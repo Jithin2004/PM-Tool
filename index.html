@@ -272,7 +272,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 </div>
 
 <!-- New Project Modal -->
-<div class="modal-overlay" id="new-modal" style="display:none" onclick="closeModalOutside(event,'new-modal')">
+<div class="modal-overlay" id="new-modal" style="display:none">
   <div class="modal">
     <div class="modal-title">Add new project</div>
     <div class="modal-sub">Fill in what you know — everything adjustable later.</div>
@@ -687,7 +687,6 @@ function openNewModal() {
   document.getElementById('new-modal').style.display='flex';
 }
 function closeModal(id){ document.getElementById(id).style.display='none'; }
-function closeModalOutside(e,id){ if(e.target.id===id) closeModal(id); }
 function addOhModal(){ modalOhItems.push({label:'',hours:0}); renderModalOh(); }
 function renderModalOh(){
   document.getElementById('nm-oh-list').innerHTML = modalOhItems.map((item,i)=>`
