@@ -121,6 +121,9 @@ export default function App() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'audit_logs' }, payload => {
           handleAuditRealtimeEvent(payload);
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, payload => {
+          handleProfileRealtimeEvent(payload);
+        })
         .subscribe(status => {
           if (status === 'SUBSCRIBED') setSyncStatus('live');
           else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') setSyncStatus('error');
@@ -171,6 +174,20 @@ export default function App() {
         return current.map(t => t.id === newRow.data.id ? newRow.data : t);
       } else if (eventType === 'DELETE') {
         return current.filter(t => t.id !== oldRow.id);
+      }
+      return current;
+    });
+  };
+
+  const handleProfileRealtimeEvent = (payload: any) => {
+    const { eventType, new: newRow, old: oldRow } = payload;
+    setAllProfiles(current => {
+      if (eventType === 'INSERT') {
+        if (!current.find(p => p.id === newRow.id)) return [...current, newRow.data];
+      } else if (eventType === 'UPDATE') {
+        return current.map(p => p.id === newRow.id ? newRow.data : p);
+      } else if (eventType === 'DELETE') {
+        return current.filter(p => p.id !== oldRow.id);
       }
       return current;
     });
@@ -455,7 +472,7 @@ export default function App() {
           id: user.id,
           email: user.email || '',
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
-          role: isFirst ? 'admin' : 'pending',
+          role: isFirst ? 'admin' : 'developer',
           avatar: user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${user.email}&background=f97316&color=fff`
         };
 
