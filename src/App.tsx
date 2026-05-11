@@ -442,13 +442,15 @@ export default function App() {
     await saveProject(updated, false);
   };
 
-  // Proper Login logic
+ // Proper Login logic
   useEffect(() => {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await handleUserSession(session.user);
-      } else {
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (session?.user) {
+          await handleUserSession(session.user);
+        }
+      } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
         setViewingAsRole(null);
       }
