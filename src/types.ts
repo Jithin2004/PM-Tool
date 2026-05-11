@@ -32,7 +32,7 @@ export interface Project {
   description?: string;
 }
 
-export type UserRole = 'admin' | 'pm' | 'developer' | 'pending';
+export type UserRole = 'super_admin' | 'admin' | 'pm' | 'developer' | 'pending';
 
 export interface UserProfile {
   id: string;
