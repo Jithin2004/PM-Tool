@@ -80,6 +80,8 @@ export default function App() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'connecting' | 'live' | 'syncing' | 'error'>('connecting');
+  const [activeTeamTab, setActiveTeamTab] = useState<'teams' | 'users'>('teams');
+  const [allProfiles, setAllProfiles] = useState<UserProfile[]>([]);
 
   // New Project Form State
   const [newProject, setNewProject] = useState<Partial<Project>>({
@@ -143,6 +145,22 @@ export default function App() {
       console.error('Fetch teams error:', e);
     }
   };
+
+  const fetchAllProfiles = async () => {
+    try {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (error) throw error;
+      if (data) setAllProfiles(data.map(row => row.data as UserProfile));
+    } catch (e) {
+      console.error('Fetch profiles error:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (isTeamModalOpen && activeTeamTab === 'users' && currentUser?.role === 'admin') {
+      fetchAllProfiles();
+    }
+  }, [isTeamModalOpen, activeTeamTab, currentUser]);
 
   const handleTeamRealtimeEvent = (payload: any) => {
     const { eventType, new: newRow, old: oldRow } = payload;
@@ -437,7 +455,7 @@ export default function App() {
           id: user.id,
           email: user.email || '',
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
-          role: isFirst ? 'admin' : 'pm',
+          role: isFirst ? 'admin' : 'pending',
           avatar: user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${user.email}&background=f97316&color=fff`
         };
 
@@ -526,6 +544,37 @@ export default function App() {
               </p>
             </div>
           </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (currentUser.role === 'pending') {
+    return (
+      <div className="min-h-screen bg-[#0f0e0d] flex items-center justify-center p-6 text-[#f0ede8]">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-[#1a1917] border border-[#333130] rounded-3xl p-10 space-y-8 text-center relative overflow-hidden"
+        >
+          <div className="flex flex-col items-center gap-4 relative z-10">
+            <div className="w-20 h-20 rounded-3xl bg-[#333130] flex items-center justify-center">
+              <Shield size={32} className="text-[#9e9890]" />
+            </div>
+            <h1 className="text-2xl font-bold font-serif tracking-tight">Pending Approval</h1>
+            <p className="text-[#9e9890] text-sm">
+              Your account has been created, but requires administrator approval to access the workspace.
+            </p>
+          </div>
+          <button 
+            onClick={async () => {
+              await supabase.auth.signOut();
+              setCurrentUser(null);
+            }}
+            className="w-full bg-[#333130] hover:bg-[#444240] text-white py-3 rounded-xl transition-colors font-semibold shadow-lg relative z-10"
+          >
+            Sign Out
+          </button>
         </motion.div>
       </div>
     );
@@ -1119,11 +1168,12 @@ export default function App() {
 
               <div className="flex flex-col gap-6">
                 <div className="flex bg-[#0f0e0d] p-1 rounded-xl border border-[#333130] w-fit">
-                  <button className="px-6 py-2 bg-orange-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest">Teams</button>
-                  <button className="px-6 py-2 text-[#5a5650] hover:text-[#9e9890] transition-colors text-xs font-bold uppercase tracking-widest">Users & Roles</button>
+                  <button onClick={() => setActiveTeamTab('teams')} className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${activeTeamTab === 'teams' ? 'bg-orange-600 text-white' : 'text-[#5a5650] hover:text-[#9e9890]'}`}>Teams</button>
+                  <button onClick={() => setActiveTeamTab('users')} className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${activeTeamTab === 'users' ? 'bg-orange-600 text-white' : 'text-[#5a5650] hover:text-[#9e9890]'}`}>Users & Roles</button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {activeTeamTab === 'teams' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {teams.map(team => (
                   <div key={team.id} className="bg-[#0f0e0d] border border-[#333130] rounded-2xl p-6 space-y-4">
                     <div className="flex justify-between items-start">
@@ -1224,7 +1274,43 @@ export default function App() {
                     </div>
                   </div>
                 ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="bg-[#0f0e0d] border border-[#333130] rounded-2xl p-6">
+                    <div className="space-y-4">
+                      {allProfiles.map(prof => (
+                        <div key={prof.id} className="flex items-center justify-between p-3 bg-[#1a1917] border border-[#333130] rounded-xl transition-colors hover:border-[#444240]">
+                          <div className="flex items-center gap-4">
+                            <img src={prof.avatar} className="w-10 h-10 rounded-lg bg-[#333130] object-cover" alt="" />
+                            <div>
+                              <div className="font-bold text-sm text-[#f0ede8]">{prof.name}</div>
+                              <div className="text-[10px] font-mono text-[#5a5650]">{prof.email}</div>
+                            </div>
+                          </div>
+                          <select 
+                            value={prof.role}
+                            onChange={async (e) => {
+                              const newRole = e.target.value as UserRole;
+                              const updatedProf = { ...prof, role: newRole };
+                              setAllProfiles(allProfiles.map(p => p.id === prof.id ? updatedProf : p));
+                              await supabase.from('profiles').update({ data: updatedProf }).eq('id', prof.id);
+                            }}
+                            disabled={currentUser.role !== 'admin'}
+                            className={`bg-[#0f0e0d] border rounded-lg px-3 py-1.5 text-xs font-bold uppercase outline-none focus:border-orange-500 disabled:opacity-50 ${prof.role === 'pending' ? 'border-amber-500/50 text-amber-500' : 'border-[#333130] text-[#9e9890]'}`}
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="developer">Developer</option>
+                            <option value="pm">Project Manager</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                      ))}
+                      {allProfiles.length === 0 && (
+                        <div className="text-[10px] text-[#5a5650] italic text-center py-4 uppercase tracking-widest">Loading Users...</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-10 flex justify-end">
