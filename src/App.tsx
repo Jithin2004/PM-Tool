@@ -814,7 +814,7 @@ export default function App() {
                   <span className="text-[10px] font-mono text-[#5a5650] uppercase tracking-widest">Resolve PM Enterprise</span>
                 </div>
                 <div className="text-[9px] font-mono text-[#333130] uppercase leading-relaxed">
-                  © 2026 Jithin M • All Rights Reserved
+                  © 2026 Jithin M & Shamil T P • All Rights Reserved
                 </div>
               </div>
             </div>
