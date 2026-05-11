@@ -32,6 +32,16 @@ export interface Project {
   description?: string;
 }
 
+export type UserRole = 'admin' | 'pm' | 'developer';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  avatar?: string;
+}
+
 export interface Developer {
   id: string;
   name: string;
@@ -57,4 +67,16 @@ export interface AppConfig {
   bufferPercent: number;
   contextSwitchCost: number; 
   fatigueFactor: number; // v3: Efficiency decay after 6 hours (e.g. 0.85)
+}
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: UserRole;
+  action: string; // e.g. 'project_update', 'team_created'
+  targetId: string;
+  targetName: string;
+  details: string; // JSON string of changes
+  timestamp: string;
 }

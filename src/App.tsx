@@ -6,7 +6,7 @@ import {
   CheckCircle2, 
   Clock, 
   AlertCircle, 
-  ChevronDown, 
+  ChevronDown as ChevronDownIcon, 
   Trash2, 
   ArrowUp, 
   ArrowDown,
@@ -18,11 +18,18 @@ import {
   Activity,
   Users,
   ChevronRight,
-  UserPlus
+  UserPlus,
+  LogOut,
+  Shield,
+  User,
+  ChevronDown,
+  Briefcase,
+  History,
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from './lib/supabase';
-import { Project, AppConfig, OverheadItem, Team, Developer } from './types';
+import { Project, AppConfig, OverheadItem, Team, Developer, UserProfile, UserRole, AuditLog } from './types';
 import { forecastProjects, calcProjectRealHours, calcHistoricalBias } from './utils/calculations';
 import { estimateProjectHours } from './services/gemini';
 
@@ -63,9 +70,14 @@ export default function App() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'inprogress' | 'inreview' | 'done'>('all');
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [viewingAsRole, setViewingAsRole] = useState<UserRole | null>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'connecting' | 'live' | 'syncing' | 'error'>('connecting');
 
@@ -91,6 +103,7 @@ export default function App() {
   useEffect(() => {
     fetchProjects();
     fetchTeams();
+    fetchAuditLogs();
     
     let channel: any;
     
@@ -102,6 +115,9 @@ export default function App() {
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, payload => {
           handleTeamRealtimeEvent(payload);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'audit_logs' }, payload => {
+          handleAuditRealtimeEvent(payload);
         })
         .subscribe(status => {
           if (status === 'SUBSCRIBED') setSyncStatus('live');
@@ -142,7 +158,49 @@ export default function App() {
     });
   };
 
-  const saveTeam = async (t: Team) => {
+  const handleAuditRealtimeEvent = (payload: any) => {
+    const { eventType, new: newRow } = payload;
+    if (eventType === 'INSERT') {
+      setAuditLogs(current => [newRow.data, ...current].slice(0, 50));
+    }
+  };
+
+  const fetchAuditLogs = async () => {
+    try {
+      const { data, error } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(50);
+      if (error) throw error;
+      if (data) setAuditLogs(data.map(row => row.data as AuditLog));
+    } catch (e) {
+      console.error('Fetch audit logs error:', e);
+    }
+  };
+
+  const logAuditAction = async (action: string, targetId: string, targetName: string, details: any) => {
+    if (!currentUser) return;
+    const log: AuditLog = {
+      id: `log-${Date.now()}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      action,
+      targetId,
+      targetName,
+      details: JSON.stringify(details),
+      timestamp: new Date().toISOString()
+    };
+    
+    try {
+      await supabase.from('audit_logs').insert({ 
+        id: log.id, 
+        data: log, 
+        timestamp: log.timestamp 
+      });
+    } catch (e) {
+      console.error('Log audit error:', e);
+    }
+  };
+
+  const saveTeam = async (t: Team, isNew = false) => {
     setSyncStatus('syncing');
     try {
       const { error } = await supabase.from('teams').upsert({ 
@@ -152,18 +210,20 @@ export default function App() {
       });
       if (error) throw error;
       setSyncStatus('live');
+      await logAuditAction(isNew ? 'team_created' : 'team_updated', t.id, t.name, { team: t });
     } catch (e) {
       console.error('Save team error:', e);
       setSyncStatus('error');
     }
   };
 
-  const deleteTeamFromDB = async (id: string) => {
+  const deleteTeamFromDB = async (team: Team) => {
     setSyncStatus('syncing');
     try {
-      const { error } = await supabase.from('teams').delete().eq('id', id);
+      const { error } = await supabase.from('teams').delete().eq('id', team.id);
       if (error) throw error;
       setSyncStatus('live');
+      await logAuditAction('team_deleted', team.id, team.name, { team });
     } catch (e) {
       console.error('Delete team error:', e);
       setSyncStatus('error');
@@ -205,7 +265,7 @@ export default function App() {
     });
   };
 
-  const saveProject = async (p: Project) => {
+  const saveProject = async (p: Project, isNew = false) => {
     setSyncStatus('syncing');
     try {
       const { error } = await supabase.from('projects').upsert({ 
@@ -215,18 +275,20 @@ export default function App() {
       });
       if (error) throw error;
       setSyncStatus('live');
+      await logAuditAction(isNew ? 'project_created' : 'project_updated', p.id.toString(), p.name, { status: p.status, teamId: p.teamId });
     } catch (e) {
       console.error('Save error:', e);
       setSyncStatus('error');
     }
   };
 
-  const deleteProjectFromDB = async (id: number) => {
+  const deleteProjectFromDB = async (project: Project) => {
     setSyncStatus('syncing');
     try {
-      const { error } = await supabase.from('projects').delete().eq('id', id);
+      const { error } = await supabase.from('projects').delete().eq('id', project.id);
       if (error) throw error;
       setSyncStatus('live');
+      await logAuditAction('project_deleted', project.id.toString(), project.name, { project });
     } catch (e) {
       console.error('Delete error:', e);
       setSyncStatus('error');
@@ -304,7 +366,7 @@ export default function App() {
     setProjects(prev => [...prev, p]);
     setIsNewModalOpen(false);
     setExpandedCards(prev => new Set(prev).add(id));
-    await saveProject(p);
+    await saveProject(p, true);
   };
 
   const teamRecommendations = useMemo(() => {
@@ -336,8 +398,63 @@ export default function App() {
     if (!p) return;
     const updated = { ...p, [field]: value };
     setProjects(prev => prev.map(item => item.id === id ? updated : item));
-    await saveProject(updated);
+    await saveProject(updated, false);
   };
+
+  // Auto-login user from metadata if possible
+  useEffect(() => {
+    const mockUser: UserProfile = {
+      id: 'admin-1',
+      email: 'jithinragesh@gmail.com',
+      name: 'Jithin Ragesh',
+      role: 'admin',
+      avatar: 'https://ui-avatars.com/api/?name=Jithin+Ragesh&background=f97316&color=fff'
+    };
+    setCurrentUser(mockUser);
+    setViewingAsRole('admin');
+  }, []);
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#0f0e0d] flex items-center justify-center p-6 text-[#f0ede8]">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-[#1a1917] border border-[#333130] rounded-3xl p-8 space-y-8 text-center"
+        >
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-orange-600 flex items-center justify-center shadow-2xl shadow-orange-600/20">
+              <span className="text-3xl font-serif font-black text-[#0f0e0d]">R</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold font-serif tracking-tight">RESOLVE PM</h1>
+              <p className="text-xs text-[#5a5650] font-mono uppercase tracking-widest mt-1">High-Fidelity Engineering</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <button 
+              onClick={() => {
+                setCurrentUser({
+                  id: 'admin-1',
+                  email: 'jithinragesh@gmail.com',
+                  name: 'Jithin Ragesh',
+                  role: 'admin'
+                });
+                setViewingAsRole('admin');
+              }}
+              className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-[#e0e0e0] transition-colors"
+            >
+              Sign in with Google
+            </button>
+            <p className="text-[10px] text-[#5a5650] px-4">
+              By continuing, you agree to Resolve's predictive modeling terms and data privacy shield.
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0f0e0d] text-[#f0ede8] font-sans">
@@ -349,57 +466,104 @@ export default function App() {
       )}
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0f0e0d]/80 backdrop-blur-xl border-b border-[#333130] px-6 py-4 flex items-center justify-between">
-        <div className="flex flex-col">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-xl font-bold font-serif tracking-tight text-white">RESOLVE</h1>
-            <span className="text-[10px] font-mono text-orange-500 font-medium px-1.5 py-0.5 border border-orange-500/20 rounded bg-orange-500/5">v4.0 PRÉCISION</span>
-          </div>
-          <div className="text-[10px] font-mono text-[#5a5650] mt-0.5 uppercase tracking-widest">
-            {now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} • {now.toLocaleTimeString()}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-[10px] font-mono text-[#5a5650]">
-            <div className={`w-2 h-2 rounded-full ${
-              syncStatus === 'live' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 
-              syncStatus === 'syncing' ? 'bg-amber-500 animate-pulse' : 'bg-[#5a5650]'
-            }`} />
-            {syncStatus}
-          </div>
-          
-          <div className="hidden md:flex items-center gap-1 text-[11px] font-mono text-[#5a5650]">
-            {config.hoursPerDay}h/day · ×{config.defaultOverhead}
+      <header className="sticky top-0 z-50 bg-[#0f0e0d]/80 backdrop-blur-xl border-b border-[#333130] px-6 py-4">
+        <div className="max-w-[1800px] mx-auto w-full flex items-center justify-between">
+          <div className="flex flex-col">
+            <div className="flex items-baseline gap-3">
+              <h1 className="text-xl font-bold font-serif tracking-tight text-white">RESOLVE</h1>
+              <span className="text-[10px] font-mono text-orange-500 font-medium px-1.5 py-0.5 border border-orange-500/20 rounded bg-orange-500/5">v4.0 PRÉCISION</span>
+            </div>
+            <div className="text-[10px] font-mono text-[#5a5650] mt-0.5 uppercase tracking-widest">
+              {now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} • {now.toLocaleTimeString()}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsTeamModalOpen(true)}
-              className="p-2 hover:bg-[#1a1917] rounded-lg transition-colors text-[#9e9890] hover:text-[#f0ede8] flex items-center gap-2"
-              title="Team Management"
-            >
-              <Users size={18} />
-              <span className="text-[11px] font-mono uppercase hidden lg:block">Teams</span>
-            </button>
-            <button 
-              onClick={() => setIsConfigOpen(!isConfigOpen)}
-              className="p-2 hover:bg-[#1a1917] rounded-lg transition-colors text-[#9e9890] hover:text-[#f0ede8]"
-            >
-              <Settings size={18} />
-            </button>
-            <button 
-              onClick={() => setIsNewModalOpen(true)}
-              className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-orange-600/20"
-            >
-              <Plus size={16} />
-              <span>New Project</span>
-            </button>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-[10px] font-mono text-[#5a5650]">
+              <div className={`w-2 h-2 rounded-full ${
+                syncStatus === 'live' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 
+                syncStatus === 'syncing' ? 'bg-amber-500 animate-pulse' : 'bg-[#5a5650]'
+              }`} />
+              {syncStatus}
+            </div>
+            
+            <div className="hidden md:flex items-center gap-1 text-[11px] font-mono text-[#5a5650]">
+              {config.hoursPerDay}h/day · ×{config.defaultOverhead}
+            </div>
+
+            <div className="flex items-center gap-4 pl-4 border-l border-[#333130] ml-2">
+              <div className="flex bg-[#0f0e0d] p-1 rounded-xl border border-[#333130]">
+                <button 
+                  onClick={() => setViewingAsRole('admin')}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${viewingAsRole === 'admin' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-[#5a5650] hover:text-[#9e9890]'}`}
+                >
+                  Admin
+                </button>
+                <button 
+                  onClick={() => setViewingAsRole('pm')}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${viewingAsRole === 'pm' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-[#5a5650] hover:text-[#9e9890]'}`}
+                >
+                  PM/Lead
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsTeamModalOpen(true)}
+                className="p-2 hover:bg-[#1a1917] rounded-lg transition-colors text-[#9e9890] hover:text-[#f0ede8] flex items-center gap-2"
+                title="Team Management"
+              >
+                <Users size={18} />
+                <span className="text-[11px] font-mono uppercase hidden lg:block">Team/Users</span>
+              </button>
+              
+              <div className="relative group">
+                <button className="flex items-center gap-3 p-1 pl-3 bg-[#1a1917] border border-[#333130] rounded-xl hover:border-[#5a5650] transition-all">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[11px] font-bold text-white">{currentUser.name}</span>
+                    <span className="text-[9px] font-mono text-orange-500 uppercase tracking-tighter">{currentUser.role} View</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-orange-600/20 flex items-center justify-center">
+                    <img src={currentUser.avatar} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <ChevronDown size={14} className="text-[#5a5650] mr-2" />
+                </button>
+                
+                <div className="absolute right-0 top-full mt-2 w-48 bg-[#1e1c1a] border border-[#333130] rounded-2xl shadow-2xl py-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all translate-y-2 group-hover:translate-y-0 z-[100]">
+                  <div className="px-4 py-2 border-b border-[#333130] mb-2">
+                    <p className="text-[10px] font-mono text-[#5a5650] uppercase">Logged in as</p>
+                    <p className="text-xs font-medium truncate">{currentUser.email}</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsProfileModalOpen(true)}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-xs hover:bg-[#2a2826] text-[#9e9890] transition-colors"
+                  >
+                    <User size={14} />
+                    Profile Settings
+                  </button>
+                  <button 
+                    onClick={() => setIsAuditModalOpen(true)}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-xs hover:bg-[#2a2826] text-[#9e9890] transition-colors"
+                  >
+                    <Shield size={14} />
+                    Audit Logs
+                  </button>
+                  <button 
+                    onClick={() => setCurrentUser(null)}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-xs hover:bg-red-500/10 text-red-500 transition-colors mt-2 border-t border-[#333130]"
+                  >
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-0">
+      <div className="max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-0">
         {/* Sidebar */}
         <aside className="border-r border-[#333130] p-6 space-y-8 bg-[#0a0a0a]">
           {/* Stats Section */}
@@ -550,7 +714,7 @@ export default function App() {
                       isExpanded={expandedCards.has(p.id)}
                       onToggle={() => toggleCard(p.id)}
                       onUpdate={(field, val) => updateProjectField(p.id, field, val)}
-                      onDelete={() => deleteProjectFromDB(p.id)}
+                      onDelete={() => deleteProjectFromDB(p)}
                       config={config}
                       teams={teams}
                     />
@@ -564,13 +728,13 @@ export default function App() {
               <div className="bg-[#1a1917] border border-[#333130] rounded-2xl p-6 space-y-6">
                 <div className="flex items-center gap-2 text-xs font-mono text-orange-500 uppercase tracking-widest">
                   <Activity size={14} />
-                  <span>Resolve Real-time Insights</span>
+                  <span>{viewingAsRole === 'admin' ? 'Strategic Portfolio Monitor' : 'Predictive Execution Monitor'}</span>
                 </div>
                 
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <div className="flex justify-between text-[10px] font-mono text-[#5a5650] uppercase">
-                      <span>Delivery Confidence</span>
+                      <span>{viewingAsRole === 'admin' ? 'Portfolio Confidence' : 'Squad Delivery Confidence'}</span>
                       <span className="text-green-500">{Math.round((filteredProjects.filter(p => p.health === 'ok').length / (filteredProjects.length || 1)) * 100)}%</span>
                     </div>
                     <div className="h-1 bg-[#0f0e0d] rounded-full overflow-hidden">
@@ -829,7 +993,7 @@ export default function App() {
                       developers: []
                     };
                     setTeams([...teams, newTeam]);
-                    saveTeam(newTeam);
+                    saveTeam(newTeam, true);
                   }}
                   className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2"
                 >
@@ -838,7 +1002,13 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-6">
+                <div className="flex bg-[#0f0e0d] p-1 rounded-xl border border-[#333130] w-fit">
+                  <button className="px-6 py-2 bg-orange-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest">Teams</button>
+                  <button className="px-6 py-2 text-[#5a5650] hover:text-[#9e9890] transition-colors text-xs font-bold uppercase tracking-widest">Users & Roles</button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {teams.map(team => (
                   <div key={team.id} className="bg-[#0f0e0d] border border-[#333130] rounded-2xl p-6 space-y-4">
                     <div className="flex justify-between items-start">
@@ -849,7 +1019,7 @@ export default function App() {
                           onChange={e => {
                             const updated = { ...team, name: e.target.value };
                             setTeams(teams.map(t => t.id === team.id ? updated : t));
-                            saveTeam(updated);
+                            saveTeam(updated, false);
                           }}
                           className="bg-transparent font-bold text-lg focus:outline-none focus:border-b border-[#333130] w-full"
                         />
@@ -859,7 +1029,7 @@ export default function App() {
                         onClick={() => {
                           if (confirm('Delete this team?')) {
                             setTeams(teams.filter(t => t.id !== team.id));
-                            deleteTeamFromDB(team.id);
+                            deleteTeamFromDB(team);
                           }
                         }}
                         className="text-red-500/40 hover:text-red-500 p-1"
@@ -881,7 +1051,7 @@ export default function App() {
                             };
                             const updated = { ...team, developers: [...team.developers, newDev] };
                             setTeams(teams.map(t => t.id === team.id ? updated : t));
-                            saveTeam(updated);
+                            saveTeam(updated, false);
                           }}
                           className="text-orange-500 hover:text-orange-400 flex items-center gap-1"
                         >
@@ -900,7 +1070,7 @@ export default function App() {
                                 const updatedDevs = team.developers.map(d => d.id === dev.id ? { ...d, name: e.target.value } : d);
                                 const updatedTeam = { ...team, developers: updatedDevs };
                                 setTeams(teams.map(t => t.id === team.id ? updatedTeam : t));
-                                saveTeam(updatedTeam);
+                                saveTeam(updatedTeam, false);
                               }}
                               className="bg-transparent text-xs font-medium focus:outline-none flex-1"
                             />
@@ -914,7 +1084,7 @@ export default function App() {
                                   const updatedDevs = team.developers.map(d => d.id === dev.id ? { ...d, efficiency: parseFloat(e.target.value) || 1 } : d);
                                   const updatedTeam = { ...team, developers: updatedDevs };
                                   setTeams(teams.map(t => t.id === team.id ? updatedTeam : t));
-                                  saveTeam(updatedTeam);
+                                  saveTeam(updatedTeam, false);
                                 }}
                                 className="w-10 bg-transparent text-[10px] font-mono text-orange-500 focus:outline-none"
                               />
@@ -924,7 +1094,7 @@ export default function App() {
                                 const updatedDevs = team.developers.filter(d => d.id !== dev.id);
                                 const updatedTeam = { ...team, developers: updatedDevs };
                                 setTeams(teams.map(t => t.id === team.id ? updatedTeam : t));
-                                saveTeam(updatedTeam);
+                                saveTeam(updatedTeam, false);
                               }}
                               className="opacity-0 group-hover:opacity-100 text-red-500/40 hover:text-red-500 transition-opacity"
                             >
@@ -939,6 +1109,7 @@ export default function App() {
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
 
               <div className="mt-10 flex justify-end">
@@ -948,6 +1119,127 @@ export default function App() {
                 >
                   Close Manager
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Audit Logs Modal */}
+      <AnimatePresence>
+        {isAuditModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAuditModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-3xl bg-[#1e1c1a] border border-[#333130] rounded-3xl p-8 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between mb-8 shrink-0">
+                <div>
+                  <h3 className="text-2xl font-bold font-serif tracking-tight">System Audit Log</h3>
+                  <p className="text-sm text-[#9e9890] mt-1">Immutable record of all project and team mutations.</p>
+                </div>
+                <button onClick={() => setIsAuditModalOpen(false)} className="p-2 hover:bg-[#333130] rounded-full">
+                  <Plus size={20} className="rotate-45" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                {auditLogs.length === 0 ? (
+                  <div className="py-20 text-center text-[#5a5650] font-mono uppercase text-xs tracking-widest">No logs recorded yet.</div>
+                ) : (
+                  auditLogs.map(log => (
+                    <div key={log.id} className="bg-[#0f0e0d] border border-[#333130] rounded-2xl p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            log.action.includes('created') ? 'bg-green-500/10 text-green-400' :
+                            log.action.includes('deleted') ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'
+                          }`}>
+                            <History size={16} />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold font-serif">{log.userName} <span className="text-[#5a5650] font-sans font-normal lowercase">{(log.action as string).replace(/_/g, ' ')}</span> {log.targetName}</div>
+                            <div className="text-[10px] font-mono text-[#5a5650]">{new Date(log.timestamp).toLocaleString()}</div>
+                          </div>
+                        </div>
+                        <div className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1a1917] border border-[#333130] text-[#9e9890] uppercase">{log.userRole}</div>
+                      </div>
+                      <div className="bg-[#1a1917] p-3 rounded-xl border border-[#333130] text-[10px] font-mono text-[#9e9890] overflow-x-auto whitespace-pre">
+                        {log.details}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Profile Modal */}
+      <AnimatePresence>
+        {isProfileModalOpen && currentUser && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsProfileModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-[#1e1c1a] border border-[#333130] rounded-3xl p-8 shadow-2xl"
+            >
+              <div className="flex flex-col items-center gap-6">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-3xl overflow-hidden bg-orange-600/20 border-2 border-orange-500/20">
+                    <img src={currentUser.avatar} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <button className="absolute -bottom-2 -right-2 p-2 bg-orange-600 rounded-xl border-4 border-[#1e1c1a] hover:bg-orange-500 transition-colors">
+                    <Settings size={16} />
+                  </button>
+                </div>
+                
+                <div className="text-center space-y-1">
+                  <h3 className="text-xl font-bold font-serif">{currentUser.name}</h3>
+                  <p className="text-sm text-[#5a5650] font-mono">{currentUser.email}</p>
+                </div>
+
+                <div className="w-full grid grid-cols-2 gap-3 pb-4">
+                  <div className="bg-[#0f0e0d] border border-[#333130] rounded-2xl p-4 text-center">
+                    <div className="text-[10px] text-[#5a5650] font-mono uppercase mb-1">Assigned Role</div>
+                    <div className="text-xs font-bold text-orange-500 uppercase tracking-widest">{currentUser.role}</div>
+                  </div>
+                  <div className="bg-[#0f0e0d] border border-[#333130] rounded-2xl p-4 text-center">
+                    <div className="text-[10px] text-[#5a5650] font-mono uppercase mb-1">Activity Rank</div>
+                    <div className="text-xs font-bold text-orange-500 uppercase tracking-widest">S-Tier PM</div>
+                  </div>
+                </div>
+
+                <div className="w-full space-y-3">
+                  <button className="w-full py-3 bg-[#333130] hover:bg-[#444240] rounded-xl text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+                    <Info size={14} />
+                    Account Preferences
+                  </button>
+                  <button 
+                    onClick={() => setIsProfileModalOpen(false)}
+                    className="w-full py-3 bg-white text-black hover:bg-white/90 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
