@@ -103,6 +103,8 @@ export default function App() {
 
   // Fetch and Subscribe
   useEffect(() => {
+    if (!currentUser) return;
+
     fetchProjects();
     fetchTeams();
     fetchAuditLogs();
@@ -122,7 +124,7 @@ export default function App() {
           handleAuditRealtimeEvent(payload);
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, payload => {
-          handleProfileRealtimeEvent(payload);
+          handleProfileRealtimeSync(payload);
         })
         .subscribe(status => {
           if (status === 'SUBSCRIBED') setSyncStatus('live');
@@ -135,7 +137,7 @@ export default function App() {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentUser?.id]); // Only subscribe when we have a user id
 
   const fetchTeams = async () => {
     try {
@@ -160,7 +162,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (isTeamModalOpen && activeTeamTab === 'users' && currentUser?.role === 'admin') {
+    if (isTeamModalOpen && activeTeamTab === 'users' && (currentUser?.role === 'admin' || currentUser?.role === 'super_admin')) {
       fetchAllProfiles();
     }
   }, [isTeamModalOpen, activeTeamTab, currentUser]);
@@ -179,13 +181,17 @@ export default function App() {
     });
   };
 
-  const handleProfileRealtimeEvent = (payload: any) => {
+  const handleProfileRealtimeSync = (payload: any) => {
     const { eventType, new: newRow, old: oldRow } = payload;
     setAllProfiles(current => {
       if (eventType === 'INSERT') {
-        if (!current.find(p => p.id === newRow.id)) return [...current, newRow.data];
+        if (!current.find(p => p.id === newRow.data.id)) return [...current, newRow.data];
       } else if (eventType === 'UPDATE') {
-        return current.map(p => p.id === newRow.id ? newRow.data : p);
+        // If my own role changed, it might affect access
+        if (newRow.data.id === currentUser?.id) {
+          setCurrentUser(newRow.data);
+        }
+        return current.map(p => p.id === newRow.data.id ? newRow.data : p);
       } else if (eventType === 'DELETE') {
         return current.filter(p => p.id !== oldRow.id);
       }
@@ -345,7 +351,7 @@ export default function App() {
       done: forecastedProjects.filter(p => p.status === 'done').length,
       atRisk: active.filter(p => p.health === 'late' || p.health === 'risk').length,
       totalHours,
-      totalDays: totalHours / config.hoursPerDay
+      totalDays: totalHours / (config.hoursPerDay || 8)
     };
   }, [forecastedProjects, config]);
 
@@ -457,11 +463,19 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const isProcessingAuth = React.useRef(false);
+
   const handleUserSession = async (user: any) => {
+    if (isProcessingAuth.current) return;
+    // If we already have this user and it's not a forced update, don't re-trigger loading
+    if (currentUser?.id === user.id) return;
+    
+    isProcessingAuth.current = true;
     setIsLoading(true);
     try {
       // Check if user profile exists
-      const { data: profiles, error } = await supabase.from('profiles').select('*'); // We'll just get all to check if empty
+      // Optimization: use a more targeted query
+      const { data: profiles, error } = await supabase.from('profiles').select('*'); 
       
       let profile = profiles?.find(p => p.id === user.id);
 
@@ -472,7 +486,7 @@ export default function App() {
           id: user.id,
           email: user.email || '',
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
-          role: isFirst ? 'admin' : 'developer',
+          role: isFirst ? 'super_admin' : 'pending',
           avatar: user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${user.email}&background=f97316&color=fff`
         };
 
@@ -489,6 +503,7 @@ export default function App() {
       console.error('Auth sync error:', e);
     } finally {
       setIsLoading(false);
+      isProcessingAuth.current = false;
     }
   };
 
@@ -633,28 +648,42 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-4 pl-4 border-l border-[#333130] ml-2">
-              <div className="flex bg-[#0f0e0d] p-1 rounded-xl border border-[#333130]">
-                <button 
-                  onClick={() => setViewingAsRole('admin')}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${viewingAsRole === 'admin' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-[#5a5650] hover:text-[#9e9890]'}`}
-                >
-                  Admin
-                </button>
-                <button 
-                  onClick={() => setViewingAsRole('pm')}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${viewingAsRole === 'pm' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-[#5a5650] hover:text-[#9e9890]'}`}
-                >
-                  PM
-                </button>
-                {currentUser.role === 'developer' && (
+              {(currentUser.role === 'super_admin' || currentUser.role === 'admin') && (
+                <div className="flex bg-[#0f0e0d] p-1 rounded-xl border border-[#333130]">
+                  {(currentUser.role === 'super_admin' || currentUser.role === 'admin') && (
+                    <button 
+                      onClick={() => setViewingAsRole('admin')}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${viewingAsRole === 'admin' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-[#5a5650] hover:text-[#9e9890]'}`}
+                    >
+                      Admin
+                    </button>
+                  )}
+                  {currentUser.role === 'super_admin' && (
+                    <button 
+                      onClick={() => setViewingAsRole('super_admin')}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${viewingAsRole === 'super_admin' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-[#5a5650] hover:text-[#9e9890]'}`}
+                    >
+                      Super
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setViewingAsRole('pm')}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${viewingAsRole === 'pm' ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/20' : 'text-[#5a5650] hover:text-[#9e9890]'}`}
+                  >
+                    PM
+                  </button>
+                </div>
+              )}
+              {currentUser.role === 'developer' && (
+                <div className="flex bg-[#0f0e0d] p-1 rounded-xl border border-[#333130]">
                   <button 
                     disabled
                     className="px-3 py-1 rounded-lg text-[10px] font-mono uppercase tracking-widest text-blue-500 bg-blue-500/10 border border-blue-500/20"
                   >
                     Viewer
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -667,7 +696,7 @@ export default function App() {
                 <span className="text-[11px] font-mono uppercase hidden lg:block">Team/Users</span>
               </button>
 
-              {currentUser.role !== 'developer' && (
+              {currentUser.role !== 'developer' && currentUser.role !== 'pending' && (
                 <button 
                   onClick={() => setIsNewModalOpen(true)}
                   className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-orange-600/20"
@@ -897,7 +926,7 @@ export default function App() {
                       onDelete={() => deleteProjectFromDB(p)}
                       config={config}
                       teams={teams}
-                      isViewOnly={currentUser.role === 'developer'}
+                      isViewOnly={currentUser.role === 'developer' || currentUser.role === 'pending'}
                     />
                   ))
                 )}
@@ -1186,7 +1215,9 @@ export default function App() {
               <div className="flex flex-col gap-6">
                 <div className="flex bg-[#0f0e0d] p-1 rounded-xl border border-[#333130] w-fit">
                   <button onClick={() => setActiveTeamTab('teams')} className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${activeTeamTab === 'teams' ? 'bg-orange-600 text-white' : 'text-[#5a5650] hover:text-[#9e9890]'}`}>Teams</button>
-                  <button onClick={() => setActiveTeamTab('users')} className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${activeTeamTab === 'users' ? 'bg-orange-600 text-white' : 'text-[#5a5650] hover:text-[#9e9890]'}`}>Users & Roles</button>
+                  {(currentUser.role === 'super_admin' || currentUser.role === 'admin') && (
+                    <button onClick={() => setActiveTeamTab('users')} className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${activeTeamTab === 'users' ? 'bg-orange-600 text-white' : 'text-[#5a5650] hover:text-[#9e9890]'}`}>Users & Roles</button>
+                  )}
                 </div>
 
                 {activeTeamTab === 'teams' ? (
@@ -1308,17 +1339,24 @@ export default function App() {
                             value={prof.role}
                             onChange={async (e) => {
                               const newRole = e.target.value as UserRole;
+                              if (newRole === 'super_admin' && currentUser.role !== 'super_admin') return;
                               const updatedProf = { ...prof, role: newRole };
                               setAllProfiles(allProfiles.map(p => p.id === prof.id ? updatedProf : p));
                               await supabase.from('profiles').update({ data: updatedProf }).eq('id', prof.id);
+                              await logAuditAction('user_role_updated', prof.id, prof.name, { oldRole: prof.role, newRole });
                             }}
-                            disabled={currentUser.role !== 'admin'}
+                            disabled={
+                              (currentUser.role === 'admin' && (prof.role === 'admin' || prof.role === 'super_admin')) ||
+                              (currentUser.role !== 'super_admin' && currentUser.role !== 'admin') ||
+                              (prof.id === currentUser.id)
+                            }
                             className={`bg-[#0f0e0d] border rounded-lg px-3 py-1.5 text-xs font-bold uppercase outline-none focus:border-orange-500 disabled:opacity-50 ${prof.role === 'pending' ? 'border-amber-500/50 text-amber-500' : 'border-[#333130] text-[#9e9890]'}`}
                           >
                             <option value="pending">Pending</option>
                             <option value="developer">Developer</option>
                             <option value="pm">Project Manager</option>
-                            <option value="admin">Admin</option>
+                            <option value="admin" disabled={currentUser.role !== 'super_admin'}>Admin</option>
+                            {prof.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
                           </select>
                         </div>
                       ))}
