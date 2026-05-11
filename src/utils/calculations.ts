@@ -70,9 +70,11 @@ export function forecastProjects(projects: Project[], config: AppConfig): Projec
       let daysCounter = 0;
       
       let remaining = totalHours;
-      while (remaining > 0) {
+      const minDailyHours = Math.max(0.1, config.hoursPerDay); // Safety check to prevent infinite loop
+      
+      while (remaining > 0 && daysCounter < 1000) { // Safety cap of 1000 days per project
         daysCounter++;
-        let availableToday = config.hoursPerDay;
+        let availableToday = minDailyHours;
         
         // Apply decay to hours worked after hour 6
         if (availableToday > 6) {
@@ -80,6 +82,9 @@ export function forecastProjects(projects: Project[], config: AppConfig): Projec
           const tiredHours = (availableToday - 6) * config.fatigueFactor;
           availableToday = freshHours + tiredHours;
         }
+        
+        // Final safety: availableToday must be positive
+        availableToday = Math.max(0.1, availableToday);
         
         const wrapWork = Math.min(remaining, availableToday);
         remaining -= wrapWork;
