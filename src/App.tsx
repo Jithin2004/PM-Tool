@@ -108,12 +108,12 @@ export default function App() {
     fetchProjects();
     fetchTeams();
     fetchAuditLogs();
-    
+
     let channel: any;
-    
-    const setupSub = async () => {
+
+    const setupSub = () => {
       channel = supabase
-        .channel('pm-live')
+        .channel('pm-live', { config: { presence: { key: currentUser.id } } })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, payload => {
           handleRealtimeEvent(payload);
         })
@@ -128,13 +128,30 @@ export default function App() {
         })
         .subscribe(status => {
           if (status === 'SUBSCRIBED') setSyncStatus('live');
-          else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') setSyncStatus('error');
+          else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            setSyncStatus('error');
+            // Auto-reconnect after 3 seconds
+            setTimeout(() => {
+              supabase.removeChannel(channel);
+              setupSub();
+            }, 3000);
+          }
         });
     };
 
+    // Reconnect when tab becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.removeChannel(channel);
+        setupSub();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     setupSub();
 
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (channel) supabase.removeChannel(channel);
     };
   }, [currentUser?.id]); // Only subscribe when we have a user id
