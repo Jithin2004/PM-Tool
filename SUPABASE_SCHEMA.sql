@@ -35,6 +35,9 @@ ON profiles FOR SELECT USING (true);
 CREATE POLICY "Users can update their own profile (role prevented by trigger/app logic)" 
 ON profiles FOR UPDATE USING (auth.uid()::uuid = id);
 
+CREATE POLICY "Users can insert their own profile" 
+ON profiles FOR INSERT WITH CHECK (auth.uid()::uuid = id);
+
 -- 5. Policies for Projects
 CREATE POLICY "Projects viewable by authenticated users" 
 ON projects FOR SELECT USING (auth.uid() IS NOT NULL);
