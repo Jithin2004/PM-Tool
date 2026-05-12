@@ -2,5 +2,5 @@
   "name": "RESOLVE PM",
   "description": "High-fidelity engineering project management with predictive PERT modeling and multi-team resource allocation.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["PERT Modeling", "Multi-team Allocation", "Productivity Decay Logic", "Cognitive Load Balancing", "Historical Bias Calibration"]
+  "majorCapabilities": []
 }
