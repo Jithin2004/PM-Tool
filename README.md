@@ -1,23 +1,20 @@
-# RESOLVE PM
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-High-fidelity engineering project management with predictive PERT modeling and multi-team resource allocation.
+# Run and deploy your AI Studio app
 
-## Quick Start
-1. **Login**: Sign in with your Google Account.
-2. **Setup Teams**: Go to the "Team/Users" section to define your squads and their default efficiency.
-3. **Add Projects**: Use the PERT (Best/Expected/Worst) estimation method for high accuracy forecasts.
-4. **Monitor**: Watch the "Real-time Insights" for delivery confidence and predictive health.
+This contains everything you need to run your app locally.
 
-## Documentation
-For a deep dive into the engineering principles (PERT, fatigue decay, historical bias calibration, and role management), see the [**ENGINEERING_GUIDE.md**](./GUIDE.md).
+View your app in AI Studio: https://ai.studio/apps/bce31a7b-7458-43a6-a741-8bcae6ea435e
 
-## Capabilities
-- **PERT Modeling**: Statistical estimation to handle uncertainty.
-- **Productivity Decay**: Non-linear modeling of human fatigue.
-- **Context Switch Logic**: Account for the mental cost of juggling tasks.
-- **Historical Bias Calibration**: Self-correcting estimates based on past performance.
-- **Role-Based Access**: Specialized views for Admins and PMs.
-- **Audit Logging**: Fully traceable record of all system mutations.
+## Run Locally
 
----
-© 2026 RESOLVE Engineering.
+**Prerequisites:**  Node.js
+
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
