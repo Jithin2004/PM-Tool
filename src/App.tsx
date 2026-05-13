@@ -845,6 +845,7 @@ function SquadRosterModal({ teams, profiles, onClose }: { teams: Team[], profile
     </div>
   );
 }
+function LiveClock() {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
