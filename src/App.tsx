@@ -141,11 +141,11 @@ function Login() {
             <Activity className="text-black w-8 h-8" />
           </div>
           <h1 className="text-4xl font-medium tracking-tight mb-2">RESOLVE PM</h1>
-          <p className="text-[10px] font-mono text-white/40 uppercase tracking-[0.3em]">Precision Engineering Control</p>
+          <p className="text-[10px] font-mono text-white/85 uppercase tracking-[0.3em]">Precision Engineering Control</p>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white/5 border border-white/10 p-6 text-xs font-mono text-white/40 leading-relaxed">
+          <div className="bg-white/5 border border-white/10 p-6 text-xs font-mono text-white/85 leading-relaxed">
             <p className="mb-4">SYSTEM_ACCESS_PROTOCOL: v4.0.2</p>
             <p>Authorized personnel only. By entering, you consent to predictive bias modeling and historical data aggregation.</p>
           </div>
@@ -161,11 +161,11 @@ function Login() {
         </div>
 
         <div className="mt-12 pt-6 border-t border-white/5 flex justify-center gap-6">
-          <div className="flex items-center gap-1.5 text-[9px] font-mono text-white/10">
+          <div className="flex items-center gap-1.5 text-[11px] font-mono text-white/70">
             <div className="w-1 h-1 rounded-full bg-white/20"></div>
             AES_256
           </div>
-          <div className="flex items-center gap-1.5 text-[9px] font-mono text-white/10">
+          <div className="flex items-center gap-1.5 text-[11px] font-mono text-white/70">
             <div className="w-1 h-1 rounded-full bg-white/20"></div>
             ENCLAVE_ACTIVE
           </div>
@@ -184,7 +184,7 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
         </div>
         <div>
           <h1 className="font-sans font-semibold text-lg tracking-tight uppercase leading-none">Resolve PM</h1>
-          <p className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">High-Fidelity Engineering System</p>
+          <p className="text-[10px] font-mono text-white/85 uppercase tracking-[0.2em]">High-Fidelity Engineering System</p>
         </div>
       </div>
 
@@ -192,14 +192,14 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
         <div className="hidden lg:flex items-center gap-8 mr-4">
           <button
             onClick={() => onToggleAdmin()}
-            className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/40 border-white/10 hover:border-white/30'}`}
+            className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}
           >
             {showAdmin ? 'Close Console' : 'Workspace'}
           </button>
           {profile?.role === 'super_admin' && (
             <button
               onClick={onToggleAdmin}
-              className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/40 border-white/10 hover:border-white/30'}`}
+              className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}
             >
               {showAdmin ? 'Exit Admin' : 'Admin Console'}
             </button>
@@ -207,8 +207,8 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
         </div>
 
         <div className="hidden md:flex flex-col items-end">
-          <p className="text-xs font-mono text-white/60 uppercase">Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/40'}>{profile?.role || 'INITIALIZING...'}</span></p>
-          <p className="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em]">{profile?.role === 'viewer' ? 'READ_ONLY_ACCESS' : 'FULL_WRITE_AUTHORITY'}</p>
+          <p className="text-xs font-mono text-white/90 uppercase">Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/85'}>{profile?.role || 'INITIALIZING...'}</span></p>
+          <p className="text-[10px] font-mono text-white/80 uppercase tracking-[0.2em]">{profile?.role === 'viewer' ? 'READ_ONLY_ACCESS' : 'FULL_WRITE_AUTHORITY'}</p>
         </div>
 
         <div className="h-8 w-[1px] bg-white/10 hidden md:block"></div>
@@ -219,7 +219,7 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
               <p className="text-sm font-medium">{user.email?.split('@')[0]}</p>
               <button
                 onClick={onLogout}
-                className="text-[10px] font-mono uppercase text-white/40 hover:text-white transition-colors"
+                className="text-[10px] font-mono uppercase text-white/85 hover:text-white transition-colors"
                 id="logout-btn"
               >
                 Terminate Session
@@ -229,14 +229,14 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
               {profile?.avatar_url ? (
                 <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
               ) : profile?.full_name ? (
-                <span className="text-[10px] font-mono font-bold text-white/60">{profile.full_name.substring(0, 2).toUpperCase()}</span>
+                <span className="text-[10px] font-mono font-bold text-white/90">{profile.full_name.substring(0, 2).toUpperCase()}</span>
               ) : (
-                <Users className="w-4 h-4 text-white/40" />
+                <Users className="w-4 h-4 text-white/85" />
               )}
             </div>
           </div>
         ) : (
-          <p className="text-xs font-mono text-white/40">ANONYMOUS_ACCESS_RESTRICTED</p>
+          <p className="text-xs font-mono text-white/85">ANONYMOUS_ACCESS_RESTRICTED</p>
         )}
       </div>
     </header>
@@ -265,7 +265,7 @@ function NotificationToast({ notification, onClose }: { notification: Notificati
     >
       {icons[notification.type]}
       <p className="text-xs font-mono text-white/80">{notification.message}</p>
-      <button onClick={onClose} className="ml-auto text-white/20 hover:text-white transition-colors">
+      <button onClick={onClose} className="ml-auto text-white/75 hover:text-white transition-colors">
         <Plus className="w-4 h-4 rotate-45" />
       </button>
     </motion.div>
@@ -297,7 +297,7 @@ function ConfirmationModal({ isOpen, title, message, onConfirm, onCancel }: { is
             </div>
             <h3 className="text-xl font-medium tracking-tight uppercase">{title}</h3>
           </div>
-          <p className="text-sm font-mono text-white/40 mb-8 leading-relaxed">
+          <p className="text-sm font-mono text-white/85 mb-8 leading-relaxed">
             {message}
           </p>
           <div className="flex gap-4">
@@ -309,7 +309,7 @@ function ConfirmationModal({ isOpen, title, message, onConfirm, onCancel }: { is
             </button>
             <button
               onClick={onCancel}
-              className="flex-1 border border-white/10 text-white/40 h-12 text-xs font-semibold uppercase tracking-widest hover:bg-white/5 transition-colors"
+              className="flex-1 border border-white/10 text-white/85 h-12 text-xs font-semibold uppercase tracking-widest hover:bg-white/5 transition-colors"
             >
               Abort
             </button>
@@ -335,8 +335,8 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
   return (
     <div className="bg-[#0a0a0a] p-6 group hover:bg-white/[0.02] transition-colors">
       <div className="flex items-center gap-3 mb-1">
-        <Icon className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
-        <span className="text-[10px] uppercase font-mono text-white/40 tracking-wider leading-none">{label}</span>
+        <Icon className="w-4 h-4 text-white/85 group-hover:text-white transition-colors" />
+        <span className="text-[10px] uppercase font-mono text-white/85 tracking-wider leading-none">{label}</span>
       </div>
       <div className={`text-2xl font-mono font-medium ${color}`}>{value}</div>
     </div>
@@ -375,40 +375,40 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
       <div className="flex justify-between items-start mb-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${
-              project.status === 'deployed' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
-              project.status === 'in-progress' ? 'border-blue-500/30 text-blue-400 bg-blue-500/5' :
-              'border-white/10 text-white/60 bg-white/5'
+            <span className={`text-[11px] font-mono font-bold uppercase px-3 py-1 border ${
+              project.status === 'deployed' ? 'border-green-500/50 text-green-400 bg-green-500/15' :
+              project.status === 'in-progress' ? 'border-blue-500/50 text-blue-400 bg-blue-500/15' :
+              'border-white/30 text-white bg-white/20'
             }`}>
               {project.status.replace('-', ' ')}
             </span>
-            <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border border-white/5 bg-white/5 ${riskColor}`}>
+            <span className={`text-[11px] font-mono font-bold uppercase px-3 py-1 border border-white/20 bg-white/10 ${riskColor}`}>
               {riskLabel}
             </span>
           </div>
           <h3 className="text-lg font-medium leading-none mb-1 group-hover:text-white transition-colors">{project.name}</h3>
           <div className="flex items-center gap-3">
-            <span className="text-[9px] font-mono text-white/20 uppercase tracking-widest">{getRelativeTime(project.created_at)}</span>
+            <span className="text-[11px] font-mono text-white/75 uppercase tracking-widest">{getRelativeTime(project.created_at)}</span>
             <div className="flex gap-2">
               {project.tags.map(tag => (
-                <span key={tag} className="text-[9px] font-mono text-white/30">#{tag}</span>
+                <span key={tag} className="text-[11px] font-mono text-white/80">#{tag}</span>
               ))}
             </div>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-[10px] font-mono text-white/40 uppercase mb-1">Finish_ETA</p>
+          <p className="text-[10px] font-mono text-white/85 uppercase mb-1">Finish_ETA</p>
           <div className={`text-xl font-mono font-medium ${riskColor}`}>{calendarDays}d</div>
-          <p className="text-[8px] font-mono text-white/20 uppercase">Effort: {expectedManDays.toFixed(1)}m/d</p>
+          <p className="text-[10px] font-mono text-white/75 uppercase">Effort: {expectedManDays.toFixed(1)}m/d</p>
         </div>
       </div>
 
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
         <div className="flex items-center gap-2">
-          <Users className="w-3 h-3 text-white/20" />
-          <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">{teamName}</span>
+          <Users className="w-3 h-3 text-white/75" />
+          <span className="text-[10px] font-mono text-white/85 uppercase tracking-widest">{teamName}</span>
         </div>
-        <button className="flex items-center gap-1 text-[10px] uppercase font-mono text-white/60 hover:text-white transition-all group/btn">
+        <button className="flex items-center gap-1 text-[10px] uppercase font-mono text-white/90 hover:text-white transition-all group/btn">
           Forecast <ChevronRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
         </button>
       </div>
@@ -425,9 +425,9 @@ function TeamMember({ name, role, load, efficiency, urgent }: { name: string, ro
       <div className="flex justify-between items-start">
         <div>
           <h4 className="text-xs font-medium text-white/80">{name}</h4>
-          <p className="text-[10px] font-mono text-white/20 uppercase">{role}</p>
+          <p className="text-[10px] font-mono text-white/75 uppercase">{role}</p>
         </div>
-        <div className={`px-2 py-0.5 rounded-sm ${loadBg} ${loadColor} text-[9px] font-mono font-bold`}>
+        <div className={`px-2 py-0.5 rounded-sm ${loadBg} ${loadColor} text-[11px] font-mono font-bold`}>
           {load}% LOAD
         </div>
       </div>
@@ -438,7 +438,7 @@ function TeamMember({ name, role, load, efficiency, urgent }: { name: string, ro
           className={`h-full ${load >= 100 ? 'bg-red-500' : load >= 70 ? 'bg-yellow-500' : 'bg-green-500'}`}
         />
       </div>
-      <div className="flex justify-between text-[8px] font-mono text-white/20 uppercase">
+      <div className="flex justify-between text-[10px] font-mono text-white/75 uppercase">
         <span>Efficiency: {(efficiency * 100).toFixed(0)}%</span>
         <span>{load > 100 ? 'CRITICAL_OVERAGE' : 'STABLE_BANDWIDTH'}</span>
       </div>
@@ -521,7 +521,7 @@ function AdminDashboard({
       <div>
         <div className="mb-8">
           <h2 className="text-3xl font-medium tracking-tight mb-2">Internal Identity Console</h2>
-          <p className="text-sm text-white/40 font-mono tracking-tighter">
+          <p className="text-sm text-white/85 font-mono tracking-tighter">
             Super Admin Privileges: Calibrate squad access levels and verify engineering credentials.
           </p>
         </div>
@@ -530,9 +530,9 @@ function AdminDashboard({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white/5 border-b border-white/10">
-                <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/40">User Identity</th>
-                <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/40">Current Role</th>
-                <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/40 text-right">Access Calibration</th>
+                <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/85">User Identity</th>
+                <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/85">Current Role</th>
+                <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/85 text-right">Access Calibration</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -547,14 +547,14 @@ function AdminDashboard({
                       </div>
                       <div className="flex flex-col">
                         <span className="font-mono text-xs">{profile.full_name || profile.email}</span>
-                        {profile.phone && <span className="text-[8px] font-mono text-white/20">{profile.phone}</span>}
+                        {profile.phone && <span className="text-[10px] font-mono text-white/75">{profile.phone}</span>}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-[10px] font-mono uppercase px-2 py-0.5 border ${profile.role === 'super_admin' ? 'border-red-500/30 text-red-500 bg-red-500/5' :
                       profile.role === 'pm' ? 'border-blue-500/30 text-blue-400 bg-blue-500/5' :
-                        'border-white/10 text-white/40 bg-white/5'
+                        'border-white/10 text-white/85 bg-white/5'
                       }`}>
                       {profile.role.replace('_', ' ')}
                     </span>
@@ -564,20 +564,20 @@ function AdminDashboard({
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => onUpdateRole(profile.id, 'pm')}
-                          className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'pm' ? 'bg-blue-500 text-white' : 'border border-white/10 text-white/40 hover:border-white/30'}`}
+                          className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'pm' ? 'bg-blue-500 text-white' : 'border border-white/10 text-white/85 hover:border-white/30'}`}
                         >
                           PM_ROLE
                         </button>
                         <button
                           onClick={() => onUpdateRole(profile.id, 'viewer')}
-                          className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'viewer' ? 'bg-white text-black' : 'border border-white/10 text-white/40 hover:border-white/30'}`}
+                          className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'viewer' ? 'bg-white text-black' : 'border border-white/10 text-white/85 hover:border-white/30'}`}
                         >
                           VIEWER
                         </button>
                       </div>
                     )}
                     {profile.role === 'super_admin' && (
-                      <span className="text-[10px] font-mono text-white/20 uppercase">Immutable_Root</span>
+                      <span className="text-[10px] font-mono text-white/75 uppercase">Immutable_Root</span>
                     )}
                   </td>
                 </tr>
@@ -591,7 +591,7 @@ function AdminDashboard({
       <div>
         <div className="mb-6">
           <h2 className="text-3xl font-medium tracking-tight mb-2">Squad Configuration</h2>
-          <p className="text-sm text-white/40 font-mono tracking-tighter">
+          <p className="text-sm text-white/85 font-mono tracking-tighter">
             Assemble cross-functional squads. Assign one Lead (PM) and multiple Engineers (Viewers).
           </p>
         </div>
@@ -601,19 +601,19 @@ function AdminDashboard({
             <h3 className="text-sm font-mono uppercase tracking-widest mb-6">{editingTeamId ? 'Update Squad' : 'Initialize Squad'}</h3>
             <form onSubmit={handleCreateTeam} className="space-y-4">
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Squad Designation</label>
+                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Squad Designation</label>
                 <input
                   required
                   type="text"
                   value={newTeamName}
                   onChange={e => setNewTeamName(e.target.value)}
-                  className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none placeholder:text-white/20"
+                  className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none placeholder:text-white/75"
                   placeholder="E.g. SQUAD_DELTA"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Assign Project Manager (PM)</label>
+                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Project Manager (PM)</label>
                 <select
                   required
                   value={selectedPm}
@@ -628,7 +628,7 @@ function AdminDashboard({
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Assign Engineers (Viewers)</label>
+                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Engineers (Viewers)</label>
                 <div className="border border-white/10 bg-black max-h-40 overflow-y-auto p-2 space-y-1">
                   {availableDevs.map(dev => (
                     <label key={dev.id} className="flex items-center gap-2 text-xs font-mono cursor-pointer hover:bg-white/5 p-1 transition-colors">
@@ -644,7 +644,7 @@ function AdminDashboard({
                       <span>{dev.full_name || dev.email}</span>
                     </label>
                   ))}
-                  {availableDevs.length === 0 && <p className="text-[10px] text-white/40 italic p-1">No unassigned engineers detected.</p>}
+                  {availableDevs.length === 0 && <p className="text-[10px] text-white/85 italic p-1">No unassigned engineers detected.</p>}
                 </div>
               </div>
 
@@ -659,7 +659,7 @@ function AdminDashboard({
                   <button
                     type="button"
                     onClick={cancelEditing}
-                    className="flex-1 border border-white/10 text-white/40 h-10 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-widest mt-4"
+                    className="flex-1 border border-white/10 text-white/85 h-10 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-widest mt-4"
                   >
                     Cancel
                   </button>
@@ -673,8 +673,8 @@ function AdminDashboard({
             <div className="overflow-y-auto p-6 space-y-4 flex-1">
               {teams.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                  <Users className="w-8 h-8 text-white/20 mb-3" />
-                  <p className="text-xs font-mono text-white/40 text-center uppercase">No squads initialized.</p>
+                  <Users className="w-8 h-8 text-white/75 mb-3" />
+                  <p className="text-xs font-mono text-white/85 text-center uppercase">No squads initialized.</p>
                 </div>
               )}
               {teams.map(team => {
@@ -688,37 +688,37 @@ function AdminDashboard({
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-sm bg-white/10 flex items-center justify-center border border-white/10">
-                          <Zap className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
+                          <Zap className="w-4 h-4 text-white/90 group-hover:text-white transition-colors" />
                         </div>
                         <h4 className="font-sans font-medium text-lg tracking-tight">{team.name}</h4>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => startEditing(team)}
-                          className="p-1.5 border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-colors"
+                          className="p-1.5 border border-white/10 text-white/85 hover:text-white hover:border-white/30 transition-colors"
                           title="Edit Squad"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => onDeleteTeam(team.id)}
-                          className="p-1.5 border border-white/10 text-white/40 hover:text-red-500 hover:border-red-500/30 transition-colors"
+                          className="p-1.5 border border-white/10 text-white/85 hover:text-red-500 hover:border-red-500/30 transition-colors"
                           title="Delete Squad"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-[10px] font-mono text-white/40 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id?.substring(0, 8) || 'UNKNOWN'}</span>
+                        <span className="text-[10px] font-mono text-white/85 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id?.substring(0, 8) || 'UNKNOWN'}</span>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
                       <div>
-                        <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Lead (PM)</p>
+                        <p className="text-[11px] font-mono text-white/85 uppercase mb-2">Lead (PM)</p>
                         <p className="text-xs font-mono text-blue-400 flex items-center gap-1.5"><Users className="w-3 h-3" /> {pm?.full_name || pm?.email || 'Unknown'}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Engineers ({squadDevs.length})</p>
+                        <p className="text-[11px] font-mono text-white/85 uppercase mb-2">Engineers ({squadDevs.length})</p>
                         <div className="space-y-1.5">
-                          {squadDevs.length === 0 && <p className="text-[10px] font-mono text-white/20 italic">None assigned</p>}
+                          {squadDevs.length === 0 && <p className="text-[10px] font-mono text-white/75 italic">None assigned</p>}
                           {squadDevs.map(d => (
                             <p key={d?.id} className="text-xs font-mono text-white/80">{d?.full_name || d?.email}</p>
                           ))}
@@ -786,25 +786,25 @@ function ProjectDetailsModal({
           <div className="flex justify-between items-start mb-8">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <BrainCircuit className="w-4 h-4 text-white/40" />
-                <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em]">Asset Analysis Console</span>
+                <BrainCircuit className="w-4 h-4 text-white/85" />
+                <span className="text-[10px] font-mono text-white/80 uppercase tracking-[0.2em]">Asset Analysis Console</span>
               </div>
               <h3 className="text-2xl font-medium tracking-tight">Predictive Workspace: {project.name}</h3>
             </div>
             <button onClick={onClose} className="p-2 border border-white/10 hover:bg-white/5 transition-colors">
-              <Plus className="w-5 h-5 rotate-45 text-white/20" />
+              <Plus className="w-5 h-5 rotate-45 text-white/75" />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Project Designation</label>
+                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Project Designation</label>
                 <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Status</label>
+                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Status</label>
                   <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
                     <option value="planning">PLANNING</option>
                     <option value="in-progress">IN_PROGRESS</option>
@@ -813,7 +813,7 @@ function ProjectDetailsModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Priority</label>
+                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Priority</label>
                   <select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
                     <option value="low">LOW</option>
                     <option value="medium">MEDIUM</option>
@@ -822,7 +822,7 @@ function ProjectDetailsModal({
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Allocate Squad</label>
+                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Allocate Squad</label>
                 <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
                   <option value="">UNALLOCATED</option>
                   {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -833,28 +833,28 @@ function ProjectDetailsModal({
             <div className="space-y-6">
               <div className="bg-white/5 border border-white/10 p-6 rounded-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-12 h-12" /></div>
-                <h4 className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-4">Predictive Outcome</h4>
+                <h4 className="text-[10px] font-mono text-white/85 uppercase tracking-widest mb-4">Predictive Outcome</h4>
                 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="bg-white/5 p-3">
-                    <p className="text-[8px] font-mono text-white/20 uppercase mb-1">Man-Days Effort</p>
+                    <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Man-Days Effort</p>
                     <p className="text-xl font-mono">{expected.toFixed(2)}d</p>
                   </div>
                   <div className="bg-blue-500/10 p-3 border border-blue-500/20">
-                    <p className="text-[8px] font-mono text-blue-400 uppercase mb-1">Calendar Finish</p>
+                    <p className="text-[10px] font-mono text-blue-400 uppercase mb-1">Calendar Finish</p>
                     <p className="text-xl font-mono text-blue-400">{calendarExpected}d</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-6">
-                  <div><p className="text-[8px] font-mono text-white/60 uppercase mb-1">Best (Days)</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
-                  <div><p className="text-[8px] font-mono text-white/60 uppercase mb-1">Likely (Days)</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
-                  <div><p className="text-[8px] font-mono text-white/60 uppercase mb-1">Worst (Days)</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
+                  <div><p className="text-[10px] font-mono text-white/90 uppercase mb-1">Best (Days)</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
+                  <div><p className="text-[10px] font-mono text-white/90 uppercase mb-1">Likely (Days)</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
+                  <div><p className="text-[10px] font-mono text-white/90 uppercase mb-1">Worst (Days)</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
                 </div>
 
                 <div className="pt-4 border-t border-white/5">
-                  <div className="flex justify-between items-center"><span className="text-[9px] font-mono text-white/20 uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-yellow-500/80">±{stdDev.toFixed(2)}σ</span></div>
-                  <p className="text-[8px] font-mono text-white/10 mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
+                  <div className="flex justify-between items-center"><span className="text-[11px] font-mono text-white/75 uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-yellow-500/80">±{stdDev.toFixed(2)}σ</span></div>
+                  <p className="text-[10px] font-mono text-white/70 mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
                 </div>
               </div>
               <button type="submit" className="w-full bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
@@ -875,7 +875,7 @@ function SquadRosterModal({ teams, profiles, onClose }: { teams: Team[], profile
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-4xl p-8 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/10">
           <h3 className="text-xl font-medium tracking-tight uppercase">Operational Squad Roster</h3>
-          <button onClick={onClose} className="p-2 border border-white/10 hover:bg-white/5 transition-colors"><Plus className="w-5 h-5 rotate-45 text-white/20" /></button>
+          <button onClick={onClose} className="p-2 border border-white/10 hover:bg-white/5 transition-colors"><Plus className="w-5 h-5 rotate-45 text-white/75" /></button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {teams.map(team => {
@@ -885,16 +885,16 @@ function SquadRosterModal({ teams, profiles, onClose }: { teams: Team[], profile
             return (
               <div key={team.id} className="border border-white/10 p-6 bg-white/5">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-8 h-8 rounded-sm bg-white/10 flex items-center justify-center border border-white/10"><Zap className="w-4 h-4 text-white/60" /></div>
+                  <div className="w-8 h-8 rounded-sm bg-white/10 flex items-center justify-center border border-white/10"><Zap className="w-4 h-4 text-white/90" /></div>
                   <h4 className="text-lg font-medium">{team.name}</h4>
                 </div>
                 <div className="space-y-6">
-                  <div><p className="text-[9px] font-mono text-white/20 uppercase mb-2">Squad Lead</p><p className="text-sm text-blue-400 font-mono">{pm?.email || 'N/A'}</p></div>
+                  <div><p className="text-[11px] font-mono text-white/75 uppercase mb-2">Squad Lead</p><p className="text-sm text-blue-400 font-mono">{pm?.email || 'N/A'}</p></div>
                   <div>
-                    <p className="text-[9px] font-mono text-white/20 uppercase mb-2">Engineering Corps ({engineers.length})</p>
+                    <p className="text-[11px] font-mono text-white/75 uppercase mb-2">Engineering Corps ({engineers.length})</p>
                     <div className="space-y-1">
-                      {engineers.map((e: any) => <p key={e.id} className="text-xs text-white/60 font-mono">{e.email}</p>)}
-                      {engineers.length === 0 && <p className="text-xs text-white/20 italic font-mono">No personnel assigned</p>}
+                      {engineers.map((e: any) => <p key={e.id} className="text-xs text-white/90 font-mono">{e.email}</p>)}
+                      {engineers.length === 0 && <p className="text-xs text-white/75 italic font-mono">No personnel assigned</p>}
                     </div>
                   </div>
                 </div>
@@ -923,17 +923,17 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-md p-8 shadow-2xl">
         <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/10">
           <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
-            <Users className="w-5 h-5 text-white/40" />
+            <Users className="w-5 h-5 text-white/85" />
           </div>
           <div>
             <h3 className="text-xl font-medium tracking-tight uppercase">Identity Profile</h3>
-            <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest">{profile.email}</p>
+            <p className="text-[10px] font-mono text-white/75 uppercase tracking-widest">{profile.email}</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Display Name</label>
+            <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Display Name</label>
             <input
               autoFocus
               required
@@ -946,7 +946,7 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Contact Number</label>
+              <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Contact Number</label>
               <input
                 type="tel"
                 value={phone}
@@ -956,7 +956,7 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Avatar URL</label>
+              <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Avatar URL</label>
               <input
                 type="url"
                 value={avatarUrl}
@@ -966,14 +966,14 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
               />
             </div>
           </div>
-          <div className="bg-white/5 border border-white/10 p-4 text-[10px] font-mono text-white/30 leading-relaxed italic">
+          <div className="bg-white/5 border border-white/10 p-4 text-[10px] font-mono text-white/80 leading-relaxed italic">
             "Your identity will be visible to administrators for squad tasking and precision engineering allocation."
           </div>
           <div className="flex gap-4">
             <button type="submit" className="flex-1 bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all">
               Update Identity
             </button>
-            <button type="button" onClick={onClose} className="flex-1 border border-white/10 text-white/40 h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-white/5 transition-all">
+            <button type="button" onClick={onClose} className="flex-1 border border-white/10 text-white/85 h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-white/5 transition-all">
               Abort
             </button>
           </div>
@@ -1417,7 +1417,7 @@ export default function App() {
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
           className="w-12 h-12 border-2 border-white/10 border-t-white rounded-full"
         />
-        <p className="font-mono text-sm uppercase tracking-widest text-white/40">Initializing Core Engine...</p>
+        <p className="font-mono text-sm uppercase tracking-widest text-white/85">Initializing Core Engine...</p>
       </div>
     );
   }
@@ -1468,20 +1468,20 @@ export default function App() {
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-8">
                 <div>
                   <h2 className="text-3xl font-medium tracking-tight mb-2">Project Workspace</h2>
-                  <p className="text-sm text-white/40 font-mono tracking-tighter">
+                  <p className="text-sm text-white/85 font-mono tracking-tighter">
                     Precision forecasting through engineering overhead modeling and historical drift correction.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto">
                   <div className="relative flex-1 md:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/80" />
                     <input
                       type="text"
                       placeholder="Query system assets..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full bg-[#0c0c0c] border border-white/10 h-10 pl-10 pr-4 text-sm font-mono focus:border-white/30 outline-none transition-all placeholder:text-white/10"
+                      className="w-full bg-[#0c0c0c] border border-white/10 h-10 pl-10 pr-4 text-sm font-mono focus:border-white/30 outline-none transition-all placeholder:text-white/70"
                     />
                   </div>
                   {profile && profile.role !== 'viewer' && (
@@ -1512,10 +1512,10 @@ export default function App() {
                 {filteredProjects.length === 0 && (
                   <div className="col-span-full border-2 border-dashed border-white/5 py-24 flex flex-col items-center justify-center text-center opacity-50">
                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-6">
-                      <BrainCircuit className="w-8 h-8 text-white/20" />
+                      <BrainCircuit className="w-8 h-8 text-white/75" />
                     </div>
                     <h3 className="text-xl font-medium mb-2 uppercase tracking-tight">Zero Assets Found</h3>
-                    <p className="text-sm font-mono text-white/40">Query yielded no matching engineering constructs.</p>
+                    <p className="text-sm font-mono text-white/85">Query yielded no matching engineering constructs.</p>
                   </div>
                 )}
               </div>
@@ -1525,8 +1525,8 @@ export default function App() {
             <div className="space-y-6">
               <div className="border border-white/10 bg-[#0c0c0c] p-6">
                 <div className="flex items-center gap-2 mb-6">
-                  <Users className="w-4 h-4 text-white/40" />
-                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/60">Squad Allocation</h3>
+                  <Users className="w-4 h-4 text-white/85" />
+                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/90">Squad Allocation</h3>
                 </div>
 
                 <div className="space-y-4">
@@ -1547,7 +1547,7 @@ export default function App() {
                       />
                     );
                   })}
-                  {teams.length === 0 && <p className="text-[10px] font-mono text-white/20 italic">No operational units detected.</p>}
+                  {teams.length === 0 && <p className="text-[10px] font-mono text-white/75 italic">No operational units detected.</p>}
                 </div>
 
                 <button
@@ -1562,14 +1562,14 @@ export default function App() {
                 {stats.deliveryConfidence < 85 && <div className="absolute top-0 left-0 w-full h-1 bg-red-500/30 animate-pulse"></div>}
                 <div className="flex items-center gap-2 mb-4">
                   <Zap className={`w-4 h-4 ${stats.deliveryConfidence < 85 ? 'text-red-500' : 'text-yellow-500/60'}`} />
-                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/60">System Insight</h3>
+                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/90">System Insight</h3>
                 </div>
-                <p className={`text-[11px] leading-relaxed font-mono italic ${stats.deliveryConfidence < 85 ? 'text-red-400' : 'text-white/40'}`}>
+                <p className={`text-[11px] leading-relaxed font-mono italic ${stats.deliveryConfidence < 85 ? 'text-red-400' : 'text-white/85'}`}>
                   {stats.insight}
                 </p>
                 <div className="mt-4 flex items-center gap-2">
-                  <TrendingUp className={`w-3 h-3 ${stats.deliveryConfidence < 85 ? 'text-red-500/40' : 'text-white/20'}`} />
-                  <span className="text-[9px] font-mono text-white/20 uppercase tracking-[0.2em]">Live Bias Analysis</span>
+                  <TrendingUp className={`w-3 h-3 ${stats.deliveryConfidence < 85 ? 'text-red-500/40' : 'text-white/75'}`} />
+                  <span className="text-[11px] font-mono text-white/75 uppercase tracking-[0.2em]">Live Bias Analysis</span>
                 </div>
               </div>
             </div>
@@ -1597,17 +1597,17 @@ export default function App() {
             >
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-8 h-8 bg-white/5 border border-white/10 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-white/60" />
+                  <Zap className="w-4 h-4 text-white/90" />
                 </div>
                 <div>
                   <h3 className="text-xl font-medium tracking-tight">System Initialization</h3>
-                  <p className="text-[10px] font-mono text-white/30 uppercase">New workload asset creation</p>
+                  <p className="text-[10px] font-mono text-white/80 uppercase">New workload asset creation</p>
                 </div>
               </div>
 
               <form onSubmit={handleCreateProject} className="space-y-6">
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Project Designation</label>
+                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Project Designation</label>
                   <input
                     autoFocus
                     required
@@ -1660,7 +1660,7 @@ export default function App() {
 
                 <div className="bg-white/5 border border-white/10 p-4">
                   <div className="flex justify-between items-center text-[10px] uppercase font-mono mb-2">
-                    <span className="text-white/40">Statistical Estimate</span>
+                    <span className="text-white/85">Statistical Estimate</span>
                     <span className="text-white/80">
                       {calculateExpectedTime(Number(pertBest), Number(pertLikely), Number(pertWorst)).toFixed(2)} MAN_DAYS
                     </span>
@@ -1672,7 +1672,7 @@ export default function App() {
                       className="h-full bg-white/40"
                     />
                   </div>
-                  <p className="text-[9px] font-mono text-white/20 mt-2 italic">
+                  <p className="text-[11px] font-mono text-white/75 mt-2 italic">
                     Confidence interval adjusted for ±{Math.sqrt(calculateVariance(Number(pertBest), Number(pertWorst))).toFixed(2)}σ.
                   </p>
                 </div>
@@ -1731,7 +1731,7 @@ export default function App() {
 
       {/* --- Footer / Sidebar Accent --- */}
       <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/80 border-t border-white/5 px-6 py-3 flex justify-between items-center pointer-events-none z-40">
-        <div className="flex items-center gap-4 text-[9px] font-mono text-white/20 uppercase tracking-widest">
+        <div className="flex items-center gap-4 text-[11px] font-mono text-white/75 uppercase tracking-widest">
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse"></div>
             SESSION_HEARTBEAT
@@ -1740,8 +1740,8 @@ export default function App() {
           <LiveClock />
         </div>
         <div className="flex items-center gap-6">
-          <Settings className="w-3 h-3 text-white/10 pointer-events-auto cursor-pointer hover:text-white transition-colors" />
-          <Cpu className="w-3 h-3 text-white/10" />
+          <Settings className="w-3 h-3 text-white/70 pointer-events-auto cursor-pointer hover:text-white transition-colors" />
+          <Cpu className="w-3 h-3 text-white/70" />
         </div>
       </footer>
 
