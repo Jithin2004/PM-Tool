@@ -368,6 +368,21 @@ function AdminDashboard({ profiles, onUpdateRole }: { profiles: Profile[], onUpd
   );
 }
 
+function LiveClock() {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="hidden sm:block">
+      UPTIME: {time.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+    </div>
+  );
+}
+
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -781,7 +796,7 @@ export default function App() {
              SESSION_HEARTBEAT
           </div>
           <div>ENCRYPTION: AES-256-GCM</div>
-          <div className="hidden sm:block">UPTIME: 168:12:44:02</div>
+          <LiveClock />
         </div>
         <div className="flex items-center gap-6">
           <Settings className="w-3 h-3 text-white/10 pointer-events-auto cursor-pointer hover:text-white transition-colors" />
