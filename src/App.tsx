@@ -1043,13 +1043,12 @@ export default function App() {
 
   const syncProfile = async (u: any) => {
     try {
-      const { data: existingProfile } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, role, full_name')
         .eq('id', u.id)
         .single();
 
-      if (existingProfile) {
       if (error && error.code !== 'PGRST116') throw error;
 
       if (!data) {
