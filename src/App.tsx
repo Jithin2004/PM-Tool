@@ -29,6 +29,19 @@ interface Profile {
   created_at: string;
 }
 
+interface TeamData {
+  pm_id: string;
+  developer_ids: string[];
+}
+
+interface Team {
+  id: string;
+  name: string;
+  data: TeamData | null;
+  created_at: string;
+  updated_at?: string;
+}
+
 interface Project {
   id: string;
   name: string;
@@ -299,70 +312,216 @@ function TeamMember({ name, role, load, efficiency, urgent }: { name: string, ro
   );
 }
 
-function AdminDashboard({ profiles, onUpdateRole }: { profiles: Profile[], onUpdateRole: (id: string, role: UserRole) => void }) {
+function AdminDashboard({ 
+  profiles, 
+  teams,
+  onUpdateRole,
+  onCreateTeam
+}: { 
+  profiles: Profile[], 
+  teams: Team[],
+  onUpdateRole: (id: string, role: UserRole) => void,
+  onCreateTeam: (name: string, pmId: string, devIds: string[]) => void
+}) {
+  const [newTeamName, setNewTeamName] = useState('');
+  const [selectedPm, setSelectedPm] = useState('');
+  const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
+
+  const handleCreateTeam = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTeamName || !selectedPm) return;
+    onCreateTeam(newTeamName, selectedPm, selectedDevs);
+    setNewTeamName('');
+    setSelectedPm('');
+    setSelectedDevs([]);
+  };
+
+  const pms = profiles.filter(p => p.role === 'pm');
+  const devs = profiles.filter(p => p.role === 'viewer');
+
   return (
-    <main className="max-w-[1600px] mx-auto px-6 py-12">
-      <div className="mb-12">
-        <h2 className="text-3xl font-medium tracking-tight mb-2">Internal Identity Console</h2>
-        <p className="text-sm text-white/40 font-mono tracking-tighter">
-          Super Admin Privileges: Calibrate squad access levels and verify engineering credentials.
-        </p>
+    <main className="max-w-[1600px] mx-auto px-6 py-12 space-y-16">
+      <div>
+        <div className="mb-8">
+          <h2 className="text-3xl font-medium tracking-tight mb-2">Internal Identity Console</h2>
+          <p className="text-sm text-white/40 font-mono tracking-tighter">
+            Super Admin Privileges: Calibrate squad access levels and verify engineering credentials.
+          </p>
+        </div>
+
+        <div className="border border-white/10 bg-[#0c0c0c] overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-white/5 border-b border-white/10">
+                <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/40">User Identity</th>
+                <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/40">Current Role</th>
+                <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/40 text-right">Access Calibration</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {profiles.map((profile) => (
+                <tr key={profile.id} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center border border-white/10 font-mono text-[10px]">
+                        {profile.email.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-mono text-xs">{profile.email}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`text-[10px] font-mono uppercase px-2 py-0.5 border ${
+                      profile.role === 'super_admin' ? 'border-red-500/30 text-red-500 bg-red-500/5' :
+                      profile.role === 'pm' ? 'border-blue-500/30 text-blue-400 bg-blue-500/5' :
+                      'border-white/10 text-white/40 bg-white/5'
+                    }`}>
+                      {profile.role.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {profile.role !== 'super_admin' && (
+                      <div className="flex justify-end gap-2">
+                         <button 
+                          onClick={() => onUpdateRole(profile.id, 'pm')}
+                          className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'pm' ? 'bg-blue-500 text-white' : 'border border-white/10 text-white/40 hover:border-white/30'}`}
+                        >
+                          PM_ROLE
+                        </button>
+                        <button 
+                          onClick={() => onUpdateRole(profile.id, 'viewer')}
+                          className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'viewer' ? 'bg-white text-black' : 'border border-white/10 text-white/40 hover:border-white/30'}`}
+                        >
+                          VIEWER
+                        </button>
+                      </div>
+                    )}
+                    {profile.role === 'super_admin' && (
+                      <span className="text-[10px] font-mono text-white/20 uppercase">Immutable_Root</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="border border-white/10 bg-[#0c0c0c] overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-white/5 border-b border-white/10">
-              <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/40">User Identity</th>
-              <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/40">Current Role</th>
-              <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/40 text-right">Access Calibration</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {profiles.map((profile) => (
-              <tr key={profile.id} className="hover:bg-white/[0.02] transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center border border-white/10 font-mono text-[10px]">
-                      {profile.email.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="font-mono text-xs">{profile.email}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`text-[10px] font-mono uppercase px-2 py-0.5 border ${
-                    profile.role === 'super_admin' ? 'border-red-500/30 text-red-500 bg-red-500/5' :
-                    profile.role === 'pm' ? 'border-blue-500/30 text-blue-400 bg-blue-500/5' :
-                    'border-white/10 text-white/40 bg-white/5'
-                  }`}>
-                    {profile.role.replace('_', ' ')}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  {profile.role !== 'super_admin' && (
-                    <div className="flex justify-end gap-2">
-                       <button 
-                        onClick={() => onUpdateRole(profile.id, 'pm')}
-                        className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'pm' ? 'bg-blue-500 text-white' : 'border border-white/10 text-white/40 hover:border-white/30'}`}
-                      >
-                        PM_ROLE
-                      </button>
-                      <button 
-                        onClick={() => onUpdateRole(profile.id, 'viewer')}
-                        className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'viewer' ? 'bg-white text-black' : 'border border-white/10 text-white/40 hover:border-white/30'}`}
-                      >
-                        VIEWER
-                      </button>
-                    </div>
-                  )}
-                  {profile.role === 'super_admin' && (
-                    <span className="text-[10px] font-mono text-white/20 uppercase">Immutable_Root</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* --- Squad Configuration Section --- */}
+      <div>
+        <div className="mb-6">
+          <h2 className="text-3xl font-medium tracking-tight mb-2">Squad Configuration</h2>
+          <p className="text-sm text-white/40 font-mono tracking-tighter">
+            Assemble cross-functional squads. Assign one Lead (PM) and multiple Engineers (Viewers).
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="border border-white/10 bg-[#0c0c0c] p-6 lg:col-span-1">
+            <h3 className="text-sm font-mono uppercase tracking-widest mb-6">Initialize Squad</h3>
+            <form onSubmit={handleCreateTeam} className="space-y-4">
+              <div>
+                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Squad Designation</label>
+                <input 
+                  required
+                  type="text" 
+                  value={newTeamName}
+                  onChange={e => setNewTeamName(e.target.value)}
+                  className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none placeholder:text-white/20"
+                  placeholder="E.g. SQUAD_DELTA"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Assign Project Manager (PM)</label>
+                <select 
+                  required
+                  value={selectedPm}
+                  onChange={e => setSelectedPm(e.target.value)}
+                  className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none text-white/80"
+                >
+                  <option value="" disabled>Select PM</option>
+                  {pms.map(pm => (
+                    <option key={pm.id} value={pm.id}>{pm.email}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Assign Engineers (Viewers)</label>
+                <div className="border border-white/10 bg-black max-h-40 overflow-y-auto p-2 space-y-1">
+                  {devs.map(dev => (
+                    <label key={dev.id} className="flex items-center gap-2 text-xs font-mono cursor-pointer hover:bg-white/5 p-1 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        className="accent-white"
+                        checked={selectedDevs.includes(dev.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedDevs([...selectedDevs, dev.id]);
+                          else setSelectedDevs(selectedDevs.filter(id => id !== dev.id));
+                        }}
+                      />
+                      <span>{dev.email}</span>
+                    </label>
+                  ))}
+                  {devs.length === 0 && <p className="text-[10px] text-white/40 italic p-1">No engineers available.</p>}
+                </div>
+              </div>
+
+              <button 
+                type="submit"
+                className="w-full bg-white text-black h-10 font-medium hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest mt-4"
+              >
+                Form Squad
+              </button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2 border border-white/10 bg-[#0c0c0c] overflow-hidden flex flex-col">
+            <h3 className="text-sm font-mono uppercase tracking-widest p-6 border-b border-white/10">Active Squads</h3>
+            <div className="overflow-y-auto p-6 space-y-4 flex-1">
+              {teams.length === 0 && (
+                 <div className="flex flex-col items-center justify-center py-10 opacity-50">
+                    <Users className="w-8 h-8 text-white/20 mb-3" />
+                    <p className="text-xs font-mono text-white/40 text-center uppercase">No squads initialized.</p>
+                 </div>
+              )}
+              {teams.map(team => {
+                 const pmId = team.data?.pm_id;
+                 const devIds = team.data?.developer_ids || [];
+                 const pm = profiles.find(p => p.id === pmId);
+                 const squadDevs = devIds.map(id => profiles.find(p => p.id === id)).filter(Boolean);
+                 return (
+                   <div key={team.id} className="border border-white/10 p-4 bg-white/5 hover:border-white/30 transition-colors group">
+                     <div className="flex justify-between items-start mb-4">
+                       <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-sm bg-white/10 flex items-center justify-center border border-white/10">
+                            <Zap className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
+                          </div>
+                          <h4 className="font-sans font-medium text-lg tracking-tight">{team.name}</h4>
+                       </div>
+                       <span className="text-[10px] font-mono text-white/40 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id.substring(0, 8)}</span>
+                     </div>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                       <div>
+                         <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Lead (PM)</p>
+                         <p className="text-xs font-mono text-blue-400 flex items-center gap-1.5"><Users className="w-3 h-3"/> {pm?.email || 'Unknown'}</p>
+                       </div>
+                       <div>
+                         <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Engineers ({squadDevs.length})</p>
+                         <div className="space-y-1.5">
+                           {squadDevs.length === 0 && <p className="text-[10px] font-mono text-white/20 italic">None assigned</p>}
+                           {squadDevs.map(d => (
+                             <p key={d?.id} className="text-xs font-mono text-white/80">{d?.email}</p>
+                           ))}
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
@@ -386,6 +545,7 @@ function LiveClock() {
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
@@ -429,6 +589,7 @@ export default function App() {
   useEffect(() => {
     if (isAdminView && profile?.role === 'super_admin') {
       fetchProfiles();
+      fetchTeams();
     }
   }, [isAdminView, profile]);
 
@@ -448,6 +609,15 @@ export default function App() {
       .order('created_at', { ascending: true });
     
     if (!error && data) setProfiles(data);
+  };
+
+  const fetchTeams = async () => {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) setTeams(data);
   };
 
   const syncProfile = async (u: any) => {
@@ -502,6 +672,31 @@ export default function App() {
     if (!error) {
       fetchProfiles();
       if (profile?.id === id) setProfile(prev => prev ? { ...prev, role } : null);
+    }
+  };
+
+  const handleCreateTeam = async (name: string, pmId: string, devIds: string[]) => {
+    if (profile?.role !== 'super_admin') return;
+
+    const newTeam = {
+      id: crypto.randomUUID(),
+      name,
+      data: {
+        pm_id: pmId,
+        developer_ids: devIds
+      }
+    };
+
+    const { data, error } = await supabase
+      .from('teams')
+      .insert(newTeam)
+      .select()
+      .single();
+
+    if (!error && data) {
+      setTeams([data, ...teams]);
+    } else {
+      console.error("Team creation failed:", error);
     }
   };
 
@@ -580,7 +775,12 @@ export default function App() {
       <StatsGrid stats={stats} />
 
       {isAdminView && profile?.role === 'super_admin' ? (
-        <AdminDashboard profiles={profiles} onUpdateRole={handleUpdateRole} />
+        <AdminDashboard 
+          profiles={profiles} 
+          teams={teams}
+          onUpdateRole={handleUpdateRole} 
+          onCreateTeam={handleCreateTeam}
+        />
       ) : (
         <main className="max-w-[1600px] mx-auto px-6 py-12">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
