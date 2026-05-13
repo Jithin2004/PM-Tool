@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  BarChart3, 
-  Activity, 
-  Users, 
-  Clock, 
-  Target, 
-  Plus, 
-  Search, 
-  ChevronRight, 
+import {
+  BarChart3,
+  Activity,
+  Users,
+  Clock,
+  Target,
+  Plus,
+  Search,
+  ChevronRight,
   AlertTriangle,
   BrainCircuit,
   Settings,
@@ -104,11 +104,11 @@ function Login() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-6 relative overflow-hidden">
       {/* Grid Overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-20" 
-           style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }}>
+      <div className="absolute inset-0 pointer-events-none opacity-20"
+        style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }}>
       </div>
-      
-      <motion.div 
+
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md bg-[#0c0c0c] border border-white/10 p-10 relative z-10"
@@ -127,7 +127,7 @@ function Login() {
             <p>Authorized personnel only. By entering, you consent to predictive bias modeling and historical data aggregation.</p>
           </div>
 
-          <button 
+          <button
             onClick={handleGoogleLogin}
             className="w-full bg-white text-black h-14 flex items-center justify-center gap-3 font-semibold uppercase tracking-widest text-xs hover:bg-neutral-200 transition-all active:scale-[0.98]"
             id="google-login-btn"
@@ -164,17 +164,17 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
           <p className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">High-Fidelity Engineering System</p>
         </div>
       </div>
-      
+
       <div className="flex items-center gap-6">
         <div className="hidden lg:flex items-center gap-8 mr-4">
-          <button 
+          <button
             onClick={() => onToggleAdmin()}
             className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/40 border-white/10 hover:border-white/30'}`}
           >
             {showAdmin ? 'Close Console' : 'Workspace'}
           </button>
           {profile?.role === 'super_admin' && (
-            <button 
+            <button
               onClick={onToggleAdmin}
               className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/40 border-white/10 hover:border-white/30'}`}
             >
@@ -187,14 +187,14 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
           <p className="text-xs font-mono text-white/60 uppercase">Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/40'}>{profile?.role || 'INITIALIZING...'}</span></p>
           <p className="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em]">{profile?.role === 'viewer' ? 'READ_ONLY_ACCESS' : 'FULL_WRITE_AUTHORITY'}</p>
         </div>
-        
+
         <div className="h-8 w-[1px] bg-white/10 hidden md:block"></div>
-        
+
         {user ? (
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end">
               <p className="text-sm font-medium">{user.email?.split('@')[0]}</p>
-              <button 
+              <button
                 onClick={onLogout}
                 className="text-[10px] font-mono uppercase text-white/40 hover:text-white transition-colors"
                 id="logout-btn"
@@ -203,7 +203,7 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
               </button>
             </div>
             <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
-               <Users className="w-4 h-4 text-white/40" />
+              <Users className="w-4 h-4 text-white/40" />
             </div>
           </div>
         ) : (
@@ -249,12 +249,12 @@ function ConfirmationModal({ isOpen, title, message, onConfirm, onCancel }: { is
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onCancel}
-          className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         />
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -276,7 +276,7 @@ function ConfirmationModal({ isOpen, title, message, onConfirm, onCancel }: { is
               onClick={onConfirm}
               className="flex-1 bg-red-500 text-white h-12 text-xs font-semibold uppercase tracking-widest hover:bg-red-600 transition-colors"
             >
-              Confirm_Operation
+              Delete
             </button>
             <button
               onClick={onCancel}
@@ -315,20 +315,20 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
 }
 
 function ProjectCard({ project, teamName }: { project: Project; teamName: string; key?: string | number }) {
-  const expectedTime = useMemo(() => 
+  const expectedTime = useMemo(() =>
     calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst).toFixed(1),
     [project]
   );
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       layout
       className="border border-white/10 bg-[#0c0c0c] p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden"
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] -mr-16 -mt-16 rounded-full blur-3xl pointer-events-none group-hover:bg-white/[0.05]"></div>
-      
+
       <div className="flex justify-between items-start mb-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -391,7 +391,7 @@ function TeamMember({ name, role, load, efficiency, urgent }: { name: string, ro
         </div>
       </div>
       <div className="w-full bg-white/5 h-1 relative overflow-hidden">
-        <motion.div 
+        <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${Math.min(load, 100)}%` }}
           className={`h-full ${urgent ? 'bg-red-500' : 'bg-white/40'}`}
@@ -405,15 +405,15 @@ function TeamMember({ name, role, load, efficiency, urgent }: { name: string, ro
   );
 }
 
-function AdminDashboard({ 
-  profiles, 
+function AdminDashboard({
+  profiles,
   teams,
   onUpdateRole,
   onCreateTeam,
   onUpdateTeam,
   onDeleteTeam
-}: { 
-  profiles: Profile[], 
+}: {
+  profiles: Profile[],
   teams: Team[],
   onUpdateRole: (id: string, role: UserRole) => void,
   onCreateTeam: (name: string, pmId: string, devIds: string[]) => void,
@@ -428,14 +428,14 @@ function AdminDashboard({
   const handleCreateTeam = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeamName || !selectedPm) return;
-    
+
     if (editingTeamId) {
       onUpdateTeam(editingTeamId, newTeamName, selectedPm, selectedDevs);
       setEditingTeamId(null);
     } else {
       onCreateTeam(newTeamName, selectedPm, selectedDevs);
     }
-    
+
     setNewTeamName('');
     setSelectedPm('');
     setSelectedDevs([]);
@@ -447,7 +447,7 @@ function AdminDashboard({
     setNewTeamName(team.name);
     setSelectedPm(parsedData?.pm_id || '');
     setSelectedDevs(parsedData?.developer_ids || []);
-    
+
     // Scroll to form
     const form = document.getElementById('squad-form');
     if (form) form.scrollIntoView({ behavior: 'smooth' });
@@ -494,24 +494,23 @@ function AdminDashboard({
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-[10px] font-mono uppercase px-2 py-0.5 border ${
-                      profile.role === 'super_admin' ? 'border-red-500/30 text-red-500 bg-red-500/5' :
+                    <span className={`text-[10px] font-mono uppercase px-2 py-0.5 border ${profile.role === 'super_admin' ? 'border-red-500/30 text-red-500 bg-red-500/5' :
                       profile.role === 'pm' ? 'border-blue-500/30 text-blue-400 bg-blue-500/5' :
-                      'border-white/10 text-white/40 bg-white/5'
-                    }`}>
+                        'border-white/10 text-white/40 bg-white/5'
+                      }`}>
                       {profile.role.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     {profile.role !== 'super_admin' && (
                       <div className="flex justify-end gap-2">
-                         <button 
+                        <button
                           onClick={() => onUpdateRole(profile.id, 'pm')}
                           className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'pm' ? 'bg-blue-500 text-white' : 'border border-white/10 text-white/40 hover:border-white/30'}`}
                         >
                           PM_ROLE
                         </button>
-                        <button 
+                        <button
                           onClick={() => onUpdateRole(profile.id, 'viewer')}
                           className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'viewer' ? 'bg-white text-black' : 'border border-white/10 text-white/40 hover:border-white/30'}`}
                         >
@@ -545,9 +544,9 @@ function AdminDashboard({
             <form onSubmit={handleCreateTeam} className="space-y-4">
               <div>
                 <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Squad Designation</label>
-                <input 
+                <input
                   required
-                  type="text" 
+                  type="text"
                   value={newTeamName}
                   onChange={e => setNewTeamName(e.target.value)}
                   className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none placeholder:text-white/20"
@@ -557,7 +556,7 @@ function AdminDashboard({
 
               <div>
                 <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Assign Project Manager (PM)</label>
-                <select 
+                <select
                   required
                   value={selectedPm}
                   onChange={e => setSelectedPm(e.target.value)}
@@ -575,8 +574,8 @@ function AdminDashboard({
                 <div className="border border-white/10 bg-black max-h-40 overflow-y-auto p-2 space-y-1">
                   {devs.map(dev => (
                     <label key={dev.id} className="flex items-center gap-2 text-xs font-mono cursor-pointer hover:bg-white/5 p-1 transition-colors">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="accent-white"
                         checked={selectedDevs.includes(dev.id)}
                         onChange={(e) => {
@@ -592,14 +591,14 @@ function AdminDashboard({
               </div>
 
               <div className="flex gap-2">
-                <button 
+                <button
                   type="submit"
                   className="flex-1 bg-white text-black h-10 font-medium hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest mt-4"
                 >
                   {editingTeamId ? 'Update Squad' : 'Form Squad'}
                 </button>
                 {editingTeamId && (
-                  <button 
+                  <button
                     type="button"
                     onClick={cancelEditing}
                     className="flex-1 border border-white/10 text-white/40 h-10 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-widest mt-4"
@@ -615,61 +614,61 @@ function AdminDashboard({
             <h3 className="text-sm font-mono uppercase tracking-widest p-6 border-b border-white/10">Active Squads</h3>
             <div className="overflow-y-auto p-6 space-y-4 flex-1">
               {teams.length === 0 && (
-                 <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                    <Users className="w-8 h-8 text-white/20 mb-3" />
-                    <p className="text-xs font-mono text-white/40 text-center uppercase">No squads initialized.</p>
-                 </div>
+                <div className="flex flex-col items-center justify-center py-10 opacity-50">
+                  <Users className="w-8 h-8 text-white/20 mb-3" />
+                  <p className="text-xs font-mono text-white/40 text-center uppercase">No squads initialized.</p>
+                </div>
               )}
               {teams.map(team => {
-                 const parsedData = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
-                 const pmId = parsedData?.pm_id;
-                 const devIds = parsedData?.developer_ids || [];
-                 const pm = profiles.find(p => p.id === pmId);
-                 const squadDevs = devIds.map((id: string) => profiles.find(p => p.id === id)).filter(Boolean);
-                 return (
-                   <div key={team.id} className="border border-white/10 p-4 bg-white/5 hover:border-white/30 transition-colors group">
-                     <div className="flex justify-between items-start mb-4">
-                       <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-sm bg-white/10 flex items-center justify-center border border-white/10">
-                            <Zap className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
-                          </div>
-                          <h4 className="font-sans font-medium text-lg tracking-tight">{team.name}</h4>
-                       </div>
-                       <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => startEditing(team)}
-                            className="p-1.5 border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-colors"
-                            title="Edit Squad"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button 
-                            onClick={() => onDeleteTeam(team.id)}
-                            className="p-1.5 border border-white/10 text-white/40 hover:text-red-500 hover:border-red-500/30 transition-colors"
-                            title="Delete Squad"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="text-[10px] font-mono text-white/40 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id?.substring(0, 8) || 'UNKNOWN'}</span>
-                       </div>
-                     </div>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                       <div>
-                         <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Lead (PM)</p>
-                         <p className="text-xs font-mono text-blue-400 flex items-center gap-1.5"><Users className="w-3 h-3"/> {pm?.email || 'Unknown'}</p>
-                       </div>
-                       <div>
-                         <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Engineers ({squadDevs.length})</p>
-                         <div className="space-y-1.5">
-                           {squadDevs.length === 0 && <p className="text-[10px] font-mono text-white/20 italic">None assigned</p>}
-                           {squadDevs.map(d => (
-                             <p key={d?.id} className="text-xs font-mono text-white/80">{d?.email}</p>
-                           ))}
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 );
+                const parsedData = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
+                const pmId = parsedData?.pm_id;
+                const devIds = parsedData?.developer_ids || [];
+                const pm = profiles.find(p => p.id === pmId);
+                const squadDevs = devIds.map((id: string) => profiles.find(p => p.id === id)).filter(Boolean);
+                return (
+                  <div key={team.id} className="border border-white/10 p-4 bg-white/5 hover:border-white/30 transition-colors group">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-sm bg-white/10 flex items-center justify-center border border-white/10">
+                          <Zap className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
+                        </div>
+                        <h4 className="font-sans font-medium text-lg tracking-tight">{team.name}</h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => startEditing(team)}
+                          className="p-1.5 border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-colors"
+                          title="Edit Squad"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteTeam(team.id)}
+                          className="p-1.5 border border-white/10 text-white/40 hover:text-red-500 hover:border-red-500/30 transition-colors"
+                          title="Delete Squad"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-[10px] font-mono text-white/40 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id?.substring(0, 8) || 'UNKNOWN'}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                      <div>
+                        <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Lead (PM)</p>
+                        <p className="text-xs font-mono text-blue-400 flex items-center gap-1.5"><Users className="w-3 h-3" /> {pm?.email || 'Unknown'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Engineers ({squadDevs.length})</p>
+                        <div className="space-y-1.5">
+                          {squadDevs.length === 0 && <p className="text-[10px] font-mono text-white/20 italic">None assigned</p>}
+                          {squadDevs.map(d => (
+                            <p key={d?.id} className="text-xs font-mono text-white/80">{d?.email}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
               })}
             </div>
           </div>
@@ -704,14 +703,14 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Notification and Confirmation State
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {}
+    onConfirm: () => { }
   });
 
   const notify = (message: string, type: Notification['type'] = 'info') => {
@@ -737,9 +736,9 @@ export default function App() {
 
   // Form State
   const [newName, setNewName] = useState('');
-  const [pertBest, setPertBest] = useState(0);
-  const [pertLikely, setPertLikely] = useState(0);
-  const [pertWorst, setPertWorst] = useState(0);
+  const [pertBest, setPertBest] = useState<string>('');
+  const [pertLikely, setPertLikely] = useState<string>('');
+  const [pertWorst, setPertWorst] = useState<string>('');
 
   useEffect(() => {
     const initAuth = async () => {
@@ -780,7 +779,7 @@ export default function App() {
       .from('projects')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (!error && data) setProjects(data);
   };
 
@@ -789,7 +788,7 @@ export default function App() {
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: true });
-    
+
     if (!error && data) setProfiles(data);
   };
 
@@ -798,7 +797,7 @@ export default function App() {
       .from('teams')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (!error && data) setTeams(data);
   };
 
@@ -820,7 +819,7 @@ export default function App() {
 
         const newRole: UserRole = (count === 0) ? 'super_admin' : 'viewer';
         const newProfile = { id: u.id, email: u.email, role: newRole };
-        
+
         const { data: createdProfile, error } = await supabase
           .from('profiles')
           .insert(newProfile)
@@ -865,7 +864,7 @@ export default function App() {
 
     const generateId = () => {
       if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
         const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
       });
@@ -924,7 +923,7 @@ export default function App() {
 
   const handleDeleteTeam = async (id: string) => {
     if (profile?.role !== 'super_admin') return;
-    
+
     askConfirmation(
       "Decommission Squad",
       "Are you sure you want to decommission this squad? All project associations will be lost.",
@@ -958,9 +957,9 @@ export default function App() {
       status: 'planning',
       priority: 'medium',
       efficiency: 0.8,
-      pert_best: Number(pertBest),
-      pert_likely: Number(pertLikely),
-      pert_worst: Number(pertWorst),
+      pert_best: Number(pertBest) || 0,
+      pert_likely: Number(pertLikely) || 0,
+      pert_worst: Number(pertWorst) || 0,
       owner_id: user.id,
       tags: ['NEW']
     };
@@ -975,15 +974,16 @@ export default function App() {
       setProjects([data, ...projects]);
       setIsAdding(false);
       setNewName('');
-      setPertBest(0);
-      setPertLikely(0);
-      setPertWorst(0);
+      setPertBest('');
+      setPertLikely('');
+      setPertWorst('');
+      notify("Asset successfully committed to system.", "success");
     } else {
       console.error("Project creation failed:", error);
     }
   };
 
-  const filteredProjects = projects.filter(p => 
+  const filteredProjects = projects.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -999,7 +999,7 @@ export default function App() {
 
     // Confidence drops by 0.5% for every hour of decay
     const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
-    
+
     // Team allocation based on PMs assigned to projects
     let activeTeams = 0;
     if (teams.length > 0) {
@@ -1023,7 +1023,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
-        <motion.div 
+        <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
           className="w-12 h-12 border-2 border-white/10 border-t-white rounded-full"
@@ -1039,14 +1039,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] font-sans text-white/90 selection:bg-white selection:text-black">
-      <Header 
-        user={user} 
-        profile={profile} 
-        onLogout={handleLogout} 
+      <Header
+        user={user}
+        profile={profile}
+        onLogout={handleLogout}
         onToggleAdmin={() => setIsAdminView(!isAdminView)}
         showAdmin={isAdminView}
       />
-      
+
       <StatsGrid stats={stats} />
 
       <AnimatePresence>
@@ -1055,7 +1055,7 @@ export default function App() {
         ))}
       </AnimatePresence>
 
-      <ConfirmationModal 
+      <ConfirmationModal
         isOpen={confirmState.isOpen}
         title={confirmState.title}
         message={confirmState.message}
@@ -1064,10 +1064,10 @@ export default function App() {
       />
 
       {isAdminView && profile?.role === 'super_admin' ? (
-        <AdminDashboard 
-          profiles={profiles} 
+        <AdminDashboard
+          profiles={profiles}
           teams={teams}
-          onUpdateRole={handleUpdateRole} 
+          onUpdateRole={handleUpdateRole}
           onCreateTeam={handleCreateTeam}
           onUpdateTeam={handleUpdateTeam}
           onDeleteTeam={handleDeleteTeam}
@@ -1083,12 +1083,12 @@ export default function App() {
                     Precision forecasting through engineering overhead modeling and historical drift correction.
                   </p>
                 </div>
-                
+
                 <div className="flex items-center gap-4 w-full md:w-auto">
                   <div className="relative flex-1 md:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Query system assets..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -1096,7 +1096,7 @@ export default function App() {
                     />
                   </div>
                   {profile && profile.role !== 'viewer' && (
-                    <button 
+                    <button
                       onClick={() => setIsAdding(true)}
                       className="bg-white text-black px-4 h-10 flex items-center gap-2 font-medium hover:bg-neutral-200 transition-colors shrink-0"
                       id="add-project-btn"
@@ -1119,7 +1119,7 @@ export default function App() {
                     return <ProjectCard key={project.id} project={project} teamName={teamName} />;
                   })}
                 </AnimatePresence>
-                
+
                 {filteredProjects.length === 0 && (
                   <div className="col-span-full border-2 border-dashed border-white/5 py-24 flex flex-col items-center justify-center text-center opacity-50">
                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-6">
@@ -1134,53 +1134,53 @@ export default function App() {
 
             {/* --- Sidebar: Team Allocation --- */}
             <div className="space-y-6">
-                <div className="border border-white/10 bg-[#0c0c0c] p-6">
-                  <div className="flex items-center gap-2 mb-6">
-                    <Users className="w-4 h-4 text-white/40" />
-                    <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/60">Squad Allocation</h3>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <TeamMember name="Squad Alpha" role="Core Systems" load={88} efficiency={0.92} />
-                    <TeamMember name="Squad Beta" role="Interface Design" load={42} efficiency={0.84} />
-                    <TeamMember name="Squad Gamma" role="Data Pipes" load={110} efficiency={0.71} urgent />
-                  </div>
-                  
-                  <button className="w-full mt-8 py-3 border border-white/5 bg-white/5 text-[9px] uppercase font-mono tracking-widest hover:bg-white/10 transition-colors">
-                    View Full Roster
-                  </button>
+              <div className="border border-white/10 bg-[#0c0c0c] p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <Users className="w-4 h-4 text-white/40" />
+                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/60">Squad Allocation</h3>
                 </div>
 
-                <div className="border border-white/10 bg-[#0c0c0c] p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Zap className="w-4 h-4 text-yellow-500/60" />
-                    <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/60">System Insight</h3>
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-white/40 font-mono italic">
-                    "Squad Gamma is currently at critical load. Expect a 15-20% increase in regression frequency due to fatigue-driven oversight."
-                  </p>
-                  <div className="mt-4 flex items-center gap-2">
-                    <TrendingUp className="w-3 h-3 text-white/20" />
-                    <span className="text-[9px] font-mono text-white/20 uppercase tracking-[0.2em]">Live Bias Analysis</span>
-                  </div>
+                <div className="space-y-4">
+                  <TeamMember name="Squad Alpha" role="Core Systems" load={88} efficiency={0.92} />
+                  <TeamMember name="Squad Beta" role="Interface Design" load={42} efficiency={0.84} />
+                  <TeamMember name="Squad Gamma" role="Data Pipes" load={110} efficiency={0.71} urgent />
                 </div>
+
+                <button className="w-full mt-8 py-3 border border-white/5 bg-white/5 text-[9px] uppercase font-mono tracking-widest hover:bg-white/10 transition-colors">
+                  View Full Roster
+                </button>
+              </div>
+
+              <div className="border border-white/10 bg-[#0c0c0c] p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Zap className="w-4 h-4 text-yellow-500/60" />
+                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/60">System Insight</h3>
+                </div>
+                <p className="text-[11px] leading-relaxed text-white/40 font-mono italic">
+                  "Squad Gamma is currently at critical load. Expect a 15-20% increase in regression frequency due to fatigue-driven oversight."
+                </p>
+                <div className="mt-4 flex items-center gap-2">
+                  <TrendingUp className="w-3 h-3 text-white/20" />
+                  <span className="text-[9px] font-mono text-white/20 uppercase tracking-[0.2em]">Live Bias Analysis</span>
+                </div>
+              </div>
             </div>
           </div>
         </main>
       )}
 
       {/* --- Overlay Components --- */}
-      
+
       <AnimatePresence>
         {isAdding && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-[#0a0a0a]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
             onClick={() => setIsAdding(false)}
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -1200,10 +1200,10 @@ export default function App() {
               <form onSubmit={handleCreateProject} className="space-y-6">
                 <div>
                   <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Project Designation</label>
-                  <input 
+                  <input
                     autoFocus
                     required
-                    type="text" 
+                    type="text"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
                     className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
@@ -1214,32 +1214,38 @@ export default function App() {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">PERT: Best</label>
-                    <input 
+                    <input
                       required
-                      type="number" 
+                      type="number"
+                      step="0.1"
                       value={pertBest}
-                      onChange={e => setPertBest(Number(e.target.value))}
+                      onChange={e => setPertBest(e.target.value)}
                       className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      placeholder="0"
                     />
                   </div>
                   <div>
                     <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">PERT: Expected</label>
-                    <input 
+                    <input
                       required
-                      type="number" 
+                      type="number"
+                      step="0.1"
                       value={pertLikely}
-                      onChange={e => setPertLikely(Number(e.target.value))}
+                      onChange={e => setPertLikely(e.target.value)}
                       className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      placeholder="0"
                     />
                   </div>
                   <div>
                     <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">PERT: Worst</label>
-                    <input 
+                    <input
                       required
-                      type="number" 
+                      type="number"
+                      step="0.1"
                       value={pertWorst}
-                      onChange={e => setPertWorst(Number(e.target.value))}
+                      onChange={e => setPertWorst(e.target.value)}
                       className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      placeholder="0"
                     />
                   </div>
                 </div>
@@ -1248,29 +1254,29 @@ export default function App() {
                   <div className="flex justify-between items-center text-[10px] uppercase font-mono mb-2">
                     <span className="text-white/40">Statistical Estimate</span>
                     <span className="text-white/80">
-                      {calculateExpectedTime(pertBest, pertLikely, pertWorst).toFixed(2)} MAN_DAYS
+                      {calculateExpectedTime(Number(pertBest), Number(pertLikely), Number(pertWorst)).toFixed(2)} MAN_DAYS
                     </span>
                   </div>
                   <div className="w-full bg-white/5 h-1">
-                    <motion.div 
+                    <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: '65%' }}
                       className="h-full bg-white/40"
                     />
                   </div>
                   <p className="text-[9px] font-mono text-white/20 mt-2 italic">
-                    Confidence interval adjusted for ±{Math.sqrt(calculateVariance(pertBest, pertWorst)).toFixed(2)}σ.
+                    Confidence interval adjusted for ±{Math.sqrt(calculateVariance(Number(pertBest), Number(pertWorst))).toFixed(2)}σ.
                   </p>
                 </div>
 
                 <div className="flex gap-4 pt-4">
-                  <button 
+                  <button
                     type="submit"
                     className="flex-1 bg-white text-black h-12 font-medium hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest"
                   >
                     Commit Asset
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setIsAdding(false)}
                     className="flex-1 border border-white/10 h-12 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-widest"
@@ -1288,8 +1294,8 @@ export default function App() {
       <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/80 border-t border-white/5 px-6 py-3 flex justify-between items-center pointer-events-none z-40">
         <div className="flex items-center gap-4 text-[9px] font-mono text-white/20 uppercase tracking-widest">
           <div className="flex items-center gap-1.5">
-             <div className="w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse"></div>
-             SESSION_HEARTBEAT
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse"></div>
+            SESSION_HEARTBEAT
           </div>
           <div>ENCRYPTION: AES-256-GCM</div>
           <LiveClock />
@@ -1301,8 +1307,8 @@ export default function App() {
       </footer>
 
       {/* Grid Overlay for aesthetic */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-20" 
-           style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }}>
+      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-20"
+        style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }}>
       </div>
     </div>
   );
