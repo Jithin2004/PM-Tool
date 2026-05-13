@@ -354,6 +354,7 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
     [project]
   );
   const calendarDays = (expectedManDays / engineerCount).toFixed(1);
+  const stdDev = Math.sqrt(calculateVariance(project.pert_best, project.pert_worst));
 
   const riskColor = stdDev < 1.5 ? 'text-green-400' : stdDev < 3 ? 'text-yellow-400' : 'text-red-500';
   const riskLabel = stdDev < 1.5 ? 'STABLE' : stdDev < 3 ? 'CAUTION' : 'HIGH_RISK';
