@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
 
 // --- Types ---
 type UserRole = 'super_admin' | 'pm' | 'viewer';
@@ -63,6 +64,19 @@ interface Stats {
   deliveryConfidence: number;
   teamBandwidth: number;
   dailyFatigue: number;
+}
+
+interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  message: string;
+}
+
+interface ConfirmState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
 }
 
 // --- Utilities ---
@@ -197,6 +211,83 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
         )}
       </div>
     </header>
+  );
+}
+
+function NotificationToast({ notification, onClose }: { notification: Notification; onClose: () => void; key?: string }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const icons = {
+    success: <CheckCircle2 className="w-4 h-4 text-green-400" />,
+    error: <XCircle className="w-4 h-4 text-red-400" />,
+    info: <Info className="w-4 h-4 text-blue-400" />,
+    warning: <AlertCircle className="w-4 h-4 text-yellow-400" />
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20, y: 0 }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 bg-[#0c0c0c] border border-white/10 p-4 min-w-[300px] shadow-2xl"
+    >
+      {icons[notification.type]}
+      <p className="text-xs font-mono text-white/80">{notification.message}</p>
+      <button onClick={onClose} className="ml-auto text-white/20 hover:text-white transition-colors">
+        <Plus className="w-4 h-4 rotate-45" />
+      </button>
+    </motion.div>
+  );
+}
+
+function ConfirmationModal({ isOpen, title, message, onConfirm, onCancel }: { isOpen: boolean; title: string; message: string; onConfirm: () => void; onCancel: () => void }) {
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onCancel}
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative w-full max-w-md bg-[#0c0c0c] border border-white/10 p-8 shadow-2xl"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-sm bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+            </div>
+            <h3 className="text-xl font-medium tracking-tight uppercase">{title}</h3>
+          </div>
+          <p className="text-sm font-mono text-white/40 mb-8 leading-relaxed">
+            {message}
+          </p>
+          <div className="flex gap-4">
+            <button
+              onClick={onConfirm}
+              className="flex-1 bg-red-500 text-white h-12 text-xs font-semibold uppercase tracking-widest hover:bg-red-600 transition-colors"
+            >
+              Confirm_Operation
+            </button>
+            <button
+              onClick={onCancel}
+              className="flex-1 border border-white/10 text-white/40 h-12 text-xs font-semibold uppercase tracking-widest hover:bg-white/5 transition-colors"
+            >
+              Abort
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 }
 
@@ -613,6 +704,36 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Notification and Confirmation State
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const notify = (message: string, type: Notification['type'] = 'info') => {
+    const id = Math.random().toString(36).substring(7);
+    setNotifications(prev => [...prev, { id, message, type }]);
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const askConfirmation = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmState({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
 
   // Form State
   const [newName, setNewName] = useState('');
@@ -738,7 +859,7 @@ export default function App() {
 
   const handleCreateTeam = async (name: string, pmId: string, devIds: string[]) => {
     if (profile?.role !== 'super_admin') {
-      alert("Unauthorized: Only super admins can create teams.");
+      notify("Unauthorized: Only super admins can create teams.", "error");
       return;
     }
 
@@ -769,10 +890,10 @@ export default function App() {
 
     if (!error && data) {
       setTeams([data, ...teams]);
-      // alert("Squad successfully initialized!"); // Optional success feedback
+      notify("Squad successfully initialized!", "success");
     } else {
       console.error("Team creation failed:", error);
-      alert(`Team creation failed: ${error?.message || JSON.stringify(error)}`);
+      notify(`Team creation failed: ${error?.message || "Unknown error"}`, "error");
     }
   };
 
@@ -794,28 +915,38 @@ export default function App() {
 
     if (!error && data) {
       setTeams(teams.map(t => t.id === id ? data : t));
+      notify("Squad configuration updated.", "success");
     } else {
       console.error("Team update failed:", error);
-      alert(`Team update failed: ${error?.message || JSON.stringify(error)}`);
+      notify(`Team update failed: ${error?.message || "Unknown error"}`, "error");
     }
   };
 
   const handleDeleteTeam = async (id: string) => {
     if (profile?.role !== 'super_admin') return;
     
-    if (!confirm("Are you sure you want to decommission this squad? All project associations will be lost.")) return;
+    askConfirmation(
+      "Decommission Squad",
+      "Are you sure you want to decommission this squad? All project associations will be lost.",
+      async () => {
+        // Attempting to cast ID as UUID if it's currently causing issues
+        // PostgREST handles strings as UUIDs automatically if the column is UUID
+        // The error "operator does not exist: uuid = text" usually points to RLS or 
+        // complex queries, but here we'll just try the direct delete again.
+        const { error } = await supabase
+          .from('teams')
+          .delete()
+          .eq('id', id);
 
-    const { error } = await supabase
-      .from('teams')
-      .delete()
-      .eq('id', id);
-
-    if (!error) {
-      setTeams(teams.filter(t => t.id !== id));
-    } else {
-      console.error("Team deletion failed:", error);
-      alert(`Team deletion failed: ${error?.message || JSON.stringify(error)}`);
-    }
+        if (!error) {
+          setTeams(teams.filter(t => t.id !== id));
+          notify("Squad decommissioned successfully.", "success");
+        } else {
+          console.error("Team deletion failed:", error);
+          notify(`Team deletion failed: ${error.message}`, "error");
+        }
+      }
+    );
   };
 
   const handleCreateProject = async (e: React.FormEvent) => {
@@ -917,6 +1048,20 @@ export default function App() {
       />
       
       <StatsGrid stats={stats} />
+
+      <AnimatePresence>
+        {notifications.map(n => (
+          <NotificationToast key={n.id} notification={n} onClose={() => removeNotification(n.id)} />
+        ))}
+      </AnimatePresence>
+
+      <ConfirmationModal 
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+      />
 
       {isAdminView && profile?.role === 'super_admin' ? (
         <AdminDashboard 
