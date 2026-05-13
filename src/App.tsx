@@ -950,7 +950,14 @@ export default function App() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName || profile?.role === 'viewer') return;
+    if (!newName) {
+      notify("Project designation is required.", "error");
+      return;
+    }
+    if (profile?.role === 'viewer') {
+      notify("Unauthorized: Viewers cannot create assets.", "error");
+      return;
+    }
 
     const newProject = {
       name: newName,
@@ -980,6 +987,7 @@ export default function App() {
       notify("Asset successfully committed to system.", "success");
     } else {
       console.error("Project creation failed:", error);
+      notify(`System Error: ${error?.message || "Failed to commit asset"}`, "error");
     }
   };
 
@@ -1178,7 +1186,6 @@ export default function App() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-[#0a0a0a]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
-            onClick={() => setIsAdding(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
