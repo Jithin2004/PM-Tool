@@ -847,9 +847,9 @@ function ProjectDetailsModal({
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-6">
-                  <div><p className="text-[10px] font-mono text-white/90 uppercase mb-1">Best (Days)</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
-                  <div><p className="text-[10px] font-mono text-white/90 uppercase mb-1">Likely (Days)</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
-                  <div><p className="text-[10px] font-mono text-white/90 uppercase mb-1">Worst (Days)</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
+                  <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">BEST (D)</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
+                  <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">LIKELY (D)</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
+                  <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">WORST (D)</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
                 </div>
 
                 <div className="pt-4 border-t border-white/5">
@@ -1692,7 +1692,7 @@ export default function App() {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 mb-2">PERT: Best (Days)</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: BEST (D)</label>
                     <input
                       required
                       type="number"
@@ -1704,7 +1704,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 mb-2">PERT: Likely (Days)</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: LIKELY (D)</label>
                     <input
                       required
                       type="number"
@@ -1716,7 +1716,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 mb-2">PERT: Worst (Days)</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: WORST (D)</label>
                     <input
                       required
                       type="number"
