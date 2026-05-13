@@ -917,17 +917,24 @@ export default function App() {
 
       if (session?.user) {
         await syncProfile(session.user);
-        await fetchProjects();
+        await Promise.all([
+          fetchProjects(),
+          fetchTeams()
+        ]);
       }
 
       supabase.auth.onAuthStateChange(async (_event, session) => {
         setUser(session?.user || null);
         if (session?.user) {
           await syncProfile(session.user);
-          await fetchProjects();
+          await Promise.all([
+            fetchProjects(),
+            fetchTeams()
+          ]);
         } else {
           setProfile(null);
           setProjects([]);
+          setTeams([]);
         }
       });
 
@@ -940,7 +947,6 @@ export default function App() {
   useEffect(() => {
     if (isAdminView && profile?.role === 'super_admin') {
       fetchProfiles();
-      fetchTeams();
     }
   }, [isAdminView, profile]);
 
