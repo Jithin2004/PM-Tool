@@ -355,26 +355,34 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
   );
   const calendarDays = (expectedManDays / engineerCount).toFixed(1);
 
+  const riskColor = stdDev < 1.5 ? 'text-green-400' : stdDev < 3 ? 'text-yellow-400' : 'text-red-500';
+  const riskLabel = stdDev < 1.5 ? 'STABLE' : stdDev < 3 ? 'CAUTION' : 'HIGH_RISK';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       layout
       onClick={() => onClick(project)}
-      className="border border-white/10 bg-[#0c0c0c] p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden"
+      className={`border border-white/10 bg-[#0c0c0c] p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden ${
+        stdDev >= 3 ? 'border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]' : ''
+      }`}
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] -mr-16 -mt-16 rounded-full blur-3xl pointer-events-none group-hover:bg-white/[0.05]"></div>
+      {stdDev >= 3 && <div className="absolute top-0 left-0 w-full h-0.5 bg-red-500/50"></div>}
 
       <div className="flex justify-between items-start mb-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            {project.priority === 'high' && <div className="w-1 h-4 bg-red-500"></div>}
-            <span className={`text-[10px] font-mono uppercase border px-2 py-0.5 ${
+            <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${
               project.status === 'deployed' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
               project.status === 'in-progress' ? 'border-blue-500/30 text-blue-400 bg-blue-500/5' :
               'border-white/10 text-white/60 bg-white/5'
             }`}>
               {project.status.replace('-', ' ')}
+            </span>
+            <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border border-white/5 bg-white/5 ${riskColor}`}>
+              {riskLabel}
             </span>
           </div>
           <h3 className="text-lg font-medium leading-none mb-1 group-hover:text-white transition-colors">{project.name}</h3>
@@ -389,7 +397,7 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
         </div>
         <div className="text-right">
           <p className="text-[10px] font-mono text-white/40 uppercase mb-1">Finish_ETA</p>
-          <div className="text-xl font-mono font-medium text-white/80">{calendarDays}d</div>
+          <div className={`text-xl font-mono font-medium ${riskColor}`}>{calendarDays}d</div>
           <p className="text-[8px] font-mono text-white/20 uppercase">Effort: {expectedManDays.toFixed(1)}m/d</p>
         </div>
       </div>
@@ -408,27 +416,30 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
 }
 
 function TeamMember({ name, role, load, efficiency, urgent }: { name: string, role: string, load: number, efficiency: number, urgent?: boolean }) {
+  const loadColor = load < 70 ? 'text-green-400' : load < 100 ? 'text-yellow-400' : 'text-red-500';
+  const loadBg = load < 70 ? 'bg-green-500/20' : load < 100 ? 'bg-yellow-500/20' : 'bg-red-500/20';
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-start">
         <div>
-          <p className="text-[11px] font-medium leading-none mb-1">{name}</p>
-          <p className="text-[9px] font-mono text-white/30 uppercase tracking-tighter">{role}</p>
+          <h4 className="text-xs font-medium text-white/80">{name}</h4>
+          <p className="text-[10px] font-mono text-white/20 uppercase">{role}</p>
         </div>
-        <div className={`text-[10px] font-mono ${urgent ? 'text-red-500' : 'text-white/60'}`}>
+        <div className={`px-2 py-0.5 rounded-sm ${loadBg} ${loadColor} text-[9px] font-mono font-bold`}>
           {load}% LOAD
         </div>
       </div>
       <div className="w-full bg-white/5 h-1 relative overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${Math.min(load, 100)}%` }}
-          className={`h-full ${urgent ? 'bg-red-500' : 'bg-white/40'}`}
+          animate={{ width: `${Math.min(100, load)}%` }}
+          className={`h-full ${load >= 100 ? 'bg-red-500' : load >= 70 ? 'bg-yellow-500' : 'bg-green-500'}`}
         />
       </div>
-      <div className="flex justify-between items-center text-[8px] font-mono uppercase tracking-[0.2em] text-white/20">
-        <span>Efficiency: {efficiency}</span>
-        <span>{urgent ? 'DECAY_DETECTION' : 'STABLE'}</span>
+      <div className="flex justify-between text-[8px] font-mono text-white/20 uppercase">
+        <span>Efficiency: {(efficiency * 100).toFixed(0)}%</span>
+        <span>{load > 100 ? 'CRITICAL_OVERAGE' : 'STABLE_BANDWIDTH'}</span>
       </div>
     </div>
   );
@@ -835,9 +846,9 @@ function ProjectDetailsModal({
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-6">
-                  <div><p className="text-[8px] font-mono text-white/10 uppercase mb-1">Best</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-[10px]" /></div>
-                  <div><p className="text-[8px] font-mono text-white/10 uppercase mb-1">Likely</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-[10px]" /></div>
-                  <div><p className="text-[8px] font-mono text-white/10 uppercase mb-1">Worst</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-[10px]" /></div>
+                  <div><p className="text-[8px] font-mono text-white/10 uppercase mb-1">Best (Days)</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-[10px]" /></div>
+                  <div><p className="text-[8px] font-mono text-white/10 uppercase mb-1">Likely (Days)</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-[10px]" /></div>
+                  <div><p className="text-[8px] font-mono text-white/10 uppercase mb-1">Worst (Days)</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-[10px]" /></div>
                 </div>
 
                 <div className="pt-4 border-t border-white/5">
@@ -1546,16 +1557,17 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="border border-white/10 bg-[#0c0c0c] p-6">
+              <div className="border border-white/10 bg-[#0c0c0c] p-6 relative overflow-hidden">
+                {stats.deliveryConfidence < 85 && <div className="absolute top-0 left-0 w-full h-1 bg-red-500/30 animate-pulse"></div>}
                 <div className="flex items-center gap-2 mb-4">
-                  <Zap className="w-4 h-4 text-yellow-500/60" />
+                  <Zap className={`w-4 h-4 ${stats.deliveryConfidence < 85 ? 'text-red-500' : 'text-yellow-500/60'}`} />
                   <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/60">System Insight</h3>
                 </div>
-                <p className="text-[11px] leading-relaxed text-white/40 font-mono italic">
+                <p className={`text-[11px] leading-relaxed font-mono italic ${stats.deliveryConfidence < 85 ? 'text-red-400' : 'text-white/40'}`}>
                   {stats.insight}
                 </p>
                 <div className="mt-4 flex items-center gap-2">
-                  <TrendingUp className="w-3 h-3 text-white/20" />
+                  <TrendingUp className={`w-3 h-3 ${stats.deliveryConfidence < 85 ? 'text-red-500/40' : 'text-white/20'}`} />
                   <span className="text-[9px] font-mono text-white/20 uppercase tracking-[0.2em]">Live Bias Analysis</span>
                 </div>
               </div>
@@ -1608,7 +1620,7 @@ export default function App() {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">PERT: Best</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">PERT: Best (Days)</label>
                     <input
                       required
                       type="number"
@@ -1620,7 +1632,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">PERT: Expected</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">PERT: Likely (Days)</label>
                     <input
                       required
                       type="number"
@@ -1632,7 +1644,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">PERT: Worst</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">PERT: Worst (Days)</label>
                     <input
                       required
                       type="number"
