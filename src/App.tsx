@@ -204,7 +204,7 @@ function StatsGrid({ stats }: { stats: Stats }) {
       <StatCard label="Pipeline Confidence" value={`${stats.deliveryConfidence}%`} icon={Target} color="text-green-400" />
       <StatCard label="Active Workflows" value={stats.totalProjects} icon={BarChart3} />
       <StatCard label="Team Allocation" value={`${stats.teamBandwidth}%`} icon={Users} />
-      <StatCard label="Predictive Decay" value={`-${stats.dailyFatigue}%`} icon={TrendingUp} color="text-yellow-500" />
+      <StatCard label="Predictive Decay" value={`${stats.dailyFatigue}h`} icon={TrendingUp} color="text-yellow-500" />
     </div>
   );
 }
@@ -221,7 +221,7 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
   );
 }
 
-function ProjectCard({ project }: { project: Project; key?: string | number }) {
+function ProjectCard({ project, teamName }: { project: Project; teamName: string; key?: string | number }) {
   const expectedTime = useMemo(() => 
     calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst).toFixed(1),
     [project]
@@ -275,7 +275,7 @@ function ProjectCard({ project }: { project: Project; key?: string | number }) {
       <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
         <div className="flex items-center gap-2 text-[10px] text-white/40 uppercase font-mono">
           <Users className="w-3 h-3" />
-          <span>Core Team S-1</span>
+          <span>{teamName}</span>
         </div>
         <button className="flex items-center gap-1 text-[10px] uppercase font-mono text-white/60 hover:text-white transition-all group/btn">
           View Forecast <ChevronRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
@@ -754,12 +754,38 @@ export default function App() {
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const stats: Stats = {
-    totalProjects: projects.length,
-    deliveryConfidence: 94.2,
-    teamBandwidth: 82.5,
-    dailyFatigue: 4.2
+  const calculateDynamicStats = () => {
+    let totalDecayHours = 0;
+    projects.forEach(p => {
+      const expected = calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
+      // Decay hours based on worst-case overage
+      if (p.pert_worst > expected) {
+        totalDecayHours += (p.pert_worst - expected) * 24;
+      }
+    });
+
+    // Confidence drops by 0.5% for every hour of decay
+    const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
+    
+    // Team allocation based on PMs assigned to projects
+    let activeTeams = 0;
+    if (teams.length > 0) {
+      activeTeams = teams.filter(t => {
+        const pmId = typeof t.data === 'string' ? JSON.parse(t.data)?.pm_id : t.data?.pm_id;
+        return projects.some(p => p.owner_id === pmId);
+      }).length;
+    }
+    const teamBandwidth = teams.length > 0 ? (activeTeams / teams.length) * 100 : 0;
+
+    return {
+      totalProjects: projects.length,
+      deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
+      teamBandwidth: Number(teamBandwidth.toFixed(1)),
+      dailyFatigue: Number(totalDecayHours.toFixed(1))
+    };
   };
+
+  const stats: Stats = useMemo(() => calculateDynamicStats(), [projects, teams]);
 
   if (loading) {
     return (
@@ -835,9 +861,14 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 <AnimatePresence mode="popLayout">
-                  {filteredProjects.map((project) => (
-                    <ProjectCard key={project.id} project={project} />
-                  ))}
+                  {filteredProjects.map((project) => {
+                    const team = teams.find(t => {
+                      const pmId = typeof t.data === 'string' ? JSON.parse(t.data)?.pm_id : t.data?.pm_id;
+                      return pmId === project.owner_id;
+                    });
+                    const teamName = team ? team.name : "Unassigned";
+                    return <ProjectCard key={project.id} project={project} teamName={teamName} />;
+                  })}
                 </AnimatePresence>
                 
                 {filteredProjects.length === 0 && (
