@@ -56,6 +56,7 @@ interface Project {
   pert_worst: number; // days
   created_at: string;
   owner_id?: string;
+  team_id?: string;
   tags: string[];
 }
 
@@ -86,6 +87,24 @@ const calculateExpectedTime = (best: number, likely: number, worst: number) => {
 
 const calculateVariance = (best: number, worst: number) => {
   return Math.pow((worst - best) / 6, 2);
+};
+
+const getRelativeTime = (dateString?: string) => {
+  if (!dateString) return 'INITIALIZING...';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 0) return 'just now';
+  if (diffInSeconds < 60) return 'just now';
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) return `${diffInDays}d ago`;
+  const diffInMonths = Math.floor(diffInDays / 30);
+  return `${diffInMonths}mo ago`;
 };
 
 // --- Components ---
@@ -314,17 +333,21 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
   );
 }
 
-function ProjectCard({ project, teamName }: { project: Project; teamName: string; key?: string | number }) {
+function ProjectCard({ project, teams, onClick }: { project: Project; teams: Team[]; onClick: (p: Project) => void }) {
   const expectedTime = useMemo(() =>
     calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst).toFixed(1),
     [project]
   );
+
+  const team = teams.find(t => t.id === project.team_id);
+  const teamName = team ? team.name : "UNALLOCATED";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       layout
+      onClick={() => onClick(project)}
       className="border border-white/10 bg-[#0c0c0c] p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden"
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] -mr-16 -mt-16 rounded-full blur-3xl pointer-events-none group-hover:bg-white/[0.05]"></div>
@@ -333,15 +356,22 @@ function ProjectCard({ project, teamName }: { project: Project; teamName: string
         <div>
           <div className="flex items-center gap-2 mb-2">
             {project.priority === 'high' && <div className="w-1 h-4 bg-red-500"></div>}
-            <span className="text-[10px] font-mono uppercase bg-white/5 border border-white/10 px-2 py-0.5 text-white/60">
+            <span className={`text-[10px] font-mono uppercase border px-2 py-0.5 ${
+              project.status === 'deployed' ? 'border-green-500/30 text-green-400 bg-green-500/5' :
+              project.status === 'in-progress' ? 'border-blue-500/30 text-blue-400 bg-blue-500/5' :
+              'border-white/10 text-white/60 bg-white/5'
+            }`}>
               {project.status.replace('-', ' ')}
             </span>
           </div>
           <h3 className="text-lg font-medium leading-none mb-1 group-hover:text-white transition-colors">{project.name}</h3>
-          <div className="flex gap-2">
-            {project.tags.map(tag => (
-              <span key={tag} className="text-[9px] font-mono text-white/30">#{tag}</span>
-            ))}
+          <div className="flex items-center gap-3">
+            <span className="text-[9px] font-mono text-white/20 uppercase tracking-widest">{getRelativeTime(project.created_at)}</span>
+            <div className="flex gap-2">
+              {project.tags.map(tag => (
+                <span key={tag} className="text-[9px] font-mono text-white/30">#{tag}</span>
+              ))}
+            </div>
           </div>
         </div>
         <div className="text-right">
@@ -350,28 +380,13 @@ function ProjectCard({ project, teamName }: { project: Project; teamName: string
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        <div className="border border-white/10 p-2 bg-black/40">
-          <p className="text-[9px] font-mono text-white/30 uppercase">Best</p>
-          <p className="text-xs font-mono">{project.pert_best}d</p>
-        </div>
-        <div className="border border-white/10 p-2 bg-black/40">
-          <p className="text-[9px] font-mono text-white/30 uppercase">Likely</p>
-          <p className="text-xs font-mono">{project.pert_likely}d</p>
-        </div>
-        <div className="border border-white/10 p-2 bg-black/40">
-          <p className="text-[9px] font-mono text-white/30 uppercase">Worst</p>
-          <p className="text-xs font-mono">{project.pert_worst}d</p>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
-        <div className="flex items-center gap-2 text-[10px] text-white/40 uppercase font-mono">
-          <Users className="w-3 h-3" />
-          <span>{teamName}</span>
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+        <div className="flex items-center gap-2">
+          <Users className="w-3 h-3 text-white/20" />
+          <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">{teamName}</span>
         </div>
         <button className="flex items-center gap-1 text-[10px] uppercase font-mono text-white/60 hover:text-white transition-all group/btn">
-          View Forecast <ChevronRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
+          Forecast <ChevronRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
         </button>
       </div>
     </motion.div>
@@ -678,7 +693,158 @@ function AdminDashboard({
   );
 }
 
-function LiveClock() {
+function ProjectDetailsModal({
+  project,
+  teams,
+  onClose,
+  onUpdate
+}: {
+  project: Project,
+  teams: Team[],
+  onClose: () => void,
+  onUpdate: (id: string, updates: Partial<Project>) => void
+}) {
+  const [name, setName] = useState(project.name);
+  const [status, setStatus] = useState(project.status);
+  const [priority, setPriority] = useState(project.priority);
+  const [teamId, setTeamId] = useState(project.team_id || '');
+  const [pBest, setPBest] = useState(project.pert_best.toString());
+  const [pLikely, setPLikely] = useState(project.pert_likely.toString());
+  const [pWorst, setPWorst] = useState(project.pert_worst.toString());
+
+  const expected = calculateExpectedTime(Number(pBest), Number(pLikely), Number(pWorst));
+  const variance = calculateVariance(Number(pBest), Number(pWorst));
+  const stdDev = Math.sqrt(variance);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdate(project.id, {
+      name,
+      status: status as any,
+      priority: priority as any,
+      team_id: teamId || undefined,
+      pert_best: Number(pBest),
+      pert_likely: Number(pLikely),
+      pert_worst: Number(pWorst)
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-2xl overflow-hidden shadow-2xl">
+        <div className="p-8">
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <BrainCircuit className="w-4 h-4 text-white/40" />
+                <span className="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em]">Asset Analysis Console</span>
+              </div>
+              <h3 className="text-2xl font-medium tracking-tight">Predictive Workspace: {project.name}</h3>
+            </div>
+            <button onClick={onClose} className="p-2 border border-white/10 hover:bg-white/5 transition-colors">
+              <Plus className="w-5 h-5 rotate-45 text-white/20" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Project Designation</label>
+                <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Status</label>
+                  <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                    <option value="planning">PLANNING</option>
+                    <option value="in-progress">IN_PROGRESS</option>
+                    <option value="review">REVIEW</option>
+                    <option value="deployed">DEPLOYED</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Priority</label>
+                  <select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                    <option value="low">LOW</option>
+                    <option value="medium">MEDIUM</option>
+                    <option value="high">HIGH</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Allocate Squad</label>
+                <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                  <option value="">UNALLOCATED</option>
+                  {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-white/5 border border-white/10 p-6 rounded-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-12 h-12" /></div>
+                <h4 className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-4">PERT Statistics</h4>
+                <div className="grid grid-cols-3 gap-4 mb-6 text-center">
+                  <div><p className="text-[8px] font-mono text-white/20 uppercase mb-1">Optimistic</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-xs" /></div>
+                  <div><p className="text-[8px] font-mono text-white/20 uppercase mb-1">Likely</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-xs" /></div>
+                  <div><p className="text-[8px] font-mono text-white/20 uppercase mb-1">Pessimistic</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-xs" /></div>
+                </div>
+                <div className="space-y-3 pt-4 border-t border-white/5">
+                  <div className="flex justify-between"><span className="text-[9px] font-mono text-white/20 uppercase">Expected Outcome</span><span className="text-xs font-mono text-white">{expected.toFixed(2)}d</span></div>
+                  <div className="flex justify-between"><span className="text-[9px] font-mono text-white/20 uppercase">Sigma Variance</span><span className="text-xs font-mono text-yellow-500/80">±{stdDev.toFixed(2)}d</span></div>
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
+                Commit System Updates
+              </button>
+            </div>
+          </form>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function SquadRosterModal({ teams, profiles, onClose }: { teams: Team[], profiles: Profile[], onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-4xl p-8 max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/10">
+          <h3 className="text-xl font-medium tracking-tight uppercase">Operational Squad Roster</h3>
+          <button onClick={onClose} className="p-2 border border-white/10 hover:bg-white/5 transition-colors"><Plus className="w-5 h-5 rotate-45 text-white/20" /></button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {teams.map(team => {
+            const data = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
+            const pm = profiles.find(p => p.id === data?.pm_id);
+            const engineers = (data?.developer_ids || []).map((id: string) => profiles.find(p => p.id === id)).filter(Boolean);
+            return (
+              <div key={team.id} className="border border-white/10 p-6 bg-white/5">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-8 h-8 rounded-sm bg-white/10 flex items-center justify-center border border-white/10"><Zap className="w-4 h-4 text-white/60" /></div>
+                  <h4 className="text-lg font-medium">{team.name}</h4>
+                </div>
+                <div className="space-y-6">
+                  <div><p className="text-[9px] font-mono text-white/20 uppercase mb-2">Squad Lead</p><p className="text-sm text-blue-400 font-mono">{pm?.email || 'N/A'}</p></div>
+                  <div>
+                    <p className="text-[9px] font-mono text-white/20 uppercase mb-2">Engineering Corps ({engineers.length})</p>
+                    <div className="space-y-1">
+                      {engineers.map((e: any) => <p key={e.id} className="text-xs text-white/60 font-mono">{e.email}</p>)}
+                      {engineers.length === 0 && <p className="text-xs text-white/20 italic font-mono">No personnel assigned</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -703,6 +869,8 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isRosterOpen, setIsRosterOpen] = useState(false);
 
   // Notification and Confirmation State
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -853,6 +1021,24 @@ export default function App() {
     if (!error) {
       fetchProfiles();
       if (profile?.id === id) setProfile(prev => prev ? { ...prev, role } : null);
+    }
+  };
+
+  const handleUpdateProjectMetadata = async (id: string, updates: Partial<Project>) => {
+    const { data, error } = await supabase
+      .from('projects')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (!error && data) {
+      setProjects(projects.map(p => p.id === id ? data : p));
+      if (selectedProject?.id === id) setSelectedProject(data);
+      notify("System metadata synchronized.", "success");
+    } else {
+      console.error("Metadata update failed:", error);
+      notify(`Sync failed: ${error?.message || "Unknown error"}`, "error");
     }
   };
 
@@ -1118,14 +1304,14 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 <AnimatePresence mode="popLayout">
-                  {filteredProjects.map((project) => {
-                    const team = teams.find(t => {
-                      const pmId = typeof t.data === 'string' ? JSON.parse(t.data)?.pm_id : t.data?.pm_id;
-                      return pmId === project.owner_id;
-                    });
-                    const teamName = team ? team.name : "Unassigned";
-                    return <ProjectCard key={project.id} project={project} teamName={teamName} />;
-                  })}
+                  {filteredProjects.map((project) => (
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      teams={teams}
+                      onClick={setSelectedProject}
+                    />
+                  ))}
                 </AnimatePresence>
 
                 {filteredProjects.length === 0 && (
@@ -1149,12 +1335,30 @@ export default function App() {
                 </div>
 
                 <div className="space-y-4">
-                  <TeamMember name="Squad Alpha" role="Core Systems" load={88} efficiency={0.92} />
-                  <TeamMember name="Squad Beta" role="Interface Design" load={42} efficiency={0.84} />
-                  <TeamMember name="Squad Gamma" role="Data Pipes" load={110} efficiency={0.71} urgent />
+                  {teams.slice(0, 3).map(team => {
+                    const teamProjects = projects.filter(p => p.team_id === team.id);
+                    const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
+                    const avgEfficiency = teamProjects.length > 0 ? teamProjects.reduce((acc, p) => acc + p.efficiency, 0) / teamProjects.length : 1;
+                    const load = Math.round((totalExpected / 20) * 100); // Assuming 20 days capacity
+
+                    return (
+                      <TeamMember
+                        key={team.id}
+                        name={team.name}
+                        role={teamProjects.length > 0 ? `${teamProjects.length} Active Workflows` : 'Awaiting Tasking'}
+                        load={Math.min(load, 150)}
+                        efficiency={Number(avgEfficiency.toFixed(2))}
+                        urgent={load > 100}
+                      />
+                    );
+                  })}
+                  {teams.length === 0 && <p className="text-[10px] font-mono text-white/20 italic">No operational units detected.</p>}
                 </div>
 
-                <button className="w-full mt-8 py-3 border border-white/5 bg-white/5 text-[9px] uppercase font-mono tracking-widest hover:bg-white/10 transition-colors">
+                <button
+                  onClick={() => setIsRosterOpen(true)}
+                  className="w-full mt-8 py-3 border border-white/5 bg-white/5 text-[9px] uppercase font-mono tracking-widest hover:bg-white/10 transition-colors"
+                >
                   View Full Roster
                 </button>
               </div>
@@ -1187,6 +1391,7 @@ export default function App() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-[#0a0a0a]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
           >
+            {/* ... rest of the isAdding code ... */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -1294,6 +1499,27 @@ export default function App() {
               </form>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedProject && (
+          <ProjectDetailsModal
+            project={selectedProject}
+            teams={teams}
+            onClose={() => setSelectedProject(null)}
+            onUpdate={handleUpdateProjectMetadata}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isRosterOpen && (
+          <SquadRosterModal
+            teams={teams}
+            profiles={profiles}
+            onClose={() => setIsRosterOpen(false)}
+          />
         )}
       </AnimatePresence>
 
