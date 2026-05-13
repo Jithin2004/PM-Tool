@@ -344,8 +344,9 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
 }
 
 function ProjectCard({ project, teams, onClick }: { project: Project; teams: Team[]; onClick: (p: Project) => void }) {
+  const historicalSquad = project.tags.find(t => t.startsWith('SQUAD:'))?.replace('SQUAD:', '');
   const team = teams.find(t => t.id === project.team_id);
-  const teamName = team ? team.name : "UNALLOCATED";
+  const teamName = team ? team.name : (historicalSquad || "UNALLOCATED");
   const parsedTeamData = team ? (typeof team.data === 'string' ? JSON.parse(team.data) : team.data) : null;
   const engineerCount = Math.max(1, parsedTeamData?.developer_ids?.length || 1);
 
@@ -1070,6 +1071,7 @@ export default function App() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isRosterOpen, setIsRosterOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [dashboardTab, setDashboardTab] = useState<'active' | 'completed'>('active');
 
   // Expose profile modal trigger for header
   useEffect(() => {
@@ -1267,6 +1269,18 @@ export default function App() {
   };
 
   const handleUpdateProjectMetadata = async (id: string, updates: Partial<Project>) => {
+    // Relieve squad and snapshot history upon completion
+    if (updates.status === 'deployed') {
+      const project = projects.find(p => p.id === id);
+      const team = teams.find(t => t.id === (updates.team_id || project?.team_id));
+      if (team) {
+        const historyTag = `SQUAD:${team.name}`;
+        const currentTags = updates.tags || project?.tags || [];
+        updates.tags = [...currentTags.filter(t => !t.startsWith('SQUAD:')), historyTag, 'FINALIZED'];
+        (updates as any).team_id = null;
+      }
+    }
+
     const { data, error } = await supabase
       .from('projects')
       .update(updates)
@@ -1276,7 +1290,7 @@ export default function App() {
 
     if (!error && data) {
       setProjects(projects.map(p => p.id === id ? data : p));
-      notify("System metadata synchronized.", "success");
+      notify("Asset metrics synchronized.", "success");
     } else {
       console.error("Metadata update failed:", error);
       notify(`Sync failed: ${error?.message || "Unknown error"}`, "error");
@@ -1435,13 +1449,16 @@ export default function App() {
     }
   };
 
-  const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProjects = projects.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesTab = dashboardTab === 'active' ? p.status !== 'deployed' : p.status === 'deployed';
+    return matchesSearch && matchesTab;
+  });
 
   const calculateDynamicStats = () => {
+    const activeProjects = projects.filter(p => p.status !== 'deployed');
     let totalDecayHours = 0;
-    projects.forEach(p => {
+    activeProjects.forEach(p => {
       const expected = calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
       if (p.pert_worst > expected) {
         totalDecayHours += (p.pert_worst - expected) * 24;
@@ -1449,14 +1466,14 @@ export default function App() {
     });
 
     const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
-    const teamsWithProjects = new Set(projects.filter(p => p.team_id).map(p => p.team_id));
+    const teamsWithProjects = new Set(activeProjects.filter(p => p.team_id).map(p => p.team_id));
     const teamBandwidth = teams.length > 0 ? (teamsWithProjects.size / teams.length) * 100 : 0;
 
     // Generate dynamic insight
     let insight = "System operations are nominal. No significant architectural bias detected.";
     
     const overloadedSquads = teams.map(t => {
-      const teamProjects = projects.filter(p => p.team_id === t.id);
+      const teamProjects = activeProjects.filter(p => p.team_id === t.id);
       const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
       return { name: t.name, load: (totalExpected / 20) };
     }).filter(s => s.load > 1.0);
@@ -1464,13 +1481,13 @@ export default function App() {
     if (overloadedSquads.length > 0) {
       insight = `"${overloadedSquads[0].name} is currently at critical load (${(overloadedSquads[0].load * 100).toFixed(0)}%). Expect a 15-20% increase in regression frequency due to fatigue."`;
     } else if (deliveryConfidence < 85) {
-      insight = `"Systemic confidence has dropped to ${deliveryConfidence.toFixed(0)}%. Predictive decay suggests high variance in ${projects.filter(p => p.pert_worst > p.pert_likely).length} workstreams."`;
+      insight = `"Systemic confidence has dropped to ${deliveryConfidence.toFixed(0)}%. Predictive decay suggests high variance in ${activeProjects.filter(p => p.pert_worst > p.pert_likely).length} workstreams."`;
     } else if (totalDecayHours > 24) {
       insight = `"Minor predictive decay detected (${totalDecayHours.toFixed(0)}h). Recommend reviewing worst-case buffers on newly initialized assets."`;
     }
 
     return {
-      totalProjects: projects.length,
+      totalProjects: activeProjects.length,
       deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
       teamBandwidth: Number(teamBandwidth.toFixed(1)),
       dailyFatigue: Number(totalDecayHours.toFixed(1)),
@@ -1538,9 +1555,27 @@ export default function App() {
             <div className="lg:col-span-3">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-8">
                 <div>
-                  <h2 className="text-3xl font-medium tracking-tight mb-2">Project Workspace</h2>
+                  <div className="flex items-center gap-6 mb-2">
+                    <h2 className="text-3xl font-medium tracking-tight">Project Workspace</h2>
+                    <div className="flex bg-white/5 p-1 border border-white/5">
+                      <button 
+                        onClick={() => setDashboardTab('active')}
+                        className={`px-3 py-1 text-[9px] font-mono uppercase tracking-widest transition-all ${dashboardTab === 'active' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
+                      >
+                        Active
+                      </button>
+                      <button 
+                        onClick={() => setDashboardTab('completed')}
+                        className={`px-3 py-1 text-[9px] font-mono uppercase tracking-widest transition-all ${dashboardTab === 'completed' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
+                      >
+                        Completed
+                      </button>
+                    </div>
+                  </div>
                   <p className="text-sm text-white/85 font-mono tracking-tighter">
-                    Precision forecasting through engineering overhead modeling and historical drift correction.
+                    {dashboardTab === 'active' 
+                      ? "Precision forecasting through engineering overhead modeling and historical drift correction."
+                      : "Historical repository of finalized assets and squad attribution data."}
                   </p>
                 </div>
 
