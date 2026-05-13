@@ -982,17 +982,32 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
             </div>
             <div>
               <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Avatar Source (URL)</label>
-              <input
-                type="url"
-                value={avatarUrl}
-                onChange={e => setAvatarUrl(e.target.value)}
-                className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                placeholder="https://..."
-              />
+              {avatarUrl?.startsWith('data:image') ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-black border border-white/10 h-11 px-4 font-mono text-xs flex items-center text-blue-400/80">
+                    [LOCAL_GALLERY_IMAGE]
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setAvatarUrl('')}
+                    className="h-11 px-3 border border-red-500/30 text-red-400 font-mono text-[9px] uppercase hover:bg-red-500/10"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="url"
+                  value={avatarUrl}
+                  onChange={e => setAvatarUrl(e.target.value)}
+                  className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                  placeholder="https://..."
+                />
+              )}
             </div>
           </div>
           <div className="bg-white/5 border border-white/10 p-4 text-[10px] font-mono text-white/80 leading-relaxed italic">
-            "Note: Your profile picture is automatically synced from Google by default, but you can override it here."
+            "Note: Your profile picture is automatically synced from Google. Uploading from your gallery will create a local override."
           </div>
           <div className="flex gap-4">
             <button type="submit" className="flex-1 bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all">
