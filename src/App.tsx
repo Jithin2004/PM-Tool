@@ -340,13 +340,16 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
 }
 
 function ProjectCard({ project, teams, onClick }: { project: Project; teams: Team[]; onClick: (p: Project) => void }) {
-  const expectedTime = useMemo(() =>
-    calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst).toFixed(1),
-    [project]
-  );
-
   const team = teams.find(t => t.id === project.team_id);
   const teamName = team ? team.name : "UNALLOCATED";
+  const parsedTeamData = team ? (typeof team.data === 'string' ? JSON.parse(team.data) : team.data) : null;
+  const engineerCount = Math.max(1, parsedTeamData?.developer_ids?.length || 1);
+
+  const expectedManDays = useMemo(() =>
+    calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst),
+    [project]
+  );
+  const calendarDays = (expectedManDays / engineerCount).toFixed(1);
 
   return (
     <motion.div
@@ -381,8 +384,9 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
           </div>
         </div>
         <div className="text-right">
-          <p className="text-[10px] font-mono text-white/40 uppercase mb-1">E(time)</p>
-          <div className="text-xl font-mono font-medium text-white/80">{expectedTime}d</div>
+          <p className="text-[10px] font-mono text-white/40 uppercase mb-1">Finish_ETA</p>
+          <div className="text-xl font-mono font-medium text-white/80">{calendarDays}d</div>
+          <p className="text-[8px] font-mono text-white/20 uppercase">Effort: {expectedManDays.toFixed(1)}m/d</p>
         </div>
       </div>
 
@@ -730,7 +734,12 @@ function ProjectDetailsModal({
   const [pLikely, setPLikely] = useState(project.pert_likely.toString());
   const [pWorst, setPWorst] = useState(project.pert_worst.toString());
 
+  const team = teams.find(t => t.id === teamId);
+  const parsedTeamData = team ? (typeof team.data === 'string' ? JSON.parse(team.data) : team.data) : null;
+  const engineerCount = Math.max(1, parsedTeamData?.developer_ids?.length || 1);
+
   const expected = calculateExpectedTime(Number(pBest), Number(pLikely), Number(pWorst));
+  const calendarExpected = (expected / engineerCount).toFixed(2);
   const variance = calculateVariance(Number(pBest), Number(pWorst));
   const stdDev = Math.sqrt(variance);
 
@@ -803,15 +812,28 @@ function ProjectDetailsModal({
             <div className="space-y-6">
               <div className="bg-white/5 border border-white/10 p-6 rounded-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-12 h-12" /></div>
-                <h4 className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-4">PERT Statistics</h4>
-                <div className="grid grid-cols-3 gap-4 mb-6 text-center">
-                  <div><p className="text-[8px] font-mono text-white/20 uppercase mb-1">Optimistic</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-xs" /></div>
-                  <div><p className="text-[8px] font-mono text-white/20 uppercase mb-1">Likely</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-xs" /></div>
-                  <div><p className="text-[8px] font-mono text-white/20 uppercase mb-1">Pessimistic</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-xs" /></div>
+                <h4 className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-4">Predictive Outcome</h4>
+                
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-white/5 p-3">
+                    <p className="text-[8px] font-mono text-white/20 uppercase mb-1">Man-Days Effort</p>
+                    <p className="text-xl font-mono">{expected.toFixed(2)}d</p>
+                  </div>
+                  <div className="bg-blue-500/10 p-3 border border-blue-500/20">
+                    <p className="text-[8px] font-mono text-blue-400 uppercase mb-1">Calendar Finish</p>
+                    <p className="text-xl font-mono text-blue-400">{calendarExpected}d</p>
+                  </div>
                 </div>
-                <div className="space-y-3 pt-4 border-t border-white/5">
-                  <div className="flex justify-between"><span className="text-[9px] font-mono text-white/20 uppercase">Expected Outcome</span><span className="text-xs font-mono text-white">{expected.toFixed(2)}d</span></div>
-                  <div className="flex justify-between"><span className="text-[9px] font-mono text-white/20 uppercase">Sigma Variance</span><span className="text-xs font-mono text-yellow-500/80">±{stdDev.toFixed(2)}d</span></div>
+
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                  <div><p className="text-[8px] font-mono text-white/10 uppercase mb-1">Best</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-[10px]" /></div>
+                  <div><p className="text-[8px] font-mono text-white/10 uppercase mb-1">Likely</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-[10px]" /></div>
+                  <div><p className="text-[8px] font-mono text-white/10 uppercase mb-1">Worst</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/5 text-center py-1 font-mono text-[10px]" /></div>
+                </div>
+
+                <div className="pt-4 border-t border-white/5">
+                  <div className="flex justify-between items-center"><span className="text-[9px] font-mono text-white/20 uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-yellow-500/80">±{stdDev.toFixed(2)}σ</span></div>
+                  <p className="text-[8px] font-mono text-white/10 mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
                 </div>
               </div>
               <button type="submit" className="w-full bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
