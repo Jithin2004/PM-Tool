@@ -917,17 +917,42 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
     onClose();
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image too large. Please select a file under 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[130] flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-md p-8 shadow-2xl">
         <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/10">
-          <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
-            <Users className="w-5 h-5 text-white/85" />
+          <div className="w-16 h-16 border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Preview" className="w-full h-full object-cover" />
+            ) : (
+              <Users className="w-6 h-6 text-white/40" />
+            )}
           </div>
-          <div>
+          <div className="flex-1">
             <h3 className="text-xl font-medium tracking-tight uppercase">Identity Profile</h3>
             <p className="text-[10px] font-mono text-white/75 uppercase tracking-widest">{profile.email}</p>
+            <div className="mt-2 flex gap-2">
+              <input type="file" accept="image/*" className="hidden" id="avatar-upload" onChange={handleFileChange} />
+              <label htmlFor="avatar-upload" className="text-[9px] font-mono text-blue-400 border border-blue-400/20 px-2 py-0.5 hover:bg-blue-400/10 cursor-pointer transition-all">
+                GALLERY_UPLOAD
+              </label>
+            </div>
           </div>
         </div>
 
@@ -956,7 +981,7 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Avatar URL</label>
+              <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Avatar Source (URL)</label>
               <input
                 type="url"
                 value={avatarUrl}
@@ -967,7 +992,7 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
             </div>
           </div>
           <div className="bg-white/5 border border-white/10 p-4 text-[10px] font-mono text-white/80 leading-relaxed italic">
-            "Your identity will be visible to administrators for squad tasking and precision engineering allocation."
+            "Note: Your profile picture is automatically synced from Google by default, but you can override it here."
           </div>
           <div className="flex gap-4">
             <button type="submit" className="flex-1 bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all">
