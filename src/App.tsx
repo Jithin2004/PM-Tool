@@ -1195,15 +1195,9 @@ export default function App() {
     // Confidence drops by 0.5% for every hour of decay
     const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
 
-    // Team allocation based on PMs assigned to projects
-    let activeTeams = 0;
-    if (teams.length > 0) {
-      activeTeams = teams.filter(t => {
-        const pmId = typeof t.data === 'string' ? JSON.parse(t.data)?.pm_id : t.data?.pm_id;
-        return projects.some(p => p.owner_id === pmId);
-      }).length;
-    }
-    const teamBandwidth = teams.length > 0 ? (activeTeams / teams.length) * 100 : 0;
+    // Team allocation based on actual project assignments
+    const teamsWithProjects = new Set(projects.filter(p => p.team_id).map(p => p.team_id));
+    const teamBandwidth = teams.length > 0 ? (teamsWithProjects.size / teams.length) * 100 : 0;
 
     return {
       totalProjects: projects.length,
