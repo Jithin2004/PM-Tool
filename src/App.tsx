@@ -179,8 +179,8 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
   return (
     <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-md z-50">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden">
-          <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+        <div className="w-14 h-14 border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden">
+          <img src="/logo.png" alt="Logo" className="w-full h-full object-cover scale-110" />
         </div>
         <div>
           <h1 className="font-sans font-semibold text-lg tracking-tight uppercase leading-none">Resolve PM</h1>
