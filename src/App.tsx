@@ -956,9 +956,9 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Display Name</label>
+            <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Full Name</label>
             <input
               autoFocus
               required
@@ -966,48 +966,58 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
               value={name}
               onChange={e => setName(e.target.value)}
               className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
-              placeholder="Enter your full name"
+              placeholder="e.g. John Doe"
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Contact Number</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                placeholder="+1..."
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Avatar Source (URL)</label>
-              {avatarUrl?.startsWith('data:image') ? (
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-black border border-white/10 h-11 px-4 font-mono text-xs flex items-center text-blue-400/80">
-                    [LOCAL_GALLERY_IMAGE]
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setAvatarUrl('')}
-                    className="h-11 px-3 border border-red-500/30 text-red-400 font-mono text-[9px] uppercase hover:bg-red-500/10"
-                  >
-                    Clear
-                  </button>
-                </div>
-              ) : (
-                <input
-                  type="url"
-                  value={avatarUrl}
-                  onChange={e => setAvatarUrl(e.target.value)}
-                  className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                  placeholder="https://..."
-                />
-              )}
-            </div>
+
+          <div>
+            <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Phone / Contact</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
+              placeholder="+123..."
+            />
           </div>
-          <div className="bg-white/5 border border-white/10 p-4 text-[10px] font-mono text-white/80 leading-relaxed italic">
-            "Note: Your profile picture is automatically synced from Google. Uploading from your gallery will create a local override."
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-[10px] uppercase font-mono text-white/85">Profile Identity Source</label>
+              <div className="flex gap-2">
+                <input type="file" accept="image/*" className="hidden" id="avatar-upload" onChange={handleFileChange} />
+                <label htmlFor="avatar-upload" className="text-[9px] font-mono text-blue-400 border border-blue-400/20 px-2 py-0.5 hover:bg-blue-400/10 cursor-pointer transition-all uppercase">
+                  [+ Gallery Photo]
+                </label>
+              </div>
+            </div>
+            
+            {avatarUrl?.startsWith('data:image') ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-white/5 border border-white/10 h-11 px-4 font-mono text-[10px] flex items-center text-blue-400/80 italic">
+                  LOCAL_GALLERY_OVERRIDE_ACTIVE
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setAvatarUrl('')}
+                  className="h-11 px-4 border border-red-500/30 text-red-400 font-mono text-[9px] uppercase hover:bg-red-500/10 transition-all"
+                >
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <input
+                type="url"
+                value={avatarUrl}
+                onChange={e => setAvatarUrl(e.target.value)}
+                className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                placeholder="Enter image URL or upload from gallery..."
+              />
+            )}
+          </div>
+
+          <div className="bg-white/5 border border-white/10 p-3 text-[10px] font-mono text-white/60 leading-relaxed italic border-l-2 border-l-blue-500/40">
+            Note: Your profile picture is automatically synced from Google. Uploading from your gallery will create a temporary local override for this device.
           </div>
           <div className="flex gap-4">
             <button type="submit" className="flex-1 bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all">
