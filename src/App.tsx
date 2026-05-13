@@ -906,7 +906,7 @@ function SquadRosterModal({ teams, profiles, onClose }: { teams: Team[], profile
     </div>
   );
 }
-function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, onClose: () => void, onUpdate: (updates: Partial<Profile>) => void }) {
+function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: { profile: Profile, googleAvatar?: string | null, onClose: () => void, onUpdate: (updates: Partial<Profile>) => void }) {
   const [name, setName] = useState(profile.full_name || '');
   const [phone, setPhone] = useState(profile.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
@@ -985,6 +985,15 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
             <div className="flex items-center justify-between mb-2">
               <label className="block text-[10px] uppercase font-mono text-white/85">Profile Identity Source</label>
               <div className="flex gap-2">
+                {googleAvatar && avatarUrl !== googleAvatar && (
+                  <button 
+                    type="button"
+                    onClick={() => setAvatarUrl(googleAvatar)}
+                    className="text-[9px] font-mono text-yellow-500 border border-yellow-500/20 px-2 py-0.5 hover:bg-yellow-500/10 transition-all uppercase"
+                  >
+                    Restore Google
+                  </button>
+                )}
                 <input type="file" accept="image/*" className="hidden" id="avatar-upload" onChange={handleFileChange} />
                 <label htmlFor="avatar-upload" className="text-[9px] font-mono text-blue-400 border border-blue-400/20 px-2 py-0.5 hover:bg-blue-400/10 cursor-pointer transition-all uppercase">
                   [+ Gallery Photo]
@@ -1209,11 +1218,23 @@ export default function App() {
           .single();
         if (insertError) throw insertError;
         setProfile(newProfile);
-        // Force onboarding if profile was just created
         setIsProfileOpen(true);
       } else {
+        // Auto-sync Google avatar for existing users if missing
+        if (!data.avatar_url && googleAvatar) {
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('profiles')
+            .update({ avatar_url: googleAvatar })
+            .eq('id', u.id)
+            .select()
+            .single();
+          
+          if (!updateError && updatedProfile) {
+            data = updatedProfile;
+          }
+        }
+        
         setProfile(data);
-        // Onboarding check: If name or phone is missing, open modal
         if (!data.full_name || !data.phone) {
           setIsProfileOpen(true);
         }
@@ -1773,6 +1794,7 @@ export default function App() {
         {isProfileOpen && profile && (
           <UserProfileModal
             profile={profile}
+            googleAvatar={user?.user_metadata?.avatar_url || user?.user_metadata?.picture}
             onClose={() => setIsProfileOpen(false)}
             onUpdate={handleUpdateProfile}
           />
