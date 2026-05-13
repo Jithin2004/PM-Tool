@@ -1043,11 +1043,25 @@ export default function App() {
 
   const syncProfile = async (u: any) => {
     try {
-      const { data, error } = await supabase
+      // Try fetching with full_name first
+      let { data, error } = await supabase
         .from('profiles')
         .select('id, email, role, full_name')
         .eq('id', u.id)
         .single();
+
+      // If it fails because full_name column is missing, fallback to basic fields
+      if (error && error.message?.includes('full_name')) {
+        console.warn("Schema mismatch: full_name column missing. Falling back to basic profile.");
+        const fallback = await supabase
+          .from('profiles')
+          .select('id, email, role')
+          .eq('id', u.id)
+          .single();
+        data = fallback.data;
+        error = fallback.error;
+        notify("Database schema update required: Please add 'full_name' to profiles.", "warning");
+      }
 
       if (error && error.code !== 'PGRST116') throw error;
 
@@ -1064,8 +1078,9 @@ export default function App() {
       } else {
         setProfile(data);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Profile sync failed", e);
+      notify(`Identity Sync Failed: ${e.message || "Unknown database error"}`, "error");
     }
   };
 
