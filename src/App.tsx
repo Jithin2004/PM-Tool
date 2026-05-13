@@ -484,6 +484,18 @@ function AdminDashboard({
   const pms = profiles.filter(p => p.role === 'pm' || p.role === 'super_admin');
   const devs = profiles.filter(p => p.role === 'viewer');
 
+  // Identify devs already in other squads to prevent double-assignment
+  const assignedDevIds = new Set(
+    teams
+      .filter(t => t.id !== editingTeamId)
+      .flatMap(t => {
+        const d = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
+        return d?.developer_ids || [];
+      })
+  );
+
+  const availableDevs = devs.filter(d => !assignedDevIds.has(d.id));
+
   return (
     <main className="max-w-[1600px] mx-auto px-6 py-12 space-y-16">
       <div>
@@ -593,7 +605,7 @@ function AdminDashboard({
               <div>
                 <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Assign Engineers (Viewers)</label>
                 <div className="border border-white/10 bg-black max-h-40 overflow-y-auto p-2 space-y-1">
-                  {devs.map(dev => (
+                  {availableDevs.map(dev => (
                     <label key={dev.id} className="flex items-center gap-2 text-xs font-mono cursor-pointer hover:bg-white/5 p-1 transition-colors">
                       <input
                         type="checkbox"
@@ -607,7 +619,7 @@ function AdminDashboard({
                       <span>{dev.full_name || dev.email}</span>
                     </label>
                   ))}
-                  {devs.length === 0 && <p className="text-[10px] text-white/40 italic p-1">No engineers available.</p>}
+                  {availableDevs.length === 0 && <p className="text-[10px] text-white/40 italic p-1">No unassigned engineers detected.</p>}
                 </div>
               </div>
 
