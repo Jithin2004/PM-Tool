@@ -221,7 +221,7 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
   );
 }
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({ project }: { project: Project; key?: string | number }) {
   const expectedTime = useMemo(() => 
     calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst).toFixed(1),
     [project]
@@ -486,10 +486,11 @@ function AdminDashboard({
                  </div>
               )}
               {teams.map(team => {
-                 const pmId = team.data?.pm_id;
-                 const devIds = team.data?.developer_ids || [];
+                 const parsedData = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
+                 const pmId = parsedData?.pm_id;
+                 const devIds = parsedData?.developer_ids || [];
                  const pm = profiles.find(p => p.id === pmId);
-                 const squadDevs = devIds.map(id => profiles.find(p => p.id === id)).filter(Boolean);
+                 const squadDevs = devIds.map((id: string) => profiles.find(p => p.id === id)).filter(Boolean);
                  return (
                    <div key={team.id} className="border border-white/10 p-4 bg-white/5 hover:border-white/30 transition-colors group">
                      <div className="flex justify-between items-start mb-4">
@@ -499,7 +500,7 @@ function AdminDashboard({
                           </div>
                           <h4 className="font-sans font-medium text-lg tracking-tight">{team.name}</h4>
                        </div>
-                       <span className="text-[10px] font-mono text-white/40 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id.substring(0, 8)}</span>
+                       <span className="text-[10px] font-mono text-white/40 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id?.substring(0, 8) || 'UNKNOWN'}</span>
                      </div>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
                        <div>
@@ -678,8 +679,13 @@ export default function App() {
   const handleCreateTeam = async (name: string, pmId: string, devIds: string[]) => {
     if (profile?.role !== 'super_admin') return;
 
+    const generateId = () => {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+      return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    };
+
     const newTeam = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       name,
       data: {
         pm_id: pmId,
