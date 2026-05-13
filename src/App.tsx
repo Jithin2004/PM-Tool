@@ -30,6 +30,8 @@ interface Profile {
   email: string;
   role: UserRole;
   full_name?: string;
+  phone?: string;
+  avatar_url?: string;
   created_at: string;
 }
 
@@ -224,7 +226,9 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
               </button>
             </div>
             <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors" onClick={() => (window as any).openProfileModal()}>
-              {profile?.full_name ? (
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : profile?.full_name ? (
                 <span className="text-[10px] font-mono font-bold text-white/60">{profile.full_name.substring(0, 2).toUpperCase()}</span>
               ) : (
                 <Users className="w-4 h-4 text-white/40" />
@@ -524,10 +528,15 @@ function AdminDashboard({
                 <tr key={profile.id} className="hover:bg-white/[0.02] transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center border border-white/10 font-mono text-[10px]">
-                        {profile.email.charAt(0).toUpperCase()}
+                      <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center border border-white/10 overflow-hidden font-mono text-[10px]">
+                        {profile.avatar_url ? (
+                          <img src={profile.avatar_url} alt="P" className="w-full h-full object-cover" />
+                        ) : (profile.full_name || profile.email).charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-mono text-xs">{profile.full_name || profile.email}</span>
+                      <div className="flex flex-col">
+                        <span className="font-mono text-xs">{profile.full_name || profile.email}</span>
+                        {profile.phone && <span className="text-[8px] font-mono text-white/20">{profile.phone}</span>}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -885,12 +894,14 @@ function SquadRosterModal({ teams, profiles, onClose }: { teams: Team[], profile
     </div>
   );
 }
-function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, onClose: () => void, onUpdate: (name: string) => void }) {
+function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, onClose: () => void, onUpdate: (updates: Partial<Profile>) => void }) {
   const [name, setName] = useState(profile.full_name || '');
+  const [phone, setPhone] = useState(profile.phone || '');
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdate(name);
+    onUpdate({ full_name: name, phone, avatar_url: avatarUrl });
     onClose();
   };
 
@@ -917,9 +928,31 @@ function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, on
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+              className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
               placeholder="Enter your full name"
             />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Contact Number</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                placeholder="+1..."
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Avatar URL</label>
+              <input
+                type="url"
+                value={avatarUrl}
+                onChange={e => setAvatarUrl(e.target.value)}
+                className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                placeholder="https://..."
+              />
+            </div>
           </div>
           <div className="bg-white/5 border border-white/10 p-4 text-[10px] font-mono text-white/30 leading-relaxed italic">
             "Your identity will be visible to administrators for squad tasking and precision engineering allocation."
@@ -1077,16 +1110,17 @@ export default function App() {
 
   const syncProfile = async (u: any) => {
     try {
-      // Try fetching with full_name first
+      // Pull avatar from Google if it exists
+      const googleAvatar = u.user_metadata?.avatar_url || u.user_metadata?.picture;
+
       let { data, error } = await supabase
         .from('profiles')
-        .select('id, email, role, full_name')
+        .select('id, email, role, full_name, phone, avatar_url')
         .eq('id', u.id)
         .single();
 
-      // If it fails because full_name column is missing, fallback to basic fields
       if (error && error.message?.includes('full_name')) {
-        console.warn("Schema mismatch: full_name column missing. Falling back to basic profile.");
+        console.warn("Schema mismatch: falling back to basic profile.");
         const fallback = await supabase
           .from('profiles')
           .select('id, email, role')
@@ -1094,7 +1128,6 @@ export default function App() {
           .single();
         data = fallback.data;
         error = fallback.error;
-        notify("Database schema update required: Please add 'full_name' to profiles.", "warning");
       }
 
       if (error && error.code !== 'PGRST116') throw error;
@@ -1104,13 +1137,24 @@ export default function App() {
         const newRole: UserRole = (totalCount === 0) ? 'super_admin' : 'viewer';
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert({ id: u.id, email: u.email, role: newRole })
+          .insert({ 
+            id: u.id, 
+            email: u.email, 
+            role: newRole,
+            avatar_url: googleAvatar 
+          })
           .select()
           .single();
         if (insertError) throw insertError;
         setProfile(newProfile);
+        // Force onboarding if profile was just created
+        setIsProfileOpen(true);
       } else {
         setProfile(data);
+        // Onboarding check: If name or phone is missing, open modal
+        if (!data.full_name || !data.phone) {
+          setIsProfileOpen(true);
+        }
       }
     } catch (e: any) {
       console.error("Profile sync failed", e);
@@ -1156,11 +1200,11 @@ export default function App() {
     }
   };
 
-  const handleUpdateProfile = async (name: string) => {
+  const handleUpdateProfile = async (updates: Partial<Profile>) => {
     if (!user) return;
     const { data, error } = await supabase
       .from('profiles')
-      .update({ full_name: name })
+      .update(updates)
       .eq('id', user.id)
       .select()
       .single();
