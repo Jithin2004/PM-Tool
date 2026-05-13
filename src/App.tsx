@@ -14,7 +14,9 @@ import {
   LogOut,
   Zap,
   TrendingUp,
-  Cpu
+  Cpu,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -316,21 +318,52 @@ function AdminDashboard({
   profiles, 
   teams,
   onUpdateRole,
-  onCreateTeam
+  onCreateTeam,
+  onUpdateTeam,
+  onDeleteTeam
 }: { 
   profiles: Profile[], 
   teams: Team[],
   onUpdateRole: (id: string, role: UserRole) => void,
-  onCreateTeam: (name: string, pmId: string, devIds: string[]) => void
+  onCreateTeam: (name: string, pmId: string, devIds: string[]) => void,
+  onUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => void,
+  onDeleteTeam: (id: string) => void
 }) {
   const [newTeamName, setNewTeamName] = useState('');
   const [selectedPm, setSelectedPm] = useState('');
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
 
   const handleCreateTeam = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeamName || !selectedPm) return;
-    onCreateTeam(newTeamName, selectedPm, selectedDevs);
+    
+    if (editingTeamId) {
+      onUpdateTeam(editingTeamId, newTeamName, selectedPm, selectedDevs);
+      setEditingTeamId(null);
+    } else {
+      onCreateTeam(newTeamName, selectedPm, selectedDevs);
+    }
+    
+    setNewTeamName('');
+    setSelectedPm('');
+    setSelectedDevs([]);
+  };
+
+  const startEditing = (team: Team) => {
+    const parsedData = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
+    setEditingTeamId(team.id);
+    setNewTeamName(team.name);
+    setSelectedPm(parsedData?.pm_id || '');
+    setSelectedDevs(parsedData?.developer_ids || []);
+    
+    // Scroll to form
+    const form = document.getElementById('squad-form');
+    if (form) form.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const cancelEditing = () => {
+    setEditingTeamId(null);
     setNewTeamName('');
     setSelectedPm('');
     setSelectedDevs([]);
@@ -416,8 +449,8 @@ function AdminDashboard({
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="border border-white/10 bg-[#0c0c0c] p-6 lg:col-span-1">
-            <h3 className="text-sm font-mono uppercase tracking-widest mb-6">Initialize Squad</h3>
+          <div className="border border-white/10 bg-[#0c0c0c] p-6 lg:col-span-1" id="squad-form">
+            <h3 className="text-sm font-mono uppercase tracking-widest mb-6">{editingTeamId ? 'Update Squad' : 'Initialize Squad'}</h3>
             <form onSubmit={handleCreateTeam} className="space-y-4">
               <div>
                 <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Squad Designation</label>
@@ -467,12 +500,23 @@ function AdminDashboard({
                 </div>
               </div>
 
-              <button 
-                type="submit"
-                className="w-full bg-white text-black h-10 font-medium hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest mt-4"
-              >
-                Form Squad
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  type="submit"
+                  className="flex-1 bg-white text-black h-10 font-medium hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest mt-4"
+                >
+                  {editingTeamId ? 'Update Squad' : 'Form Squad'}
+                </button>
+                {editingTeamId && (
+                  <button 
+                    type="button"
+                    onClick={cancelEditing}
+                    className="flex-1 border border-white/10 text-white/40 h-10 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-widest mt-4"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -500,7 +544,23 @@ function AdminDashboard({
                           </div>
                           <h4 className="font-sans font-medium text-lg tracking-tight">{team.name}</h4>
                        </div>
-                       <span className="text-[10px] font-mono text-white/40 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id?.substring(0, 8) || 'UNKNOWN'}</span>
+                       <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => startEditing(team)}
+                            className="p-1.5 border border-white/10 text-white/40 hover:text-white hover:border-white/30 transition-colors"
+                            title="Edit Squad"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => onDeleteTeam(team.id)}
+                            className="p-1.5 border border-white/10 text-white/40 hover:text-red-500 hover:border-red-500/30 transition-colors"
+                            title="Delete Squad"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-[10px] font-mono text-white/40 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id?.substring(0, 8) || 'UNKNOWN'}</span>
+                       </div>
                      </div>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
                        <div>
@@ -716,6 +776,48 @@ export default function App() {
     }
   };
 
+  const handleUpdateTeam = async (id: string, name: string, pmId: string, devIds: string[]) => {
+    if (profile?.role !== 'super_admin') return;
+
+    const { data, error } = await supabase
+      .from('teams')
+      .update({
+        name,
+        data: {
+          pm_id: pmId,
+          developer_ids: devIds
+        }
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (!error && data) {
+      setTeams(teams.map(t => t.id === id ? data : t));
+    } else {
+      console.error("Team update failed:", error);
+      alert(`Team update failed: ${error?.message || JSON.stringify(error)}`);
+    }
+  };
+
+  const handleDeleteTeam = async (id: string) => {
+    if (profile?.role !== 'super_admin') return;
+    
+    if (!confirm("Are you sure you want to decommission this squad? All project associations will be lost.")) return;
+
+    const { error } = await supabase
+      .from('teams')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      setTeams(teams.filter(t => t.id !== id));
+    } else {
+      console.error("Team deletion failed:", error);
+      alert(`Team deletion failed: ${error?.message || JSON.stringify(error)}`);
+    }
+  };
+
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || profile?.role === 'viewer') return;
@@ -822,6 +924,8 @@ export default function App() {
           teams={teams}
           onUpdateRole={handleUpdateRole} 
           onCreateTeam={handleCreateTeam}
+          onUpdateTeam={handleUpdateTeam}
+          onDeleteTeam={handleDeleteTeam}
         />
       ) : (
         <main className="max-w-[1600px] mx-auto px-6 py-12">
