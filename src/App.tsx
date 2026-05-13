@@ -29,6 +29,7 @@ interface Profile {
   id: string;
   email: string;
   role: UserRole;
+  full_name?: string;
   created_at: string;
 }
 
@@ -222,8 +223,12 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
                 Terminate Session
               </button>
             </div>
-            <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
-              <Users className="w-4 h-4 text-white/40" />
+            <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors" onClick={() => (window as any).openProfileModal()}>
+              {profile?.full_name ? (
+                <span className="text-[10px] font-mono font-bold text-white/60">{profile.full_name.substring(0, 2).toUpperCase()}</span>
+              ) : (
+                <Users className="w-4 h-4 text-white/40" />
+              )}
             </div>
           </div>
         ) : (
@@ -476,7 +481,7 @@ function AdminDashboard({
     setSelectedDevs([]);
   };
 
-  const pms = profiles.filter(p => p.role === 'pm');
+  const pms = profiles.filter(p => p.role === 'pm' || p.role === 'super_admin');
   const devs = profiles.filter(p => p.role === 'viewer');
 
   return (
@@ -506,7 +511,7 @@ function AdminDashboard({
                       <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center border border-white/10 font-mono text-[10px]">
                         {profile.email.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-mono text-xs">{profile.email}</span>
+                      <span className="font-mono text-xs">{profile.full_name || profile.email}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -580,7 +585,7 @@ function AdminDashboard({
                 >
                   <option value="" disabled>Select PM</option>
                   {pms.map(pm => (
-                    <option key={pm.id} value={pm.id}>{pm.email}</option>
+                    <option key={pm.id} value={pm.id}>{pm.full_name || pm.email}</option>
                   ))}
                 </select>
               </div>
@@ -599,7 +604,7 @@ function AdminDashboard({
                           else setSelectedDevs(selectedDevs.filter(id => id !== dev.id));
                         }}
                       />
-                      <span>{dev.email}</span>
+                      <span>{dev.full_name || dev.email}</span>
                     </label>
                   ))}
                   {devs.length === 0 && <p className="text-[10px] text-white/40 italic p-1">No engineers available.</p>}
@@ -671,14 +676,14 @@ function AdminDashboard({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/5">
                       <div>
                         <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Lead (PM)</p>
-                        <p className="text-xs font-mono text-blue-400 flex items-center gap-1.5"><Users className="w-3 h-3" /> {pm?.email || 'Unknown'}</p>
+                        <p className="text-xs font-mono text-blue-400 flex items-center gap-1.5"><Users className="w-3 h-3" /> {pm?.full_name || pm?.email || 'Unknown'}</p>
                       </div>
                       <div>
                         <p className="text-[9px] font-mono text-white/40 uppercase mb-2">Engineers ({squadDevs.length})</p>
                         <div className="space-y-1.5">
                           {squadDevs.length === 0 && <p className="text-[10px] font-mono text-white/20 italic">None assigned</p>}
                           {squadDevs.map(d => (
-                            <p key={d?.id} className="text-xs font-mono text-white/80">{d?.email}</p>
+                            <p key={d?.id} className="text-xs font-mono text-white/80">{d?.full_name || d?.email}</p>
                           ))}
                         </div>
                       </div>
@@ -846,6 +851,59 @@ function SquadRosterModal({ teams, profiles, onClose }: { teams: Team[], profile
     </div>
   );
 }
+function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, onClose: () => void, onUpdate: (name: string) => void }) {
+  const [name, setName] = useState(profile.full_name || '');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdate(name);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-6">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-md p-8 shadow-2xl">
+        <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/10">
+          <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center">
+            <Users className="w-5 h-5 text-white/40" />
+          </div>
+          <div>
+            <h3 className="text-xl font-medium tracking-tight uppercase">Identity Profile</h3>
+            <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest">{profile.email}</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-[10px] uppercase font-mono text-white/40 mb-2">Display Name</label>
+            <input
+              autoFocus
+              required
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+              placeholder="Enter your full name"
+            />
+          </div>
+          <div className="bg-white/5 border border-white/10 p-4 text-[10px] font-mono text-white/30 leading-relaxed italic">
+            "Your identity will be visible to administrators for squad tasking and precision engineering allocation."
+          </div>
+          <div className="flex gap-4">
+            <button type="submit" className="flex-1 bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all">
+              Update Identity
+            </button>
+            <button type="button" onClick={onClose} className="flex-1 border border-white/10 text-white/40 h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-white/5 transition-all">
+              Abort
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
 function LiveClock() {
   const [time, setTime] = useState(new Date());
 
@@ -873,6 +931,12 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isRosterOpen, setIsRosterOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // Expose profile modal trigger for header
+  useEffect(() => {
+    (window as any).openProfileModal = () => setIsProfileOpen(true);
+  }, []);
 
   // Notification and Confirmation State
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -986,25 +1050,20 @@ export default function App() {
         .single();
 
       if (existingProfile) {
-        setProfile(existingProfile);
-      } else {
-        // Strict logic: First user in DB becomes super_admin
-        const { count } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
+      if (error && error.code !== 'PGRST116') throw error;
 
-        const newRole: UserRole = (count === 0) ? 'super_admin' : 'viewer';
-        const newProfile = { id: u.id, email: u.email, role: newRole };
-
-        const { data: createdProfile, error } = await supabase
+      if (!data) {
+        const { count: totalCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        const newRole: UserRole = (totalCount === 0) ? 'super_admin' : 'viewer';
+        const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert(newProfile)
+          .insert({ id: u.id, email: u.email, role: newRole })
           .select()
           .single();
-
-        if (!error && createdProfile) {
-          setProfile(createdProfile);
-        }
+        if (insertError) throw insertError;
+        setProfile(newProfile);
+      } else {
+        setProfile(data);
       }
     } catch (e) {
       console.error("Profile sync failed", e);
@@ -1046,6 +1105,23 @@ export default function App() {
     } else {
       console.error("Metadata update failed:", error);
       notify(`Sync failed: ${error?.message || "Unknown error"}`, "error");
+    }
+  };
+
+  const handleUpdateProfile = async (name: string) => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ full_name: name })
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (!error && data) {
+      setProfile(data);
+      notify("Identity parameters updated.", "success");
+    } else {
+      notify(`Sync failed: ${error?.message}`, "error");
     }
   };
 
@@ -1534,6 +1610,16 @@ export default function App() {
             teams={teams}
             profiles={profiles}
             onClose={() => setIsRosterOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isProfileOpen && profile && (
+          <UserProfileModal
+            profile={profile}
+            onClose={() => setIsProfileOpen(false)}
+            onUpdate={handleUpdateProfile}
           />
         )}
       </AnimatePresence>
