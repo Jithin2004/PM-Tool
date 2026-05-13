@@ -770,7 +770,7 @@ function ProjectDetailsModal({
       name,
       status: status as any,
       priority: priority as any,
-      team_id: teamId || undefined,
+      team_id: teamId || null,
       pert_best: Number(pBest),
       pert_likely: Number(pLikely),
       pert_worst: Number(pWorst)
