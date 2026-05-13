@@ -65,6 +65,7 @@ interface Stats {
   deliveryConfidence: number;
   teamBandwidth: number;
   dailyFatigue: number;
+  insight: string;
 }
 
 interface Notification {
@@ -1185,24 +1186,38 @@ export default function App() {
     let totalDecayHours = 0;
     projects.forEach(p => {
       const expected = calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
-      // Decay hours based on worst-case overage
       if (p.pert_worst > expected) {
         totalDecayHours += (p.pert_worst - expected) * 24;
       }
     });
 
-    // Confidence drops by 0.5% for every hour of decay
     const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
-
-    // Team allocation based on actual project assignments
     const teamsWithProjects = new Set(projects.filter(p => p.team_id).map(p => p.team_id));
     const teamBandwidth = teams.length > 0 ? (teamsWithProjects.size / teams.length) * 100 : 0;
+
+    // Generate dynamic insight
+    let insight = "System operations are nominal. No significant architectural bias detected.";
+    
+    const overloadedSquads = teams.map(t => {
+      const teamProjects = projects.filter(p => p.team_id === t.id);
+      const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
+      return { name: t.name, load: (totalExpected / 20) };
+    }).filter(s => s.load > 1.0);
+
+    if (overloadedSquads.length > 0) {
+      insight = `"${overloadedSquads[0].name} is currently at critical load (${(overloadedSquads[0].load * 100).toFixed(0)}%). Expect a 15-20% increase in regression frequency due to fatigue."`;
+    } else if (deliveryConfidence < 85) {
+      insight = `"Systemic confidence has dropped to ${deliveryConfidence.toFixed(0)}%. Predictive decay suggests high variance in ${projects.filter(p => p.pert_worst > p.pert_likely).length} workstreams."`;
+    } else if (totalDecayHours > 24) {
+      insight = `"Minor predictive decay detected (${totalDecayHours.toFixed(0)}h). Recommend reviewing worst-case buffers on newly initialized assets."`;
+    }
 
     return {
       totalProjects: projects.length,
       deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
       teamBandwidth: Number(teamBandwidth.toFixed(1)),
-      dailyFatigue: Number(totalDecayHours.toFixed(1))
+      dailyFatigue: Number(totalDecayHours.toFixed(1)),
+      insight
     };
   };
 
@@ -1363,7 +1378,7 @@ export default function App() {
                   <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/60">System Insight</h3>
                 </div>
                 <p className="text-[11px] leading-relaxed text-white/40 font-mono italic">
-                  "Squad Gamma is currently at critical load. Expect a 15-20% increase in regression frequency due to fatigue-driven oversight."
+                  {stats.insight}
                 </p>
                 <div className="mt-4 flex items-center gap-2">
                   <TrendingUp className="w-3 h-3 text-white/20" />
