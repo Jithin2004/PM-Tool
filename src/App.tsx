@@ -1035,7 +1035,6 @@ export default function App() {
 
     if (!error && data) {
       setProjects(projects.map(p => p.id === id ? data : p));
-      if (selectedProject?.id === id) setSelectedProject(data);
       notify("System metadata synchronized.", "success");
     } else {
       console.error("Metadata update failed:", error);
