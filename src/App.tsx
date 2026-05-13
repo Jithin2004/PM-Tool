@@ -677,7 +677,10 @@ export default function App() {
   };
 
   const handleCreateTeam = async (name: string, pmId: string, devIds: string[]) => {
-    if (profile?.role !== 'super_admin') return;
+    if (profile?.role !== 'super_admin') {
+      alert("Unauthorized: Only super admins can create teams.");
+      return;
+    }
 
     const generateId = () => {
       if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -693,6 +696,8 @@ export default function App() {
       }
     };
 
+    console.log("Attempting to insert new team:", newTeam);
+
     const { data, error } = await supabase
       .from('teams')
       .insert(newTeam)
@@ -701,8 +706,10 @@ export default function App() {
 
     if (!error && data) {
       setTeams([data, ...teams]);
+      // alert("Squad successfully initialized!"); // Optional success feedback
     } else {
       console.error("Team creation failed:", error);
+      alert(`Team creation failed: ${error?.message || JSON.stringify(error)}`);
     }
   };
 
