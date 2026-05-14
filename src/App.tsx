@@ -1192,8 +1192,9 @@ export default function App() {
         .eq('id', u.id)
         .single();
 
-      if (error && error.message?.includes('full_name')) {
-        console.warn("Schema mismatch: falling back to basic profile.");
+      // Handle common schema mismatch errors
+      if (error && (error.message?.includes('full_name') || error.message?.includes('avatar_url'))) {
+        console.warn("Schema mismatch detected: falling back to basic profile select.");
         const fallback = await supabase
           .from('profiles')
           .select('id, email, role')
@@ -1206,8 +1207,15 @@ export default function App() {
       if (error && error.code !== 'PGRST116') throw error;
 
       if (!data) {
-        const { count: totalCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-        const newRole: UserRole = (totalCount === 0) ? 'super_admin' : 'viewer';
+        // Decide initial role
+        const { count: totalCount, error: countError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        
+        if (countError) console.error("Initial role check failed:", countError);
+        const newRole: UserRole = (!countError && totalCount === 0) ? 'super_admin' : 'viewer';
+
+        // Attempt to insert full profile
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({ 
@@ -1218,8 +1226,25 @@ export default function App() {
           })
           .select()
           .single();
-        if (insertError) throw insertError;
-        setProfile(newProfile);
+
+        if (insertError) {
+          console.error("Primary profile insert failed:", insertError);
+          // Fallback insert with only core fields
+          const { data: retryProfile, error: retryError } = await supabase
+            .from('profiles')
+            .insert({ 
+              id: u.id, 
+              email: u.email, 
+              role: newRole 
+            })
+            .select()
+            .single();
+          
+          if (retryError) throw retryError;
+          setProfile(retryProfile);
+        } else {
+          setProfile(newProfile);
+        }
         setIsProfileOpen(true);
       } else {
         // Auto-sync Google avatar for existing users if missing
@@ -1242,8 +1267,9 @@ export default function App() {
         }
       }
     } catch (e: any) {
-      console.error("Profile sync failed", e);
-      notify(`Identity Sync Failed: ${e.message || "Unknown database error"}`, "error");
+      console.error("Profile sync failed:", e);
+      const detailedError = e.message || e.details || "Database connection error (Code 103)";
+      notify(`Identity Sync Failed: ${detailedError}`, "error");
     }
   };
 
