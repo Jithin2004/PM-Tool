@@ -58,9 +58,13 @@ interface Project {
   pert_likely: number; // days
   pert_worst: number; // days
   created_at: string;
+  proposed_start_date?: string;
+  delete_reason?: string;
   owner_id?: string;
   team_id?: string;
   tags: string[];
+  client_deadline?: string;
+  real_hours?: number;
 }
 
 interface Stats {
@@ -175,7 +179,27 @@ function Login() {
   );
 }
 
-function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: any, profile: Profile | null, onLogout: () => void, onToggleAdmin: () => void, showAdmin: boolean }) {
+function Header({ 
+  user, 
+  profile, 
+  onLogout, 
+  onToggleAdmin, 
+  showAdmin,
+  workingHours,
+  setWorkingHours,
+  tilesPerRow,
+  setTilesPerRow
+}: { 
+  user: any, 
+  profile: Profile | null, 
+  onLogout: () => void, 
+  onToggleAdmin: () => void, 
+  showAdmin: boolean,
+  workingHours: number,
+  setWorkingHours: (h: number) => void,
+  tilesPerRow: number,
+  setTilesPerRow: (t: number) => void
+}) {
   return (
     <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-md z-50">
       <div className="flex items-center gap-3">
@@ -189,6 +213,37 @@ function Header({ user, profile, onLogout, onToggleAdmin, showAdmin }: { user: a
       </div>
 
       <div className="flex items-center gap-6">
+        <div className="hidden xl:flex items-center gap-6 border-x border-white/10 px-6">
+          <div className="flex flex-col">
+            <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Working Hours/Day</label>
+            <div className="flex items-center gap-2">
+              <Clock className="w-3 h-3 text-blue-400" />
+              <input 
+                type="number" 
+                value={workingHours} 
+                onChange={(e) => setWorkingHours(Number(e.target.value))}
+                className="w-12 bg-transparent border-b border-white/20 font-mono text-xs focus:border-blue-400 outline-none text-center"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Tiles Per Row</label>
+            <div className="flex items-center gap-3">
+              <div className="flex bg-white/5 p-1 border border-white/10 rounded-sm">
+                {[2, 3, 4].map(num => (
+                  <button 
+                    key={num}
+                    onClick={() => setTilesPerRow(num)}
+                    className={`px-2 py-0.5 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="hidden lg:flex items-center gap-8 mr-4">
           <button
             onClick={() => onToggleAdmin()}
@@ -360,6 +415,21 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
   const riskColor = stdDev < 1.5 ? 'text-green-400' : stdDev < 3 ? 'text-yellow-400' : 'text-red-500';
   const riskLabel = stdDev < 1.5 ? 'STABLE' : stdDev < 3 ? 'CAUTION' : 'HIGH_RISK';
 
+  // ETA Calibration Logic
+  const startDate = project.proposed_start_date ? new Date(project.proposed_start_date) : new Date(project.created_at);
+  const now = new Date();
+  const daysPassed = Math.max(0, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  const remainingDays = Math.max(0, Number(calendarDays) - daysPassed);
+  
+  const completionDate = new Date(startDate.getTime() + Number(calendarDays) * 24 * 60 * 60 * 1000);
+  const completionDateStr = completionDate.toLocaleDateString('en-GB', { 
+    weekday: 'short', 
+    day: 'numeric', 
+    month: 'short', 
+    year: 'numeric' 
+  });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -399,8 +469,9 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
         </div>
         <div className="text-right">
           <p className="text-[10px] font-mono text-white/85 uppercase mb-1">Finish_ETA</p>
-          <div className={`text-xl font-mono font-medium ${riskColor}`}>{calendarDays}d</div>
-          <p className="text-[10px] font-mono text-white/75 uppercase">Effort: {expectedManDays.toFixed(1)}m/d</p>
+          <div className={`text-xl font-mono font-medium ${riskColor}`}>{remainingDays.toFixed(1)}d</div>
+          <p className="text-[9px] font-mono text-white/60 uppercase mt-1 leading-none">{completionDateStr}</p>
+          <p className="text-[10px] font-mono text-white/75 uppercase mt-2">Effort: {expectedManDays.toFixed(1)}m/d</p>
         </div>
       </div>
 
@@ -737,16 +808,19 @@ function AdminDashboard({
   );
 }
 
-function ProjectDetailsModal({
   project,
   teams,
   onClose,
-  onUpdate
+  onUpdate,
+  onDelete,
+  workingHoursPerDay
 }: {
   project: Project,
   teams: Team[],
   onClose: () => void,
-  onUpdate: (id: string, updates: Partial<Project>) => void
+  onUpdate: (id: string, updates: Partial<Project>) => void,
+  onDelete: (id: string, reason: string) => void,
+  workingHoursPerDay: number
 }) {
   const [name, setName] = useState(project.name);
   const [status, setStatus] = useState(project.status);
@@ -755,6 +829,10 @@ function ProjectDetailsModal({
   const [pBest, setPBest] = useState(project.pert_best.toString());
   const [pLikely, setPLikely] = useState(project.pert_likely.toString());
   const [pWorst, setPWorst] = useState(project.pert_worst.toString());
+  const [proposedStartDate, setProposedStartDate] = useState(project.proposed_start_date || '');
+  const [clientDeadline, setClientDeadline] = useState(project.client_deadline || '');
+  const [deleteReason, setDeleteReason] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const team = teams.find(t => t.id === teamId);
   const parsedTeamData = team ? (typeof team.data === 'string' ? JSON.parse(team.data) : team.data) : null;
@@ -774,10 +852,21 @@ function ProjectDetailsModal({
       team_id: teamId || null,
       pert_best: Number(pBest),
       pert_likely: Number(pLikely),
-      pert_worst: Number(pWorst)
+      pert_worst: Number(pWorst),
+      proposed_start_date: proposedStartDate,
+      client_deadline: clientDeadline
     });
     onClose();
   };
+
+  const startDate = proposedStartDate ? new Date(proposedStartDate) : new Date(project.created_at);
+  const now = new Date();
+  const daysPassed = Math.max(0, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const remainingDays = Math.max(0, Number(calendarExpected) - daysPassed);
+  const completionDate = new Date(startDate.getTime() + Number(calendarExpected) * 24 * 60 * 60 * 1000);
+  
+  const deadline = clientDeadline ? new Date(clientDeadline) : null;
+  const variance = deadline ? Math.floor((deadline.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
@@ -822,12 +911,61 @@ function ProjectDetailsModal({
                   </select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Proposed Start</label>
+                  <input type="date" value={proposedStartDate} onChange={e => setProposedStartDate(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Client Deadline</label>
+                  <input type="date" value={clientDeadline} onChange={e => setClientDeadline(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
+                </div>
+              </div>
               <div>
                 <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Allocate Squad</label>
                 <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
                   <option value="">UNALLOCATED</option>
                   {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
+              </div>
+              
+              <div className="pt-4 border-t border-white/10">
+                {!isDeleting ? (
+                  <button 
+                    type="button" 
+                    onClick={() => setIsDeleting(true)}
+                    className="flex items-center gap-2 text-xs font-mono text-red-500 hover:text-red-400 transition-colors uppercase tracking-widest"
+                  >
+                    <Trash2 className="w-4 h-4" /> Decommission Asset
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <label className="block text-[10px] uppercase font-mono text-red-500/80">Reason for Decommissioning</label>
+                    <textarea 
+                      required
+                      value={deleteReason}
+                      onChange={e => setDeleteReason(e.target.value)}
+                      className="w-full bg-black border border-red-500/30 p-3 font-mono text-xs focus:border-red-500 outline-none min-h-[80px]"
+                      placeholder="Specify reason..."
+                    />
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => onDelete(project.id, deleteReason)}
+                        className="flex-1 bg-red-500 text-white py-2 text-[10px] font-mono uppercase tracking-widest hover:bg-red-600 transition-colors"
+                      >
+                        Confirm Delete
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsDeleting(false)}
+                        className="flex-1 border border-white/10 text-white/70 py-2 text-[10px] font-mono uppercase tracking-widest hover:bg-white/5 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -838,13 +976,28 @@ function ProjectDetailsModal({
                 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="bg-white/5 p-3">
-                    <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Man-Days Effort</p>
-                    <p className="text-xl font-mono">{expected.toFixed(2)}d</p>
+                    <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Total Real Hours</p>
+                    <p className="text-xl font-mono">{(expected * workingHoursPerDay).toFixed(1)}h</p>
+                  </div>
+                  <div className="bg-white/5 p-3">
+                    <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Working Days</p>
+                    <p className="text-xl font-mono">{calendarExpected}d</p>
                   </div>
                   <div className="bg-blue-500/10 p-3 border border-blue-500/20">
-                    <p className="text-[10px] font-mono text-blue-400 uppercase mb-1">Calendar Finish</p>
-                    <p className="text-xl font-mono text-blue-400">{calendarExpected}d</p>
+                    <p className="text-[10px] font-mono text-blue-400 uppercase mb-1">Remaining ETA</p>
+                    <p className="text-xl font-mono text-blue-400">{remainingDays.toFixed(1)}d</p>
                   </div>
+                  <div className={`p-3 border ${variance !== null && variance < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
+                    <p className={`text-[10px] font-mono uppercase mb-1 ${variance !== null && variance < 0 ? 'text-red-400' : 'text-green-400'}`}>Variance</p>
+                    <p className={`text-xl font-mono ${variance !== null && variance < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      {variance !== null ? `${Math.abs(variance)}d ${variance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-[10px] font-mono text-white/75 uppercase mb-2">Predicted End</p>
+                  <p className="text-lg font-mono text-white">{completionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-6">
@@ -890,11 +1043,11 @@ function SquadRosterModal({ teams, profiles, onClose }: { teams: Team[], profile
                   <h4 className="text-lg font-medium">{team.name}</h4>
                 </div>
                 <div className="space-y-6">
-                  <div><p className="text-[11px] font-mono text-white/75 uppercase mb-2">Squad Lead</p><p className="text-sm text-blue-400 font-mono">{pm?.email || 'N/A'}</p></div>
+                  <div><p className="text-[11px] font-mono text-white/75 uppercase mb-2">Squad Lead</p><p className="text-sm text-blue-400 font-mono">{pm?.full_name || pm?.email || 'N/A'}</p></div>
                   <div>
                     <p className="text-[11px] font-mono text-white/75 uppercase mb-2">Engineering Corps ({engineers.length})</p>
                     <div className="space-y-1">
-                      {engineers.map((e: any) => <p key={e.id} className="text-xs text-white/90 font-mono">{e.email}</p>)}
+                      {engineers.map((e: any) => <p key={e.id} className="text-xs text-white/90 font-mono">{e.full_name || e.email}</p>)}
                       {engineers.length === 0 && <p className="text-xs text-white/75 italic font-mono">No personnel assigned</p>}
                     </div>
                   </div>
@@ -1072,6 +1225,8 @@ export default function App() {
   const [isRosterOpen, setIsRosterOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'active' | 'completed'>('active');
+  const [workingHoursPerDay, setWorkingHoursPerDay] = useState(8);
+  const [tilesPerRow, setTilesPerRow] = useState(3);
 
   // Expose profile modal trigger for header
   useEffect(() => {
@@ -1113,6 +1268,7 @@ export default function App() {
   const [pertBest, setPertBest] = useState<string>('');
   const [pertLikely, setPertLikely] = useState<string>('');
   const [pertWorst, setPertWorst] = useState<string>('');
+  const [proposedStartDate, setProposedStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -1149,10 +1305,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isAdminView && profile?.role === 'super_admin') {
+    if ((isAdminView && profile?.role === 'super_admin') || isRosterOpen) {
       fetchProfiles();
     }
-  }, [isAdminView, profile]);
+  }, [isAdminView, profile, isRosterOpen]);
 
   const fetchProjects = async () => {
     const { data, error } = await supabase
@@ -1432,6 +1588,28 @@ export default function App() {
     );
   };
 
+  const handleDeleteProject = async (id: string, reason: string) => {
+    askConfirmation(
+      "Decommission Asset",
+      `Are you sure you want to decommission this engineering asset? Reason: ${reason}`,
+      async () => {
+        const { error } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', id);
+
+        if (!error) {
+          setProjects(projects.filter(p => p.id !== id));
+          notify("Asset successfully decommissioned.", "success");
+          setSelectedProject(null);
+        } else {
+          console.error("Asset deletion failed:", error);
+          notify(`Deletion failed: ${error.message}`, "error");
+        }
+      }
+    );
+  };
+
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName) {
@@ -1451,6 +1629,7 @@ export default function App() {
       pert_best: Number(pertBest) || 0,
       pert_likely: Number(pertLikely) || 0,
       pert_worst: Number(pertWorst) || 0,
+      proposed_start_date: proposedStartDate,
       owner_id: user.id,
       tags: ['NEW']
     };
@@ -1548,6 +1727,10 @@ export default function App() {
         onLogout={handleLogout}
         onToggleAdmin={() => setIsAdminView(!isAdminView)}
         showAdmin={isAdminView}
+        workingHours={workingHoursPerDay}
+        setWorkingHours={setWorkingHoursPerDay}
+        tilesPerRow={tilesPerRow}
+        setTilesPerRow={setTilesPerRow}
       />
 
       <StatsGrid stats={stats} />
@@ -1629,7 +1812,11 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className={`grid grid-cols-1 ${
+                tilesPerRow === 2 ? 'md:grid-cols-2' : 
+                tilesPerRow === 3 ? 'md:grid-cols-2 xl:grid-cols-3' : 
+                'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              } gap-6`}>
                 <AnimatePresence mode="popLayout">
                   {filteredProjects.map((project) => (
                     <ProjectCard
@@ -1790,6 +1977,16 @@ export default function App() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Proposed Start Date</label>
+                  <input
+                    type="date"
+                    value={proposedStartDate}
+                    onChange={e => setProposedStartDate(e.target.value)}
+                    className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                  />
+                </div>
+
                 <div className="bg-white/5 border border-white/10 p-4">
                   <div className="flex justify-between items-center text-[10px] uppercase font-mono mb-2">
                     <span className="text-white/85">Statistical Estimate</span>
@@ -1837,6 +2034,8 @@ export default function App() {
             teams={teams}
             onClose={() => setSelectedProject(null)}
             onUpdate={handleUpdateProjectMetadata}
+            onDelete={handleDeleteProject}
+            workingHoursPerDay={workingHoursPerDay}
           />
         )}
       </AnimatePresence>
