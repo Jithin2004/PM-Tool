@@ -179,21 +179,21 @@ function Login() {
   );
 }
 
-function Header({ 
-  user, 
-  profile, 
-  onLogout, 
-  onToggleAdmin, 
+function Header({
+  user,
+  profile,
+  onLogout,
+  onToggleAdmin,
   showAdmin,
   workingHours,
   setWorkingHours,
   tilesPerRow,
   setTilesPerRow
-}: { 
-  user: any, 
-  profile: Profile | null, 
-  onLogout: () => void, 
-  onToggleAdmin: () => void, 
+}: {
+  user: any,
+  profile: Profile | null,
+  onLogout: () => void,
+  onToggleAdmin: () => void,
   showAdmin: boolean,
   workingHours: number,
   setWorkingHours: (h: number) => void,
@@ -218,9 +218,9 @@ function Header({
             <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Working Hours/Day</label>
             <div className="flex items-center gap-2">
               <Clock className="w-3 h-3 text-blue-400" />
-              <input 
-                type="number" 
-                value={workingHours} 
+              <input
+                type="number"
+                value={workingHours}
                 onChange={(e) => setWorkingHours(Number(e.target.value))}
                 className="w-12 bg-transparent border-b border-white/20 font-mono text-xs focus:border-blue-400 outline-none text-center"
               />
@@ -231,7 +231,7 @@ function Header({
             <div className="flex items-center gap-3">
               <div className="flex bg-white/5 p-1 border border-white/10 rounded-sm">
                 {[2, 3, 4].map(num => (
-                  <button 
+                  <button
                     key={num}
                     onClick={() => setTilesPerRow(num)}
                     className={`px-2 py-0.5 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
@@ -263,7 +263,7 @@ function Header({
 
         <div className="hidden md:flex flex-col items-end">
           <p className="text-xs font-mono text-white/90 uppercase">Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/85'}>{profile?.role || 'INITIALIZING...'}</span></p>
-          <p className="text-[10px] font-mono text-white/80 uppercase tracking-[0.2em]">{profile?.role === 'viewer' ? 'READ_ONLY_ACCESS' : 'FULL_WRITE_AUTHORITY'}</p>
+          <p className="text-[10px] font-mono text-white/80 uppercase tracking-[0.2em]">{profile?.role === 'viewer' ? 'READ ONLY ACCESS' : 'FULL WRITE AUTHORITY'}</p>
         </div>
 
         <div className="h-8 w-[1px] bg-white/10 hidden md:block"></div>
@@ -419,15 +419,15 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
   const startDate = project.proposed_start_date ? new Date(project.proposed_start_date) : new Date(project.created_at);
   const now = new Date();
   const daysPassed = Math.max(0, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  
+
   const remainingDays = Math.max(0, Number(calendarDays) - daysPassed);
-  
+
   const completionDate = new Date(startDate.getTime() + Number(calendarDays) * 24 * 60 * 60 * 1000);
-  const completionDateStr = completionDate.toLocaleDateString('en-GB', { 
-    weekday: 'short', 
-    day: 'numeric', 
-    month: 'short', 
-    year: 'numeric' 
+  const completionDateStr = completionDate.toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
   });
 
   return (
@@ -436,9 +436,8 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
       animate={{ opacity: 1, y: 0 }}
       layout
       onClick={() => onClick(project)}
-      className={`border border-white/10 bg-[#0c0c0c] p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden ${
-        stdDev >= 3 ? 'border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]' : ''
-      }`}
+      className={`border border-white/10 bg-[#0c0c0c] p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden ${stdDev >= 3 ? 'border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]' : ''
+        }`}
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] -mr-16 -mt-16 rounded-full blur-3xl pointer-events-none group-hover:bg-white/[0.05]"></div>
       {stdDev >= 3 && <div className="absolute top-0 left-0 w-full h-0.5 bg-red-500/50"></div>}
@@ -446,11 +445,10 @@ function ProjectCard({ project, teams, onClick }: { project: Project; teams: Tea
       <div className="flex justify-between items-start mb-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className={`text-[11px] font-mono font-bold uppercase px-3 py-1 border ${
-              project.status === 'deployed' ? 'border-green-500/50 text-green-400 bg-green-500/15' :
+            <span className={`text-[11px] font-mono font-bold uppercase px-3 py-1 border ${project.status === 'deployed' ? 'border-green-500/50 text-green-400 bg-green-500/15' :
               project.status === 'in-progress' ? 'border-blue-500/50 text-blue-400 bg-blue-500/15' :
-              'border-white/30 text-white bg-white/20'
-            }`}>
+                'border-white/30 text-white bg-white/20'
+              }`}>
               {project.status.replace('-', ' ')}
             </span>
             <span className={`text-[11px] font-mono font-bold uppercase px-3 py-1 border border-white/20 bg-white/10 ${riskColor}`}>
@@ -512,7 +510,7 @@ function TeamMember({ name, role, load, efficiency, urgent }: { name: string, ro
       </div>
       <div className="flex justify-between text-[10px] font-mono text-white/75 uppercase">
         <span>Efficiency: {(efficiency * 100).toFixed(0)}%</span>
-        <span>{load > 100 ? 'CRITICAL_OVERAGE' : 'STABLE_BANDWIDTH'}</span>
+        <span>{load > 100 ? 'CRITICAL_OVERAGE' : 'STABLE BANDWIDTH'}</span>
       </div>
     </div>
   );
@@ -865,7 +863,7 @@ function ProjectDetailsModal({
   const daysPassed = Math.max(0, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
   const remainingDays = Math.max(0, Number(calendarExpected) - daysPassed);
   const completionDate = new Date(startDate.getTime() + Number(calendarExpected) * 24 * 60 * 60 * 1000);
-  
+
   const deadline = clientDeadline ? new Date(clientDeadline) : null;
   const deadlineVariance = deadline ? Math.floor((deadline.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
@@ -929,11 +927,11 @@ function ProjectDetailsModal({
                   {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
-              
+
               <div className="pt-4 border-t border-white/10">
                 {!isDeleting ? (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setIsDeleting(true)}
                     className="flex items-center gap-2 text-xs font-mono text-red-500 hover:text-red-400 transition-colors uppercase tracking-widest"
                   >
@@ -942,7 +940,7 @@ function ProjectDetailsModal({
                 ) : (
                   <div className="space-y-3">
                     <label className="block text-[10px] uppercase font-mono text-red-500/80">Reason for Decommissioning</label>
-                    <textarea 
+                    <textarea
                       required
                       value={deleteReason}
                       onChange={e => setDeleteReason(e.target.value)}
@@ -950,15 +948,15 @@ function ProjectDetailsModal({
                       placeholder="Specify reason..."
                     />
                     <div className="flex gap-2">
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => onDelete(project.id, deleteReason)}
                         className="flex-1 bg-red-500 text-white py-2 text-[10px] font-mono uppercase tracking-widest hover:bg-red-600 transition-colors"
                       >
                         Confirm Delete
                       </button>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => setIsDeleting(false)}
                         className="flex-1 border border-white/10 text-white/70 py-2 text-[10px] font-mono uppercase tracking-widest hover:bg-white/5 transition-colors"
                       >
@@ -974,7 +972,7 @@ function ProjectDetailsModal({
               <div className="bg-white/5 border border-white/10 p-6 rounded-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-12 h-12" /></div>
                 <h4 className="text-[10px] font-mono text-white/85 uppercase tracking-widest mb-4">Predictive Outcome</h4>
-                
+
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="bg-white/5 p-3">
                     <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Total Real Hours</p>
@@ -1141,7 +1139,7 @@ function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: { profil
               <label className="block text-[10px] uppercase font-mono text-white/85">Profile Identity Source</label>
               <div className="flex gap-2">
                 {googleAvatar && avatarUrl !== googleAvatar && (
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setAvatarUrl(googleAvatar)}
                     className="text-[9px] font-mono text-yellow-500 border border-yellow-500/20 px-2 py-0.5 hover:bg-yellow-500/10 transition-all uppercase"
@@ -1155,13 +1153,13 @@ function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: { profil
                 </label>
               </div>
             </div>
-            
+
             {avatarUrl?.startsWith('data:image') ? (
               <div className="flex items-center gap-2">
                 <div className="flex-1 bg-white/5 border border-white/10 h-11 px-4 font-mono text-[10px] flex items-center text-blue-400/80 italic">
                   LOCAL_GALLERY_OVERRIDE_ACTIVE
                 </div>
-                <button 
+                <button
                   type="button"
                   onClick={() => setAvatarUrl('')}
                   className="h-11 px-4 border border-red-500/30 text-red-400 font-mono text-[9px] uppercase hover:bg-red-500/10 transition-all"
@@ -1368,18 +1366,18 @@ export default function App() {
         const { count: totalCount, error: countError } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true });
-        
+
         if (countError) console.error("Initial role check failed:", countError);
         const newRole: UserRole = (!countError && totalCount === 0) ? 'super_admin' : 'viewer';
 
         // Attempt to insert full profile
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert({ 
-            id: u.id, 
-            email: u.email, 
+          .insert({
+            id: u.id,
+            email: u.email,
             role: newRole,
-            avatar_url: googleAvatar 
+            avatar_url: googleAvatar
           })
           .select()
           .single();
@@ -1389,14 +1387,14 @@ export default function App() {
           // Fallback insert with only core fields
           const { data: retryProfile, error: retryError } = await supabase
             .from('profiles')
-            .insert({ 
-              id: u.id, 
-              email: u.email, 
-              role: newRole 
+            .insert({
+              id: u.id,
+              email: u.email,
+              role: newRole
             })
             .select()
             .single();
-          
+
           if (retryError) throw retryError;
           setProfile(retryProfile);
         } else {
@@ -1412,12 +1410,12 @@ export default function App() {
             .eq('id', u.id)
             .select()
             .single();
-          
+
           if (!updateError && updatedProfile) {
             data = updatedProfile;
           }
         }
-        
+
         setProfile(data);
         if (!data.full_name || !data.phone) {
           setIsProfileOpen(true);
@@ -1677,7 +1675,7 @@ export default function App() {
 
     // Generate dynamic insight
     let insight = "System operations are nominal. No significant architectural bias detected.";
-    
+
     const overloadedSquads = teams.map(t => {
       const teamProjects = activeProjects.filter(p => p.team_id === t.id);
       const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
@@ -1768,13 +1766,13 @@ export default function App() {
                   <div className="flex items-center gap-6 mb-2">
                     <h2 className="text-3xl font-medium tracking-tight">Project Workspace</h2>
                     <div className="flex bg-white/5 p-1 border border-white/5">
-                      <button 
+                      <button
                         onClick={() => setDashboardTab('active')}
                         className={`px-3 py-1 text-[9px] font-mono uppercase tracking-widest transition-all ${dashboardTab === 'active' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
                       >
                         Active
                       </button>
-                      <button 
+                      <button
                         onClick={() => setDashboardTab('completed')}
                         className={`px-3 py-1 text-[9px] font-mono uppercase tracking-widest transition-all ${dashboardTab === 'completed' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
                       >
@@ -1783,7 +1781,7 @@ export default function App() {
                     </div>
                   </div>
                   <p className="text-sm text-white/85 font-mono tracking-tighter">
-                    {dashboardTab === 'active' 
+                    {dashboardTab === 'active'
                       ? "Precision forecasting through engineering overhead modeling and historical drift correction."
                       : "Historical repository of finalized assets and squad attribution data."}
                   </p>
@@ -1813,11 +1811,10 @@ export default function App() {
                 </div>
               </div>
 
-              <div className={`grid grid-cols-1 ${
-                tilesPerRow === 2 ? 'md:grid-cols-2' : 
-                tilesPerRow === 3 ? 'md:grid-cols-2 xl:grid-cols-3' : 
-                'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-              } gap-6`}>
+              <div className={`grid grid-cols-1 ${tilesPerRow === 2 ? 'md:grid-cols-2' :
+                tilesPerRow === 3 ? 'md:grid-cols-2 xl:grid-cols-3' :
+                  'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                } gap-6`}>
                 <AnimatePresence mode="popLayout">
                   {filteredProjects.map((project) => (
                     <ProjectCard
@@ -1935,7 +1932,7 @@ export default function App() {
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
                     className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                    placeholder="E.g. QUANTUM_STORAGE_OPTIMIZER"
+                    placeholder="E.g. QUANTUM STORAGE OPTIMIZER"
                   />
                 </div>
 
