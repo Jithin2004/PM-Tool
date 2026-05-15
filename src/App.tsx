@@ -867,7 +867,7 @@ function ProjectDetailsModal({
   const completionDate = new Date(startDate.getTime() + Number(calendarExpected) * 24 * 60 * 60 * 1000);
   
   const deadline = clientDeadline ? new Date(clientDeadline) : null;
-  const variance = deadline ? Math.floor((deadline.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
+  const deadlineVariance = deadline ? Math.floor((deadline.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
@@ -988,10 +988,10 @@ function ProjectDetailsModal({
                     <p className="text-[10px] font-mono text-blue-400 uppercase mb-1">Remaining ETA</p>
                     <p className="text-xl font-mono text-blue-400">{remainingDays.toFixed(1)}d</p>
                   </div>
-                  <div className={`p-3 border ${variance !== null && variance < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
-                    <p className={`text-[10px] font-mono uppercase mb-1 ${variance !== null && variance < 0 ? 'text-red-400' : 'text-green-400'}`}>Variance</p>
-                    <p className={`text-xl font-mono ${variance !== null && variance < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                      {variance !== null ? `${Math.abs(variance)}d ${variance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
+                  <div className={`p-3 border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
+                    <p className={`text-[10px] font-mono uppercase mb-1 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-green-400'}`}>Variance</p>
+                    <p className={`text-xl font-mono ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      {deadlineVariance !== null ? `${Math.abs(deadlineVariance)}d ${deadlineVariance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
                     </p>
                   </div>
                 </div>
