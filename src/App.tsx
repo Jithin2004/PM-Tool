@@ -1124,13 +1124,16 @@ function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: { profil
           </div>
 
           <div>
-            <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Phone / Contact</label>
+            <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Phone / Contact (10 Digits)</label>
             <input
               type="tel"
+              pattern="[0-9]{10}"
+              title="Please enter a full 10 digit phone number"
+              required
               value={phone}
               onChange={e => setPhone(e.target.value)}
               className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none"
-              placeholder="+123..."
+              placeholder="e.g. 1234567890"
             />
           </div>
 
@@ -1158,6 +1161,19 @@ function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: { profil
               <div className="flex items-center gap-2">
                 <div className="flex-1 bg-white/5 border border-white/10 h-11 px-4 font-mono text-[10px] flex items-center text-blue-400/80 italic">
                   LOCAL_GALLERY_OVERRIDE_ACTIVE
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAvatarUrl('')}
+                  className="h-11 px-4 border border-red-500/30 text-red-400 font-mono text-[9px] uppercase hover:bg-red-500/10 transition-all"
+                >
+                  Clear
+                </button>
+              </div>
+            ) : avatarUrl === googleAvatar && googleAvatar ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-white/5 border border-white/10 h-11 px-4 font-mono text-[10px] flex items-center text-green-400/80 italic">
+                  GOOGLE_ACCOUNT_LINKED
                 </div>
                 <button
                   type="button"
