@@ -21,7 +21,12 @@ CREATE TABLE IF NOT EXISTS projects (
   pert_worst NUMERIC NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   owner_id UUID REFERENCES auth.users(id),
-  tags TEXT[] DEFAULT '{}'
+  team_id UUID,
+  tags TEXT[] DEFAULT '{}',
+  proposed_start_date TIMESTAMPTZ,
+  delete_reason TEXT,
+  client_deadline TIMESTAMPTZ,
+  real_hours NUMERIC
 );
 
 -- 3. Row Level Security (RLS)
