@@ -808,6 +808,7 @@ function AdminDashboard({
   );
 }
 
+function ProjectDetailsModal({
   project,
   teams,
   onClose,
