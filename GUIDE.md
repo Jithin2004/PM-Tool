@@ -20,13 +20,15 @@ Instead of a single "guess," you provide three values for every project:
 ### B. Historical Bias Calibration
 RESOLVE tracks your team's accuracy. If you consistently underestimate by 20%, the system learns this from your **Done** projects (comparing `Actual Hours` to the `PERT Estimate`) and automatically scales future forecasts by that same bias factor.
 
-### C. The Fatigue Factor (Decay Logic)
-Human productivity isn't linear. After 6 hours of deep work, efficiency drops. 
-- **Configuration**: If `Fatigue Factor` is set to `0.80`, hours worked after the 6th hour in a single day are only "80% efficient." This means a 2-hour task at the end of the day might actually take 2.5 hours of calendar time.
+### C. The Human Element (Efficiency Factor)
+Humans do not code for 8 straight hours. Meetings, context switching, debugging, and general breaks naturally consume time.
+- **Productive Hours Calculation**: RESOLVE assumes an **80% efficiency baseline**. If you set your global "Working Hours/Day" to 8, the engine calculates that only 6.4 hours per day will go toward actual task burn-down. This mathematically guarantees your calendar predictions won't suffer from optimistic time-blocking.
 
-### D. Context Switch Cost
-Every time a team or individual switches between projects, there is a mental "re-loading" cost. 
-- RESOLVE applies a **Logarithmic Penalty**. The more projects a team is juggling simultaneously, the higher the overhead per project.
+### D. Dynamic ETA Calibration
+Once a project has a **Proposed Start Date**, the engine tracks elapsed time. 
+- **Calendar Days**: Total expected hours are divided by the team's daily productive hours.
+- **Remaining ETA**: Automatically calibrates each day. If a 10-day project started 3 days ago, the Remaining ETA physically ticks down to 7 days, maintaining a realistic "Predicted End Date" projection.
+- **Schedule Variance**: RESOLVE continuously checks the *Predicted End Date* against the *Client Deadline* and generates a Variance score (e.g., "3 days ahead" or "2 days behind").
 
 ---
 
@@ -37,20 +39,18 @@ Every time a team or individual switches between projects, there is a mental "re
 | Field | Meaning | Real-World Strategy |
 | :--- | :--- | :--- |
 | **Project Name** | Identifiable name of the deliverable. | Be specific (e.g., "Auth Service Rewrite"). |
-| **Priority** | Numerical rank (1 = Highest). | Lower numbers get scheduled first by the engine. |
-| **Team ID** | The squad or individual assigned. | Use this to balance load across different departments. |
-| **Expected Hours** | Your primary gut-feel estimate. | Don't include buffer; the system adds it later. |
-| **Best Case** | "10x Developer" speed. | Be honest—what is the physical minimum time? |
-| **Worst Case** | "The Disaster Scenario." | Factor in unknown legacy code or 3rd party API delays. |
-| **Overhead Multiplier** | Multiplier for meetings/QA/Admin. | Standard is `1.3` (30% overhead). For complex R&D, use `1.8`. |
-| **Client Deadline** | The hard drop-dead date. | Used to calculate **Health Status** (OK, Risk, or Late). |
+| **Priority** | Numerical rank (High/Medium/Low). | Determines dashboard sorting and attention. |
+| **Team ID** | The squad or individual assigned. | Used for resource load balancing. |
+| **Proposed Start Date** | The day the work officially begins. | Anchors the ETA calibration. |
+| **Client Deadline** | The hard drop-dead date. | Used to calculate **Variance** (Ahead/Behind schedule). |
+| **PERT: Best Case** | Physical minimum hours required. | The "10x Developer" uninterrupted speed. |
+| **PERT: Likely Case**| Most probable hours required. | Includes normal minor setbacks. |
+| **PERT: Worst Case** | "The Disaster Scenario" hours. | Factor in legacy code or API delays. |
 
 ### Global Settings (`config`)
 
-- **Hours Per Day**: Actual productive coding hours (usually 6-7, not 8).
-- **Buffer %**: A "Safety Margin" applied to every project (e.g., 10%).
-- **Context Switch (Hrs)**: The base penalty for switching tasks. Standard is `0.5` to `1.5` hours.
-- **Fatigue Factor**: The multiplier applied to work after the 6th hour (default `0.85`).
+- **Working Hours/Day**: The baseline hours your team is contracted to work (e.g., 8). This is globally configured in the top header. The engine automatically reduces this to "Productive Hours" (e.g., 6.4) to account for daily human friction. All calendar ETA predictions scale dynamically when you change this number.
+- **Tiles Per Row**: Customize your dashboard density (2-4 tiles) based on your monitor size.
 
 ---
 

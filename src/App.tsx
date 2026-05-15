@@ -398,18 +398,20 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
   );
 }
 
-function ProjectCard({ project, teams, onClick }: { project: Project; teams: Team[]; onClick: (p: Project) => void }) {
+function ProjectCard({ project, teams, workingHoursPerDay, onClick }: { project: Project; teams: Team[]; workingHoursPerDay: number; onClick: (p: Project) => void }) {
   const historicalSquad = project.tags.find(t => t.startsWith('SQUAD:'))?.replace('SQUAD:', '');
   const team = teams.find(t => t.id === project.team_id);
   const teamName = team ? team.name : (historicalSquad || "UNALLOCATED");
   const parsedTeamData = team ? (typeof team.data === 'string' ? JSON.parse(team.data) : team.data) : null;
   const engineerCount = Math.max(1, parsedTeamData?.developer_ids?.length || 1);
 
-  const expectedManDays = useMemo(() =>
+  const expectedRealHours = useMemo(() =>
     calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst),
     [project]
   );
-  const calendarDays = (expectedManDays / engineerCount).toFixed(1);
+  
+  const productiveHoursPerDay = workingHoursPerDay * 0.8;
+  const calendarDays = (expectedRealHours / productiveHoursPerDay / engineerCount).toFixed(1);
   const stdDev = Math.sqrt(calculateVariance(project.pert_best, project.pert_worst));
 
   const riskColor = stdDev < 1.5 ? 'text-green-400' : stdDev < 3 ? 'text-yellow-400' : 'text-red-500';
@@ -828,8 +830,8 @@ function ProjectDetailsModal({
   const [pBest, setPBest] = useState(project.pert_best.toString());
   const [pLikely, setPLikely] = useState(project.pert_likely.toString());
   const [pWorst, setPWorst] = useState(project.pert_worst.toString());
-  const [proposedStartDate, setProposedStartDate] = useState(project.proposed_start_date || '');
-  const [clientDeadline, setClientDeadline] = useState(project.client_deadline || '');
+  const [proposedStartDate, setProposedStartDate] = useState(project.proposed_start_date?.substring(0, 10) || '');
+  const [clientDeadline, setClientDeadline] = useState(project.client_deadline?.substring(0, 10) || '');
   const [deleteReason, setDeleteReason] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -837,8 +839,9 @@ function ProjectDetailsModal({
   const parsedTeamData = team ? (typeof team.data === 'string' ? JSON.parse(team.data) : team.data) : null;
   const engineerCount = Math.max(1, parsedTeamData?.developer_ids?.length || 1);
 
-  const expected = calculateExpectedTime(Number(pBest), Number(pLikely), Number(pWorst));
-  const calendarExpected = (expected / engineerCount).toFixed(2);
+  const expectedRealHours = calculateExpectedTime(Number(pBest), Number(pLikely), Number(pWorst));
+  const productiveHoursPerDay = workingHoursPerDay * 0.8;
+  const calendarExpected = (expectedRealHours / productiveHoursPerDay / engineerCount).toFixed(2);
   const variance = calculateVariance(Number(pBest), Number(pWorst));
   const stdDev = Math.sqrt(variance);
 
@@ -976,7 +979,7 @@ function ProjectDetailsModal({
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="bg-white/5 p-3">
                     <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Total Real Hours</p>
-                    <p className="text-xl font-mono">{(expected * workingHoursPerDay).toFixed(1)}h</p>
+                    <p className="text-xl font-mono">{expectedRealHours.toFixed(1)}h</p>
                   </div>
                   <div className="bg-white/5 p-3">
                     <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Working Days</p>
@@ -1000,9 +1003,9 @@ function ProjectDetailsModal({
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-6">
-                  <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">BEST (D)</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
-                  <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">LIKELY (D)</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
-                  <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">WORST (D)</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
+                  <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">BEST (H)</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
+                  <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">LIKELY (H)</p><input type="number" step="0.1" value={pLikely} onChange={e => setPLikely(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
+                  <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">WORST (H)</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
                 </div>
 
                 <div className="pt-4 border-t border-white/5">
@@ -1837,6 +1840,7 @@ export default function App() {
                       key={project.id}
                       project={project}
                       teams={teams}
+                      workingHoursPerDay={workingHoursPerDay}
                       onClick={setSelectedProject}
                     />
                   ))}
@@ -1954,7 +1958,7 @@ export default function App() {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: BEST (D)</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: BEST (H)</label>
                     <input
                       required
                       type="number"
@@ -1966,7 +1970,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: LIKELY (D)</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: LIKELY (H)</label>
                     <input
                       required
                       type="number"
@@ -1978,7 +1982,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: WORST (D)</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: WORST (H)</label>
                     <input
                       required
                       type="number"
@@ -2005,7 +2009,7 @@ export default function App() {
                   <div className="flex justify-between items-center text-[10px] uppercase font-mono mb-2">
                     <span className="text-white/85">Statistical Estimate</span>
                     <span className="text-white/80">
-                      {calculateExpectedTime(Number(pertBest), Number(pertLikely), Number(pertWorst)).toFixed(2)} MAN_DAYS
+                      {calculateExpectedTime(Number(pertBest), Number(pertLikely), Number(pertWorst)).toFixed(2)} HOURS
                     </span>
                   </div>
                   <div className="w-full bg-white/5 h-1">
