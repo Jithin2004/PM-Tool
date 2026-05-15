@@ -218,12 +218,18 @@ function Header({
             <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Working Hours/Day</label>
             <div className="flex items-center gap-2">
               <Clock className="w-3 h-3 text-blue-400" />
-              <input
-                type="number"
-                value={workingHours}
-                onChange={(e) => setWorkingHours(Number(e.target.value))}
-                className="w-12 bg-transparent border-b border-white/20 font-mono text-xs focus:border-blue-400 outline-none text-center"
-              />
+              {profile?.role === 'super_admin' ? (
+                <input
+                  type="number"
+                  value={workingHours}
+                  onChange={(e) => setWorkingHours(Number(e.target.value))}
+                  min={1}
+                  max={24}
+                  className="w-12 bg-transparent border-b border-blue-400/50 font-mono text-xs focus:border-blue-400 outline-none text-center"
+                />
+              ) : (
+                <span className="w-12 font-mono text-xs text-center text-white/70">{workingHours}h</span>
+              )}
             </div>
           </div>
           <div className="flex flex-col">
@@ -245,18 +251,12 @@ function Header({
         </div>
 
         <div className="hidden lg:flex items-center gap-8 mr-4">
-          <button
-            onClick={() => onToggleAdmin()}
-            className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}
-          >
-            {showAdmin ? 'Close Console' : 'Workspace'}
-          </button>
           {profile?.role === 'super_admin' && (
             <button
               onClick={onToggleAdmin}
               className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}
             >
-              {showAdmin ? 'Exit Admin' : 'Admin Console'}
+              {showAdmin ? 'Exit Admin Console' : 'Admin Console'}
             </button>
           )}
         </div>
@@ -1320,7 +1320,55 @@ export default function App() {
     };
 
     initAuth();
+
+    const projectsSub = supabase.channel('public:projects')
+      .on('postgres', { event: '*', schema: 'public', table: 'projects' }, () => {
+        fetchProjects();
+      }).subscribe();
+
+    const teamsSub = supabase.channel('public:teams')
+      .on('postgres', { event: '*', schema: 'public', table: 'teams' }, () => {
+        fetchTeams();
+      }).subscribe();
+
+    const profilesSub = supabase.channel('public:profiles')
+      .on('postgres', { event: 'INSERT', schema: 'public', table: 'profiles' }, (payload) => {
+        fetchProfiles();
+        const newEmail = payload.new.email;
+        notify(`New member onboarded: ${newEmail}`, 'info');
+      })
+      .on('postgres', { event: 'UPDATE', schema: 'public', table: 'profiles' }, () => {
+        fetchProfiles();
+      })
+      .on('postgres', { event: 'DELETE', schema: 'public', table: 'profiles' }, () => {
+        fetchProfiles();
+      }).subscribe();
+
+    return () => {
+      supabase.removeChannel(projectsSub);
+      supabase.removeChannel(teamsSub);
+      supabase.removeChannel(profilesSub);
+    };
   }, []);
+
+  const activeTeams = useMemo(() => teams.filter(t => t.name !== 'SYSTEM_SETTINGS'), [teams]);
+
+  useEffect(() => {
+    const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
+    if (settingsTeam && settingsTeam.data && typeof (settingsTeam.data as any).workingHours === 'number') {
+      setWorkingHoursPerDay((settingsTeam.data as any).workingHours);
+    }
+  }, [teams]);
+
+  const handleWorkingHoursChange = async (h: number) => {
+    setWorkingHoursPerDay(h);
+    const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
+    if (settingsTeam) {
+      await supabase.from('teams').update({ data: { workingHours: h } }).eq('id', settingsTeam.id);
+    } else {
+      await supabase.from('teams').insert({ name: 'SYSTEM_SETTINGS', data: { workingHours: h } });
+    }
+  };
 
   useEffect(() => {
     if ((isAdminView && profile?.role === 'super_admin') || isRosterOpen) {
@@ -1419,6 +1467,10 @@ export default function App() {
         } else {
           setProfile(newProfile);
         }
+        // Welcome toast for new users
+        const welcomeName = u.user_metadata?.full_name || u.email?.split('@')[0] || 'Engineer';
+        notify(`Welcome aboard, ${welcomeName}! Complete your identity profile to get started.`, 'info');
+        fetchProfiles();
         setIsProfileOpen(true);
       } else {
         // Auto-sync Google avatar for existing users if missing
@@ -1491,6 +1543,7 @@ export default function App() {
     if (!error && data) {
       setProjects(projects.map(p => p.id === id ? data : p));
       notify("Asset metrics synchronized.", "success");
+      fetchProjects();
     } else {
       console.error("Metadata update failed:", error);
       notify(`Sync failed: ${error?.message || "Unknown error"}`, "error");
@@ -1548,6 +1601,7 @@ export default function App() {
     if (!error && data) {
       setTeams([data, ...teams]);
       notify("Squad successfully initialized!", "success");
+      fetchProfiles();
     } else {
       console.error("Team creation failed:", error);
       notify(`Team creation failed: ${error?.message || "Unknown error"}`, "error");
@@ -1620,6 +1674,7 @@ export default function App() {
           setProjects(projects.filter(p => p.id !== id));
           notify("Asset successfully decommissioned.", "success");
           setSelectedProject(null);
+          fetchProjects();
         } else {
           console.error("Asset deletion failed:", error);
           notify(`Deletion failed: ${error.message}`, "error");
@@ -1665,7 +1720,9 @@ export default function App() {
       setPertBest('');
       setPertLikely('');
       setPertWorst('');
+      setProposedStartDate('');
       notify("Asset successfully committed to system.", "success");
+      fetchProjects();
     } else {
       console.error("Project creation failed:", error);
       notify(`System Error: ${error?.message || "Failed to commit asset"}`, "error");
@@ -1690,12 +1747,12 @@ export default function App() {
 
     const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
     const teamsWithProjects = new Set(activeProjects.filter(p => p.team_id).map(p => p.team_id));
-    const teamBandwidth = teams.length > 0 ? (teamsWithProjects.size / teams.length) * 100 : 0;
+    const teamBandwidth = activeTeams.length > 0 ? (teamsWithProjects.size / activeTeams.length) * 100 : 0;
 
     // Generate dynamic insight
     let insight = "System operations are nominal. No significant architectural bias detected.";
 
-    const overloadedSquads = teams.map(t => {
+    const overloadedSquads = activeTeams.map(t => {
       const teamProjects = activeProjects.filter(p => p.team_id === t.id);
       const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
       return { name: t.name, load: (totalExpected / 20) };
@@ -1718,7 +1775,7 @@ export default function App() {
     };
   };
 
-  const stats: Stats = useMemo(() => calculateDynamicStats(), [projects, teams]);
+  const stats: Stats = useMemo(() => calculateDynamicStats(), [projects, activeTeams]);
 
   if (loading) {
     return (
@@ -1746,7 +1803,7 @@ export default function App() {
         onToggleAdmin={() => setIsAdminView(!isAdminView)}
         showAdmin={isAdminView}
         workingHours={workingHoursPerDay}
-        setWorkingHours={setWorkingHoursPerDay}
+        setWorkingHours={handleWorkingHoursChange}
         tilesPerRow={tilesPerRow}
         setTilesPerRow={setTilesPerRow}
       />
@@ -1770,7 +1827,7 @@ export default function App() {
       {isAdminView && profile?.role === 'super_admin' ? (
         <AdminDashboard
           profiles={profiles}
-          teams={teams}
+          teams={activeTeams}
           onUpdateRole={handleUpdateRole}
           onCreateTeam={handleCreateTeam}
           onUpdateTeam={handleUpdateTeam}
@@ -1839,7 +1896,7 @@ export default function App() {
                     <ProjectCard
                       key={project.id}
                       project={project}
-                      teams={teams}
+                      teams={activeTeams}
                       workingHoursPerDay={workingHoursPerDay}
                       onClick={setSelectedProject}
                     />
@@ -1867,7 +1924,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-4">
-                  {teams.slice(0, 3).map(team => {
+                  {activeTeams.slice(0, 3).map(team => {
                     const teamProjects = projects.filter(p => p.team_id === team.id);
                     const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
                     const avgEfficiency = teamProjects.length > 0 ? teamProjects.reduce((acc, p) => acc + p.efficiency, 0) / teamProjects.length : 1;
@@ -1884,7 +1941,7 @@ export default function App() {
                       />
                     );
                   })}
-                  {teams.length === 0 && <p className="text-[10px] font-mono text-white/75 italic">No operational units detected.</p>}
+                  {activeTeams.length === 0 && <p className="text-[10px] font-mono text-white/75 italic">No operational units detected.</p>}
                 </div>
 
                 <button
@@ -2049,7 +2106,7 @@ export default function App() {
         {selectedProject && (
           <ProjectDetailsModal
             project={selectedProject}
-            teams={teams}
+            teams={activeTeams}
             onClose={() => setSelectedProject(null)}
             onUpdate={handleUpdateProjectMetadata}
             onDelete={handleDeleteProject}
@@ -2061,7 +2118,7 @@ export default function App() {
       <AnimatePresence>
         {isRosterOpen && (
           <SquadRosterModal
-            teams={teams}
+            teams={activeTeams}
             profiles={profiles}
             onClose={() => setIsRosterOpen(false)}
           />
