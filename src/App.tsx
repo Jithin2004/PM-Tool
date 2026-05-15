@@ -471,7 +471,7 @@ function ProjectCard({ project, teams, workingHoursPerDay, onClick }: { project:
           <p className="text-[10px] font-mono text-white/85 uppercase mb-1">Finish_ETA</p>
           <div className={`text-xl font-mono font-medium ${riskColor}`}>{remainingDays.toFixed(1)}d</div>
           <p className="text-[9px] font-mono text-white/60 uppercase mt-1 leading-none">{completionDateStr}</p>
-          <p className="text-[10px] font-mono text-white/75 uppercase mt-2">Effort: {expectedManDays.toFixed(1)}m/d</p>
+          <p className="text-[10px] font-mono text-white/75 uppercase mt-2">Effort: {expectedRealHours.toFixed(1)}h</p>
         </div>
       </div>
 
