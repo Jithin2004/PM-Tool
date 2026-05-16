@@ -835,6 +835,8 @@ function ProjectDetailsModal({
   const [deleteReason, setDeleteReason] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const hasAllData = pBest !== '' && pLikely !== '' && pWorst !== '' && proposedStartDate !== '' && clientDeadline !== '';
+
   const team = teams.find(t => t.id === teamId);
   const parsedTeamData = team ? (typeof team.data === 'string' ? JSON.parse(team.data) : team.data) : null;
   const engineerCount = Math.max(1, parsedTeamData?.developer_ids?.length || 1);
@@ -976,31 +978,43 @@ function ProjectDetailsModal({
                 <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-12 h-12" /></div>
                 <h4 className="text-[10px] font-mono text-white/85 uppercase tracking-widest mb-4">Predictive Outcome</h4>
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-white/5 p-3">
-                    <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Total Real Hours</p>
-                    <p className="text-xl font-mono">{expectedRealHours.toFixed(1)}h</p>
-                  </div>
-                  <div className="bg-white/5 p-3">
-                    <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Working Days</p>
-                    <p className="text-xl font-mono">{calendarExpected}d</p>
-                  </div>
-                  <div className="bg-blue-500/10 p-3 border border-blue-500/20">
-                    <p className="text-[10px] font-mono text-blue-400 uppercase mb-1">Remaining ETA</p>
-                    <p className="text-xl font-mono text-blue-400">{remainingDays.toFixed(1)}d</p>
-                  </div>
-                  <div className={`p-3 border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
-                    <p className={`text-[10px] font-mono uppercase mb-1 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-green-400'}`}>Variance</p>
-                    <p className={`text-xl font-mono ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                      {deadlineVariance !== null ? `${Math.abs(deadlineVariance)}d ${deadlineVariance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
-                    </p>
-                  </div>
-                </div>
+                {hasAllData ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="bg-white/5 p-3">
+                        <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Total Real Hours</p>
+                        <p className="text-xl font-mono">{expectedRealHours.toFixed(1)}h</p>
+                      </div>
+                      <div className="bg-white/5 p-3">
+                        <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Working Days</p>
+                        <p className="text-xl font-mono">{calendarExpected}d</p>
+                      </div>
+                      <div className="bg-blue-500/10 p-3 border border-blue-500/20">
+                        <p className="text-[10px] font-mono text-blue-400 uppercase mb-1">Remaining ETA</p>
+                        <p className="text-xl font-mono text-blue-400">{remainingDays.toFixed(1)}d</p>
+                      </div>
+                      <div className={`p-3 border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
+                        <p className={`text-[10px] font-mono uppercase mb-1 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-green-400'}`}>Variance</p>
+                        <p className={`text-xl font-mono ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {deadlineVariance !== null ? `${Math.abs(deadlineVariance)}d ${deadlineVariance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="mb-6">
-                  <p className="text-[10px] font-mono text-white/75 uppercase mb-2">Predicted End</p>
-                  <p className="text-lg font-mono text-white">{completionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                </div>
+                    <div className="mb-6">
+                      <p className="text-[10px] font-mono text-white/75 uppercase mb-2">Predicted End</p>
+                      <p className="text-lg font-mono text-white">{completionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 mb-6 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-mono text-yellow-500 uppercase tracking-widest mb-1">Calculation Suspended</p>
+                      <p className="text-[10px] font-mono text-yellow-500/80 leading-relaxed">Please obtain and input all PERT estimates and timeline constraints to initiate the predictive outcome engine.</p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">BEST (H)</p><input type="number" step="0.1" value={pBest} onChange={e => setPBest(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
@@ -1008,10 +1022,12 @@ function ProjectDetailsModal({
                   <div><p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">WORST (H)</p><input type="number" step="0.1" value={pWorst} onChange={e => setPWorst(e.target.value)} className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white" /></div>
                 </div>
 
-                <div className="pt-4 border-t border-white/5">
-                  <div className="flex justify-between items-center"><span className="text-[11px] font-mono text-white/75 uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-yellow-500/80">±{stdDev.toFixed(2)}σ</span></div>
-                  <p className="text-[10px] font-mono text-white/70 mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
-                </div>
+                {hasAllData && (
+                  <div className="pt-4 border-t border-white/5">
+                    <div className="flex justify-between items-center"><span className="text-[11px] font-mono text-white/75 uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-yellow-500/80">±{stdDev.toFixed(2)}σ</span></div>
+                    <p className="text-[10px] font-mono text-white/70 mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
+                  </div>
+                )}
               </div>
               <button type="submit" className="w-full bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
                 Commit System Updates
@@ -2017,7 +2033,6 @@ export default function App() {
                   <div>
                     <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: BEST (H)</label>
                     <input
-                      required
                       type="number"
                       step="0.1"
                       value={pertBest}
@@ -2029,7 +2044,6 @@ export default function App() {
                   <div>
                     <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: LIKELY (H)</label>
                     <input
-                      required
                       type="number"
                       step="0.1"
                       value={pertLikely}
@@ -2041,7 +2055,6 @@ export default function App() {
                   <div>
                     <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: WORST (H)</label>
                     <input
-                      required
                       type="number"
                       step="0.1"
                       value={pertWorst}
