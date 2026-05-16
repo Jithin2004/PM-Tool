@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
+import { generateSystemInsight } from './services/aiService';
 
 // --- Types ---
 type UserRole = 'super_admin' | 'pm' | 'viewer';
@@ -1383,6 +1384,9 @@ export default function App() {
   const [dashboardTab, setDashboardTab] = useState<'active' | 'completed'>('active');
   const [workingHoursPerDay, setWorkingHoursPerDay] = useState(8);
   const [tilesPerRow, setTilesPerRow] = useState(3);
+  const [aiInsight, setAiInsight] = useState("Awaiting telemetry...");
+
+
 
   // Expose profile modal trigger for header
   useEffect(() => {
@@ -1500,6 +1504,49 @@ export default function App() {
   }, []);
 
   const activeTeams = useMemo(() => teams.filter(t => t.name !== 'SYSTEM_SETTINGS'), [teams]);
+
+  useEffect(() => {
+    if (loading || projects.length === 0) return;
+
+    const fetchInsight = async () => {
+      setAiInsight("Analyzing telemetry...");
+      const activeProjects = projects.filter(p => p.status !== 'deployed');
+      
+      let totalDecayHours = 0;
+      activeProjects.forEach(p => {
+        const expected = calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
+        if (p.pert_worst > expected) {
+          totalDecayHours += (p.pert_worst - expected);
+        }
+      });
+
+      const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
+      const teamsWithProjects = new Set(activeProjects.filter(p => p.team_id).map(p => p.team_id));
+      const teamBandwidth = activeTeams.length > 0 ? (teamsWithProjects.size / activeTeams.length) * 100 : 0;
+
+      const overloadedSquads = activeTeams.map(t => {
+        const parsedData = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
+        const engineerCount = Math.max(1, parsedData?.developer_ids?.length || 1);
+        const teamCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount;
+        const teamProjects = activeProjects.filter(p => p.team_id === t.id);
+        const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
+        return { name: t.name, load: (totalExpected / teamCapacityHours) };
+      }).filter(s => s.load > 1.0);
+
+      const insightText = await generateSystemInsight({
+        totalProjects: activeProjects.length,
+        deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
+        teamBandwidth: Number(teamBandwidth.toFixed(1)),
+        dailyFatigue: Number(totalDecayHours.toFixed(1)),
+        overloadedSquads
+      });
+
+      setAiInsight(`"${insightText}"`);
+    };
+
+    const debounceId = setTimeout(fetchInsight, 2500);
+    return () => clearTimeout(debounceId);
+  }, [projects, activeTeams, workingHoursPerDay, loading]);
 
   useEffect(() => {
     const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
@@ -1910,36 +1957,16 @@ export default function App() {
     const teamsWithProjects = new Set(activeProjects.filter(p => p.team_id).map(p => p.team_id));
     const teamBandwidth = activeTeams.length > 0 ? (teamsWithProjects.size / activeTeams.length) * 100 : 0;
 
-    // Generate dynamic insight
-    let insight = "System operations are nominal. No significant architectural bias detected.";
-
-    const overloadedSquads = activeTeams.map(t => {
-      const parsedData = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
-      const engineerCount = Math.max(1, parsedData?.developer_ids?.length || 1);
-      const teamCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount;
-      const teamProjects = activeProjects.filter(p => p.team_id === t.id);
-      const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
-      return { name: t.name, load: (totalExpected / teamCapacityHours) };
-    }).filter(s => s.load > 1.0);
-
-    if (overloadedSquads.length > 0) {
-      insight = `"${overloadedSquads[0].name} is currently at critical load (${(overloadedSquads[0].load * 100).toFixed(0)}%). Expect a 15-20% increase in regression frequency due to fatigue."`;
-    } else if (deliveryConfidence < 85) {
-      insight = `"Systemic confidence has dropped to ${deliveryConfidence.toFixed(0)}%. Predictive decay suggests high variance in ${activeProjects.filter(p => p.pert_worst > p.pert_likely).length} workstreams."`;
-    } else if (totalDecayHours > 24) {
-      insight = `"Minor predictive decay detected (${totalDecayHours.toFixed(0)}h). Recommend reviewing worst-case buffers on newly initialized assets."`;
-    }
-
     return {
       totalProjects: activeProjects.length,
       deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
       teamBandwidth: Number(teamBandwidth.toFixed(1)),
       dailyFatigue: Number(totalDecayHours.toFixed(1)),
-      insight
+      insight: aiInsight
     };
   };
 
-  const stats: Stats = useMemo(() => calculateDynamicStats(), [projects, activeTeams]);
+  const stats: Stats = useMemo(() => calculateDynamicStats(), [projects, activeTeams, aiInsight]);
 
   if (loading) {
     return (

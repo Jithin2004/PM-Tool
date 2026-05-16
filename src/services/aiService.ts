@@ -43,3 +43,29 @@ export async function estimateProject(description: string) {
     throw error;
   }
 }
+
+export async function generateSystemInsight(stats: any) {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `
+        You are an elite, highly technical AI Project Manager overseeing an engineering system.
+        Analyze the following real-time telemetry from the dashboard and provide a single, 1-2 sentence technical insight.
+        Maintain a high-fidelity, predictive, and slightly cybernetic tone (e.g., use terms like "nominal", "variance", "telemetry", "predictive decay").
+        Do NOT use markdown. Do NOT use pleasantries. Just return the raw string insight.
+        
+        Telemetry:
+        - Active Workflows: ${stats.totalProjects}
+        - Delivery Confidence: ${stats.deliveryConfidence}%
+        - Team Allocation (Bandwidth): ${stats.teamBandwidth}%
+        - Predictive Decay (Variance/Fatigue): ${stats.dailyFatigue} hours
+        - Overloaded Squads: ${stats.overloadedSquads?.length > 0 ? stats.overloadedSquads.map((s:any) => s.name).join(", ") : "None"}
+      `
+    });
+
+    return response.text?.trim() || "System operations are nominal. No significant architectural bias detected.";
+  } catch (error) {
+    console.error("AI Insight generation failed:", error);
+    return "Telemetry interrupted. Defaulting to local heuristics: System operations nominal.";
+  }
+}
