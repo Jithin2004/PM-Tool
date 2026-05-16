@@ -847,9 +847,34 @@ function ProjectDetailsModal({
   const variance = calculateVariance(Number(pBest), Number(pWorst));
   const stdDev = Math.sqrt(variance);
 
+  const [changeReasonPrompt, setChangeReasonPrompt] = useState<{ changes: any, open: boolean }>({ changes: null, open: false });
+  const [changeReason, setChangeReason] = useState('');
+  const [showLogs, setShowLogs] = useState(false);
+
+  const logs = useMemo(() => {
+    return (project.tags || []).filter(t => t.startsWith('LOG:')).map(t => JSON.parse(t.substring(4)));
+  }, [project.tags]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdate(project.id, {
+
+    const changes: string[] = [];
+    if (status !== project.status) changes.push(`Status (${project.status} -> ${status})`);
+    if (priority !== project.priority) changes.push(`Priority (${project.priority} -> ${priority})`);
+    if ((teamId || null) !== (project.team_id || null)) {
+      const oldTeam = teams.find(t => t.id === project.team_id)?.name || 'UNALLOCATED';
+      const newTeam = teams.find(t => t.id === teamId)?.name || 'UNALLOCATED';
+      changes.push(`Squad (${oldTeam} -> ${newTeam})`);
+    }
+    const oldDeadline = project.client_deadline?.substring(0, 10) || 'None';
+    const newDeadline = clientDeadline || 'None';
+    if (oldDeadline !== newDeadline) changes.push(`Client Deadline (${oldDeadline} -> ${newDeadline})`);
+
+    const oldStart = project.proposed_start_date?.substring(0, 10) || 'None';
+    const newStart = proposedStartDate || 'None';
+    if (oldStart !== newStart) changes.push(`Proposed Start (${oldStart} -> ${newStart})`);
+
+    const updates = {
       name,
       status: status as any,
       priority: priority as any,
@@ -859,7 +884,30 @@ function ProjectDetailsModal({
       pert_worst: Number(pWorst),
       proposed_start_date: proposedStartDate || null,
       client_deadline: clientDeadline || null
+    };
+
+    if (changes.length > 0) {
+      setChangeReasonPrompt({ changes: { ...updates, _log_summary: changes.join(', ') }, open: true });
+    } else {
+      onUpdate(project.id, updates);
+      onClose();
+    }
+  };
+
+  const handleConfirmChange = () => {
+    if (!changeReason) return;
+    const logEntry = JSON.stringify({
+      timestamp: new Date().toISOString(),
+      changes: changeReasonPrompt.changes._log_summary,
+      reason: changeReason
     });
+    
+    const updatedTags = [...(project.tags || []), `LOG:${logEntry}`];
+    const finalUpdates = { ...changeReasonPrompt.changes, tags: updatedTags };
+    delete finalUpdates._log_summary;
+
+    onUpdate(project.id, finalUpdates);
+    setChangeReasonPrompt({ changes: null, open: false });
     onClose();
   };
 
@@ -876,6 +924,56 @@ function ProjectDetailsModal({
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-2xl overflow-hidden shadow-2xl">
+        
+        {showLogs && (
+          <div className="absolute inset-0 z-50 bg-[#0c0c0c] flex flex-col">
+            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#0a0a0a]">
+              <h4 className="text-sm font-mono text-white/90 uppercase tracking-widest flex items-center gap-2"><History className="w-4 h-4" /> Asset Modification Log</h4>
+              <button type="button" onClick={() => setShowLogs(false)} className="p-2 border border-white/10 hover:bg-white/5 transition-colors"><Plus className="w-4 h-4 rotate-45 text-white/75" /></button>
+            </div>
+            <div className="flex-1 p-6 overflow-y-auto space-y-4">
+              {logs.length === 0 ? (
+                <p className="text-xs font-mono text-white/50 italic">No historical adjustments recorded.</p>
+              ) : (
+                [...logs].reverse().map((log, i) => (
+                  <div key={i} className="border border-white/10 bg-white/5 p-4 flex flex-col gap-2">
+                    <p className="text-[10px] font-mono text-white/50">{new Date(log.timestamp).toLocaleString()}</p>
+                    <p className="text-xs font-mono text-white/90 leading-relaxed"><span className="text-white/50 uppercase tracking-widest text-[9px] mr-2">CHANGES:</span> {log.changes}</p>
+                    <p className="text-xs font-mono text-yellow-500/90 leading-relaxed"><span className="text-white/50 uppercase tracking-widest text-[9px] mr-2">REASON:</span> {log.reason}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {changeReasonPrompt.open && (
+          <div className="absolute inset-0 z-50 bg-[#0c0c0c]/95 backdrop-blur-sm flex items-center justify-center p-8">
+            <div className="w-full max-w-md bg-black border border-white/20 p-6 space-y-4 shadow-2xl">
+              <div className="flex items-center gap-2 mb-2">
+                <Activity className="w-4 h-4 text-yellow-500" />
+                <h4 className="text-sm font-mono text-white/90 uppercase tracking-widest">Reason for Adjustment</h4>
+              </div>
+              <p className="text-[10px] font-mono text-white/60">The following adjustments require documentation for compliance:</p>
+              <ul className="text-[10px] font-mono text-white/80 list-disc pl-4 space-y-1">
+                {changeReasonPrompt.changes._log_summary.split(', ').map((c: string) => <li key={c}>{c}</li>)}
+              </ul>
+              <textarea
+                autoFocus
+                required
+                value={changeReason}
+                onChange={e => setChangeReason(e.target.value)}
+                className="w-full bg-[#0a0a0a] border border-white/20 p-3 text-xs font-mono min-h-[100px] focus:border-white/50 outline-none"
+                placeholder="Enter reason for modifying these parameters..."
+              />
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={handleConfirmChange} disabled={!changeReason} className="flex-1 bg-white text-black text-[10px] uppercase font-mono py-2 disabled:opacity-50 tracking-widest font-semibold">Log & Commit</button>
+                <button type="button" onClick={() => setChangeReasonPrompt({changes: null, open: false})} className="flex-1 border border-white/20 text-white/70 text-[10px] uppercase font-mono py-2 hover:bg-white/5 tracking-widest">Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="p-8">
           <div className="flex justify-between items-start mb-8">
             <div>
@@ -933,14 +1031,22 @@ function ProjectDetailsModal({
                 </select>
               </div>
 
-              <div className="pt-4 border-t border-white/10">
+              <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowLogs(true)}
+                  className="flex items-center gap-2 text-xs font-mono text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest whitespace-nowrap"
+                >
+                  <History className="w-4 h-4" /> View Logs
+                </button>
+                
                 {!isDeleting ? (
                   <button
                     type="button"
                     onClick={() => setIsDeleting(true)}
-                    className="flex items-center gap-2 text-xs font-mono text-red-500 hover:text-red-400 transition-colors uppercase tracking-widest"
+                    className="flex items-center gap-2 text-xs font-mono text-red-500 hover:text-red-400 transition-colors uppercase tracking-widest whitespace-nowrap"
                   >
-                    <Trash2 className="w-4 h-4" /> Decommission Asset
+                    <Trash2 className="w-4 h-4" /> Decommission
                   </button>
                 ) : (
                   <div className="space-y-3">
@@ -1303,6 +1409,9 @@ export default function App() {
   const [pertLikely, setPertLikely] = useState<string>('');
   const [pertWorst, setPertWorst] = useState<string>('');
   const [proposedStartDate, setProposedStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [newClientDeadline, setNewClientDeadline] = useState<string>('');
+  const [newPriority, setNewPriority] = useState<string>('medium');
+  const [newTeamId, setNewTeamId] = useState<string>('');
 
   useEffect(() => {
     const initAuth = async () => {
@@ -1713,12 +1822,14 @@ export default function App() {
     const newProject = {
       name: newName,
       status: 'planning',
-      priority: 'medium',
+      priority: newPriority,
       efficiency: 0.8,
       pert_best: Number(pertBest) || 0,
       pert_likely: Number(pertLikely) || 0,
       pert_worst: Number(pertWorst) || 0,
       proposed_start_date: proposedStartDate || null,
+      client_deadline: newClientDeadline || null,
+      team_id: newTeamId || null,
       owner_id: user.id,
       tags: ['NEW']
     };
@@ -1737,12 +1848,26 @@ export default function App() {
       setPertLikely('');
       setPertWorst('');
       setProposedStartDate('');
+      setNewClientDeadline('');
+      setNewPriority('medium');
+      setNewTeamId('');
       notify("Asset successfully committed to system.", "success");
       fetchProjects();
     } else {
       console.error("Project creation failed:", error);
       notify(`System Error: ${error?.message || "Failed to commit asset"}`, "error");
     }
+  };
+
+  const getSuggestedSquad = () => {
+    if (activeTeams.length === 0) return null;
+    const stats = activeTeams.map(t => {
+      const teamProjects = projects.filter(p => p.team_id === t.id && p.status !== 'deployed');
+      const load = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
+      const eff = teamProjects.length > 0 ? teamProjects.reduce((acc, p) => acc + p.efficiency, 0) / teamProjects.length : 1;
+      return { id: t.id, name: t.name, load, eff };
+    });
+    return stats.sort((a, b) => a.load !== b.load ? a.load - b.load : b.eff - a.eff)[0];
   };
 
   const filteredProjects = projects.filter(p => {
@@ -2065,14 +2190,67 @@ export default function App() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Proposed Start Date</label>
-                  <input
-                    type="date"
-                    value={proposedStartDate}
-                    onChange={e => setProposedStartDate(e.target.value)}
-                    className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Priority Selection</label>
+                    <select
+                      value={newPriority}
+                      onChange={e => setNewPriority(e.target.value)}
+                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
+                    >
+                      <option value="low">LOW PRIORITY</option>
+                      <option value="medium">MEDIUM PRIORITY</option>
+                      <option value="high">CRITICAL PRIORITY</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Allocate Squad</label>
+                    <select
+                      value={newTeamId}
+                      onChange={e => setNewTeamId(e.target.value)}
+                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
+                    >
+                      <option value="">UNALLOCATED</option>
+                      {activeTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {getSuggestedSquad() && !newTeamId && (
+                  <div className="bg-blue-500/10 border border-blue-500/20 p-3 flex justify-between items-center">
+                    <div>
+                      <p className="text-[10px] font-mono text-blue-400 uppercase tracking-widest mb-0.5">AI Suggestion</p>
+                      <p className="text-xs font-mono text-white/80">Squad <strong>{getSuggestedSquad()?.name}</strong> has optimal bandwidth availability.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNewTeamId(getSuggestedSquad()?.id || '')}
+                      className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-colors border border-blue-500/30"
+                    >
+                      Auto-Assign
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Proposed Start Date</label>
+                    <input
+                      type="date"
+                      value={proposedStartDate}
+                      onChange={e => setProposedStartDate(e.target.value)}
+                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Client Deadline</label>
+                    <input
+                      type="date"
+                      value={newClientDeadline}
+                      onChange={e => setNewClientDeadline(e.target.value)}
+                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="bg-white/5 border border-white/10 p-4">
