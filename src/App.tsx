@@ -399,7 +399,8 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
   );
 }
 
-function ProjectCard({ project, teams, workingHoursPerDay, onClick }: { project: Project; teams: Team[]; workingHoursPerDay: number; onClick: (p: Project) => void }) {
+function ProjectCard({ project, teams, profiles, workingHoursPerDay, onClick }: { project: Project; teams: Team[]; profiles: Profile[]; workingHoursPerDay: number; onClick: (p: Project) => void }) {
+  const creator = profiles.find(p => p.id === project.owner_id);
   const historicalSquad = project.tags.find(t => t.startsWith('SQUAD:'))?.replace('SQUAD:', '');
   const team = teams.find(t => t.id === project.team_id);
   const teamName = team ? team.name : (historicalSquad || "UNALLOCATED");
@@ -462,11 +463,25 @@ function ProjectCard({ project, teams, workingHoursPerDay, onClick }: { project:
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-mono text-white/75 uppercase tracking-widest">{getRelativeTime(project.created_at)}</span>
             <div className="flex gap-2">
-              {project.tags.map(tag => (
+              {project.tags.filter(tag => !tag.startsWith('LOG:') && !tag.startsWith('SQUAD:')).map(tag => (
                 <span key={tag} className="text-[11px] font-mono text-white/80">#{tag}</span>
               ))}
             </div>
           </div>
+          {creator && (
+            <div className="mt-3 flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/20">
+                {creator.avatar_url ? (
+                  <img src={creator.avatar_url} alt="Creator" className="w-full h-full object-cover" />
+                ) : (
+                  <Users className="w-2.5 h-2.5 text-white/70" />
+                )}
+              </div>
+              <p className="text-[10px] font-mono text-white/60">
+                Created by <span className="text-white/85">{creator.full_name || creator.email}</span>
+              </p>
+            </div>
+          )}
         </div>
         <div className="text-right">
           <p className="text-[10px] font-mono text-white/85 uppercase mb-1">Finish_ETA</p>
@@ -1888,21 +1903,35 @@ export default function App() {
     activeProjects.forEach(p => {
       const expected = calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
       if (p.pert_worst > expected) {
-        totalDecayHours += (p.pert_worst - expected) * 24;
+        totalDecayHours += (p.pert_worst - expected); // Removed *24 multiplier, PERT is already in hours
       }
     });
 
     const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
-    const teamsWithProjects = new Set(activeProjects.filter(p => p.team_id).map(p => p.team_id));
-    const teamBandwidth = activeTeams.length > 0 ? (teamsWithProjects.size / activeTeams.length) * 100 : 0;
+    
+    // Calculate average load across teams for accurate Team Allocation bandwidth
+    const averageLoad = activeTeams.length > 0 
+      ? activeTeams.reduce((acc, t) => {
+          const parsedData = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
+          const engineerCount = Math.max(1, parsedData?.developer_ids?.length || 1);
+          const teamCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount; // 20 days capacity
+          const teamProjects = activeProjects.filter(p => p.team_id === t.id);
+          const totalExpected = teamProjects.reduce((sum, p) => sum + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
+          return acc + Math.min(totalExpected / teamCapacityHours, 1.5); // Cap at 150% to avoid extreme skew
+        }, 0) / activeTeams.length * 100
+      : 0;
+    const teamBandwidth = averageLoad;
 
     // Generate dynamic insight
     let insight = "System operations are nominal. No significant architectural bias detected.";
 
     const overloadedSquads = activeTeams.map(t => {
+      const parsedData = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
+      const engineerCount = Math.max(1, parsedData?.developer_ids?.length || 1);
+      const teamCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount;
       const teamProjects = activeProjects.filter(p => p.team_id === t.id);
       const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
-      return { name: t.name, load: (totalExpected / 20) };
+      return { name: t.name, load: (totalExpected / teamCapacityHours) };
     }).filter(s => s.load > 1.0);
 
     if (overloadedSquads.length > 0) {
@@ -2044,6 +2073,7 @@ export default function App() {
                       key={project.id}
                       project={project}
                       teams={activeTeams}
+                      profiles={profiles}
                       workingHoursPerDay={workingHoursPerDay}
                       onClick={setSelectedProject}
                     />
@@ -2072,10 +2102,14 @@ export default function App() {
 
                 <div className="space-y-4">
                   {activeTeams.slice(0, 3).map(team => {
+                    const parsedData = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
+                    const engineerCount = Math.max(1, parsedData?.developer_ids?.length || 1);
+                    const teamCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount; // 20 days capacity
+
                     const teamProjects = projects.filter(p => p.team_id === team.id);
                     const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
                     const avgEfficiency = teamProjects.length > 0 ? teamProjects.reduce((acc, p) => acc + p.efficiency, 0) / teamProjects.length : 1;
-                    const load = Math.round((totalExpected / 20) * 100); // Assuming 20 days capacity
+                    const load = Math.round((totalExpected / teamCapacityHours) * 100);
 
                     return (
                       <TeamMember
