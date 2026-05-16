@@ -855,8 +855,8 @@ function ProjectDetailsModal({
       pert_best: Number(pBest),
       pert_likely: Number(pLikely),
       pert_worst: Number(pWorst),
-      proposed_start_date: proposedStartDate,
-      client_deadline: clientDeadline
+      proposed_start_date: proposedStartDate || null,
+      client_deadline: clientDeadline || null
     });
     onClose();
   };
@@ -1702,7 +1702,7 @@ export default function App() {
       pert_best: Number(pertBest) || 0,
       pert_likely: Number(pertLikely) || 0,
       pert_worst: Number(pertWorst) || 0,
-      proposed_start_date: proposedStartDate,
+      proposed_start_date: proposedStartDate || null,
       owner_id: user.id,
       tags: ['NEW']
     };
