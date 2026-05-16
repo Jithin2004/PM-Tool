@@ -16,7 +16,8 @@ import {
   TrendingUp,
   Cpu,
   Edit2,
-  Trash2
+  Trash2,
+  History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -1424,6 +1425,11 @@ export default function App() {
           fetchProjects(),
           fetchTeams()
         ]);
+      }
+
+      // Clear stale OAuth hash fragments from URL to prevent expired session warnings
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        window.history.replaceState(null, '', window.location.pathname);
       }
 
       supabase.auth.onAuthStateChange(async (_event, session) => {
