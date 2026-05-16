@@ -1907,18 +1907,8 @@ export default function App() {
 
     const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
     
-    // Calculate average load across teams for accurate Team Allocation bandwidth
-    const averageLoad = activeTeams.length > 0 
-      ? activeTeams.reduce((acc, t) => {
-          const parsedData = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
-          const engineerCount = Math.max(1, parsedData?.developer_ids?.length || 1);
-          const teamCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount; // 20 days capacity
-          const teamProjects = activeProjects.filter(p => p.team_id === t.id);
-          const totalExpected = teamProjects.reduce((sum, p) => sum + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
-          return acc + Math.min(totalExpected / teamCapacityHours, 1.5); // Cap at 150% to avoid extreme skew
-        }, 0) / activeTeams.length * 100
-      : 0;
-    const teamBandwidth = averageLoad;
+    const teamsWithProjects = new Set(activeProjects.filter(p => p.team_id).map(p => p.team_id));
+    const teamBandwidth = activeTeams.length > 0 ? (teamsWithProjects.size / activeTeams.length) * 100 : 0;
 
     // Generate dynamic insight
     let insight = "System operations are nominal. No significant architectural bias detected.";
