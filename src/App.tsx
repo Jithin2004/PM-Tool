@@ -1438,7 +1438,8 @@ export default function App() {
         await syncProfile(session.user);
         await Promise.all([
           fetchProjects(),
-          fetchTeams()
+          fetchTeams(),
+          fetchProfiles()
         ]);
       }
 
@@ -1453,7 +1454,8 @@ export default function App() {
           await syncProfile(session.user);
           await Promise.all([
             fetchProjects(),
-            fetchTeams()
+            fetchTeams(),
+            fetchProfiles()
           ]);
         } else {
           setProfile(null);
@@ -1516,11 +1518,7 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    if ((isAdminView && profile?.role === 'super_admin') || isRosterOpen) {
-      fetchProfiles();
-    }
-  }, [isAdminView, profile, isRosterOpen]);
+  // fetchProfiles is now called globally on init to support ProjectCard lookups
 
   const fetchProjects = async () => {
     const { data, error } = await supabase
