@@ -2313,9 +2313,18 @@ export default function App() {
 
   const handleWorkingHoursChange = async (h: number) => {
     setWorkingHoursPerDay(h);
-    const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
-    if (settingsTeam) {
-      await supabase.from('teams').update({ data: { workingHours: h } }).eq('id', settingsTeam.id);
+    const { data: existing, error: findError } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('name', 'SYSTEM_SETTINGS')
+      .maybeSingle();
+
+    if (!findError && existing) {
+      const mergedData = {
+        ...existing.data,
+        workingHours: h
+      };
+      await supabase.from('teams').update({ data: mergedData }).eq('id', existing.id);
     } else {
       await supabase.from('teams').insert({ name: 'SYSTEM_SETTINGS', data: { workingHours: h } });
     }
@@ -2335,16 +2344,21 @@ export default function App() {
       }
     });
 
-    const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
-    if (settingsTeam) {
+    const { data: existing, error: findError } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('name', 'SYSTEM_SETTINGS')
+      .maybeSingle();
+
+    if (!findError && existing) {
       const mergedData = {
-        ...settingsTeam.data,
+        ...existing.data,
         ...updatedData
       };
       const { error } = await supabase
         .from('teams')
         .update({ data: mergedData })
-        .eq('id', settingsTeam.id);
+        .eq('id', existing.id);
       if (!error) {
         notify("Logistics telemetry synchronized.", "success");
         await fetchTeams();
