@@ -871,6 +871,7 @@ function LogisticsDashboard({
   const [unexcusedDeductionAmount, setUnexcusedDeductionAmount] = useState(100);
   const [deductionMethod, setDeductionMethod] = useState<'fixed' | 'pro_rata'>('fixed');
   const [currency, setCurrency] = useState<'USD' | 'INR' | 'EUR' | 'CAD' | 'AED'>('USD');
+  const [bypassHalfDay, setBypassHalfDay] = useState(false);
 
   const currencySymbols: Record<string, string> = {
     USD: '$',
@@ -903,6 +904,7 @@ function LogisticsDashboard({
       setUnexcusedDeductionAmount(systemData.paySlab.unexcusedDeductionAmount ?? 100);
       setDeductionMethod(systemData.paySlab.deductionMethod ?? 'fixed');
       setCurrency(systemData.paySlab.currency ?? 'USD');
+      setBypassHalfDay(systemData.paySlab.bypassHalfDay ?? false);
     }
   }, [settingsTeam]);
 
@@ -941,7 +943,7 @@ function LogisticsDashboard({
         }
       });
 
-      const halfDayLeavesConverted = halfDayCount / defaultHalfDayRatio;
+      const halfDayLeavesConverted = bypassHalfDay ? 0 : (halfDayCount / defaultHalfDayRatio);
       const casualExceeded = Math.max(0, clCount - defaultCasual);
       const medicalExceeded = Math.max(0, mlCount - defaultMedical);
       const totalUnpaidDays = casualExceeded + medicalExceeded + halfDayLeavesConverted + uuCount;
@@ -971,7 +973,7 @@ function LogisticsDashboard({
         netPayable
       };
     });
-  }, [profiles, systemData, monthPrefix, allowedCasualLeaves, allowedMedicalLeaves, halfDayRule, unexcusedDeductionAmount, deductionMethod]);
+  }, [profiles, systemData, monthPrefix, allowedCasualLeaves, allowedMedicalLeaves, halfDayRule, unexcusedDeductionAmount, deductionMethod, bypassHalfDay]);
 
   const handleMarkAttendance = async (userId: string, status: 'present' | 'half_day' | 'absent', leaveType?: 'casual' | 'medical' | 'unexcused') => {
     const existingAttendance = systemData.attendance || {};
@@ -1002,7 +1004,8 @@ function LogisticsDashboard({
       halfDayRule,
       unexcusedDeductionAmount,
       deductionMethod,
-      currency
+      currency,
+      bypassHalfDay
     };
 
     await onSaveData({
@@ -1297,6 +1300,24 @@ function LogisticsDashboard({
                       className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
                     />
                     <p className="text-[9px] font-mono text-white/40 italic">Specify how many marked Half-Day absences equal 1 Full-Day leave (e.g. 2 half-days = 1 full day).</p>
+                  </div>
+
+                  {/* Half-day Empathy Bypass Toggle */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Half-Day Empathy Bypass</label>
+                    <div className="flex items-center gap-3 bg-[#0a0a0a] border border-white/10 h-11 px-4">
+                      <input
+                        type="checkbox"
+                        id="bypassHalfDay"
+                        checked={bypassHalfDay}
+                        onChange={(e) => setBypassHalfDay(e.target.checked)}
+                        className="w-4 h-4 accent-white cursor-pointer"
+                      />
+                      <label htmlFor="bypassHalfDay" className="text-xs font-mono text-white/80 cursor-pointer select-none">
+                        Bypass half-day pay deductions
+                      </label>
+                    </div>
+                    <p className="text-[9px] font-mono text-white/40 italic">When enabled, employees will NOT have pay deducted for marked half-day leaves (showing empathy for genuine needs).</p>
                   </div>
 
                   {/* Currency Selector */}
