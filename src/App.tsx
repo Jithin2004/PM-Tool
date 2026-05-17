@@ -22,7 +22,10 @@ import {
   DollarSign,
   Sliders,
   Check,
-  Lock
+  Lock,
+  Calculator,
+  TrendingDown,
+  Banknote
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -1710,6 +1713,25 @@ function LogisticsDashboard({
                   <option value="2026">2026</option>
                   <option value="2027">2027</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Payroll Aggregate Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-[#0c0c0c] border border-white/10 p-6 flex flex-col justify-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10"><Calculator className="w-16 h-16" /></div>
+                <p className="text-[10px] font-mono uppercase text-white/50 tracking-widest mb-2 relative z-10">Total Gross Liability</p>
+                <p className="text-2xl font-mono text-white font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.baseSalary, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+              <div className="bg-[#0c0c0c] border border-red-500/20 p-6 flex flex-col justify-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10 text-red-500"><TrendingDown className="w-16 h-16" /></div>
+                <p className="text-[10px] font-mono uppercase text-red-400/80 tracking-widest mb-2 relative z-10">Total Deductions</p>
+                <p className="text-2xl font-mono text-red-500 font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.totalDeductions, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+              <div className="bg-green-500/10 border border-green-500/30 p-6 flex flex-col justify-center relative overflow-hidden shadow-[0_0_30px_rgba(34,197,94,0.1)]">
+                <div className="absolute top-0 right-0 p-4 opacity-20 text-green-500"><Banknote className="w-16 h-16" /></div>
+                <p className="text-[10px] font-mono uppercase text-green-400 tracking-widest mb-2 relative z-10">Total Net Payable</p>
+                <p className="text-2xl font-mono text-white font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.netPayable, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
             </div>
 
