@@ -3040,15 +3040,49 @@ export default function App() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [isAdminView, setIsAdminView] = useState(false);
-  const [isLogisticsView, setIsLogisticsView] = useState(false);
+  const [isAdminView, setIsAdminView] = useState(() => new URLSearchParams(window.location.search).get('view') === 'admin');
+  const [isLogisticsView, setIsLogisticsView] = useState(() => new URLSearchParams(window.location.search).get('view') === 'logistics');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isRosterOpen, setIsRosterOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [dashboardTab, setDashboardTab] = useState<'active' | 'completed'>('active');
+  const [dashboardTab, setDashboardTab] = useState<'active' | 'completed'>(() => new URLSearchParams(window.location.search).get('tab') === 'completed' ? 'completed' : 'active');
+
+  // URL Sync Effect
+  useEffect(() => {
+    let view = 'home';
+    if (isAdminView) view = 'admin';
+    else if (isLogisticsView) view = 'logistics';
+    
+    const params = new URLSearchParams(window.location.search);
+    const currentView = params.get('view') || 'home';
+    const currentTab = params.get('tab') || 'active';
+
+    if (currentView !== view || (view === 'home' && currentTab !== dashboardTab)) {
+      const newParams = new URLSearchParams();
+      if (view !== 'home') newParams.set('view', view);
+      if (view === 'home' && dashboardTab === 'completed') newParams.set('tab', 'completed');
+      
+      const search = newParams.toString();
+      const newUrl = search ? `${window.location.pathname}?${search}` : window.location.pathname;
+      window.history.pushState({}, '', newUrl);
+    }
+  }, [isAdminView, isLogisticsView, dashboardTab]);
+
+  // Browser Back/Forward Sync Effect
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get('view');
+      setIsAdminView(view === 'admin');
+      setIsLogisticsView(view === 'logistics');
+      setDashboardTab(params.get('tab') === 'completed' ? 'completed' : 'active');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [workingHoursPerDay, setWorkingHoursPerDay] = useState(8);
   const [tilesPerRow, setTilesPerRow] = useState(3);
   const [aiInsight, setAiInsight] = useState("Awaiting telemetry...");
