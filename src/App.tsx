@@ -157,7 +157,7 @@ function Login() {
 
         <div className="space-y-6">
           <div className="bg-white/5 border border-white/10 p-6 text-xs font-mono text-white/85 leading-relaxed">
-            <p className="mb-4">SYSTEM_ACCESS_PROTOCOL: v4.0.2</p>
+            <p className="mb-4">SYSTEM_ACCESS_PROTOCOL: v5.0.5</p>
             <p>Authorized personnel only. By entering, you consent to predictive bias modeling and historical data aggregation.</p>
           </div>
 
@@ -189,6 +189,7 @@ function Login() {
 function Header({
   user,
   profile,
+  userCustomRoles = {},
   onLogout,
   onToggleAdmin,
   showAdmin,
@@ -201,6 +202,7 @@ function Header({
 }: {
   user: any,
   profile: Profile | null,
+  userCustomRoles?: Record<string, string>,
   onLogout: () => void,
   onToggleAdmin: () => void,
   showAdmin: boolean,
@@ -271,7 +273,7 @@ function Header({
             </button>
           )}
 
-          {profile?.role === 'super_admin' && (
+          {(profile?.role === 'super_admin' || profile?.role === 'pm') && (
             <button
               onClick={onToggleAdmin}
               className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}
@@ -282,7 +284,7 @@ function Header({
         </div>
 
         <div className="hidden md:flex flex-col items-end">
-          <p className="text-xs font-mono text-white/90 uppercase">Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/85'}>{profile?.role || 'INITIALIZING...'}</span></p>
+          <p className="text-xs font-mono text-white/90 uppercase">Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/85'}>{(profile && userCustomRoles[profile.id]) || profile?.role || 'INITIALIZING...'}</span></p>
           <p className="text-[10px] font-mono text-white/80 uppercase tracking-[0.2em]">{profile?.role === 'viewer' ? 'READ ONLY ACCESS' : 'FULL WRITE AUTHORITY'}</p>
         </div>
 
@@ -555,6 +557,9 @@ function TeamMember({ name, role, load, efficiency, urgent }: { name: string, ro
 function AdminDashboard({
   profiles,
   teams,
+  currentUserRole,
+  systemData,
+  onSaveSystemData,
   onUpdateRole,
   onCreateTeam,
   onUpdateTeam,
@@ -562,6 +567,9 @@ function AdminDashboard({
 }: {
   profiles: Profile[],
   teams: Team[],
+  currentUserRole?: UserRole,
+  systemData: any,
+  onSaveSystemData: (data: any) => Promise<void>,
   onUpdateRole: (id: string, role: UserRole) => void,
   onCreateTeam: (name: string, pmId: string, devIds: string[]) => void,
   onUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => void,
@@ -571,6 +579,66 @@ function AdminDashboard({
   const [selectedPm, setSelectedPm] = useState('');
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [newRoleName, setNewRoleName] = useState('');
+
+  const customRoles: string[] = systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'];
+  const userCustomRoles: Record<string, string> = systemData.userCustomRoles || {};
+
+  const handleAddCustomRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoleName.trim()) return;
+    const cleanRoleName = newRoleName.trim();
+    if (customRoles.some(r => r.toLowerCase() === cleanRoleName.toLowerCase())) {
+      alert("This role designation already exists.");
+      return;
+    }
+    const updatedRoles = [...customRoles, cleanRoleName];
+    await onSaveSystemData({
+      ...systemData,
+      customRoles: updatedRoles
+    });
+    setNewRoleName('');
+  };
+
+  const handleDeleteCustomRole = async (roleToDelete: string) => {
+    if (['viewer', 'developer', 'designer', 'qa engineer'].includes(roleToDelete.toLowerCase())) {
+      alert("Cannot delete system default designations.");
+      return;
+    }
+    const confirmDelete = window.confirm(`Are you sure you want to delete the custom designation '${roleToDelete}'? This will unassign it from all users.`);
+    if (!confirmDelete) return;
+
+    const updatedRoles = customRoles.filter(r => r !== roleToDelete);
+    const updatedUserRoles = { ...userCustomRoles };
+    Object.keys(updatedUserRoles).forEach(userId => {
+      if (updatedUserRoles[userId] === roleToDelete) {
+        delete updatedUserRoles[userId];
+      }
+    });
+
+    await onSaveSystemData({
+      ...systemData,
+      customRoles: updatedRoles,
+      userCustomRoles: updatedUserRoles
+    });
+  };
+
+  const handleAssignCustomRole = async (userId: string, roleName: string) => {
+    const userProfile = profiles.find(p => p.id === userId);
+    const targetName = userProfile?.full_name || userProfile?.email || "this user";
+
+    const confirmChange = window.confirm(`Confirm action: Change designation of ${targetName} to '${roleName}'?`);
+    if (!confirmChange) return;
+
+    const updatedUserRoles = {
+      ...userCustomRoles,
+      [userId]: roleName
+    };
+    await onSaveSystemData({
+      ...systemData,
+      userCustomRoles: updatedUserRoles
+    });
+  };
 
   const handleCreateTeam = (e: React.FormEvent) => {
     e.preventDefault();
@@ -628,7 +696,7 @@ function AdminDashboard({
         <div className="mb-8">
           <h2 className="text-3xl font-medium tracking-tight mb-2">Internal Identity Console</h2>
           <p className="text-sm text-white/85 font-mono tracking-tighter">
-            Super Admin Privileges: Calibrate squad access levels and verify engineering credentials.
+            {currentUserRole === 'super_admin' ? 'Super Admin Privileges: Calibrate squad access levels and verify engineering credentials.' : 'Project Manager Console: Manage normal user designations and view active squads.'}
           </p>
         </div>
 
@@ -662,29 +730,43 @@ function AdminDashboard({
                       profile.role === 'pm' ? 'border-blue-500/30 text-blue-400 bg-blue-500/5' :
                         'border-white/10 text-white/85 bg-white/5'
                       }`}>
-                      {profile.role.replace('_', ' ')}
+                      {profile.role === 'viewer' ? (userCustomRoles[profile.id] || 'Viewer') : profile.role.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {profile.role !== 'super_admin' && (
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => onUpdateRole(profile.id, 'pm')}
-                          className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'pm' ? 'bg-blue-500 text-white' : 'border border-white/10 text-white/85 hover:border-white/30'}`}
-                        >
-                          PM_ROLE
-                        </button>
-                        <button
-                          onClick={() => onUpdateRole(profile.id, 'viewer')}
-                          className={`text-[10px] font-mono uppercase px-3 py-1 transition-all ${profile.role === 'viewer' ? 'bg-white text-black' : 'border border-white/10 text-white/85 hover:border-white/30'}`}
-                        >
-                          VIEWER
-                        </button>
-                      </div>
-                    )}
-                    {profile.role === 'super_admin' && (
-                      <span className="text-[10px] font-mono text-white/75 uppercase">Immutable_Root</span>
-                    )}
+                    <div className="flex justify-end items-center gap-4">
+                      {/* PM role change (Visible to Super Admin only) */}
+                      {currentUserRole === 'super_admin' && profile.role !== 'super_admin' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => onUpdateRole(profile.id, profile.role === 'pm' ? 'viewer' : 'pm')}
+                            className={`text-[10px] font-mono uppercase px-3 py-1.5 transition-all ${profile.role === 'pm' ? 'bg-blue-500 text-white' : 'border border-white/10 text-white/85 hover:border-white/30'}`}
+                          >
+                            {profile.role === 'pm' ? 'DEMOTE FROM PM' : 'PROMOTE TO PM'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Custom Designation select (Visible to PM or Super Admin for normal users) */}
+                      {profile.role === 'viewer' ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-mono text-white/50 uppercase">Designation:</span>
+                          <select
+                            value={userCustomRoles[profile.id] || 'Viewer'}
+                            onChange={(e) => handleAssignCustomRole(profile.id, e.target.value)}
+                            className="bg-black border border-white/10 text-[10px] font-mono px-2 py-1 focus:border-white/30 outline-none text-white/85"
+                          >
+                            {customRoles.map(r => (
+                              <option key={r} value={r}>{r}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : profile.role === 'pm' && currentUserRole === 'pm' ? (
+                        <span className="text-[10px] font-mono text-white/45 uppercase italic">Immutable PM (Root Required)</span>
+                      ) : profile.role === 'super_admin' ? (
+                        <span className="text-[10px] font-mono text-white/45 uppercase italic">Immutable Root</span>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -693,90 +775,150 @@ function AdminDashboard({
         </div>
       </div>
 
-      {/* --- Squad Configuration Section --- */}
+      {/* --- Squad Configuration & Custom Roles Section --- */}
       <div>
         <div className="mb-6">
-          <h2 className="text-3xl font-medium tracking-tight mb-2">Squad Configuration</h2>
+          <h2 className="text-3xl font-medium tracking-tight mb-2">
+            {currentUserRole === 'super_admin' ? 'Control & Capabilities Center' : 'Active Squad Roster'}
+          </h2>
           <p className="text-sm text-white/85 font-mono tracking-tighter">
-            Assemble cross-functional squads. Assign one Lead (PM) and multiple Engineers (Viewers).
+            {currentUserRole === 'super_admin' ? 'Form cross-functional teams, allocate squads, and customize corporate designations.' : 'View current operational squad formations and allocation hierarchies.'}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="border border-white/10 bg-[#0c0c0c] p-6 lg:col-span-1" id="squad-form">
-            <h3 className="text-sm font-mono uppercase tracking-widest mb-6">{editingTeamId ? 'Update Squad' : 'Initialize Squad'}</h3>
-            <form onSubmit={handleCreateTeam} className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Squad Configuration Form (Visible to Super Admin) */}
+          {currentUserRole === 'super_admin' && (
+            <div className="border border-white/10 bg-[#0c0c0c] p-6 lg:col-span-4 flex flex-col justify-between" id="squad-form">
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Squad Designation</label>
-                <input
-                  required
-                  type="text"
-                  value={newTeamName}
-                  onChange={e => setNewTeamName(e.target.value)}
-                  className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none placeholder:text-white/75"
-                  placeholder="E.g. SQUAD_DELTA"
-                />
-              </div>
+                <h3 className="text-sm font-mono uppercase tracking-widest mb-6">{editingTeamId ? 'Update Squad' : 'Initialize Squad'}</h3>
+                <form onSubmit={handleCreateTeam} className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Squad Designation</label>
+                    <input
+                      required
+                      type="text"
+                      value={newTeamName}
+                      onChange={e => setNewTeamName(e.target.value)}
+                      className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none placeholder:text-white/70"
+                      placeholder="E.g. SQUAD_DELTA"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Project Manager (PM)</label>
-                <select
-                  required
-                  value={selectedPm}
-                  onChange={e => setSelectedPm(e.target.value)}
-                  className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none text-white/80"
-                >
-                  <option value="" disabled>Select PM</option>
-                  {pms.map(pm => (
-                    <option key={pm.id} value={pm.id}>{pm.full_name || pm.email}</option>
-                  ))}
-                </select>
-              </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Project Manager (PM)</label>
+                    <select
+                      required
+                      value={selectedPm}
+                      onChange={e => setSelectedPm(e.target.value)}
+                      className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none text-white/80"
+                    >
+                      <option value="" disabled>Select PM</option>
+                      {pms.map(pm => (
+                        <option key={pm.id} value={pm.id}>{pm.full_name || pm.email}</option>
+                      ))}
+                    </select>
+                  </div>
 
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Engineers (Viewers)</label>
+                    <div className="border border-white/10 bg-black max-h-40 overflow-y-auto p-2 space-y-1">
+                      {availableDevs.map(dev => (
+                        <label key={dev.id} className="flex items-center gap-2 text-xs font-mono cursor-pointer hover:bg-white/5 p-1 transition-colors">
+                          <input
+                            type="checkbox"
+                            className="accent-white"
+                            checked={selectedDevs.includes(dev.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedDevs([...selectedDevs, dev.id]);
+                              else setSelectedDevs(selectedDevs.filter(id => id !== dev.id));
+                            }}
+                          />
+                          <span>{dev.full_name || dev.email}</span>
+                        </label>
+                      ))}
+                      {availableDevs.length === 0 && <p className="text-[10px] text-white/70 italic p-1">No unassigned engineers detected.</p>}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="submit"
+                      className="flex-1 bg-white text-black h-10 font-semibold hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest"
+                    >
+                      {editingTeamId ? 'Update Squad' : 'Form Squad'}
+                    </button>
+                    {editingTeamId && (
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                        className="flex-1 border border-white/10 text-white/85 h-10 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-widest"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Manage Custom Designations (Visible to Super Admin) */}
+          {currentUserRole === 'super_admin' && (
+            <div className="border border-white/10 bg-[#0c0c0c] p-6 lg:col-span-4 flex flex-col justify-between">
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Engineers (Viewers)</label>
-                <div className="border border-white/10 bg-black max-h-40 overflow-y-auto p-2 space-y-1">
-                  {availableDevs.map(dev => (
-                    <label key={dev.id} className="flex items-center gap-2 text-xs font-mono cursor-pointer hover:bg-white/5 p-1 transition-colors">
+                <h3 className="text-sm font-mono uppercase tracking-widest mb-6">Manage Custom Designations</h3>
+                <form onSubmit={handleAddCustomRole} className="space-y-4 mb-6">
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Create New Designation</label>
+                    <div className="flex gap-2">
                       <input
-                        type="checkbox"
-                        className="accent-white"
-                        checked={selectedDevs.includes(dev.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedDevs([...selectedDevs, dev.id]);
-                          else setSelectedDevs(selectedDevs.filter(id => id !== dev.id));
-                        }}
+                        required
+                        type="text"
+                        value={newRoleName}
+                        onChange={e => setNewRoleName(e.target.value)}
+                        className="flex-1 bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none placeholder:text-white/70"
+                        placeholder="e.g. Frontend Engineer"
                       />
-                      <span>{dev.full_name || dev.email}</span>
-                    </label>
-                  ))}
-                  {availableDevs.length === 0 && <p className="text-[10px] text-white/85 italic p-1">No unassigned engineers detected.</p>}
+                      <button
+                        type="submit"
+                        className="bg-white text-black px-4 h-10 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-colors whitespace-nowrap"
+                      >
+                        Create
+                      </button>
+                    </div>
+                  </div>
+                </form>
+
+                <div>
+                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-3">Active Custom Roles</label>
+                  <div className="divide-y divide-white/5 border border-white/10 max-h-40 overflow-y-auto bg-black p-2 rounded-sm">
+                    {customRoles.map(role => (
+                      <div key={role} className="flex justify-between items-center py-2 px-1 hover:bg-white/[0.02] transition-colors">
+                        <span className="text-xs font-mono text-white/85">{role}</span>
+                        {!['viewer', 'developer', 'designer', 'qa engineer'].includes(role.toLowerCase()) ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomRole(role)}
+                            className="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest"
+                          >
+                            Delete
+                          </button>
+                        ) : (
+                          <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest">SYSTEM</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
+            </div>
+          )}
 
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 bg-white text-black h-10 font-medium hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest mt-4"
-                >
-                  {editingTeamId ? 'Update Squad' : 'Form Squad'}
-                </button>
-                {editingTeamId && (
-                  <button
-                    type="button"
-                    onClick={cancelEditing}
-                    className="flex-1 border border-white/10 text-white/85 h-10 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-widest mt-4"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-
-          <div className="lg:col-span-2 border border-white/10 bg-[#0c0c0c] overflow-hidden flex flex-col">
+          {/* Active Squads list */}
+          <div className={`border border-white/10 bg-[#0c0c0c] overflow-hidden flex flex-col ${currentUserRole === 'super_admin' ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
             <h3 className="text-sm font-mono uppercase tracking-widest p-6 border-b border-white/10">Active Squads</h3>
-            <div className="overflow-y-auto p-6 space-y-4 flex-1">
+            <div className="overflow-y-auto p-6 space-y-4 flex-1 max-h-[400px]">
               {teams.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-10 opacity-50">
                   <Users className="w-8 h-8 text-white/75 mb-3" />
@@ -799,20 +941,24 @@ function AdminDashboard({
                         <h4 className="font-sans font-medium text-lg tracking-tight">{team.name}</h4>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => startEditing(team)}
-                          className="p-1.5 border border-white/10 text-white/85 hover:text-white hover:border-white/30 transition-colors"
-                          title="Edit Squad"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => onDeleteTeam(team.id)}
-                          className="p-1.5 border border-white/10 text-white/85 hover:text-red-500 hover:border-red-500/30 transition-colors"
-                          title="Delete Squad"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {currentUserRole === 'super_admin' && (
+                          <>
+                            <button
+                              onClick={() => startEditing(team)}
+                              className="p-1.5 border border-white/10 text-white/85 hover:text-white hover:border-white/30 transition-colors"
+                              title="Edit Squad"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteTeam(team.id)}
+                              className="p-1.5 border border-white/10 text-white/85 hover:text-red-500 hover:border-red-500/30 transition-colors"
+                              title="Delete Squad"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                         <span className="text-[10px] font-mono text-white/85 uppercase bg-black px-2 py-1 border border-white/10">ID: {team.id?.substring(0, 8) || 'UNKNOWN'}</span>
                       </div>
                     </div>
@@ -824,9 +970,9 @@ function AdminDashboard({
                       <div>
                         <p className="text-[11px] font-mono text-white/85 uppercase mb-2">Engineers ({squadDevs.length})</p>
                         <div className="space-y-1.5">
-                          {squadDevs.length === 0 && <p className="text-[10px] font-mono text-white/75 italic">None assigned</p>}
+                          {squadDevs.length === 0 && <p className="text-[10px] font-mono text-white/70 italic">None assigned</p>}
                           {squadDevs.map(d => (
-                            <p key={d?.id} className="text-xs font-mono text-white/80">{d?.full_name || d?.email}</p>
+                            <p key={d?.id} className="text-xs font-mono text-white/80">{(d && userCustomRoles[d.id]) || d?.full_name || d?.email}</p>
                           ))}
                         </div>
                       </div>
@@ -993,10 +1139,13 @@ function LogisticsDashboard({
 
       const unmarkedWorkingDays = Math.max(0, expectedWorkingDays - totalDaysAccounted);
 
+      // Unmarked days count as present by default
+      presentCount += unmarkedWorkingDays;
+
       const halfDayLeavesConverted = unpaidHalfDayCount / defaultHalfDayRatio;
       const casualExceeded = Math.max(0, clCount - defaultCasual);
       const medicalExceeded = Math.max(0, mlCount - defaultMedical);
-      const totalUnpaidDays = casualExceeded + medicalExceeded + halfDayLeavesConverted + uuCount + unmarkedWorkingDays;
+      const totalUnpaidDays = casualExceeded + medicalExceeded + halfDayLeavesConverted + uuCount;
 
       let totalDeductions = 0;
       if (totalUnpaidDays > 0) {
@@ -1110,6 +1259,9 @@ function LogisticsDashboard({
         if (dayData.status === 'present') present++;
         else if (dayData.status === 'half_day') halfDay++;
         else if (dayData.status === 'absent') absent++;
+      } else {
+        // Default to present for unmarked profiles
+        present++;
       }
     });
     return { present, halfDay, absent };
@@ -1226,7 +1378,7 @@ function LogisticsDashboard({
                 ) : (
                   filteredProfiles.map(profile => {
                     const record = dayAttendance[profile.id];
-                    const status = record?.status;
+                    const status = record?.status || 'present';
                     const leaveType = record?.leaveType;
 
                     return (
@@ -1243,7 +1395,7 @@ function LogisticsDashboard({
                           <div>
                             <h4 className="text-sm font-semibold text-white/90">{profile.full_name || 'Anonymous User'}</h4>
                             <p className="text-[10px] font-mono text-white/60 uppercase">{profile.email}</p>
-                            <p className="text-[9px] font-mono mt-1"><span className="text-white/40 uppercase">Role:</span> <span className="text-blue-400 uppercase">{profile.role}</span></p>
+                            <p className="text-[9px] font-mono mt-1"><span className="text-white/40 uppercase">Role:</span> <span className="text-blue-400 uppercase">{(systemData.userCustomRoles && systemData.userCustomRoles[profile.id]) || profile.role}</span></p>
                           </div>
                         </div>
 
@@ -1701,14 +1853,18 @@ function ProjectDetailsModal({
   onClose,
   onUpdate,
   onDelete,
-  workingHoursPerDay
+  workingHoursPerDay,
+  currentUserProfile,
+  userCustomRoles
 }: {
   project: Project,
   teams: Team[],
   onClose: () => void,
   onUpdate: (id: string, updates: Partial<Project>) => void,
   onDelete: (id: string, reason: string) => void,
-  workingHoursPerDay: number
+  workingHoursPerDay: number,
+  currentUserProfile: Profile | null,
+  userCustomRoles: Record<string, string>
 }) {
   const [name, setName] = useState(project.name);
   const [status, setStatus] = useState(project.status);
@@ -1786,7 +1942,9 @@ function ProjectDetailsModal({
     const logEntry = JSON.stringify({
       timestamp: new Date().toISOString(),
       changes: changeReasonPrompt.changes._log_summary,
-      reason: changeReason
+      reason: changeReason,
+      authorName: currentUserProfile?.full_name || currentUserProfile?.email || 'Unknown User',
+      authorRole: (currentUserProfile?.id && userCustomRoles[currentUserProfile.id]) || currentUserProfile?.role || 'viewer'
     });
 
     const updatedTags = [...(project.tags || []), `LOG:${logEntry}`];
@@ -1824,7 +1982,14 @@ function ProjectDetailsModal({
               ) : (
                 [...logs].reverse().map((log, i) => (
                   <div key={i} className="border border-white/10 bg-white/5 p-4 flex flex-col gap-2">
-                    <p className="text-[10px] font-mono text-white/50">{new Date(log.timestamp).toLocaleString()}</p>
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-white/50">{new Date(log.timestamp).toLocaleString()}</span>
+                      {log.authorName && (
+                        <span className="text-blue-400 font-bold uppercase tracking-wider">
+                          BY: {log.authorName} ({log.authorRole || 'Viewer'})
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs font-mono text-white/90 leading-relaxed"><span className="text-white/50 uppercase tracking-widest text-[9px] mr-2">CHANGES:</span> {log.changes}</p>
                     <p className="text-xs font-mono text-yellow-500/90 leading-relaxed"><span className="text-white/50 uppercase tracking-widest text-[9px] mr-2">REASON:</span> {log.reason}</p>
                   </div>
@@ -2033,39 +2198,540 @@ function ProjectDetailsModal({
   );
 }
 
-function SquadRosterModal({ teams, profiles, onClose }: { teams: Team[], profiles: Profile[], onClose: () => void }) {
+function SquadRosterModal({
+  teams,
+  profiles,
+  projects,
+  workingHoursPerDay,
+  attendanceRecords,
+  onClose
+}: {
+  teams: Team[],
+  profiles: Profile[],
+  projects: Project[],
+  workingHoursPerDay: number,
+  attendanceRecords: Record<string, Record<string, { status: string, leaveType?: string, isPaidHalfDay?: boolean }>>,
+  onClose: () => void
+}) {
+  const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
+  const systemData: any = settingsTeam?.data || {};
+
+  const [activeSquadId, setActiveSquadId] = useState<string | null>(teams[0]?.id || null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [capacityFilter, setCapacityFilter] = useState<'all' | 'overloaded' | 'optimal' | 'underutilized'>('all');
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
+
+  const getSquadLoadMetrics = (team: Team) => {
+    const parsedData = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
+    const devIds = parsedData?.developer_ids || [];
+    const engineerCount = Math.max(1, devIds.length);
+    const pmId = parsedData?.pm_id;
+
+    // Capacity based on 20 working days per month per engineer
+    const totalCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount;
+
+    // Workload from active projects assigned to this team
+    const teamProjects = projects.filter(p => p.team_id === team.id && p.status !== 'deployed');
+    const totalExpectedHours = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
+    const totalWorstHours = teamProjects.reduce((acc, p) => acc + p.pert_worst, 0);
+
+    const loadPercentage = Math.round((totalExpectedHours / totalCapacityHours) * 100);
+    const averageEfficiency = teamProjects.length > 0
+      ? teamProjects.reduce((acc, p) => acc + p.efficiency, 0) / teamProjects.length
+      : 1.0;
+
+    const potentialDriftHours = Math.max(0, totalWorstHours - totalExpectedHours);
+
+    return {
+      engineerCount,
+      pmId,
+      totalCapacityHours,
+      totalExpectedHours,
+      loadPercentage,
+      averageEfficiency,
+      potentialDriftHours,
+      activeProjects: teamProjects
+    };
+  };
+
+  const filteredSquads = useMemo(() => {
+    return teams.filter(team => {
+      const metrics = getSquadLoadMetrics(team);
+      const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        profiles.some(p => {
+          const parsedData = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
+          const isMember = p.id === parsedData?.pm_id || parsedData?.developer_ids?.includes(p.id);
+          return isMember && (p.full_name || p.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+        });
+
+      if (!matchesSearch) return false;
+
+      if (capacityFilter === 'overloaded') return metrics.loadPercentage > 100;
+      if (capacityFilter === 'optimal') return metrics.loadPercentage >= 50 && metrics.loadPercentage <= 100;
+      if (capacityFilter === 'underutilized') return metrics.loadPercentage < 50;
+      return true;
+    });
+  }, [teams, searchQuery, capacityFilter, projects, workingHoursPerDay, profiles]);
+
+  const aggregateMetrics = useMemo(() => {
+    if (teams.length === 0) return { totalStaff: profiles.length, avgLoad: 0, overloadedCount: 0 };
+
+    let totalLoadSum = 0;
+    let overloadedCount = 0;
+    teams.forEach(team => {
+      const metrics = getSquadLoadMetrics(team);
+      totalLoadSum += metrics.loadPercentage;
+      if (metrics.loadPercentage > 100) overloadedCount++;
+    });
+
+    return {
+      totalStaff: profiles.length,
+      avgLoad: Math.round(totalLoadSum / teams.length),
+      overloadedCount
+    };
+  }, [teams, projects, workingHoursPerDay, profiles]);
+
+  const selectedPersonnel = useMemo(() => {
+    if (!selectedPersonnelId) return null;
+    const profile = profiles.find(p => p.id === selectedPersonnelId);
+    if (!profile) return null;
+
+    let presentDays = 0;
+    let halfDays = 0;
+    let absentDays = 0;
+
+    Object.keys(attendanceRecords).forEach(dateStr => {
+      const dayData = attendanceRecords[dateStr]?.[profile.id];
+      if (dayData) {
+        if (dayData.status === 'present') presentDays++;
+        else if (dayData.status === 'half_day') halfDays++;
+        else if (dayData.status === 'absent') absentDays++;
+      } else {
+        presentDays++;
+      }
+    });
+
+    const userProjects = projects.filter(p => {
+      if (p.status === 'deployed') return false;
+      const team = teams.find(t => t.id === p.team_id);
+      if (!team) return false;
+      const data = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
+      return data?.pm_id === profile.id || data?.developer_ids?.includes(profile.id);
+    });
+
+    return {
+      profile,
+      presentDays,
+      halfDays,
+      absentDays,
+      activeProjects: userProjects
+    };
+  }, [selectedPersonnelId, profiles, attendanceRecords, projects, teams]);
+
+  const selectedSquad = teams.find(t => t.id === activeSquadId);
+  const activeMetrics = selectedSquad ? getSquadLoadMetrics(selectedSquad) : null;
+  const activeSquadPM = selectedSquad && activeMetrics ? profiles.find(p => p.id === activeMetrics.pmId) : null;
+  const activeSquadEngineers = selectedSquad ? (typeof selectedSquad.data === 'string' ? JSON.parse(selectedSquad.data) : selectedSquad.data)?.developer_ids?.map((id: string) => profiles.find(p => p.id === id)).filter(Boolean) || [] : [];
+
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-4xl p-8 max-h-[80vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/10">
-          <h3 className="text-xl font-medium tracking-tight uppercase">Operational Squad Roster</h3>
-          <button onClick={onClose} className="p-2 border border-white/10 hover:bg-white/5 transition-colors"><Plus className="w-5 h-5 rotate-45 text-white/75" /></button>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-6xl overflow-hidden shadow-2xl flex flex-col h-[90vh]">
+        
+        {/* Roster Header */}
+        <div className="p-6 border-b border-white/10 bg-[#0a0a0a] flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-5 h-5 text-blue-400" />
+              <h3 className="text-xl font-medium tracking-tight uppercase">Operational Squad Roster</h3>
+            </div>
+            <p className="text-xs font-mono text-white/60">Comprehensive workload utilization, telemetry and squad allocation analysis.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="bg-[#0a0a0a] border border-white/10 px-4 py-2 text-center shrink-0">
+              <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-0.5">Total Squads</p>
+              <p className="text-sm font-bold font-mono">{teams.length}</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-white/10 px-4 py-2 text-center shrink-0">
+              <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-0.5">Average Load</p>
+              <p className={`text-sm font-bold font-mono ${aggregateMetrics.avgLoad > 100 ? 'text-red-400' : 'text-blue-400'}`}>{aggregateMetrics.avgLoad}%</p>
+            </div>
+            <div className="bg-[#0a0a0a] border border-white/10 px-4 py-2 text-center shrink-0">
+              <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-0.5">Overloaded</p>
+              <p className={`text-sm font-bold font-mono ${aggregateMetrics.overloadedCount > 0 ? 'text-red-400' : 'text-green-400'}`}>{aggregateMetrics.overloadedCount} Units</p>
+            </div>
+            <button onClick={onClose} className="p-2 border border-white/10 hover:bg-white/5 transition-colors shrink-0">
+              <Plus className="w-5 h-5 rotate-45 text-white/75" />
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {teams.map(team => {
-            const data = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
-            const pm = profiles.find(p => p.id === data?.pm_id);
-            const engineers = (data?.developer_ids || []).map((id: string) => profiles.find(p => p.id === id)).filter(Boolean);
-            return (
-              <div key={team.id} className="border border-white/10 p-6 bg-white/5">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-8 h-8 rounded-sm bg-white/10 flex items-center justify-center border border-white/10"><Zap className="w-4 h-4 text-white/90" /></div>
-                  <h4 className="text-lg font-medium">{team.name}</h4>
-                </div>
-                <div className="space-y-6">
-                  <div><p className="text-[11px] font-mono text-white/75 uppercase mb-2">Squad Lead</p><p className="text-sm text-blue-400 font-mono">{pm?.full_name || pm?.email || 'N/A'}</p></div>
+
+        {/* Search & Filter Bar */}
+        <div className="p-4 border-b border-white/10 bg-[#0f0f0f] flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+            <input
+              type="text"
+              placeholder="Query name, email or squad..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#0a0a0a] border border-white/10 h-10 pl-10 pr-4 text-xs font-mono focus:border-white/30 outline-none transition-all placeholder:text-white/40 text-white animate-none"
+            />
+          </div>
+          <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
+            {(['all', 'overloaded', 'optimal', 'underutilized'] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setCapacityFilter(filter)}
+                className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-widest transition-all border whitespace-nowrap ${capacityFilter === filter ? 'bg-white text-black font-semibold border-white' : 'border-white/10 text-white/60 hover:text-white hover:bg-white/5'}`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dashboard Panels */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+          
+          {/* Left Panel: Squad Directory */}
+          <div className="w-full md:w-80 border-r border-white/10 overflow-y-auto divide-y divide-white/5 bg-[#0a0a0a]/50">
+            {filteredSquads.length === 0 ? (
+              <div className="p-8 text-center text-xs font-mono text-white/40 italic">
+                No matching squads detected.
+              </div>
+            ) : (
+              filteredSquads.map(team => {
+                const metrics = getSquadLoadMetrics(team);
+                const isActive = team.id === activeSquadId;
+                const pm = profiles.find(p => p.id === metrics.pmId);
+                const devsCount = metrics.engineerCount;
+
+                return (
+                  <div
+                    key={team.id}
+                    onClick={() => setActiveSquadId(team.id)}
+                    className={`p-4 cursor-pointer transition-all hover:bg-white/[0.02] flex flex-col gap-2 ${isActive ? 'bg-white/5 border-l-2 border-l-blue-500' : ''}`}
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <h4 className="text-sm font-semibold tracking-tight uppercase truncate">{team.name}</h4>
+                      <span className={`text-[9px] font-mono px-2 py-0.5 border ${metrics.loadPercentage > 100 ? 'bg-red-500/10 text-red-400 border-red-500/20' : metrics.loadPercentage >= 50 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
+                        {metrics.loadPercentage}% LOAD
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-mono text-white/60">
+                      <span>LEAD: <span className="text-white/80">{pm?.full_name?.split(' ')[0] || pm?.email?.split('@')[0] || 'N/A'}</span></span>
+                      <span>STAFF: <span className="text-white/80">{devsCount}</span></span>
+                    </div>
+                    
+                    {/* Progress indicator */}
+                    <div className="w-full bg-white/5 h-1">
+                      <div
+                        className={`h-full ${metrics.loadPercentage > 100 ? 'bg-red-500' : 'bg-blue-500'}`}
+                        style={{ width: `${Math.min(100, metrics.loadPercentage)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Right Panel: Analytical Detail deep dive */}
+          <div className="flex-1 overflow-y-auto p-8 bg-[#0c0c0c]">
+            {selectedSquad && activeMetrics ? (
+              <div className="space-y-8">
+                
+                {/* Squad header banner */}
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-white/5">
                   <div>
-                    <p className="text-[11px] font-mono text-white/75 uppercase mb-2">Engineering Corps ({engineers.length})</p>
-                    <div className="space-y-1">
-                      {engineers.map((e: any) => <p key={e.id} className="text-xs text-white/90 font-mono">{e.full_name || e.email}</p>)}
-                      {engineers.length === 0 && <p className="text-xs text-white/75 italic font-mono">No personnel assigned</p>}
+                    <h3 className="text-2xl font-bold uppercase tracking-tight mb-2">{selectedSquad.name}</h3>
+                    <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-white/60">
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                        <span>Lead PM: <strong className="text-blue-400">{activeSquadPM?.full_name || activeSquadPM?.email || 'Unallocated'}</strong></span>
+                      </div>
+                      <div>•</div>
+                      <div>Engineers Assigned: <strong>{activeSquadEngineers.length}</strong></div>
                     </div>
                   </div>
                 </div>
+
+                {/* Analytical telemetry metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  
+                  {/* Gauge 1: Load */}
+                  <div className="border border-white/10 bg-white/5 p-6 flex flex-col justify-between h-40 relative overflow-hidden">
+                    <div className="flex justify-between items-start">
+                      <p className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Workload Status</p>
+                      <Activity className={`w-4 h-4 ${activeMetrics.loadPercentage > 100 ? 'text-red-500 animate-pulse' : 'text-blue-400'}`} />
+                    </div>
+                    <div>
+                      <p className={`text-3xl font-mono font-bold ${activeMetrics.loadPercentage > 100 ? 'text-red-400' : 'text-white'}`}>{activeMetrics.loadPercentage}%</p>
+                      <p className="text-[10px] font-mono text-white/60 mt-1 uppercase">Capacity Utilization</p>
+                    </div>
+                    <div className="w-full bg-white/5 h-1.5">
+                      <div className={`h-full ${activeMetrics.loadPercentage > 100 ? 'bg-red-500' : 'bg-blue-400'}`} style={{ width: `${Math.min(100, activeMetrics.loadPercentage)}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Gauge 2: Capacity Hours details */}
+                  <div className="border border-white/10 bg-white/5 p-6 flex flex-col justify-between h-40">
+                    <div className="flex justify-between items-start">
+                      <p className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Allocated Workload</p>
+                      <Clock className="w-4 h-4 text-white/60" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-mono font-bold text-white">{Math.round(activeMetrics.totalExpectedHours)}h</p>
+                      <p className="text-[10px] font-mono text-white/60 mt-1 uppercase">Allocated vs {Math.round(activeMetrics.totalCapacityHours)}h Capacity</p>
+                    </div>
+                    <p className="text-[9px] font-mono text-white/40 italic">Calculated across 20 monthly working days.</p>
+                  </div>
+
+                  {/* Gauge 3: Potential Drift */}
+                  <div className="border border-white/10 bg-white/5 p-6 flex flex-col justify-between h-40">
+                    <div className="flex justify-between items-start">
+                      <p className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Potential drift risk</p>
+                      <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                    </div>
+                    <div>
+                      <p className="text-3xl font-mono font-bold text-yellow-500">+{Math.round(activeMetrics.potentialDriftHours)}h</p>
+                      <p className="text-[10px] font-mono text-white/60 mt-1 uppercase">Worst-case drift delta</p>
+                    </div>
+                    <div className="flex justify-between items-center text-[9px] font-mono text-white/50">
+                      <span>AVG EFFICIENCY</span>
+                      <span>{(activeMetrics.averageEfficiency * 100).toFixed(0)}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Overloaded Banner if load exceeds 100% */}
+                {activeMetrics.loadPercentage > 100 && (
+                  <div className="bg-red-500/10 border border-red-500/20 p-4 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5 animate-bounce" />
+                    <div>
+                      <h5 className="text-xs font-mono text-red-400 uppercase tracking-widest font-bold mb-1">Squad Telemetry Alert: Extreme Overload Detected</h5>
+                      <p className="text-[10px] font-mono text-red-400/80 leading-relaxed">This squad has surpassed its monthly engineering bandwidth. Highly advise reallocating some assets to underloaded squads to prevent burn-out and delivery delay.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Workflows Section */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                    <h4 className="text-xs font-mono uppercase tracking-widest text-white/80 font-bold">Active Squad Workflows ({activeMetrics.activeProjects.length})</h4>
+                    <span className="text-[9px] font-mono text-white/40">DRIFT TRACKING ACTIVATED</span>
+                  </div>
+                  
+                  {activeMetrics.activeProjects.length === 0 ? (
+                    <p className="text-xs font-mono text-white/50 italic py-4">No active workflow parameters are assigned to this squad.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4">
+                      {activeMetrics.activeProjects.map(project => {
+                        const expected = calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst);
+                        const progress = project.status === 'planning' ? 15 : project.status === 'in-progress' ? 50 : project.status === 'review' ? 85 : 100;
+                        return (
+                          <div key={project.id} className="border border-white/5 bg-[#0f0f0f] p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-white/10 transition-all">
+                            <div className="space-y-1">
+                              <h5 className="text-sm font-semibold tracking-tight text-white/90">{project.name}</h5>
+                              <div className="flex items-center gap-3 text-[10px] font-mono text-white/60 uppercase">
+                                <span className={`text-[9px] px-1.5 py-0.5 border ${project.priority === 'high' ? 'text-red-400 border-red-500/20 bg-red-500/5' : project.priority === 'medium' ? 'text-blue-400 border-blue-500/20 bg-blue-500/5' : 'text-green-400 border-green-500/20 bg-green-500/5'}`}>
+                                  {project.priority}
+                                </span>
+                                <span>STATUS: <span className="text-blue-400">{project.status.replace('-', '_')}</span></span>
+                              </div>
+                            </div>
+
+                            {/* Project visual Progress */}
+                            <div className="w-full md:w-60 space-y-1">
+                              <div className="flex justify-between text-[9px] font-mono text-white/50">
+                                <span>PROGRESS</span>
+                                <span>{progress}%</span>
+                              </div>
+                              <div className="w-full bg-white/5 h-1">
+                                <div className="bg-white/40 h-full transition-all" style={{ width: `${progress}%` }} />
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <p className="text-xs font-mono text-white/95 font-bold">{expected.toFixed(1)} hrs</p>
+                              <p className="text-[9px] font-mono text-white/50 uppercase">PERT expectation</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Assigned Personnel grid */}
+                <div className="space-y-4">
+                  <div className="border-b border-white/5 pb-2">
+                    <h4 className="text-xs font-mono uppercase tracking-widest text-white/80 font-bold">Assigned engineering personnel</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* PM Roster Card */}
+                    {activeSquadPM && (
+                      <div
+                        onClick={() => setSelectedPersonnelId(activeSquadPM.id)}
+                        className="border border-blue-500/20 bg-blue-500/5 p-4 flex items-center justify-between hover:bg-blue-500/10 cursor-pointer transition-all hover:scale-[1.01] group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 border border-blue-400/20 bg-[#0a0a0a] flex items-center justify-center overflow-hidden shrink-0">
+                            {activeSquadPM.avatar_url ? (
+                              <img src={activeSquadPM.avatar_url} alt={activeSquadPM.full_name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Users className="w-5 h-5 text-blue-400" />
+                            )}
+                          </div>
+                          <div>
+                            <h5 className="text-xs font-semibold text-white/90 truncate max-w-[140px]">{activeSquadPM.full_name || 'Anonymous User'}</h5>
+                            <p className="text-[9px] font-mono text-white/50 uppercase truncate max-w-[140px]">{activeSquadPM.email}</p>
+                            <span className="inline-block mt-1 text-[8px] font-mono bg-blue-400 text-black px-1.5 uppercase font-bold tracking-widest">SQUAD_LEAD</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                      </div>
+                    )}
+
+                    {/* Engineers Cards */}
+                    {activeSquadEngineers.map((engineer: any) => (
+                      <div
+                        key={engineer.id}
+                        onClick={() => setSelectedPersonnelId(engineer.id)}
+                        className="border border-white/5 bg-[#0f0f0f] p-4 flex items-center justify-between hover:bg-white/5 cursor-pointer transition-all hover:scale-[1.01] group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 border border-white/10 bg-[#0a0a0a] flex items-center justify-center overflow-hidden shrink-0">
+                            {engineer.avatar_url ? (
+                              <img src={engineer.avatar_url} alt={engineer.full_name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Users className="w-5 h-5 text-white/40" />
+                            )}
+                          </div>
+                          <div>
+                            <h5 className="text-xs font-semibold text-white/90 truncate max-w-[140px]">{engineer.full_name || 'Anonymous User'}</h5>
+                            <p className="text-[9px] font-mono text-white/50 uppercase truncate max-w-[140px]">{engineer.email}</p>
+                            <span className="inline-block mt-1 text-[8px] font-mono bg-white/10 text-white/80 border border-white/10 px-1.5 uppercase tracking-widest">{(systemData.userCustomRoles && systemData.userCustomRoles[engineer.id]) || 'Viewer'}</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                      </div>
+                    ))}
+
+                    {activeSquadEngineers.length === 0 && !activeSquadPM && (
+                      <p className="text-xs font-mono text-white/40 italic md:col-span-2">No active resources assigned to this squad.</p>
+                    )}
+                  </div>
+                </div>
+
               </div>
-            );
-          })}
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
+                <BrainCircuit className="w-12 h-12 text-white/70 mb-4" />
+                <h4 className="text-lg font-medium uppercase tracking-tight">Analytical console suspended</h4>
+                <p className="text-xs font-mono text-white/70 mt-1">Please select an operational squad from the sidebar directory.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Drawer Overlay: Personnel Telemetry Drill-down */}
+          <AnimatePresence>
+            {selectedPersonnel && (
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="absolute inset-y-0 right-0 w-full sm:w-96 border-l border-white/10 bg-[#0a0a0a] shadow-2xl p-6 flex flex-col justify-between z-50 overflow-y-auto"
+              >
+                <div className="space-y-8">
+                  {/* Close and title */}
+                  <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                    <h4 className="text-xs font-mono uppercase tracking-widest text-blue-400 font-bold">Personnel Telemetry</h4>
+                    <button
+                      onClick={() => setSelectedPersonnelId(null)}
+                      className="p-1 border border-white/10 hover:bg-white/5 text-white/80 hover:text-white transition-colors"
+                    >
+                      <Plus className="w-4 h-4 rotate-45" />
+                    </button>
+                  </div>
+
+                  {/* Profile Info */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden">
+                      {selectedPersonnel.profile.avatar_url ? (
+                        <img src={selectedPersonnel.profile.avatar_url} alt={selectedPersonnel.profile.full_name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Users className="w-8 h-8 text-white/40" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold tracking-tight">{selectedPersonnel.profile.full_name || 'Anonymous User'}</h4>
+                      <p className="text-xs font-mono text-white/60">{selectedPersonnel.profile.email}</p>
+                      <p className="text-[10px] font-mono text-blue-400 uppercase mt-1">ROLE: {selectedPersonnel.profile.role === 'viewer' ? (systemData.userCustomRoles && systemData.userCustomRoles[selectedPersonnel.profile.id]) || 'Viewer' : selectedPersonnel.profile.role.replace('_', ' ')}</p>
+                    </div>
+                  </div>
+
+                  {/* Dynamic monthly attendance summary stats */}
+                  <div className="space-y-3">
+                    <h5 className="text-[10px] font-mono uppercase tracking-widest text-white/50 font-bold">Monthly Attendance Metrics</h5>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-[#0c0c0c] border border-green-500/10 p-3 text-center">
+                        <p className="text-[8px] font-mono text-green-400/70 uppercase">PRESENT</p>
+                        <p className="text-xl font-bold font-mono text-green-400 mt-1">{selectedPersonnel.presentDays}</p>
+                      </div>
+                      <div className="bg-[#0c0c0c] border border-yellow-500/10 p-3 text-center">
+                        <p className="text-[8px] font-mono text-yellow-500/70 uppercase">HALF_DAY</p>
+                        <p className="text-xl font-bold font-mono text-yellow-500 mt-1">{selectedPersonnel.halfDays}</p>
+                      </div>
+                      <div className="bg-[#0c0c0c] border border-red-500/10 p-3 text-center">
+                        <p className="text-[8px] font-mono text-red-500/70 uppercase">ABSENT</p>
+                        <p className="text-xl font-bold font-mono text-red-400 mt-1">{selectedPersonnel.absentDays}</p>
+                      </div>
+                    </div>
+                    <p className="text-[9px] font-mono text-white/40 italic leading-tight">Note: Unmarked working days are accounted as present by default.</p>
+                  </div>
+
+                  {/* Active tasks assignments */}
+                  <div className="space-y-3">
+                    <h5 className="text-[10px] font-mono uppercase tracking-widest text-white/50 font-bold">Attached workloads</h5>
+                    {selectedPersonnel.activeProjects.length === 0 ? (
+                      <p className="text-xs font-mono text-white/40 italic">Awaiting task allocations.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {selectedPersonnel.activeProjects.map(proj => (
+                          <div key={proj.id} className="border border-white/5 bg-[#0f0f0f] p-3 text-xs font-mono flex flex-col gap-1">
+                            <span className="font-semibold text-white/90 truncate">{proj.name}</span>
+                            <div className="flex justify-between items-center text-[9px] text-white/50">
+                              <span>PRIORITY: <strong className={proj.priority === 'high' ? 'text-red-400' : 'text-blue-400'}>{proj.priority.toUpperCase()}</strong></span>
+                              <span>STATUS: {proj.status.toUpperCase()}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-white/5 flex flex-col gap-3">
+                  {selectedPersonnel.profile.phone && (
+                    <div className="text-xs font-mono text-white/70">
+                      CONTACT SECURE KEY: <strong className="text-white/95">{selectedPersonnel.profile.phone}</strong>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setSelectedPersonnelId(null)}
+                    className="w-full py-2 bg-white text-black text-[10px] uppercase font-mono tracking-widest font-semibold hover:bg-neutral-200 transition-colors"
+                  >
+                    Commit & Sync Telemetry
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
         </div>
       </motion.div>
     </div>
@@ -2242,6 +2908,11 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const systemSettings = useMemo(() => teams.find(t => t.name === 'SYSTEM_SETTINGS'), [teams]);
+  const systemData = useMemo(() => systemSettings?.data as any || {}, [systemSettings]);
+  const userCustomRoles = useMemo(() => systemData.userCustomRoles || {}, [systemData]);
+  const customRoles = useMemo(() => systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'], [systemData]);
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
@@ -2697,15 +3368,27 @@ export default function App() {
   const handleUpdateRole = async (id: string, role: UserRole) => {
     if (profile?.role !== 'super_admin') return;
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role })
-      .eq('id', id);
+    const targetUser = profiles.find(p => p.id === id);
+    const targetName = targetUser?.full_name || targetUser?.email || "this user";
 
-    if (!error) {
-      fetchProfiles();
-      if (profile?.id === id) setProfile(prev => prev ? { ...prev, role } : null);
-    }
+    askConfirmation(
+      "Confirm Role Change",
+      `Are you sure you want to change the role of ${targetName} to ${role.replace('_', ' ').toUpperCase()}?`,
+      async () => {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ role })
+          .eq('id', id);
+
+        if (!error) {
+          notify(`Role updated to ${role.replace('_', ' ').toUpperCase()} for ${targetName}`, "success");
+          fetchProfiles();
+          if (profile?.id === id) setProfile(prev => prev ? { ...prev, role } : null);
+        } else {
+          notify(`Failed to update role: ${error.message}`, "error");
+        }
+      }
+    );
   };
 
   const handleUpdateProjectMetadata = async (id: string, updates: Partial<Project>) => {
@@ -2987,6 +3670,7 @@ export default function App() {
       <Header
         user={user}
         profile={profile}
+        userCustomRoles={userCustomRoles}
         onLogout={handleLogout}
         onToggleAdmin={() => {
           setIsAdminView(!isAdminView);
@@ -3026,10 +3710,13 @@ export default function App() {
           teams={teams}
           onSaveData={handleSaveLogisticsData}
         />
-      ) : isAdminView && profile?.role === 'super_admin' ? (
+      ) : isAdminView && (profile?.role === 'super_admin' || profile?.role === 'pm') ? (
         <AdminDashboard
           profiles={profiles}
           teams={activeTeams}
+          currentUserRole={profile?.role}
+          systemData={systemData}
+          onSaveSystemData={handleSaveLogisticsData}
           onUpdateRole={handleUpdateRole}
           onCreateTeam={handleCreateTeam}
           onUpdateTeam={handleUpdateTeam}
@@ -3377,6 +4064,8 @@ export default function App() {
             onUpdate={handleUpdateProjectMetadata}
             onDelete={handleDeleteProject}
             workingHoursPerDay={workingHoursPerDay}
+            currentUserProfile={profile}
+            userCustomRoles={userCustomRoles}
           />
         )}
       </AnimatePresence>
@@ -3386,6 +4075,9 @@ export default function App() {
           <SquadRosterModal
             teams={activeTeams}
             profiles={profiles}
+            projects={projects}
+            workingHoursPerDay={workingHoursPerDay}
+            attendanceRecords={teams.find(t => t.name === 'SYSTEM_SETTINGS')?.data?.attendance || {}}
             onClose={() => setIsRosterOpen(false)}
           />
         )}
