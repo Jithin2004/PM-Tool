@@ -560,6 +560,7 @@ function AdminDashboard({
   currentUserRole,
   systemData,
   onSaveSystemData,
+  askConfirmation,
   onUpdateRole,
   onCreateTeam,
   onUpdateTeam,
@@ -570,6 +571,7 @@ function AdminDashboard({
   currentUserRole?: UserRole,
   systemData: any,
   onSaveSystemData: (data: any) => Promise<void>,
+  askConfirmation: (title: string, message: string, onConfirm: () => void) => void,
   onUpdateRole: (id: string, role: UserRole) => void,
   onCreateTeam: (name: string, pmId: string, devIds: string[]) => void,
   onUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => void,
@@ -605,21 +607,21 @@ function AdminDashboard({
       alert("Cannot delete system default designations.");
       return;
     }
-    const confirmDelete = window.confirm(`Are you sure you want to delete the custom designation '${roleToDelete}'? This will unassign it from all users.`);
-    if (!confirmDelete) return;
+    
+    askConfirmation("Confirm Deletion", `Are you sure you want to delete the custom designation '${roleToDelete}'? This will unassign it from all users.`, async () => {
+      const updatedRoles = customRoles.filter(r => r !== roleToDelete);
+      const updatedUserRoles = { ...userCustomRoles };
+      Object.keys(updatedUserRoles).forEach(userId => {
+        if (updatedUserRoles[userId] === roleToDelete) {
+          delete updatedUserRoles[userId];
+        }
+      });
 
-    const updatedRoles = customRoles.filter(r => r !== roleToDelete);
-    const updatedUserRoles = { ...userCustomRoles };
-    Object.keys(updatedUserRoles).forEach(userId => {
-      if (updatedUserRoles[userId] === roleToDelete) {
-        delete updatedUserRoles[userId];
-      }
-    });
-
-    await onSaveSystemData({
-      ...systemData,
-      customRoles: updatedRoles,
-      userCustomRoles: updatedUserRoles
+      await onSaveSystemData({
+        ...systemData,
+        customRoles: updatedRoles,
+        userCustomRoles: updatedUserRoles
+      });
     });
   };
 
@@ -627,16 +629,15 @@ function AdminDashboard({
     const userProfile = profiles.find(p => p.id === userId);
     const targetName = userProfile?.full_name || userProfile?.email || "this user";
 
-    const confirmChange = window.confirm(`Confirm action: Change designation of ${targetName} to '${roleName}'?`);
-    if (!confirmChange) return;
-
-    const updatedUserRoles = {
-      ...userCustomRoles,
-      [userId]: roleName
-    };
-    await onSaveSystemData({
-      ...systemData,
-      userCustomRoles: updatedUserRoles
+    askConfirmation("Confirm Designation Change", `Confirm action: Change designation of ${targetName} to '${roleName}'?`, async () => {
+      const updatedUserRoles = {
+        ...userCustomRoles,
+        [userId]: roleName
+      };
+      await onSaveSystemData({
+        ...systemData,
+        userCustomRoles: updatedUserRoles
+      });
     });
   };
 
@@ -3717,6 +3718,7 @@ export default function App() {
           currentUserRole={profile?.role}
           systemData={systemData}
           onSaveSystemData={handleSaveLogisticsData}
+          askConfirmation={askConfirmation}
           onUpdateRole={handleUpdateRole}
           onCreateTeam={handleCreateTeam}
           onUpdateTeam={handleUpdateTeam}
