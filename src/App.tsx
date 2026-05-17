@@ -2380,7 +2380,6 @@ export default function App() {
     if (loading || projects.length === 0) return;
 
     const fetchInsight = async () => {
-      setAiInsight("Analyzing telemetry...");
       const activeProjects = projects.filter(p => p.status !== 'deployed');
       
       let totalDecayHours = 0;
@@ -2404,6 +2403,19 @@ export default function App() {
         return { name: t.name, load: (totalExpected / teamCapacityHours) };
       }).filter(s => s.load > 1.0);
 
+      // Compute current telemetry stats hash to detect significant changes
+      const currentStatsHash = `${activeProjects.length}-${deliveryConfidence.toFixed(0)}-${teamBandwidth.toFixed(0)}-${overloadedSquads.length}`;
+
+      const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
+      const settingsData = settingsTeam?.data as any || {};
+
+      // If the stats hash matches the cached stats hash in the database, skip API execution
+      if (settingsData.statsHash === currentStatsHash && settingsData.cachedInsight) {
+        setAiInsight(settingsData.cachedInsight);
+        return;
+      }
+
+      setAiInsight("Analyzing telemetry...");
       const insightText = await generateSystemInsight({
         totalProjects: activeProjects.length,
         deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
@@ -2412,17 +2424,56 @@ export default function App() {
         overloadedSquads
       });
 
-      setAiInsight(`"${insightText}"`);
+      const formattedInsight = `"${insightText}"`;
+      setAiInsight(formattedInsight);
+
+      // Persist the fresh insight and stats hash to database settings for all users
+      try {
+        const updatedData = {
+          ...settingsData,
+          cachedInsight: formattedInsight,
+          statsHash: currentStatsHash
+        };
+
+        localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(updatedData));
+
+        const { data: dbSettings, error: findError } = await supabase
+          .from('teams')
+          .select('*')
+          .eq('name', 'SYSTEM_SETTINGS')
+          .maybeSingle();
+
+        if (!findError) {
+          if (dbSettings) {
+            await supabase
+              .from('teams')
+              .update({ data: updatedData })
+              .eq('id', dbSettings.id);
+          } else {
+            await supabase
+              .from('teams')
+              .insert({ name: 'SYSTEM_SETTINGS', data: updatedData });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to persist updated AI insight to database settings:", err);
+      }
     };
 
     const debounceId = setTimeout(fetchInsight, 2500);
     return () => clearTimeout(debounceId);
-  }, [projects, activeTeams, workingHoursPerDay, loading]);
+  }, [projects, teams, activeTeams, workingHoursPerDay, loading]);
 
   useEffect(() => {
     const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
-    if (settingsTeam && settingsTeam.data && typeof (settingsTeam.data as any).workingHours === 'number') {
-      setWorkingHoursPerDay((settingsTeam.data as any).workingHours);
+    if (settingsTeam && settingsTeam.data) {
+      const settingsData = settingsTeam.data as any;
+      if (typeof settingsData.workingHours === 'number') {
+        setWorkingHoursPerDay(settingsData.workingHours);
+      }
+      if (settingsData.cachedInsight) {
+        setAiInsight(settingsData.cachedInsight);
+      }
     }
   }, [teams]);
 
