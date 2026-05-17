@@ -1263,7 +1263,7 @@ function LogisticsDashboard({
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', false)}
                               className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'unexcused' && !record?.isPaidHalfDay ? 'bg-yellow-500/20 text-yellow-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
-                              HD (Unpaid)
+                              Half Day (Unpaid)
                             </button>
                             <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
 
@@ -1271,23 +1271,23 @@ function LogisticsDashboard({
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', true)}
                               className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && record?.isPaidHalfDay ? 'bg-green-500/20 text-green-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
-                              HD (Paid/Empathy)
+                              Half Day (Paid)
                             </button>
-                            <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+                            <div className="w-[1px] h-4 bg-white/10 mx-1" style={{ display: 'none' }}></div>
 
                             <button
-                              onClick={() => handleMarkAttendance(profile.id, 'half_day', 'casual', false)}
+                              onClick={() => handleMarkAttendance(profile.id, 'half_day', 'casual', false)} style={{ display: 'none' }}
                               className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'casual' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
-                              HD (0.5 CL)
+                              
                             </button>
-                            <div className="w-[1px] h-4 bg-white/10 mx-1 font-mono"></div>
+                            <div className="w-[1px] h-4 bg-white/10 mx-1 font-mono" style={{ display: 'none' }}></div>
 
                             <button
-                              onClick={() => handleMarkAttendance(profile.id, 'half_day', 'medical', false)}
+                              onClick={() => handleMarkAttendance(profile.id, 'half_day', 'medical', false)} style={{ display: 'none' }}
                               className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'medical' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
-                              HD (0.5 ML)
+                              
                             </button>
                           </div>
                           {/* HIDE_OLD_BUTTON_START */}
@@ -1397,7 +1397,7 @@ function LogisticsDashboard({
                   </div>
 
                   {/* Half-day Empathy Bypass Toggle */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2" style={{ display: 'none' }}>
                     <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Half-Day Empathy Bypass</label>
                     <div className="flex items-center gap-3 bg-[#0a0a0a] border border-white/10 h-11 px-4">
                       <input
