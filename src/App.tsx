@@ -92,6 +92,7 @@ interface ConfirmState {
   isOpen: boolean;
   title: string;
   message: string;
+  confirmText?: string;
   onConfirm: () => void;
 }
 
@@ -349,7 +350,7 @@ function NotificationToast({ notification, onClose }: { notification: Notificati
   );
 }
 
-function ConfirmationModal({ isOpen, title, message, onConfirm, onCancel }: { isOpen: boolean; title: string; message: string; onConfirm: () => void; onCancel: () => void }) {
+function ConfirmationModal({ isOpen, title, message, confirmText = 'Confirm', onConfirm, onCancel }: { isOpen: boolean; title: string; message: string; confirmText?: string; onConfirm: () => void; onCancel: () => void }) {
   if (!isOpen) return null;
 
   return (
@@ -369,8 +370,8 @@ function ConfirmationModal({ isOpen, title, message, onConfirm, onCancel }: { is
           className="relative w-full max-w-md bg-[#0c0c0c] border border-white/10 p-8 shadow-2xl"
         >
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-sm bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
+            <div className={`w-10 h-10 rounded-sm border flex items-center justify-center ${confirmText.toLowerCase() === 'delete' ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20'}`}>
+              <AlertTriangle className={`w-5 h-5 ${confirmText.toLowerCase() === 'delete' ? 'text-red-500' : 'text-blue-500'}`} />
             </div>
             <h3 className="text-xl font-medium tracking-tight uppercase">{title}</h3>
           </div>
@@ -380,9 +381,9 @@ function ConfirmationModal({ isOpen, title, message, onConfirm, onCancel }: { is
           <div className="flex gap-4">
             <button
               onClick={onConfirm}
-              className="flex-1 bg-red-500 text-white h-12 text-xs font-semibold uppercase tracking-widest hover:bg-red-600 transition-colors"
+              className={`flex-1 text-white h-12 text-xs font-semibold uppercase tracking-widest transition-colors ${confirmText.toLowerCase() === 'delete' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
             >
-              Delete
+              {confirmText}
             </button>
             <button
               onClick={onCancel}
@@ -571,7 +572,7 @@ function AdminDashboard({
   currentUserRole?: UserRole,
   systemData: any,
   onSaveSystemData: (data: any) => Promise<void>,
-  askConfirmation: (title: string, message: string, onConfirm: () => void) => void,
+  askConfirmation: (title: string, message: string, onConfirm: () => void, confirmText?: string) => void,
   onUpdateRole: (id: string, role: UserRole) => void,
   onCreateTeam: (name: string, pmId: string, devIds: string[]) => void,
   onUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => void,
@@ -622,7 +623,7 @@ function AdminDashboard({
         customRoles: updatedRoles,
         userCustomRoles: updatedUserRoles
       });
-    });
+    }, "Delete");
   };
 
   const handleAssignCustomRole = async (userId: string, roleName: string) => {
@@ -638,7 +639,7 @@ function AdminDashboard({
         ...systemData,
         userCustomRoles: updatedUserRoles
       });
-    });
+    }, "Change");
   };
 
   const handleCreateTeam = (e: React.FormEvent) => {
@@ -2942,6 +2943,7 @@ export default function App() {
     isOpen: false,
     title: '',
     message: '',
+    confirmText: 'Confirm',
     onConfirm: () => { }
   });
 
@@ -2954,11 +2956,12 @@ export default function App() {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const askConfirmation = (title: string, message: string, onConfirm: () => void) => {
+  const askConfirmation = (title: string, message: string, onConfirm: () => void, confirmText = 'Confirm') => {
     setConfirmState({
       isOpen: true,
       title,
       message,
+      confirmText,
       onConfirm: () => {
         onConfirm();
         setConfirmState(prev => ({ ...prev, isOpen: false }));
@@ -3701,6 +3704,7 @@ export default function App() {
         isOpen={confirmState.isOpen}
         title={confirmState.title}
         message={confirmState.message}
+        confirmText={confirmState.confirmText}
         onConfirm={confirmState.onConfirm}
         onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
       />
