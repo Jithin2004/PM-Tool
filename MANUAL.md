@@ -29,11 +29,15 @@ $$\text{Standard Deviation } (\sigma) = \frac{P - O}{6}$$
 * **Volatile / Critical Risk ($\sigma \ge 3$)**: Extreme uncertainty. The UI flags these projects with highlighted red warnings and elevated variance indicators to prompt leads for scope division.
 
 ### C. Human Efficiency Baseline (Friction Discount)
-Humans cannot maintain continuous task burn-down for a full 8-hour workday. Resolve PM applies a **globally configured Working Hours baseline** alongside an **80% human efficiency multiplier**:
+Humans cannot maintain continuous task burn-down for a full workday. Resolve PM dynamically computes the **Working Hours baseline** based on a **globally configured Company Working Time Range** (From Time to To Time):
+
+$$\text{Working Hours} = \text{To Time} - \text{From Time}$$
+
+Only the **Super Admin** is authorized to set and edit this global Company Working Time Range, while all other roles receive high-contrast read-only access. An **80% human efficiency multiplier** is automatically applied to compute productive hours:
 
 $$\text{Daily Productive Capacity} = \text{Working Hours} \times 0.80$$
 
-For example, a standard 8-hour configuration results in exactly **6.4 hours** of actual task burn-down per calendar day. This prevents optimistic calendar projections and aligns predicted dates with real-world sprint capacity.
+For example, a standard 09:00 to 17:00 configuration translates to exactly 8 working hours, resulting in **6.4 hours** of actual task burn-down per calendar day. This mathematically discounts daily operational friction (context switching, meetings, planning) to guarantee calendar forecast accuracy.
 
 ### D. Dynamic ETA & Calendar Calibration
 For any active project, the forecast calculates calendar duration as:

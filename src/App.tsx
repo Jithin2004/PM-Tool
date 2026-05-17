@@ -113,6 +113,24 @@ const calculateVariance = (best: number, worst: number) => {
   return Math.pow((worst - best) / 6, 2);
 };
 
+const calculateHoursFromRange = (from: string, to: string): number => {
+  if (!from || !to) return 8;
+  const [fromH, fromM] = from.split(':').map(Number);
+  const [toH, toM] = to.split(':').map(Number);
+  let diffMin = (toH * 60 + toM) - (fromH * 60 + fromM);
+  if (diffMin < 0) {
+    diffMin += 24 * 60; // handles overnight wrap
+  }
+  return Math.max(0.1, Number((diffMin / 60).toFixed(2)));
+};
+
+const getLocalDateString = (d: Date = new Date()): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getRelativeTime = (dateString?: string) => {
   if (!dateString) return 'INITIALIZING...';
   const date = new Date(dateString);
@@ -205,8 +223,9 @@ function Header({
   onToggleLogistics,
   showLogistics,
   onGoHome,
-  workingHours,
-  setWorkingHours,
+  workingTimeFrom,
+  workingTimeTo,
+  onWorkingTimeChange,
   tilesPerRow,
   setTilesPerRow,
   theme,
@@ -221,8 +240,9 @@ function Header({
   onToggleLogistics: () => void,
   showLogistics: boolean,
   onGoHome: () => void,
-  workingHours: number,
-  setWorkingHours: (h: number) => void,
+  workingTimeFrom: string,
+  workingTimeTo: string,
+  onWorkingTimeChange: (from: string, to: string) => void,
   tilesPerRow: number,
   setTilesPerRow: (t: number) => void,
   theme: 'dark' | 'light',
@@ -255,14 +275,29 @@ function Header({
           {/* Working hours + tiles — xl only */}
           <div className="hidden xl:flex items-center gap-6 border-x border-white/10 px-6">
             <div className="flex flex-col">
-              <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Working Hrs/Day</label>
+              <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Company Working Time</label>
               <div className="flex items-center gap-2">
-                <Clock className="w-3 h-3 text-blue-400" />
+                <Clock className="w-3.5 h-3.5 text-blue-400" />
                 {profile?.role === 'super_admin' ? (
-                  <input type="number" value={workingHours} onChange={(e) => setWorkingHours(Number(e.target.value))} min={1} max={24}
-                    className="w-12 bg-transparent border-b border-blue-400/50 font-mono text-xs focus:border-blue-400 outline-none text-center" />
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="time"
+                      value={workingTimeFrom}
+                      onChange={(e) => onWorkingTimeChange(e.target.value, workingTimeTo)}
+                      className="bg-transparent border-b border-blue-400/50 font-mono text-xs focus:border-blue-400 outline-none text-center py-0.5 text-white"
+                    />
+                    <span className="text-[10px] font-mono text-white/40">to</span>
+                    <input
+                      type="time"
+                      value={workingTimeTo}
+                      onChange={(e) => onWorkingTimeChange(workingTimeFrom, e.target.value)}
+                      className="bg-transparent border-b border-blue-400/50 font-mono text-xs focus:border-blue-400 outline-none text-center py-0.5 text-white"
+                    />
+                  </div>
                 ) : (
-                  <span className="w-12 font-mono text-xs text-center text-white/70">{workingHours}h</span>
+                  <span className="font-mono text-xs text-white/70">
+                    {workingTimeFrom} - {workingTimeTo} ({calculateHoursFromRange(workingTimeFrom, workingTimeTo)}h)
+                  </span>
                 )}
               </div>
             </div>
@@ -415,15 +450,30 @@ function Header({
               {user && (
                 <div className="space-y-3 pt-2 border-t border-white/5">
                   <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest">System Parameters</p>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2">
                     <span className="text-xs font-mono text-white/70 flex items-center gap-2">
-                      <Clock className="w-3 h-3 text-blue-400" /> Working Hours/Day
+                      <Clock className="w-3 h-3 text-blue-400" /> Company Working Time
                     </span>
                     {profile?.role === 'super_admin' ? (
-                      <input type="number" value={workingHours} onChange={(e) => setWorkingHours(Number(e.target.value))} min={1} max={24}
-                        className="w-14 bg-black border border-white/10 font-mono text-xs focus:border-blue-400 outline-none text-center py-1.5 text-white" />
+                      <div className="flex items-center gap-2 bg-black border border-white/10 p-2 rounded-sm w-full">
+                        <input
+                          type="time"
+                          value={workingTimeFrom}
+                          onChange={(e) => onWorkingTimeChange(e.target.value, workingTimeTo)}
+                          className="flex-1 bg-transparent font-mono text-xs text-white text-center outline-none"
+                        />
+                        <span className="text-xs font-mono text-white/40">to</span>
+                        <input
+                          type="time"
+                          value={workingTimeTo}
+                          onChange={(e) => onWorkingTimeChange(workingTimeFrom, e.target.value)}
+                          className="flex-1 bg-transparent font-mono text-xs text-white text-center outline-none"
+                        />
+                      </div>
                     ) : (
-                      <span className="font-mono text-xs text-white/70">{workingHours}h</span>
+                      <span className="font-mono text-xs text-white/70 bg-black/40 border border-white/10 p-2 rounded-sm text-center">
+                        {workingTimeFrom} to {workingTimeTo} ({calculateHoursFromRange(workingTimeFrom, workingTimeTo)}h)
+                      </span>
                     )}
                   </div>
                   {profile?.role === 'super_admin' && (
@@ -1151,10 +1201,7 @@ function LogisticsDashboard({
   const [activeTab, setActiveTab] = useState<'attendance' | 'paySlab' | 'payroll'>('attendance');
 
   // Attendance states
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [attendanceSearch, setAttendanceSearch] = useState('');
 
   // Pay Slab form states (initialize from DB or default)
@@ -3244,7 +3291,12 @@ export default function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-  const [workingHoursPerDay, setWorkingHoursPerDay] = useState(8);
+  const [workingTimeFrom, setWorkingTimeFrom] = useState("09:00");
+  const [workingTimeTo, setWorkingTimeTo] = useState("17:00");
+
+  const workingHoursPerDay = useMemo(() => {
+    return calculateHoursFromRange(workingTimeFrom, workingTimeTo);
+  }, [workingTimeFrom, workingTimeTo]);
   const [tilesPerRow, setTilesPerRow] = useState(3);
   const [aiInsight, setAiInsight] = useState("Awaiting telemetry...");
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -3299,7 +3351,7 @@ export default function App() {
   const [pertBest, setPertBest] = useState<string>('');
   const [pertLikely, setPertLikely] = useState<string>('');
   const [pertWorst, setPertWorst] = useState<string>('');
-  const [proposedStartDate, setProposedStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [proposedStartDate, setProposedStartDate] = useState<string>(getLocalDateString());
   const [newClientDeadline, setNewClientDeadline] = useState<string>('');
   const [newPriority, setNewPriority] = useState<string>('medium');
   const [newTeamId, setNewTeamId] = useState<string>('');
@@ -3468,8 +3520,17 @@ export default function App() {
     const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
     if (settingsTeam && settingsTeam.data) {
       const settingsData = settingsTeam.data as any;
-      if (typeof settingsData.workingHours === 'number') {
-        setWorkingHoursPerDay(settingsData.workingHours);
+      if (settingsData.workingTimeFrom) {
+        setWorkingTimeFrom(settingsData.workingTimeFrom);
+      } else if (typeof settingsData.workingHours === 'number') {
+        const hrs = settingsData.workingHours;
+        const endHour = Math.min(23, 9 + Math.floor(hrs));
+        const endMin = Math.round((hrs - Math.floor(hrs)) * 60);
+        setWorkingTimeFrom("09:00");
+        setWorkingTimeTo(`${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`);
+      }
+      if (settingsData.workingTimeTo) {
+        setWorkingTimeTo(settingsData.workingTimeTo);
       }
       if (settingsData.cachedInsight) {
         setAiInsight(settingsData.cachedInsight);
@@ -3477,8 +3538,9 @@ export default function App() {
     }
   }, [teams]);
 
-  const handleWorkingHoursChange = async (h: number) => {
-    setWorkingHoursPerDay(h);
+  const handleWorkingTimeChange = async (from: string, to: string) => {
+    setWorkingTimeFrom(from);
+    setWorkingTimeTo(to);
     const { data: existing, error: findError } = await supabase
       .from('teams')
       .select('*')
@@ -3488,11 +3550,13 @@ export default function App() {
     if (!findError && existing) {
       const mergedData = {
         ...existing.data,
-        workingHours: h
+        workingTimeFrom: from,
+        workingTimeTo: to,
+        workingHours: calculateHoursFromRange(from, to)
       };
       await supabase.from('teams').update({ data: mergedData }).eq('id', existing.id);
     } else {
-      await supabase.from('teams').insert({ name: 'SYSTEM_SETTINGS', data: { workingHours: h } });
+      await supabase.from('teams').insert({ name: 'SYSTEM_SETTINGS', data: { workingTimeFrom: from, workingTimeTo: to, workingHours: calculateHoursFromRange(from, to) } });
     }
   };
 
@@ -4015,8 +4079,9 @@ export default function App() {
           setIsAdminView(false);
           setIsLogisticsView(false);
         }}
-        workingHours={workingHoursPerDay}
-        setWorkingHours={handleWorkingHoursChange}
+        workingTimeFrom={workingTimeFrom}
+        workingTimeTo={workingTimeTo}
+        onWorkingTimeChange={handleWorkingTimeChange}
         tilesPerRow={tilesPerRow}
         setTilesPerRow={setTilesPerRow}
         theme={theme}
