@@ -25,7 +25,8 @@ import {
   Lock,
   Calculator,
   TrendingDown,
-  Banknote
+  Banknote,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -1035,6 +1036,9 @@ function LogisticsDashboard({
   const activeSymbol = currencySymbols[currency] || '$';
 
   // Payroll states
+  const [payrollMode, setPayrollMode] = useState<'monthly' | 'custom'>('monthly');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const today = new Date();
     return (today.getMonth() + 1).toString().padStart(2, '0');
@@ -1077,26 +1081,44 @@ function LogisticsDashboard({
     const targetMonth = Number(selectedMonth);
 
     let expectedWorkingDays = 22;
-    if (targetYear < currentYear || (targetYear === currentYear && targetMonth < currentMonth)) {
-      // Past month: calculate all weekdays in that month
+    let isDateInRange = (dateStr: string) => dateStr.startsWith(monthPrefix);
+
+    if (payrollMode === 'custom' && customStartDate && customEndDate) {
       let count = 0;
-      const lastDay = new Date(targetYear, targetMonth, 0).getDate();
-      for (let d = 1; d <= lastDay; d++) {
-        const dayOfWeek = new Date(targetYear, targetMonth - 1, d).getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+      const start = new Date(customStartDate);
+      const end = new Date(customEndDate);
+      if (start <= end) {
+        let current = new Date(start);
+        while (current <= end) {
+          const dayOfWeek = current.getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+          current.setDate(current.getDate() + 1);
+        }
       }
       expectedWorkingDays = count;
-    } else if (targetYear === currentYear && targetMonth === currentMonth) {
-      // Current month: calculate weekdays up to current day
-      let count = 0;
-      for (let d = 1; d <= currentDay; d++) {
-        const dayOfWeek = new Date(targetYear, targetMonth - 1, d).getDay();
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
-      }
-      expectedWorkingDays = count;
+      isDateInRange = (dateStr: string) => dateStr >= customStartDate && dateStr <= customEndDate;
     } else {
-      // Future month
-      expectedWorkingDays = 0;
+      if (targetYear < currentYear || (targetYear === currentYear && targetMonth < currentMonth)) {
+        // Past month: calculate all weekdays in that month
+        let count = 0;
+        const lastDay = new Date(targetYear, targetMonth, 0).getDate();
+        for (let d = 1; d <= lastDay; d++) {
+          const dayOfWeek = new Date(targetYear, targetMonth - 1, d).getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+        }
+        expectedWorkingDays = count;
+      } else if (targetYear === currentYear && targetMonth === currentMonth) {
+        // Current month: calculate weekdays up to current day
+        let count = 0;
+        for (let d = 1; d <= currentDay; d++) {
+          const dayOfWeek = new Date(targetYear, targetMonth - 1, d).getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+        }
+        expectedWorkingDays = count;
+      } else {
+        // Future month
+        expectedWorkingDays = 0;
+      }
     }
 
     return profiles.map(profile => {
@@ -1110,7 +1132,7 @@ function LogisticsDashboard({
       let unpaidHalfDayCount = 0;
 
       Object.keys(attendanceRecords).forEach(dateStr => {
-        if (dateStr.startsWith(monthPrefix)) {
+        if (isDateInRange(dateStr)) {
           const dayData = attendanceRecords[dateStr]?.[profile.id];
           if (dayData) {
             if (dayData.status === 'present') {
@@ -1136,7 +1158,7 @@ function LogisticsDashboard({
       });
 
       const totalDaysAccounted = Object.keys(attendanceRecords).reduce((acc, dateStr) => {
-        if (dateStr.startsWith(monthPrefix) && attendanceRecords[dateStr]?.[profile.id]) {
+        if (isDateInRange(dateStr) && attendanceRecords[dateStr]?.[profile.id]) {
           return acc + 1;
         }
         return acc;
@@ -1177,7 +1199,62 @@ function LogisticsDashboard({
         netPayable
       };
     });
-  }, [profiles, systemData, monthPrefix, allowedCasualLeaves, allowedMedicalLeaves, halfDayRule, unexcusedDeductionAmount, deductionMethod, bypassHalfDay]);
+  }, [profiles, systemData, monthPrefix, allowedCasualLeaves, allowedMedicalLeaves, halfDayRule, unexcusedDeductionAmount, deductionMethod, bypassHalfDay, payrollMode, customStartDate, customEndDate]);
+
+  const handleExportCSV = () => {
+    const totalGross = payrollData.reduce((sum, item) => sum + item.baseSalary, 0);
+    const totalDeductions = payrollData.reduce((sum, item) => sum + item.totalDeductions, 0);
+    const totalNet = payrollData.reduce((sum, item) => sum + item.netPayable, 0);
+
+    const headers = [
+      'System Profile', 'Base Salary', 'Present Days', 'Half Days', 
+      'Casual Leaves', 'Medical Leaves', 'Unexcused', 
+      'Total Unpaid Days', 'Total Deductions', 'Net Payable'
+    ];
+    
+    const rows = payrollData.map(d => [
+      d.profile.full_name || d.profile.email || 'Unknown',
+      d.baseSalary.toFixed(2),
+      d.presentCount.toFixed(1),
+      d.halfDayCount.toString(),
+      d.clCount.toFixed(1),
+      d.mlCount.toFixed(1),
+      d.uuCount.toString(),
+      d.totalUnpaidDays.toFixed(1),
+      d.totalDeductions.toFixed(2),
+      d.netPayable.toFixed(2)
+    ]);
+
+    rows.push([]);
+    rows.push(['AGGREGATE TOTALS', '', '', '', '', '', '', '', '', '']);
+    rows.push(['Total Gross Liability', totalGross.toFixed(2), '', '', '', '', '', '', '', '']);
+    rows.push(['Total Deductions', totalDeductions.toFixed(2), '', '', '', '', '', '', '', '']);
+    rows.push(['Total Net Payable', totalNet.toFixed(2), '', '', '', '', '', '', '', '']);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    let filename = '';
+    if (payrollMode === 'monthly') {
+      const monthName = new Date(`${selectedYear}-${selectedMonth}-01`).toLocaleString('default', { month: 'long' });
+      filename = `Payroll_Telemetry_${monthName}_${selectedYear}.csv`;
+    } else {
+      filename = `Payroll_Telemetry_Custom_${customStartDate}_to_${customEndDate}.csv`;
+    }
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleMarkAttendance = async (
     userId: string, 
@@ -1682,37 +1759,61 @@ function LogisticsDashboard({
                 <p className="text-[10px] font-mono text-white/50 uppercase">MONTHLY SQUAD COMPENSATION COMPLIANCE</p>
               </div>
 
-              <div className="flex items-center gap-4">
-                {/* Month Picker */}
+              <div className="flex flex-col xl:flex-row items-center gap-4">
                 <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  value={payrollMode}
+                  onChange={(e) => setPayrollMode(e.target.value as any)}
                   className="bg-[#0a0a0a] border border-white/10 h-10 px-4 text-xs font-mono text-white focus:border-white/30 outline-none"
                 >
-                  <option value="01">January</option>
-                  <option value="02">February</option>
-                  <option value="03">March</option>
-                  <option value="04">April</option>
-                  <option value="05">May</option>
-                  <option value="06">June</option>
-                  <option value="07">July</option>
-                  <option value="08">August</option>
-                  <option value="09">September</option>
-                  <option value="10">October</option>
-                  <option value="11">November</option>
-                  <option value="12">December</option>
+                  <option value="monthly">Monthly Cycle</option>
+                  <option value="custom">Custom Range</option>
                 </select>
 
-                {/* Year Picker */}
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="bg-[#0a0a0a] border border-white/10 h-10 px-4 text-xs font-mono text-white focus:border-white/30 outline-none"
+                {payrollMode === 'monthly' ? (
+                  <>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="bg-[#0a0a0a] border border-white/10 h-10 px-4 text-xs font-mono text-white focus:border-white/30 outline-none"
+                    >
+                      <option value="01">January</option>
+                      <option value="02">February</option>
+                      <option value="03">March</option>
+                      <option value="04">April</option>
+                      <option value="05">May</option>
+                      <option value="06">June</option>
+                      <option value="07">July</option>
+                      <option value="08">August</option>
+                      <option value="09">September</option>
+                      <option value="10">October</option>
+                      <option value="11">November</option>
+                      <option value="12">December</option>
+                    </select>
+
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(e.target.value)}
+                      className="bg-[#0a0a0a] border border-white/10 h-10 px-4 text-xs font-mono text-white focus:border-white/30 outline-none"
+                    >
+                      <option value="2025">2025</option>
+                      <option value="2026">2026</option>
+                      <option value="2027">2027</option>
+                    </select>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} className="bg-[#0a0a0a] border border-white/10 h-10 px-2 text-xs font-mono text-white focus:border-white/30 outline-none" />
+                    <span className="text-white/50 text-xs font-mono">to</span>
+                    <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="bg-[#0a0a0a] border border-white/10 h-10 px-2 text-xs font-mono text-white focus:border-white/30 outline-none" />
+                  </div>
+                )}
+                
+                <button
+                  onClick={handleExportCSV}
+                  className="bg-white text-black h-10 px-4 text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors flex items-center gap-2 whitespace-nowrap ml-2"
                 >
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
-                </select>
+                  <Download className="w-3 h-3" /> Export CSV
+                </button>
               </div>
             </div>
 
@@ -1739,7 +1840,7 @@ function LogisticsDashboard({
             <div className="border border-white/10 bg-[#0c0c0c] overflow-hidden">
               <div className="p-6 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center">
                 <h3 className="text-xs font-mono uppercase tracking-widest text-white/90 font-bold">Compiled Month Telemetry Sheet</h3>
-                <span className="text-[10px] font-mono text-white/50">Month Scope: {monthPrefix}</span>
+                <span className="text-[10px] font-mono text-white/50">Scope: {payrollMode === 'monthly' ? monthPrefix : `${customStartDate || 'TBD'} to ${customEndDate || 'TBD'}`}</span>
               </div>
 
               <div className="overflow-x-auto">
