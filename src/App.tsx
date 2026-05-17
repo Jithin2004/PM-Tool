@@ -943,10 +943,14 @@ function LogisticsDashboard({
         }
       });
 
+      const expectedWorkingDays = 22;
+      const totalDaysMarked = presentCount + halfDayCount + clCount + mlCount + uuCount;
+      const unmarkedWorkingDays = Math.max(0, expectedWorkingDays - totalDaysMarked);
+
       const halfDayLeavesConverted = bypassHalfDay ? 0 : (halfDayCount / defaultHalfDayRatio);
       const casualExceeded = Math.max(0, clCount - defaultCasual);
       const medicalExceeded = Math.max(0, mlCount - defaultMedical);
-      const totalUnpaidDays = casualExceeded + medicalExceeded + halfDayLeavesConverted + uuCount;
+      const totalUnpaidDays = casualExceeded + medicalExceeded + halfDayLeavesConverted + uuCount + unmarkedWorkingDays;
 
       let totalDeductions = 0;
       if (totalUnpaidDays > 0) {
