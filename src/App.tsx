@@ -956,6 +956,7 @@ function LogisticsDashboard({
       let clCount = 0;
       let mlCount = 0;
       let uuCount = 0;
+      let unpaidHalfDayCount = 0;
 
       Object.keys(attendanceRecords).forEach(dateStr => {
         if (dateStr.startsWith(monthPrefix)) {
@@ -965,6 +966,15 @@ function LogisticsDashboard({
               presentCount++;
             } else if (dayData.status === 'half_day') {
               halfDayCount++;
+              if (dayData.leaveType === 'casual') {
+                clCount += 0.5;
+              } else if (dayData.leaveType === 'medical') {
+                mlCount += 0.5;
+              } else if (dayData.isPaidHalfDay) {
+                // Paid half day (empathy bypass) - fully paid, no CL/ML or unpaid deductions
+              } else {
+                unpaidHalfDayCount++;
+              }
             } else if (dayData.status === 'absent') {
               if (dayData.leaveType === 'casual') clCount++;
               else if (dayData.leaveType === 'medical') mlCount++;
@@ -974,10 +984,16 @@ function LogisticsDashboard({
         }
       });
 
-      const totalDaysMarked = presentCount + halfDayCount + clCount + mlCount + uuCount;
-      const unmarkedWorkingDays = Math.max(0, expectedWorkingDays - totalDaysMarked);
+      const totalDaysAccounted = Object.keys(attendanceRecords).reduce((acc, dateStr) => {
+        if (dateStr.startsWith(monthPrefix) && attendanceRecords[dateStr]?.[profile.id]) {
+          return acc + 1;
+        }
+        return acc;
+      }, 0);
 
-      const halfDayLeavesConverted = bypassHalfDay ? 0 : (halfDayCount / defaultHalfDayRatio);
+      const unmarkedWorkingDays = Math.max(0, expectedWorkingDays - totalDaysAccounted);
+
+      const halfDayLeavesConverted = unpaidHalfDayCount / defaultHalfDayRatio;
       const casualExceeded = Math.max(0, clCount - defaultCasual);
       const medicalExceeded = Math.max(0, mlCount - defaultMedical);
       const totalUnpaidDays = casualExceeded + medicalExceeded + halfDayLeavesConverted + uuCount + unmarkedWorkingDays;
@@ -1009,12 +1025,23 @@ function LogisticsDashboard({
     });
   }, [profiles, systemData, monthPrefix, allowedCasualLeaves, allowedMedicalLeaves, halfDayRule, unexcusedDeductionAmount, deductionMethod, bypassHalfDay]);
 
-  const handleMarkAttendance = async (userId: string, status: 'present' | 'half_day' | 'absent', leaveType?: 'casual' | 'medical' | 'unexcused') => {
+  const handleMarkAttendance = async (
+    userId: string, 
+    status: 'present' | 'half_day' | 'absent', 
+    leaveType?: 'casual' | 'medical' | 'unexcused',
+    isPaidHalfDay?: boolean
+  ) => {
     const existingAttendance = systemData.attendance || {};
     const dayRecords = { ...(existingAttendance[selectedDate] || {}) };
 
     if (status === 'absent') {
       dayRecords[userId] = { status, leaveType: leaveType || 'unexcused' };
+    } else if (status === 'half_day') {
+      dayRecords[userId] = { 
+        status, 
+        leaveType: leaveType || 'unexcused', 
+        isPaidHalfDay: !!isPaidHalfDay 
+      };
     } else {
       dayRecords[userId] = { status };
     }
@@ -1230,8 +1257,41 @@ function LogisticsDashboard({
                             Present
                           </button>
 
-                          {/* Half Day button */}
-                          <button
+                          {/* Half Day split options */}
+                          <div className="flex items-center bg-black/40 border border-white/10 p-1">
+                            <button
+                              onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', false)}
+                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'unexcused' && !record?.isPaidHalfDay ? 'bg-yellow-500/20 text-yellow-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                            >
+                              HD (Unpaid)
+                            </button>
+                            <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+
+                            <button
+                              onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', true)}
+                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && record?.isPaidHalfDay ? 'bg-green-500/20 text-green-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                            >
+                              HD (Paid/Empathy)
+                            </button>
+                            <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+
+                            <button
+                              onClick={() => handleMarkAttendance(profile.id, 'half_day', 'casual', false)}
+                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'casual' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                            >
+                              HD (0.5 CL)
+                            </button>
+                            <div className="w-[1px] h-4 bg-white/10 mx-1 font-mono"></div>
+
+                            <button
+                              onClick={() => handleMarkAttendance(profile.id, 'half_day', 'medical', false)}
+                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'medical' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                            >
+                              HD (0.5 ML)
+                            </button>
+                          </div>
+                          {/* HIDE_OLD_BUTTON_START */}
+                          <button style={{ display: 'none' }}
                             onClick={() => handleMarkAttendance(profile.id, 'half_day')}
                             className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'half_day' ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400 font-bold shadow-[0_0_10px_rgba(234,179,8,0.15)]' : 'border-white/10 hover:border-white/20 text-white/60 hover:text-white'}`}
                           >
