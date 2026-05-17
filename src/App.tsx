@@ -17,7 +17,12 @@ import {
   Cpu,
   Edit2,
   Trash2,
-  History
+  History,
+  Calendar,
+  DollarSign,
+  Sliders,
+  Check,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -187,6 +192,8 @@ function Header({
   onLogout,
   onToggleAdmin,
   showAdmin,
+  onToggleLogistics,
+  showLogistics,
   workingHours,
   setWorkingHours,
   tilesPerRow,
@@ -197,6 +204,8 @@ function Header({
   onLogout: () => void,
   onToggleAdmin: () => void,
   showAdmin: boolean,
+  onToggleLogistics: () => void,
+  showLogistics: boolean,
   workingHours: number,
   setWorkingHours: (h: number) => void,
   tilesPerRow: number,
@@ -252,7 +261,16 @@ function Header({
           </div>
         </div>
 
-        <div className="hidden lg:flex items-center gap-8 mr-4">
+        <div className="hidden lg:flex items-center gap-4 mr-4">
+          {(profile?.role === 'super_admin' || profile?.role === 'pm') && (
+            <button
+              onClick={onToggleLogistics}
+              className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}
+            >
+              {showLogistics ? 'Exit Logistics Console' : 'Logistics Console'}
+            </button>
+          )}
+
           {profile?.role === 'super_admin' && (
             <button
               onClick={onToggleAdmin}
@@ -412,7 +430,7 @@ function ProjectCard({ project, teams, profiles, workingHoursPerDay, onClick }: 
     calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst),
     [project]
   );
-  
+
   const productiveHoursPerDay = workingHoursPerDay * 0.8;
   const calendarDays = (expectedRealHours / productiveHoursPerDay / engineerCount).toFixed(1);
   const stdDev = Math.sqrt(calculateVariance(project.pert_best, project.pert_worst));
@@ -436,10 +454,7 @@ function ProjectCard({ project, teams, profiles, workingHoursPerDay, onClick }: 
   });
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      layout
+    <div
       onClick={() => onClick(project)}
       className={`border border-white/10 bg-[#0c0c0c] p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden ${stdDev >= 3 ? 'border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]' : ''
         }`}
@@ -464,9 +479,11 @@ function ProjectCard({ project, teams, profiles, workingHoursPerDay, onClick }: 
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-mono text-white/75 uppercase tracking-widest">{getRelativeTime(project.created_at)}</span>
             <div className="flex gap-2">
-              {project.tags.filter(tag => !tag.startsWith('LOG:') && !tag.startsWith('SQUAD:')).map(tag => (
-                <span key={tag} className="text-[11px] font-mono text-white/80">#{tag}</span>
-              ))}
+              {project.tags
+                .filter(tag => !tag.startsWith('SQUAD:') && !tag.startsWith('LOG:'))
+                .map(tag => (
+                  <span key={tag} className="text-[11px] font-mono text-white/80">#{tag}</span>
+                ))}
             </div>
           </div>
           {creator && (
@@ -501,7 +518,7 @@ function ProjectCard({ project, teams, profiles, workingHoursPerDay, onClick }: 
           Forecast <ChevronRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -825,6 +842,744 @@ function AdminDashboard({
   );
 }
 
+function LogisticsDashboard({
+  profiles,
+  teams,
+  onSaveData
+}: {
+  profiles: Profile[],
+  teams: Team[],
+  onSaveData: (updatedData: any) => Promise<void>
+}) {
+  const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
+  const systemData: any = settingsTeam?.data || {};
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'attendance' | 'paySlab' | 'payroll'>('attendance');
+
+  // Attendance states
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [attendanceSearch, setAttendanceSearch] = useState('');
+
+  // Pay Slab form states (initialize from DB or default)
+  const [allowedCasualLeaves, setAllowedCasualLeaves] = useState(2);
+  const [allowedMedicalLeaves, setAllowedMedicalLeaves] = useState(2);
+  const [halfDayRule, setHalfDayRule] = useState(2);
+  const [unexcusedDeductionAmount, setUnexcusedDeductionAmount] = useState(100);
+  const [deductionMethod, setDeductionMethod] = useState<'fixed' | 'pro_rata'>('fixed');
+  const [currency, setCurrency] = useState<'USD' | 'INR' | 'EUR' | 'CAD' | 'AED'>('USD');
+
+  const currencySymbols: Record<string, string> = {
+    USD: '$',
+    INR: '₹',
+    EUR: '€',
+    CAD: 'C$',
+    AED: 'AED '
+  };
+
+  const activeSymbol = currencySymbols[currency] || '$';
+
+  // Payroll states
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const today = new Date();
+    return (today.getMonth() + 1).toString().padStart(2, '0');
+  });
+  const [selectedYear, setSelectedYear] = useState(() => {
+    const today = new Date();
+    return today.getFullYear().toString();
+  });
+  const [editingSalaryUserId, setEditingSalaryUserId] = useState<string | null>(null);
+  const [editingSalaryValue, setEditingSalaryValue] = useState('');
+
+  // Sync state values when DB systemData updates
+  useEffect(() => {
+    if (systemData.paySlab) {
+      setAllowedCasualLeaves(systemData.paySlab.allowedCasualLeaves ?? 2);
+      setAllowedMedicalLeaves(systemData.paySlab.allowedMedicalLeaves ?? 2);
+      setHalfDayRule(systemData.paySlab.halfDayRule ?? 2);
+      setUnexcusedDeductionAmount(systemData.paySlab.unexcusedDeductionAmount ?? 100);
+      setDeductionMethod(systemData.paySlab.deductionMethod ?? 'fixed');
+      setCurrency(systemData.paySlab.currency ?? 'USD');
+    }
+  }, [settingsTeam]);
+
+  // Calculations for deductions and net payroll
+  const monthPrefix = `${selectedYear}-${selectedMonth}`;
+  const attendanceRecords = systemData.attendance || {};
+
+  const payrollData = useMemo(() => {
+    const defaultCasual = allowedCasualLeaves;
+    const defaultMedical = allowedMedicalLeaves;
+    const defaultHalfDayRatio = halfDayRule;
+
+    return profiles.map(profile => {
+      const baseSalary = systemData.salaries?.[profile.id] ?? 3000;
+
+      let presentCount = 0;
+      let halfDayCount = 0;
+      let clCount = 0;
+      let mlCount = 0;
+      let uuCount = 0;
+
+      Object.keys(attendanceRecords).forEach(dateStr => {
+        if (dateStr.startsWith(monthPrefix)) {
+          const dayData = attendanceRecords[dateStr]?.[profile.id];
+          if (dayData) {
+            if (dayData.status === 'present') {
+              presentCount++;
+            } else if (dayData.status === 'half_day') {
+              halfDayCount++;
+            } else if (dayData.status === 'absent') {
+              if (dayData.leaveType === 'casual') clCount++;
+              else if (dayData.leaveType === 'medical') mlCount++;
+              else uuCount++;
+            }
+          }
+        }
+      });
+
+      const halfDayLeavesConverted = halfDayCount / defaultHalfDayRatio;
+      const casualExceeded = Math.max(0, clCount - defaultCasual);
+      const medicalExceeded = Math.max(0, mlCount - defaultMedical);
+      const totalUnpaidDays = casualExceeded + medicalExceeded + halfDayLeavesConverted + uuCount;
+
+      let totalDeductions = 0;
+      if (totalUnpaidDays > 0) {
+        if (deductionMethod === 'fixed') {
+          totalDeductions = totalUnpaidDays * unexcusedDeductionAmount;
+        } else {
+          const dailyRate = baseSalary / 22;
+          totalDeductions = totalUnpaidDays * dailyRate;
+        }
+      }
+
+      const netPayable = Math.max(0, baseSalary - totalDeductions);
+
+      return {
+        profile,
+        baseSalary,
+        presentCount,
+        halfDayCount,
+        clCount,
+        mlCount,
+        uuCount,
+        totalUnpaidDays,
+        totalDeductions,
+        netPayable
+      };
+    });
+  }, [profiles, systemData, monthPrefix, allowedCasualLeaves, allowedMedicalLeaves, halfDayRule, unexcusedDeductionAmount, deductionMethod]);
+
+  const handleMarkAttendance = async (userId: string, status: 'present' | 'half_day' | 'absent', leaveType?: 'casual' | 'medical' | 'unexcused') => {
+    const existingAttendance = systemData.attendance || {};
+    const dayRecords = { ...(existingAttendance[selectedDate] || {}) };
+
+    if (status === 'absent') {
+      dayRecords[userId] = { status, leaveType: leaveType || 'unexcused' };
+    } else {
+      dayRecords[userId] = { status };
+    }
+
+    const updatedAttendance = {
+      ...existingAttendance,
+      [selectedDate]: dayRecords
+    };
+
+    await onSaveData({
+      ...systemData,
+      attendance: updatedAttendance
+    });
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const updatedPaySlab = {
+      allowedCasualLeaves,
+      allowedMedicalLeaves,
+      halfDayRule,
+      unexcusedDeductionAmount,
+      deductionMethod,
+      currency
+    };
+
+    await onSaveData({
+      ...systemData,
+      paySlab: updatedPaySlab
+    });
+  };
+
+  const handleSaveSalary = async (userId: string) => {
+    const existingSalaries = systemData.salaries || {};
+    const updatedSalaries = {
+      ...existingSalaries,
+      [userId]: Number(editingSalaryValue) || 0
+    };
+
+    await onSaveData({
+      ...systemData,
+      salaries: updatedSalaries
+    });
+    setEditingSalaryUserId(null);
+  };
+
+  // Filter profiles for attendance marking
+  const filteredProfiles = profiles.filter(p => {
+    const searchLower = attendanceSearch.toLowerCase();
+    return (
+      (p.full_name || '').toLowerCase().includes(searchLower) ||
+      p.email.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Calculate day summary stats
+  const dayAttendance = attendanceRecords[selectedDate] || {};
+  const dayStats = useMemo(() => {
+    let present = 0;
+    let halfDay = 0;
+    let absent = 0;
+    profiles.forEach(p => {
+      const dayData = dayAttendance[p.id];
+      if (dayData) {
+        if (dayData.status === 'present') present++;
+        else if (dayData.status === 'half_day') halfDay++;
+        else if (dayData.status === 'absent') absent++;
+      }
+    });
+    return { present, halfDay, absent };
+  }, [dayAttendance, profiles]);
+
+  return (
+    <main className="max-w-[1600px] mx-auto px-6 py-12">
+      {/* Visual Section Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 border-b border-white/10 pb-8">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <Sliders className="w-5 h-5 text-blue-400" />
+            <h2 className="text-3xl font-medium tracking-tight uppercase">Logistics & Payroll Console</h2>
+          </div>
+          <p className="text-sm font-mono text-white/70">
+            Secure workspace administration: attendance tracking, pay slab logic, and automated pro-rata deductions.
+          </p>
+        </div>
+
+        {/* Tab Selector */}
+        <div className="flex bg-white/5 p-1 border border-white/5 rounded-sm">
+          <button
+            onClick={() => setActiveTab('attendance')}
+            className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'attendance' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+          >
+            Attendance Tracker
+          </button>
+          <button
+            onClick={() => setActiveTab('paySlab')}
+            className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'paySlab' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+          >
+            Global Rules & Pay Slabs
+          </button>
+          <button
+            onClick={() => setActiveTab('payroll')}
+            className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'payroll' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+          >
+            Payroll Telemetry
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Contents */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'attendance' && (
+          <motion.div
+            key="attendance"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-8"
+          >
+            {/* Header controls for Attendance */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center bg-[#0c0c0c] border border-white/10 p-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-white/50">Tracking Target Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full bg-[#0a0a0a] border border-white/10 h-11 pl-10 pr-4 text-sm font-mono text-white focus:border-white/30 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-white/50">Query Profiles</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
+                  <input
+                    type="text"
+                    placeholder="Search name or email..."
+                    value={attendanceSearch}
+                    onChange={(e) => setAttendanceSearch(e.target.value)}
+                    className="w-full bg-[#0a0a0a] border border-white/10 h-11 pl-10 pr-4 text-sm font-mono text-white focus:border-white/30 outline-none transition-all placeholder:text-white/40"
+                  />
+                </div>
+              </div>
+
+              {/* Day stats counters */}
+              <div className="flex gap-4 items-center justify-between border-t border-white/5 lg:border-t-0 lg:border-l lg:border-white/10 pt-4 lg:pt-0 lg:pl-8 h-full">
+                <div className="text-center flex-1">
+                  <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">PRESENT</p>
+                  <p className="text-2xl font-bold text-green-400 font-mono">{dayStats.present}</p>
+                </div>
+                <div className="h-8 w-[1px] bg-white/5"></div>
+                <div className="text-center flex-1">
+                  <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">HALF DAY</p>
+                  <p className="text-2xl font-bold text-yellow-400 font-mono">{dayStats.halfDay}</p>
+                </div>
+                <div className="h-8 w-[1px] bg-white/5"></div>
+                <div className="text-center flex-1">
+                  <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">ABSENT</p>
+                  <p className="text-2xl font-bold text-red-500 font-mono">{dayStats.absent}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Attendance Marking Grid */}
+            <div className="border border-white/10 bg-[#0c0c0c] overflow-hidden">
+              <div className="p-6 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center">
+                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90">Mark System Attendance</h3>
+                <span className="text-[9px] font-mono text-white/50 bg-white/5 px-2 py-0.5 border border-white/5 uppercase">TELEMETRY_ONLINE</span>
+              </div>
+
+              <div className="divide-y divide-white/5">
+                {filteredProfiles.length === 0 ? (
+                  <div className="p-12 text-center text-xs font-mono text-white/50 italic">
+                    No active system profiles match your search criteria.
+                  </div>
+                ) : (
+                  filteredProfiles.map(profile => {
+                    const record = dayAttendance[profile.id];
+                    const status = record?.status;
+                    const leaveType = record?.leaveType;
+
+                    return (
+                      <div key={profile.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-white/[0.01] transition-all">
+                        {/* User Details */}
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden">
+                            {profile.avatar_url ? (
+                              <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Users className="w-5 h-5 text-white/40" />
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-white/90">{profile.full_name || 'Anonymous User'}</h4>
+                            <p className="text-[10px] font-mono text-white/60 uppercase">{profile.email}</p>
+                            <p className="text-[9px] font-mono mt-1"><span className="text-white/40 uppercase">Role:</span> <span className="text-blue-400 uppercase">{profile.role}</span></p>
+                          </div>
+                        </div>
+
+                        {/* Status marking controls */}
+                        <div className="flex flex-wrap items-center gap-3">
+                          {/* Present button */}
+                          <button
+                            onClick={() => handleMarkAttendance(profile.id, 'present')}
+                            className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'present' ? 'bg-green-500/20 border-green-500 text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.15)]' : 'border-white/10 hover:border-white/20 text-white/60 hover:text-white'}`}
+                          >
+                            Present
+                          </button>
+
+                          {/* Half Day button */}
+                          <button
+                            onClick={() => handleMarkAttendance(profile.id, 'half_day')}
+                            className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'half_day' ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400 font-bold shadow-[0_0_10px_rgba(234,179,8,0.15)]' : 'border-white/10 hover:border-white/20 text-white/60 hover:text-white'}`}
+                          >
+                            Half Day
+                          </button>
+
+                          {/* Absent Option split */}
+                          <div className="flex items-center bg-black/40 border border-white/10 p-1">
+                            <button
+                              onClick={() => handleMarkAttendance(profile.id, 'absent', 'unexcused')}
+                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'unexcused' ? 'bg-red-500/20 text-red-500 font-bold' : 'text-white/50 hover:text-white'}`}
+                            >
+                              Absent (Unpaid)
+                            </button>
+                            <div className="w-[1px] h-4 bg-white/10 mx-1 font-mono"></div>
+                            
+                            <button
+                              onClick={() => handleMarkAttendance(profile.id, 'absent', 'casual')}
+                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'casual' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                            >
+                              Casual Leave (CL)
+                            </button>
+                            <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+
+                            <button
+                              onClick={() => handleMarkAttendance(profile.id, 'absent', 'medical')}
+                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'medical' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                            >
+                              Medical Leave (ML)
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'paySlab' && (
+          <motion.div
+            key="paySlab"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.2 }}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+          >
+            {/* Rules configurator Form */}
+            <div className="lg:col-span-2 border border-white/10 bg-[#0c0c0c] p-8 space-y-6">
+              <div className="border-b border-white/10 pb-4 flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-blue-400" />
+                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90 font-semibold font-bold">Global System Pay Slabs</h3>
+              </div>
+
+              <form onSubmit={handleSaveSettings} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Casual Leaves */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Allowed Paid Casual Leaves (CL) / Month</label>
+                    <input
+                      type="number"
+                      required
+                      value={allowedCasualLeaves}
+                      onChange={(e) => setAllowedCasualLeaves(Number(e.target.value))}
+                      min={0}
+                      max={31}
+                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                    />
+                    <p className="text-[9px] font-mono text-white/40 italic">Allocated paid leave allowance per user. Exceeding days trigger deductions.</p>
+                  </div>
+
+                  {/* Medical Leaves */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Allowed Paid Medical Leaves (ML) / Month</label>
+                    <input
+                      type="number"
+                      required
+                      value={allowedMedicalLeaves}
+                      onChange={(e) => setAllowedMedicalLeaves(Number(e.target.value))}
+                      min={0}
+                      max={31}
+                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                    />
+                    <p className="text-[9px] font-mono text-white/40 italic">Allocated paid sick/medical leave. Excess days trigger deductions.</p>
+                  </div>
+
+                  {/* Half-day Conversion Rule */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Half-Day Conversion Threshold</label>
+                    <input
+                      type="number"
+                      required
+                      value={halfDayRule}
+                      onChange={(e) => setHalfDayRule(Number(e.target.value))}
+                      min={1}
+                      max={10}
+                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                    />
+                    <p className="text-[9px] font-mono text-white/40 italic">Specify how many marked Half-Day absences equal 1 Full-Day leave (e.g. 2 half-days = 1 full day).</p>
+                  </div>
+
+                  {/* Currency Selector */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Global System Currency</label>
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value as any)}
+                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                    >
+                      <option value="USD">USD ($) - US Dollar</option>
+                      <option value="INR">INR (₹) - Indian Rupee</option>
+                      <option value="EUR">EUR (€) - Euro</option>
+                      <option value="CAD">CAD (C$) - Canadian Dollar</option>
+                      <option value="AED">AED (د.إ) - UAE Dirham</option>
+                    </select>
+                    <p className="text-[9px] font-mono text-white/40 italic">Set the primary currency used across salary listings, calculations, and deductions.</p>
+                  </div>
+
+                  {/* Deduction Method Selector */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Leave Deduction Calculation Method</label>
+                    <select
+                      value={deductionMethod}
+                      onChange={(e) => setDeductionMethod(e.target.value as any)}
+                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                    >
+                      <option value="fixed">Fixed Currency Value per Leave Day</option>
+                      <option value="pro_rata">Daily Pro-Rata (Base Monthly Salary / 22 Working Days)</option>
+                    </select>
+                    <p className="text-[9px] font-mono text-white/40 italic">Choose whether unexcused leaves deduct a flat fee or calculate dynamic pro-rata daily wage cuts.</p>
+                  </div>
+
+                  {/* Fixed Amount input */}
+                  {deductionMethod === 'fixed' && (
+                    <div className="flex flex-col gap-2 md:col-span-2">
+                      <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Flat Deduction Value ({activeSymbol.trim()}) per Excess Leave</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-white/60">{activeSymbol}</span>
+                        <input
+                          type="number"
+                          required
+                          value={unexcusedDeductionAmount}
+                          onChange={(e) => setUnexcusedDeductionAmount(Number(e.target.value))}
+                          min={0}
+                          className="w-full bg-[#0a0a0a] border border-white/10 h-11 pl-10 pr-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                        />
+                      </div>
+                      <p className="text-[9px] font-mono text-white/40 italic">Configured deduction amount deducted from the user's monthly payload for each exceeding unexcused day.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-white/10 flex justify-end">
+                  <button
+                    type="submit"
+                    className="bg-white text-black font-semibold text-[10px] font-mono uppercase tracking-widest px-8 py-3 hover:bg-neutral-200 transition-colors flex items-center gap-2"
+                  >
+                    <Check className="w-4 h-4" /> Save Slab System Configuration
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Quick Helper Rules Info panel */}
+            <div className="border border-white/10 bg-[#0c0c0c] p-8 space-y-6">
+              <div className="border-b border-white/10 pb-4 flex items-center gap-2">
+                <BrainCircuit className="w-4 h-4 text-blue-400" />
+                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90 font-semibold font-bold">Formula Telemetry</h3>
+              </div>
+
+              <div className="space-y-4 text-xs font-mono text-white/70 leading-relaxed">
+                <p>
+                  The payroll deduction calculation is computed in real-time using high-fidelity rules matching standard corporate infrastructure:
+                </p>
+                <div className="border border-white/10 bg-[#0a0a0a] p-4 text-[11px] space-y-2">
+                  <p className="font-bold text-white">1. Total Unpaid Leave Days (LD):</p>
+                  <p className="text-white/60">LD = Excess(CL) + Excess(ML) + (Half-Days / Threshold) + Unexcused Absences</p>
+                  
+                  <p className="font-bold text-white pt-2">2. Daily Wage Rate (DR):</p>
+                  <p className="text-white/60">DR = Base Salary / 22 (Industry average working days)</p>
+
+                  <p className="font-bold text-white pt-2">3. Total Deductions:</p>
+                  <p className="text-white/60">If Fixed Method: Deduct = LD * Flat Deduction Amount</p>
+                  <p className="text-white/60">If Pro-Rata Method: Deduct = LD * DR</p>
+                </div>
+                <div className="bg-blue-500/10 border border-blue-500/20 p-4 flex items-start gap-3">
+                  <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-blue-400/90">
+                    Paid leave allocations are automatically assigned to all active user roles (both Project Managers and Developers/Viewers) inside the database.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'payroll' && (
+          <motion.div
+            key="payroll"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-8"
+          >
+            {/* Payroll filters */}
+            <div className="flex flex-col md:flex-row gap-6 items-center bg-[#0c0c0c] border border-white/10 p-6 justify-between">
+              <div>
+                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90 font-semibold font-bold mb-1">Payroll Telemetry Analysis</h3>
+                <p className="text-[10px] font-mono text-white/50 uppercase">MONTHLY SQUAD COMPENSATION COMPLIANCE</p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                {/* Month Picker */}
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="bg-[#0a0a0a] border border-white/10 h-10 px-4 text-xs font-mono text-white focus:border-white/30 outline-none"
+                >
+                  <option value="01">January</option>
+                  <option value="02">February</option>
+                  <option value="03">March</option>
+                  <option value="04">April</option>
+                  <option value="05">May</option>
+                  <option value="06">June</option>
+                  <option value="07">July</option>
+                  <option value="08">August</option>
+                  <option value="09">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+
+                {/* Year Picker */}
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="bg-[#0a0a0a] border border-white/10 h-10 px-4 text-xs font-mono text-white focus:border-white/30 outline-none"
+                >
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Payroll Data Grid */}
+            <div className="border border-white/10 bg-[#0c0c0c] overflow-hidden">
+              <div className="p-6 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center">
+                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90 font-bold">Compiled Month Telemetry Sheet</h3>
+                <span className="text-[10px] font-mono text-white/50">Month Scope: {monthPrefix}</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/[0.02]">
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50">System Profile</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-right">Base Salary ({activeSymbol.trim()})</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-center">Attendance Summary (Days)</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-center">Leaves / Exceeded Allowed</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-center font-bold text-red-500/90">Deductible Days</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-right font-bold text-red-400">Total Deductions ({activeSymbol.trim()})</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-right font-bold text-green-400">Net Payable ({activeSymbol.trim()})</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {payrollData.map(({
+                      profile,
+                      baseSalary,
+                      presentCount,
+                      halfDayCount,
+                      clCount,
+                      mlCount,
+                      uuCount,
+                      totalUnpaidDays,
+                      totalDeductions,
+                      netPayable
+                    }) => {
+                      const isEditing = editingSalaryUserId === profile.id;
+
+                      return (
+                        <tr key={profile.id} className="hover:bg-white/[0.01] transition-all">
+                          {/* Profile */}
+                          <td className="p-4 flex items-center gap-3">
+                            <div className="w-8 h-8 border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
+                              {profile.avatar_url ? (
+                                <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Users className="w-4 h-4 text-white/40" />
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-semibold text-white/90">{profile.full_name || 'Anonymous User'}</h4>
+                              <p className="text-[9px] font-mono text-white/50 uppercase">{profile.email}</p>
+                            </div>
+                          </td>
+
+                          {/* Base Salary (Editable) */}
+                          <td className="p-4 text-right">
+                            {isEditing ? (
+                              <div className="flex items-center gap-1.5 justify-end">
+                                <input
+                                  type="number"
+                                  value={editingSalaryValue}
+                                  onChange={(e) => setEditingSalaryValue(e.target.value)}
+                                  className="w-20 bg-black border border-white/20 px-2 py-1 text-xs font-mono text-right text-white focus:border-white/50 outline-none"
+                                />
+                                <button
+                                  onClick={() => handleSaveSalary(profile.id)}
+                                  className="p-1 border border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-end gap-2 group/sal">
+                                <span className="font-mono text-xs text-white/80">{activeSymbol}{baseSalary.toLocaleString()}</span>
+                                <button
+                                  onClick={() => {
+                                    setEditingSalaryUserId(profile.id);
+                                    setEditingSalaryValue(baseSalary.toString());
+                                  }}
+                                  className="opacity-0 group-hover/sal:opacity-100 p-1 hover:bg-white/5 text-white/60 hover:text-white transition-all"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Attendance */}
+                          <td className="p-4 text-center">
+                            <div className="flex items-center justify-center gap-2 text-[10px] font-mono">
+                              <span className="bg-green-500/10 text-green-400 px-2 py-0.5 border border-green-500/15" title="Present Days">P: {presentCount}</span>
+                              <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 border border-yellow-500/15" title="Half Days">HD: {halfDayCount}</span>
+                              <span className="bg-red-500/10 text-red-400 px-2 py-0.5 border border-red-500/15" title="Unexcused Absences">UU: {uuCount}</span>
+                            </div>
+                          </td>
+
+                          {/* Leaves */}
+                          <td className="p-4 text-center">
+                            <div className="flex flex-col items-center justify-center gap-1 text-[9px] font-mono">
+                              <div>
+                                <span className="text-white/60">CL: {clCount}</span>
+                                <span className="text-white/40"> / Allowed: {allowedCasualLeaves}</span>
+                              </div>
+                              <div>
+                                <span className="text-white/60">ML: {mlCount}</span>
+                                <span className="text-white/40"> / Allowed: {allowedMedicalLeaves}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Deductible Days */}
+                          <td className="p-4 text-center font-bold font-mono text-xs text-red-400">
+                            {totalUnpaidDays > 0 ? `${totalUnpaidDays.toFixed(1)} Days` : '0 Days'}
+                          </td>
+
+                          {/* Deductions */}
+                          <td className="p-4 text-right font-mono text-xs text-red-500 font-bold">
+                            {totalDeductions > 0 ? `-${activeSymbol}${totalDeductions.toFixed(2)}` : `${activeSymbol}0.00`}
+                          </td>
+
+                          {/* Net Payable */}
+                          <td className="p-4 text-right font-mono text-xs text-green-400 font-bold">
+                            {activeSymbol}{netPayable.toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </main>
+  );
+}
+
 function ProjectDetailsModal({
   project,
   teams,
@@ -918,7 +1673,7 @@ function ProjectDetailsModal({
       changes: changeReasonPrompt.changes._log_summary,
       reason: changeReason
     });
-    
+
     const updatedTags = [...(project.tags || []), `LOG:${logEntry}`];
     const finalUpdates = { ...changeReasonPrompt.changes, tags: updatedTags };
     delete finalUpdates._log_summary;
@@ -941,7 +1696,7 @@ function ProjectDetailsModal({
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-2xl overflow-hidden shadow-2xl">
-        
+
         {showLogs && (
           <div className="absolute inset-0 z-50 bg-[#0c0c0c] flex flex-col">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#0a0a0a]">
@@ -985,7 +1740,7 @@ function ProjectDetailsModal({
               />
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={handleConfirmChange} disabled={!changeReason} className="flex-1 bg-white text-black text-[10px] uppercase font-mono py-2 disabled:opacity-50 tracking-widest font-semibold">Log & Commit</button>
-                <button type="button" onClick={() => setChangeReasonPrompt({changes: null, open: false})} className="flex-1 border border-white/20 text-white/70 text-[10px] uppercase font-mono py-2 hover:bg-white/5 tracking-widest">Cancel</button>
+                <button type="button" onClick={() => setChangeReasonPrompt({ changes: null, open: false })} className="flex-1 border border-white/20 text-white/70 text-[10px] uppercase font-mono py-2 hover:bg-white/5 tracking-widest">Cancel</button>
               </div>
             </div>
           </div>
@@ -1056,7 +1811,7 @@ function ProjectDetailsModal({
                 >
                   <History className="w-4 h-4" /> View Logs
                 </button>
-                
+
                 {!isDeleting ? (
                   <button
                     type="button"
@@ -1375,6 +2130,7 @@ export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
+  const [isLogisticsView, setIsLogisticsView] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1474,25 +2230,25 @@ export default function App() {
     initAuth();
 
     const projectsSub = supabase.channel('public:projects')
-      .on('postgres', { event: '*', schema: 'public', table: 'projects' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
         fetchProjects();
       }).subscribe();
 
     const teamsSub = supabase.channel('public:teams')
-      .on('postgres', { event: '*', schema: 'public', table: 'teams' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
         fetchTeams();
       }).subscribe();
 
     const profilesSub = supabase.channel('public:profiles')
-      .on('postgres', { event: 'INSERT', schema: 'public', table: 'profiles' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, (payload) => {
         fetchProfiles();
         const newEmail = payload.new.email;
         notify(`New member onboarded: ${newEmail}`, 'info');
       })
-      .on('postgres', { event: 'UPDATE', schema: 'public', table: 'profiles' }, () => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, () => {
         fetchProfiles();
       })
-      .on('postgres', { event: 'DELETE', schema: 'public', table: 'profiles' }, () => {
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'profiles' }, () => {
         fetchProfiles();
       }).subscribe();
 
@@ -1565,6 +2321,49 @@ export default function App() {
     }
   };
 
+  const handleSaveLogisticsData = async (updatedData: any) => {
+    // Save to localStorage immediately as a fast fallback
+    localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(updatedData));
+
+    // Update in-memory state immediately so responsiveness is instantaneous
+    setTeams(prevTeams => {
+      const settingsTeam = prevTeams.find(t => t.name === 'SYSTEM_SETTINGS');
+      if (settingsTeam) {
+        return prevTeams.map(t => t.name === 'SYSTEM_SETTINGS' ? { ...t, data: { ...t.data, ...updatedData } } : t);
+      } else {
+        return [...prevTeams, { id: 'SYSTEM_SETTINGS', name: 'SYSTEM_SETTINGS', data: updatedData, created_at: new Date().toISOString() }];
+      }
+    });
+
+    const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
+    if (settingsTeam) {
+      const mergedData = {
+        ...settingsTeam.data,
+        ...updatedData
+      };
+      const { error } = await supabase
+        .from('teams')
+        .update({ data: mergedData })
+        .eq('id', settingsTeam.id);
+      if (!error) {
+        notify("Logistics telemetry synchronized.", "success");
+        await fetchTeams();
+      } else {
+        console.warn("Supabase logistics sync failed, using localStorage fallback:", error);
+      }
+    } else {
+      const { error } = await supabase
+        .from('teams')
+        .insert({ name: 'SYSTEM_SETTINGS', data: updatedData });
+      if (!error) {
+        notify("Logistics telemetry initialized.", "success");
+        await fetchTeams();
+      } else {
+        console.warn("Supabase logistics init failed, using localStorage fallback:", error);
+      }
+    }
+  };
+
   // fetchProfiles is now called globally on init to support ProjectCard lookups
 
   const fetchProjects = async () => {
@@ -1591,7 +2390,21 @@ export default function App() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error && data) setTeams(data);
+    if (!error && data) {
+      // If SYSTEM_SETTINGS is in the DB, sync with localStorage
+      const settingsTeam = data.find(t => t.name === 'SYSTEM_SETTINGS');
+      if (settingsTeam) {
+        localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(settingsTeam.data));
+      }
+      setTeams(data);
+    } else {
+      // Fallback: check localStorage for SYSTEM_SETTINGS
+      const localSettings = localStorage.getItem('SYSTEM_SETTINGS');
+      if (localSettings) {
+        const parsedSettings = JSON.parse(localSettings);
+        setTeams([{ id: 'SYSTEM_SETTINGS', name: 'SYSTEM_SETTINGS', data: parsedSettings, created_at: new Date().toISOString() }]);
+      }
+    }
   };
 
   const syncProfile = async (u: any) => {
@@ -1599,11 +2412,15 @@ export default function App() {
       // Pull avatar from Google if it exists
       const googleAvatar = u.user_metadata?.avatar_url || u.user_metadata?.picture;
 
-      let { data, error } = await supabase
+      let data: any = null;
+      let error: any = null;
+      const res = await supabase
         .from('profiles')
         .select('id, email, role, full_name, phone, avatar_url')
         .eq('id', u.id)
         .single();
+      data = res.data;
+      error = res.error;
 
       // Handle common schema mismatch errors
       if (error && (error.message?.includes('full_name') || error.message?.includes('avatar_url'))) {
@@ -1991,8 +2808,16 @@ export default function App() {
         user={user}
         profile={profile}
         onLogout={handleLogout}
-        onToggleAdmin={() => setIsAdminView(!isAdminView)}
+        onToggleAdmin={() => {
+          setIsAdminView(!isAdminView);
+          setIsLogisticsView(false);
+        }}
         showAdmin={isAdminView}
+        onToggleLogistics={() => {
+          setIsLogisticsView(!isLogisticsView);
+          setIsAdminView(false);
+        }}
+        showLogistics={isLogisticsView}
         workingHours={workingHoursPerDay}
         setWorkingHours={handleWorkingHoursChange}
         tilesPerRow={tilesPerRow}
@@ -2015,7 +2840,13 @@ export default function App() {
         onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
       />
 
-      {isAdminView && profile?.role === 'super_admin' ? (
+      {isLogisticsView && (profile?.role === 'super_admin' || profile?.role === 'pm') ? (
+        <LogisticsDashboard
+          profiles={profiles}
+          teams={teams}
+          onSaveData={handleSaveLogisticsData}
+        />
+      ) : isAdminView && profile?.role === 'super_admin' ? (
         <AdminDashboard
           profiles={profiles}
           teams={activeTeams}
@@ -2084,14 +2915,22 @@ export default function App() {
                 } gap-6`}>
                 <AnimatePresence mode="popLayout">
                   {filteredProjects.map((project) => (
-                    <ProjectCard
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      transition={{ duration: 0.2 }}
                       key={project.id}
-                      project={project}
-                      teams={activeTeams}
-                      profiles={profiles}
-                      workingHoursPerDay={workingHoursPerDay}
-                      onClick={setSelectedProject}
-                    />
+                    >
+                      <ProjectCard
+                        project={project}
+                        teams={activeTeams}
+                        profiles={profiles}
+                        workingHoursPerDay={workingHoursPerDay}
+                        onClick={setSelectedProject}
+                      />
+                    </motion.div>
                   ))}
                 </AnimatePresence>
 
@@ -2127,14 +2966,15 @@ export default function App() {
                     const load = Math.round((totalExpected / teamCapacityHours) * 100);
 
                     return (
-                      <TeamMember
-                        key={team.id}
-                        name={team.name}
-                        role={teamProjects.length > 0 ? `${teamProjects.length} Active Workflows` : 'Awaiting Tasking'}
-                        load={Math.min(load, 150)}
-                        efficiency={Number(avgEfficiency.toFixed(2))}
-                        urgent={load > 100}
-                      />
+                      <div key={team.id}>
+                        <TeamMember
+                          name={team.name}
+                          role={teamProjects.length > 0 ? `${teamProjects.length} Active Workflows` : 'Awaiting Tasking'}
+                          load={Math.min(load, 150)}
+                          efficiency={Number(avgEfficiency.toFixed(2))}
+                          urgent={load > 100}
+                        />
+                      </div>
                     );
                   })}
                   {activeTeams.length === 0 && <p className="text-[10px] font-mono text-white/75 italic">No operational units detected.</p>}
