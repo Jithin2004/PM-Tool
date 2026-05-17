@@ -200,6 +200,7 @@ function Header({
   showAdmin,
   onToggleLogistics,
   showLogistics,
+  onGoHome,
   workingHours,
   setWorkingHours,
   tilesPerRow,
@@ -213,6 +214,7 @@ function Header({
   showAdmin: boolean,
   onToggleLogistics: () => void,
   showLogistics: boolean,
+  onGoHome: () => void,
   workingHours: number,
   setWorkingHours: (h: number) => void,
   tilesPerRow: number,
@@ -220,15 +222,20 @@ function Header({
 }) {
   return (
     <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-md z-50">
-      <div className="flex items-center gap-3">
-        <div className="w-14 h-14 border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden">
+      <button
+        onClick={onGoHome}
+        className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer group"
+        title="Go to Project Workspace"
+        id="logo-home-btn"
+      >
+        <div className="w-14 h-14 border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden group-hover:border-white/40 transition-colors">
           <img src="/logo.png" alt="Logo" className="w-full h-full object-cover scale-110" />
         </div>
         <div>
           <h1 className="font-sans font-semibold text-lg tracking-tight uppercase leading-none">Resolve PM</h1>
           <p className="text-[10px] font-mono text-white/85 uppercase tracking-[0.2em]">High-Fidelity Engineering System</p>
         </div>
-      </div>
+      </button>
 
       <div className="flex items-center gap-6">
         <div className="hidden xl:flex items-center gap-6 border-x border-white/10 px-6">
@@ -612,7 +619,7 @@ function AdminDashboard({
       alert("Cannot delete system default designations.");
       return;
     }
-    
+
     askConfirmation("Confirm Deletion", `Are you sure you want to delete the custom designation '${roleToDelete}'? This will unassign it from all users.`, async () => {
       const updatedRoles = customRoles.filter(r => r !== roleToDelete);
       const updatedUserRoles = { ...userCustomRoles };
@@ -1207,11 +1214,11 @@ function LogisticsDashboard({
     const totalNet = payrollData.reduce((sum, item) => sum + item.netPayable, 0);
 
     const headers = [
-      'System Profile', 'Base Salary', 'Present Days', 'Half Days', 
-      'Casual Leaves', 'Medical Leaves', 'Unexcused', 
+      'System Profile', 'Base Salary', 'Present Days', 'Half Days',
+      'Casual Leaves', 'Medical Leaves', 'Unexcused',
       'Total Unpaid Days', 'Total Deductions', 'Net Payable'
     ];
-    
+
     const rows = payrollData.map(d => [
       d.profile.full_name || d.profile.email || 'Unknown',
       d.baseSalary.toFixed(2),
@@ -1239,7 +1246,7 @@ function LogisticsDashboard({
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    
+
     let filename = '';
     if (payrollMode === 'monthly') {
       const monthName = new Date(`${selectedYear}-${selectedMonth}-01`).toLocaleString('default', { month: 'long' });
@@ -1257,8 +1264,8 @@ function LogisticsDashboard({
   };
 
   const handleMarkAttendance = async (
-    userId: string, 
-    status: 'present' | 'half_day' | 'absent', 
+    userId: string,
+    status: 'present' | 'half_day' | 'absent',
     leaveType?: 'casual' | 'medical' | 'unexcused',
     isPaidHalfDay?: boolean
   ) => {
@@ -1268,10 +1275,10 @@ function LogisticsDashboard({
     if (status === 'absent') {
       dayRecords[userId] = { status, leaveType: leaveType || 'unexcused' };
     } else if (status === 'half_day') {
-      dayRecords[userId] = { 
-        status, 
-        leaveType: leaveType || 'unexcused', 
-        isPaidHalfDay: !!isPaidHalfDay 
+      dayRecords[userId] = {
+        status,
+        leaveType: leaveType || 'unexcused',
+        isPaidHalfDay: !!isPaidHalfDay
       };
     } else {
       dayRecords[userId] = { status };
@@ -1513,7 +1520,7 @@ function LogisticsDashboard({
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'casual', false)} style={{ display: 'none' }}
                               className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'casual' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
-                              
+
                             </button>
                             <div className="w-[1px] h-4 bg-white/10 mx-1 font-mono" style={{ display: 'none' }}></div>
 
@@ -1521,7 +1528,7 @@ function LogisticsDashboard({
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'medical', false)} style={{ display: 'none' }}
                               className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'medical' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
-                              
+
                             </button>
                           </div>
                           {/* HIDE_OLD_BUTTON_START */}
@@ -1541,7 +1548,7 @@ function LogisticsDashboard({
                               Absent (Unpaid)
                             </button>
                             <div className="w-[1px] h-4 bg-white/10 mx-1 font-mono"></div>
-                            
+
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'absent', 'casual')}
                               className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'casual' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-white/50 hover:text-white'}`}
@@ -1724,7 +1731,7 @@ function LogisticsDashboard({
                 <div className="border border-white/10 bg-[#0a0a0a] p-4 text-[11px] space-y-2">
                   <p className="font-bold text-white">1. Total Unpaid Leave Days (LD):</p>
                   <p className="text-white/60">LD = Excess(CL) + Excess(ML) + (Half-Days / Threshold) + Unexcused Absences</p>
-                  
+
                   <p className="font-bold text-white pt-2">2. Daily Wage Rate (DR):</p>
                   <p className="text-white/60">DR = Base Salary / 22 (Industry average working days)</p>
 
@@ -1807,7 +1814,7 @@ function LogisticsDashboard({
                     <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="bg-[#0a0a0a] border border-white/10 h-10 px-2 text-xs font-mono text-white focus:border-white/30 outline-none" />
                   </div>
                 )}
-                
+
                 <button
                   onClick={handleExportCSV}
                   className="bg-white text-black h-10 px-4 text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors flex items-center gap-2 whitespace-nowrap ml-2"
@@ -2329,6 +2336,7 @@ function SquadRosterModal({
   projects,
   workingHoursPerDay,
   attendanceRecords,
+  systemData,
   onClose
 }: {
   teams: Team[],
@@ -2336,10 +2344,10 @@ function SquadRosterModal({
   projects: Project[],
   workingHoursPerDay: number,
   attendanceRecords: Record<string, Record<string, { status: string, leaveType?: string, isPaidHalfDay?: boolean }>>,
+  systemData: any,
   onClose: () => void
 }) {
-  const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
-  const systemData: any = settingsTeam?.data || {};
+  // systemData is passed directly from parent (contains userCustomRoles, etc.)
 
   const [activeSquadId, setActiveSquadId] = useState<string | null>(teams[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -2462,7 +2470,7 @@ function SquadRosterModal({
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-6xl overflow-hidden shadow-2xl flex flex-col h-[90vh]">
-        
+
         {/* Roster Header */}
         <div className="p-6 border-b border-white/10 bg-[#0a0a0a] flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
@@ -2518,7 +2526,7 @@ function SquadRosterModal({
 
         {/* Dashboard Panels */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-          
+
           {/* Left Panel: Squad Directory */}
           <div className="w-full md:w-80 border-r border-white/10 overflow-y-auto divide-y divide-white/5 bg-[#0a0a0a]/50">
             {filteredSquads.length === 0 ? (
@@ -2548,7 +2556,7 @@ function SquadRosterModal({
                       <span>LEAD: <span className="text-white/80">{pm?.full_name?.split(' ')[0] || pm?.email?.split('@')[0] || 'N/A'}</span></span>
                       <span>STAFF: <span className="text-white/80">{devsCount}</span></span>
                     </div>
-                    
+
                     {/* Progress indicator */}
                     <div className="w-full bg-white/5 h-1">
                       <div
@@ -2566,7 +2574,7 @@ function SquadRosterModal({
           <div className="flex-1 overflow-y-auto p-8 bg-[#0c0c0c]">
             {selectedSquad && activeMetrics ? (
               <div className="space-y-8">
-                
+
                 {/* Squad header banner */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-white/5">
                   <div>
@@ -2584,7 +2592,7 @@ function SquadRosterModal({
 
                 {/* Analytical telemetry metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  
+
                   {/* Gauge 1: Load */}
                   <div className="border border-white/10 bg-white/5 p-6 flex flex-col justify-between h-40 relative overflow-hidden">
                     <div className="flex justify-between items-start">
@@ -2647,7 +2655,7 @@ function SquadRosterModal({
                     <h4 className="text-xs font-mono uppercase tracking-widest text-white/80 font-bold">Active Squad Workflows ({activeMetrics.activeProjects.length})</h4>
                     <span className="text-[9px] font-mono text-white/40">DRIFT TRACKING ACTIVATED</span>
                   </div>
-                  
+
                   {activeMetrics.activeProjects.length === 0 ? (
                     <p className="text-xs font-mono text-white/50 italic py-4">No active workflow parameters are assigned to this squad.</p>
                   ) : (
@@ -2695,7 +2703,7 @@ function SquadRosterModal({
                     <h4 className="text-xs font-mono uppercase tracking-widest text-white/80 font-bold">Assigned engineering personnel</h4>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
+
                     {/* PM Roster Card */}
                     {activeSquadPM && (
                       <div
@@ -3050,23 +3058,9 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'active' | 'completed'>('active');
 
-  // Deep-link / page-refresh pathname parsing (runs once on mount)
-  useEffect(() => {
-    const path = window.location.pathname;
-    if (path === '/admin') {
-      setIsAdminView(true);
-      setIsLogisticsView(false);
-    } else if (path === '/logistics') {
-      setIsLogisticsView(true);
-      setIsAdminView(false);
-    } else {
-      // Default: workspace view
-      setIsAdminView(false);
-      setIsLogisticsView(false);
-    }
-  }, []);
-
   // URL Sync Effect — keeps pathname in sync with view state
+  // State initializers already read the pathname on mount, so this only
+  // fires on actual user-driven view changes (not on initial load if paths match).
   useEffect(() => {
     let targetPath = '/';
     if (isAdminView) targetPath = '/admin';
@@ -3217,7 +3211,7 @@ export default function App() {
 
     const fetchInsight = async () => {
       const activeProjects = projects.filter(p => p.status !== 'deployed');
-      
+
       let totalDecayHours = 0;
       activeProjects.forEach(p => {
         const expected = calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
@@ -3798,7 +3792,7 @@ export default function App() {
     });
 
     const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
-    
+
     const teamsWithProjects = new Set(activeProjects.filter(p => p.team_id).map(p => p.team_id));
     const teamBandwidth = activeTeams.length > 0 ? (teamsWithProjects.size / activeTeams.length) * 100 : 0;
 
@@ -3847,6 +3841,10 @@ export default function App() {
           setIsAdminView(false);
         }}
         showLogistics={isLogisticsView}
+        onGoHome={() => {
+          setIsAdminView(false);
+          setIsLogisticsView(false);
+        }}
         workingHours={workingHoursPerDay}
         setWorkingHours={handleWorkingHoursChange}
         tilesPerRow={tilesPerRow}
@@ -4245,6 +4243,7 @@ export default function App() {
             projects={projects}
             workingHoursPerDay={workingHoursPerDay}
             attendanceRecords={teams.find(t => t.name === 'SYSTEM_SETTINGS')?.data?.attendance || {}}
+            systemData={systemData}
             onClose={() => setIsRosterOpen(false)}
           />
         )}
