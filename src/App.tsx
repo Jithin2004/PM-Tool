@@ -917,6 +917,37 @@ function LogisticsDashboard({
     const defaultMedical = allowedMedicalLeaves;
     const defaultHalfDayRatio = halfDayRule;
 
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    const currentDay = today.getDate();
+
+    const targetYear = Number(selectedYear);
+    const targetMonth = Number(selectedMonth);
+
+    let expectedWorkingDays = 22;
+    if (targetYear < currentYear || (targetYear === currentYear && targetMonth < currentMonth)) {
+      // Past month: calculate all weekdays in that month
+      let count = 0;
+      const lastDay = new Date(targetYear, targetMonth, 0).getDate();
+      for (let d = 1; d <= lastDay; d++) {
+        const dayOfWeek = new Date(targetYear, targetMonth - 1, d).getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+      }
+      expectedWorkingDays = count;
+    } else if (targetYear === currentYear && targetMonth === currentMonth) {
+      // Current month: calculate weekdays up to current day
+      let count = 0;
+      for (let d = 1; d <= currentDay; d++) {
+        const dayOfWeek = new Date(targetYear, targetMonth - 1, d).getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+      }
+      expectedWorkingDays = count;
+    } else {
+      // Future month
+      expectedWorkingDays = 0;
+    }
+
     return profiles.map(profile => {
       const baseSalary = systemData.salaries?.[profile.id] ?? 3000;
 
@@ -943,7 +974,6 @@ function LogisticsDashboard({
         }
       });
 
-      const expectedWorkingDays = 22;
       const totalDaysMarked = presentCount + halfDayCount + clCount + mlCount + uuCount;
       const unmarkedWorkingDays = Math.max(0, expectedWorkingDays - totalDaysMarked);
 
