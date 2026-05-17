@@ -26,7 +26,11 @@ import {
   Calculator,
   TrendingDown,
   Banknote,
-  Download
+  Download,
+  Menu,
+  X,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -204,7 +208,9 @@ function Header({
   workingHours,
   setWorkingHours,
   tilesPerRow,
-  setTilesPerRow
+  setTilesPerRow,
+  theme,
+  setTheme
 }: {
   user: any,
   profile: Profile | null,
@@ -218,117 +224,241 @@ function Header({
   workingHours: number,
   setWorkingHours: (h: number) => void,
   tilesPerRow: number,
-  setTilesPerRow: (t: number) => void
+  setTilesPerRow: (t: number) => void,
+  theme: 'dark' | 'light',
+  setTheme: (t: 'dark' | 'light') => void
 }) {
-  return (
-    <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/80 backdrop-blur-md z-50">
-      <button
-        onClick={onGoHome}
-        className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer group"
-        title="Go to Project Workspace"
-        id="logo-home-btn"
-      >
-        <div className="w-14 h-14 border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden group-hover:border-white/40 transition-colors">
-          <img src="/logo.png" alt="Logo" className="w-full h-full object-cover scale-110" />
-        </div>
-        <div>
-          <h1 className="font-sans font-semibold text-lg tracking-tight uppercase leading-none">Resolve PM</h1>
-          <p className="text-[10px] font-mono text-white/85 uppercase tracking-[0.2em]">High-Fidelity Engineering System</p>
-        </div>
-      </button>
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const canAccessConsoles = profile?.role === 'super_admin' || profile?.role === 'pm';
 
-      <div className="flex items-center gap-6">
-        <div className="hidden xl:flex items-center gap-6 border-x border-white/10 px-6">
-          <div className="flex flex-col">
-            <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Working Hours/Day</label>
-            <div className="flex items-center gap-2">
-              <Clock className="w-3 h-3 text-blue-400" />
-              {profile?.role === 'super_admin' ? (
-                <input
-                  type="number"
-                  value={workingHours}
-                  onChange={(e) => setWorkingHours(Number(e.target.value))}
-                  min={1}
-                  max={24}
-                  className="w-12 bg-transparent border-b border-blue-400/50 font-mono text-xs focus:border-blue-400 outline-none text-center"
-                />
-              ) : (
-                <span className="w-12 font-mono text-xs text-center text-white/70">{workingHours}h</span>
-              )}
-            </div>
+  return (
+    <>
+      <header className="border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-md z-50">
+        {/* Logo */}
+        <button
+          onClick={() => { onGoHome(); setMobileMenuOpen(false); }}
+          className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group"
+          title="Go to Project Workspace"
+          id="logo-home-btn"
+        >
+          <div className="w-10 h-10 sm:w-14 sm:h-14 border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden group-hover:border-white/40 transition-colors">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover scale-110" />
           </div>
-          <div className="flex flex-col">
-            <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Tiles Per Row</label>
-            <div className="flex items-center gap-3">
+          <div>
+            <h1 className="font-sans font-semibold text-base sm:text-lg tracking-tight uppercase leading-none">Resolve PM</h1>
+            <p className="hidden sm:block text-[9px] font-mono text-white/70 uppercase tracking-[0.15em]">High-Fidelity Engineering System</p>
+          </div>
+        </button>
+
+        {/* Desktop right side */}
+        <div className="hidden lg:flex items-center gap-5">
+          {/* Working hours + tiles — xl only */}
+          <div className="hidden xl:flex items-center gap-6 border-x border-white/10 px-6">
+            <div className="flex flex-col">
+              <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Working Hrs/Day</label>
+              <div className="flex items-center gap-2">
+                <Clock className="w-3 h-3 text-blue-400" />
+                {profile?.role === 'super_admin' ? (
+                  <input type="number" value={workingHours} onChange={(e) => setWorkingHours(Number(e.target.value))} min={1} max={24}
+                    className="w-12 bg-transparent border-b border-blue-400/50 font-mono text-xs focus:border-blue-400 outline-none text-center" />
+                ) : (
+                  <span className="w-12 font-mono text-xs text-center text-white/70">{workingHours}h</span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Tiles Per Row</label>
               <div className="flex bg-white/5 p-1 border border-white/10 rounded-sm">
                 {[2, 3, 4].map(num => (
-                  <button
-                    key={num}
-                    onClick={() => setTilesPerRow(num)}
-                    className={`px-2 py-0.5 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}
-                  >
+                  <button key={num} onClick={() => setTilesPerRow(num)}
+                    className={`px-2 py-0.5 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}>
                     {num}
                   </button>
                 ))}
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="hidden lg:flex items-center gap-4 mr-4">
-          {(profile?.role === 'super_admin' || profile?.role === 'pm') && (
-            <button
-              onClick={onToggleLogistics}
-              className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}
-            >
-              {showLogistics ? 'Exit Logistics Console' : 'Logistics Console'}
-            </button>
-          )}
-
-          {(profile?.role === 'super_admin' || profile?.role === 'pm') && (
-            <button
-              onClick={onToggleAdmin}
-              className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}
-            >
-              {showAdmin ? 'Exit Admin Console' : 'Admin Console'}
-            </button>
-          )}
-        </div>
-
-        <div className="hidden md:flex flex-col items-end">
-          <p className="text-xs font-mono text-white/90 uppercase">Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/85'}>{(profile && userCustomRoles[profile.id]) || profile?.role || 'INITIALIZING...'}</span></p>
-          <p className="text-[10px] font-mono text-white/80 uppercase tracking-[0.2em]">{profile?.role === 'viewer' ? 'READ ONLY ACCESS' : 'FULL WRITE AUTHORITY'}</p>
-        </div>
-
-        <div className="h-8 w-[1px] bg-white/10 hidden md:block"></div>
-
-        {user ? (
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end">
-              <p className="text-sm font-medium">{user.email?.split('@')[0]}</p>
-              <button
-                onClick={onLogout}
-                className="text-[10px] font-mono uppercase text-white/85 hover:text-white transition-colors"
-                id="logout-btn"
-              >
-                Terminate Session
+          {/* Console nav buttons */}
+          {canAccessConsoles && (
+            <div className="flex items-center gap-3">
+              <button onClick={onToggleLogistics}
+                className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
+                {showLogistics ? 'Exit Logistics' : 'Logistics Console'}
+              </button>
+              <button onClick={onToggleAdmin}
+                className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
+                {showAdmin ? 'Exit Admin' : 'Admin Console'}
               </button>
             </div>
-            <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors" onClick={() => (window as any).openProfileModal()}>
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-              ) : profile?.full_name ? (
-                <span className="text-[10px] font-mono font-bold text-white/90">{profile.full_name.substring(0, 2).toUpperCase()}</span>
-              ) : (
-                <Users className="w-4 h-4 text-white/85" />
+          )}
+
+          {/* Role badge */}
+          <div className="flex flex-col items-end">
+            <p className="text-xs font-mono text-white/90 uppercase">
+              Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/85'}>
+                {(profile && userCustomRoles[profile.id]) || profile?.role || 'INITIALIZING...'}
+              </span>
+            </p>
+            <p className="text-[10px] font-mono text-white/60 uppercase tracking-[0.2em]">
+              {profile?.role === 'viewer' ? 'READ ONLY' : 'FULL WRITE ACCESS'}
+            </p>
+          </div>
+
+          <div className="h-8 w-[1px] bg-white/10" />
+
+          {/* Theme Toggle Button */}
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-2 border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0"
+            title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
+          </button>
+
+          <div className="h-8 w-[1px] bg-white/10" />
+
+          {/* Avatar + logout */}
+          {user && (
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col items-end">
+                <p className="text-sm font-medium">{user.email?.split('@')[0]}</p>
+                <button onClick={onLogout} className="text-[10px] font-mono uppercase text-white/60 hover:text-white transition-colors" id="logout-btn">
+                  Terminate Session
+                </button>
+              </div>
+              <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors"
+                onClick={() => (window as any).openProfileModal()}>
+                {profile?.avatar_url ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> :
+                  profile?.full_name ? <span className="text-[10px] font-mono font-bold">{profile.full_name.substring(0, 2).toUpperCase()}</span> :
+                    <Users className="w-4 h-4 text-white/85" />}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile right: avatar + hamburger */}
+        <div className="flex lg:hidden items-center gap-2">
+          {/* Theme Toggle for Mobile */}
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors shrink-0"
+            title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
+          </button>
+
+          {user && (
+            <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors"
+              onClick={() => (window as any).openProfileModal()}>
+              {profile?.avatar_url ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> :
+                profile?.full_name ? <span className="text-[9px] font-mono font-bold">{profile.full_name.substring(0, 2).toUpperCase()}</span> :
+                  <Users className="w-3.5 h-3.5 text-white/85" />}
+            </div>
+          )}
+          <button
+            onClick={() => setMobileMenuOpen(prev => !prev)}
+            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="lg:hidden fixed top-[57px] left-0 right-0 bg-[#0a0a0a]/98 backdrop-blur-md border-b border-white/10 z-40 shadow-2xl overflow-y-auto max-h-[calc(100vh-57px)]"
+          >
+            <div className="px-4 py-5 space-y-4">
+              {/* User info */}
+              {user && (
+                <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                  <div>
+                    <p className="text-sm font-medium">{user.email?.split('@')[0]}</p>
+                    <p className="text-[10px] font-mono text-white/50 uppercase mt-0.5">
+                      Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/70'}>
+                        {(profile && userCustomRoles[profile.id]) || profile?.role || '—'}
+                      </span>
+                    </p>
+                  </div>
+                  <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${profile?.role === 'viewer' ? 'border-white/10 text-white/50' : 'border-green-500/30 text-green-400'}`}>
+                    {profile?.role === 'viewer' ? 'Read Only' : 'Write Access'}
+                  </span>
+                </div>
+              )}
+
+              {/* Console buttons */}
+              {canAccessConsoles && (
+                <div className="space-y-2">
+                  <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1">Navigation</p>
+                  <button
+                    onClick={() => { onToggleLogistics(); setMobileMenuOpen(false); }}
+                    className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
+                    {showLogistics ? '← Exit Logistics Console' : 'Logistics Console'}
+                  </button>
+                  <button
+                    onClick={() => { onToggleAdmin(); setMobileMenuOpen(false); }}
+                    className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
+                    {showAdmin ? '← Exit Admin Console' : 'Admin Console'}
+                  </button>
+                </div>
+              )}
+
+              {/* Settings */}
+              {user && (
+                <div className="space-y-3 pt-2 border-t border-white/5">
+                  <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest">System Parameters</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-white/70 flex items-center gap-2">
+                      <Clock className="w-3 h-3 text-blue-400" /> Working Hours/Day
+                    </span>
+                    {profile?.role === 'super_admin' ? (
+                      <input type="number" value={workingHours} onChange={(e) => setWorkingHours(Number(e.target.value))} min={1} max={24}
+                        className="w-14 bg-black border border-white/10 font-mono text-xs focus:border-blue-400 outline-none text-center py-1.5 text-white" />
+                    ) : (
+                      <span className="font-mono text-xs text-white/70">{workingHours}h</span>
+                    )}
+                  </div>
+                  {profile?.role === 'super_admin' && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono text-white/70">Tiles Per Row</span>
+                      <div className="flex bg-white/5 p-1 border border-white/10 rounded-sm">
+                        {[2, 3, 4].map(num => (
+                          <button key={num} onClick={() => setTilesPerRow(num)}
+                            className={`px-3 py-1 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}>
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Logout */}
+              {user && (
+                <div className="pt-3 border-t border-white/5">
+                  <button
+                    onClick={() => { onLogout(); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-red-400/80 hover:text-red-400 transition-colors py-2"
+                    id="logout-btn-mobile"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Terminate Session
+                  </button>
+                </div>
               )}
             </div>
-          </div>
-        ) : (
-          <p className="text-xs font-mono text-white/85">ANONYMOUS_ACCESS_RESTRICTED</p>
+          </motion.div>
         )}
-      </div>
-    </header>
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -366,7 +496,7 @@ function ConfirmationModal({ isOpen, title, message, confirmText = 'Confirm', on
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -378,7 +508,7 @@ function ConfirmationModal({ isOpen, title, message, confirmText = 'Confirm', on
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md bg-[#0c0c0c] border border-white/10 p-8 shadow-2xl"
+          className="relative w-full max-w-md bg-[#0c0c0c] border border-white/10 p-6 sm:p-8 overflow-y-auto max-h-[90vh] md:max-h-none shadow-2xl rounded-sm my-auto"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className={`w-10 h-10 rounded-sm border flex items-center justify-center ${confirmText.toLowerCase() === 'delete' ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20'}`}>
@@ -411,7 +541,7 @@ function ConfirmationModal({ isOpen, title, message, confirmText = 'Confirm', on
 
 function StatsGrid({ stats }: { stats: Stats }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-px bg-white/10 border-b border-white/10">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/10 border-b border-white/10">
       <StatCard label="Pipeline Confidence" value={`${stats.deliveryConfidence}%`} icon={Target} color="text-green-400" />
       <StatCard label="Active Workflows" value={stats.totalProjects} icon={BarChart3} />
       <StatCard label="Team Allocation" value={`${stats.teamBandwidth}%`} icon={Users} />
@@ -422,12 +552,12 @@ function StatsGrid({ stats }: { stats: Stats }) {
 
 function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: string, value: any, icon: any, color?: string }) {
   return (
-    <div className="bg-[#0a0a0a] p-6 group hover:bg-white/[0.02] transition-colors">
-      <div className="flex items-center gap-3 mb-1">
-        <Icon className="w-4 h-4 text-white/85 group-hover:text-white transition-colors" />
-        <span className="text-[10px] uppercase font-mono text-white/85 tracking-wider leading-none">{label}</span>
+    <div className="bg-[#0a0a0a] p-4 sm:p-6 group hover:bg-white/[0.02] transition-colors">
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/85 group-hover:text-white transition-colors" />
+        <span className="text-[9px] sm:text-[10px] uppercase font-mono text-white/85 tracking-wider leading-none">{label}</span>
       </div>
-      <div className={`text-2xl font-mono font-medium ${color}`}>{value}</div>
+      <div className={`text-xl sm:text-2xl font-mono font-medium ${color}`}>{value}</div>
     </div>
   );
 }
@@ -476,32 +606,32 @@ function ProjectCard({ project, teams, profiles, workingHoursPerDay, onClick }: 
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] -mr-16 -mt-16 rounded-full blur-3xl pointer-events-none group-hover:bg-white/[0.05]"></div>
       {stdDev >= 3 && <div className="absolute top-0 left-0 w-full h-0.5 bg-red-500/50"></div>}
 
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`text-[11px] font-mono font-bold uppercase px-3 py-1 border ${project.status === 'deployed' ? 'border-green-500/50 text-green-400 bg-green-500/15' :
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-6 mb-6">
+        <div className="space-y-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 border ${project.status === 'deployed' ? 'border-green-500/50 text-green-400 bg-green-500/15' :
               project.status === 'in-progress' ? 'border-blue-500/50 text-blue-400 bg-blue-500/15' :
                 'border-white/30 text-white bg-white/20'
               }`}>
               {project.status.replace('-', ' ')}
             </span>
-            <span className={`text-[11px] font-mono font-bold uppercase px-3 py-1 border border-white/20 bg-white/10 ${riskColor}`}>
+            <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 border border-white/20 bg-white/10 ${riskColor}`}>
               {riskLabel}
             </span>
           </div>
-          <h3 className="text-lg font-medium leading-none mb-1 group-hover:text-white transition-colors">{project.name}</h3>
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-mono text-white/75 uppercase tracking-widest">{getRelativeTime(project.created_at)}</span>
-            <div className="flex gap-2">
+          <h3 className="text-base sm:text-lg font-medium leading-tight group-hover:text-white transition-colors">{project.name}</h3>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-[10px] font-mono text-white/60 uppercase tracking-wider">{getRelativeTime(project.created_at)}</span>
+            <div className="flex flex-wrap gap-1.5">
               {project.tags
                 .filter(tag => !tag.startsWith('SQUAD:') && !tag.startsWith('LOG:'))
                 .map(tag => (
-                  <span key={tag} className="text-[11px] font-mono text-white/80">#{tag}</span>
+                  <span key={tag} className="text-[10px] font-mono text-white/70">#{tag}</span>
                 ))}
             </div>
           </div>
           {creator && (
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-2.5 flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/20">
                 {creator.avatar_url ? (
                   <img src={creator.avatar_url} alt="Creator" className="w-full h-full object-cover" />
@@ -509,17 +639,21 @@ function ProjectCard({ project, teams, profiles, workingHoursPerDay, onClick }: 
                   <Users className="w-2.5 h-2.5 text-white/70" />
                 )}
               </div>
-              <p className="text-[10px] font-mono text-white/60">
-                Created by <span className="text-white/85">{creator.full_name || creator.email}</span>
+              <p className="text-[9px] font-mono text-white/50">
+                By <span className="text-white/75">{creator.full_name || creator.email}</span>
               </p>
             </div>
           )}
         </div>
-        <div className="text-right">
-          <p className="text-[10px] font-mono text-white/85 uppercase mb-1">Finish_ETA</p>
-          <div className={`text-xl font-mono font-medium ${riskColor}`}>{remainingDays.toFixed(1)}d</div>
-          <p className="text-[9px] font-mono text-white/60 uppercase mt-1 leading-none">{completionDateStr}</p>
-          <p className="text-[10px] font-mono text-white/75 uppercase mt-2">Effort: {expectedRealHours.toFixed(1)}h</p>
+        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-3 sm:pt-0 border-t border-white/5 sm:border-t-0 text-right">
+          <div className="text-left sm:text-right">
+            <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest leading-none mb-1">Finish_ETA</p>
+            <div className={`text-xl sm:text-2xl font-mono font-medium ${riskColor} leading-none`}>{remainingDays.toFixed(1)}d</div>
+          </div>
+          <div className="text-right mt-0 sm:mt-2">
+            <p className="text-[9px] font-mono text-white/50 uppercase leading-none">{completionDateStr}</p>
+            <p className="text-[10px] font-mono text-white/75 uppercase mt-1">Effort: {expectedRealHours.toFixed(1)}h</p>
+          </div>
         </div>
       </div>
 
@@ -704,7 +838,7 @@ function AdminDashboard({
   const availableDevs = devs.filter(d => !assignedDevIds.has(d.id));
 
   return (
-    <main className="max-w-[1600px] mx-auto px-6 py-12 space-y-16">
+    <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 pb-16 space-y-12 sm:space-y-16">
       <div>
         <div className="mb-8">
           <h2 className="text-3xl font-medium tracking-tight mb-2">Internal Identity Console</h2>
@@ -713,8 +847,8 @@ function AdminDashboard({
           </p>
         </div>
 
-        <div className="border border-white/10 bg-[#0c0c0c] overflow-hidden">
-          <table className="w-full text-left border-collapse">
+        <div className="border border-white/10 bg-[#0c0c0c] overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-white/5 border-b border-white/10">
                 <th className="px-6 py-4 text-[10px] font-mono uppercase tracking-widest text-white/85">User Identity</th>
@@ -1357,7 +1491,7 @@ function LogisticsDashboard({
   }, [dayAttendance, profiles]);
 
   return (
-    <main className="max-w-[1600px] mx-auto px-6 py-12">
+    <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 pb-16">
       {/* Visual Section Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 border-b border-white/10 pb-8">
         <div>
@@ -1371,22 +1505,22 @@ function LogisticsDashboard({
         </div>
 
         {/* Tab Selector */}
-        <div className="flex bg-white/5 p-1 border border-white/5 rounded-sm">
+        <div className="flex overflow-x-auto scrollbar-none bg-white/5 p-1 border border-white/5 rounded-sm w-full md:w-auto max-w-full">
           <button
             onClick={() => setActiveTab('attendance')}
-            className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'attendance' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'attendance' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
           >
-            Attendance Tracker
+            Attendance
           </button>
           <button
             onClick={() => setActiveTab('paySlab')}
-            className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'paySlab' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'paySlab' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
           >
-            Global Rules & Pay Slabs
+            Rules & Slabs
           </button>
           <button
             onClick={() => setActiveTab('payroll')}
-            className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'payroll' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'payroll' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
           >
             Payroll Telemetry
           </button>
@@ -1489,28 +1623,28 @@ function LogisticsDashboard({
                         </div>
 
                         {/* Status marking controls */}
-                        <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                           {/* Present button */}
                           <button
                             onClick={() => handleMarkAttendance(profile.id, 'present')}
-                            className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'present' ? 'bg-green-500/20 border-green-500 text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.15)]' : 'border-white/10 hover:border-white/20 text-white/60 hover:text-white'}`}
+                            className={`w-full sm:w-auto px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'present' ? 'bg-green-500/20 border-green-500 text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.15)]' : 'border-white/10 hover:border-white/20 text-white/60 hover:text-white'}`}
                           >
                             Present
                           </button>
 
                           {/* Half Day split options */}
-                          <div className="flex items-center bg-black/40 border border-white/10 p-1">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-black/40 border border-white/10 p-1 gap-1 sm:gap-0 w-full sm:w-auto">
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', false)}
-                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'unexcused' && !record?.isPaidHalfDay ? 'bg-yellow-500/20 text-yellow-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'unexcused' && !record?.isPaidHalfDay ? 'bg-yellow-500/20 text-yellow-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
                               Half Day (Unpaid)
                             </button>
-                            <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+                            <div className="hidden sm:block w-[1px] h-4 bg-white/10 mx-1"></div>
 
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', true)}
-                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && record?.isPaidHalfDay ? 'bg-green-500/20 text-green-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && record?.isPaidHalfDay ? 'bg-green-500/20 text-green-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
                               Half Day (Paid)
                             </button>
@@ -1540,26 +1674,26 @@ function LogisticsDashboard({
                           </button>
 
                           {/* Absent Option split */}
-                          <div className="flex items-center bg-black/40 border border-white/10 p-1">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-black/40 border border-white/10 p-1 gap-1 sm:gap-0 w-full sm:w-auto">
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'absent', 'unexcused')}
-                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'unexcused' ? 'bg-red-500/20 text-red-500 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'unexcused' ? 'bg-red-500/20 text-red-500 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
                               Absent (Unpaid)
                             </button>
-                            <div className="w-[1px] h-4 bg-white/10 mx-1 font-mono"></div>
+                            <div className="hidden sm:block w-[1px] h-4 bg-white/10 mx-1 font-mono"></div>
 
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'absent', 'casual')}
-                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'casual' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'casual' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
                               Casual Leave (CL)
                             </button>
-                            <div className="w-[1px] h-4 bg-white/10 mx-1"></div>
+                            <div className="hidden sm:block w-[1px] h-4 bg-white/10 mx-1"></div>
 
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'absent', 'medical')}
-                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'medical' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'medical' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-white/50 hover:text-white'}`}
                             >
                               Medical Leave (ML)
                             </button>
@@ -1851,7 +1985,7 @@ function LogisticsDashboard({
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[1000px]">
                   <thead>
                     <tr className="border-b border-white/10 bg-white/[0.02]">
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50">System Profile</th>
@@ -2098,9 +2232,9 @@ function ProjectDetailsModal({
   const deadlineVariance = deadline ? Math.floor((deadline.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-2xl overflow-hidden shadow-2xl">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-2xl overflow-y-auto max-h-[90vh] md:max-h-none shadow-2xl rounded-sm my-auto">
 
         {showLogs && (
           <div className="absolute inset-0 z-50 bg-[#0c0c0c] flex flex-col">
@@ -2353,6 +2487,7 @@ function SquadRosterModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [capacityFilter, setCapacityFilter] = useState<'all' | 'overloaded' | 'optimal' | 'underutilized'>('all');
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
+  const [rosterTab, setRosterTab] = useState<'squads' | 'analytics'>('squads');
 
   const getSquadLoadMetrics = (team: Team) => {
     const parsedData = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
@@ -2524,11 +2659,27 @@ function SquadRosterModal({
           </div>
         </div>
 
+        {/* Mobile Tab Controls */}
+        <div className="flex md:hidden bg-white/5 border-b border-white/10 p-1 shrink-0">
+          <button
+            onClick={() => setRosterTab('squads')}
+            className={`flex-1 text-center py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${rosterTab === 'squads' ? 'bg-white text-black font-semibold' : 'text-white/60'}`}
+          >
+            Squad Directory
+          </button>
+          <button
+            onClick={() => setRosterTab('analytics')}
+            className={`flex-1 text-center py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${rosterTab === 'analytics' ? 'bg-white text-black font-semibold' : 'text-white/60'}`}
+          >
+            Deep Analytics
+          </button>
+        </div>
+
         {/* Dashboard Panels */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
           {/* Left Panel: Squad Directory */}
-          <div className="w-full md:w-80 border-r border-white/10 overflow-y-auto divide-y divide-white/5 bg-[#0a0a0a]/50">
+          <div className={`w-full md:w-80 border-r border-white/10 overflow-y-auto divide-y divide-white/5 bg-[#0a0a0a]/50 ${rosterTab === 'squads' ? 'block' : 'hidden md:block'}`}>
             {filteredSquads.length === 0 ? (
               <div className="p-8 text-center text-xs font-mono text-white/40 italic">
                 No matching squads detected.
@@ -2543,7 +2694,10 @@ function SquadRosterModal({
                 return (
                   <div
                     key={team.id}
-                    onClick={() => setActiveSquadId(team.id)}
+                    onClick={() => {
+                      setActiveSquadId(team.id);
+                      setRosterTab('analytics');
+                    }}
                     className={`p-4 cursor-pointer transition-all hover:bg-white/[0.02] flex flex-col gap-2 ${isActive ? 'bg-white/5 border-l-2 border-l-blue-500' : ''}`}
                   >
                     <div className="flex justify-between items-start gap-2">
@@ -2571,9 +2725,18 @@ function SquadRosterModal({
           </div>
 
           {/* Right Panel: Analytical Detail deep dive */}
-          <div className="flex-1 overflow-y-auto p-8 bg-[#0c0c0c]">
+          <div className={`flex-1 overflow-y-auto p-5 sm:p-8 bg-[#0c0c0c] ${rosterTab === 'analytics' ? 'block' : 'hidden md:block'}`}>
             {selectedSquad && activeMetrics ? (
               <div className="space-y-8">
+                {/* Mobile Back Button */}
+                <div className="block md:hidden mb-2">
+                  <button
+                    onClick={() => setRosterTab('squads')}
+                    className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    ← Back to Squad List
+                  </button>
+                </div>
 
                 {/* Squad header banner */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-white/5">
@@ -2897,9 +3060,9 @@ function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: { profil
   };
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-md p-8 shadow-2xl">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-md p-6 sm:p-8 overflow-y-auto max-h-[90vh] md:max-h-none shadow-2xl rounded-sm my-auto">
         <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/10">
           <div className="w-16 h-16 border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden">
             {avatarUrl ? (
@@ -3084,6 +3247,13 @@ export default function App() {
   const [workingHoursPerDay, setWorkingHoursPerDay] = useState(8);
   const [tilesPerRow, setTilesPerRow] = useState(3);
   const [aiInsight, setAiInsight] = useState("Awaiting telemetry...");
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('resolve-theme') as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('resolve-theme', theme);
+  }, [theme]);
 
 
 
@@ -3825,7 +3995,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] font-sans text-white/90 selection:bg-white selection:text-black">
+    <div className={`min-h-screen bg-[#0a0a0a] font-sans text-white/90 selection:bg-white selection:text-black ${theme === 'light' ? 'light' : ''}`}>
       <Header
         user={user}
         profile={profile}
@@ -3849,6 +4019,8 @@ export default function App() {
         setWorkingHours={handleWorkingHoursChange}
         tilesPerRow={tilesPerRow}
         setTilesPerRow={setTilesPerRow}
+        theme={theme}
+        setTheme={setTheme}
       />
 
       <StatsGrid stats={stats} />
@@ -3888,14 +4060,14 @@ export default function App() {
           onDeleteTeam={handleDeleteTeam}
         />
       ) : (
-        <main className="max-w-[1600px] mx-auto px-6 py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
+        <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8 mb-8 sm:mb-12">
             <div className="lg:col-span-3">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-8">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-8 mb-6 sm:mb-8">
                 <div>
-                  <div className="flex items-center gap-6 mb-2">
-                    <h2 className="text-3xl font-medium tracking-tight">Project Workspace</h2>
-                    <div className="flex bg-white/5 p-1 border border-white/5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mb-2">
+                    <h2 className="text-2xl sm:text-3xl font-medium tracking-tight">Project Workspace</h2>
+                    <div className="flex bg-white/5 p-1 border border-white/5 shrink-0">
                       <button
                         onClick={() => setDashboardTab('active')}
                         className={`px-3 py-1 text-[9px] font-mono uppercase tracking-widest transition-all ${dashboardTab === 'active' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
@@ -4047,14 +4219,14 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#0a0a0a]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+            className="fixed inset-0 bg-[#0a0a0a]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
           >
             {/* ... rest of the isAdding code ... */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#0c0c0c] border border-white/10 w-full max-w-xl p-8"
+              className="bg-[#0c0c0c] border border-white/10 w-full max-w-xl p-6 sm:p-8 overflow-y-auto max-h-[90vh] md:max-h-none rounded-sm my-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-8">
@@ -4261,16 +4433,17 @@ export default function App() {
       </AnimatePresence>
 
       {/* --- Footer / Sidebar Accent --- */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/80 border-t border-white/5 px-6 py-3 flex justify-between items-center pointer-events-none z-40">
-        <div className="flex items-center gap-4 text-[11px] font-mono text-white/75 uppercase tracking-widest">
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/80 border-t border-white/5 px-4 sm:px-6 py-3 flex justify-between items-center pointer-events-none z-40">
+        <div className="flex items-center gap-3 sm:gap-4 text-[9px] sm:text-[11px] font-mono text-white/75 uppercase tracking-widest">
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse"></div>
-            SESSION_HEARTBEAT
+            <span className="hidden sm:inline">SESSION_HEARTBEAT</span>
+            <span className="inline sm:hidden">LIVE</span>
           </div>
-          <div>ENCRYPTION: AES-256-GCM</div>
+          <div className="hidden sm:block">ENCRYPTION: AES-256-GCM</div>
           <LiveClock />
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <Settings className="w-3 h-3 text-white/70 pointer-events-auto cursor-pointer hover:text-white transition-colors" />
           <Cpu className="w-3 h-3 text-white/70" />
         </div>
