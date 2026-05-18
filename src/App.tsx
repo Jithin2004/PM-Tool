@@ -5134,10 +5134,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      System Insight
-      "Current telemetry indicates a nominal operational state with 95 percent delivery confidence and substantial bandwidth headroom, presenting a high-fidelity window for scaling additional workflows before predictive decay impacts performance variance."
-
-      Live Bias Analysis
       {/* Grid Overlay for aesthetic */}
       <div className="fixed inset-0 pointer-events-none z-[-1] opacity-20"
         style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }}>
