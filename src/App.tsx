@@ -3349,77 +3349,6 @@ export default function App() {
   const userCustomRoles = useMemo(() => systemData.userCustomRoles || {}, [systemData]);
   const customRoles = useMemo(() => systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'], [systemData]);
 
-  const tourSteps = useMemo(() => [
-    {
-      title: "Welcome to Resolve PM Core",
-      description: "Step into a high-fidelity engineering workspace designed for precision scheduling, live squad allocation, and telemetry-driven analytics.",
-      actionBefore: () => {
-        setIsAdminView(false);
-        setIsLogisticsView(false);
-      }
-    },
-    {
-      title: "Tactical Navigation Console",
-      description: "Use the top header navigation to transition seamlessly. PMs and Admins can easily toggle the Admin Console or Logistics Console to reallocate assets.",
-      actionBefore: () => {
-        setIsAdminView(false);
-        setIsLogisticsView(false);
-      }
-    },
-    {
-      title: "AI-Powered Strategy Telemetry",
-      description: "At a glance, monitor overall stats: Workflow count, AI confidence margins, total team capacity load, and historical project decay and fatigue margins.",
-      actionBefore: () => {
-        setIsAdminView(false);
-        setIsLogisticsView(false);
-      }
-    },
-    {
-      title: "Project Workspace Grid",
-      description: "Your primary asset canvas. Every project cards shows advanced PERT scheduling, AI timeline confidence, and dynamic squad efficiency analytics.",
-      actionBefore: () => {
-        setIsAdminView(false);
-        setIsLogisticsView(false);
-      }
-    },
-    {
-      title: "Admin Console & Squad Roster",
-      description: "Admins can promotion and designate custom engineering roles, build and configure collaborative teams, and coordinate cross-functional squad load limits.",
-      actionBefore: () => {
-        setIsAdminView(true);
-        setIsLogisticsView(false);
-      }
-    },
-    {
-      title: "Logistics & Payroll Controls",
-      description: "Mark daily member attendance, customize allowed leave parameters, and let the system calculate real-time net payroll deductions and payouts.",
-      actionBefore: () => {
-        setIsLogisticsView(true);
-        setIsAdminView(false);
-      }
-    },
-    {
-      title: "Calibrated & Ready!",
-      description: "The platform is customized to your system variables. Feel free to toggle the color scheme (light/dark) in the header and start allocation!",
-      actionBefore: () => {
-        setIsAdminView(false);
-        setIsLogisticsView(false);
-      }
-    }
-  ], []);
-
-  // Expose tour launcher globally
-  useEffect(() => {
-    (window as any).startOnboardingTour = () => {
-      setGuideStep(0);
-      setShowGuide(true);
-      setIsAdminView(false);
-      setIsLogisticsView(false);
-    };
-  }, []);
-
-
-
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isAdminView, setIsAdminView] = useState(() => window.location.pathname === '/admin');
@@ -3431,6 +3360,177 @@ export default function App() {
   const [isRosterOpen, setIsRosterOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'active' | 'completed'>('active');
+
+  const tourSteps = useMemo(() => {
+    const role = profile?.role || 'viewer';
+
+    if (role === 'super_admin') {
+      return [
+        {
+          title: "Welcome, Commander!",
+          description: "Step into your high-fidelity Resolve PM workspace. This guide will brief you on all administrative and scheduling tools at your disposal.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Tactical Navigation Console",
+          description: "In the Header, use the 'Admin Console' button to manage squad structure, the 'Logistics Console' button to access payroll, and the 'Brain' button to restart this tour.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "AI-Powered Strategy Telemetry",
+          description: "Click 'Telemetry' or monitor stats at the top: Delivery Confidence (calculated from squad load), daily Fatigue, and live AI Strategy Briefings.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Project Workspace Grid",
+          description: "Your primary asset canvas. Click the '+' button to add new projects. Switch between 'Active' and 'Completed' tabs. Click 'Details' on any card to view PERT estimates and enter audit logs.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Admin Console (Squads & Roles)",
+          description: "Here, click 'Configure Roles' to manage bespoke engineering titles. Click 'Form Squad' to spawn a squad, set their load limit, and assign developers.",
+          actionBefore: () => {
+            setIsAdminView(true);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Logistics & Payroll Controls",
+          description: "Use the calendar to mark daily attendance. Change pay slabs under settings, calculate automated deductions, and click 'Export CSV' to download detailed payroll reports.",
+          actionBefore: () => {
+            setIsLogisticsView(true);
+            setIsAdminView(false);
+          }
+        },
+        {
+          title: "Calibrated & Ready!",
+          description: "Use the Sun/Moon button next to the Help Tour button to switch themes. Your console is fully synced to Supabase. Enjoy allocation!",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        }
+      ];
+    } else if (role === 'pm') {
+      return [
+        {
+          title: "Welcome, Project Manager!",
+          description: "Step into your allocation workspace. This guide will brief you on how to coordinate squads and track client deadlines.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "PM Header Controls",
+          description: "Use the 'Logistics Console' button in the Header to access developers' attendance, and the glowing 'Brain' button to trigger this guide anytime.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Strategy Telemetry",
+          description: "Track project counts, daily fatigue levels, and dynamic AI briefings to report overall delivery confidence to supervisors.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Project Management Grid",
+          description: "Click the '+' button to setup new project deadlines. Click 'Details' on any card to edit its proposed start, set priorities, and write change reason logs.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "PM Logistics & Telemetry",
+          description: "Click on the calendar dates to mark daily attendance. View net payout totals and click 'Export CSV' to generate reports for the ownership.",
+          actionBefore: () => {
+            setIsLogisticsView(true);
+            setIsAdminView(false);
+          }
+        },
+        {
+          title: "Calibrated & Ready!",
+          description: "Toggle themes with the Sun/Moon header button, coordinate with your assigned engineers, and keep timelines on target!",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        }
+      ];
+    } else {
+      // Viewer or general engineer
+      return [
+        {
+          title: "Welcome to Resolve PM!",
+          description: "This workspace displays live engineering allocations, delivery schedules, and historical project logs in Read-Only mode.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Viewing Header & Themes",
+          description: "Your session role is set to 'Viewer'. You can read stats, switch themes using the Sun/Moon button, or restart this guide using the 'Brain' button.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "AI Telemetry & Delivery Confidence",
+          description: "Monitor overall project stats, daily fatigue limits, and AI Strategy briefings right from the top dashboard telemetry panel.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Project Grid & Search",
+          description: "Use the top Search bar to find projects. Toggle 'Active' or 'Completed' tabs to view archives. Click 'Details' on cards to view PERT estimates and past audit logs.",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "All Calibrated!",
+          description: "You are fully up to date with live squad activities. Keep track of project updates as developers coordinate tasks!",
+          actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        }
+      ];
+    }
+  }, [profile?.role]);
+
+  // Expose tour launcher globally
+  useEffect(() => {
+    (window as any).startOnboardingTour = () => {
+      setGuideStep(0);
+      setShowGuide(true);
+      setIsAdminView(false);
+      setIsLogisticsView(false);
+    };
+  }, [tourSteps]);
+
 
   // URL Sync Effect — keeps pathname in sync with view state
   // State initializers already read the pathname on mount, so this only
@@ -4956,27 +5056,27 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Onboarding Tour Overlay */}
+      {/* Onboarding Tour Overlay - Floating Panel in Bottom-Right Corner */}
       <AnimatePresence>
         {showGuide && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="fixed bottom-6 right-6 z-[9999] p-4 max-w-sm w-[90vw] pointer-events-auto">
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="w-full max-w-lg bg-[#0e0e0e] border border-blue-500/30 rounded-lg p-6 sm:p-8 shadow-[0_0_50px_rgba(59,130,246,0.15)] relative overflow-hidden"
+              className="w-full bg-[#0e0e0e]/95 border border-blue-500/40 rounded-lg p-5 shadow-[0_10px_50px_rgba(59,130,246,0.35)] relative overflow-hidden backdrop-blur-md"
             >
               {/* Core accent gradient bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
               
               {/* Header */}
-              <div className="flex justify-between items-start mb-6">
+              <div className="flex justify-between items-start mb-4">
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-sm">
-                    Terminal Tutorial • Step {guideStep + 1} of {tourSteps.length}
+                  <span className="text-[9px] font-mono uppercase tracking-widest text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-sm">
+                    Interactive briefing • Step {guideStep + 1} of {tourSteps.length}
                   </span>
-                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white mt-2">
+                  <h3 className="text-base font-bold tracking-tight text-white mt-1.5">
                     {tourSteps[guideStep]?.title}
                   </h3>
                 </div>
@@ -4985,19 +5085,19 @@ export default function App() {
                     localStorage.setItem('resolve-pm-onboarded', 'true');
                     setShowGuide(false);
                   }}
-                  className="text-white/40 hover:text-white transition-colors cursor-pointer text-sm font-mono uppercase tracking-wider"
+                  className="text-white/40 hover:text-white transition-colors cursor-pointer text-[10px] font-mono uppercase tracking-wider bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded"
                 >
                   Skip
                 </button>
               </div>
 
               {/* Body Description */}
-              <p className="text-sm sm:text-base text-white/80 leading-relaxed font-sans mb-8 text-neutral-300">
+              <p className="text-xs text-neutral-300 leading-relaxed font-sans mb-5">
                 {tourSteps[guideStep]?.description}
               </p>
 
               {/* Navigation Controls */}
-              <div className="flex justify-between items-center mt-6 pt-4 border-t border-white/10">
+              <div className="flex justify-between items-center pt-3 border-t border-white/10">
                 <button
                   disabled={guideStep === 0}
                   onClick={() => {
@@ -5005,9 +5105,9 @@ export default function App() {
                     setGuideStep(prevStep);
                     tourSteps[prevStep]?.actionBefore?.();
                   }}
-                  className={`px-4 py-2 border border-white/10 text-xs font-mono uppercase tracking-wider hover:bg-white/5 transition-all rounded-sm flex items-center gap-1.5 cursor-pointer ${guideStep === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  className={`px-3 py-1.5 border border-white/10 text-[10px] font-mono uppercase tracking-wider hover:bg-white/5 transition-all rounded-sm flex items-center gap-1 cursor-pointer ${guideStep === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronLeft className="w-3 h-3" />
                   Back
                 </button>
 
@@ -5020,19 +5120,20 @@ export default function App() {
                     } else {
                       localStorage.setItem('resolve-pm-onboarded', 'true');
                       setShowGuide(false);
-                      notify("Onboarding complete. Terminal is ready for tasking.", "success");
+                      notify("Briefing complete. Systems calibrated.", "success");
                     }
                   }}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono uppercase tracking-wider transition-all rounded-sm flex items-center gap-1.5 shadow-[0_0_15px_rgba(59,130,246,0.3)] cursor-pointer"
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono uppercase tracking-wider transition-all rounded-sm flex items-center gap-1 shadow-[0_0_12px_rgba(59,130,246,0.3)] cursor-pointer"
                 >
-                  {guideStep === tourSteps.length - 1 ? 'Calibrate & Finish' : 'Next Step'}
-                  <ChevronRight className="w-3.5 h-3.5 animate-pulse" />
+                  {guideStep === tourSteps.length - 1 ? 'Finish' : 'Next'}
+                  <ChevronRight className="w-3 h-3 animate-pulse" />
                 </button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
 
       {/* Grid Overlay for aesthetic */}
       <div className="fixed inset-0 pointer-events-none z-[-1] opacity-20"
