@@ -36,7 +36,6 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
-import { generateSystemInsight } from './services/aiService';
 import ExecutionBoard from './components/ExecutionBoard';
 import { calculateExpectedEffort, calculatePertVariance } from './utils/pert';
 import { calculateHoursFromTimeRange } from './utils/productivity';
@@ -91,7 +90,6 @@ interface Stats {
   deliveryConfidence: number;
   teamBandwidth: number;
   dailyFatigue: number;
-  insight: string;
 }
 
 interface Notification {
@@ -3685,7 +3683,6 @@ export default function App() {
     return calculateHoursFromRange(workingTimeFrom, workingTimeTo);
   }, [workingTimeFrom, workingTimeTo]);
   const [tilesPerRow, setTilesPerRow] = useState(3);
-  const [aiInsight, setAiInsight] = useState("Awaiting analytics...");
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('resolve-theme') as 'dark' | 'light') || 'dark';
   });
@@ -3900,104 +3897,6 @@ export default function App() {
 
   const activeTeams = useMemo(() => teams.filter(t => t.name !== 'SYSTEM_SETTINGS'), [teams]);
 
-
-  useEffect(() => {
-    if (loading || projects.length === 0 || teams.length === 0) return;
-
-    const fetchInsight = async () => {
-      const activeProjects = projects.filter(p => p.status !== 'deployed');
-
-      let totalDecayHours = 0;
-      activeProjects.forEach(p => {
-        const expected = calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
-        if (p.pert_worst > expected) {
-          totalDecayHours += (p.pert_worst - expected);
-        }
-      });
-
-      const deliveryConfidence = Math.max(0, 100 - (totalDecayHours * 0.5));
-      const teamsWithProjects = new Set(activeProjects.filter(p => p.team_id).map(p => p.team_id));
-      const teamBandwidth = activeTeams.length > 0 ? (teamsWithProjects.size / activeTeams.length) * 100 : 0;
-
-      const overloadedSquads = activeTeams.map(t => {
-        const parsedData = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
-        const engineerCount = Math.max(1, parsedData?.developer_ids?.length || 1);
-        const teamCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount;
-        const teamProjects = activeProjects.filter(p => p.team_id === t.id);
-        const totalExpected = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
-        return { name: t.name, load: (totalExpected / teamCapacityHours) };
-      }).filter(s => s.load > 1.0);
-
-      // Compute current analytics stats hash to detect significant changes
-      const currentStatsHash = `${activeProjects.length}-${deliveryConfidence.toFixed(0)}-${teamBandwidth.toFixed(0)}-${overloadedSquads.length}`;
-
-      const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
-      const settingsData = settingsTeam?.data as any || {};
-
-      // If the stats hash matches the cached stats hash in the database, skip API execution
-      if (settingsData.statsHash === currentStatsHash && settingsData.cachedInsight) {
-        setAiInsight(settingsData.cachedInsight);
-        return;
-      }
-
-      // Viewers and general users NEVER trigger the live API. They only read the cached one.
-      const isAuthorizedToTrigger = profile?.role === 'super_admin' || profile?.role === 'pm';
-      if (!isAuthorizedToTrigger) {
-        if (settingsData.cachedInsight) {
-          setAiInsight(settingsData.cachedInsight);
-        }
-        return;
-      }
-
-      setAiInsight("Analyzing analytics...");
-      const insightText = await generateSystemInsight({
-        totalProjects: activeProjects.length,
-        deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
-        teamBandwidth: Number(teamBandwidth.toFixed(1)),
-        dailyFatigue: Number(totalDecayHours.toFixed(1)),
-        overloadedSquads
-      });
-
-      const formattedInsight = `"${insightText}"`;
-      setAiInsight(formattedInsight);
-
-      // Persist the fresh insight and stats hash to database settings for all users
-      try {
-        const updatedData = {
-          ...settingsData,
-          cachedInsight: formattedInsight,
-          statsHash: currentStatsHash
-        };
-
-        localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(updatedData));
-
-        const { data: dbSettings, error: findError } = await supabase
-          .from('teams')
-          .select('*')
-          .eq('name', 'SYSTEM_SETTINGS')
-          .maybeSingle();
-
-        if (!findError) {
-          if (dbSettings) {
-            await supabase
-              .from('teams')
-              .update({ data: updatedData })
-              .eq('id', dbSettings.id);
-          } else {
-            await supabase
-              .from('teams')
-              .insert({ name: 'SYSTEM_SETTINGS', data: updatedData });
-          }
-        }
-      } catch (err) {
-        console.error("Failed to persist updated AI insight to database settings:", err);
-      }
-    };
-
-    const debounceId = setTimeout(fetchInsight, 1500);
-    return () => clearTimeout(debounceId);
-  }, [projects, teams, activeTeams, workingHoursPerDay, loading, profile?.role]);
-
   useEffect(() => {
     const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
     if (settingsTeam && settingsTeam.data) {
@@ -4013,9 +3912,6 @@ export default function App() {
       }
       if (settingsData.workingTimeTo) {
         setWorkingTimeTo(settingsData.workingTimeTo);
-      }
-      if (settingsData.cachedInsight) {
-        setAiInsight(settingsData.cachedInsight);
       }
     }
   }, [teams]);
@@ -4746,12 +4642,11 @@ export default function App() {
       totalProjects: activeProjects.length,
       deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
       teamBandwidth: Number(teamBandwidth.toFixed(1)),
-      dailyFatigue: Number(totalDecayHours.toFixed(1)),
-      insight: aiInsight
+      dailyFatigue: Number(totalDecayHours.toFixed(1))
     };
   };
 
-  const stats: Stats = useMemo(() => calculateDynamicStats(), [projects, activeTeams, aiInsight]);
+  const stats: Stats = useMemo(() => calculateDynamicStats(), [projects, activeTeams]);
 
   if (loading) {
     return (
@@ -4994,20 +4889,6 @@ export default function App() {
                 </button>
               </div>
 
-              <div className="border border-white/10 bg-[#0c0c0c] p-6 relative overflow-hidden">
-                {stats.deliveryConfidence < 85 && <div className="absolute top-0 left-0 w-full h-1 bg-red-500/30 animate-pulse"></div>}
-                <div className="flex items-center gap-2 mb-4">
-                  <Zap className={`w-4 h-4 ${stats.deliveryConfidence < 85 ? 'text-red-500' : 'text-yellow-500/60'}`} />
-                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/90">System Insight</h3>
-                </div>
-                <p className={`text-[11px] leading-relaxed font-mono italic ${stats.deliveryConfidence < 85 ? 'text-red-400' : 'text-white/85'}`}>
-                  {stats.insight}
-                </p>
-                <div className="mt-4 flex items-center gap-2">
-                  <TrendingUp className={`w-3 h-3 ${stats.deliveryConfidence < 85 ? 'text-red-500/40' : 'text-white/75'}`} />
-                  <span className="text-[11px] font-mono text-white/75 uppercase tracking-[0.2em]">Live Bias Analysis</span>
-                </div>
-              </div>
             </div>
           </div>
         </main>
