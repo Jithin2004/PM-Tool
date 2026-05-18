@@ -186,7 +186,7 @@ function Login() {
 
         <div className="space-y-6">
           <div className="bg-white/5 border border-white/10 p-6 text-xs font-mono text-white/85 leading-relaxed">
-            <p className="mb-4">SYSTEM_ACCESS_PROTOCOL: v5.0.5</p>
+            <p className="mb-4">SYSTEM_ACCESS_PROTOCOL: v6.0.1</p>
             <p>Authorized personnel only. By entering, you consent to predictive bias modeling and historical data aggregation.</p>
           </div>
 
