@@ -4935,7 +4935,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-{/* --- Footer / Sidebar Accent --- */}
+      {/* --- Footer / Sidebar Accent --- */}
       <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/80 border-t border-white/5 px-4 sm:px-6 py-3 flex justify-between items-center pointer-events-none z-40">
         <div className="flex items-center gap-3 sm:gap-4 text-[9px] sm:text-[11px] font-mono text-white/75 uppercase tracking-widest">
           <div className="flex items-center gap-1.5">
@@ -4969,7 +4969,7 @@ export default function App() {
             >
               {/* Core accent gradient bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
-              
+
               {/* Header */}
               <div className="flex justify-between items-start mb-6">
                 <div>
