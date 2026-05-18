@@ -4497,7 +4497,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* --- Footer / Sidebar Accent --- */}
+{/* --- Footer / Sidebar Accent --- */}
       <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/80 border-t border-white/5 px-4 sm:px-6 py-3 flex justify-between items-center pointer-events-none z-40">
         <div className="flex items-center gap-3 sm:gap-4 text-[9px] sm:text-[11px] font-mono text-white/75 uppercase tracking-widest">
           <div className="flex items-center gap-1.5">
@@ -4507,6 +4507,10 @@ export default function App() {
           </div>
           <div className="hidden sm:block">ENCRYPTION: AES-256-GCM</div>
           <LiveClock />
+          {/* --- Added Copyright Notice --- */}
+          <div className="text-white/40 border-l border-white/10 pl-3 sm:pl-4 hidden md:block">
+            &copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P
+          </div>
         </div>
         <div className="flex items-center gap-4 sm:gap-6">
           <Settings className="w-3 h-3 text-white/70 pointer-events-auto cursor-pointer hover:text-white transition-colors" />
