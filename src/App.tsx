@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   ChevronRight,
+  ChevronLeft,
   AlertTriangle,
   BrainCircuit,
   Settings,
@@ -342,14 +343,24 @@ function Header({
 
           <div className="h-8 w-[1px] bg-white/10" />
 
+          {/* Interactive Tour Button */}
+          <button
+            onClick={() => (window as any).startOnboardingTour?.()}
+            className="p-2 border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0 cursor-pointer"
+            title="Start Interactive Tour"
+          >
+            <BrainCircuit className="w-4 h-4 text-blue-400" />
+          </button>
+
           {/* Theme Toggle Button */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0"
+            className="p-2 border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0 cursor-pointer"
             title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
           >
             {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
           </button>
+
 
           <div className="h-8 w-[1px] bg-white/10" />
 
@@ -372,16 +383,25 @@ function Header({
           )}
         </div>
 
-        {/* Mobile right: avatar + hamburger */}
         <div className="flex lg:hidden items-center gap-2">
+          {/* Interactive Tour for Mobile */}
+          <button
+            onClick={() => (window as any).startOnboardingTour?.()}
+            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+            title="Start Interactive Tour"
+          >
+            <BrainCircuit className="w-4 h-4 text-blue-400" />
+          </button>
+
           {/* Theme Toggle for Mobile */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors shrink-0"
+            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
             title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
           >
             {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
           </button>
+
 
           {user && (
             <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors"
@@ -2207,9 +2227,39 @@ function ProjectDetailsModal({
   const [changeReason, setChangeReason] = useState('');
   const [showLogs, setShowLogs] = useState(false);
 
+  const [dbLogs, setDbLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchDbLogs = async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('change_logs')
+            .select('*')
+            .eq('project_id', project.id)
+            .order('timestamp', { ascending: true });
+          if (!error && data && data.length > 0) {
+            setDbLogs(data.map(d => ({
+              timestamp: d.timestamp,
+              changes: d.changes,
+              reason: d.reason,
+              authorName: d.author_name,
+              authorRole: d.author_role
+            })));
+          }
+        } catch (err) {
+          console.error("Error fetching change logs from table:", err);
+        }
+      }
+    };
+    fetchDbLogs();
+  }, [project.id]);
+
   const logs = useMemo(() => {
+    if (dbLogs.length > 0) return dbLogs;
     return (project.tags || []).filter(t => t.startsWith('LOG:')).map(t => JSON.parse(t.substring(4)));
-  }, [project.tags]);
+  }, [project.tags, dbLogs]);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -3251,10 +3301,124 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+
+  // Dedicated DB table states
+  const [attendanceRows, setAttendanceRows] = useState<any[]>([]);
+  const [salariesRows, setSalariesRows] = useState<any[]>([]);
+
+  // Onboarding Tour state
+  const [showGuide, setShowGuide] = useState(() => {
+    return localStorage.getItem('resolve-pm-onboarded') !== 'true';
+  });
+  const [guideStep, setGuideStep] = useState(0);
+
   const systemSettings = useMemo(() => teams.find(t => t.name === 'SYSTEM_SETTINGS'), [teams]);
-  const systemData = useMemo(() => systemSettings?.data as any || {}, [systemSettings]);
+  const rawSystemData = useMemo(() => systemSettings?.data as any || {}, [systemSettings]);
+
+  const systemData = useMemo(() => {
+    const data = { ...rawSystemData };
+
+    // Overwrite attendance from dedicated table if available
+    if (attendanceRows.length > 0) {
+      const records: Record<string, Record<string, any>> = {};
+      attendanceRows.forEach(row => {
+        if (!records[row.date]) {
+          records[row.date] = {};
+        }
+        records[row.date][row.user_id] = {
+          status: row.status,
+          leaveType: row.leave_type || undefined,
+          isPaidHalfDay: row.is_paid_half_day || false
+        };
+      });
+      data.attendance = records;
+    }
+
+    // Overwrite salaries from dedicated table if available
+    if (salariesRows.length > 0) {
+      const salaries: Record<string, number> = {};
+      salariesRows.forEach(row => {
+        salaries[row.user_id] = Number(row.base_salary);
+      });
+      data.salaries = salaries;
+    }
+
+    return data;
+  }, [rawSystemData, attendanceRows, salariesRows]);
+
   const userCustomRoles = useMemo(() => systemData.userCustomRoles || {}, [systemData]);
   const customRoles = useMemo(() => systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'], [systemData]);
+
+  const tourSteps = useMemo(() => [
+    {
+      title: "Welcome to Resolve PM Core",
+      description: "Step into a high-fidelity engineering workspace designed for precision scheduling, live squad allocation, and telemetry-driven analytics.",
+      actionBefore: () => {
+        setIsAdminView(false);
+        setIsLogisticsView(false);
+      }
+    },
+    {
+      title: "Tactical Navigation Console",
+      description: "Use the top header navigation to transition seamlessly. PMs and Admins can easily toggle the Admin Console or Logistics Console to reallocate assets.",
+      actionBefore: () => {
+        setIsAdminView(false);
+        setIsLogisticsView(false);
+      }
+    },
+    {
+      title: "AI-Powered Strategy Telemetry",
+      description: "At a glance, monitor overall stats: Workflow count, AI confidence margins, total team capacity load, and historical project decay and fatigue margins.",
+      actionBefore: () => {
+        setIsAdminView(false);
+        setIsLogisticsView(false);
+      }
+    },
+    {
+      title: "Project Workspace Grid",
+      description: "Your primary asset canvas. Every project cards shows advanced PERT scheduling, AI timeline confidence, and dynamic squad efficiency analytics.",
+      actionBefore: () => {
+        setIsAdminView(false);
+        setIsLogisticsView(false);
+      }
+    },
+    {
+      title: "Admin Console & Squad Roster",
+      description: "Admins can promotion and designate custom engineering roles, build and configure collaborative teams, and coordinate cross-functional squad load limits.",
+      actionBefore: () => {
+        setIsAdminView(true);
+        setIsLogisticsView(false);
+      }
+    },
+    {
+      title: "Logistics & Payroll Controls",
+      description: "Mark daily member attendance, customize allowed leave parameters, and let the system calculate real-time net payroll deductions and payouts.",
+      actionBefore: () => {
+        setIsLogisticsView(true);
+        setIsAdminView(false);
+      }
+    },
+    {
+      title: "Calibrated & Ready!",
+      description: "The platform is customized to your system variables. Feel free to toggle the color scheme (light/dark) in the header and start allocation!",
+      actionBefore: () => {
+        setIsAdminView(false);
+        setIsLogisticsView(false);
+      }
+    }
+  ], []);
+
+  // Expose tour launcher globally
+  useEffect(() => {
+    (window as any).startOnboardingTour = () => {
+      setGuideStep(0);
+      setShowGuide(true);
+      setIsAdminView(false);
+      setIsLogisticsView(false);
+    };
+  }, []);
+
+
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -3366,7 +3530,9 @@ export default function App() {
         await Promise.all([
           fetchProjects(),
           fetchTeams(),
-          fetchProfiles()
+          fetchProfiles(),
+          fetchAttendance(),
+          fetchSalaries()
         ]);
       }
 
@@ -3382,12 +3548,16 @@ export default function App() {
           await Promise.all([
             fetchProjects(),
             fetchTeams(),
-            fetchProfiles()
+            fetchProfiles(),
+            fetchAttendance(),
+            fetchSalaries()
           ]);
         } else {
           setProfile(null);
           setProjects([]);
           setTeams([]);
+          setAttendanceRows([]);
+          setSalariesRows([]);
         }
       });
 
@@ -3419,14 +3589,94 @@ export default function App() {
         fetchProfiles();
       }).subscribe();
 
+    const attendanceSub = supabase.channel('public:attendance')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        fetchAttendance();
+      }).subscribe();
+
+    const salariesSub = supabase.channel('public:salaries')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'salaries' }, () => {
+        fetchSalaries();
+      }).subscribe();
+
     return () => {
       supabase.removeChannel(projectsSub);
       supabase.removeChannel(teamsSub);
       supabase.removeChannel(profilesSub);
+      supabase.removeChannel(attendanceSub);
+      supabase.removeChannel(salariesSub);
     };
   }, []);
 
+
+  // Automated database migration to dedicated tables
+  useEffect(() => {
+    if (!isSupabaseConfigured || loading) return;
+
+    const migrateData = async () => {
+      // Migrate Attendance
+      const oldAttendance = rawSystemData.attendance;
+      if (oldAttendance && Object.keys(oldAttendance).length > 0 && attendanceRows.length === 0) {
+        console.log("Migrating attendance records to dedicated table...");
+        const toInsert: any[] = [];
+        Object.keys(oldAttendance).forEach(dateStr => {
+          const dayData = oldAttendance[dateStr];
+          Object.keys(dayData).forEach(userId => {
+            const record = dayData[userId];
+            // Verify if record matches UUID or format
+            toInsert.push({
+              user_id: userId,
+              date: dateStr,
+              status: record.status,
+              leave_type: record.leaveType || null,
+              is_paid_half_day: !!record.isPaidHalfDay
+            });
+          });
+        });
+
+        if (toInsert.length > 0) {
+          try {
+            const { error } = await supabase.from('attendance').insert(toInsert);
+            if (!error) {
+              console.log(`Successfully migrated ${toInsert.length} attendance records.`);
+              await fetchAttendance();
+            }
+          } catch (e) {
+            console.error("Attendance migration failed:", e);
+          }
+        }
+      }
+
+      // Migrate Salaries
+      const oldSalaries = rawSystemData.salaries;
+      if (oldSalaries && Object.keys(oldSalaries).length > 0 && salariesRows.length === 0) {
+        console.log("Migrating salaries records to dedicated table...");
+        const toInsert = Object.keys(oldSalaries).map(userId => ({
+          user_id: userId,
+          base_salary: Number(oldSalaries[userId]) || 3000
+        }));
+
+        if (toInsert.length > 0) {
+          try {
+            const { error } = await supabase.from('salaries').insert(toInsert);
+            if (!error) {
+              console.log(`Successfully migrated ${toInsert.length} salary records.`);
+              await fetchSalaries();
+            }
+          } catch (e) {
+            console.error("Salary migration failed:", e);
+          }
+        }
+      }
+    };
+
+    // Run migration after data has been loaded
+    const delay = setTimeout(migrateData, 5000);
+    return () => clearTimeout(delay);
+  }, [loading, rawSystemData, attendanceRows.length, salariesRows.length]);
+
   const activeTeams = useMemo(() => teams.filter(t => t.name !== 'SYSTEM_SETTINGS'), [teams]);
+
 
   useEffect(() => {
     if (loading || projects.length === 0) return;
@@ -3561,7 +3811,139 @@ export default function App() {
   };
 
   const handleSaveLogisticsData = async (updatedData: any) => {
-    // Save to localStorage immediately as a fast fallback
+    // 1. Intercept attendance updates
+    if (updatedData.attendance) {
+      if (isSupabaseConfigured) {
+        try {
+          const oldAttendance = systemData.attendance || {};
+          const newAttendance = updatedData.attendance;
+
+          const promises: Promise<any>[] = [];
+          Object.keys(newAttendance).forEach(dateStr => {
+            const dayRecords = newAttendance[dateStr];
+            Object.keys(dayRecords).forEach(userId => {
+              const record = dayRecords[userId];
+              const oldRecord = oldAttendance[dateStr]?.[userId];
+              if (
+                !oldRecord ||
+                oldRecord.status !== record.status ||
+                oldRecord.leaveType !== record.leaveType ||
+                oldRecord.isPaidHalfDay !== record.isPaidHalfDay
+              ) {
+                // Changed record: upsert it!
+                promises.push((async () => {
+                  const { data: existing } = await supabase
+                    .from('attendance')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .eq('date', dateStr)
+                    .maybeSingle();
+
+                  if (existing) {
+                    return supabase
+                      .from('attendance')
+                      .update({
+                        status: record.status,
+                        leave_type: record.leaveType || null,
+                        is_paid_half_day: !!record.isPaidHalfDay
+                      })
+                      .eq('id', existing.id);
+                  } else {
+                    return supabase
+                      .from('attendance')
+                      .insert({
+                        user_id: userId,
+                        date: dateStr,
+                        status: record.status,
+                        leave_type: record.leaveType || null,
+                        is_paid_half_day: !!record.isPaidHalfDay
+                      });
+                  }
+                })());
+              }
+            });
+          });
+
+          if (promises.length > 0) {
+            await Promise.all(promises);
+            await fetchAttendance();
+          }
+        } catch (e) {
+          console.error("Error saving attendance to dedicated table:", e);
+        }
+      }
+
+      // Save to local state immediately
+      const records: any[] = [];
+      Object.keys(updatedData.attendance).forEach(dateStr => {
+        const dayData = updatedData.attendance[dateStr];
+        Object.keys(dayData).forEach(userId => {
+          const record = dayData[userId];
+          records.push({
+            user_id: userId,
+            date: dateStr,
+            status: record.status,
+            leave_type: record.leaveType || null,
+            is_paid_half_day: !!record.isPaidHalfDay
+          });
+        });
+      });
+      setAttendanceRows(records);
+      delete updatedData.attendance;
+    }
+
+    // 2. Intercept salaries updates
+    if (updatedData.salaries) {
+      if (isSupabaseConfigured) {
+        try {
+          const oldSalaries = systemData.salaries || {};
+          const newSalaries = updatedData.salaries;
+
+          const promises: Promise<any>[] = [];
+          Object.keys(newSalaries).forEach(userId => {
+            const salary = newSalaries[userId];
+            const oldSalary = oldSalaries[userId];
+            if (oldSalary !== salary) {
+              promises.push((async () => {
+                const { data: existing } = await supabase
+                  .from('salaries')
+                  .select('id')
+                  .eq('user_id', userId)
+                  .maybeSingle();
+
+                if (existing) {
+                  return supabase
+                    .from('salaries')
+                    .update({ base_salary: salary })
+                    .eq('id', existing.id);
+                } else {
+                  return supabase
+                    .from('salaries')
+                    .insert({ user_id: userId, base_salary: salary });
+                }
+              })());
+            }
+          });
+
+          if (promises.length > 0) {
+            await Promise.all(promises);
+            await fetchSalaries();
+          }
+        } catch (e) {
+          console.error("Error saving salaries to dedicated table:", e);
+        }
+      }
+
+      // Save to local state immediately
+      const records = Object.keys(updatedData.salaries).map(userId => ({
+        user_id: userId,
+        base_salary: Number(updatedData.salaries[userId]) || 3000
+      }));
+      setSalariesRows(records);
+      delete updatedData.salaries;
+    }
+
+    // Save remainder to localStorage immediately as a fast fallback
     localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(updatedData));
 
     // Update in-memory state immediately so responsiveness is instantaneous
@@ -3608,6 +3990,7 @@ export default function App() {
     }
   };
 
+
   // fetchProfiles is now called globally on init to support ProjectCard lookups
 
   const fetchProjects = async () => {
@@ -3627,6 +4010,35 @@ export default function App() {
 
     if (!error && data) setProfiles(data);
   };
+
+  const fetchAttendance = async () => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('*');
+      if (!error && data) {
+        setAttendanceRows(data);
+      }
+    } catch (err) {
+      console.warn("Could not fetch from attendance table:", err);
+    }
+  };
+
+  const fetchSalaries = async () => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const { data, error } = await supabase
+        .from('salaries')
+        .select('*');
+      if (!error && data) {
+        setSalariesRows(data);
+      }
+    } catch (err) {
+      console.warn("Could not fetch from salaries table:", err);
+    }
+  };
+
 
   const fetchTeams = async () => {
     const { data, error } = await supabase
@@ -3785,6 +4197,31 @@ export default function App() {
   };
 
   const handleUpdateProjectMetadata = async (id: string, updates: Partial<Project>) => {
+    // Intercept and extract any new change logs to store in the dedicated change_logs table
+    if (updates.tags) {
+      const project = projects.find(p => p.id === id);
+      const oldTags = project?.tags || [];
+      const newLogs = updates.tags.filter(t => t.startsWith('LOG:') && !oldTags.includes(t));
+      for (const logTag of newLogs) {
+        try {
+          const logData = JSON.parse(logTag.substring(4));
+          if (isSupabaseConfigured) {
+            await supabase.from('change_logs').insert({
+              project_id: id,
+              changes: logData.changes,
+              reason: logData.reason,
+              author_name: logData.authorName,
+              author_role: logData.authorRole,
+              timestamp: logData.timestamp || new Date().toISOString()
+            });
+            console.log("Successfully saved change log in dedicated table.");
+          }
+        } catch (e) {
+          console.error("Failed to parse and save change log in dedicated table:", e);
+        }
+      }
+    }
+
     // Relieve squad and snapshot history upon completion
     if (updates.status === 'deployed') {
       const project = projects.find(p => p.id === id);
@@ -3813,6 +4250,7 @@ export default function App() {
       notify(`Sync failed: ${error?.message || "Unknown error"}`, "error");
     }
   };
+
 
   const handleUpdateProfile = async (updates: Partial<Profile>) => {
     if (!user) return;
@@ -4518,10 +4956,89 @@ export default function App() {
         </div>
       </footer>
 
+      {/* Onboarding Tour Overlay */}
+      <AnimatePresence>
+        {showGuide && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="w-full max-w-lg bg-[#0e0e0e] border border-blue-500/30 rounded-lg p-6 sm:p-8 shadow-[0_0_50px_rgba(59,130,246,0.15)] relative overflow-hidden"
+            >
+              {/* Core accent gradient bar */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+              
+              {/* Header */}
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-sm">
+                    Terminal Tutorial • Step {guideStep + 1} of {tourSteps.length}
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white mt-2">
+                    {tourSteps[guideStep]?.title}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.setItem('resolve-pm-onboarded', 'true');
+                    setShowGuide(false);
+                  }}
+                  className="text-white/40 hover:text-white transition-colors cursor-pointer text-sm font-mono uppercase tracking-wider"
+                >
+                  Skip
+                </button>
+              </div>
+
+              {/* Body Description */}
+              <p className="text-sm sm:text-base text-white/80 leading-relaxed font-sans mb-8 text-neutral-300">
+                {tourSteps[guideStep]?.description}
+              </p>
+
+              {/* Navigation Controls */}
+              <div className="flex justify-between items-center mt-6 pt-4 border-t border-white/10">
+                <button
+                  disabled={guideStep === 0}
+                  onClick={() => {
+                    const prevStep = guideStep - 1;
+                    setGuideStep(prevStep);
+                    tourSteps[prevStep]?.actionBefore?.();
+                  }}
+                  className={`px-4 py-2 border border-white/10 text-xs font-mono uppercase tracking-wider hover:bg-white/5 transition-all rounded-sm flex items-center gap-1.5 cursor-pointer ${guideStep === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Back
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (guideStep < tourSteps.length - 1) {
+                      const nextStep = guideStep + 1;
+                      setGuideStep(nextStep);
+                      tourSteps[nextStep]?.actionBefore?.();
+                    } else {
+                      localStorage.setItem('resolve-pm-onboarded', 'true');
+                      setShowGuide(false);
+                      notify("Onboarding complete. Terminal is ready for tasking.", "success");
+                    }
+                  }}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono uppercase tracking-wider transition-all rounded-sm flex items-center gap-1.5 shadow-[0_0_15px_rgba(59,130,246,0.3)] cursor-pointer"
+                >
+                  {guideStep === tourSteps.length - 1 ? 'Calibrate & Finish' : 'Next Step'}
+                  <ChevronRight className="w-3.5 h-3.5 animate-pulse" />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Grid Overlay for aesthetic */}
       <div className="fixed inset-0 pointer-events-none z-[-1] opacity-20"
         style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }}>
       </div>
     </div>
+
   );
 }
