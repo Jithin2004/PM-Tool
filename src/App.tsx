@@ -3779,7 +3779,7 @@ export default function App() {
 
 
   useEffect(() => {
-    if (loading || projects.length === 0) return;
+    if (loading || projects.length === 0 || teams.length === 0) return;
 
     const fetchInsight = async () => {
       const activeProjects = projects.filter(p => p.status !== 'deployed');
@@ -3814,6 +3814,15 @@ export default function App() {
       // If the stats hash matches the cached stats hash in the database, skip API execution
       if (settingsData.statsHash === currentStatsHash && settingsData.cachedInsight) {
         setAiInsight(settingsData.cachedInsight);
+        return;
+      }
+
+      // Viewers and general users NEVER trigger the live API. They only read the cached one.
+      const isAuthorizedToTrigger = profile?.role === 'super_admin' || profile?.role === 'pm';
+      if (!isAuthorizedToTrigger) {
+        if (settingsData.cachedInsight) {
+          setAiInsight(settingsData.cachedInsight);
+        }
         return;
       }
 
@@ -3862,9 +3871,9 @@ export default function App() {
       }
     };
 
-    const debounceId = setTimeout(fetchInsight, 2500);
+    const debounceId = setTimeout(fetchInsight, 1500);
     return () => clearTimeout(debounceId);
-  }, [projects, teams, activeTeams, workingHoursPerDay, loading]);
+  }, [projects, teams, activeTeams, workingHoursPerDay, loading, profile?.role]);
 
   useEffect(() => {
     const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');

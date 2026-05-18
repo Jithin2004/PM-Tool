@@ -3,6 +3,38 @@ import { GoogleGenAI, Type } from "@google/genai";
 const apiKey = process.env.GEMINI_API_KEY || '';
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
+function isRateLimitError(error: any): boolean {
+  if (!error) return false;
+  return (
+    error.status === 429 ||
+    error.statusCode === 429 ||
+    String(error.message || '').includes("429") ||
+    String(error.message || '').includes("RESOURCE_EXHAUSTED") ||
+    String(error.message || '').includes("rate limit")
+  );
+}
+
+async function callGeminiWithRetry<T>(fn: () => Promise<T>): Promise<T> {
+  let attempt = 1;
+  let delay = 2000; // start at 2 seconds
+  const maxAttempts = 3;
+
+  while (true) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (isRateLimitError(error) && attempt <= maxAttempts) {
+        console.warn(`Gemini API rate-limited (429). Attempt ${attempt} of ${maxAttempts}. Retrying in ${delay}ms...`, error);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        attempt++;
+        delay *= 2; // double the duration (exponential backoff)
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
 export function getLocalTelemetryInsight(stats: any): string {
   const confidence = stats.deliveryConfidence ?? 100;
   const bandwidth = stats.teamBandwidth ?? 0;
@@ -54,7 +86,7 @@ export async function estimateProject(description: string) {
   }
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await callGeminiWithRetry(() => ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `
         As an expert technical project manager, estimate the development effort for the following project:
@@ -82,7 +114,7 @@ export async function estimateProject(description: string) {
           required: ["coreHours", "overheadMultiplier", "suggestedPriority"]
         }
       }
-    });
+    }));
 
     const text = response.text;
     if (!text) throw new Error("No response from AI");
@@ -109,7 +141,7 @@ export async function generateSystemInsight(stats: any) {
   }
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await callGeminiWithRetry(() => ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `
         You are an elite, highly technical AI Project Manager overseeing an engineering system.
@@ -124,7 +156,7 @@ export async function generateSystemInsight(stats: any) {
         - Predictive Decay (Variance/Fatigue): ${stats.dailyFatigue} hours
         - Overloaded Squads: ${stats.overloadedSquads?.length > 0 ? stats.overloadedSquads.map((s:any) => s.name).join(", ") : "None"}
       `
-    });
+    }));
 
     return response.text?.trim() || getLocalTelemetryInsight(stats);
   } catch (error) {
