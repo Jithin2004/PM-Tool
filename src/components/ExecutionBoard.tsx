@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronRight, Plus, Clock, User, CheckCircle, MessageSquare, 
-  AlertTriangle, X, LayoutGrid, Layers, Send, Terminal, Lock, Shield, ArrowRight 
+  AlertTriangle, X, LayoutGrid, Layers, Send, Terminal, Lock, Shield, ArrowRight,
+  ArrowUp, ChevronDown
 } from 'lucide-react';
 
 interface Task {
@@ -38,6 +39,8 @@ interface ExecutionBoardProps {
   notify: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   // Trigger system confidence recalculation
   onRecalibrateTelemetry: () => void;
+  // Elevate a task to the Asset workspace form
+  onPromoteToAsset?: (task: { title: string; description: string; projectId: string }) => void;
 }
 
 export default function ExecutionBoard({
@@ -47,7 +50,8 @@ export default function ExecutionBoard({
   isSupabaseConfigured,
   supabase,
   notify,
-  onRecalibrateTelemetry
+  onRecalibrateTelemetry,
+  onPromoteToAsset
 }: ExecutionBoardProps) {
   const [viewMode, setViewMode] = useState<'kanban' | 'scrum'>('kanban');
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -64,6 +68,9 @@ export default function ExecutionBoard({
   
   // Real-time ticker to force dynamic countdown update every second
   const [timeTicker, setTimeTicker] = useState(0);
+  // Project asset panel filter state
+  const [filterByProject, setFilterByProject] = useState<string | null>(null);
+  const [projectsPanelOpen, setProjectsPanelOpen] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -583,10 +590,90 @@ export default function ExecutionBoard({
         </div>
       )}
 
+      {/* Projects Overview Panel — all workspace assets synced here */}
+      <div className="mb-6 bg-black/30 border border-white/5 rounded-sm overflow-hidden">
+        <button
+          onClick={() => setProjectsPanelOpen(prev => !prev)}
+          className="w-full flex items-center justify-between px-4 py-3 border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+            <span className="text-[10px] font-mono uppercase tracking-widest text-white/60">
+              Project Assets Overview
+            </span>
+            <span className="text-[8px] font-mono text-white/30 bg-white/5 px-1.5 py-0.5 rounded-sm">
+              {projects.length} synced
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {filterByProject && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setFilterByProject(null); }}
+                className="text-[8px] font-mono uppercase tracking-wider text-cyan-400 bg-cyan-950/30 border border-cyan-500/20 px-2 py-0.5 rounded-sm hover:bg-cyan-950/50 transition-colors cursor-pointer"
+              >
+                Clear Filter ×
+              </button>
+            )}
+            <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform duration-200 ${projectsPanelOpen ? 'rotate-0' : '-rotate-90'}`} />
+          </div>
+        </button>
+
+        {projectsPanelOpen && (
+          <div className="max-h-[180px] overflow-y-auto scrollbar-thin divide-y divide-white/[0.03]">
+            {projects.length === 0 ? (
+              <div className="px-4 py-5 text-center text-white/20 text-[9px] font-mono uppercase tracking-wider">
+                No project assets found. Create one in the Assets workspace.
+              </div>
+            ) : (
+              projects.map(project => {
+                const projectTaskCount = tasks.filter(t => t.project_id === project.id).length;
+                const isFiltered = filterByProject === project.id;
+                const statusMap: Record<string, string> = {
+                  'planning': 'text-white/50 border-white/15',
+                  'in-progress': 'text-blue-400 border-blue-500/30',
+                  'review': 'text-yellow-400 border-yellow-500/30',
+                  'deployed': 'text-emerald-400 border-emerald-500/30'
+                };
+                const statusStyle = statusMap[project.status] || 'text-white/50 border-white/15';
+                return (
+                  <div
+                    key={project.id}
+                    className={`flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors ${isFiltered ? 'bg-blue-950/15 border-l-2 border-blue-500/40' : ''}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span className={`text-[7px] font-mono uppercase px-1.5 py-0.5 border rounded-sm shrink-0 ${statusStyle}`}>
+                        {(project.status || 'planning').replace('-', ' ')}
+                      </span>
+                      <span className="text-[10px] font-mono text-white/75 truncate">{project.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                      <span className="text-[8px] font-mono text-white/25 bg-white/5 px-1.5 py-0.5 rounded-sm">
+                        {projectTaskCount} task{projectTaskCount !== 1 ? 's' : ''}
+                      </span>
+                      <button
+                        onClick={() => setFilterByProject(isFiltered ? null : project.id)}
+                        title={isFiltered ? 'Clear filter' : `Filter board to ${project.name}`}
+                        className={`text-[8px] font-mono uppercase tracking-wider px-2 py-0.5 border rounded-sm transition-all cursor-pointer ${
+                          isFiltered
+                            ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_8px_rgba(37,99,235,0.3)]'
+                            : 'border-white/10 text-white/35 hover:border-white/25 hover:text-white/60'
+                        }`}
+                      >
+                        {isFiltered ? 'Filtered ✓' : 'Filter'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Lane Columns */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {columns.map(col => {
-          const colTasks = tasks.filter(t => t.status === col.id);
+          const colTasks = tasks.filter(t => t.status === col.id && (!filterByProject || t.project_id === filterByProject));
           return (
             <div 
               key={col.id}
@@ -678,6 +765,18 @@ export default function ExecutionBoard({
                                   <ArrowRight className="w-2 h-2" />
                                 </button>
                               ))}
+                              {onPromoteToAsset && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onPromoteToAsset({ title: task.title, description: task.description || '', projectId: task.project_id });
+                                  }}
+                                  title="Elevate task to Asset workspace"
+                                  className="w-4 h-4 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/20 hover:border-emerald-400/40 text-emerald-400 rounded-sm flex items-center justify-center transition-all cursor-pointer"
+                                >
+                                  <ArrowUp className="w-2 h-2" />
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>

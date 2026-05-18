@@ -4667,10 +4667,52 @@ export default function App() {
       setNewTeamId('');
       notify("Asset successfully committed to system.", "success");
       fetchProjects();
+
+      // Auto-sync new project to Execution Board as a triage task
+      if (isSupabaseConfigured) {
+        try {
+          await supabase.from('tactical_tasks').insert({
+            project_id: data.id,
+            title: data.name,
+            description: `Project asset auto-synced from workspace. Priority: ${newPriority}.`,
+            status: 'triage',
+            weight: 1.0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        } catch (syncErr) {
+          console.warn('Could not auto-sync project to Execution Board:', syncErr);
+        }
+      } else {
+        // Offline: append to localStorage task cache
+        try {
+          const localTasks = JSON.parse(localStorage.getItem('tactical_tasks') || '[]');
+          localTasks.unshift({
+            id: `task-${Date.now()}`,
+            project_id: data.id || `local-${Date.now()}`,
+            title: data.name,
+            description: `Project asset auto-synced. Priority: ${newPriority}.`,
+            status: 'triage',
+            weight: 1.0,
+            created_at: new Date().toISOString()
+          });
+          localStorage.setItem('tactical_tasks', JSON.stringify(localTasks));
+        } catch (_) { /* ignore */ }
+      }
     } else {
       console.error("Project creation failed:", error);
       notify(`System Error: ${error?.message || "Failed to commit asset"}`, "error");
     }
+  };
+
+  // Promote a task from Execution Board into the Asset creation form
+  const handlePromoteTaskToAsset = (taskData: { title: string; description: string; projectId: string }) => {
+    setNewName(taskData.title);
+    setIsPipelineView(false);
+    setIsAdminView(false);
+    setIsLogisticsView(false);
+    setIsAdding(true);
+    notify(`Task "${taskData.title}" elevated — fill in PERT estimates to register as a full asset.`, 'info');
   };
 
   const getSuggestedSquad = () => {
@@ -4802,6 +4844,7 @@ export default function App() {
               // Recalibrate system state and fetch latest lists
               setProjects([...projects]);
             }}
+            onPromoteToAsset={handlePromoteTaskToAsset}
           />
         </main>
       ) : isLogisticsView && (profile?.role === 'super_admin' || profile?.role === 'pm') ? (
