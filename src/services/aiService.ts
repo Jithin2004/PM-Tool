@@ -14,6 +14,17 @@ function isRateLimitError(error: any): boolean {
   );
 }
 
+function isPermanentQuotaExhaustion(error: any): boolean {
+  if (!error) return false;
+  const errMsg = String(error.message || error.status || '').toLowerCase();
+  return (
+    errMsg.includes("quota exceeded") ||
+    errMsg.includes("exceeded your current quota") ||
+    errMsg.includes("billing details") ||
+    errMsg.includes("plan and billing")
+  );
+}
+
 async function callGeminiWithRetry<T>(fn: () => Promise<T>): Promise<T> {
   let attempt = 1;
   let delay = 2000; // start at 2 seconds
@@ -23,6 +34,10 @@ async function callGeminiWithRetry<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn();
     } catch (error) {
+      if (isPermanentQuotaExhaustion(error)) {
+        console.error("Gemini API daily quota fully exhausted. Skipping retries to save bandwidth and instantly using local fallback.", error);
+        throw error;
+      }
       if (isRateLimitError(error) && attempt <= maxAttempts) {
         console.warn(`Gemini API rate-limited (429). Attempt ${attempt} of ${maxAttempts}. Retrying in ${delay}ms...`, error);
         await new Promise(resolve => setTimeout(resolve, delay));
