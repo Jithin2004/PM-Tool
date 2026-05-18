@@ -38,6 +38,8 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
 import { generateSystemInsight } from './services/aiService';
 import ExecutionBoard from './components/ExecutionBoard';
+import { calculateExpectedEffort, calculatePertVariance } from './utils/pert';
+import { calculateHoursFromTimeRange } from './utils/productivity';
 
 // --- Types ---
 type UserRole = 'super_admin' | 'pm' | 'developer' | 'viewer';
@@ -108,22 +110,15 @@ interface ConfirmState {
 
 // --- Utilities ---
 const calculateExpectedTime = (best: number, likely: number, worst: number) => {
-  return (best + 4 * likely + worst) / 6;
+  return calculateExpectedEffort({ best, likely, worst });
 };
 
 const calculateVariance = (best: number, worst: number) => {
-  return Math.pow((worst - best) / 6, 2);
+  return calculatePertVariance({ best, worst });
 };
 
 const calculateHoursFromRange = (from: string, to: string): number => {
-  if (!from || !to) return 8;
-  const [fromH, fromM] = from.split(':').map(Number);
-  const [toH, toM] = to.split(':').map(Number);
-  let diffMin = (toH * 60 + toM) - (fromH * 60 + fromM);
-  if (diffMin < 0) {
-    diffMin += 24 * 60; // handles overnight wrap
-  }
-  return Math.max(0.1, Number((diffMin / 60).toFixed(2)));
+  return calculateHoursFromTimeRange(from, to);
 };
 
 const getLocalDateString = (d: Date = new Date()): string => {
@@ -324,11 +319,11 @@ function Header({
           <div className="flex items-center gap-2">
             <button onClick={onGoHome}
               className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${(!showAdmin && !showLogistics && !showPipeline) ? 'bg-white text-black border-white shadow-[0_0_8px_rgba(255,255,255,0.2)]' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-              Assets
+              Projects
             </button>
             <button onClick={onTogglePipeline}
               className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showPipeline ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-              Execution Board
+              Task Board
             </button>
             {canAccessConsoles && (
               <>
@@ -470,12 +465,12 @@ function Header({
                 <button
                   onClick={() => { onGoHome(); setMobileMenuOpen(false); }}
                   className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${(!showAdmin && !showLogistics && !showPipeline) ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                  Assets Board
+                  Projects
                 </button>
                 <button
                   onClick={() => { onTogglePipeline(); setMobileMenuOpen(false); }}
                   className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showPipeline ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                  Execution Board
+                  Task Board
                 </button>
                 {canAccessConsoles && (
                   <>
@@ -639,10 +634,10 @@ function ConfirmationModal({ isOpen, title, message, confirmText = 'Confirm', on
 function StatsGrid({ stats }: { stats: Stats }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/10 border-b border-white/10">
-      <StatCard label="Pipeline Confidence" value={`${stats.deliveryConfidence}%`} icon={Target} color="text-green-400" />
+      <StatCard label="ETA Confidence" value={`${stats.deliveryConfidence}%`} icon={Target} color="text-green-400" />
       <StatCard label="Active Workflows" value={stats.totalProjects} icon={BarChart3} />
       <StatCard label="Team Allocation" value={`${stats.teamBandwidth}%`} icon={Users} />
-      <StatCard label="Predictive Decay" value={`${stats.dailyFatigue}h`} icon={TrendingUp} color="text-yellow-500" />
+      <StatCard label="Delivery Risk" value={`${stats.dailyFatigue}h`} icon={TrendingUp} color="text-yellow-500" />
     </div>
   );
 }
@@ -661,9 +656,9 @@ function StatCard({ label, value, icon: Icon, color = "text-white" }: { label: s
 
 function ProjectCard({ project, teams, profiles, workingHoursPerDay, onClick }: { project: Project; teams: Team[]; profiles: Profile[]; workingHoursPerDay: number; onClick: (p: Project) => void }) {
   const creator = profiles.find(p => p.id === project.owner_id);
-  const historicalSquad = project.tags.find(t => t.startsWith('SQUAD:'))?.replace('SQUAD:', '');
+  const historicalTeam = project.tags.find(t => t.startsWith('SQUAD:'))?.replace('SQUAD:', '');
   const team = teams.find(t => t.id === project.team_id);
-  const teamName = team ? team.name : (historicalSquad || "UNALLOCATED");
+  const teamName = team ? team.name : (historicalTeam || "UNALLOCATED");
   const parsedTeamData = team ? (typeof team.data === 'string' ? JSON.parse(team.data) : team.data) : null;
   const engineerCount = Math.max(1, parsedTeamData?.developer_ids?.length || 1);
 
@@ -922,7 +917,7 @@ function AdminDashboard({
   const pms = profiles.filter(p => p.role === 'pm' || p.role === 'super_admin');
   const devs = profiles.filter(p => p.role === 'viewer');
 
-  // Identify devs already in other squads to prevent double-assignment
+  // Identify devs already in other teams to prevent double-assignment
   const assignedDevIds = new Set(
     teams
       .filter(t => t.id !== editingTeamId)
@@ -940,7 +935,7 @@ function AdminDashboard({
         <div className="mb-8">
           <h2 className="text-3xl font-medium tracking-tight mb-2">Internal Identity Console</h2>
           <p className="text-sm text-white/85 font-mono tracking-tighter">
-            {currentUserRole === 'super_admin' ? 'Super Admin Privileges: Calibrate squad access levels and verify engineering credentials.' : 'Project Manager Console: Manage normal user designations and view active squads.'}
+            {currentUserRole === 'super_admin' ? 'Super Admin Privileges: Calibrate team access levels and verify engineering credentials.' : 'Project Manager Console: Manage normal user designations and view active teams.'}
           </p>
         </div>
 
@@ -1019,26 +1014,26 @@ function AdminDashboard({
         </div>
       </div>
 
-      {/* --- Squad Configuration & Custom Roles Section --- */}
+      {/* --- Team Configuration & Custom Roles Section --- */}
       <div>
         <div className="mb-6">
           <h2 className="text-3xl font-medium tracking-tight mb-2">
-            {currentUserRole === 'super_admin' ? 'Control & Capabilities Center' : 'Active Squad Roster'}
+            {currentUserRole === 'super_admin' ? 'Control & Capabilities Center' : 'Active Team Roster'}
           </h2>
           <p className="text-sm text-white/85 font-mono tracking-tighter">
-            {currentUserRole === 'super_admin' ? 'Form cross-functional teams, allocate squads, and customize corporate designations.' : 'View current operational squad formations and allocation hierarchies.'}
+            {currentUserRole === 'super_admin' ? 'Form cross-functional teams, allocate squads, and customize corporate designations.' : 'View current operational team formations and allocation hierarchies.'}
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Squad Configuration Form (Visible to Super Admin) */}
+          {/* Team Configuration Form (Visible to Super Admin) */}
           {currentUserRole === 'super_admin' && (
             <div className="border border-white/10 bg-[#0c0c0c] p-6 lg:col-span-4 flex flex-col justify-between" id="squad-form">
               <div>
-                <h3 className="text-sm font-mono uppercase tracking-widest mb-6">{editingTeamId ? 'Update Squad' : 'Initialize Squad'}</h3>
+                <h3 className="text-sm font-mono uppercase tracking-widest mb-6">{editingTeamId ? 'Update Team' : 'Create Team'}</h3>
                 <form onSubmit={handleCreateTeam} className="space-y-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Squad Designation</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Team Name</label>
                     <input
                       required
                       type="text"
@@ -1090,7 +1085,7 @@ function AdminDashboard({
                       type="submit"
                       className="flex-1 bg-white text-black h-10 font-semibold hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest"
                     >
-                      {editingTeamId ? 'Update Squad' : 'Form Squad'}
+                      {editingTeamId ? 'Update Team' : 'Create Team'}
                     </button>
                     {editingTeamId && (
                       <button
@@ -1159,14 +1154,14 @@ function AdminDashboard({
             </div>
           )}
 
-          {/* Active Squads list */}
+          {/* Active Teams list */}
           <div className={`border border-white/10 bg-[#0c0c0c] overflow-hidden flex flex-col ${currentUserRole === 'super_admin' ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
-            <h3 className="text-sm font-mono uppercase tracking-widest p-6 border-b border-white/10">Active Squads</h3>
+            <h3 className="text-sm font-mono uppercase tracking-widest p-6 border-b border-white/10">Active Teams</h3>
             <div className="overflow-y-auto p-6 space-y-4 flex-1 max-h-[400px]">
               {teams.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-10 opacity-50">
                   <Users className="w-8 h-8 text-white/75 mb-3" />
-                  <p className="text-xs font-mono text-white/85 text-center uppercase">No squads initialized.</p>
+                  <p className="text-xs font-mono text-white/85 text-center uppercase">No teams created.</p>
                 </div>
               )}
               {teams.map(team => {
@@ -1478,9 +1473,9 @@ function LogisticsDashboard({
     let filename = '';
     if (payrollMode === 'monthly') {
       const monthName = new Date(`${selectedYear}-${selectedMonth}-01`).toLocaleString('default', { month: 'long' });
-      filename = `Payroll_Telemetry_${monthName}_${selectedYear}.csv`;
+      filename = `Payroll_Analytics_${monthName}_${selectedYear}.csv`;
     } else {
-      filename = `Payroll_Telemetry_Custom_${customStartDate}_to_${customEndDate}.csv`;
+      filename = `Payroll_Analytics_Custom_${customStartDate}_to_${customEndDate}.csv`;
     }
 
     link.setAttribute('href', url);
@@ -1616,7 +1611,7 @@ function LogisticsDashboard({
             onClick={() => setActiveTab('payroll')}
             className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'payroll' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
           >
-            Payroll Telemetry
+            Payroll Analytics
           </button>
         </div>
       </div>
@@ -1949,7 +1944,7 @@ function LogisticsDashboard({
             <div className="border border-white/10 bg-[#0c0c0c] p-8 space-y-6">
               <div className="border-b border-white/10 pb-4 flex items-center gap-2">
                 <BrainCircuit className="w-4 h-4 text-blue-400" />
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90 font-semibold font-bold">Formula Telemetry</h3>
+                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90 font-semibold font-bold">Formula Analytics</h3>
               </div>
 
               <div className="space-y-4 text-xs font-mono text-white/70 leading-relaxed">
@@ -1990,7 +1985,7 @@ function LogisticsDashboard({
             {/* Payroll filters */}
             <div className="flex flex-col md:flex-row gap-6 items-center bg-[#0c0c0c] border border-white/10 p-6 justify-between">
               <div>
-                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90 font-semibold font-bold mb-1">Payroll Telemetry Analysis</h3>
+                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90 font-semibold font-bold mb-1">Payroll Analytics</h3>
                 <p className="text-[10px] font-mono text-white/50 uppercase">MONTHLY SQUAD COMPENSATION COMPLIANCE</p>
               </div>
 
@@ -2074,7 +2069,7 @@ function LogisticsDashboard({
             {/* Payroll Data Grid */}
             <div className="border border-white/10 bg-[#0c0c0c] overflow-hidden">
               <div className="p-6 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center">
-                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90 font-bold">Compiled Month Telemetry Sheet</h3>
+                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90 font-bold">Compiled Month Analytics Sheet</h3>
                 <span className="text-[10px] font-mono text-white/50">Scope: {payrollMode === 'monthly' ? monthPrefix : `${customStartDate || 'TBD'} to ${customEndDate || 'TBD'}`}</span>
               </div>
 
@@ -2297,7 +2292,7 @@ function ProjectDetailsModal({
     if ((teamId || null) !== (project.team_id || null)) {
       const oldTeam = teams.find(t => t.id === project.team_id)?.name || 'UNALLOCATED';
       const newTeam = teams.find(t => t.id === teamId)?.name || 'UNALLOCATED';
-      changes.push(`Squad (${oldTeam} -> ${newTeam})`);
+      changes.push(`Team (${oldTeam} -> ${newTeam})`);
     }
     const oldDeadline = project.client_deadline?.substring(0, 10) || 'None';
     const newDeadline = clientDeadline || 'None';
@@ -2363,7 +2358,7 @@ function ProjectDetailsModal({
         {showLogs && (
           <div className="absolute inset-0 z-50 bg-[#0c0c0c] flex flex-col">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#0a0a0a]">
-              <h4 className="text-sm font-mono text-white/90 uppercase tracking-widest flex items-center gap-2"><History className="w-4 h-4" /> Asset Modification Log</h4>
+              <h4 className="text-sm font-mono text-white/90 uppercase tracking-widest flex items-center gap-2"><History className="w-4 h-4" /> Project Change Log</h4>
               <button type="button" onClick={() => setShowLogs(false)} className="p-2 border border-white/10 hover:bg-white/5 transition-colors"><Plus className="w-4 h-4 rotate-45 text-white/75" /></button>
             </div>
             <div className="flex-1 p-6 overflow-y-auto space-y-4">
@@ -2421,7 +2416,7 @@ function ProjectDetailsModal({
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <BrainCircuit className="w-4 h-4 text-white/85" />
-                <span className="text-[10px] font-mono text-white/80 uppercase tracking-[0.2em]">Asset Analysis Console</span>
+                <span className="text-[10px] font-mono text-white/80 uppercase tracking-[0.2em]">Project Overview</span>
               </div>
               <h3 className="text-2xl font-medium tracking-tight">Predictive Workspace: {project.name}</h3>
             </div>
@@ -2466,7 +2461,7 @@ function ProjectDetailsModal({
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Allocate Squad</label>
+                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Team</label>
                 <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
                   <option value="">UNALLOCATED</option>
                   {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -2488,11 +2483,11 @@ function ProjectDetailsModal({
                     onClick={() => setIsDeleting(true)}
                     className="flex items-center gap-2 text-xs font-mono text-red-500 hover:text-red-400 transition-colors uppercase tracking-widest whitespace-nowrap"
                   >
-                    <Trash2 className="w-4 h-4" /> Decommission
+                    <Trash2 className="w-4 h-4" /> Archive
                   </button>
                 ) : (
                   <div className="space-y-3">
-                    <label className="block text-[10px] uppercase font-mono text-red-500/80">Reason for Decommissioning</label>
+                    <label className="block text-[10px] uppercase font-mono text-red-500/80">Reason for Archiveing</label>
                     <textarea
                       required
                       value={deleteReason}
@@ -2735,13 +2730,13 @@ function SquadRosterModal({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Users className="w-5 h-5 text-blue-400" />
-              <h3 className="text-xl font-medium tracking-tight uppercase">Operational Squad Roster</h3>
+              <h3 className="text-xl font-medium tracking-tight uppercase">Teams</h3>
             </div>
-            <p className="text-xs font-mono text-white/60">Comprehensive workload utilization, telemetry and squad allocation analysis.</p>
+            <p className="text-xs font-mono text-white/60">Comprehensive workload utilization, analytics and team allocation analysis.</p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <div className="bg-[#0a0a0a] border border-white/10 px-4 py-2 text-center shrink-0">
-              <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-0.5">Total Squads</p>
+              <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-0.5">Total Teams</p>
               <p className="text-sm font-bold font-mono">{teams.length}</p>
             </div>
             <div className="bg-[#0a0a0a] border border-white/10 px-4 py-2 text-center shrink-0">
@@ -2764,7 +2759,7 @@ function SquadRosterModal({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
             <input
               type="text"
-              placeholder="Query name, email or squad..."
+              placeholder="Query name, email or team..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#0a0a0a] border border-white/10 h-10 pl-10 pr-4 text-xs font-mono focus:border-white/30 outline-none transition-all placeholder:text-white/40 text-white animate-none"
@@ -2789,7 +2784,7 @@ function SquadRosterModal({
             onClick={() => setRosterTab('squads')}
             className={`flex-1 text-center py-2 text-[10px] font-mono uppercase tracking-widest transition-all ${rosterTab === 'squads' ? 'bg-white text-black font-semibold' : 'text-white/60'}`}
           >
-            Squad Directory
+            Team Directory
           </button>
           <button
             onClick={() => setRosterTab('analytics')}
@@ -2802,11 +2797,11 @@ function SquadRosterModal({
         {/* Dashboard Panels */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
-          {/* Left Panel: Squad Directory */}
+          {/* Left Panel: Team Directory */}
           <div className={`w-full md:w-80 border-r border-white/10 overflow-y-auto divide-y divide-white/5 bg-[#0a0a0a]/50 ${rosterTab === 'squads' ? 'block' : 'hidden md:block'}`}>
             {filteredSquads.length === 0 ? (
               <div className="p-8 text-center text-xs font-mono text-white/40 italic">
-                No matching squads detected.
+                No matching teams found.
               </div>
             ) : (
               filteredSquads.map(team => {
@@ -2858,11 +2853,11 @@ function SquadRosterModal({
                     onClick={() => setRosterTab('squads')}
                     className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
                   >
-                    ← Back to Squad List
+                    ← Back to Team List
                   </button>
                 </div>
 
-                {/* Squad header banner */}
+                {/* Team header banner */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-white/5">
                   <div>
                     <h3 className="text-2xl font-bold uppercase tracking-tight mb-2">{selectedSquad.name}</h3>
@@ -2877,7 +2872,7 @@ function SquadRosterModal({
                   </div>
                 </div>
 
-                {/* Analytical telemetry metrics */}
+                {/* Analytical analytics metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                   {/* Gauge 1: Load */}
@@ -2930,8 +2925,8 @@ function SquadRosterModal({
                   <div className="bg-red-500/10 border border-red-500/20 p-4 flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5 animate-bounce" />
                     <div>
-                      <h5 className="text-xs font-mono text-red-400 uppercase tracking-widest font-bold mb-1">Squad Telemetry Alert: Extreme Overload Detected</h5>
-                      <p className="text-[10px] font-mono text-red-400/80 leading-relaxed">This squad has surpassed its monthly engineering bandwidth. Highly advise reallocating some assets to underloaded squads to prevent burn-out and delivery delay.</p>
+                      <h5 className="text-xs font-mono text-red-400 uppercase tracking-widest font-bold mb-1">Team Analytics Alert: Extreme Overload Detected</h5>
+                      <p className="text-[10px] font-mono text-red-400/80 leading-relaxed">This team has surpassed its monthly engineering bandwidth. Highly advise reallocating some assets to underloaded teams to prevent burn-out and delivery delay.</p>
                     </div>
                   </div>
                 )}
@@ -2939,12 +2934,12 @@ function SquadRosterModal({
                 {/* Active Workflows Section */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                    <h4 className="text-xs font-mono uppercase tracking-widest text-white/80 font-bold">Active Squad Workflows ({activeMetrics.activeProjects.length})</h4>
+                    <h4 className="text-xs font-mono uppercase tracking-widest text-white/80 font-bold">Active Team Projects ({activeMetrics.activeProjects.length})</h4>
                     <span className="text-[9px] font-mono text-white/40">DRIFT TRACKING ACTIVATED</span>
                   </div>
 
                   {activeMetrics.activeProjects.length === 0 ? (
-                    <p className="text-xs font-mono text-white/50 italic py-4">No active workflow parameters are assigned to this squad.</p>
+                    <p className="text-xs font-mono text-white/50 italic py-4">No active workflow parameters are assigned to this team.</p>
                   ) : (
                     <div className="grid grid-cols-1 gap-4">
                       {activeMetrics.activeProjects.map(project => {
@@ -3041,7 +3036,7 @@ function SquadRosterModal({
                     ))}
 
                     {activeSquadEngineers.length === 0 && !activeSquadPM && (
-                      <p className="text-xs font-mono text-white/40 italic md:col-span-2">No active resources assigned to this squad.</p>
+                      <p className="text-xs font-mono text-white/40 italic md:col-span-2">No active resources assigned to this team.</p>
                     )}
                   </div>
                 </div>
@@ -3051,12 +3046,12 @@ function SquadRosterModal({
               <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
                 <BrainCircuit className="w-12 h-12 text-white/70 mb-4" />
                 <h4 className="text-lg font-medium uppercase tracking-tight">Analytical console suspended</h4>
-                <p className="text-xs font-mono text-white/70 mt-1">Please select an operational squad from the sidebar directory.</p>
+                <p className="text-xs font-mono text-white/70 mt-1">Please select an operational team from the sidebar directory.</p>
               </div>
             )}
           </div>
 
-          {/* Drawer Overlay: Personnel Telemetry Drill-down */}
+          {/* Drawer Overlay: Personnel Analytics Drill-down */}
           <AnimatePresence>
             {selectedPersonnel && (
               <motion.div
@@ -3069,7 +3064,7 @@ function SquadRosterModal({
                 <div className="space-y-8">
                   {/* Close and title */}
                   <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                    <h4 className="text-xs font-mono uppercase tracking-widest text-blue-400 font-bold">Personnel Telemetry</h4>
+                    <h4 className="text-xs font-mono uppercase tracking-widest text-blue-400 font-bold">Personnel Analytics</h4>
                     <button
                       onClick={() => setSelectedPersonnelId(null)}
                       className="p-1 border border-white/10 hover:bg-white/5 text-white/80 hover:text-white transition-colors"
@@ -3145,7 +3140,7 @@ function SquadRosterModal({
                     onClick={() => setSelectedPersonnelId(null)}
                     className="w-full py-2 bg-white text-black text-[10px] uppercase font-mono tracking-widest font-semibold hover:bg-neutral-200 transition-colors"
                   >
-                    Commit & Sync Telemetry
+                    Commit & Sync Analytics
                   </button>
                 </div>
               </motion.div>
@@ -3408,15 +3403,15 @@ export default function App() {
         },
         {
           title: "Tactical Navigation Console",
-          description: "In the Header, use the 'Admin Console' button to manage squad structure, the 'Logistics Console' button to access payroll, and the 'Brain' button to restart this tour.",
+          description: "In the Header, use the 'Admin Console' button to manage team structure, the 'Logistics Console' button to access payroll, and the 'Brain' button to restart this tour.",
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
           }
         },
         {
-          title: "AI-Powered Strategy Telemetry",
-          description: "Click 'Telemetry' or monitor stats at the top: Delivery Confidence (calculated from squad load), daily Fatigue, and live AI Strategy Briefings.",
+          title: "AI-Powered Strategy Analytics",
+          description: "Click 'Analytics' or monitor stats at the top: Delivery Confidence (calculated from team load), daily Fatigue, and live AI Strategy Briefings.",
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
@@ -3424,15 +3419,15 @@ export default function App() {
         },
         {
           title: "Project Workspace Grid",
-          description: "Your primary asset canvas. Click the '+' button to add new projects. Switch between 'Active' and 'Completed' tabs. Click 'Details' on any card to view PERT estimates and enter audit logs.",
+          description: "Your primary project workspace. Click the '+' button to add new projects. Switch between 'Active' and 'Completed' tabs. Click 'Details' on any card to view PERT estimates and enter audit logs.",
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
           }
         },
         {
-          title: "Admin Console (Squads & Roles)",
-          description: "Here, click 'Configure Roles' to manage bespoke engineering titles. Click 'Form Squad' to spawn a squad, set their load limit, and assign developers.",
+          title: "Admin Console (Teams & Roles)",
+          description: "Here, click 'Configure Roles' to manage team titles. Click 'Create Team' to create a team, set their load limit, and assign developers.",
           actionBefore: () => {
             setIsAdminView(true);
             setIsLogisticsView(false);
@@ -3447,8 +3442,8 @@ export default function App() {
           }
         },
         {
-          title: "Pipeline Execution Board",
-          description: "Explore the brand new premium, tactical Execution Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
+          title: "Task Board",
+          description: "Explore the brand new premium, tactical Task Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
           actionBefore: () => {
             setIsPipelineView(true);
             setIsAdminView(false);
@@ -3487,7 +3482,7 @@ export default function App() {
       return [
         {
           title: "Welcome, Project Manager!",
-          description: "Step into your allocation workspace. This guide will brief you on how to coordinate squads and track client deadlines.",
+          description: "Step into your allocation workspace. This guide will brief you on how to coordinate teams and track client deadlines.",
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
@@ -3504,7 +3499,7 @@ export default function App() {
           }
         },
         {
-          title: "Strategy Telemetry",
+          title: "Strategy Analytics",
           description: "Track project counts, daily fatigue levels, and dynamic AI briefings to report overall delivery confidence to supervisors.",
           actionBefore: () => {
             setIsAdminView(false);
@@ -3522,7 +3517,7 @@ export default function App() {
           }
         },
         {
-          title: "PM Logistics & Telemetry",
+          title: "PM Logistics & Analytics",
           description: "Click on the calendar dates to mark daily attendance. View net payout totals and click 'Export CSV' to generate reports for the ownership.",
           actionBefore: () => {
             setIsLogisticsView(true);
@@ -3531,7 +3526,7 @@ export default function App() {
           }
         },
         {
-          title: "Pipeline Execution Board",
+          title: "Task Board",
           description: "Track project task progression, visualize Kanban/Scrum lanes, and inspect live clock-synced ETAs.",
           actionBefore: () => {
             setIsPipelineView(true);
@@ -3589,8 +3584,8 @@ export default function App() {
           }
         },
         {
-          title: "AI Telemetry & Delivery Confidence",
-          description: "Monitor overall project stats, daily fatigue limits, and AI Strategy briefings right from the top dashboard telemetry panel.",
+          title: "AI Analytics & Delivery Confidence",
+          description: "Monitor overall project stats, daily fatigue limits, and AI Strategy briefings right from the top dashboard analytics panel.",
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
@@ -3607,7 +3602,7 @@ export default function App() {
           }
         },
         {
-          title: "Pipeline Execution Board",
+          title: "Task Board",
           description: "View real-time task progression lanes and live clock-synced ETAs in premium Read-Only mode.",
           actionBefore: () => {
             setIsPipelineView(true);
@@ -3635,7 +3630,7 @@ export default function App() {
         },
         {
           title: "All Calibrated!",
-          description: "You are fully up to date with live squad activities. Keep track of project updates as developers coordinate tasks!",
+          description: "You are fully up to date with live team activities. Keep track of project updates as developers coordinate tasks!",
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
@@ -3690,7 +3685,7 @@ export default function App() {
     return calculateHoursFromRange(workingTimeFrom, workingTimeTo);
   }, [workingTimeFrom, workingTimeTo]);
   const [tilesPerRow, setTilesPerRow] = useState(3);
-  const [aiInsight, setAiInsight] = useState("Awaiting telemetry...");
+  const [aiInsight, setAiInsight] = useState("Awaiting analytics...");
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('resolve-theme') as 'dark' | 'light') || 'dark';
   });
@@ -3933,7 +3928,7 @@ export default function App() {
         return { name: t.name, load: (totalExpected / teamCapacityHours) };
       }).filter(s => s.load > 1.0);
 
-      // Compute current telemetry stats hash to detect significant changes
+      // Compute current analytics stats hash to detect significant changes
       const currentStatsHash = `${activeProjects.length}-${deliveryConfidence.toFixed(0)}-${teamBandwidth.toFixed(0)}-${overloadedSquads.length}`;
 
       const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
@@ -3954,7 +3949,7 @@ export default function App() {
         return;
       }
 
-      setAiInsight("Analyzing telemetry...");
+      setAiInsight("Analyzing analytics...");
       const insightText = await generateSystemInsight({
         totalProjects: activeProjects.length,
         deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
@@ -4209,7 +4204,7 @@ export default function App() {
         .update({ data: mergedData })
         .eq('id', existing.id);
       if (!error) {
-        notify("Logistics telemetry synchronized.", "success");
+        notify("Logistics analytics synchronized.", "success");
         await fetchTeams();
       } else {
         console.warn("Supabase logistics sync failed, using localStorage fallback:", error);
@@ -4219,7 +4214,7 @@ export default function App() {
         .from('teams')
         .insert({ name: 'SYSTEM_SETTINGS', data: updatedData });
       if (!error) {
-        notify("Logistics telemetry initialized.", "success");
+        notify("Logistics analytics initialized.", "success");
         await fetchTeams();
       } else {
         console.warn("Supabase logistics init failed, using localStorage fallback:", error);
@@ -4459,7 +4454,7 @@ export default function App() {
       }
     }
 
-    // Relieve squad and snapshot history upon completion
+    // Relieve team and snapshot history upon completion
     if (updates.status === 'deployed') {
       const project = projects.find(p => p.id === id);
       const team = teams.find(t => t.id === (updates.team_id || project?.team_id));
@@ -4480,7 +4475,7 @@ export default function App() {
 
     if (!error && data) {
       setProjects(projects.map(p => p.id === id ? data : p));
-      notify("Asset metrics synchronized.", "success");
+      notify("Project details saved.", "success");
       fetchProjects();
     } else {
       console.error("Metadata update failed:", error);
@@ -4539,7 +4534,7 @@ export default function App() {
 
     if (!error && data) {
       setTeams([data, ...teams]);
-      notify("Squad successfully initialized!", "success");
+      notify("Team successfully initialized!", "success");
       fetchProfiles();
     } else {
       console.error("Team creation failed:", error);
@@ -4565,7 +4560,7 @@ export default function App() {
 
     if (!error && data) {
       setTeams(teams.map(t => t.id === id ? data : t));
-      notify("Squad configuration updated.", "success");
+      notify("Team configuration updated.", "success");
     } else {
       console.error("Team update failed:", error);
       notify(`Team update failed: ${error?.message || "Unknown error"}`, "error");
@@ -4576,8 +4571,8 @@ export default function App() {
     if (profile?.role !== 'super_admin') return;
 
     askConfirmation(
-      "Decommission Squad",
-      "Are you sure you want to decommission this squad? All project associations will be lost.",
+      "Archive Team",
+      "Are you sure you want to archive this team? All project associations will be lost.",
       async () => {
         // Attempting to cast ID as UUID if it's currently causing issues
         // PostgREST handles strings as UUIDs automatically if the column is UUID
@@ -4590,7 +4585,7 @@ export default function App() {
 
         if (!error) {
           setTeams(teams.filter(t => t.id !== id));
-          notify("Squad decommissioned successfully.", "success");
+          notify("Team archiveed successfully.", "success");
         } else {
           console.error("Team deletion failed:", error);
           notify(`Team deletion failed: ${error.message}`, "error");
@@ -4601,8 +4596,8 @@ export default function App() {
 
   const handleDeleteProject = async (id: string, reason: string) => {
     askConfirmation(
-      "Decommission Asset",
-      `Are you sure you want to decommission this engineering asset? Reason: ${reason}`,
+      "Archive Project",
+      `Are you sure you want to archive this project? Reason: ${reason}`,
       async () => {
         const { error } = await supabase
           .from('projects')
@@ -4611,11 +4606,11 @@ export default function App() {
 
         if (!error) {
           setProjects(projects.filter(p => p.id !== id));
-          notify("Asset successfully decommissioned.", "success");
+          notify("Project archived successfully.", "success");
           setSelectedProject(null);
           fetchProjects();
         } else {
-          console.error("Asset deletion failed:", error);
+          console.error("Project archive failed:", error);
           notify(`Deletion failed: ${error.message}`, "error");
         }
       }
@@ -4629,7 +4624,7 @@ export default function App() {
       return;
     }
     if (profile?.role === 'viewer') {
-      notify("Unauthorized: Viewers cannot create assets.", "error");
+      notify("Unauthorized: Viewers cannot create projects.", "error");
       return;
     }
 
@@ -4665,23 +4660,23 @@ export default function App() {
       setNewClientDeadline('');
       setNewPriority('medium');
       setNewTeamId('');
-      notify("Asset successfully committed to system.", "success");
+      notify("Project created successfully.", "success");
       fetchProjects();
 
-      // Auto-sync new project to Execution Board as a triage task
+      // Auto-sync new project to Task Board as a triage task
       if (isSupabaseConfigured) {
         try {
           await supabase.from('tactical_tasks').insert({
             project_id: data.id,
             title: data.name,
-            description: `Project asset auto-synced from workspace. Priority: ${newPriority}.`,
+            description: `Project auto-synced from workspace. Priority: ${newPriority}.`,
             status: 'triage',
             weight: 1.0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
         } catch (syncErr) {
-          console.warn('Could not auto-sync project to Execution Board:', syncErr);
+          console.warn('Could not auto-sync project to Task Board:', syncErr);
         }
       } else {
         // Offline: append to localStorage task cache
@@ -4691,7 +4686,7 @@ export default function App() {
             id: `task-${Date.now()}`,
             project_id: data.id || `local-${Date.now()}`,
             title: data.name,
-            description: `Project asset auto-synced. Priority: ${newPriority}.`,
+            description: `Project auto-synced. Priority: ${newPriority}.`,
             status: 'triage',
             weight: 1.0,
             created_at: new Date().toISOString()
@@ -4701,21 +4696,21 @@ export default function App() {
       }
     } else {
       console.error("Project creation failed:", error);
-      notify(`System Error: ${error?.message || "Failed to commit asset"}`, "error");
+      notify(`System Error: ${error?.message || "Failed to create project"}`, "error");
     }
   };
 
-  // Promote a task from Execution Board into the Asset creation form
+  // Promote a task from Task Board into the Asset creation form
   const handlePromoteTaskToAsset = (taskData: { title: string; description: string; projectId: string }) => {
     setNewName(taskData.title);
     setIsPipelineView(false);
     setIsAdminView(false);
     setIsLogisticsView(false);
     setIsAdding(true);
-    notify(`Task "${taskData.title}" elevated — fill in PERT estimates to register as a full asset.`, 'info');
+    notify(`Task "${taskData.title}" elevated — fill in PERT estimates to register as a project.`, 'info');
   };
 
-  const getSuggestedSquad = () => {
+  const getSuggestedTeam = () => {
     if (activeTeams.length === 0) return null;
     const stats = activeTeams.map(t => {
       const teamProjects = projects.filter(p => p.team_id === t.id && p.status !== 'deployed');
@@ -4840,7 +4835,7 @@ export default function App() {
             isSupabaseConfigured={isSupabaseConfigured}
             supabase={supabase}
             notify={notify}
-            onRecalibrateTelemetry={() => {
+            onRecalibrateAnalytics={() => {
               // Recalibrate system state and fetch latest lists
               setProjects([...projects]);
             }}
@@ -4892,7 +4887,7 @@ export default function App() {
                   <p className="text-sm text-white/85 font-mono tracking-tighter">
                     {dashboardTab === 'active'
                       ? "Precision forecasting through engineering overhead modeling and historical drift correction."
-                      : "Historical repository of finalized assets and squad attribution data."}
+                      : "Historical repository of finalized projects and team attribution data."}
                   </p>
                 </div>
 
@@ -4901,7 +4896,7 @@ export default function App() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/80" />
                     <input
                       type="text"
-                      placeholder="Query system assets..."
+                      placeholder="Query projects..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full bg-[#0c0c0c] border border-white/10 h-10 pl-10 pr-4 text-sm font-mono focus:border-white/30 outline-none transition-all placeholder:text-white/70"
@@ -4914,7 +4909,7 @@ export default function App() {
                       id="add-project-btn"
                     >
                       <Plus className="w-4 h-4" />
-                      <span className="hidden sm:inline text-xs uppercase tracking-wider">Add Asset</span>
+                      <span className="hidden sm:inline text-xs uppercase tracking-wider">Create Project</span>
                     </button>
                   )}
                 </div>
@@ -4950,7 +4945,7 @@ export default function App() {
                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-6">
                       <BrainCircuit className="w-8 h-8 text-white/75" />
                     </div>
-                    <h3 className="text-xl font-medium mb-2 uppercase tracking-tight">Zero Assets Found</h3>
+                    <h3 className="text-xl font-medium mb-2 uppercase tracking-tight">No Projects Found</h3>
                     <p className="text-sm font-mono text-white/85">Query yielded no matching engineering constructs.</p>
                   </div>
                 )}
@@ -4962,7 +4957,7 @@ export default function App() {
               <div className="border border-white/10 bg-[#0c0c0c] p-6">
                 <div className="flex items-center gap-2 mb-6">
                   <Users className="w-4 h-4 text-white/85" />
-                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/90">Squad Allocation</h3>
+                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/90">Team Allocation</h3>
                 </div>
 
                 <div className="space-y-4">
@@ -5042,7 +5037,7 @@ export default function App() {
                 </div>
                 <div>
                   <h3 className="text-xl font-medium tracking-tight">System Initialization</h3>
-                  <p className="text-[10px] font-mono text-white/80 uppercase">New workload asset creation</p>
+                  <p className="text-[10px] font-mono text-white/80 uppercase">New project creation</p>
                 </div>
               </div>
 
@@ -5110,7 +5105,7 @@ export default function App() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Allocate Squad</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Team</label>
                     <select
                       value={newTeamId}
                       onChange={e => setNewTeamId(e.target.value)}
@@ -5122,15 +5117,15 @@ export default function App() {
                   </div>
                 </div>
 
-                {getSuggestedSquad() && !newTeamId && (
+                {getSuggestedTeam() && !newTeamId && (
                   <div className="bg-blue-500/10 border border-blue-500/20 p-3 flex justify-between items-center">
                     <div>
                       <p className="text-[10px] font-mono text-blue-400 uppercase tracking-widest mb-0.5">AI Suggestion</p>
-                      <p className="text-xs font-mono text-white/80">Squad <strong>{getSuggestedSquad()?.name}</strong> has optimal bandwidth availability.</p>
+                      <p className="text-xs font-mono text-white/80">Team <strong>{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setNewTeamId(getSuggestedSquad()?.id || '')}
+                      onClick={() => setNewTeamId(getSuggestedTeam()?.id || '')}
                       className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-colors border border-blue-500/30"
                     >
                       Auto-Assign
@@ -5277,7 +5272,7 @@ export default function App() {
                 Onboarding Satisfaction Survey
               </h3>
               <p className="text-xs text-white/70 mb-5 leading-relaxed font-mono uppercase tracking-wider text-[10px]">
-                Tactical briefing complete. Please rate your experience to calibrate system telemetry.
+                Tactical briefing complete. Please rate your experience to calibrate system analytics.
               </p>
 
               {/* Rating selector (1-5) */}
@@ -5313,7 +5308,7 @@ export default function App() {
                     'Clear Navigation',
                     'High-Fidelity UI',
                     'Real-time Calibrations',
-                    'AI Insights Telemetry'
+                    'AI Insights Analytics'
                   ].map((tag) => {
                     const selected = feedbackTags.includes(tag);
                     return (

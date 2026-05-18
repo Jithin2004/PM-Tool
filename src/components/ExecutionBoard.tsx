@@ -5,6 +5,7 @@ import {
   AlertTriangle, X, LayoutGrid, Layers, Send, Terminal, Lock, Shield, ArrowRight,
   ArrowUp, ChevronDown
 } from 'lucide-react';
+import { calculateTaskCountdown } from '../services/etaService';
 
 interface Task {
   id: string;
@@ -38,8 +39,8 @@ interface ExecutionBoardProps {
   supabase: any;
   notify: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   // Trigger system confidence recalculation
-  onRecalibrateTelemetry: () => void;
-  // Elevate a task to the Asset workspace form
+  onRecalibrateAnalytics: () => void;
+  // Elevate a task to the Project workspace form
   onPromoteToAsset?: (task: { title: string; description: string; projectId: string }) => void;
 }
 
@@ -50,7 +51,7 @@ export default function ExecutionBoard({
   isSupabaseConfigured,
   supabase,
   notify,
-  onRecalibrateTelemetry,
+  onRecalibrateAnalytics,
   onPromoteToAsset
 }: ExecutionBoardProps) {
   const [viewMode, setViewMode] = useState<'kanban' | 'scrum'>('kanban');
@@ -178,7 +179,7 @@ export default function ExecutionBoard({
         setHistoryLogs(logData);
       }
     } catch (err) {
-      console.warn("Failed to load tactical board telemetry, entering local fallback mode:", err);
+      console.warn("Failed to load tactical board analytics, entering local fallback mode:", err);
       const localTasks = localStorage.getItem('tactical_tasks');
       if (localTasks) setTasks(JSON.parse(localTasks));
       const localLogs = localStorage.getItem('task_history_logs');
@@ -214,34 +215,7 @@ export default function ExecutionBoard({
 
   // Compute countdown for each card dynamically
   const getCardCountdownText = (task: Task) => {
-    if (task.status === 'validation' || task.status === 'merged') {
-      return { text: 'DEPLOYED', color: 'text-emerald-500', pulse: 'bg-emerald-500' };
-    }
-
-    // Weight affects decay rate
-    const weightHours = task.weight || 5;
-    const now = new Date().getTime();
-    
-    // Simulate target time: Created Time + weightHours (translated to real elapsed scale for live display)
-    const createdTime = new Date(task.created_at || new Date()).getTime();
-    const totalDurationMs = weightHours * 60 * 60 * 1000;
-    const targetTime = createdTime + totalDurationMs;
-    const remainingMs = targetTime - now;
-
-    if (remainingMs <= 0) {
-      return { text: 'OVERDUE (DECAY)', color: 'text-rose-500 font-bold', pulse: 'bg-rose-500 animate-ping' };
-    }
-
-    const hours = Math.floor(remainingMs / (3600 * 1000));
-    const mins = Math.floor((remainingMs % (3600 * 1000)) / (60 * 1000));
-    const secs = Math.floor((remainingMs % (60 * 1000)) / 1000);
-
-    const countdownStr = `T-MINUS ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    
-    if (hours < 2) {
-      return { text: countdownStr, color: 'text-amber-500 font-mono font-medium', pulse: 'bg-amber-500 animate-pulse' };
-    }
-    return { text: countdownStr, color: 'text-cyan-400 font-mono', pulse: 'bg-cyan-500 animate-pulse' };
+    return calculateTaskCountdown(task.created_at, task.weight, task.status);
   };
 
   // Add Task handler (Admins & PMs only)
@@ -356,7 +330,7 @@ export default function ExecutionBoard({
     setNewTaskWeight(5);
     setNewTaskAssigned('');
     fetchTasksData();
-    onRecalibrateTelemetry();
+    onRecalibrateAnalytics();
   };
 
   // Move Task Lane (Drag and Drop / Click helper)
@@ -439,7 +413,7 @@ export default function ExecutionBoard({
     }
 
     fetchTasksData();
-    onRecalibrateTelemetry();
+    onRecalibrateAnalytics();
   };
 
   // Developer comments submit handler
@@ -529,7 +503,7 @@ export default function ExecutionBoard({
         <div>
           <h2 className="text-sm font-mono uppercase tracking-widest text-white flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping" />
-            Tactical Execution Pipeline
+            Tactical Task Board
           </h2>
           <p className="text-[10px] font-mono text-white/40 mt-1 uppercase tracking-wider">
             Real-time clock-synced dev team workflows
@@ -590,7 +564,7 @@ export default function ExecutionBoard({
         </div>
       )}
 
-      {/* Projects Overview Panel — all workspace assets synced here */}
+      {/* Projects Overview Panel — all workspace projects synced here */}
       <div className="mb-6 bg-black/30 border border-white/5 rounded-sm overflow-hidden">
         <button
           onClick={() => setProjectsPanelOpen(prev => !prev)}
@@ -599,7 +573,7 @@ export default function ExecutionBoard({
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
             <span className="text-[10px] font-mono uppercase tracking-widest text-white/60">
-              Project Assets Overview
+              Project Overview
             </span>
             <span className="text-[8px] font-mono text-white/30 bg-white/5 px-1.5 py-0.5 rounded-sm">
               {projects.length} synced
@@ -622,7 +596,7 @@ export default function ExecutionBoard({
           <div className="max-h-[180px] overflow-y-auto scrollbar-thin divide-y divide-white/[0.03]">
             {projects.length === 0 ? (
               <div className="px-4 py-5 text-center text-white/20 text-[9px] font-mono uppercase tracking-wider">
-                No project assets found. Create one in the Assets workspace.
+                No projects found. Create one in the Projects workspace.
               </div>
             ) : (
               projects.map(project => {
@@ -733,7 +707,7 @@ export default function ExecutionBoard({
                         {/* Project mapping tag */}
                         <div className="flex items-center gap-1.5 text-[8px] font-mono text-white/30 uppercase tracking-widest mb-3">
                           <span className="w-1.5 h-1.5 rounded-full bg-white/10" />
-                          Project: {associatedProject?.name || 'Asset Canvas'}
+                          Project: {associatedProject?.name || 'Project'}
                         </div>
 
                         {/* Dynamic ETA Countdown Banner */}
@@ -771,7 +745,7 @@ export default function ExecutionBoard({
                                     e.stopPropagation();
                                     onPromoteToAsset({ title: task.title, description: task.description || '', projectId: task.project_id });
                                   }}
-                                  title="Elevate task to Asset workspace"
+                                  title="Elevate task to Project workspace"
                                   className="w-4 h-4 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/20 hover:border-emerald-400/40 text-emerald-400 rounded-sm flex items-center justify-center transition-all cursor-pointer"
                                 >
                                   <ArrowUp className="w-2 h-2" />
