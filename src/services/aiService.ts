@@ -102,7 +102,7 @@ export async function estimateProject(description: string) {
 
   try {
     const response = await callGeminiWithRetry(() => ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-flash-lite",
       contents: `
         As an expert technical project manager, estimate the development effort for the following project:
         "${description}"
@@ -157,7 +157,7 @@ export async function generateSystemInsight(stats: any) {
 
   try {
     const response = await callGeminiWithRetry(() => ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-flash-lite",
       contents: `
         You are an elite, highly technical AI Project Manager overseeing an engineering system.
         Analyze the following real-time telemetry from the dashboard and provide a single, 1-2 sentence technical insight.

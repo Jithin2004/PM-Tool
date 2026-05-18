@@ -57,7 +57,7 @@ export async function estimateProjectHours(name: string, description: string): P
 
   try {
     const response = await callGeminiWithRetry(() => ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-flash-lite",
       contents: `Estimate the total developer hours for a project with the following details. Return ONLY the number.
       Name: ${name}
       Description: ${description}`,
