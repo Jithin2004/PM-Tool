@@ -147,3 +147,69 @@ ON change_logs FOR INSERT WITH CHECK (
   )
 );
 
+
+-- 11. Dedicated table for Tactical Tasks (Kanban / Scrum)
+CREATE TABLE IF NOT EXISTS tactical_tasks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'triage' CHECK (status IN (
+    'triage', 'in_flight', 'validation',
+    'sprint_backlog', 'in_progress', 'code_review', 'merged'
+  )),
+  assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  weight NUMERIC NOT NULL DEFAULT 1.0,
+  due_date TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. Dedicated table for Task History Logs (Immutable Audit Trail)
+CREATE TABLE IF NOT EXISTS task_history_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  task_id UUID NOT NULL REFERENCES tactical_tasks(id) ON DELETE CASCADE,
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  author_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  author_name TEXT NOT NULL,
+  author_role TEXT NOT NULL CHECK (author_role IN ('super_admin', 'pm', 'developer', 'viewer')),
+  field_name TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  telemetry_snapshot JSONB NOT NULL
+);
+
+-- 13. Enable RLS on new tables
+ALTER TABLE tactical_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_history_logs ENABLE ROW LEVEL SECURITY;
+
+-- 14. Security Policies for Tactical Tasks
+CREATE POLICY "Tactical tasks viewable by authenticated users"
+ON tactical_tasks FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Admins and PMs can modify tactical tasks"
+ON tactical_tasks FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE profiles.id = auth.uid()::uuid 
+    AND profiles.role IN ('super_admin', 'pm')
+  )
+);
+
+CREATE POLICY "Developers can update tactical tasks (for logging/comments)"
+ON tactical_tasks FOR UPDATE USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE profiles.id = auth.uid()::uuid 
+    AND profiles.role = 'developer'
+  )
+);
+
+-- 15. Security Policies for Task History Logs (Read/Insert only)
+CREATE POLICY "Task history logs viewable by authenticated users"
+ON task_history_logs FOR SELECT USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Authenticated users can insert task history logs"
+ON task_history_logs FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+

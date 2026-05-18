@@ -66,3 +66,37 @@ ALTER TABLE attendance DISABLE ROW LEVEL SECURITY;
 ALTER TABLE salaries DISABLE ROW LEVEL SECURITY;
 ALTER TABLE change_logs DISABLE ROW LEVEL SECURITY;
 
+
+-- Create tactical_tasks table
+CREATE TABLE IF NOT EXISTS tactical_tasks (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL,
+  assigned_to TEXT,
+  weight NUMERIC DEFAULT 1.0,
+  due_date TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create task_history_logs table
+CREATE TABLE IF NOT EXISTS task_history_logs (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  author_id TEXT,
+  author_name TEXT NOT NULL,
+  author_role TEXT NOT NULL,
+  field_name TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  telemetry_snapshot JSONB NOT NULL
+);
+
+-- Disable Row Level Security (RLS) for testing
+ALTER TABLE tactical_tasks DISABLE ROW LEVEL SECURITY;
+ALTER TABLE task_history_logs DISABLE ROW LEVEL SECURITY;
+
+

@@ -37,9 +37,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
 import { generateSystemInsight } from './services/aiService';
+import ExecutionBoard from './components/ExecutionBoard';
 
 // --- Types ---
-type UserRole = 'super_admin' | 'pm' | 'viewer';
+type UserRole = 'super_admin' | 'pm' | 'developer' | 'viewer';
 
 interface Profile {
   id: string;
@@ -223,6 +224,8 @@ function Header({
   showAdmin,
   onToggleLogistics,
   showLogistics,
+  onTogglePipeline,
+  showPipeline,
   onGoHome,
   workingTimeFrom,
   workingTimeTo,
@@ -240,6 +243,8 @@ function Header({
   showAdmin: boolean,
   onToggleLogistics: () => void,
   showLogistics: boolean,
+  onTogglePipeline: () => void,
+  showPipeline: boolean,
   onGoHome: () => void,
   workingTimeFrom: string,
   workingTimeTo: string,
@@ -315,19 +320,29 @@ function Header({
             </div>
           </div>
 
-          {/* Console nav buttons */}
-          {canAccessConsoles && (
-            <div className="flex items-center gap-3">
-              <button onClick={onToggleLogistics}
-                className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-                {showLogistics ? 'Exit Logistics' : 'Logistics Console'}
-              </button>
-              <button onClick={onToggleAdmin}
-                className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-                {showAdmin ? 'Exit Admin' : 'Admin Console'}
-              </button>
-            </div>
-          )}
+          {/* Unified navigation menu */}
+          <div className="flex items-center gap-2">
+            <button onClick={onGoHome}
+              className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${(!showAdmin && !showLogistics && !showPipeline) ? 'bg-white text-black border-white shadow-[0_0_8px_rgba(255,255,255,0.2)]' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
+              Assets
+            </button>
+            <button onClick={onTogglePipeline}
+              className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showPipeline ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
+              Execution Board
+            </button>
+            {canAccessConsoles && (
+              <>
+                <button onClick={onToggleLogistics}
+                  className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
+                  Logistics
+                </button>
+                <button onClick={onToggleAdmin}
+                  className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
+                  Admin
+                </button>
+              </>
+            )}
+          </div>
 
           {/* Role badge */}
           <div className="flex flex-col items-end">
@@ -449,22 +464,34 @@ function Header({
                 </div>
               )}
 
-              {/* Console buttons */}
-              {canAccessConsoles && (
-                <div className="space-y-2">
-                  <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1">Navigation</p>
-                  <button
-                    onClick={() => { onToggleLogistics(); setMobileMenuOpen(false); }}
-                    className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                    {showLogistics ? '← Exit Logistics Console' : 'Logistics Console'}
-                  </button>
-                  <button
-                    onClick={() => { onToggleAdmin(); setMobileMenuOpen(false); }}
-                    className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                    {showAdmin ? '← Exit Admin Console' : 'Admin Console'}
-                  </button>
-                </div>
-              )}
+              {/* Unified navigation menu for mobile */}
+              <div className="space-y-2">
+                <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1">Navigation</p>
+                <button
+                  onClick={() => { onGoHome(); setMobileMenuOpen(false); }}
+                  className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${(!showAdmin && !showLogistics && !showPipeline) ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
+                  Assets Board
+                </button>
+                <button
+                  onClick={() => { onTogglePipeline(); setMobileMenuOpen(false); }}
+                  className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showPipeline ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
+                  Execution Board
+                </button>
+                {canAccessConsoles && (
+                  <>
+                    <button
+                      onClick={() => { onToggleLogistics(); setMobileMenuOpen(false); }}
+                      className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
+                      Logistics Console
+                    </button>
+                    <button
+                      onClick={() => { onToggleAdmin(); setMobileMenuOpen(false); }}
+                      className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
+                      Admin Console
+                    </button>
+                  </>
+                )}
+              </div>
 
               {/* Settings */}
               {user && (
@@ -3353,6 +3380,7 @@ export default function App() {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdminView, setIsAdminView] = useState(() => window.location.pathname === '/admin');
   const [isLogisticsView, setIsLogisticsView] = useState(() => window.location.pathname === '/logistics');
+  const [isPipelineView, setIsPipelineView] = useState(() => window.location.pathname === '/pipeline');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -3360,6 +3388,10 @@ export default function App() {
   const [isRosterOpen, setIsRosterOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'active' | 'completed'>('active');
+  const [showFeedbackGate, setShowFeedbackGate] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
+  const [feedbackTags, setFeedbackTags] = useState<string[]>([]);
+  const [feedbackComment, setFeedbackComment] = useState('');
 
   const tourSteps = useMemo(() => {
     const role = profile?.role || 'viewer';
@@ -3415,11 +3447,39 @@ export default function App() {
           }
         },
         {
+          title: "Pipeline Execution Board",
+          description: "Explore the brand new premium, tactical Execution Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
+          actionBefore: () => {
+            setIsPipelineView(true);
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Visual Lenses & Task Lanes",
+          description: "Switch between 'Kanban' (Triage, In Flight, Validation) and 'Scrum' (Sprint Backlog, In Progress, Code Review, Merged) lenses instantly.",
+          actionBefore: () => {
+            setIsPipelineView(true);
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Developer Activity Logs",
+          description: "Click on any task card to reveal the slide-out developer activity log drawer and inspect live historical records.",
+          actionBefore: () => {
+            setIsPipelineView(true);
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
           title: "Calibrated & Ready!",
           description: "Use the Sun/Moon button next to the Help Tour button to switch themes. Your console is fully synced to Supabase. Enjoy allocation!",
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         }
       ];
@@ -3431,6 +3491,7 @@ export default function App() {
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         },
         {
@@ -3439,6 +3500,7 @@ export default function App() {
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         },
         {
@@ -3447,6 +3509,7 @@ export default function App() {
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         },
         {
@@ -3455,6 +3518,7 @@ export default function App() {
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         },
         {
@@ -3463,6 +3527,34 @@ export default function App() {
           actionBefore: () => {
             setIsLogisticsView(true);
             setIsAdminView(false);
+            setIsPipelineView(false);
+          }
+        },
+        {
+          title: "Pipeline Execution Board",
+          description: "Track project task progression, visualize Kanban/Scrum lanes, and inspect live clock-synced ETAs.",
+          actionBefore: () => {
+            setIsPipelineView(true);
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Visual Lenses & Task Lanes",
+          description: "Switch visual layouts between Kanban and Scrum on the fly to match your team's tactical coordination model.",
+          actionBefore: () => {
+            setIsPipelineView(true);
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Developer Activity Logs",
+          description: "Open cards to monitor detailed, immutable logs showing developer status transitions and audits.",
+          actionBefore: () => {
+            setIsPipelineView(true);
+            setIsAdminView(false);
+            setIsLogisticsView(false);
           }
         },
         {
@@ -3471,6 +3563,7 @@ export default function App() {
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         }
       ];
@@ -3483,6 +3576,7 @@ export default function App() {
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         },
         {
@@ -3491,6 +3585,7 @@ export default function App() {
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         },
         {
@@ -3499,12 +3594,41 @@ export default function App() {
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         },
         {
           title: "Project Grid & Search",
           description: "Use the top Search bar to find projects. Toggle 'Active' or 'Completed' tabs to view archives. Click 'Details' on cards to view PERT estimates and past audit logs.",
           actionBefore: () => {
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+            setIsPipelineView(false);
+          }
+        },
+        {
+          title: "Pipeline Execution Board",
+          description: "View real-time task progression lanes and live clock-synced ETAs in premium Read-Only mode.",
+          actionBefore: () => {
+            setIsPipelineView(true);
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Visual Lenses & Task Lanes",
+          description: "Switch visual layouts between Kanban and Scrum lanes to inspect matching task distributions.",
+          actionBefore: () => {
+            setIsPipelineView(true);
+            setIsAdminView(false);
+            setIsLogisticsView(false);
+          }
+        },
+        {
+          title: "Developer Activity Logs",
+          description: "Click on task cards to read historical compliance logs showing past status transitions.",
+          actionBefore: () => {
+            setIsPipelineView(true);
             setIsAdminView(false);
             setIsLogisticsView(false);
           }
@@ -3515,6 +3639,7 @@ export default function App() {
           actionBefore: () => {
             setIsAdminView(false);
             setIsLogisticsView(false);
+            setIsPipelineView(false);
           }
         }
       ];
@@ -3528,6 +3653,7 @@ export default function App() {
       setShowGuide(true);
       setIsAdminView(false);
       setIsLogisticsView(false);
+      setIsPipelineView(false);
     };
   }, [tourSteps]);
 
@@ -3539,11 +3665,12 @@ export default function App() {
     let targetPath = '/';
     if (isAdminView) targetPath = '/admin';
     else if (isLogisticsView) targetPath = '/logistics';
+    else if (isPipelineView) targetPath = '/pipeline';
 
     if (window.location.pathname !== targetPath) {
       window.history.pushState({}, '', targetPath);
     }
-  }, [isAdminView, isLogisticsView]);
+  }, [isAdminView, isLogisticsView, isPipelineView]);
 
   // Browser Back/Forward Sync Effect
   useEffect(() => {
@@ -3551,6 +3678,7 @@ export default function App() {
       const path = window.location.pathname;
       setIsAdminView(path === '/admin');
       setIsLogisticsView(path === '/logistics');
+      setIsPipelineView(path === '/pipeline');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -4615,16 +4743,25 @@ export default function App() {
         onToggleAdmin={() => {
           setIsAdminView(!isAdminView);
           setIsLogisticsView(false);
+          setIsPipelineView(false);
         }}
         showAdmin={isAdminView}
         onToggleLogistics={() => {
           setIsLogisticsView(!isLogisticsView);
           setIsAdminView(false);
+          setIsPipelineView(false);
         }}
         showLogistics={isLogisticsView}
+        onTogglePipeline={() => {
+          setIsPipelineView(!isPipelineView);
+          setIsAdminView(false);
+          setIsLogisticsView(false);
+        }}
+        showPipeline={isPipelineView}
         onGoHome={() => {
           setIsAdminView(false);
           setIsLogisticsView(false);
+          setIsPipelineView(false);
         }}
         workingTimeFrom={workingTimeFrom}
         workingTimeTo={workingTimeTo}
@@ -4652,7 +4789,22 @@ export default function App() {
         onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
       />
 
-      {isLogisticsView && (profile?.role === 'super_admin' || profile?.role === 'pm') ? (
+      {isPipelineView ? (
+        <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12">
+          <ExecutionBoard
+            projects={projects}
+            users={profiles}
+            currentUserProfile={profile}
+            isSupabaseConfigured={isSupabaseConfigured}
+            supabase={supabase}
+            notify={notify}
+            onRecalibrateTelemetry={() => {
+              // Recalibrate system state and fetch latest lists
+              setProjects([...projects]);
+            }}
+          />
+        </main>
+      ) : isLogisticsView && (profile?.role === 'super_admin' || profile?.role === 'pm') ? (
         <LogisticsDashboard
           profiles={profiles}
           teams={teams}
@@ -5065,6 +5217,131 @@ export default function App() {
         </div>
       </footer>
 
+      {/* Onboarding Satisfaction Survey - Mandatory Feedback Gate */}
+      <AnimatePresence>
+        {showFeedbackGate && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black/85 backdrop-blur-sm z-[10000] p-4 pointer-events-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              className="w-full max-w-md bg-[#0a0a0a] border border-purple-500/40 rounded-lg p-6 shadow-[0_0_50px_rgba(147,51,234,0.3)] relative overflow-hidden font-sans text-white"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-500" />
+              
+              <h3 className="text-lg font-bold tracking-tight mb-2 text-white flex items-center gap-2">
+                <BrainCircuit className="w-5 h-5 text-purple-400" />
+                Onboarding Satisfaction Survey
+              </h3>
+              <p className="text-xs text-white/70 mb-5 leading-relaxed font-mono uppercase tracking-wider text-[10px]">
+                Tactical briefing complete. Please rate your experience to calibrate system telemetry.
+              </p>
+
+              {/* Rating selector (1-5) */}
+              <div className="mb-6">
+                <label className="block text-[10px] font-mono uppercase text-white/50 tracking-widest mb-2.5">
+                  Satisfaction Score *
+                </label>
+                <div className="flex justify-between items-center gap-3">
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setFeedbackRating(num)}
+                      className={`flex-1 py-3 border text-sm font-mono transition-all rounded-sm hover:scale-105 cursor-pointer ${
+                        feedbackRating === num
+                          ? 'bg-purple-600 border-purple-400 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]'
+                          : 'border-white/10 bg-white/5 text-white/60 hover:border-purple-500/50 hover:text-white'
+                      }`}
+                    >
+                      {num} ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Multi-select check tags */}
+              <div className="mb-6">
+                <label className="block text-[10px] font-mono uppercase text-white/50 tracking-widest mb-2.5">
+                  Key Strengths (Multi-Select)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    'Clear Navigation',
+                    'High-Fidelity UI',
+                    'Real-time Calibrations',
+                    'AI Insights Telemetry'
+                  ].map((tag) => {
+                    const selected = feedbackTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          if (selected) {
+                            setFeedbackTags(feedbackTags.filter(t => t !== tag));
+                          } else {
+                            setFeedbackTags([...feedbackTags, tag]);
+                          }
+                        }}
+                        className={`text-left px-3 py-2 border text-[10px] font-mono transition-all rounded-sm cursor-pointer ${
+                          selected
+                            ? 'bg-indigo-600/30 border-indigo-500 text-indigo-200'
+                            : 'border-white/5 bg-white/5 text-white/50 hover:border-white/10 hover:text-white'
+                        }`}
+                      >
+                        {selected ? '✦ ' : '◇ '} {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Comments box */}
+              <div className="mb-6">
+                <label className="block text-[10px] font-mono uppercase text-white/50 tracking-widest mb-2">
+                  Additional Calibration Notes
+                </label>
+                <textarea
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  placeholder="Enter optional suggestions or feedback..."
+                  rows={3}
+                  className="w-full bg-white/5 border border-white/10 rounded-sm p-3 font-mono text-xs text-white placeholder-white/30 focus:border-purple-500/50 outline-none resize-none transition-colors"
+                />
+              </div>
+
+              {/* Action button */}
+              <button
+                type="button"
+                disabled={feedbackRating === null}
+                onClick={() => {
+                  localStorage.setItem('resolve-pm-onboarded', 'true');
+                  localStorage.setItem(
+                    'resolve-pm-feedback',
+                    JSON.stringify({
+                      rating: feedbackRating,
+                      tags: feedbackTags,
+                      comment: feedbackComment,
+                      timestamp: new Date().toISOString()
+                    })
+                  );
+                  setShowFeedbackGate(false);
+                  notify("Feedback registered. Welcome to the tactical grid.", "success");
+                }}
+                className={`w-full py-2.5 font-mono text-xs uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-2 cursor-pointer ${
+                  feedbackRating !== null
+                    ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.4)] hover:scale-[1.01]'
+                    : 'bg-white/5 border border-white/5 text-white/30 cursor-not-allowed'
+                }`}
+              >
+                ✦ Complete & Calibrate ✦
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Onboarding Tour Overlay - Floating Panel in Bottom-Right Corner */}
       <AnimatePresence>
         {showGuide && (
@@ -5091,8 +5368,8 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => {
-                    localStorage.setItem('resolve-pm-onboarded', 'true');
                     setShowGuide(false);
+                    setShowFeedbackGate(true);
                   }}
                   className="text-white/40 hover:text-white transition-colors cursor-pointer text-[10px] font-mono uppercase tracking-wider bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded"
                 >
@@ -5127,9 +5404,8 @@ export default function App() {
                       setGuideStep(nextStep);
                       tourSteps[nextStep]?.actionBefore?.();
                     } else {
-                      localStorage.setItem('resolve-pm-onboarded', 'true');
                       setShowGuide(false);
-                      notify("Briefing complete. Systems calibrated.", "success");
+                      setShowFeedbackGate(true);
                     }
                   }}
                   className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono uppercase tracking-wider transition-all rounded-sm flex items-center gap-1 shadow-[0_0_12px_rgba(59,130,246,0.3)] cursor-pointer"
