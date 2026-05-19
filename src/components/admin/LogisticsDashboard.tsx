@@ -13,10 +13,12 @@ export function LogisticsDashboard({
   profiles: Profile[],
   teams: Team[],
   systemData: any,
-  onSaveData: (updatedData: any) => Promise<void>
+  onSaveData: (updatedData: any) => Promise<void>,
+  role?: string
 }) {
   // systemData is passed from canonical DashboardContext (attendance merged from dedicated table)
   const [activeTab, setActiveTab] = useState<'attendance' | 'paySlab' | 'payroll'>('attendance');
+  const isSuperAdmin = role === 'super_admin';
 
   // Attendance states
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
@@ -377,12 +379,14 @@ export function LogisticsDashboard({
           >
             Attendance
           </button>
-          <button
-            onClick={() => setActiveTab('paySlab')}
-            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'paySlab' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
-          >
-            Rules & Slabs
-          </button>
+          {isSuperAdmin && (
+            <button
+              onClick={() => setActiveTab('paySlab')}
+              className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'paySlab' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+            >
+              Rules &amp; Slabs
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('payroll')}
             className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'payroll' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}

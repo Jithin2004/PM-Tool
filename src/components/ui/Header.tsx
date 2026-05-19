@@ -49,7 +49,8 @@ export function Header({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const canAccessConsoles = profile?.role === 'super_admin' || profile?.role === 'pm';
+  const canAccessLogistics = profile?.role === 'super_admin' || profile?.role === 'pm';
+  const canAccessAdmin = profile?.role === 'super_admin';
   const unreadCount = notifications.filter(n => !n.read_at).length;
 
   return (
@@ -125,17 +126,17 @@ export function Header({
               className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showPipeline ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
               Task Board
             </button>
-            {canAccessConsoles && (
-              <>
-                <button onClick={onToggleLogistics}
-                  className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-                  Logistics
-                </button>
-                <button onClick={onToggleAdmin}
-                  className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-                  Admin
-                </button>
-              </>
+            {canAccessLogistics && (
+              <button onClick={onToggleLogistics}
+                className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
+                Logistics
+              </button>
+            )}
+            {canAccessAdmin && (
+              <button onClick={onToggleAdmin}
+                className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
+                Admin
+              </button>
             )}
           </div>
 
@@ -353,19 +354,19 @@ export function Header({
                   className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showPipeline ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
                   Task Board
                 </button>
-                {canAccessConsoles && (
-                  <>
-                    <button
-                      onClick={() => { onToggleLogistics(); setMobileMenuOpen(false); }}
-                      className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                      Logistics Console
-                    </button>
-                    <button
-                      onClick={() => { onToggleAdmin(); setMobileMenuOpen(false); }}
-                      className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                      Admin Console
-                    </button>
-                  </>
+                {canAccessLogistics && (
+                  <button
+                    onClick={() => { onToggleLogistics(); setMobileMenuOpen(false); }}
+                    className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
+                    Logistics Console
+                  </button>
+                )}
+                {canAccessAdmin && (
+                  <button
+                    onClick={() => { onToggleAdmin(); setMobileMenuOpen(false); }}
+                    className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
+                    Admin Console
+                  </button>
                 )}
               </div>
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { useAuth } from '../context/AuthContext';
 import { AuthPage } from '../pages/auth/AuthPage';
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { AdminPanel } from '../pages/dashboard/AdminPanel';
@@ -34,6 +35,7 @@ function usePathname() {
 export function ResolveRouter() {
   const pathname = usePathname();
   const { user, workspace, loading } = useWorkspace();
+  const { profile } = useAuth();
 
   if (loading) {
     return (
@@ -63,6 +65,14 @@ export function ResolveRouter() {
   }
 
   if (pathname === '/admin') {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/');
+      return (
+        <DashboardLayout>
+          <ProjectWorkspace />
+        </DashboardLayout>
+      );
+    }
     return (
       <DashboardLayout>
         <AdminPanel />
@@ -71,6 +81,14 @@ export function ResolveRouter() {
   }
 
   if (pathname === '/logistics') {
+    if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
+      window.history.replaceState(null, '', '/');
+      return (
+        <DashboardLayout>
+          <ProjectWorkspace />
+        </DashboardLayout>
+      );
+    }
     return (
       <DashboardLayout>
         <LogisticsPanel />

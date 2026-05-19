@@ -26,6 +26,7 @@ export function LogisticsPanel() {
       teams={teams}
       systemData={systemData}
       onSaveData={handleSaveLogisticsData}
+      role={profile?.role}
     />
   );
 }
