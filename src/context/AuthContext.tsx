@@ -47,30 +47,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!data) {
-        // 2. First-User Assignment & Brand New User Onboarding Flow
         if (import.meta.env.DEV) {
-          console.log("New user detected in AuthContext. Determining first-user role assignment...");
+          console.log("New user detected in AuthContext. Auto-creating users row with pending-workspace-setup...");
         }
-        const { count: usersCount, error: countError } = await supabase
+        
+        const { data: newUserRow, error: insertError } = await supabase
           .from('users')
-          .select('*', { count: 'exact', head: true });
+          .insert({
+            id: authUser.id,
+            email: email,
+            workspace_id: null,
+            role: 'pending-workspace-setup',
+            full_name: fullName,
+            avatar_url: googleAvatar,
+            availability_factor: 1
+          })
+          .select()
+          .single();
 
-        if (countError) {
-          console.error("Error fetching users count:", countError);
+        if (insertError) {
+          console.error("Failed to insert pending user row in AuthContext:", insertError);
+        } else {
+          data = newUserRow;
         }
-
-        const newRole = usersCount === 0 ? 'super_admin' : 'viewer';
-
-        data = {
-          id: authUser.id,
-          workspace_id: 'pending-workspace-setup',
-          email: authUser.email,
-          full_name: fullName,
-          avatar_url: googleAvatar,
-          role: newRole,
-          availability_factor: 1,
-          created_at: new Date().toISOString()
-        };
       } else {
         // We found canonical user in users table. Update avatar if missing.
         if (!data.avatar_url && googleAvatar) {
@@ -89,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profileWithDesignation = {
           ...data,
           auth_user_id: data.id,
-          designation: data.role === 'super_admin' ? 'Super Admin' : data.role === 'pm' ? 'Project Manager' : 'Developer'
+          designation: data.role === 'super_admin' ? 'Super Admin' : data.role === 'pm' ? 'Project Manager' : data.role === 'pending-workspace-setup' ? 'Pending Setup' : 'Developer'
         };
         setProfile(profileWithDesignation as User);
       } else {

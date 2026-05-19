@@ -41,12 +41,12 @@ create table if not exists workspaces (
 
 create table if not exists users (
   id uuid primary key references auth.users(id) on delete cascade,
-  workspace_id uuid not null references workspaces(id) on delete cascade,
+  workspace_id uuid references workspaces(id) on delete cascade,
   email text not null,
   full_name text,
   phone text,
   avatar_url text,
-  role text not null default 'viewer' check (role in ('super_admin', 'pm', 'developer', 'viewer')),
+  role text not null default 'viewer' check (role in ('super_admin', 'pm', 'developer', 'viewer', 'pending-workspace-setup')),
   availability_factor numeric not null default 1,
   created_at timestamptz not null default now(),
   unique(workspace_id, email)
@@ -260,6 +260,19 @@ with check (
       and me.role in ('super_admin', 'pm')
   )
 );
+
+create policy "Users can insert their own pending user row"
+on users for insert
+with check (
+  id = auth.uid()
+  and role = 'pending-workspace-setup'
+  and workspace_id is null
+);
+
+create policy "Users can update their own user row"
+on users for update
+using (id = auth.uid())
+with check (id = auth.uid());
 
 create policy "Teams are isolated by workspace"
 on teams for all
