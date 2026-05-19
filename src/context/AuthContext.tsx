@@ -230,12 +230,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Session expired. Redirecting...", type: "error" } }));
         setTimeout(() => { window.location.href = '/'; }, 1000);
         return;
-      } else if (event !== 'INITIAL_SESSION') {
-        // Only react to subsequent events to avoid race conditions with initAuth
-        setUser(session?.user || null);
+      } else {
+        // Handle all other events, including INITIAL_SESSION
+        // If we already have the profile, we can skip syncProfile to save a query
         if (session?.user) {
-          await syncProfile(session.user);
+          if (user?.id !== session.user.id) {
+            setUser(session.user);
+            await syncProfile(session.user);
+          }
         } else {
+          setUser(null);
           setProfile(null);
         }
       }

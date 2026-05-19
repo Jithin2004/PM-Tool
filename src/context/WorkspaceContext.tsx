@@ -138,7 +138,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       if (active) {
         setLoading(false);
       }
-    }, 2500);
+    }, 8000);
 
     return () => {
       active = false;
