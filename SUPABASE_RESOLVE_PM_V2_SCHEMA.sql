@@ -261,6 +261,7 @@ with check (
   )
 );
 
+drop policy if exists "Users can insert their own pending user row" on users;
 create policy "Users can insert their own pending user row"
 on users for insert
 with check (
@@ -269,6 +270,7 @@ with check (
   and workspace_id is null
 );
 
+drop policy if exists "Users can update their own user row" on users;
 create policy "Users can update their own user row"
 on users for update
 using (id = auth.uid())
@@ -352,6 +354,7 @@ create table if not exists workspace_holidays (
 
 -- Enable RLS for workspace_holidays
 alter table workspace_holidays enable row level security;
+drop policy if exists "Workspace holidays are isolated by workspace" on workspace_holidays;
 create policy "Workspace holidays are isolated by workspace"
 on workspace_holidays for all
 using (workspace_id = current_workspace())
@@ -370,6 +373,7 @@ create table if not exists team_events (
 
 -- Enable RLS for team_events
 alter table team_events enable row level security;
+drop policy if exists "Team events are isolated by team" on team_events;
 create policy "Team events are isolated by team"
 on team_events for all
 using (team_id in (select id from teams where workspace_id = current_workspace()))
@@ -388,6 +392,7 @@ create table if not exists personal_leave (
 
 -- Enable RLS for personal_leave
 alter table personal_leave enable row level security;
+drop policy if exists "Personal leaves are isolated by user workspace" on personal_leave;
 create policy "Personal leaves are isolated by user workspace"
 on personal_leave for all
 using (user_id in (select id from users where workspace_id = current_workspace()))
