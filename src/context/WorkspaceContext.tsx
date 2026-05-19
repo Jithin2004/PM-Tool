@@ -25,6 +25,7 @@ export interface CreateWorkspaceInput {
 const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+  console.log("WorkspaceProvider: Rendering. Configured:", isSupabaseConfigured);
   const [user, setUser] = useState<User | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);

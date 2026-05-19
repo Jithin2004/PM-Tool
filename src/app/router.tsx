@@ -34,6 +34,8 @@ function usePathname() {
 export function ResolveRouter() {
   const pathname = usePathname();
   const { user, workspace, loading } = useWorkspace();
+  
+  console.log("ResolveRouter: Rendering", { pathname, hasUser: !!user, hasWorkspace: !!workspace, loading });
 
   if (loading) {
     return (
