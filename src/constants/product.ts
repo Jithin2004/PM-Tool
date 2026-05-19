@@ -3,18 +3,18 @@ export const PRODUCT_NAME = 'Resolve PM';
 export const PRODUCT_PROMISE = 'Deadlines based on how humans actually work';
 
 export const TERMINOLOGY = {
-  asset: 'Project',
-  assets: 'Projects',
+  project: 'Project',
+  projects: 'Projects',
   addAsset: 'Create Project',
   executionPipeline: 'Task Board',
   operationalSquadRoster: 'Teams',
   predictiveDecay: 'Delivery Risk',
   assetAnalysisConsole: 'Project Overview',
-  telemetry: 'Analytics',
-  decommission: 'Archive',
+  analytics: 'Analytics',
+  archive: 'Archive',
   systemInitialization: 'Workspace Setup',
-  squad: 'Team',
-  squads: 'Teams'
+  team: 'Team',
+  teams: 'Teams'
 } as const;
 
 export const PROJECT_TEMPLATES = [

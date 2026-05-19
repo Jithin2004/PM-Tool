@@ -23,7 +23,7 @@ export function ProjectCreatePage() {
     workWindow: {
       workStart: '09:00',
       workEnd: '17:00',
-      lunchDurationMinutes: 60,
+      lunchDuration: 60,
       workingDays: [1, 2, 3, 4, 5],
       productivityFactor: 0.8
     }

@@ -60,7 +60,7 @@ export function getLocalTelemetryInsight(stats: any): string {
 
   if (overloaded.length > 0) {
     const squadNames = overloaded.map((s: any) => s.name).join(", ");
-    responses.push(`Critical load variance detected. Squads [${squadNames}] exhibit severe overload telemetry. Recommend rapid squad reallocation to counter predictive decay.`);
+    responses.push(`Critical load variance detected. Teams [${squadNames}] exhibit severe overload analytics. Recommend rapid team reallocation to counter Delivery Risk.`);
   }
 
   if (confidence < 75) {
@@ -70,7 +70,7 @@ export function getLocalTelemetryInsight(stats: any): string {
   }
 
   if (bandwidth > 85) {
-    responses.push(`Team bandwidth utilization is peaking at a sub-critical ${bandwidth}%. Squad fatigue thresholds are at high-risk limits; variance correction is advised.`);
+    responses.push(`Team bandwidth utilization is peaking at a sub-critical ${bandwidth}%. Team fatigue thresholds are at high-risk limits; variance correction is advised.`);
   } else if (bandwidth < 50) {
     responses.push(`Under-utilization pattern observed: team bandwidth is currently ${bandwidth}%. Optimization of workflow intake is suggested.`);
   }
@@ -80,7 +80,7 @@ export function getLocalTelemetryInsight(stats: any): string {
   }
 
   if (responses.length === 0) {
-    responses.push(`Telemetry nominal. Overall bandwidth utilization is ${bandwidth}% with zero squad overload. Delivery confidence is solid at ${confidence}%.`);
+    responses.push(`Analytics nominal. Overall bandwidth utilization is ${bandwidth}% with zero team overload. Delivery confidence is solid at ${confidence}%.`);
   }
 
   return responses[0];
@@ -151,7 +151,7 @@ export async function estimateProject(description: string) {
 
 export async function generateSystemInsight(stats: any) {
   if (!ai || !apiKey) {
-    console.warn("GEMINI_API_KEY not configured. Running high-fidelity local telemetry analysis.");
+    console.warn("GEMINI_API_KEY not configured. Running high-fidelity local analytics analysis.");
     return getLocalTelemetryInsight(stats);
   }
 
@@ -160,22 +160,22 @@ export async function generateSystemInsight(stats: any) {
       model: "gemini-3.1-flash-lite",
       contents: `
         You are an elite, highly technical AI Project Manager overseeing an engineering system.
-        Analyze the following real-time telemetry from the dashboard and provide a single, 1-2 sentence technical insight.
-        Maintain a high-fidelity, predictive, and slightly cybernetic tone (e.g., use terms like "nominal", "variance", "telemetry", "predictive decay").
+        Analyze the following real-time analytics from the dashboard and provide a single, 1-2 sentence technical insight.
+        Maintain a high-fidelity, predictive, and slightly cybernetic tone (e.g., use terms like "nominal", "variance", "analytics", "Delivery Risk").
         Do NOT use markdown. Do NOT use pleasantries. Just return the raw string insight.
         
-        Telemetry:
+        Analytics:
         - Active Workflows: ${stats.totalProjects}
         - Delivery Confidence: ${stats.deliveryConfidence}%
         - Team Allocation (Bandwidth): ${stats.teamBandwidth}%
-        - Predictive Decay (Variance/Fatigue): ${stats.dailyFatigue} hours
-        - Overloaded Squads: ${stats.overloadedSquads?.length > 0 ? stats.overloadedSquads.map((s:any) => s.name).join(", ") : "None"}
+        - Delivery Risk (Variance/Fatigue): ${stats.dailyFatigue} hours
+        - Overloaded Teams: ${stats.overloadedSquads?.length > 0 ? stats.overloadedSquads.map((s:any) => s.name).join(", ") : "None"}
       `
     }));
 
     return response.text?.trim() || getLocalTelemetryInsight(stats);
   } catch (error) {
-    console.warn("AI Insight generation rate-limited or failed, using high-fidelity local telemetry analysis.");
+    console.warn("AI Insight generation rate-limited or failed, using high-fidelity local analytics analysis.");
     return getLocalTelemetryInsight(stats);
   }
 }

@@ -4,10 +4,9 @@ export type BusinessType = typeof BUSINESS_TYPES[number];
 
 export interface WorkspaceSettings {
   businessType: BusinessType;
-  teamSize: number;
   workStart: string;
   workEnd: string;
-  lunchDurationMinutes: number;
+  lunchDuration: number;
   workingDays: number[];
   timezone: string;
   attendanceEnabled: boolean;

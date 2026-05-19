@@ -1,7 +1,7 @@
 export interface WorkWindow {
   workStart: string;
   workEnd: string;
-  lunchDurationMinutes: number;
+  lunchDuration: number;
   workingDays: number[];
   productivityFactor: number;
 }
@@ -22,7 +22,7 @@ export function calculateHoursFromTimeRange(from: string, to: string): number {
 
 export function calculateDailyProductiveHours(window: WorkWindow): number {
   const grossHours = calculateHoursFromTimeRange(window.workStart, window.workEnd);
-  const lunchHours = Math.max(0, window.lunchDurationMinutes) / 60;
+  const lunchHours = Math.max(0, window.lunchDuration) / 60;
   const netHours = Math.max(0.1, grossHours - lunchHours);
   return Number((netHours * window.productivityFactor).toFixed(2));
 }

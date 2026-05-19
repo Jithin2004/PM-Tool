@@ -1,15 +1,26 @@
 import React, { useMemo, useState } from 'react';
+import { Check, Plus, X } from 'lucide-react';
 import { BUSINESS_TYPES } from '../../constants/product';
+import { useWorkspace } from '../../context/WorkspaceContext';
 import { predictEta } from '../../services/etaService';
 import type { BusinessType, WorkspaceSettings } from '../../types/workspace';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
 
+const WORKDAYS = [
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 0, label: 'Sun' }
+];
+
 const DEFAULT_SETTINGS: WorkspaceSettings = {
   businessType: 'Software',
-  teamSize: 6,
   workStart: '09:00',
   workEnd: '17:00',
-  lunchDurationMinutes: 60,
+  lunchDuration: 60,
   workingDays: [1, 2, 3, 4, 5],
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   attendanceEnabled: true,
@@ -17,14 +28,67 @@ const DEFAULT_SETTINGS: WorkspaceSettings = {
   productivityFactor: 0.8
 };
 
+function navigate(path: string) {
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
 export function WorkspaceSetupPage() {
+  const { user, workspace, createWorkspace, updateWorkspaceSettings, error } = useWorkspace();
   const [step, setStep] = useState(1);
-  const [settings, setSettings] = useState<WorkspaceSettings>(DEFAULT_SETTINGS);
+  const [workspaceName, setWorkspaceName] = useState(workspace?.name || `${user?.email?.split('@')[0] || 'My'} Workspace`);
+  const [settings, setSettings] = useState<WorkspaceSettings>(workspace?.settings || DEFAULT_SETTINGS);
+  const [saving, setSaving] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invites, setInvites] = useState<string[]>([]);
+
   const preview = useMemo(() => predictEta({
     likely: 40,
     workWindow: settings,
     startDate: new Date()
   }), [settings]);
+
+  const saveWorkspace = async () => {
+    setSaving(true);
+    setLocalError(null);
+
+    try {
+      if (workspace) {
+        await updateWorkspaceSettings(settings);
+      } else {
+        await createWorkspace({
+          name: workspaceName.trim() || 'Resolve Workspace',
+          settings
+        });
+      }
+      setStep(4);
+    } catch (err: any) {
+      setLocalError(err?.message || 'Workspace setup failed.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addInvite = () => {
+    const email = inviteEmail.trim();
+    if (!email || invites.includes(email)) return;
+    setInvites(prev => [...prev, email]);
+    setInviteEmail('');
+  };
+
+  const toggleWorkday = (day: number) => {
+    setSettings(prev => {
+      const nextDays = prev.workingDays.includes(day)
+        ? prev.workingDays.filter(value => value !== day)
+        : [...prev.workingDays, day].sort((a, b) => a - b);
+
+      return {
+        ...prev,
+        workingDays: nextDays.length > 0 ? nextDays : prev.workingDays
+      };
+    });
+  };
 
   return (
     <ResolveLayout eyebrow="Workspace Setup">
@@ -32,42 +96,48 @@ export function WorkspaceSetupPage() {
         <section className="border border-white/10 bg-white/[0.03] p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Step {step} of 4</p>
-              <h2 className="mt-2 text-2xl font-semibold">Set up how your team works</h2>
+              <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Step {step} of 5</p>
+              <h2 className="mt-2 text-2xl font-semibold">
+                {step <= 3 ? 'Set up your workspace' : step === 4 ? 'Invite your team' : 'Create your first project'}
+              </h2>
             </div>
           </div>
 
+          {(localError || error) && (
+            <div className="mb-5 border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+              {localError || error}
+            </div>
+          )}
+
           {step === 1 && (
-            <div>
-              <label className="mb-3 block text-sm font-medium">Business Type</label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {BUSINESS_TYPES.map(type => (
-                  <button
-                    key={type}
-                    onClick={() => setSettings(prev => ({ ...prev, businessType: type as BusinessType }))}
-                    className={`border px-4 py-3 text-left text-sm ${settings.businessType === type ? 'border-white bg-white text-black' : 'border-white/10 bg-white/5 text-white/80'}`}
-                  >
-                    {type}
-                  </button>
-                ))}
+            <div className="space-y-6">
+              <label className="block text-sm font-medium">
+                Workspace Name
+                <input
+                  value={workspaceName}
+                  onChange={event => setWorkspaceName(event.target.value)}
+                  className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none focus:border-white/40"
+                />
+              </label>
+
+              <div>
+                <label className="mb-3 block text-sm font-medium">Business Type</label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {BUSINESS_TYPES.map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setSettings(prev => ({ ...prev, businessType: type as BusinessType }))}
+                      className={`border px-4 py-3 text-left text-sm transition-colors ${settings.businessType === type ? 'border-white bg-white text-black' : 'border-white/10 bg-white/5 text-white/80 hover:border-white/25'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
           {step === 2 && (
-            <div>
-              <label className="mb-3 block text-sm font-medium">Team Size</label>
-              <input
-                type="number"
-                min={1}
-                value={settings.teamSize}
-                onChange={event => setSettings(prev => ({ ...prev, teamSize: Number(event.target.value) || 1 }))}
-                className="h-12 w-full border border-white/10 bg-black px-4 text-white outline-none focus:border-white/40"
-              />
-            </div>
-          )}
-
-          {step === 3 && (
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium">
                 Work Start
@@ -79,46 +149,141 @@ export function WorkspaceSetupPage() {
               </label>
               <label className="text-sm font-medium">
                 Lunch Duration
-                <input type="number" min={0} value={settings.lunchDurationMinutes} onChange={event => setSettings(prev => ({ ...prev, lunchDurationMinutes: Number(event.target.value) || 0 }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
+                <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
               </label>
               <label className="text-sm font-medium">
                 Timezone
                 <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
               </label>
+              <div className="sm:col-span-2">
+                <label className="mb-3 block text-sm font-medium">Workdays</label>
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+                  {WORKDAYS.map(day => {
+                    const active = settings.workingDays.includes(day.value);
+                    return (
+                      <button
+                        key={day.value}
+                        onClick={() => toggleWorkday(day.value)}
+                        className={`h-10 border text-sm ${active ? 'border-white bg-white text-black' : 'border-white/10 bg-white/5 text-white/70'}`}
+                      >
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <div className="space-y-4">
+              <label className="block text-sm font-medium">
+                Productivity Factor
+                <input
+                  type="number"
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={settings.productivityFactor}
+                  onChange={event => setSettings(prev => ({ ...prev, productivityFactor: Number(event.target.value) || 0.8 }))}
+                  className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white"
+                />
+              </label>
               <label className="flex items-center justify-between border border-white/10 bg-white/5 p-4">
-                Attendance enabled
+                Attendance Enabled
                 <input type="checkbox" checked={settings.attendanceEnabled} onChange={event => setSettings(prev => ({ ...prev, attendanceEnabled: event.target.checked }))} />
               </label>
               <label className="flex items-center justify-between border border-white/10 bg-white/5 p-4">
-                Payroll enabled
+                Payroll Enabled
                 <input type="checkbox" checked={settings.payrollEnabled} onChange={event => setSettings(prev => ({ ...prev, payrollEnabled: event.target.checked }))} />
               </label>
             </div>
           )}
 
+          {step === 4 && (
+            <div className="space-y-5">
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={event => setInviteEmail(event.target.value)}
+                  placeholder="teammate@company.com"
+                  className="h-12 flex-1 border border-white/10 bg-black px-4 text-white outline-none focus:border-white/40"
+                />
+                <button onClick={addInvite} className="flex h-12 w-12 items-center justify-center border border-white/10 bg-white text-black">
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {invites.map(email => (
+                  <div key={email} className="flex items-center justify-between border border-white/10 bg-white/5 px-4 py-3 text-sm">
+                    {email}
+                    <button onClick={() => setInvites(prev => prev.filter(value => value !== email))}>
+                      <X className="h-4 w-4 text-white/60" />
+                    </button>
+                  </div>
+                ))}
+                {invites.length === 0 && <p className="text-sm text-white/55">No invites added. You can skip this for now.</p>}
+              </div>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="border border-white/10 bg-black/30 p-6">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center bg-emerald-500/15 text-emerald-300">
+                <Check className="h-5 w-5" />
+              </div>
+              <h3 className="text-xl font-semibold">Workspace foundation is ready</h3>
+              <p className="mt-3 text-sm leading-6 text-white/65">
+                Your workspace is ready. You can now build projects, delegate tasks, track timelines, and sync offline in real-time.
+              </p>
+            </div>
+          )}
+
           <div className="mt-8 flex justify-between">
-            <button disabled={step === 1} onClick={() => setStep(prev => Math.max(1, prev - 1))} className="border border-white/10 px-4 py-2 text-sm text-white/80 disabled:opacity-40">
+            <button
+              disabled={step === 1 || saving}
+              onClick={() => setStep(prev => Math.max(1, prev - 1))}
+              className="border border-white/10 px-4 py-2 text-sm text-white/80 disabled:opacity-40"
+            >
               Back
             </button>
-            <button onClick={() => setStep(prev => Math.min(4, prev + 1))} className="bg-white px-4 py-2 text-sm font-medium text-black">
-              {step === 4 ? 'Finish Setup' : 'Next'}
-            </button>
+
+            {step < 3 && (
+              <button onClick={() => setStep(prev => prev + 1)} className="bg-white px-4 py-2 text-sm font-medium text-black">
+                Next
+              </button>
+            )}
+
+            {step === 3 && (
+              <button disabled={saving} onClick={saveWorkspace} className="bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50">
+                {saving ? 'Saving...' : 'Save Workspace'}
+              </button>
+            )}
+
+            {step === 4 && (
+              <button onClick={() => setStep(5)} className="bg-white px-4 py-2 text-sm font-medium text-black">
+                {invites.length > 0 ? 'Continue' : 'Skip'}
+              </button>
+            )}
+
+            {step === 5 && (
+              <button onClick={() => navigate('/')} className="bg-white px-4 py-2 text-sm font-medium text-black">
+                Go to Dashboard
+              </button>
+            )}
           </div>
         </section>
 
         <aside className="border border-white/10 bg-white/[0.03] p-6">
-          <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Live Preview</p>
+          <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Prediction Preview</p>
           <h3 className="mt-3 text-lg font-semibold">A 40 hour project finishes around</h3>
           <p className="mt-4 text-3xl font-semibold">{preview.predictedCompletion.toLocaleDateString()}</p>
           <dl className="mt-6 space-y-3 text-sm text-white/70">
             <div className="flex justify-between"><dt>Daily capacity</dt><dd>{preview.dailyCapacityHours}h</dd></div>
             <div className="flex justify-between"><dt>Confidence</dt><dd>{preview.confidence}%</dd></div>
             <div className="flex justify-between"><dt>Risk</dt><dd className="capitalize">{preview.risk}</dd></div>
+            <div className="flex justify-between"><dt>Workspace</dt><dd>{workspaceName || 'Untitled'}</dd></div>
           </dl>
         </aside>
       </div>

@@ -10,8 +10,8 @@ create table if not exists workspaces (
   business_type text not null default 'Software',
   work_start time not null default '09:00',
   work_end time not null default '17:00',
-  lunch_duration_minutes integer not null default 60,
-  working_days integer[] not null default array[1,2,3,4,5],
+  lunch_duration integer not null default 60,
+  workdays integer[] not null default array[1,2,3,4,5],
   timezone text not null default 'UTC',
   attendance_enabled boolean not null default true,
   payroll_enabled boolean not null default false,
@@ -196,6 +196,18 @@ with check (owner_id = auth.uid());
 create policy "Users are isolated by workspace"
 on users for select
 using (workspace_id = current_workspace() or id = auth.uid());
+
+create policy "Workspace owner can create first super admin user"
+on users for insert
+with check (
+  id = auth.uid()
+  and role = 'super_admin'
+  and exists (
+    select 1 from workspaces
+    where workspaces.id = users.workspace_id
+      and workspaces.owner_id = auth.uid()
+  )
+);
 
 create policy "Workspace admins can manage users"
 on users for all
