@@ -4,6 +4,7 @@ export interface WorkWindow {
   lunchDuration: number;
   workingDays: number[];
   productivityFactor: number;
+  saturdayRule?: 'all' | 'off' | '2nd_4th' | '1st_3rd' | 'custom';
 }
 
 export function calculateHoursFromTimeRange(from: string, to: string): number {
@@ -27,8 +28,31 @@ export function calculateDailyProductiveHours(window: WorkWindow): number {
   return Number((netHours * window.productivityFactor).toFixed(2));
 }
 
-export function isWorkingDay(date: Date, workingDays: number[]): boolean {
-  return workingDays.includes(date.getDay());
+export function isWorkingDay(date: Date, workingDays: number[], saturdayRule?: string): boolean {
+  const dayOfWeek = date.getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+
+  if (dayOfWeek === 6) {
+    if (!workingDays.includes(6)) {
+      return false;
+    }
+    const rule = saturdayRule || 'off';
+    if (rule === 'all') return true;
+    if (rule === 'off') return false;
+
+    const satIndex = Math.ceil(date.getDate() / 7);
+    if (rule === '2nd_4th') {
+      return satIndex !== 2 && satIndex !== 4;
+    }
+    if (rule === '1st_3rd') {
+      return satIndex !== 1 && satIndex !== 3;
+    }
+    if (rule === 'custom') {
+      return true;
+    }
+    return false;
+  }
+
+  return workingDays.includes(dayOfWeek);
 }
 
 export function addWorkingHours(start: Date, hours: number, window: WorkWindow): Date {
@@ -37,7 +61,7 @@ export function addWorkingHours(start: Date, hours: number, window: WorkWindow):
   const dailyHours = calculateDailyProductiveHours(window);
 
   while (remaining > 0) {
-    if (isWorkingDay(result, window.workingDays)) {
+    if (isWorkingDay(result, window.workingDays, window.saturdayRule)) {
       remaining -= Math.min(remaining, dailyHours);
     }
 

@@ -25,7 +25,8 @@ const DEFAULT_SETTINGS: WorkspaceSettings = {
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   attendanceEnabled: true,
   payrollEnabled: false,
-  productivityFactor: 0.8
+  productivityFactor: 0.8,
+  saturdayRule: 'off'
 };
 
 function navigate(path: string) {
@@ -83,9 +84,11 @@ export function WorkspaceSetupPage() {
         ? prev.workingDays.filter(value => value !== day)
         : [...prev.workingDays, day].sort((a, b) => a - b);
 
+      const hasSaturday = nextDays.includes(6);
       return {
         ...prev,
-        workingDays: nextDays.length > 0 ? nextDays : prev.workingDays
+        workingDays: nextDays.length > 0 ? nextDays : prev.workingDays,
+        saturdayRule: hasSaturday ? (prev.saturdayRule === 'off' ? 'all' : prev.saturdayRule || 'all') : 'off'
       };
     });
   };
@@ -172,6 +175,22 @@ export function WorkspaceSetupPage() {
                   })}
                 </div>
               </div>
+              {settings.workingDays.includes(6) && (
+                <div className="sm:col-span-2">
+                  <label className="mb-3 block text-sm font-medium">Saturday Working Pattern</label>
+                  <select
+                    value={settings.saturdayRule || 'all'}
+                    onChange={event => setSettings(prev => ({ ...prev, saturdayRule: event.target.value as any }))}
+                    className="h-12 w-full border border-white/10 bg-black px-4 text-white focus:border-white/40 outline-none"
+                  >
+                    <option value="all">All Saturdays Working</option>
+                    <option value="off">All Saturdays Off</option>
+                    <option value="2nd_4th">2nd & 4th Saturday Off</option>
+                    <option value="1st_3rd">1st & 3rd Saturday Off</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+              )}
             </div>
           )}
 

@@ -12,6 +12,7 @@ export interface WorkspaceSettings {
   attendanceEnabled: boolean;
   payrollEnabled: boolean;
   productivityFactor: number;
+  saturdayRule?: 'all' | 'off' | '2nd_4th' | '1st_3rd' | 'custom';
 }
 
 export interface Workspace {

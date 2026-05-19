@@ -26,6 +26,21 @@ interface WorkspaceRow {
 }
 
 export function rowToWorkspace(row: WorkspaceRow): Workspace {
+  let businessType = row.business_type || 'Software';
+  let saturdayRule: WorkspaceSettings['saturdayRule'] = 'off';
+  if (businessType.includes('|')) {
+    const parts = businessType.split('|');
+    businessType = parts[0];
+    saturdayRule = parts[1] as any;
+  } else {
+    const days = row.workdays || [];
+    if (days.includes(6)) {
+      saturdayRule = 'all';
+    } else {
+      saturdayRule = 'off';
+    }
+  }
+
   return {
     id: row.id,
     name: row.name,
@@ -33,7 +48,7 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     settings: {
-      businessType: row.business_type,
+      businessType: businessType as any,
       workStart: row.work_start?.slice(0, 5) || '09:00',
       workEnd: row.work_end?.slice(0, 5) || '17:00',
       lunchDuration: Number(row.lunch_duration ?? 60),
@@ -41,14 +56,16 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
       timezone: row.timezone || 'UTC',
       attendanceEnabled: !!row.attendance_enabled,
       payrollEnabled: !!row.payroll_enabled,
-      productivityFactor: Number(row.productivity_factor ?? 0.8)
+      productivityFactor: Number(row.productivity_factor ?? 0.8),
+      saturdayRule
     }
   };
 }
 
 export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
+  const compoundBusinessType = `${settings.businessType}|${settings.saturdayRule || 'off'}`;
   return {
-    business_type: settings.businessType,
+    business_type: compoundBusinessType,
     work_start: settings.workStart,
     work_end: settings.workEnd,
     lunch_duration: settings.lunchDuration,
