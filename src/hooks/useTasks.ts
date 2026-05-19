@@ -305,7 +305,8 @@ export function useTasks(workspaceId?: string) {
     
     if (workspaceId && isSupabaseConfigured) {
       // Setup real-time subscription for this workspace's tasks
-      const channel = supabase.channel(`tasks-changes-${workspaceId}`)
+      const channelName = `tasks-changes-${workspaceId}-${Date.now()}`;
+      const channel = supabase.channel(channelName)
         .on('postgres_changes', { 
             event: '*', 
             schema: 'public', 
@@ -329,7 +330,8 @@ export function useTasks(workspaceId?: string) {
         .subscribe();
 
       // Setup real-time subscription for task dependencies changes
-      const depChannel = supabase.channel(`task-dependencies-changes-${workspaceId}`)
+      const depChannelName = `task-dependencies-changes-${workspaceId}-${Date.now()}`;
+      const depChannel = supabase.channel(depChannelName)
         .on('postgres_changes', { 
             event: '*', 
             schema: 'public', 
