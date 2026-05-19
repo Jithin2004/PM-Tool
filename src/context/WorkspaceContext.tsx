@@ -1,8 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { createWorkspaceForUser, getWorkspaceForUser, updateWorkspaceSettings as persistWorkspaceSettings } from '../services/workspaceService';
+import { createWorkspaceForUser, getWorkspaceForUser, updateWorkspaceSettings as persistWorkspaceSettings, rowToWorkspace } from '../services/workspaceService';
 import type { Workspace, WorkspaceSettings } from '../types/workspace';
+import { useAuth } from './AuthContext';
 
 interface WorkspaceContextValue {
   user: User | null;
@@ -30,116 +31,119 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshWorkspace = useCallback(async (targetUser?: User | null) => {
-    if (import.meta.env.DEV) {
-      console.log("WorkspaceContext: refreshWorkspace() started");
-    }
-    if (!isSupabaseConfigured) {
-      if (import.meta.env.DEV) {
-        console.log("WorkspaceContext: refreshWorkspace() aborted because Supabase is not configured");
-      }
-      setWorkspace(null);
-      return;
-    }
+  const { profile, loading: authLoading } = useAuth();
 
-    let activeUser = targetUser;
-    if (activeUser === undefined) {
-      if (import.meta.env.DEV) {
-        console.log("WorkspaceContext: refreshWorkspace() calling supabase.auth.getSession()...");
-      }
-      const { data: { session } } = await supabase.auth.getSession();
-      activeUser = session?.user || null;
-    }
-    setUser(activeUser);
+  const refreshWorkspace = useCallback(async () => {
     if (import.meta.env.DEV) {
-      console.log("WorkspaceContext: refreshWorkspace() active user:", activeUser?.id || 'none');
+      console.log("WorkspaceContext: refreshWorkspace() called");
     }
-
-    if (!activeUser) {
+    if (!isSupabaseConfigured || !profile?.workspace_id) {
       setWorkspace(null);
       return;
     }
 
     try {
-      if (import.meta.env.DEV) {
-        console.log("WorkspaceContext: refreshWorkspace() calling getWorkspaceForUser()...");
+      const { data: workspaceRow, error: workspaceError } = await supabase
+        .from('workspaces')
+        .select('*')
+        .eq('id', profile.workspace_id)
+        .maybeSingle();
+
+      if (workspaceError) throw workspaceError;
+      if (workspaceRow) {
+        setWorkspace(rowToWorkspace(workspaceRow as any));
+      } else {
+        setWorkspace(null);
       }
-      const newWs = await getWorkspaceForUser(activeUser.id);
-      if (import.meta.env.DEV) {
-        console.log("WorkspaceContext: refreshWorkspace() getWorkspaceForUser() returned:", newWs?.id || 'null');
-      }
-      setWorkspace(prev => {
-        if (prev && newWs && prev.id !== newWs.id) {
-          console.log('Workspace switch detected. Unsubscribing stale channels.');
-          supabase.removeAllChannels();
-        }
-        return newWs;
-      });
     } catch (err: any) {
-      console.error('WorkspaceContext: refreshWorkspace() failed:', err);
-      setWorkspace(null);
+      console.error('WorkspaceContext: refreshWorkspace failed:', err);
       setError(err?.message || 'Workspace lookup failed.');
+      setWorkspace(null);
     }
-  }, []);
+  }, [profile?.workspace_id]);
 
   useEffect(() => {
-    let active = true;
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
 
     if (!isSupabaseConfigured) {
+      setWorkspace(null);
       setLoading(false);
       return;
     }
 
-    const initWorkspace = async () => {
+    if (!profile) {
+      setUser(null);
+      setWorkspace(null);
+      setLoading(false);
+      return;
+    }
+
+    // Align active user with profile identity
+    setUser(profile as any);
+
+    if (!profile.workspace_id) {
+      setWorkspace(null);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    const loadWorkspace = async () => {
       try {
         if (import.meta.env.DEV) {
-          console.log("WorkspaceContext: Initializing workspace state...");
+          console.log("WorkspaceContext: Loading workspace matching profile:", profile.workspace_id);
         }
-        await refreshWorkspace();
-      } catch (err) {
-        console.error("WorkspaceContext initialization error:", err);
+        const { data: workspaceRow, error: workspaceError } = await supabase
+          .from('workspaces')
+          .select('*')
+          .eq('id', profile.workspace_id)
+          .maybeSingle();
+
+        if (!active) return;
+
+        if (workspaceError) throw workspaceError;
+        if (workspaceRow) {
+          setWorkspace(prev => {
+            if (prev && prev.id !== workspaceRow.id) {
+              console.log('Workspace switch detected. Unsubscribing stale channels.');
+              supabase.removeAllChannels();
+            }
+            return rowToWorkspace(workspaceRow as any);
+          });
+        } else {
+          setWorkspace(null);
+        }
+      } catch (err: any) {
+        console.error("WorkspaceContext load workspace error:", err);
+        if (active) {
+          setWorkspace(null);
+          setError(err?.message || 'Workspace lookup failed.');
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
-    // Run explicit initialization to guarantee loading resolves
-    initWorkspace();
+    loadWorkspace();
 
     // Bulletproof fallback to absolutely prevent infinite loading screens
     const safetyTimeout = setTimeout(() => {
-      setLoading(false);
+      if (active) {
+        setLoading(false);
+      }
     }, 2500);
-
-    if (import.meta.env.DEV) {
-      console.log("WorkspaceContext: subscribing to onAuthStateChange...");
-    }
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (import.meta.env.DEV) {
-        console.log("WorkspaceContext: onAuthStateChange event:", event, "session user:", session?.user?.id || 'none');
-      }
-      if (!active) return;
-
-      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
-        setUser(null);
-        setWorkspace(null);
-        supabase.removeAllChannels();
-        setLoading(false);
-      } else if (event !== 'INITIAL_SESSION') {
-        // Only react to subsequent events, as INITIAL_SESSION is handled by explicit init
-        const userToRefresh = session?.user || null;
-        setUser(userToRefresh);
-        await refreshWorkspace(userToRefresh);
-        setLoading(false);
-      }
-    });
 
     return () => {
       active = false;
-      authListener.subscription.unsubscribe();
       clearTimeout(safetyTimeout);
     };
-  }, [refreshWorkspace]);
+  }, [profile, authLoading]);
 
   const createWorkspace = useCallback(async ({ name, settings }: CreateWorkspaceInput) => {
     if (!user) throw new Error('You must be signed in to create a workspace.');
