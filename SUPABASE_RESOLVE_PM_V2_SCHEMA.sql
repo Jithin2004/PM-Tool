@@ -318,3 +318,64 @@ values
   ('project-files', 'project-files', false),
   ('exports', 'exports', false)
 on conflict (id) do nothing;
+
+-- -------------------------------------------------------------
+-- Resolve Scheduling Intelligence Engine Additions
+-- -------------------------------------------------------------
+
+-- Alter workspaces table to support regional calendars
+alter table workspaces add column if not exists country text;
+alter table workspaces add column if not exists region text;
+
+-- Create workspace_holidays table (Layer 2)
+create table if not exists workspace_holidays (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references workspaces(id) on delete cascade,
+  date date not null,
+  name text not null,
+  type text not null check (type in ('public', 'regional', 'festival', 'company')),
+  unique(workspace_id, date)
+);
+
+-- Enable RLS for workspace_holidays
+alter table workspace_holidays enable row level security;
+create policy "Workspace holidays are isolated by workspace"
+on workspace_holidays for all
+using (workspace_id = current_workspace())
+with check (workspace_id = current_workspace());
+
+-- Create team_events table (Layer 3)
+create table if not exists team_events (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references teams(id) on delete cascade,
+  title text not null,
+  start_date timestamptz not null,
+  end_date timestamptz not null,
+  availability_factor numeric not null default 1,
+  check (start_date <= end_date)
+);
+
+-- Enable RLS for team_events
+alter table team_events enable row level security;
+create policy "Team events are isolated by team"
+on team_events for all
+using (team_id in (select id from teams where workspace_id = current_workspace()))
+with check (team_id in (select id from teams where workspace_id = current_workspace()));
+
+-- Create personal_leave table (Layer 4)
+create table if not exists personal_leave (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  leave_type text not null,
+  start_date timestamptz not null,
+  end_date timestamptz not null,
+  availability_factor numeric not null default 0,
+  check (start_date <= end_date)
+);
+
+-- Enable RLS for personal_leave
+alter table personal_leave enable row level security;
+create policy "Personal leaves are isolated by user workspace"
+on personal_leave for all
+using (user_id in (select id from users where workspace_id = current_workspace()))
+with check (user_id in (select id from users where workspace_id = current_workspace()));

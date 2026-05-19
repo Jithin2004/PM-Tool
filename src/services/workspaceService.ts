@@ -26,13 +26,31 @@ interface WorkspaceRow {
 }
 
 export function rowToWorkspace(row: WorkspaceRow): Workspace {
-  let businessType = row.business_type || 'Software';
+  let businessType = 'Software';
   let saturdayRule: WorkspaceSettings['saturdayRule'] = 'off';
-  if (businessType.includes('|')) {
-    const parts = businessType.split('|');
+  let country = '';
+  let region = '';
+  let shutdowns: WorkspaceSettings['shutdowns'] = [];
+
+  const rawBusinessType = row.business_type || 'Software';
+
+  if (rawBusinessType.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(rawBusinessType);
+      businessType = parsed.businessType || 'Software';
+      saturdayRule = parsed.saturdayRule || 'off';
+      country = parsed.country || '';
+      region = parsed.region || '';
+      shutdowns = parsed.shutdowns || [];
+    } catch (err) {
+      // Fallback
+    }
+  } else if (rawBusinessType.includes('|')) {
+    const parts = rawBusinessType.split('|');
     businessType = parts[0];
     saturdayRule = parts[1] as any;
   } else {
+    businessType = rawBusinessType;
     const days = row.workdays || [];
     if (days.includes(6)) {
       saturdayRule = 'all';
@@ -57,15 +75,25 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
       attendanceEnabled: !!row.attendance_enabled,
       payrollEnabled: !!row.payroll_enabled,
       productivityFactor: Number(row.productivity_factor ?? 0.8),
-      saturdayRule
+      saturdayRule,
+      country,
+      region,
+      shutdowns
     }
   };
 }
 
 export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
-  const compoundBusinessType = `${settings.businessType}|${settings.saturdayRule || 'off'}`;
+  const meta = {
+    businessType: settings.businessType,
+    saturdayRule: settings.saturdayRule || 'off',
+    country: settings.country || '',
+    region: settings.region || '',
+    shutdowns: settings.shutdowns || []
+  };
+
   return {
-    business_type: compoundBusinessType,
+    business_type: JSON.stringify(meta),
     work_start: settings.workStart,
     work_end: settings.workEnd,
     lunch_duration: settings.lunchDuration,
@@ -103,6 +131,36 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
   return workspaceRow ? rowToWorkspace(workspaceRow as WorkspaceRow) : null;
 }
 
+import { getHolidaysForRegion } from '../utils/holidays';
+
+export async function syncWorkspaceHolidays(workspaceId: string, country: string, region: string) {
+  if (!country) return;
+
+  const currentYear = new Date().getFullYear();
+  const holidays = getHolidaysForRegion(country, region, currentYear);
+  const nextYearHolidays = getHolidaysForRegion(country, region, currentYear + 1);
+  const allHolidays = [...holidays, ...nextYearHolidays];
+
+  if (allHolidays.length > 0) {
+    try {
+      await supabase
+        .from('workspace_holidays')
+        .delete()
+        .eq('workspace_id', workspaceId);
+
+      const holidayRows = allHolidays.map(h => ({
+        workspace_id: workspaceId,
+        date: h.date,
+        name: h.name,
+        type: h.type
+      }));
+      await supabase.from('workspace_holidays').insert(holidayRows);
+    } catch (err) {
+      console.error("Failed to sync workspace holidays:", err);
+    }
+  }
+}
+
 export async function createWorkspaceForUser({ name, settings, user }: CreateWorkspaceInput): Promise<Workspace> {
   const { data: workspaceRow, error: workspaceError } = await supabase
     .from('workspaces')
@@ -134,6 +192,10 @@ export async function createWorkspaceForUser({ name, settings, user }: CreateWor
 
   if (userError) throw userError;
 
+  if (settings.country) {
+    await syncWorkspaceHolidays(workspaceRow.id, settings.country, settings.region || '');
+  }
+
   return rowToWorkspace(workspaceRow as WorkspaceRow);
 }
 
@@ -147,5 +209,10 @@ export async function updateWorkspaceSettings(workspace: Workspace, settings: Pa
     .single();
 
   if (error) throw error;
+
+  if (settings.country !== undefined || settings.region !== undefined) {
+    await syncWorkspaceHolidays(workspace.id, nextSettings.country || '', nextSettings.region || '');
+  }
+
   return rowToWorkspace(data as WorkspaceRow);
 }

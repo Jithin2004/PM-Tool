@@ -158,6 +158,14 @@ export function WorkspaceSetupPage() {
                 Timezone
                 <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
               </label>
+              <label className="text-sm font-medium">
+                Country
+                <input value={settings.country || ''} onChange={event => setSettings(prev => ({ ...prev, country: event.target.value }))} placeholder="e.g. India" className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none" />
+              </label>
+              <label className="text-sm font-medium">
+                State/Region
+                <input value={settings.region || ''} onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))} placeholder="e.g. Kerala" className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none" />
+              </label>
               <div className="sm:col-span-2">
                 <label className="mb-3 block text-sm font-medium">Workdays</label>
                 <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
@@ -191,6 +199,63 @@ export function WorkspaceSetupPage() {
                   </select>
                 </div>
               )}
+              <div className="sm:col-span-2">
+                <label className="mb-3 block text-sm font-medium">Workspace Shutdown Dates</label>
+                <div className="space-y-3">
+                  {(settings.shutdowns || []).map((shutdown, index) => (
+                    <div key={index} className="flex items-center justify-between border border-white/10 bg-white/5 px-4 py-2 text-sm">
+                      <div>
+                        <span className="font-semibold text-white">{shutdown.name}</span>: {shutdown.start} to {shutdown.end}
+                      </div>
+                      <button onClick={() => setSettings(prev => ({
+                        ...prev,
+                        shutdowns: (prev.shutdowns || []).filter((_, i) => i !== index)
+                      }))}>
+                        <X className="h-4 w-4 text-white/60 hover:text-white" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Shutdown / Retreat Name"
+                      id="shutdown-name"
+                      className="h-12 flex-1 border border-white/10 bg-black px-4 text-sm text-white outline-none focus:border-white/40"
+                    />
+                    <input
+                      type="date"
+                      id="shutdown-start"
+                      className="h-12 border border-white/10 bg-black px-3 text-sm text-white outline-none focus:border-white/40"
+                    />
+                    <input
+                      type="date"
+                      id="shutdown-end"
+                      className="h-12 border border-white/10 bg-black px-3 text-sm text-white outline-none focus:border-white/40"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nameEl = document.getElementById('shutdown-name') as HTMLInputElement;
+                        const startEl = document.getElementById('shutdown-start') as HTMLInputElement;
+                        const endEl = document.getElementById('shutdown-end') as HTMLInputElement;
+                        if (nameEl?.value && startEl?.value && endEl?.value) {
+                          setSettings(prev => ({
+                            ...prev,
+                            shutdowns: [...(prev.shutdowns || []), { name: nameEl.value, start: startEl.value, end: endEl.value }]
+                          }));
+                          nameEl.value = '';
+                          startEl.value = '';
+                          endEl.value = '';
+                        }
+                      }}
+                      className="h-12 border border-white/10 bg-white px-6 text-sm font-medium text-black hover:bg-white/90"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

@@ -1,5 +1,7 @@
 import { calculateExpectedEffort, calculatePertStandardDeviation, normalizePertInput } from '../utils/pert';
 import { addWorkingHours, calculateDailyProductiveHours, type WorkWindow } from '../utils/productivity';
+import { supabase } from '../lib/supabase';
+import type { WorkspaceSettings } from '../types/workspace';
 
 export interface EtaInput {
   best?: number;
@@ -13,6 +15,70 @@ export interface EtaInput {
   availabilityFactor?: number;
   teamLoadFactor?: number;
   interruptionHours?: number;
+}
+
+export async function getSchedulingContext(
+  workspaceSettings: WorkspaceSettings,
+  workspaceId: string,
+  assigneeId?: string | null,
+  teamId?: string | null
+): Promise<WorkWindow> {
+  const window: WorkWindow = {
+    ...workspaceSettings,
+    holidays: [],
+    teamEvents: [],
+    personalLeaves: []
+  };
+
+  try {
+    const { data: holidaysData } = await supabase
+      .from('workspace_holidays')
+      .select('date')
+      .eq('workspace_id', workspaceId);
+    if (holidaysData) {
+      window.holidays = holidaysData.map(h => h.date);
+    }
+  } catch (err) {
+    // Fallback if table doesn't exist
+  }
+
+  try {
+    if (teamId) {
+      const { data: teamEventsData } = await supabase
+        .from('team_events')
+        .select('*')
+        .eq('team_id', teamId);
+      if (teamEventsData) {
+        window.teamEvents = teamEventsData.map(e => ({
+          start: new Date(e.start_date),
+          end: new Date(e.end_date),
+          availabilityFactor: Number(e.availability_factor ?? 1)
+        }));
+      }
+    }
+  } catch (err) {
+    // Fallback if table doesn't exist
+  }
+
+  try {
+    if (assigneeId) {
+      const { data: leaveData } = await supabase
+        .from('personal_leave')
+        .select('*')
+        .eq('user_id', assigneeId);
+      if (leaveData) {
+        window.personalLeaves = leaveData.map(l => ({
+          start: new Date(l.start_date),
+          end: new Date(l.end_date),
+          availabilityFactor: Number(l.availability_factor ?? 0)
+        }));
+      }
+    }
+  } catch (err) {
+    // Fallback if table doesn't exist
+  }
+
+  return window;
 }
 
 export interface EtaResult {

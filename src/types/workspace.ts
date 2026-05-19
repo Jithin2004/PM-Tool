@@ -13,6 +13,9 @@ export interface WorkspaceSettings {
   payrollEnabled: boolean;
   productivityFactor: number;
   saturdayRule?: 'all' | 'off' | '2nd_4th' | '1st_3rd' | 'custom';
+  country?: string;
+  region?: string;
+  shutdowns?: Array<{ start: string; end: string; name: string }>;
 }
 
 export interface Workspace {

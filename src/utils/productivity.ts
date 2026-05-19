@@ -5,6 +5,10 @@ export interface WorkWindow {
   workingDays: number[];
   productivityFactor: number;
   saturdayRule?: 'all' | 'off' | '2nd_4th' | '1st_3rd' | 'custom';
+  holidays?: string[];
+  shutdowns?: Array<{ start: string; end: string; name: string }>;
+  teamEvents?: Array<{ start: Date; end: Date; availabilityFactor: number }>;
+  personalLeaves?: Array<{ start: Date; end: Date; availabilityFactor: number }>;
 }
 
 export function calculateHoursFromTimeRange(from: string, to: string): number {
@@ -55,14 +59,82 @@ export function isWorkingDay(date: Date, workingDays: number[], saturdayRule?: s
   return workingDays.includes(dayOfWeek);
 }
 
+export function getDailyCapacity(date: Date, window: WorkWindow): number {
+  // 1. Weekend rules + Saturday patterns
+  if (!isWorkingDay(date, window.workingDays, window.saturdayRule)) {
+    return 0;
+  }
+
+  // Format date as YYYY-MM-DD (local time-safe)
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const yyyymmdd = `${year}-${month}-${day}`;
+
+  // 2. Workspace holidays (exclude completely)
+  if (window.holidays && window.holidays.includes(yyyymmdd)) {
+    return 0;
+  }
+
+  // 3. Workspace shutdown dates (exclude completely)
+  if (window.shutdowns) {
+    const isShutdown = window.shutdowns.some(s => {
+      return yyyymmdd >= s.start && yyyymmdd <= s.end;
+    });
+    if (isShutdown) return 0;
+  }
+
+  // Base daily hours (working hours + lunch windows + productivity factor)
+  let dayCapacity = calculateDailyProductiveHours(window);
+
+  // Normalize date range matching to ignore hours/minutes/seconds
+  const dateAtMidnight = new Date(date);
+  dateAtMidnight.setHours(0, 0, 0, 0);
+  const timeMidnight = dateAtMidnight.getTime();
+
+  // 4. Team events (reduce capacity)
+  if (window.teamEvents && window.teamEvents.length > 0) {
+    let teamFactor = 1;
+    window.teamEvents.forEach(e => {
+      const startMidnight = new Date(e.start);
+      startMidnight.setHours(0, 0, 0, 0);
+      const endMidnight = new Date(e.end);
+      endMidnight.setHours(0, 0, 0, 0);
+
+      if (timeMidnight >= startMidnight.getTime() && timeMidnight <= endMidnight.getTime()) {
+        teamFactor = Math.min(teamFactor, Number(e.availabilityFactor ?? 1));
+      }
+    });
+    dayCapacity *= teamFactor;
+  }
+
+  // 5. Personal leaves (reduce capacity)
+  if (window.personalLeaves && window.personalLeaves.length > 0) {
+    let leaveFactor = 1;
+    window.personalLeaves.forEach(l => {
+      const startMidnight = new Date(l.start);
+      startMidnight.setHours(0, 0, 0, 0);
+      const endMidnight = new Date(l.end);
+      endMidnight.setHours(0, 0, 0, 0);
+
+      if (timeMidnight >= startMidnight.getTime() && timeMidnight <= endMidnight.getTime()) {
+        leaveFactor = Math.min(leaveFactor, Number(l.availabilityFactor ?? 0));
+      }
+    });
+    dayCapacity *= leaveFactor;
+  }
+
+  return Number(dayCapacity.toFixed(2));
+}
+
 export function addWorkingHours(start: Date, hours: number, window: WorkWindow): Date {
   const result = new Date(start);
   let remaining = Math.max(0, hours);
-  const dailyHours = calculateDailyProductiveHours(window);
 
   while (remaining > 0) {
-    if (isWorkingDay(result, window.workingDays, window.saturdayRule)) {
-      remaining -= Math.min(remaining, dailyHours);
+    const dailyCap = getDailyCapacity(result, window);
+    if (dailyCap > 0) {
+      remaining -= Math.min(remaining, dailyCap);
     }
 
     if (remaining > 0) {
