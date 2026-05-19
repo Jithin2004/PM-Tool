@@ -200,22 +200,27 @@ alter table notifications enable row level security;
 alter table activity_logs enable row level security;
 alter table attendance enable row level security;
 
+drop policy if exists "Workspace members can view their workspace" on workspaces;
 create policy "Workspace members can view their workspace"
 on workspaces for select
 using (id = current_workspace() or owner_id = auth.uid());
 
+drop policy if exists "Workspace owner can update workspace" on workspaces;
 create policy "Workspace owner can update workspace"
 on workspaces for update
 using (owner_id = auth.uid());
 
+drop policy if exists "Workspace owner can create workspace" on workspaces;
 create policy "Workspace owner can create workspace"
 on workspaces for insert
 with check (owner_id = auth.uid());
 
+drop policy if exists "Users are isolated by workspace" on users;
 create policy "Users are isolated by workspace"
 on users for select
 using (auth.uid() is not null);
 
+drop policy if exists "Workspace owner can create first super admin user" on users;
 create policy "Workspace owner can create first super admin user"
 on users for insert
 with check (
@@ -228,6 +233,7 @@ with check (
   )
 );
 
+drop policy if exists "Workspace admins can update users" on users;
 create policy "Workspace admins can update users"
 on users for update
 using (
@@ -239,6 +245,7 @@ using (
   )
 );
 
+drop policy if exists "Workspace admins can delete users" on users;
 create policy "Workspace admins can delete users"
 on users for delete
 using (
@@ -250,6 +257,7 @@ using (
   )
 );
 
+drop policy if exists "Workspace admins can insert users" on users;
 create policy "Workspace admins can insert users"
 on users for insert
 with check (
@@ -276,51 +284,61 @@ on users for update
 using (id = auth.uid())
 with check (id = auth.uid());
 
+drop policy if exists "Teams are isolated by workspace" on teams;
 create policy "Teams are isolated by workspace"
 on teams for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
 
+drop policy if exists "Team members are isolated by workspace" on team_members;
 create policy "Team members are isolated by workspace"
 on team_members for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
 
+drop policy if exists "Projects are isolated by workspace" on projects;
 create policy "Projects are isolated by workspace"
 on projects for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
 
+drop policy if exists "Tasks are isolated by workspace" on tasks;
 create policy "Tasks are isolated by workspace"
 on tasks for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
 
+drop policy if exists "Task dependencies are isolated by workspace" on task_dependencies;
 create policy "Task dependencies are isolated by workspace"
 on task_dependencies for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
 
+drop policy if exists "Comments are isolated by workspace" on comments;
 create policy "Comments are isolated by workspace"
 on comments for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
 
+drop policy if exists "Files are isolated by workspace" on files;
 create policy "Files are isolated by workspace"
 on files for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
 
+drop policy if exists "Notifications are isolated by workspace" on notifications;
 create policy "Notifications are isolated by workspace"
 on notifications for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
 
+drop policy if exists "Activity logs are isolated by workspace" on activity_logs;
 create policy "Activity logs are isolated by workspace"
 on activity_logs for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
 
+drop policy if exists "Attendance is isolated by workspace" on attendance;
 create policy "Attendance is isolated by workspace"
 on attendance for all
 using (workspace_id = current_workspace())
