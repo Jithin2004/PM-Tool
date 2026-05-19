@@ -90,6 +90,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const initWorkspace = async () => {
+      try {
+        if (import.meta.env.DEV) {
+          console.log("WorkspaceContext: Initializing workspace state...");
+        }
+        await refreshWorkspace();
+      } catch (err) {
+        console.error("WorkspaceContext initialization error:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    // Run explicit initialization to guarantee loading resolves
+    initWorkspace();
+
     if (import.meta.env.DEV) {
       console.log("WorkspaceContext: subscribing to onAuthStateChange...");
     }
@@ -104,7 +120,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setWorkspace(null);
         supabase.removeAllChannels();
         setLoading(false);
-      } else {
+      } else if (event !== 'INITIAL_SESSION') {
+        // Only react to subsequent events, as INITIAL_SESSION is handled by explicit init
         const userToRefresh = session?.user || null;
         setUser(userToRefresh);
         await refreshWorkspace(userToRefresh);
@@ -112,20 +129,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    const fallbackTimeout = setTimeout(async () => {
-      if (active && loading) {
-        if (import.meta.env.DEV) {
-          console.log("WorkspaceContext: fallback workspace check triggered");
-        }
-        await refreshWorkspace();
-        if (active) setLoading(false);
-      }
-    }, 150);
-
     return () => {
       active = false;
       authListener.subscription.unsubscribe();
-      clearTimeout(fallbackTimeout);
     };
   }, [refreshWorkspace]);
 

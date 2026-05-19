@@ -107,6 +107,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const initAuth = async () => {
+      try {
+        if (import.meta.env.DEV) {
+          console.log("AuthContext: Initializing auth state...");
+        }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
+        setUser(session?.user || null);
+        if (session?.user) {
+          await syncProfile(session.user);
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error("AuthContext initialization error:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    // Explicitly initialize auth state
+    initAuth();
+
     if (import.meta.env.DEV) {
       console.log("AuthContext: subscribing to onAuthStateChange...");
     }
@@ -125,41 +149,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Session expired. Redirecting...", type: "error" } }));
         setTimeout(() => { window.location.href = '/'; }, 1000);
         return;
+      } else if (event !== 'INITIAL_SESSION') {
+        // Only react to subsequent events to avoid race conditions with initAuth
+        setLoading(true);
+        setUser(session?.user || null);
+        if (session?.user) {
+          await syncProfile(session.user);
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
       }
-
-      setLoading(true);
-      setUser(session?.user || null);
-      if (session?.user) {
-        await syncProfile(session.user);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
     });
     const authListener = data.subscription;
-
-    const fallbackTimeout = setTimeout(async () => {
-      if (mounted && loading) {
-        if (import.meta.env.DEV) {
-          console.log("AuthContext: fallback session check triggered");
-        }
-        const { data: { session } } = await supabase.auth.getSession();
-        if (mounted && loading) {
-          setUser(session?.user || null);
-          if (session?.user) {
-            await syncProfile(session.user);
-          } else {
-            setProfile(null);
-          }
-          setLoading(false);
-        }
-      }
-    }, 150);
 
     return () => {
       mounted = false;
       if (authListener) authListener.unsubscribe();
-      clearTimeout(fallbackTimeout);
     };
   }, [syncProfile]);
 
