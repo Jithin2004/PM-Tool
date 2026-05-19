@@ -55,6 +55,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return newWs;
       });
     } catch (err: any) {
+      console.error('Workspace lookup failed:', err);
       setWorkspace(null);
       setError(err?.message || 'Workspace lookup failed.');
     }
@@ -73,6 +74,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user || null);
         await refreshWorkspace();
       } catch (err: any) {
+        console.error('Workspace initialization failed:', err);
         if (active) setError(err?.message || 'Workspace initialization failed.');
       } finally {
         if (active) setLoading(false);

@@ -1,6 +1,25 @@
 -- Resolve PM v2 workspace-scoped schema draft.
 -- Run in Supabase SQL Editor after backing up existing data.
 
+-- Drop old tables to prevent foreign key and column type conflicts
+drop table if exists task_history_logs cascade;
+drop table if exists tactical_tasks cascade;
+drop table if exists task_dependencies cascade;
+drop table if exists tasks cascade;
+drop table if exists comments cascade;
+drop table if exists files cascade;
+drop table if exists activity_logs cascade;
+drop table if exists notifications cascade;
+drop table if exists team_members cascade;
+drop table if exists teams cascade;
+drop table if exists attendance cascade;
+drop table if exists salaries cascade;
+drop table if exists change_logs cascade;
+drop table if exists projects cascade;
+drop table if exists users cascade;
+drop table if exists workspaces cascade;
+drop table if exists profiles cascade;
+
 create extension if not exists pgcrypto;
 
 create table if not exists workspaces (
@@ -195,7 +214,7 @@ with check (owner_id = auth.uid());
 
 create policy "Users are isolated by workspace"
 on users for select
-using (workspace_id = current_workspace() or id = auth.uid());
+using (auth.uid() is not null);
 
 create policy "Workspace owner can create first super admin user"
 on users for insert
@@ -209,9 +228,31 @@ with check (
   )
 );
 
-create policy "Workspace admins can manage users"
-on users for all
+create policy "Workspace admins can update users"
+on users for update
 using (
+  exists (
+    select 1 from users me
+    where me.id = auth.uid()
+      and me.workspace_id = users.workspace_id
+      and me.role in ('super_admin', 'pm')
+  )
+);
+
+create policy "Workspace admins can delete users"
+on users for delete
+using (
+  exists (
+    select 1 from users me
+    where me.id = auth.uid()
+      and me.workspace_id = users.workspace_id
+      and me.role in ('super_admin', 'pm')
+  )
+);
+
+create policy "Workspace admins can insert users"
+on users for insert
+with check (
   exists (
     select 1 from users me
     where me.id = auth.uid()

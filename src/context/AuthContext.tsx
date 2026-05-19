@@ -34,15 +34,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
-        console.warn("Error fetching from users table:", error);
+        console.error("Error fetching from users table:", error);
       }
 
       if (!data) {
         // 2. First-User Assignment & Brand New User Onboarding Flow
         console.log("New user detected in AuthContext. Determining first-user role assignment...");
-        const { count: usersCount } = await supabase
+        const { count: usersCount, error: countError } = await supabase
           .from('users')
           .select('*', { count: 'exact', head: true });
+
+        if (countError) {
+          console.error("Error fetching users count:", countError);
+        }
 
         const newRole = usersCount === 0 ? 'super_admin' : 'viewer';
 
