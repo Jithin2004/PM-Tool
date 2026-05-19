@@ -204,7 +204,10 @@ export async function createWorkspaceForUser({ name, settings, user }: CreateWor
   if (userError) throw userError;
 
   if (settings.country) {
-    await syncWorkspaceHolidays(workspaceRow.id, settings.country, settings.region || '');
+    // Run holiday sync asynchronously in the background to prevent transaction locks or deadlock hangs on onboarding
+    syncWorkspaceHolidays(workspaceRow.id, settings.country, settings.region || '').catch(err => {
+      console.warn("Failed to sync workspace holidays in background:", err);
+    });
   }
 
   return rowToWorkspace(workspaceRow as WorkspaceRow);
@@ -222,7 +225,9 @@ export async function updateWorkspaceSettings(workspace: Workspace, settings: Pa
   if (error) throw error;
 
   if (settings.country !== undefined || settings.region !== undefined) {
-    await syncWorkspaceHolidays(workspace.id, nextSettings.country || '', nextSettings.region || '');
+    syncWorkspaceHolidays(workspace.id, nextSettings.country || '', nextSettings.region || '').catch(err => {
+      console.warn("Failed to sync workspace holidays in background:", err);
+    });
   }
 
   return rowToWorkspace(data as WorkspaceRow);

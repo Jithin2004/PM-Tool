@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Check, Plus, X } from 'lucide-react';
 import { BUSINESS_TYPES } from '../../constants/product';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAuth } from '../../context/AuthContext';
 import { predictEta } from '../../services/etaService';
 import type { BusinessType, WorkspaceSettings } from '../../types/workspace';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
@@ -36,6 +37,7 @@ function navigate(path: string) {
 
 export function WorkspaceSetupPage() {
   const { user, workspace, createWorkspace, updateWorkspaceSettings, error } = useWorkspace();
+  const { refreshProfile } = useAuth();
   const [step, setStep] = useState(1);
   const [workspaceName, setWorkspaceName] = useState(workspace?.name || `${user?.email?.split('@')[0] || 'My'} Workspace`);
   const [settings, setSettings] = useState<WorkspaceSettings>(workspace?.settings || DEFAULT_SETTINGS);
@@ -43,6 +45,13 @@ export function WorkspaceSetupPage() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [invites, setInvites] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (window.location.pathname !== '/onboarding/workspace') {
+      window.history.replaceState(null, '', '/onboarding/workspace');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  }, []);
 
   const preview = useMemo(() => predictEta({
     likely: 40,
@@ -62,6 +71,8 @@ export function WorkspaceSetupPage() {
           name: workspaceName.trim() || 'Resolve Workspace',
           settings
         });
+        // Sync frontend profile role immediately to super_admin
+        await refreshProfile();
       }
       setStep(4);
     } catch (err: any) {

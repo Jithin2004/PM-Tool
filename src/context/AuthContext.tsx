@@ -9,6 +9,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateRole: (id: string, role: User['role']) => Promise<boolean>;
   updateProfile: (updates: Partial<User>) => Promise<boolean>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -215,8 +216,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await syncProfile(user);
+    }
+  }, [user, syncProfile]);
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, logout, updateRole, updateProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, logout, updateRole, updateProfile, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
