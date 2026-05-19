@@ -18,9 +18,9 @@ CREATE POLICY "Users can read workspace settings"
   ON workspace_settings FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM workspace_users
-      WHERE workspace_users.workspace_id = workspace_settings.workspace_id
-      AND workspace_users.user_id = auth.uid()
+      SELECT 1 FROM users
+      WHERE users.workspace_id = workspace_settings.workspace_id
+      AND users.id = auth.uid()
     )
   );
 
@@ -29,9 +29,9 @@ CREATE POLICY "Admins can update workspace settings"
   ON workspace_settings FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM workspace_users
-      WHERE workspace_users.workspace_id = workspace_settings.workspace_id
-      AND workspace_users.user_id = auth.uid()
-      AND workspace_users.role IN ('owner', 'admin')
+      SELECT 1 FROM users
+      WHERE users.workspace_id = workspace_settings.workspace_id
+      AND users.id = auth.uid()
+      AND users.role = 'super_admin'
     )
   );
