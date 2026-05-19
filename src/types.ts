@@ -1,7 +1,7 @@
 // Canonical Type Definitions mirroring SUPABASE_RESOLVE_PM_V2_SCHEMA.sql
 // These types enforce a single source of truth across all views (Board, Gantt, Calendar, etc.)
 
-export type UserRole = 'super_admin' | 'pm' | 'developer' | 'viewer';
+export type UserRole = 'super_admin' | 'pm' | 'developer' | 'viewer' | 'uninvited' | 'pending-workspace-setup';
 export type ProjectStatus = 'planning' | 'active' | 'review' | 'done' | 'archived' | 'deployed' | 'in-progress';
 export type ProjectPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type RiskLevel = 'low' | 'medium' | 'high';

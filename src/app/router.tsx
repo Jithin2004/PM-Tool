@@ -55,7 +55,7 @@ export function ResolveRouter() {
     return <AuthPage />;
   }
 
-  if ((profile?.role as any) === 'uninvited') {
+  if (profile?.role === 'uninvited') {
     console.log(profile);
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white p-6">
