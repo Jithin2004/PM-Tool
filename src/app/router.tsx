@@ -56,6 +56,7 @@ export function ResolveRouter() {
   }
 
   if ((profile?.role as any) === 'uninvited') {
+    console.log(profile);
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white p-6">
         <div className="max-w-md w-full border border-red-500/25 bg-red-500/5 p-8 text-center rounded">
