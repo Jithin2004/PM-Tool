@@ -34,10 +34,10 @@ function usePathname() {
 
 export function ResolveRouter() {
   const pathname = usePathname();
-  const { user, workspace, loading } = useWorkspace();
-  const { profile } = useAuth();
+  const { user, workspace, loading: workspaceLoading } = useWorkspace();
+  const { profile, loading: authLoading } = useAuth();
 
-  if (loading) {
+  if (workspaceLoading || authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white">
         <div className="text-center">
