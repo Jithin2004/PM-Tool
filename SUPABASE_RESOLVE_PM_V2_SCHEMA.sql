@@ -415,3 +415,41 @@ create policy "Personal leaves are isolated by user workspace"
 on personal_leave for all
 using (user_id in (select id from users where workspace_id = current_workspace()))
 with check (user_id in (select id from users where workspace_id = current_workspace()));
+
+-- Create workspace_settings table
+create table if not exists workspace_settings (
+  workspace_id uuid primary key references workspaces(id) on delete cascade,
+  working_hours numeric default 8,
+  working_time_from text default '09:00',
+  working_time_to text default '17:00',
+  lunch_duration_minutes integer default 60,
+  settings_blob jsonb default '{}'::jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Enable RLS for workspace_settings
+alter table workspace_settings enable row level security;
+drop policy if exists "Workspace settings are isolated by workspace" on workspace_settings;
+create policy "Workspace settings are isolated by workspace"
+on workspace_settings for all
+using (workspace_id = current_workspace())
+with check (workspace_id = current_workspace());
+
+-- Create salaries table
+create table if not exists salaries (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references workspaces(id) on delete cascade,
+  user_id uuid not null references users(id) on delete cascade,
+  base_salary numeric not null default 3000,
+  created_at timestamptz default now(),
+  unique(workspace_id, user_id)
+);
+
+-- Enable RLS for salaries
+alter table salaries enable row level security;
+drop policy if exists "Salaries are isolated by workspace" on salaries;
+create policy "Salaries are isolated by workspace"
+on salaries for all
+using (workspace_id = current_workspace())
+with check (workspace_id = current_workspace());
