@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .from('invitations')
             .select('*')
             .or(`email.eq.${email},email.eq.${email.toLowerCase()},email.eq.${email.toUpperCase()}`)
-            .eq('status', 'pending')
+            .in('status', ['pending', 'accepted'])
             .maybeSingle();
 
           if (!inviteError && invite && new Date(invite.expires_at) >= new Date()) {
@@ -67,13 +67,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (import.meta.env.DEV) {
             console.log("Valid pending invitation found. Bootstrapping invited user row...");
           }
-          // Accept invitation
-          await supabase
-            .from('invitations')
-            .update({ status: 'accepted' })
-            .eq('id', inviteToUse.id);
-
-          // Create canonical users row with pre-assigned role and workspace
+          // 1. Create canonical users row with pre-assigned role and workspace FIRST
+          // This must happen before updating invitation status to satisfy RLS!
           const { data: newUserRow, error: insertError } = await supabase
             .from('users')
             .upsert({
@@ -92,6 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error("Failed to bootstrap invited user row:", insertError);
           } else {
             data = newUserRow;
+            
+            // 2. Only accept invitation AFTER user is successfully created
+            if (inviteToUse.status === 'pending') {
+              await supabase
+                .from('invitations')
+                .update({ status: 'accepted' })
+                .eq('id', inviteToUse.id);
+            }
           }
         } else {
           // No invitation found. Check if the system is completely empty for bootstrap setup.
@@ -207,7 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Bulletproof fallback to absolutely prevent infinite loading screens
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
-    }, 2500);
+    }, 8000);
 
     if (import.meta.env.DEV) {
       console.log("AuthContext: subscribing to onAuthStateChange...");

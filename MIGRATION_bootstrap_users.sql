@@ -12,6 +12,6 @@ with check (
     where lower(invitations.email) = lower(auth.email())
       and invitations.workspace_id = users.workspace_id
       and invitations.role = users.role
-      and invitations.status = 'pending'
+      and invitations.status IN ('pending', 'accepted')
   )
 );
