@@ -4,5 +4,5 @@
 drop policy if exists "Invited users can accept their own invitation" on invitations;
 create policy "Invited users can accept their own invitation"
 on invitations for update
-using (email = auth.email() and status = 'pending')
-with check (email = auth.email() and status = 'accepted');
+using (lower(email) = lower(auth.email()) and status = 'pending')
+with check (lower(email) = lower(auth.email()) and status = 'accepted');

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Terminal, Lock, X, AlertTriangle, Users, Database, Zap, Edit2, Trash2 } from 'lucide-react';
 import { Project, Team, User, Profile, UserRole } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 export function AdminDashboard({
   profiles,
@@ -32,6 +33,8 @@ export function AdminDashboard({
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [newRoleName, setNewRoleName] = useState('');
+
+  const { workspace, user: currentUserProfile } = useWorkspace();
 
   const [invitations, setInvitations] = useState<any[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -68,25 +71,17 @@ export function AdminDashboard({
     setInviteError(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("No active auth session.");
-
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('workspace_id')
-        .eq('id', session.user.id)
-        .single();
-
-      if (userError || !userData?.workspace_id) throw new Error("Could not locate active workspace.");
+      if (!workspace?.id) throw new Error("Could not locate active workspace.");
+      if (!currentUserProfile?.id) throw new Error("No active user profile.");
 
       const { error: insertError } = await supabase
         .from('invitations')
         .insert({
           email,
-          workspace_id: userData.workspace_id,
+          workspace_id: workspace.id,
           role: inviteRole,
           status: 'pending',
-          invited_by: session.user.id,
+          invited_by: currentUserProfile.id,
           expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         });
 

@@ -290,10 +290,10 @@ create policy "Invited users can bootstrap their own user row"
 on users for insert
 with check (
   id = auth.uid()
-  and email = auth.email()
+  and lower(email) = lower(auth.email())
   and exists (
     select 1 from invitations
-    where invitations.email = auth.email()
+    where lower(invitations.email) = lower(auth.email())
       and invitations.workspace_id = users.workspace_id
       and invitations.role = users.role
       and invitations.status = 'pending'
@@ -496,7 +496,7 @@ drop policy if exists "Invitations are readable by the invited email or workspac
 create policy "Invitations are readable by the invited email or workspace members"
 on invitations for select
 using (
-  email = auth.email()
+  lower(email) = lower(auth.email())
   or workspace_id = current_workspace()
 );
 
@@ -523,6 +523,6 @@ with check (
 drop policy if exists "Invited users can accept their own invitation" on invitations;
 create policy "Invited users can accept their own invitation"
 on invitations for update
-using (email = auth.email() and status = 'pending')
-with check (email = auth.email() and status = 'accepted');
+using (lower(email) = lower(auth.email()) and status = 'pending')
+with check (lower(email) = lower(auth.email()) and status = 'accepted');
 

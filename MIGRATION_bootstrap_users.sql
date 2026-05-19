@@ -6,10 +6,10 @@ create policy "Invited users can bootstrap their own user row"
 on users for insert
 with check (
   id = auth.uid()
-  and email = auth.email()
+  and lower(email) = lower(auth.email())
   and exists (
     select 1 from invitations
-    where invitations.email = auth.email()
+    where lower(invitations.email) = lower(auth.email())
       and invitations.workspace_id = users.workspace_id
       and invitations.role = users.role
       and invitations.status = 'pending'
