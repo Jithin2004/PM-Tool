@@ -8,7 +8,8 @@ export function LogisticsDashboard({
   profiles,
   teams,
   systemData,
-  onSaveData
+  onSaveData,
+  role
 }: {
   profiles: Profile[],
   teams: Team[],

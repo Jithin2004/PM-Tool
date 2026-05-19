@@ -44,6 +44,45 @@ export function TeamRosterModal({
     return () => resizeObserver.disconnect();
   }, []);
 
+  const TeamRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const team = filteredSquads[index];
+    if (!team) return null;
+    const metrics = getSquadLoadMetrics(team);
+    const isActive = team.id === activeSquadId;
+    const pm = profiles.find(p => p.id === metrics.pmId);
+    const devsCount = metrics.engineerCount;
+
+    return (
+      <div
+        style={style}
+        onClick={() => {
+          setActiveSquadId(team.id);
+          setRosterTab('analytics');
+        }}
+        className={`p-4 cursor-pointer transition-all hover:bg-white/[0.02] flex flex-col gap-2 border-b border-white/5 ${isActive ? 'bg-white/5 border-l-2 border-l-blue-500' : ''}`}
+      >
+        <div className="flex justify-between items-start gap-2">
+          <h4 className="text-sm font-semibold tracking-tight uppercase truncate">{team.name}</h4>
+          <span className={`text-[9px] font-mono px-2 py-0.5 border ${metrics.loadPercentage > 100 ? 'bg-red-500/10 text-red-400 border-red-500/20' : metrics.loadPercentage >= 50 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
+            {metrics.loadPercentage}% LOAD
+          </span>
+        </div>
+        <div className="flex justify-between items-center text-[10px] font-mono text-white/60">
+          <span>LEAD: <span className="text-white/80">{pm?.full_name?.split(' ')[0] || pm?.email?.split('@')[0] || 'N/A'}</span></span>
+          <span>STAFF: <span className="text-white/80">{devsCount}</span></span>
+        </div>
+
+        {/* Progress indicator */}
+        <div className="w-full bg-white/5 h-1">
+          <div
+            className={`h-full ${metrics.loadPercentage > 100 ? 'bg-red-500' : 'bg-blue-500'}`}
+            style={{ width: `${Math.min(100, metrics.loadPercentage)}%` }}
+          />
+        </div>
+      </div>
+    );
+  };
+
   const getSquadLoadMetrics = (team: Team) => {
     const parsedData = team.data;
     const devIds = parsedData?.developer_ids || [];
@@ -242,50 +281,13 @@ export function TeamRosterModal({
               </div>
             ) : filteredSquads.length > 20 ? (
               <List
-                height={containerHeight}
-                itemCount={filteredSquads.length}
-                itemSize={82}
-                width="100%"
+                rowCount={filteredSquads.length}
+                rowHeight={82}
+                rowComponent={TeamRow as any}
+                rowProps={{}}
+                style={{ height: containerHeight, width: '100%' }}
                 className="scrollbar-thin divide-y divide-white/5"
-              >
-                {({ index, style }) => {
-                  const team = filteredSquads[index];
-                  const metrics = getSquadLoadMetrics(team);
-                  const isActive = team.id === activeSquadId;
-                  const pm = profiles.find(p => p.id === metrics.pmId);
-                  const devsCount = metrics.engineerCount;
-
-                  return (
-                    <div
-                      style={style}
-                      onClick={() => {
-                        setActiveSquadId(team.id);
-                        setRosterTab('analytics');
-                      }}
-                      className={`p-4 cursor-pointer transition-all hover:bg-white/[0.02] flex flex-col gap-2 border-b border-white/5 ${isActive ? 'bg-white/5 border-l-2 border-l-blue-500' : ''}`}
-                    >
-                      <div className="flex justify-between items-start gap-2">
-                        <h4 className="text-sm font-semibold tracking-tight uppercase truncate">{team.name}</h4>
-                        <span className={`text-[9px] font-mono px-2 py-0.5 border ${metrics.loadPercentage > 100 ? 'bg-red-500/10 text-red-400 border-red-500/20' : metrics.loadPercentage >= 50 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
-                          {metrics.loadPercentage}% LOAD
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] font-mono text-white/60">
-                        <span>LEAD: <span className="text-white/80">{pm?.full_name?.split(' ')[0] || pm?.email?.split('@')[0] || 'N/A'}</span></span>
-                        <span>STAFF: <span className="text-white/80">{devsCount}</span></span>
-                      </div>
-
-                      {/* Progress indicator */}
-                      <div className="w-full bg-white/5 h-1">
-                        <div
-                          className={`h-full ${metrics.loadPercentage > 100 ? 'bg-red-500' : 'bg-blue-500'}`}
-                          style={{ width: `${Math.min(100, metrics.loadPercentage)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                }}
-              </List>
+              />
             ) : (
               <div className="w-full h-full overflow-y-auto divide-y divide-white/5 scrollbar-thin">
                 {filteredSquads.map(team => {

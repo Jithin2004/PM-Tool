@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2 } from 'lucide-react';
+import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2, History } from 'lucide-react';
 import { Project, Team, User, Profile } from '../../types';
 import { useDashboard } from '../../context/DashboardContext';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';

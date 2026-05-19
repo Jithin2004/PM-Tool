@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, XCircle, Info, AlertCircle, Plus } from 'lucide-react';
 
 export interface Notification {
+  id?: string;
   message: string;
   type: 'success' | 'error' | 'warning' | 'info';
 }

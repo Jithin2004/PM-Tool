@@ -217,6 +217,31 @@ export default function ExecutionBoard({
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {columns.map(col => {
           const colTasks = tasks.filter(t => t.status === col.id && (!filterByProject || t.project_id === filterByProject));
+          const TaskRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+            const task = colTasks[index];
+            if (!task) return null;
+            const innerStyle = {
+              ...style,
+              height: typeof style.height === 'number' ? style.height - 12 : style.height,
+            };
+            return (
+              <div style={innerStyle}>
+                <TaskCard
+                  task={task}
+                  project={projects.find(p => p.id === task.project_id)}
+                  hasWriteAccess={hasWriteAccess}
+                  columns={columns}
+                  onTransitionTask={handleTransitionTask}
+                  onPromoteToAsset={onPromoteToAsset}
+                  onClick={(t) => {
+                    setSelectedTask(t);
+                    setIsDrawerOpen(true);
+                  }}
+                />
+              </div>
+            );
+          };
+
           return (
             <div key={col.id} className="bg-white/[0.02] border border-white/5 rounded-sm p-3 flex flex-col min-h-[350px] transition-all">
               <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
@@ -236,36 +261,13 @@ export default function ExecutionBoard({
                   </div>
                 ) : colTasks.length > 20 ? (
                   <List
-                    height={Math.min(450, colTasks.length * 175)}
-                    itemCount={colTasks.length}
-                    itemSize={175}
-                    width="100%"
+                    rowCount={colTasks.length}
+                    rowHeight={175}
+                    rowComponent={TaskRow as any}
+                    rowProps={{}}
+                    style={{ height: Math.min(450, colTasks.length * 175), width: '100%' }}
                     className="scrollbar-thin pr-1"
-                  >
-                    {({ index, style }) => {
-                      const task = colTasks[index];
-                      const innerStyle = {
-                        ...style,
-                        height: typeof style.height === 'number' ? style.height - 12 : style.height,
-                      };
-                      return (
-                        <div style={innerStyle}>
-                          <TaskCard
-                            task={task}
-                            project={projects.find(p => p.id === task.project_id)}
-                            hasWriteAccess={hasWriteAccess}
-                            columns={columns}
-                            onTransitionTask={handleTransitionTask}
-                            onPromoteToAsset={onPromoteToAsset}
-                            onClick={(t) => {
-                              setSelectedTask(t);
-                              setIsDrawerOpen(true);
-                            }}
-                          />
-                        </div>
-                      );
-                    }}
-                  </List>
+                  />
                 ) : (
                   <div className="flex-1 flex flex-col gap-3 overflow-y-auto scrollbar-thin pr-1">
                     {colTasks.map(task => (

@@ -56,50 +56,7 @@ import { TeamRosterModal } from '../../components/team/TeamRosterModal';
 import { UserProfileModal } from '../../components/user/UserProfileModal';
 import { calculateExpectedTime, calculateVariance, calculateHoursFromRange, getLocalDateString, getRelativeTime } from '../../utils/timeUtils';
 
-// --- Types ---
-type UserRole = 'super_admin' | 'pm' | 'developer' | 'viewer';
-
-interface Profile {
-  id: string;
-  email: string;
-  role: UserRole;
-  full_name?: string;
-  phone?: string;
-  avatar_url?: string;
-  created_at: string;
-}
-
-interface TeamData {
-  pm_id: string;
-  developer_ids: string[];
-}
-
-interface Team {
-  id: string;
-  name: string;
-  data: TeamData | null;
-  created_at: string;
-  updated_at?: string;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  status: 'planning' | 'in-progress' | 'review' | 'deployed';
-  priority: 'high' | 'medium' | 'low';
-  efficiency: number; // 0 to 1
-  pert_best: number; // days
-  pert_likely: number; // days
-  pert_worst: number; // days
-  created_at: string;
-  proposed_start_date?: string;
-  delete_reason?: string;
-  owner_id?: string;
-  team_id?: string;
-  tags: string[];
-  client_deadline?: string;
-  real_hours?: number;
-}
+import { Project, Team, Profile, User, UserRole } from '../../types';
 
 interface Stats {
   totalProjects: number;
@@ -1003,7 +960,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       if (settingsTeam) {
         return prevTeams.map(t => t.name === 'SYSTEM_SETTINGS' ? { ...t, data: { ...t.data, ...updatedData } } : t);
       } else {
-        return [...prevTeams, { id: 'SYSTEM_SETTINGS', name: 'SYSTEM_SETTINGS', data: updatedData, created_at: new Date().toISOString() }];
+        return [...prevTeams, { id: 'SYSTEM_SETTINGS', workspace_id: workspace?.id || '', name: 'SYSTEM_SETTINGS', data: updatedData, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }];
       }
     });
 
@@ -1173,7 +1130,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       const localSettings = localStorage.getItem('SYSTEM_SETTINGS');
       if (localSettings) {
         const parsedSettings = JSON.parse(localSettings);
-        setTeams([{ id: 'SYSTEM_SETTINGS', name: 'SYSTEM_SETTINGS', data: parsedSettings, created_at: new Date().toISOString() }]);
+        setTeams([{ id: 'SYSTEM_SETTINGS', workspace_id: workspace?.id || '', name: 'SYSTEM_SETTINGS', data: parsedSettings, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       }
     }
   };
