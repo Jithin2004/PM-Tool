@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         const { data: newUserRow, error: insertError } = await supabase
           .from('users')
-          .insert({
+          .upsert({
             id: authUser.id,
             email: email,
             workspace_id: null,

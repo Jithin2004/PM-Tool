@@ -129,7 +129,7 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
       // 2. Auto-create canonical users row
       const { error: insertError } = await supabase
         .from('users')
-        .insert({
+        .upsert({
           id: userId,
           email: email,
           workspace_id: null,
