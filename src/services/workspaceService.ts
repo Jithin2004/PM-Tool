@@ -61,21 +61,27 @@ export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
 }
 
 export async function getWorkspaceForUser(userId: string): Promise<Workspace | null> {
+  console.log("workspaceService: getWorkspaceForUser() started for user:", userId);
+  
+  console.log("workspaceService: getWorkspaceForUser() querying users table...");
   const { data: memberRow, error: memberError } = await supabase
     .from('users')
     .select('workspace_id')
     .eq('id', userId)
     .maybeSingle();
 
+  console.log("workspaceService: getWorkspaceForUser() users query completed. error:", memberError, "data:", memberRow);
   if (memberError) throw memberError;
   if (!memberRow?.workspace_id) return null;
 
+  console.log("workspaceService: getWorkspaceForUser() querying workspaces table for ID:", memberRow.workspace_id);
   const { data: workspaceRow, error: workspaceError } = await supabase
     .from('workspaces')
     .select('*')
     .eq('id', memberRow.workspace_id)
     .maybeSingle();
 
+  console.log("workspaceService: getWorkspaceForUser() workspaces query completed. error:", workspaceError, "data:", workspaceRow);
   if (workspaceError) throw workspaceError;
   return workspaceRow ? rowToWorkspace(workspaceRow as WorkspaceRow) : null;
 }

@@ -21,12 +21,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const syncProfile = useCallback(async (authUser: any) => {
     if (!isSupabaseConfigured) return;
+    console.log("AuthContext: syncProfile() started for user:", authUser.id);
 
     try {
       const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
       const email = authUser.email;
       const fullName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email?.split('@')[0] || 'User';
 
+      console.log("AuthContext: syncProfile() querying users table...");
       // 1. Primary Query: Canonical users table
       let { data, error } = await supabase
         .from('users')
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authUser.id)
         .maybeSingle();
 
+      console.log("AuthContext: syncProfile() users query completed. error:", error, "data:", data);
       if (error && error.code !== 'PGRST116') {
         console.error("Error fetching from users table:", error);
       }

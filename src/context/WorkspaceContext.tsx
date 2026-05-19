@@ -32,14 +32,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const refreshWorkspace = useCallback(async () => {
+    console.log("WorkspaceContext: refreshWorkspace() started");
     if (!isSupabaseConfigured) {
+      console.log("WorkspaceContext: refreshWorkspace() aborted because Supabase is not configured");
       setWorkspace(null);
       return;
     }
 
+    console.log("WorkspaceContext: refreshWorkspace() calling supabase.auth.getSession()...");
     const { data: { session } } = await supabase.auth.getSession();
     const activeUser = session?.user || null;
     setUser(activeUser);
+    console.log("WorkspaceContext: refreshWorkspace() active user:", activeUser?.id || 'none');
 
     if (!activeUser) {
       setWorkspace(null);
@@ -47,7 +51,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      console.log("WorkspaceContext: refreshWorkspace() calling getWorkspaceForUser()...");
       const newWs = await getWorkspaceForUser(activeUser.id);
+      console.log("WorkspaceContext: refreshWorkspace() getWorkspaceForUser() returned:", newWs?.id || 'null');
       setWorkspace(prev => {
         if (prev && newWs && prev.id !== newWs.id) {
           console.log('Workspace switch detected. Unsubscribing stale channels.');
@@ -56,7 +62,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return newWs;
       });
     } catch (err: any) {
-      console.error('Workspace lookup failed:', err);
+      console.error('WorkspaceContext: refreshWorkspace() failed:', err);
       setWorkspace(null);
       setError(err?.message || 'Workspace lookup failed.');
     }
@@ -66,18 +72,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     let active = true;
 
     const initialize = async () => {
+      console.log("WorkspaceContext: initialize() started");
       setLoading(true);
       setError(null);
 
       try {
+        console.log("WorkspaceContext: calling supabase.auth.getSession()...");
         const { data: { session } } = await supabase.auth.getSession();
+        console.log("WorkspaceContext: getSession() resolved, user:", session?.user?.id || 'none');
         if (!active) return;
         setUser(session?.user || null);
+        console.log("WorkspaceContext: calling refreshWorkspace()...");
         await refreshWorkspace();
+        console.log("WorkspaceContext: refreshWorkspace() resolved successfully");
       } catch (err: any) {
-        console.error('Workspace initialization failed:', err);
+        console.error('WorkspaceContext: initialize() failed with error:', err);
         if (active) setError(err?.message || 'Workspace initialization failed.');
       } finally {
+        console.log("WorkspaceContext: initialize() finally block. active:", active);
         if (active) setLoading(false);
       }
     };
@@ -85,6 +97,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     initialize();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("WorkspaceContext: onAuthStateChange event:", event, "session user:", session?.user?.id || 'none');
       if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
         setUser(null);
         setWorkspace(null);
