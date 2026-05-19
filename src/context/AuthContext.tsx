@@ -96,55 +96,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const initAuth = async () => {
-      if (!isSupabaseConfigured) {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
+    console.log("AuthContext: subscribing to onAuthStateChange...");
+    const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("AuthContext: onAuthStateChange event:", event, "session user:", session?.user?.id || 'none');
+      if (!mounted) return;
+      
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+        setLoading(true);
+        setUser(null);
+        setProfile(null);
+        supabase.removeAllChannels();
         setLoading(false);
+        window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Session expired. Redirecting...", type: "error" } }));
+        setTimeout(() => { window.location.href = '/'; }, 1000);
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (mounted) {
-        setUser(session?.user || null);
-        if (session?.user) {
-          await syncProfile(session.user);
-        }
-        setLoading(false);
+      setLoading(true);
+      setUser(session?.user || null);
+      if (session?.user) {
+        await syncProfile(session.user);
+      } else {
+        setProfile(null);
       }
-    };
+      setLoading(false);
+    });
+    const authListener = data.subscription;
 
-    initAuth();
-
-    let authListener: any = null;
-    if (isSupabaseConfigured) {
-      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (!mounted) return;
-        
-        if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
-          setLoading(true);
-          setUser(null);
-          setProfile(null);
-          supabase.removeAllChannels();
+    const fallbackTimeout = setTimeout(async () => {
+      if (mounted && loading) {
+        console.log("AuthContext: fallback session check triggered");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted && loading) {
+          setUser(session?.user || null);
+          if (session?.user) {
+            await syncProfile(session.user);
+          } else {
+            setProfile(null);
+          }
           setLoading(false);
-          window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Session expired. Redirecting...", type: "error" } }));
-          setTimeout(() => { window.location.href = '/'; }, 1000);
-          return;
         }
-
-        setLoading(true);
-        setUser(session?.user || null);
-        if (session?.user) {
-          await syncProfile(session.user);
-        } else {
-          setProfile(null);
-        }
-        setLoading(false);
-      });
-      authListener = data.subscription;
-    }
+      }
+    }, 150);
 
     return () => {
       mounted = false;
       if (authListener) authListener.unsubscribe();
+      clearTimeout(fallbackTimeout);
     };
   }, [syncProfile]);
 
