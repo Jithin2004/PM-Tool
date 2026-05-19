@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { predictEta } from '../../services/etaService';
 import type { BusinessType, WorkspaceSettings } from '../../types/workspace';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
+import { supabase } from '../../lib/supabase';
 
 const WORKDAYS = [
   { value: 1, label: 'Mon' },
@@ -82,11 +83,63 @@ export function WorkspaceSetupPage() {
     }
   };
 
-  const addInvite = () => {
-    const email = inviteEmail.trim();
+  const addInvite = async () => {
+    const email = inviteEmail.trim().toLowerCase();
     if (!email || invites.includes(email)) return;
-    setInvites(prev => [...prev, email]);
-    setInviteEmail('');
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setLocalError("Invalid email format.");
+      return;
+    }
+
+    setLocalError(null);
+    setSaving(true);
+    try {
+      if (workspace?.id) {
+        const { error: inviteError } = await supabase
+          .from('invitations')
+          .insert({
+            email,
+            workspace_id: workspace.id,
+            role: 'developer', // Default invited role
+            status: 'pending',
+            invited_by: user?.id,
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          });
+
+        if (inviteError) {
+          if (inviteError.code === '23505') {
+            throw new Error("This email is already invited.");
+          }
+          throw inviteError;
+        }
+      }
+      setInvites(prev => [...prev, email]);
+      setInviteEmail('');
+    } catch (err: any) {
+      setLocalError(err?.message || "Failed to save invitation.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeInvite = async (email: string) => {
+    setLocalError(null);
+    setSaving(true);
+    try {
+      if (workspace?.id) {
+        await supabase
+          .from('invitations')
+          .delete()
+          .eq('workspace_id', workspace.id)
+          .eq('email', email);
+      }
+      setInvites(prev => prev.filter(value => value !== email));
+    } catch (err: any) {
+      setLocalError("Failed to revoke invitation.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleWorkday = (day: number) => {
@@ -313,7 +366,7 @@ export function WorkspaceSetupPage() {
                 {invites.map(email => (
                   <div key={email} className="flex items-center justify-between border border-white/10 bg-white/5 px-4 py-3 text-sm">
                     {email}
-                    <button onClick={() => setInvites(prev => prev.filter(value => value !== email))}>
+                    <button onClick={() => removeInvite(email)} disabled={saving}>
                       <X className="h-4 w-4 text-white/60" />
                     </button>
                   </div>

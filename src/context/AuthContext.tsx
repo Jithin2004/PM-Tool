@@ -48,28 +48,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!data) {
-        if (import.meta.env.DEV) {
-          console.log("New user detected in AuthContext. Auto-creating users row with pending-workspace-setup...");
-        }
-        
-        const { data: newUserRow, error: insertError } = await supabase
+        // Check if there are any users in the system to determine if this is a fresh organization bootstrap
+        const { count, error: countError } = await supabase
           .from('users')
-          .upsert({
-            id: authUser.id,
-            email: email,
-            workspace_id: null,
-            role: 'pending-workspace-setup',
-            full_name: fullName,
-            avatar_url: googleAvatar,
-            availability_factor: 1
-          })
-          .select()
-          .single();
+          .select('*', { count: 'exact', head: true });
 
-        if (insertError) {
-          console.error("Failed to insert pending user row in AuthContext:", insertError);
+        const isFreshOrg = !countError && count === 0;
+
+        if (isFreshOrg) {
+          if (import.meta.env.DEV) {
+            console.log("First user detected in AuthContext. Allowing bootstrap as pending-workspace-setup...");
+          }
+          const { data: newUserRow, error: insertError } = await supabase
+            .from('users')
+            .upsert({
+              id: authUser.id,
+              email: email,
+              workspace_id: null,
+              role: 'pending-workspace-setup',
+              full_name: fullName,
+              avatar_url: googleAvatar,
+              availability_factor: 1
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error("Failed to insert pending user row in AuthContext:", insertError);
+          } else {
+            data = newUserRow;
+          }
         } else {
-          data = newUserRow;
+          // Check for a valid pending invitation
+          const { data: invite, error: inviteError } = await supabase
+            .from('invitations')
+            .select('*')
+            .eq('email', email?.toLowerCase())
+            .eq('status', 'pending')
+            .maybeSingle();
+
+          if (inviteError || !invite || new Date(invite.expires_at) < new Date()) {
+            if (import.meta.env.DEV) {
+              console.log("Uninvited or expired invitation for:", email);
+            }
+            const uninvitedProfile = {
+              id: authUser.id,
+              email: email,
+              role: 'uninvited',
+              full_name: fullName,
+              avatar_url: googleAvatar,
+              workspace_id: null,
+              designation: 'Uninvited User'
+            } as any;
+            setProfile(uninvitedProfile);
+            setLoading(false);
+            return;
+          }
+
+          // Valid invitation found: Accept and create canonical user row with pre-assigned role
+          await supabase
+            .from('invitations')
+            .update({ status: 'accepted' })
+            .eq('id', invite.id);
+
+          const { data: newUserRow, error: insertError } = await supabase
+            .from('users')
+            .upsert({
+              id: authUser.id,
+              email: email,
+              workspace_id: invite.workspace_id,
+              role: invite.role,
+              full_name: fullName,
+              avatar_url: googleAvatar,
+              availability_factor: 1
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error("Failed to bootstrap invited user row:", insertError);
+          } else {
+            data = newUserRow;
+          }
         }
       } else {
         // We found canonical user in users table. Update avatar if missing.

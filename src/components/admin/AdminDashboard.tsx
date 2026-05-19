@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Terminal, Lock, X, AlertTriangle, Users, Database, Zap, Edit2, Trash2 } from 'lucide-react';
 import { Project, Team, User, Profile, UserRole } from '../../types';
+import { supabase } from '../../lib/supabase';
 
 export function AdminDashboard({
   profiles,
@@ -31,6 +32,91 @@ export function AdminDashboard({
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [newRoleName, setNewRoleName] = useState('');
+
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'pm' | 'developer' | 'viewer'>('developer');
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
+  const fetchInvitations = async () => {
+    if (currentUserRole !== 'super_admin') return;
+    const { data, error } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('status', 'pending');
+    if (!error && data) {
+      setInvitations(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvitations();
+  }, [currentUserRole]);
+
+  const handleSendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email) return;
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setInviteError("Invalid email format.");
+      return;
+    }
+
+    setInviting(true);
+    setInviteError(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("No active auth session.");
+
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('workspace_id')
+        .eq('id', session.user.id)
+        .single();
+
+      if (userError || !userData?.workspace_id) throw new Error("Could not locate active workspace.");
+
+      const { error: insertError } = await supabase
+        .from('invitations')
+        .insert({
+          email,
+          workspace_id: userData.workspace_id,
+          role: inviteRole,
+          status: 'pending',
+          invited_by: session.user.id,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        });
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          throw new Error("This email is already invited.");
+        }
+        throw insertError;
+      }
+
+      setInviteEmail('');
+      fetchInvitations();
+    } catch (err: any) {
+      setInviteError(err?.message || "Failed to send invitation.");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (id: string) => {
+    askConfirmation("Revoke Invitation", "Are you sure you want to revoke this invitation? The user will no longer be allowed to join.", async () => {
+      const { error } = await supabase
+        .from('invitations')
+        .delete()
+        .eq('id', id);
+      if (!error) {
+        fetchInvitations();
+      }
+    }, "Revoke");
+  };
 
   const customRoles: string[] = systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'];
   const userCustomRoles: Record<string, string> = systemData.userCustomRoles || {};
@@ -430,6 +516,81 @@ export function AdminDashboard({
               })}
             </div>
           </div>
+
+          {/* Invite Member & Pending Invitations (Visible to Super Admin) */}
+          {currentUserRole === 'super_admin' && (
+            <div className="border border-white/10 bg-[#0c0c0c] p-6 lg:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Invite Form */}
+              <div>
+                <h3 className="text-sm font-mono uppercase tracking-widest mb-6">Invite Organization Member</h3>
+                <form onSubmit={handleSendInvitation} className="space-y-4">
+                  {inviteError && (
+                    <div className="border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
+                      {inviteError}
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Member Email</label>
+                    <input
+                      required
+                      type="email"
+                      value={inviteEmail}
+                      onChange={e => setInviteEmail(e.target.value)}
+                      className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none placeholder:text-white/70 text-white"
+                      placeholder="teammate@company.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assigned Role</label>
+                    <select
+                      required
+                      value={inviteRole}
+                      onChange={e => setInviteRole(e.target.value as any)}
+                      className="w-full bg-black border border-white/10 h-10 px-3 font-mono text-xs focus:border-white/40 outline-none text-white/80"
+                    >
+                      <option value="developer">Developer</option>
+                      <option value="pm">Project Manager</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={inviting}
+                    className="w-full bg-white text-black h-10 font-semibold hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest disabled:opacity-50"
+                  >
+                    {inviting ? 'Inviting...' : 'Send Invitation'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Pending Invites List */}
+              <div>
+                <h3 className="text-sm font-mono uppercase tracking-widest mb-6">Pending Invitations</h3>
+                <div className="divide-y divide-white/5 border border-white/10 max-h-[220px] overflow-y-auto bg-black p-4 rounded-sm">
+                  {invitations.map(inv => (
+                    <div key={inv.id} className="flex justify-between items-center py-3 hover:bg-white/[0.02] transition-colors border-b border-white/5 last:border-0">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-mono text-white/85">{inv.email}</span>
+                        <span className="text-[9px] font-mono text-white/45 uppercase mt-1">Role: {inv.role}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRevokeInvitation(inv.id)}
+                        className="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest px-3 py-1.5 border border-white/10 hover:border-red-500/30 transition-colors bg-white/5 hover:bg-white/10"
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  ))}
+                  {invitations.length === 0 && (
+                    <div className="text-center py-8 text-xs font-mono text-white/40 italic">
+                      No pending invitations.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </main>

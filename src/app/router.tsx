@@ -35,7 +35,7 @@ function usePathname() {
 export function ResolveRouter() {
   const pathname = usePathname();
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
-  const { profile, loading: authLoading } = useAuth();
+  const { profile, logout, loading: authLoading } = useAuth();
 
   if (workspaceLoading || authLoading) {
     return (
@@ -50,6 +50,30 @@ export function ResolveRouter() {
 
   if (!user) {
     return <AuthPage />;
+  }
+
+  if ((profile?.role as any) === 'uninvited') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white p-6">
+        <div className="max-w-md w-full border border-red-500/25 bg-red-500/5 p-8 text-center rounded">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center bg-red-500/10 text-red-400 rounded-full">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Access Restrained</h2>
+          <p className="text-sm text-white/60 mb-6 font-mono">
+            You haven't been invited to an organization yet.
+          </p>
+          <button
+            onClick={() => logout()}
+            className="w-full border border-white/10 bg-white/5 py-2.5 text-sm font-medium hover:bg-white/10 transition-colors font-mono uppercase tracking-wider"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!workspace) {

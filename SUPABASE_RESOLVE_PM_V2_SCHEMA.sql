@@ -460,3 +460,48 @@ create policy "Salaries are isolated by workspace"
 on salaries for all
 using (workspace_id = current_workspace())
 with check (workspace_id = current_workspace());
+
+-- Create invitations table
+create table if not exists invitations (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  workspace_id uuid not null references workspaces(id) on delete cascade,
+  role text not null check (role in ('super_admin', 'pm', 'developer', 'viewer')),
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'revoked')),
+  invited_by uuid references users(id) on delete set null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  unique(workspace_id, email)
+);
+
+-- Enable RLS for invitations
+alter table invitations enable row level security;
+
+drop policy if exists "Invitations are readable by the invited email or workspace members" on invitations;
+create policy "Invitations are readable by the invited email or workspace members"
+on invitations for select
+using (
+  email = auth.email()
+  or workspace_id = current_workspace()
+);
+
+drop policy if exists "Workspace super admins can manage invitations" on invitations;
+create policy "Workspace super admins can manage invitations"
+on invitations for all
+using (
+  workspace_id = current_workspace()
+  and exists (
+    select 1 from users
+    where users.id = auth.uid()
+    and users.role = 'super_admin'
+  )
+)
+with check (
+  workspace_id = current_workspace()
+  and exists (
+    select 1 from users
+    where users.id = auth.uid()
+    and users.role = 'super_admin'
+  )
+);
+
