@@ -121,28 +121,10 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
   }
   if (memberError) throw memberError;
 
-  // 1. Detect zero-row user lookup
-  if (!memberRow) {
-    const { data: { session } } = await supabase.auth.getSession();
-    const email = session?.user?.email;
-    if (session?.user && email) {
-      // 2. Auto-create canonical users row
-      const { error: insertError } = await supabase
-        .from('users')
-        .upsert({
-          id: userId,
-          email: email,
-          workspace_id: null,
-          role: 'pending-workspace-setup'
-        });
-      if (insertError) {
-        console.error("Auto-creating users row failed:", insertError);
-      }
-    }
+  // 1. Detect zero-row user lookup or missing workspace_id
+  if (!memberRow || !memberRow.workspace_id) {
     return null;
   }
-
-  if (!memberRow.workspace_id) return null;
 
   if (import.meta.env.DEV) {
     console.log("workspaceService: getWorkspaceForUser() querying workspaces table for ID:", memberRow.workspace_id);
