@@ -63,9 +63,9 @@ BEGIN
     CREATE POLICY "Admins and PMs can insert tactical tasks"
     ON tactical_tasks FOR INSERT WITH CHECK (
       EXISTS (
-        SELECT 1 FROM profiles
-        WHERE profiles.id = auth.uid()::uuid
-        AND profiles.role IN ('super_admin', 'pm')
+        SELECT 1 FROM users
+        WHERE users.id = auth.uid()
+        AND users.role IN ('super_admin', 'pm')
       )
     );
   END IF;
@@ -81,9 +81,9 @@ BEGIN
     CREATE POLICY "Admins and PMs can update tactical tasks"
     ON tactical_tasks FOR UPDATE USING (
       EXISTS (
-        SELECT 1 FROM profiles
-        WHERE profiles.id = auth.uid()::uuid
-        AND profiles.role IN ('super_admin', 'pm')
+        SELECT 1 FROM users
+        WHERE users.id = auth.uid()
+        AND users.role IN ('super_admin', 'pm')
       )
     );
   END IF;
@@ -99,9 +99,9 @@ BEGIN
     CREATE POLICY "Admins and PMs can delete tactical tasks"
     ON tactical_tasks FOR DELETE USING (
       EXISTS (
-        SELECT 1 FROM profiles
-        WHERE profiles.id = auth.uid()::uuid
-        AND profiles.role IN ('super_admin', 'pm')
+        SELECT 1 FROM users
+        WHERE users.id = auth.uid()
+        AND users.role IN ('super_admin', 'pm')
       )
     );
   END IF;
