@@ -49,6 +49,9 @@ export function ResolveRouter() {
   }
 
   if (!user) {
+    if (window.location.pathname !== '/' && window.location.pathname !== '/onboarding/workspace') {
+      window.history.replaceState(null, '', '/');
+    }
     return <AuthPage />;
   }
 

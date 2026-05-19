@@ -90,6 +90,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    setLoading(true);
     let active = true;
 
     const loadWorkspace = async () => {

@@ -229,14 +229,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       } else if (event !== 'INITIAL_SESSION') {
         // Only react to subsequent events to avoid race conditions with initAuth
-        setLoading(true);
         setUser(session?.user || null);
         if (session?.user) {
           await syncProfile(session.user);
         } else {
           setProfile(null);
         }
-        setLoading(false);
       }
     });
     const authListener = data.subscription;

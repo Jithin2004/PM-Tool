@@ -272,18 +272,22 @@ export function AdminDashboard({
                     <div className="flex justify-end items-center gap-4">
                       {/* PM role change (Visible to Super Admin only) */}
                       {currentUserRole === 'super_admin' && profile.role !== 'super_admin' && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => onUpdateRole(profile.id, profile.role === 'pm' ? 'viewer' : 'pm')}
-                            className={`text-[10px] font-mono uppercase px-3 py-1.5 transition-all ${profile.role === 'pm' ? 'bg-blue-500 text-white' : 'border border-white/10 text-white/85 hover:border-white/30'}`}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-mono text-white/50 uppercase">Role:</span>
+                          <select
+                            value={profile.role}
+                            onChange={(e) => onUpdateRole(profile.id, e.target.value as any)}
+                            className="bg-black border border-white/10 text-[10px] font-mono px-2 py-1 focus:border-white/30 outline-none text-white/85"
                           >
-                            {profile.role === 'pm' ? 'DEMOTE FROM PM' : 'PROMOTE TO PM'}
-                          </button>
+                            <option value="viewer">Viewer</option>
+                            <option value="developer">Developer</option>
+                            <option value="pm">Project Manager</option>
+                          </select>
                         </div>
                       )}
 
                       {/* Custom Designation select (Visible to PM or Super Admin for normal users) */}
-                      {profile.role === 'viewer' ? (
+                      {profile.role !== 'super_admin' ? (
                         <div className="flex items-center gap-2">
                           <span className="text-[9px] font-mono text-white/50 uppercase">Designation:</span>
                           <select
@@ -296,11 +300,9 @@ export function AdminDashboard({
                             ))}
                           </select>
                         </div>
-                      ) : profile.role === 'pm' && currentUserRole === 'pm' ? (
-                        <span className="text-[10px] font-mono text-white/45 uppercase italic">Immutable PM (Root Required)</span>
-                      ) : profile.role === 'super_admin' ? (
+                      ) : (
                         <span className="text-[10px] font-mono text-white/45 uppercase italic">Immutable Root</span>
-                      ) : null}
+                      )}
                     </div>
                   </td>
                 </tr>
