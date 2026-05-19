@@ -14,21 +14,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  console.log("AuthProvider: Rendering. Configured:", isSupabaseConfigured);
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   const syncProfile = useCallback(async (authUser: any) => {
     if (!isSupabaseConfigured) return;
-    console.log("AuthContext: syncProfile() started for user:", authUser.id);
+    if (import.meta.env.DEV) {
+      console.log("AuthContext: syncProfile() started for user:", authUser.id);
+    }
 
     try {
       const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
       const email = authUser.email;
       const fullName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email?.split('@')[0] || 'User';
 
-      console.log("AuthContext: syncProfile() querying users table...");
+      if (import.meta.env.DEV) {
+        console.log("AuthContext: syncProfile() querying users table...");
+      }
       // 1. Primary Query: Canonical users table
       let { data, error } = await supabase
         .from('users')
@@ -36,14 +39,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authUser.id)
         .maybeSingle();
 
-      console.log("AuthContext: syncProfile() users query completed. error:", error, "data:", data);
+      if (import.meta.env.DEV) {
+        console.log("AuthContext: syncProfile() users query completed. error:", error, "data:", data);
+      }
       if (error && error.code !== 'PGRST116') {
         console.error("Error fetching from users table:", error);
       }
 
       if (!data) {
         // 2. First-User Assignment & Brand New User Onboarding Flow
-        console.log("New user detected in AuthContext. Determining first-user role assignment...");
+        if (import.meta.env.DEV) {
+          console.log("New user detected in AuthContext. Determining first-user role assignment...");
+        }
         const { count: usersCount, error: countError } = await supabase
           .from('users')
           .select('*', { count: 'exact', head: true });
@@ -101,9 +108,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    console.log("AuthContext: subscribing to onAuthStateChange...");
+    if (import.meta.env.DEV) {
+      console.log("AuthContext: subscribing to onAuthStateChange...");
+    }
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("AuthContext: onAuthStateChange event:", event, "session user:", session?.user?.id || 'none');
+      if (import.meta.env.DEV) {
+        console.log("AuthContext: onAuthStateChange event:", event, "session user:", session?.user?.id || 'none');
+      }
       if (!mounted) return;
       
       if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
@@ -130,7 +141,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const fallbackTimeout = setTimeout(async () => {
       if (mounted && loading) {
-        console.log("AuthContext: fallback session check triggered");
+        if (import.meta.env.DEV) {
+          console.log("AuthContext: fallback session check triggered");
+        }
         const { data: { session } } = await supabase.auth.getSession();
         if (mounted && loading) {
           setUser(session?.user || null);

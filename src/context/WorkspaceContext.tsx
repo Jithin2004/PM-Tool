@@ -25,28 +25,35 @@ export interface CreateWorkspaceInput {
 const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  console.log("WorkspaceProvider: Rendering. Configured:", isSupabaseConfigured);
   const [user, setUser] = useState<User | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refreshWorkspace = useCallback(async (targetUser?: User | null) => {
-    console.log("WorkspaceContext: refreshWorkspace() started");
+    if (import.meta.env.DEV) {
+      console.log("WorkspaceContext: refreshWorkspace() started");
+    }
     if (!isSupabaseConfigured) {
-      console.log("WorkspaceContext: refreshWorkspace() aborted because Supabase is not configured");
+      if (import.meta.env.DEV) {
+        console.log("WorkspaceContext: refreshWorkspace() aborted because Supabase is not configured");
+      }
       setWorkspace(null);
       return;
     }
 
     let activeUser = targetUser;
     if (activeUser === undefined) {
-      console.log("WorkspaceContext: refreshWorkspace() calling supabase.auth.getSession()...");
+      if (import.meta.env.DEV) {
+        console.log("WorkspaceContext: refreshWorkspace() calling supabase.auth.getSession()...");
+      }
       const { data: { session } } = await supabase.auth.getSession();
       activeUser = session?.user || null;
     }
     setUser(activeUser);
-    console.log("WorkspaceContext: refreshWorkspace() active user:", activeUser?.id || 'none');
+    if (import.meta.env.DEV) {
+      console.log("WorkspaceContext: refreshWorkspace() active user:", activeUser?.id || 'none');
+    }
 
     if (!activeUser) {
       setWorkspace(null);
@@ -54,9 +61,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      console.log("WorkspaceContext: refreshWorkspace() calling getWorkspaceForUser()...");
+      if (import.meta.env.DEV) {
+        console.log("WorkspaceContext: refreshWorkspace() calling getWorkspaceForUser()...");
+      }
       const newWs = await getWorkspaceForUser(activeUser.id);
-      console.log("WorkspaceContext: refreshWorkspace() getWorkspaceForUser() returned:", newWs?.id || 'null');
+      if (import.meta.env.DEV) {
+        console.log("WorkspaceContext: refreshWorkspace() getWorkspaceForUser() returned:", newWs?.id || 'null');
+      }
       setWorkspace(prev => {
         if (prev && newWs && prev.id !== newWs.id) {
           console.log('Workspace switch detected. Unsubscribing stale channels.');
@@ -79,9 +90,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    console.log("WorkspaceContext: subscribing to onAuthStateChange...");
+    if (import.meta.env.DEV) {
+      console.log("WorkspaceContext: subscribing to onAuthStateChange...");
+    }
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("WorkspaceContext: onAuthStateChange event:", event, "session user:", session?.user?.id || 'none');
+      if (import.meta.env.DEV) {
+        console.log("WorkspaceContext: onAuthStateChange event:", event, "session user:", session?.user?.id || 'none');
+      }
       if (!active) return;
 
       if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
@@ -99,7 +114,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     const fallbackTimeout = setTimeout(async () => {
       if (active && loading) {
-        console.log("WorkspaceContext: fallback workspace check triggered");
+        if (import.meta.env.DEV) {
+          console.log("WorkspaceContext: fallback workspace check triggered");
+        }
         await refreshWorkspace();
         if (active) setLoading(false);
       }
