@@ -695,21 +695,31 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const [newTeamId, setNewTeamId] = useState<string>('');
 
   useEffect(() => {
-    if (user && profile && workspace?.id) {
-      fetchProjects();
-      fetchTeams();
-      fetchProfiles();
-      fetchAttendance();
-      fetchSalaries();
-    } else if (!user) {
-      setProjects([]);
-      setTeams([]);
-      setProfiles([]);
-    }
+    let isMounted = true;
+    const loadAllData = async () => {
+      if (user && profile && workspace?.id) {
+        await Promise.all([
+          fetchProjects(),
+          fetchTeams(),
+          fetchProfiles(),
+          fetchAttendance(),
+          fetchSalaries()
+        ]);
+      } else if (!user) {
+        setProjects([]);
+        setTeams([]);
+        setProfiles([]);
+      }
+      if (isMounted) setLoading(false);
+    };
+
+    loadAllData();
     
     if (window.location.hash && window.location.hash.includes('access_token')) {
       window.history.replaceState(null, '', window.location.pathname);
     }
+
+    return () => { isMounted = false; };
   }, [user, profile, workspace?.id]);
 
 
