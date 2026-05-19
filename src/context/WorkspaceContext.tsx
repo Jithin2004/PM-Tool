@@ -99,12 +99,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error("WorkspaceContext initialization error:", err);
       } finally {
-        if (active) setLoading(false);
+        setLoading(false);
       }
     };
 
     // Run explicit initialization to guarantee loading resolves
     initWorkspace();
+
+    // Bulletproof fallback to absolutely prevent infinite loading screens
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 2500);
 
     if (import.meta.env.DEV) {
       console.log("WorkspaceContext: subscribing to onAuthStateChange...");
@@ -132,6 +137,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
       authListener.subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
     };
   }, [refreshWorkspace]);
 

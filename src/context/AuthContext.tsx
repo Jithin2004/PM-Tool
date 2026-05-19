@@ -124,12 +124,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error("AuthContext initialization error:", err);
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     };
 
     // Explicitly initialize auth state
     initAuth();
+
+    // Bulletproof fallback to absolutely prevent infinite loading screens
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 2500);
 
     if (import.meta.env.DEV) {
       console.log("AuthContext: subscribing to onAuthStateChange...");
@@ -166,6 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
       if (authListener) authListener.unsubscribe();
+      clearTimeout(safetyTimeout);
     };
   }, [syncProfile]);
 
