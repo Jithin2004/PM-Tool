@@ -48,24 +48,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!data) {
-        // Check if there are any users in the system to determine if this is a fresh organization bootstrap
-        const { count, error: countError } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true });
+        // 1. Look up pending invitation first, supporting case-insensitive checks
+        let inviteToUse = null;
+        if (email) {
+          const { data: invite, error: inviteError } = await supabase
+            .from('invitations')
+            .select('*')
+            .or(`email.eq.${email},email.eq.${email.toLowerCase()},email.eq.${email.toUpperCase()}`)
+            .eq('status', 'pending')
+            .maybeSingle();
 
-        const isFreshOrg = !countError && count === 0;
-
-        if (isFreshOrg) {
-          if (import.meta.env.DEV) {
-            console.log("First user detected in AuthContext. Allowing bootstrap as pending-workspace-setup...");
+          if (!inviteError && invite && new Date(invite.expires_at) >= new Date()) {
+            inviteToUse = invite;
           }
+        }
+
+        if (inviteToUse) {
+          if (import.meta.env.DEV) {
+            console.log("Valid pending invitation found. Bootstrapping invited user row...");
+          }
+          // Accept invitation
+          await supabase
+            .from('invitations')
+            .update({ status: 'accepted' })
+            .eq('id', inviteToUse.id);
+
+          // Create canonical users row with pre-assigned role and workspace
           const { data: newUserRow, error: insertError } = await supabase
             .from('users')
             .upsert({
               id: authUser.id,
               email: email,
-              workspace_id: null,
-              role: 'pending-workspace-setup',
+              workspace_id: inviteToUse.workspace_id,
+              role: inviteToUse.role,
               full_name: fullName,
               avatar_url: googleAvatar,
               availability_factor: 1
@@ -74,22 +89,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .single();
 
           if (insertError) {
-            console.error("Failed to insert pending user row in AuthContext:", insertError);
+            console.error("Failed to bootstrap invited user row:", insertError);
           } else {
             data = newUserRow;
           }
         } else {
-          // Check for a valid pending invitation
-          const { data: invite, error: inviteError } = await supabase
-            .from('invitations')
-            .select('*')
-            .eq('email', email?.toLowerCase())
-            .eq('status', 'pending')
-            .maybeSingle();
+          // No invitation found. Check if the system is completely empty for bootstrap setup.
+          const { count, error: countError } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true });
 
-          if (inviteError || !invite || new Date(invite.expires_at) < new Date()) {
+          const isFreshOrg = !countError && count === 0;
+
+          if (isFreshOrg) {
             if (import.meta.env.DEV) {
-              console.log("Uninvited or expired invitation for:", email);
+              console.log("First user detected in AuthContext. Allowing bootstrap as pending-workspace-setup...");
+            }
+            const { data: newUserRow, error: insertError } = await supabase
+              .from('users')
+              .upsert({
+                id: authUser.id,
+                email: email,
+                workspace_id: null,
+                role: 'pending-workspace-setup',
+                full_name: fullName,
+                avatar_url: googleAvatar,
+                availability_factor: 1
+              })
+              .select()
+              .single();
+
+            if (insertError) {
+              console.error("Failed to insert pending user row in AuthContext:", insertError);
+            } else {
+              data = newUserRow;
+            }
+          } else {
+            // Not a fresh org and no invitation found -> Block and show Access Restrained
+            if (import.meta.env.DEV) {
+              console.log("Uninvited user. Access blocked for:", email);
             }
             const uninvitedProfile = {
               id: authUser.id,
@@ -103,32 +141,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(uninvitedProfile);
             setLoading(false);
             return;
-          }
-
-          // Valid invitation found: Accept and create canonical user row with pre-assigned role
-          await supabase
-            .from('invitations')
-            .update({ status: 'accepted' })
-            .eq('id', invite.id);
-
-          const { data: newUserRow, error: insertError } = await supabase
-            .from('users')
-            .upsert({
-              id: authUser.id,
-              email: email,
-              workspace_id: invite.workspace_id,
-              role: invite.role,
-              full_name: fullName,
-              avatar_url: googleAvatar,
-              availability_factor: 1
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error("Failed to bootstrap invited user row:", insertError);
-          } else {
-            data = newUserRow;
           }
         }
       } else {
