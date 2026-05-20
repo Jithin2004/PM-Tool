@@ -27,10 +27,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const lastSyncedUserIdRef = React.useRef<string | null>(null);
   const syncPromiseRef = React.useRef<Promise<void> | null>(null);
   const syncUserRef = React.useRef<string | null>(null);
+  const safetyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
+
+  useEffect(() => {
+    if (profileResolved && safetyTimeoutRef.current) {
+      clearTimeout(safetyTimeoutRef.current);
+      safetyTimeoutRef.current = null;
+    }
+  }, [profileResolved]);
 
   useEffect(() => {
     userRef.current = user;
@@ -261,6 +269,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error("[AuthContext initAuth CRITICAL ERROR]:", err);
       } finally {
+        if (safetyTimeoutRef.current) {
+          clearTimeout(safetyTimeoutRef.current);
+          safetyTimeoutRef.current = null;
+        }
         console.log("[AuthContext initAuth FINISHED] setting loading to false");
         setLoading(false);
       }
@@ -271,9 +283,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Bulletproof fallback to absolutely prevent infinite loading screens
     // Extended to 15s to support cold starts and network delays on reload.
-    const safetyTimeout = setTimeout(() => {
-      console.warn("[AuthContext safetyTimeout triggered!] forcing loading to false");
-      setLoading(false);
+    if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+    safetyTimeoutRef.current = setTimeout(() => {
+      if (safetyTimeoutRef.current) {
+        console.warn("[AuthContext safetyTimeout triggered!] forcing loading to false");
+        setLoading(false);
+        safetyTimeoutRef.current = null;
+      }
     }, 15000);
 
     console.log("[AuthContext subscribing to onAuthStateChange]");
@@ -327,7 +343,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
       if (authListener) authListener.unsubscribe();
-      clearTimeout(safetyTimeout);
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
     };
   }, [syncProfile]);
 
