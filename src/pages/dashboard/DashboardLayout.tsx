@@ -1236,11 +1236,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     const newTeam = {
       workspace_id: workspace.id,
       name,
-      capacity_hours_per_week: 40 * devIds.length,
-      data: {
-        pm_id: pmId,
-        developer_ids: devIds
-      }
+      capacity_hours_per_week: 40 * devIds.length
     };
 
     const { data, error } = await supabase
@@ -1288,11 +1284,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       .from('teams')
       .update({
         name,
-        capacity_hours_per_week: 40 * devIds.length,
-        data: {
-          pm_id: pmId,
-          developer_ids: devIds
-        }
+        capacity_hours_per_week: 40 * devIds.length
       })
       .eq('id', id)
       .select()
