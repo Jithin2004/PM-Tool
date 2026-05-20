@@ -206,7 +206,7 @@ export function AdminDashboard({
   };
 
   const pms = profiles.filter(p => p.role === 'pm' || p.role === 'super_admin');
-  const devs = profiles.filter(p => p.role === 'viewer');
+  const devs = profiles.filter(p => p.role === 'developer' || p.role === 'viewer');
 
   // Identify devs already in other teams to prevent double-assignment
   const assignedDevIds = new Set(
