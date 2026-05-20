@@ -56,6 +56,7 @@ import { ProjectDetailsModal } from '../../components/project/ProjectDetailsModa
 import { TeamRosterModal } from '../../components/team/TeamRosterModal';
 import { UserProfileModal } from '../../components/user/UserProfileModal';
 import { calculateExpectedTime, calculateVariance, calculateHoursFromRange, getLocalDateString, getRelativeTime } from '../../utils/timeUtils';
+import { isWorkspaceOwner, requireWorkspaceOwner } from '../../utils/workspaceUtils';
 
 import { Project, Team, Profile, User, UserRole } from '../../types';
 
@@ -797,7 +798,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   }, [teams, workspace?.id]);
 
   const handleWorkingTimeChange = async (from: string, to: string) => {
-    if (profile?.role !== 'super_admin' || profile?.id !== workspace?.owner_id) {
+    if (!isWorkspaceOwner(profile?.id, workspace)) {
+      requireWorkspaceOwner(profile?.id, workspace, 'handleWorkingTimeChange');
       notify("Only the workspace owner can update working hours.", "error");
       return;
     }
@@ -829,7 +831,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   };
 
   const handleSaveLogisticsData = async (updatedData: any) => {
-    if (profile?.role !== 'super_admin' || profile?.id !== workspace?.owner_id) {
+    if (!isWorkspaceOwner(profile?.id, workspace)) {
+      requireWorkspaceOwner(profile?.id, workspace, 'handleSaveLogisticsData');
       notify("Only the workspace owner can modify logistics settings.", "error");
       return;
     }
