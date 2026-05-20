@@ -729,6 +729,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       if (oldSalaries && Object.keys(oldSalaries).length > 0 && salariesRows.length === 0) {
         console.log("Migrating salaries records to dedicated table...");
         const toInsert = Object.keys(oldSalaries).map(userId => ({
+          workspace_id: workspace.id,
           user_id: userId,
           base_salary: Number(oldSalaries[userId]) || 3000
         }));
@@ -934,7 +935,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 } else {
                   return supabase
                     .from('salaries')
-                    .insert({ user_id: userId, base_salary: salary });
+                    .insert({ workspace_id: workspace.id, user_id: userId, base_salary: salary });
                 }
               })());
             }
@@ -1389,8 +1390,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       notify("Unauthorized: Viewers cannot create projects.", "error");
       return;
     }
+    if (!workspace?.id) {
+      notify("No active workspace selected.", "error");
+      return;
+    }
 
     const newProject = {
+      workspace_id: workspace.id,
       name: newName,
       status: 'planning',
       priority: newPriority,
