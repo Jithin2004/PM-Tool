@@ -231,26 +231,6 @@ export async function createWorkspaceForUser({ name, settings, user, templateId,
 
   if (userError) throw userError;
 
-  // Initialize a starter project with the chosen execution mode
-  const templateName = templateId ? (templateId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) : 'Blank';
-  const { error: projectError } = await supabase
-    .from('projects')
-    .insert({
-      workspace_id: workspaceRow.id,
-      owner_id: user.id,
-      name: `${templateName} — Kickoff`,
-      status: 'planning',
-      priority: 'medium',
-      template: templateName,
-      execution_mode: executionMode || 'KANBAN',
-      efficiency: 0.8,
-      tags: ['NEW']
-    });
-
-  if (projectError) {
-    console.warn("Failed to create starter project:", projectError);
-  }
-
   if (settings.country) {
     syncWorkspaceHolidays(workspaceRow.id, settings.country, settings.region || '').catch(err => {
       console.warn("Failed to sync workspace holidays in background:", err);
