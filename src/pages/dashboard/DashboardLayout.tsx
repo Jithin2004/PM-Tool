@@ -266,7 +266,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         records[row.date][row.user_id] = {
           status: row.status,
           leaveType: row.leave_type || undefined,
-          isPaidHalfDay: row.is_paid_half_day || false
+          isPaidHalfDay: row.is_paid_half_day !== undefined ? row.is_paid_half_day : (row.availability_factor !== undefined ? row.availability_factor === 0.5 : false)
         };
       });
       data.attendance = records;
@@ -701,11 +701,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
             const record = dayData[userId];
             // Verify if record matches UUID or format
             toInsert.push({
+              workspace_id: workspace.id,
               user_id: userId,
               date: dateStr,
               status: record.status,
               leave_type: record.leaveType || null,
-              is_paid_half_day: !!record.isPaidHalfDay
+              availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
             });
           });
         });
@@ -845,6 +846,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                   const { data: existing } = await supabase
                     .from('attendance')
                     .select('id')
+                    .eq('workspace_id', workspace.id)
                     .eq('user_id', userId)
                     .eq('date', dateStr)
                     .maybeSingle();
@@ -855,18 +857,19 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                       .update({
                         status: record.status,
                         leave_type: record.leaveType || null,
-                        is_paid_half_day: !!record.isPaidHalfDay
+                        availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
                       })
                       .eq('id', existing.id);
                   } else {
                     return supabase
                       .from('attendance')
                       .insert({
+                        workspace_id: workspace.id,
                         user_id: userId,
                         date: dateStr,
                         status: record.status,
                         leave_type: record.leaveType || null,
-                        is_paid_half_day: !!record.isPaidHalfDay
+                        availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
                       });
                   }
                 })());
@@ -890,11 +893,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         Object.keys(dayData).forEach(userId => {
           const record = dayData[userId];
           records.push({
+            workspace_id: workspace.id,
             user_id: userId,
             date: dateStr,
             status: record.status,
             leave_type: record.leaveType || null,
-            is_paid_half_day: !!record.isPaidHalfDay
+            is_paid_half_day: !!record.isPaidHalfDay,
+            availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
           });
         });
       });
