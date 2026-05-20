@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Check, Plus, X } from 'lucide-react';
-import { BUSINESS_TYPES } from '../../constants/product';
+import { Check, Plus, X, Layers, GitBranch, Users, Hash, BadgeCheck } from 'lucide-react';
+import { BUSINESS_TYPES, WORKFLOW_TEMPLATES, getTemplatesForBusiness, EXECUTION_MODES } from '../../constants/product';
+import type { WorkflowTemplate } from '../../constants/product';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { predictEtaSync } from '../../services/etaService';
@@ -42,6 +43,7 @@ export function WorkspaceSetupPage() {
   const [step, setStep] = useState(1);
   const [workspaceName, setWorkspaceName] = useState(workspace?.name || `${user?.email?.split('@')[0] || 'My'} Workspace`);
   const [settings, setSettings] = useState<WorkspaceSettings>(workspace?.settings || DEFAULT_SETTINGS);
+  const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplate | null>(null);
   const [saving, setSaving] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -53,6 +55,8 @@ export function WorkspaceSetupPage() {
       window.dispatchEvent(new PopStateEvent('popstate'));
     }
   }, []);
+
+  const templateOptions = useMemo(() => getTemplatesForBusiness(settings.businessType), [settings.businessType]);
 
   const preview = useMemo(() => predictEtaSync({
     likely: 40,
@@ -70,12 +74,18 @@ export function WorkspaceSetupPage() {
       } else {
         await createWorkspace({
           name: workspaceName.trim() || 'Resolve Workspace',
-          settings
+          settings,
+          templateId: selectedTemplate?.id,
+          executionMode: selectedTemplate?.executionMode,
+          defaultLanes: selectedTemplate?.lanes,
+          workflowRules: {
+            ceremonies: selectedTemplate?.ceremonies || [],
+            teamStructure: selectedTemplate?.teamStructure || ''
+          }
         });
-        // Sync frontend profile role immediately to super_admin
         await refreshProfile();
       }
-      setStep(4);
+      setStep(5);
     } catch (err: any) {
       setLocalError(err?.message || 'Workspace setup failed.');
     } finally {
@@ -163,9 +173,9 @@ export function WorkspaceSetupPage() {
         <section className="border border-white/10 bg-white/[0.03] p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Step {step} of 5</p>
+              <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Step {step} of 6</p>
               <h2 className="mt-2 text-2xl font-semibold">
-                {step <= 3 ? 'Set up your workspace' : step === 4 ? 'Invite your team' : 'Create your first project'}
+                {step <= 4 ? 'Set up your workspace' : step === 5 ? 'Invite your team' : 'Create your first project'}
               </h2>
             </div>
           </div>
@@ -205,6 +215,66 @@ export function WorkspaceSetupPage() {
           )}
 
           {step === 2 && (
+            <div className="space-y-4">
+              <p className="text-sm text-white/70">
+                Choose a workflow template for <strong>{settings.businessType}</strong>. This sets up your first board with the appropriate structure.
+              </p>
+              <div className="grid gap-3 max-h-[420px] overflow-y-auto pr-1">
+                {templateOptions.map(tpl => {
+                  const isSelected = selectedTemplate?.id === tpl.id;
+                  return (
+                    <button
+                      key={tpl.id}
+                      onClick={() => {
+                        setSelectedTemplate(tpl);
+                        setSettings(prev => ({
+                          ...prev,
+                          templateId: tpl.id,
+                          executionMode: tpl.executionMode,
+                          defaultLanes: tpl.lanes,
+                          workflowRules: { ceremonies: tpl.ceremonies, teamStructure: tpl.teamStructure }
+                        }));
+                      }}
+                      className={`w-full text-left border p-4 transition-all ${isSelected ? 'border-cyan-400 bg-cyan-950/20' : 'border-white/10 bg-white/5 hover:border-white/25'}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h4 className="text-base font-semibold">{tpl.name}</h4>
+                          <p className="mt-1 text-xs text-white/60 leading-relaxed">{tpl.description}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-white/10 px-2 py-0.5 text-white/70">
+                              <Layers className="w-3 h-3" />{tpl.lanes} lanes
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-white/10 px-2 py-0.5 text-white/70">
+                              <GitBranch className="w-3 h-3" />{tpl.executionMode}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-white/10 px-2 py-0.5 text-white/70">
+                              <Users className="w-3 h-3" />{tpl.teamStructure}
+                            </span>
+                          </div>
+                          {tpl.ceremonies.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {tpl.ceremonies.map(c => (
+                                <span key={c} className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 text-cyan-300/70">{c}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {isSelected && <BadgeCheck className="w-5 h-5 text-cyan-400 shrink-0 mt-1" />}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {tpl.badges.map(b => (
+                          <span key={b} className="text-[9px] font-mono uppercase tracking-wider bg-white/10 px-2 py-0.5 text-white/60">{b}</span>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium">
                 Work Start
@@ -323,7 +393,7 @@ export function WorkspaceSetupPage() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="space-y-4">
               <label className="block text-sm font-medium">
                 Productivity Factor
@@ -348,7 +418,7 @@ export function WorkspaceSetupPage() {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="space-y-5">
               <div className="flex gap-2">
                 <input
@@ -376,7 +446,7 @@ export function WorkspaceSetupPage() {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="border border-white/10 bg-black/30 p-6">
               <div className="mb-4 flex h-12 w-12 items-center justify-center bg-emerald-500/15 text-emerald-300">
                 <Check className="h-5 w-5" />
@@ -385,6 +455,13 @@ export function WorkspaceSetupPage() {
               <p className="mt-3 text-sm leading-6 text-white/65">
                 Your workspace is ready. You can now build projects, delegate tasks, track timelines, and sync offline in real-time.
               </p>
+              {selectedTemplate && (
+                <div className="mt-4 border border-white/10 bg-white/5 p-3 text-sm">
+                  <span className="text-xs font-mono uppercase tracking-wider text-cyan-400">Template</span>
+                  <p className="mt-1 font-semibold">{selectedTemplate.name}</p>
+                  <p className="text-xs text-white/60 mt-0.5">{selectedTemplate.executionMode} · {selectedTemplate.lanes} lanes · {selectedTemplate.teamStructure}</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -397,25 +474,31 @@ export function WorkspaceSetupPage() {
               Back
             </button>
 
-            {step < 3 && (
-              <button onClick={() => setStep(prev => prev + 1)} className="bg-white px-4 py-2 text-sm font-medium text-black">
+            {step < 4 && (
+              <button
+                onClick={() => {
+                  if (step === 2 && !selectedTemplate) return;
+                  setStep(prev => prev + 1);
+                }}
+                className={`bg-white px-4 py-2 text-sm font-medium text-black ${step === 2 && !selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}`}
+              >
                 Next
               </button>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <button disabled={saving} onClick={saveWorkspace} className="bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50">
                 {saving ? 'Saving...' : 'Save Workspace'}
               </button>
             )}
 
-            {step === 4 && (
-              <button onClick={() => setStep(5)} className="bg-white px-4 py-2 text-sm font-medium text-black">
+            {step === 5 && (
+              <button onClick={() => setStep(6)} className="bg-white px-4 py-2 text-sm font-medium text-black">
                 {invites.length > 0 ? 'Continue' : 'Skip'}
               </button>
             )}
 
-            {step === 5 && (
+            {step === 6 && (
               <button onClick={() => navigate('/')} className="bg-white px-4 py-2 text-sm font-medium text-black">
                 Go to Dashboard
               </button>
@@ -433,6 +516,17 @@ export function WorkspaceSetupPage() {
             <div className="flex justify-between"><dt>Risk</dt><dd className="capitalize">{preview.risk}</dd></div>
             <div className="flex justify-between"><dt>Workspace</dt><dd>{workspaceName || 'Untitled'}</dd></div>
           </dl>
+          {selectedTemplate && (
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <p className="text-xs font-mono uppercase tracking-[0.2em] text-cyan-400">Workflow Template</p>
+              <div className="mt-3 space-y-2 text-sm text-white/70">
+                <div className="flex justify-between"><dt>Template</dt><dd className="text-white font-medium">{selectedTemplate.name}</dd></div>
+                <div className="flex justify-between"><dt>Execution Mode</dt><dd className="text-cyan-300 font-mono text-xs">{selectedTemplate.executionMode}</dd></div>
+                <div className="flex justify-between"><dt>Default Lanes</dt><dd>{selectedTemplate.lanes}</dd></div>
+                <div className="flex justify-between items-start"><dt>Team</dt><dd className="text-right text-xs">{selectedTemplate.teamStructure}</dd></div>
+              </div>
+            </div>
+          )}
         </aside>
       </div>
     </ResolveLayout>

@@ -8,6 +8,10 @@ export interface CreateWorkspaceInput {
   name: string;
   settings: WorkspaceSettings;
   user: User;
+  templateId?: string;
+  executionMode?: string;
+  defaultLanes?: number;
+  workflowRules?: Record<string, any>;
 }
 
 interface WorkspaceRow {
@@ -15,6 +19,10 @@ interface WorkspaceRow {
   name: string;
   owner_id: string;
   business_type: WorkspaceSettings['businessType'];
+  template_id?: string;
+  execution_mode?: string;
+  default_lanes?: number;
+  workflow_rules?: Record<string, any>;
   work_start: string;
   work_end: string;
   lunch_duration: number;
@@ -69,6 +77,10 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
     updatedAt: row.updated_at,
     settings: {
       businessType: businessType as any,
+      templateId: row.template_id,
+      executionMode: row.execution_mode,
+      defaultLanes: row.default_lanes,
+      workflowRules: row.workflow_rules,
       workStart: row.work_start?.slice(0, 5) || '09:00',
       workEnd: row.work_end?.slice(0, 5) || '17:00',
       lunchDuration: Number(row.lunch_duration ?? 60),
@@ -184,12 +196,16 @@ export async function syncWorkspaceHolidays(workspaceId: string, country: string
   }
 }
 
-export async function createWorkspaceForUser({ name, settings, user }: CreateWorkspaceInput): Promise<Workspace> {
+export async function createWorkspaceForUser({ name, settings, user, templateId, executionMode, defaultLanes, workflowRules }: CreateWorkspaceInput): Promise<Workspace> {
   const { data: workspaceRow, error: workspaceError } = await supabase
     .from('workspaces')
     .insert({
       name,
       owner_id: user.id,
+      template_id: templateId || null,
+      execution_mode: executionMode || 'KANBAN',
+      default_lanes: defaultLanes || 5,
+      workflow_rules: workflowRules || {},
       ...settingsToWorkspaceRow(settings)
     })
     .select()
@@ -215,8 +231,27 @@ export async function createWorkspaceForUser({ name, settings, user }: CreateWor
 
   if (userError) throw userError;
 
+  // Initialize a starter project with the chosen execution mode
+  const templateName = templateId ? (templateId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())) : 'Blank';
+  const { error: projectError } = await supabase
+    .from('projects')
+    .insert({
+      workspace_id: workspaceRow.id,
+      owner_id: user.id,
+      name: `${templateName} — Kickoff`,
+      status: 'planning',
+      priority: 'medium',
+      template: templateName,
+      execution_mode: executionMode || 'KANBAN',
+      efficiency: 0.8,
+      tags: ['NEW']
+    });
+
+  if (projectError) {
+    console.warn("Failed to create starter project:", projectError);
+  }
+
   if (settings.country) {
-    // Run holiday sync asynchronously in the background to prevent transaction locks or deadlock hangs on onboarding
     syncWorkspaceHolidays(workspaceRow.id, settings.country, settings.region || '').catch(err => {
       console.warn("Failed to sync workspace holidays in background:", err);
     });

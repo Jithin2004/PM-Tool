@@ -4,6 +4,10 @@ export type BusinessType = typeof BUSINESS_TYPES[number];
 
 export interface WorkspaceSettings {
   businessType: BusinessType;
+  templateId?: string;
+  executionMode?: string;
+  defaultLanes?: number;
+  workflowRules?: Record<string, any>;
   workStart: string;
   workEnd: string;
   lunchDuration: number;

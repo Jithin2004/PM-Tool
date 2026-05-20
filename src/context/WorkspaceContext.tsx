@@ -21,6 +21,10 @@ interface WorkspaceContextValue {
 export interface CreateWorkspaceInput {
   name: string;
   settings: WorkspaceSettings;
+  templateId?: string;
+  executionMode?: string;
+  defaultLanes?: number;
+  workflowRules?: Record<string, any>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
@@ -155,14 +159,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, [profile, authLoading]);
 
-  const createWorkspace = useCallback(async ({ name, settings }: CreateWorkspaceInput) => {
+  const createWorkspace = useCallback(async ({ name, settings, templateId, executionMode, defaultLanes, workflowRules }: CreateWorkspaceInput) => {
     if (!user) throw new Error('You must be signed in to create a workspace.');
     if (!isSupabaseConfigured) throw new Error('Supabase is not configured.');
 
     setError(null);
 
     try {
-      const nextWorkspace = await createWorkspaceForUser({ name, settings, user });
+      const nextWorkspace = await createWorkspaceForUser({ name, settings, user, templateId, executionMode, defaultLanes, workflowRules });
       setWorkspace(nextWorkspace);
       return nextWorkspace;
     } catch (err: any) {
