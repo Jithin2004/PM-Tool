@@ -34,6 +34,10 @@ interface DashboardContextType {
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
   notifications: Notification[];
   markAsRead: (notificationId: string) => Promise<void>;
+  workingHoursPerDay?: number;
+  tilesPerRow?: number;
+  setIsRosterOpen?: (open: boolean) => void;
+  setSelectedProject?: (project: Project | null) => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null);

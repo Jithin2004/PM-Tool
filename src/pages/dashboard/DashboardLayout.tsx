@@ -1382,7 +1382,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName) {
+    if (!newName.trim()) {
       notify("Project designation is required.", "error");
       return;
     }
@@ -1395,17 +1395,49 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       return;
     }
 
+    if (!proposedStartDate) {
+      notify("Proposed Start Date is required.", "error");
+      return;
+    }
+    if (!newClientDeadline) {
+      notify("Client Deadline is required.", "error");
+      return;
+    }
+    if (new Date(proposedStartDate) > new Date(newClientDeadline)) {
+      notify("Client Deadline cannot be before the Proposed Start Date.", "error");
+      return;
+    }
+
+    if (!pertBest || !pertLikely || !pertWorst) {
+      notify("PERT estimates (Best, Likely, and Worst) are mandatory.", "error");
+      return;
+    }
+
+    const bestNum = Number(pertBest);
+    const likelyNum = Number(pertLikely);
+    const worstNum = Number(pertWorst);
+
+    if (isNaN(bestNum) || bestNum <= 0 || isNaN(likelyNum) || likelyNum <= 0 || isNaN(worstNum) || worstNum <= 0) {
+      notify("PERT estimates must be positive numbers.", "error");
+      return;
+    }
+
+    if (bestNum > likelyNum || likelyNum > worstNum) {
+      notify("PERT bounds violation: Best Case ≤ Likely Case ≤ Worst Case.", "error");
+      return;
+    }
+
     const newProject = {
       workspace_id: workspace.id,
       name: newName,
       status: 'planning',
       priority: newPriority,
       efficiency: 0.8,
-      pert_best: Number(pertBest) || 0,
-      pert_likely: Number(pertLikely) || 0,
-      pert_worst: Number(pertWorst) || 0,
-      proposed_start_date: proposedStartDate || null,
-      client_deadline: newClientDeadline || null,
+      pert_best: bestNum,
+      pert_likely: likelyNum,
+      pert_worst: worstNum,
+      proposed_start_date: proposedStartDate,
+      client_deadline: newClientDeadline,
       team_id: newTeamId || null,
       owner_id: user.id,
       tags: ['NEW']
@@ -1583,7 +1615,11 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       updateTaskDates,
       updateTask,
       notifications: dbNotifications,
-      markAsRead: handleMarkAsRead
+      markAsRead: handleMarkAsRead,
+      workingHoursPerDay,
+      tilesPerRow,
+      setIsRosterOpen,
+      setSelectedProject
     }}>
       <div className={`min-h-screen bg-[#0a0a0a] font-sans text-white/90 selection:bg-white selection:text-black ${theme === 'light' ? 'light' : ''}`}>
         <Header
@@ -1688,10 +1724,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: BEST (H)</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: BEST (H) *</label>
                     <input
                       type="number"
                       step="0.1"
+                      min="0.1"
+                      required
                       value={pertBest}
                       onChange={e => setPertBest(e.target.value)}
                       className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
@@ -1699,10 +1737,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: LIKELY (H)</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: LIKELY (H) *</label>
                     <input
                       type="number"
                       step="0.1"
+                      min="0.1"
+                      required
                       value={pertLikely}
                       onChange={e => setPertLikely(e.target.value)}
                       className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
@@ -1710,10 +1750,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: WORST (H)</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: WORST (H) *</label>
                     <input
                       type="number"
                       step="0.1"
+                      min="0.1"
+                      required
                       value={pertWorst}
                       onChange={e => setPertWorst(e.target.value)}
                       className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
@@ -1766,18 +1808,20 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Proposed Start Date</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Proposed Start Date *</label>
                     <input
                       type="date"
+                      required
                       value={proposedStartDate}
                       onChange={e => setProposedStartDate(e.target.value)}
                       className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Client Deadline</label>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Client Deadline *</label>
                     <input
                       type="date"
+                      required
                       value={newClientDeadline}
                       onChange={e => setNewClientDeadline(e.target.value)}
                       className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"

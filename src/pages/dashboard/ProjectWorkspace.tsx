@@ -705,10 +705,10 @@ function DecisionCenterPanel() {
 }
 
 export function ProjectWorkspace({
-  workingHoursPerDay,
-  tilesPerRow,
-  setIsRosterOpen,
-  setSelectedProject,
+  workingHoursPerDay: propWorkingHoursPerDay,
+  tilesPerRow: propTilesPerRow,
+  setIsRosterOpen: propSetIsRosterOpen,
+  setSelectedProject: propSetSelectedProject,
 }: any) {
   const { profile } = useAuth();
   const { 
@@ -719,8 +719,17 @@ export function ProjectWorkspace({
     setSearchTerm, 
     dashboardTab, 
     setDashboardTab, 
-    setIsAdding 
-  } = useDashboard();
+    setIsAdding,
+    workingHoursPerDay: ctxWorkingHours,
+    tilesPerRow: ctxTiles,
+    setIsRosterOpen: ctxSetRosterOpen,
+    setSelectedProject: ctxSetSelectedProject,
+  } = useDashboard() as any;
+
+  const workingHoursPerDay = propWorkingHoursPerDay ?? ctxWorkingHours ?? 8;
+  const tilesPerRow = propTilesPerRow ?? ctxTiles ?? 3;
+  const setIsRosterOpen = propSetIsRosterOpen ?? ctxSetIsRosterOpen;
+  const setSelectedProject = propSetSelectedProject ?? ctxSetSelectedProject;
 
   const activeTeams = useMemo(() => teams.filter(t => t.name !== 'SYSTEM_SETTINGS'), [teams]);
 
