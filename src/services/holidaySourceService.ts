@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { calendarEventService } from './calendarEventService';
 import { getHolidaysForRegion, DerivedHoliday } from '../utils/holidays';
 import { sha256 } from '../utils/cryptoUtils';
+import { NagerDateProvider } from './nagerDateProvider';
 
 export interface HolidayProvider {
   name: string;
@@ -43,6 +44,7 @@ class HolidaySourceService {
 
   constructor() {
     this.providers.push(new LocalHolidayProvider());
+    this.registerProvider(new NagerDateProvider());
   }
 
   registerProvider(provider: HolidayProvider) {
@@ -183,20 +185,96 @@ class HolidaySourceService {
     return (data || []) as SyncLogEntry[];
   }
 
-  async getImportedHolidays(workspaceId: string, year?: number): Promise<DerivedHoliday[]> {
+  async getImportedHolidays(workspaceId: string, year?: number): Promise<any[]> {
     const y = year || new Date().getFullYear();
     const startDate = `${y}-01-01`;
-    const endDate = `${y + 1}-01-01`;
+    const endDate = `${y + 2}-01-01`;
 
     const events = await calendarEventService.getEventsInRange(workspaceId, startDate, endDate);
     return events
-      .filter(e => (e.event_type === 'holiday' || e.event_type === 'festival') && e.auto_generated)
+      .filter(e => (e.event_type === 'holiday' || e.event_type === 'festival' || e.event_type === 'company') && e.auto_generated)
       .map(e => ({
+        ...e,
         date: e.start_date?.split('T')[0] || '',
         name: e.title || '',
-        type: (e.event_type === 'festival' ? 'festival' : 'public') as DerivedHoliday['type'],
+        holidayType: e.event_type === 'festival' ? 'festival' : 'public',
         source: e.source_id || 'local-builtin'
       }));
+  }
+
+  async checkAndSyncNextYear(workspaceId: string, country: string, region: string): Promise<boolean> {
+    const currentYear = new Date().getFullYear();
+    const { data: existing } = await supabase
+      .from('calendar_sync_logs')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('year', currentYear + 1)
+      .maybeSingle();
+
+    if (!existing) {
+      await this.syncForWorkspace(workspaceId, country, region);
+      return true;
+    }
+    return false;
+  }
+
+  async getCalendarEvents(workspaceId: string, year: number): Promise<any[]> {
+    const startDate = `${year}-01-01`;
+    const endDate = `${year + 1}-01-01`;
+
+    const events = await calendarEventService.getEventsInRange(workspaceId, startDate, endDate);
+    return events.filter(e => e.event_type === 'holiday' || e.event_type === 'festival' || e.event_type === 'company');
+  }
+
+  async toggleHoliday(eventId: string, workspaceId: string, enabled: boolean): Promise<boolean> {
+    try {
+      if (enabled) {
+        await supabase.from('calendar_events')
+          .update({ deleted_at: null })
+          .eq('id', eventId)
+          .eq('workspace_id', workspaceId);
+      } else {
+        await supabase.from('calendar_events')
+          .update({ deleted_at: new Date().toISOString() })
+          .eq('id', eventId)
+          .eq('workspace_id', workspaceId)
+          .is('deleted_at', null);
+      }
+      return true;
+    } catch (err) {
+      console.warn('Failed to toggle holiday:', err);
+      return false;
+    }
+  }
+
+  async createOrganizationEvent(workspaceId: string, event: {
+    title: string;
+    start_date: string;
+    end_date: string;
+    event_type: 'company' | 'holiday';
+    capacity_impact: number;
+    description?: string;
+  }, actorId?: string): Promise<boolean> {
+    try {
+      await calendarEventService.createEvent({
+        workspace_id: workspaceId,
+        event_type: event.event_type,
+        title: event.title,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        capacity_impact: event.capacity_impact,
+        is_recurring: false,
+        auto_generated: false,
+        source_table: 'organization',
+        source_id: 'admin',
+        description: event.description || null,
+        timezone: 'UTC'
+      }, actorId);
+      return true;
+    } catch (err) {
+      console.warn('Failed to create organization event:', err);
+      return false;
+    }
   }
 }
 

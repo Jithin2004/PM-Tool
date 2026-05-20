@@ -1,37 +1,50 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CalendarDays, RefreshCw, Check, X, AlertTriangle, History, Globe } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, History, Plus, X, Globe, Building2, CalendarDays } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAuth } from '../../context/AuthContext';
 import { holidaySourceService } from '../../services/holidaySourceService';
 import { supabase } from '../../lib/supabase';
-import { COUNTRIES } from '../../data/countries';
 import type { SyncLogEntry } from '../../services/holidaySourceService';
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAY_HEADERS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const COMPANY_EVENT_TYPES = [
+  { value: 'company', label: 'Company Retreat' },
+  { value: 'company', label: 'Emergency Closure' },
+  { value: 'company', label: 'Strike' },
+  { value: 'company', label: 'Maintenance Day' },
+  { value: 'company', label: 'Special Holiday' },
+  { value: 'company', label: 'Flood Closure' },
+  { value: 'company', label: 'Election Day' },
+];
 
 export function CalendarIntelligencePanel() {
   const { workspace } = useWorkspace();
+  const { profile } = useAuth();
+  const isSuperAdmin = profile?.role === 'super_admin';
+  const [tab, setTab] = useState<'calendar' | 'history'>('calendar');
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [events, setEvents] = useState<any[]>([]);
   const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([]);
-  const [importedHolidays, setImportedHolidays] = useState<any[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [lastSyncResult, setLastSyncResult] = useState<string | null>(null);
-  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
-
-  const countryData = useMemo(() => {
-    if (!workspace?.settings?.country) return null;
-    return COUNTRIES.find(c => c.name === workspace.settings.country);
-  }, [workspace?.settings?.country]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newEvent, setNewEvent] = useState({ title: '', start_date: '', end_date: '', event_type: 'company' as const, capacity_impact: 1, description: '' });
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
   const loadData = async () => {
     if (!workspace?.id) return;
-    const [logs, holidays] = await Promise.all([
-      holidaySourceService.getSyncLogs(workspace.id),
-      holidaySourceService.getImportedHolidays(workspace.id)
+    const [evts, logs] = await Promise.all([
+      holidaySourceService.getCalendarEvents(workspace.id, year),
+      holidaySourceService.getSyncLogs(workspace.id)
     ]);
+    setEvents(evts);
     setSyncLogs(logs);
-    setImportedHolidays(holidays);
   };
 
   useEffect(() => {
     loadData();
-  }, [workspace?.id]);
+  }, [workspace?.id, year]);
 
   const handleSyncNow = async () => {
     if (!workspace?.id || !workspace.settings.country || syncing) return;
@@ -39,127 +52,206 @@ export function CalendarIntelligencePanel() {
     setLastSyncResult(null);
     try {
       const result = await holidaySourceService.syncForWorkspace(
-        workspace.id,
-        workspace.settings.country,
-        workspace.settings.region || '',
-        workspace.ownerId
+        workspace.id, workspace.settings.country, workspace.settings.region || '', workspace.ownerId
       );
-      setLastSyncResult(`Sync complete: ${result.imported} holidays imported (${result.status})`);
+      setLastSyncResult(`Sync complete: ${result.imported} holidays (${result.status})`);
       await loadData();
     } catch (err: any) {
       setLastSyncResult(`Sync failed: ${err?.message || 'Unknown error'}`);
-    } finally {
-      setSyncing(false);
+    } finally { setSyncing(false); }
+  };
+
+  const handleToggle = async (eventId: string, currentlyDeleted: string | null) => {
+    if (!isSuperAdmin || togglingIds.has(eventId)) return;
+    setTogglingIds(prev => new Set(prev).add(eventId));
+    const enabled = !!currentlyDeleted;
+    await holidaySourceService.toggleHoliday(eventId, workspace!.id, enabled);
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, deleted_at: enabled ? null : new Date().toISOString() } : e));
+    setTogglingIds(prev => { const n = new Set(prev); n.delete(eventId); return n; });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('eta-recalculate'));
     }
   };
 
-  const handleDeleteHoliday = async (eventId: string) => {
-    if (!workspace?.id || deletingIds.has(eventId)) return;
-    setDeletingIds(prev => new Set(prev).add(eventId));
-    try {
-      await supabase.from('calendar_events')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', eventId)
-        .is('deleted_at', null);
-      setImportedHolidays(prev => prev.filter(h => (h as any).id !== eventId));
-    } catch (err) {
-      console.warn('Failed to delete holiday:', err);
-    } finally {
-      setDeletingIds(prev => { const next = new Set(prev); next.delete(eventId); return next; });
+  const handleCreateEvent = async () => {
+    if (!workspace?.id || !newEvent.title || !newEvent.start_date) return;
+    const ok = await holidaySourceService.createOrganizationEvent(workspace.id, {
+      title: newEvent.title,
+      start_date: `${newEvent.start_date}T00:00:00Z`,
+      end_date: `${newEvent.end_date || newEvent.start_date}T23:59:59Z`,
+      event_type: 'company',
+      capacity_impact: newEvent.capacity_impact,
+      description: newEvent.description || undefined,
+    }, workspace.ownerId);
+    if (ok) {
+      setShowCreateForm(false);
+      setNewEvent({ title: '', start_date: '', end_date: '', event_type: 'company', capacity_impact: 1, description: '' });
+      await loadData();
     }
   };
+
+  const calendarGrid = useMemo(() => {
+    const weeks: Array<Array<{ day: number; events: any[] } | null>> = [];
+    for (let m = 0; m < 12; m++) {
+      const firstDay = new Date(year, m, 1);
+      const daysInMonth = new Date(year, m + 1, 0).getDate();
+      const startOffset = (firstDay.getDay() + 6) % 7;
+      const days: Array<{ day: number; events: any[] } | null> = [];
+      for (let i = 0; i < startOffset; i++) days.push(null);
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dayEvents = events.filter(e => {
+          const start = e.start_date?.split('T')[0] || '';
+          const end = e.end_date?.split('T')[0] || start;
+          return dateStr >= start && dateStr <= end;
+        });
+        days.push({ day: d, events: dayEvents });
+      }
+      weeks.push(days);
+    }
+    return weeks;
+  }, [year, events]);
 
   return (
     <div className="space-y-8">
-      <div>
-        <div className="mb-6">
-          <h2 className="text-3xl font-medium tracking-tight mb-2">Calendar Intelligence</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-3xl font-medium tracking-tight mb-1">Organization Calendar Intelligence</h2>
           <p className="text-sm text-white/85 font-mono tracking-tighter">
-            Manage imported holidays, sync logs, and regional calendar data for {workspace?.settings?.country || 'your workspace'}.
+            {isSuperAdmin ? 'Manage holidays, company events, and calendar sync.' : 'View-only calendar.'}
           </p>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="border border-white/10 bg-[#0c0c0c] p-6">
-            <h3 className="text-sm font-mono uppercase tracking-widest mb-4">Region & Source</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-white/60">Country</span>
-                <span className="font-medium">{workspace?.settings?.country || 'Not set'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-white/60">State/Region</span>
-                <span className="font-medium">{workspace?.settings?.region || 'None'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-white/60">City</span>
-                <span className="font-medium">{workspace?.settings?.city || 'None'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-white/60">Timezone</span>
-                <span className="font-medium">{workspace?.settings?.timezone || 'UTC'}</span>
-              </div>
-              {countryData && (
-                <div className="flex justify-between">
-                  <span className="text-white/60">Supported states</span>
-                  <span className="font-medium">{countryData.states.length > 0 ? `${countryData.states.length} states/regions` : 'None defined'}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 pt-6 border-t border-white/10">
-              <button
-                onClick={handleSyncNow}
-                disabled={syncing || !workspace?.settings?.country}
-                className="w-full bg-white text-black h-10 font-semibold hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Syncing...' : 'Sync Holidays Now'}
-              </button>
-              {lastSyncResult && (
-                <div className={`mt-3 text-xs font-mono px-3 py-2 ${lastSyncResult.includes('failed') ? 'bg-red-500/10 text-red-300' : 'bg-emerald-500/10 text-emerald-300'}`}>
-                  {lastSyncResult}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="border border-white/10 bg-[#0c0c0c] p-6">
-            <h3 className="text-sm font-mono uppercase tracking-widest mb-4">Active Imported Holidays ({importedHolidays.length})</h3>
-            <div className="divide-y divide-white/5 max-h-[320px] overflow-y-auto">
-              {importedHolidays.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                  <CalendarDays className="w-8 h-8 text-white/75 mb-3" />
-                  <p className="text-xs font-mono text-white/85 text-center uppercase">No imported holidays.</p>
-                  <p className="text-[10px] text-white/50 mt-1">Sync a country with holiday support.</p>
-                </div>
-              )}
-              {(importedHolidays as any[]).map((h: any) => (
-                <div key={h.id || h.date} className="flex items-center justify-between py-3 px-1 hover:bg-white/[0.02] transition-colors">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Globe className="w-4 h-4 text-white/40 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium truncate">{h.name || h.title}</p>
-                      <p className="text-[10px] text-white/50 font-mono">{h.date} {h.source ? `· ${h.source}` : ''}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteHoliday(h.id)}
-                    disabled={deletingIds.has(h.id)}
-                    className="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest px-2 py-1 border border-red-500/20 hover:border-red-500/40 transition-colors disabled:opacity-40 shrink-0"
-                  >
-                    {deletingIds.has(h.id) ? '...' : 'Remove'}
-                  </button>
-                </div>
-              ))}
-            </div>
+        <div className="flex items-center gap-3">
+          {isSuperAdmin && (
+            <button onClick={() => setShowCreateForm(true)} className="border border-white/10 bg-white/5 px-4 py-2 text-xs font-mono uppercase tracking-wider hover:bg-white/10 transition-colors flex items-center gap-2">
+              <Plus className="w-3.5 h-3.5" /> Add Event
+            </button>
+          )}
+          <div className="flex items-center gap-1 border border-white/10">
+            <button onClick={() => setYear(y => y - 1)} className="p-2 hover:bg-white/5"><ChevronLeft className="w-4 h-4" /></button>
+            <span className="px-3 text-sm font-mono">{year}</span>
+            <button onClick={() => setYear(y => y + 1)} className="p-2 hover:bg-white/5"><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
+      </div>
 
-        <div className="mt-6 border border-white/10 bg-[#0c0c0c] p-6">
+      <div className="flex gap-1 border-b border-white/10 mb-6">
+        <button onClick={() => setTab('calendar')} className={`px-4 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${tab === 'calendar' ? 'border-b-2 border-white text-white' : 'text-white/50 hover:text-white/80'}`}>Calendar View</button>
+        <button onClick={() => setTab('history')} className={`px-4 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${tab === 'history' ? 'border-b-2 border-white text-white' : 'text-white/50 hover:text-white/80'}`}>Sync History</button>
+      </div>
+
+      {tab === 'calendar' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {calendarGrid.map((monthDays, mi) => (
+              <div key={mi} className="border border-white/10 bg-[#0c0c0c] p-3">
+                <h4 className="text-xs font-mono uppercase tracking-wider text-white/60 mb-2">{MONTHS[mi]} {year}</h4>
+                <div className="grid grid-cols-7 gap-0.5">
+                  {DAY_HEADERS.map(d => <div key={d} className="text-[8px] font-mono text-white/30 text-center py-1">{d}</div>)}
+                  {monthDays.map((cell, ci) => (
+                    <div key={ci} className="aspect-square min-h-[28px] text-[9px] font-mono relative group">
+                      {cell && (
+                        <div className={`w-full h-full flex items-center justify-center ${cell.events.length > 0 ? 'bg-white/10 text-white font-medium' : 'text-white/50 hover:bg-white/5'} rounded-sm`}>
+                          {cell.day}
+                          {cell.events.length > 0 && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400" />}
+                        </div>
+                      )}
+                      {cell && cell.events.length > 0 && (
+                        <div className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block w-48 bg-[#1a1a1a] border border-white/10 p-2 shadow-xl">
+                          {cell.events.map((ev: any) => {
+                            const isDeleted = !!ev.deleted_at;
+                            return (
+                              <div key={ev.id} className={`flex items-center gap-2 py-1 text-[10px] ${isDeleted ? 'opacity-40' : ''}`}>
+                                {ev.auto_generated ? <Globe className="w-3 h-3 shrink-0 text-cyan-400" /> : <Building2 className="w-3 h-3 shrink-0 text-amber-400" />}
+                                <span className="truncate flex-1">{ev.title}</span>
+                                {isSuperAdmin && (
+                                  <button
+                                    onClick={() => handleToggle(ev.id, ev.deleted_at)}
+                                    disabled={togglingIds.has(ev.id)}
+                                    className={`text-[8px] font-mono uppercase px-1 py-0.5 border transition-colors ${isDeleted ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' : 'border-white/10 text-white/50 hover:border-red-500/30 hover:text-red-400'}`}
+                                  >
+                                    {togglingIds.has(ev.id) ? '...' : isDeleted ? 'Enable' : 'Disable'}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="border border-white/10 bg-[#0c0c0c] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-mono uppercase tracking-widest">Sync</h3>
+              <button onClick={handleSyncNow} disabled={syncing || !workspace?.settings?.country} className="bg-white text-black h-8 px-4 text-[10px] font-semibold hover:bg-neutral-200 transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-2">
+                <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing...' : 'Sync Now'}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div><span className="text-white/50">Country</span><p className="font-medium">{workspace?.settings?.country || 'Not set'}</p></div>
+              <div><span className="text-white/50">State/Region</span><p className="font-medium">{workspace?.settings?.region || 'None'}</p></div>
+              <div><span className="text-white/50">Imported</span><p className="font-medium">{events.filter(e => e.auto_generated && !e.deleted_at).length} holidays</p></div>
+              <div><span className="text-white/50">Organization</span><p className="font-medium">{events.filter(e => !e.auto_generated && !e.deleted_at).length} events</p></div>
+            </div>
+            {lastSyncResult && (
+              <div className={`mt-3 text-xs font-mono px-3 py-2 ${lastSyncResult.includes('failed') ? 'bg-red-500/10 text-red-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{lastSyncResult}</div>
+            )}
+          </div>
+
+          {showCreateForm && isSuperAdmin && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCreateForm(false)}>
+              <div className="bg-[#0c0c0c] border border-white/10 w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-mono uppercase tracking-widest">Create Organization Event</h3>
+                  <button onClick={() => setShowCreateForm(false)}><X className="w-4 h-4 text-white/60 hover:text-white" /></button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">Title</label>
+                    <input value={newEvent.title} onChange={e => setNewEvent(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Company Retreat, Flood Closure" className="w-full h-10 bg-black border border-white/10 px-3 text-xs font-mono text-white outline-none focus:border-white/40" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">Start Date</label>
+                      <input type="date" value={newEvent.start_date} onChange={e => setNewEvent(prev => ({ ...prev, start_date: e.target.value }))} className="w-full h-10 bg-black border border-white/10 px-3 text-xs font-mono text-white outline-none focus:border-white/40" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">End Date</label>
+                      <input type="date" value={newEvent.end_date} onChange={e => setNewEvent(prev => ({ ...prev, end_date: e.target.value }))} className="w-full h-10 bg-black border border-white/10 px-3 text-xs font-mono text-white outline-none focus:border-white/40" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">Capacity Impact</label>
+                    <select value={newEvent.capacity_impact} onChange={e => setNewEvent(prev => ({ ...prev, capacity_impact: Number(e.target.value) }))} className="w-full h-10 bg-black border border-white/10 px-3 text-xs font-mono text-white outline-none focus:border-white/40">
+                      <option value={1}>Full day (no capacity)</option>
+                      <option value={0.5}>Half day (50% capacity)</option>
+                      <option value={0}>No impact (informational)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">Description</label>
+                    <textarea value={newEvent.description} onChange={e => setNewEvent(prev => ({ ...prev, description: e.target.value }))} rows={2} className="w-full bg-black border border-white/10 px-3 py-2 text-xs font-mono text-white outline-none focus:border-white/40" />
+                  </div>
+                  <button onClick={handleCreateEvent} disabled={!newEvent.title || !newEvent.start_date} className="w-full bg-white text-black h-10 font-semibold hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest disabled:opacity-50">
+                    Create Event
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'history' && (
+        <div className="border border-white/10 bg-[#0c0c0c] p-6">
           <h3 className="text-sm font-mono uppercase tracking-widest mb-4 flex items-center gap-2">
-            <History className="w-4 h-4" />
-            Sync History ({syncLogs.length})
+            <History className="w-4 h-4" /> Sync History ({syncLogs.length})
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[600px]">
@@ -172,13 +264,10 @@ export function CalendarIntelligencePanel() {
                   <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Found</th>
                   <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Imported</th>
                   <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Status</th>
-                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Hash</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {syncLogs.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-xs font-mono text-white/40 italic">No sync logs yet.</td></tr>
-                )}
+                {syncLogs.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-xs font-mono text-white/40 italic">No sync logs yet.</td></tr>}
                 {syncLogs.map(log => (
                   <tr key={log.id} className="hover:bg-white/[0.02]">
                     <td className="px-4 py-3 text-[10px] font-mono text-white/70">{log.created_at ? new Date(log.created_at).toLocaleDateString() : '-'}</td>
@@ -188,23 +277,15 @@ export function CalendarIntelligencePanel() {
                     <td className="px-4 py-3 text-[10px] font-mono text-white/80">{log.holidays_found}</td>
                     <td className="px-4 py-3 text-[10px] font-mono text-white/80">{log.holidays_imported}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${
-                        log.status === 'success' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' :
-                        log.status === 'partial' ? 'border-amber-500/30 text-amber-400 bg-amber-500/5' :
-                        log.status === 'failed' ? 'border-red-500/30 text-red-400 bg-red-500/5' :
-                        'border-white/10 text-white/50 bg-white/5'
-                      }`}>
-                        {log.status}
-                      </span>
+                      <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${log.status === 'success' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' : log.status === 'partial' ? 'border-amber-500/30 text-amber-400 bg-amber-500/5' : log.status === 'failed' ? 'border-red-500/30 text-red-400 bg-red-500/5' : 'border-white/10 text-white/50 bg-white/5'}`}>{log.status}</span>
                     </td>
-                    <td className="px-4 py-3 text-[9px] font-mono text-white/35 max-w-[80px] truncate" title={log.hash}>{log.hash?.substring(0, 12) || '-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

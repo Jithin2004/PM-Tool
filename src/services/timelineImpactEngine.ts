@@ -142,7 +142,7 @@ export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
     productivityFactor: workspaceSettings.productivityFactor,
     saturdayRule: workspaceSettings.saturdayRule,
     holidays: calendarEvents.filter(e => e.event_type === 'holiday' || e.event_type === 'festival').map(e => e.start_date.split('T')[0]),
-    shutdowns: workspaceSettings.shutdowns,
+    shutdowns: [...(workspaceSettings.shutdowns || []), ...calendarEvents.filter(e => e.source_table === 'organization' && e.event_type === 'company' && (e.capacity_impact ?? 1) >= 1).map(e => ({ start: e.start_date.split('T')[0], end: e.end_date.split('T')[0], name: e.title || 'Company event' }))],
     teamEvents: calendarEvents.filter(e => e.event_type === 'company' || e.event_type === 'sprint').map(e => ({
       start: new Date(e.start_date),
       end: new Date(e.end_date),

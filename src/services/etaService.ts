@@ -71,6 +71,16 @@ export async function getSchedulingContext(
         }));
     }
 
+    const orgShutdowns = events
+      .filter(e => e.source_table === 'organization' && e.event_type === 'company' && (e.capacity_impact ?? 1) >= 1)
+      .map(e => ({
+        start: e.start_date.split('T')[0],
+        end: e.end_date.split('T')[0],
+        name: e.title || 'Company event'
+      }));
+
+    window.shutdowns = [...(window.shutdowns || []), ...orgShutdowns];
+
     (window as any).calendarEvents = events;
   } catch (err) {
     (window as any).calendarEvents = [];

@@ -18,6 +18,7 @@ export function AdminPanel() {
     handleDeleteTeam 
   } = useDashboard();
   const [tab, setTab] = useState<'identity' | 'calendar'>('identity');
+  const canViewCalendar = profile?.role === 'super_admin';
 
   if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
     return (
@@ -40,14 +41,16 @@ export function AdminPanel() {
         >
           Identity & Teams
         </button>
-        <button
-          onClick={() => setTab('calendar')}
-          className={`px-4 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${
-            tab === 'calendar' ? 'border-b-2 border-white text-white' : 'text-white/50 hover:text-white/80'
-          }`}
-        >
-          Calendar Intelligence
-        </button>
+        {canViewCalendar && (
+          <button
+            onClick={() => setTab('calendar')}
+            className={`px-4 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${
+              tab === 'calendar' ? 'border-b-2 border-white text-white' : 'text-white/50 hover:text-white/80'
+            }`}
+          >
+            Calendar Intelligence
+          </button>
+        )}
       </div>
       <div className="pt-0">
         {tab === 'identity' && (
