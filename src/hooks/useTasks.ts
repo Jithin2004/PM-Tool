@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Task, TaskStatus, TaskDependency } from '../types';
 import { sendNotification } from '../services/notificationService';
@@ -362,66 +362,75 @@ export function useTasks(workspaceId?: string) {
     const controller = new AbortController();
     fetchTasks(controller.signal);
     
-    if (workspaceId && isSupabaseConfigured) {
-      // Setup real-time subscription for this workspace's tasks
-      const channelName = `tasks-changes-${workspaceId}-${Date.now()}`;
-      const channel = supabase.channel(channelName)
-        .on('postgres_changes', { 
-            event: '*', 
-            schema: 'public', 
-            table: 'tasks',
-            filter: `workspace_id=eq.${workspaceId}` 
-          }, 
-          (payload) => {
-            const { eventType, new: newRecord, old: oldRecord } = payload;
-            if (eventType === 'INSERT') {
-              setTasks(prev => {
-                if (prev.some(t => t.id === newRecord.id)) return prev;
-                return [newRecord as Task, ...prev];
-              });
-            } else if (eventType === 'UPDATE') {
-              setTasks(prev => prev.map(t => t.id === newRecord.id ? { ...t, ...newRecord } : t));
-            } else if (eventType === 'DELETE') {
-              setTasks(prev => prev.filter(t => t.id !== oldRecord.id));
-            }
-          }
-        )
-        .subscribe();
-
-      // Setup real-time subscription for task dependencies changes
-      const depChannelName = `task-dependencies-changes-${workspaceId}-${Date.now()}`;
-      const depChannel = supabase.channel(depChannelName)
-        .on('postgres_changes', { 
-            event: '*', 
-            schema: 'public', 
-            table: 'task_dependencies',
-            filter: `workspace_id=eq.${workspaceId}` 
-          }, 
-          (payload) => {
-            const { eventType, new: newRecord, old: oldRecord } = payload;
-            if (eventType === 'INSERT') {
-              setDependencies(prev => {
-                if (prev.some(d => d.task_id === newRecord.task_id && d.depends_on_task_id === newRecord.depends_on_task_id)) return prev;
-                return [...prev, newRecord as TaskDependency];
-              });
-            } else if (eventType === 'DELETE') {
-              setDependencies(prev => prev.filter(d => !(d.task_id === oldRecord.task_id && d.depends_on_task_id === oldRecord.depends_on_task_id)));
-            }
-          }
-        )
-        .subscribe();
-        
-      return () => {
-        controller.abort();
-        supabase.removeChannel(channel);
-        supabase.removeChannel(depChannel);
-      };
-    }
-    
     return () => {
       controller.abort();
     };
   }, [fetchTasks, workspaceId]);
+
+  // Realtime subscriptions use stable refs to prevent duplicate channel registration
+  const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
+
+  useEffect(() => {
+    if (!workspaceId || !isSupabaseConfigured) return;
+
+    for (const ch of channelsRef.current) {
+      supabase.removeChannel(ch);
+    }
+    channelsRef.current = [];
+
+    const taskChannel = supabase.channel(`tasks-changes-${workspaceId}`)
+      .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'tasks',
+          filter: `workspace_id=eq.${workspaceId}` 
+        }, 
+        (payload) => {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          if (eventType === 'INSERT') {
+            setTasks(prev => {
+              if (prev.some(t => t.id === newRecord.id)) return prev;
+              return [newRecord as Task, ...prev];
+            });
+          } else if (eventType === 'UPDATE') {
+            setTasks(prev => prev.map(t => t.id === newRecord.id ? { ...t, ...newRecord } : t));
+          } else if (eventType === 'DELETE') {
+            setTasks(prev => prev.filter(t => t.id !== oldRecord.id));
+          }
+        }
+      )
+      .subscribe();
+
+    const depChannel = supabase.channel(`task-dependencies-changes-${workspaceId}`)
+      .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'task_dependencies',
+          filter: `workspace_id=eq.${workspaceId}` 
+        }, 
+        (payload) => {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          if (eventType === 'INSERT') {
+            setDependencies(prev => {
+              if (prev.some(d => d.task_id === newRecord.task_id && d.depends_on_task_id === newRecord.depends_on_task_id)) return prev;
+              return [...prev, newRecord as TaskDependency];
+            });
+          } else if (eventType === 'DELETE') {
+            setDependencies(prev => prev.filter(d => !(d.task_id === oldRecord.task_id && d.depends_on_task_id === oldRecord.depends_on_task_id)));
+          }
+        }
+      )
+      .subscribe();
+
+    channelsRef.current = [taskChannel, depChannel];
+
+    return () => {
+      for (const ch of channelsRef.current) {
+        supabase.removeChannel(ch);
+      }
+      channelsRef.current = [];
+    };
+  }, [workspaceId]);
 
   const addTask = async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
     if (!workspaceId) return null;

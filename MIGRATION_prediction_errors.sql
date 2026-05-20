@@ -40,7 +40,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Prediction errors viewable by workspace members"
     ON prediction_errors FOR SELECT USING (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = prediction_errors.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = prediction_errors.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;
@@ -52,7 +52,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Members can insert prediction errors"
     ON prediction_errors FOR INSERT WITH CHECK (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = prediction_errors.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = prediction_errors.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;

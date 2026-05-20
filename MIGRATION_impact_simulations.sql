@@ -40,7 +40,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Impact simulations viewable by workspace members"
     ON impact_simulations FOR SELECT USING (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = impact_simulations.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = impact_simulations.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;
@@ -52,7 +52,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Members can insert impact simulations"
     ON impact_simulations FOR INSERT WITH CHECK (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = impact_simulations.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = impact_simulations.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;
@@ -64,7 +64,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Members can update impact simulations"
     ON impact_simulations FOR UPDATE USING (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = impact_simulations.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = impact_simulations.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;

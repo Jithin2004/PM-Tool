@@ -23,7 +23,7 @@ BEGIN
   ) THEN
     CREATE POLICY "PCMx viewable by workspace members"
     ON prediction_context_metrics FOR SELECT USING (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = prediction_context_metrics.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = prediction_context_metrics.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;
@@ -35,7 +35,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Members can insert PCMx"
     ON prediction_context_metrics FOR INSERT WITH CHECK (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = prediction_context_metrics.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = prediction_context_metrics.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;
@@ -47,7 +47,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Members can update PCMx"
     ON prediction_context_metrics FOR UPDATE USING (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = prediction_context_metrics.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = prediction_context_metrics.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;

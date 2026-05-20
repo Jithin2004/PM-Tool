@@ -75,9 +75,9 @@ BEGIN
     CREATE POLICY "Calendar events viewable by workspace members"
     ON calendar_events FOR SELECT USING (
       EXISTS (
-        SELECT 1 FROM workspace_members
-        WHERE workspace_members.workspace_id = calendar_events.workspace_id
-        AND workspace_members.user_id = auth.uid()
+        SELECT 1 FROM users
+        WHERE users.workspace_id = calendar_events.workspace_id
+        AND users.id = auth.uid()
       )
     );
   END IF;
@@ -93,10 +93,10 @@ BEGIN
     CREATE POLICY "Admins and PMs can insert calendar events"
     ON calendar_events FOR INSERT WITH CHECK (
       EXISTS (
-        SELECT 1 FROM workspace_members
-        WHERE workspace_members.workspace_id = calendar_events.workspace_id
-        AND workspace_members.user_id = auth.uid()
-        AND workspace_members.role IN ('admin', 'pm', 'super_admin')
+        SELECT 1 FROM users
+        WHERE users.workspace_id = calendar_events.workspace_id
+        AND users.id = auth.uid()
+        AND users.role IN ('admin', 'pm', 'super_admin')
       )
     );
   END IF;
@@ -112,10 +112,10 @@ BEGIN
     CREATE POLICY "Admins and PMs can update calendar events"
     ON calendar_events FOR UPDATE USING (
       EXISTS (
-        SELECT 1 FROM workspace_members
-        WHERE workspace_members.workspace_id = calendar_events.workspace_id
-        AND workspace_members.user_id = auth.uid()
-        AND workspace_members.role IN ('admin', 'pm', 'super_admin')
+        SELECT 1 FROM users
+        WHERE users.workspace_id = calendar_events.workspace_id
+        AND users.id = auth.uid()
+        AND users.role IN ('admin', 'pm', 'super_admin')
       )
     );
   END IF;
@@ -131,10 +131,10 @@ BEGIN
     CREATE POLICY "Admins and PMs can delete calendar events"
     ON calendar_events FOR DELETE USING (
       EXISTS (
-        SELECT 1 FROM workspace_members
-        WHERE workspace_members.workspace_id = calendar_events.workspace_id
-        AND workspace_members.user_id = auth.uid()
-        AND workspace_members.role IN ('admin', 'pm', 'super_admin')
+        SELECT 1 FROM users
+        WHERE users.workspace_id = calendar_events.workspace_id
+        AND users.id = auth.uid()
+        AND users.role IN ('admin', 'pm', 'super_admin')
       )
     );
   END IF;

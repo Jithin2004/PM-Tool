@@ -21,7 +21,7 @@ BEGIN
   ) THEN
     CREATE POLICY "PCM viewable by workspace members"
     ON prediction_confidence_metrics FOR SELECT USING (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = prediction_confidence_metrics.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = prediction_confidence_metrics.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;
@@ -33,7 +33,7 @@ BEGIN
   ) THEN
     CREATE POLICY "Members can insert PCM"
     ON prediction_confidence_metrics FOR INSERT WITH CHECK (
-      EXISTS (SELECT 1 FROM workspace_members WHERE workspace_members.workspace_id = prediction_confidence_metrics.workspace_id AND workspace_members.user_id = auth.uid())
+      EXISTS (SELECT 1 FROM users WHERE users.workspace_id = prediction_confidence_metrics.workspace_id AND users.id = auth.uid())
     );
   END IF;
 END $$;
