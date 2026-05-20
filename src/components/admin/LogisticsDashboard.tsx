@@ -36,10 +36,10 @@ export function LogisticsDashboard({
 
   const currencySymbols: Record<string, string> = {
     USD: '$',
-    INR: 'â‚¹',
-    EUR: 'â‚¬',
+    INR: '₹',
+    EUR: '€',
     CAD: 'C$',
-    AED: 'AED '
+    AED: 'د.إ'
   };
 
   const activeSymbol = currencySymbols[currency] || '$';
@@ -89,49 +89,53 @@ export function LogisticsDashboard({
     const targetYear = Number(selectedYear);
     const targetMonth = Number(selectedMonth);
 
-    let expectedWorkingDays = 22;
     let isDateInRange = (dateStr: string) => dateStr.startsWith(monthPrefix);
 
+    const allWeekdaysInRange: string[] = [];
+
     if (payrollMode === 'custom' && customStartDate && customEndDate) {
-      let count = 0;
       const start = new Date(customStartDate);
       const end = new Date(customEndDate);
       if (start <= end) {
         let current = new Date(start);
         while (current <= end) {
           const dayOfWeek = current.getDay();
-          if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            allWeekdaysInRange.push(getLocalDateString(current));
+          }
           current.setDate(current.getDate() + 1);
         }
       }
-      expectedWorkingDays = count;
       isDateInRange = (dateStr: string) => dateStr >= customStartDate && dateStr <= customEndDate;
     } else {
-      if (targetYear < currentYear || (targetYear === currentYear && targetMonth < currentMonth)) {
-        // Past month: calculate all weekdays in that month
-        let count = 0;
-        const lastDay = new Date(targetYear, targetMonth, 0).getDate();
-        for (let d = 1; d <= lastDay; d++) {
-          const dayOfWeek = new Date(targetYear, targetMonth - 1, d).getDay();
-          if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
+      const startYear = Number(selectedYear);
+      const startMonth = Number(selectedMonth);
+
+      let lastDay = 0;
+      if (startYear < currentYear || (startYear === currentYear && startMonth < currentMonth)) {
+        // Past month: full month
+        lastDay = new Date(startYear, startMonth, 0).getDate();
+      } else if (startYear === currentYear && startMonth === currentMonth) {
+        // Current month: up to current day
+        lastDay = currentDay;
+      }
+
+      for (let d = 1; d <= lastDay; d++) {
+        const dateObj = new Date(startYear, startMonth - 1, d);
+        const dayOfWeek = dateObj.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+          allWeekdaysInRange.push(getLocalDateString(dateObj));
         }
-        expectedWorkingDays = count;
-      } else if (targetYear === currentYear && targetMonth === currentMonth) {
-        // Current month: calculate weekdays up to current day
-        let count = 0;
-        for (let d = 1; d <= currentDay; d++) {
-          const dayOfWeek = new Date(targetYear, targetMonth - 1, d).getDay();
-          if (dayOfWeek !== 0 && dayOfWeek !== 6) count++;
-        }
-        expectedWorkingDays = count;
-      } else {
-        // Future month
-        expectedWorkingDays = 0;
       }
     }
 
     return profiles.map(profile => {
       const baseSalary = systemData.salaries?.[profile.id] ?? 3000;
+      const joiningDateStr = profile.created_at ? getLocalDateString(new Date(profile.created_at)) : '';
+      
+      // Filter weekdays to only those on or after joining date
+      const profileWeekdays = allWeekdaysInRange.filter(dateStr => !joiningDateStr || dateStr >= joiningDateStr);
+      const expectedWorkingDaysForProfile = profileWeekdays.length;
 
       let presentCount = 0;
       let halfDayCount = 0;
@@ -141,7 +145,7 @@ export function LogisticsDashboard({
       let unpaidHalfDayCount = 0;
 
       Object.keys(attendanceRecords).forEach(dateStr => {
-        if (isDateInRange(dateStr)) {
+        if (isDateInRange(dateStr) && (!joiningDateStr || dateStr >= joiningDateStr)) {
           const dayData = attendanceRecords[dateStr]?.[profile.id];
           if (dayData) {
             if (dayData.status === 'present') {
@@ -167,13 +171,13 @@ export function LogisticsDashboard({
       });
 
       const totalDaysAccounted = Object.keys(attendanceRecords).reduce((acc, dateStr) => {
-        if (isDateInRange(dateStr) && attendanceRecords[dateStr]?.[profile.id]) {
+        if (isDateInRange(dateStr) && (!joiningDateStr || dateStr >= joiningDateStr) && attendanceRecords[dateStr]?.[profile.id]) {
           return acc + 1;
         }
         return acc;
       }, 0);
 
-      const unmarkedWorkingDays = Math.max(0, expectedWorkingDays - totalDaysAccounted);
+      const unmarkedWorkingDays = Math.max(0, expectedWorkingDaysForProfile - totalDaysAccounted);
 
       // Unmarked days count as present by default
       presentCount += unmarkedWorkingDays;
@@ -205,7 +209,8 @@ export function LogisticsDashboard({
         uuCount,
         totalUnpaidDays,
         totalDeductions,
-        netPayable
+        netPayable,
+        expectedWorkingDays: expectedWorkingDaysForProfile
       };
     });
   }, [profiles, systemData, monthPrefix, allowedCasualLeaves, allowedMedicalLeaves, halfDayRule, unexcusedDeductionAmount, deductionMethod, bypassHalfDay, payrollMode, customStartDate, customEndDate]);
@@ -331,6 +336,10 @@ export function LogisticsDashboard({
 
   // Filter profiles for attendance marking
   const filteredProfiles = profiles.filter(p => {
+    const joiningDateStr = p.created_at ? getLocalDateString(new Date(p.created_at)) : '';
+    if (joiningDateStr && selectedDate < joiningDateStr) {
+      return false; // Not yet onboarded on selectedDate
+    }
     const searchLower = attendanceSearch.toLowerCase();
     return (
       (p.full_name || '').toLowerCase().includes(searchLower) ||
@@ -345,6 +354,10 @@ export function LogisticsDashboard({
     let halfDay = 0;
     let absent = 0;
     profiles.forEach(p => {
+      const joiningDateStr = p.created_at ? getLocalDateString(new Date(p.created_at)) : '';
+      if (joiningDateStr && selectedDate < joiningDateStr) {
+        return; // Skip not yet onboarded
+      }
       const dayData = dayAttendance[p.id];
       if (dayData) {
         if (dayData.status === 'present') present++;
@@ -356,7 +369,7 @@ export function LogisticsDashboard({
       }
     });
     return { present, halfDay, absent };
-  }, [dayAttendance, profiles]);
+  }, [dayAttendance, profiles, selectedDate]);
 
   return (
     <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 pb-16">
@@ -486,7 +499,14 @@ export function LogisticsDashboard({
                             )}
                           </div>
                           <div>
-                            <h4 className="text-sm font-semibold text-white/90">{profile.full_name || 'Anonymous User'}</h4>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold text-white/90">{profile.full_name || 'Anonymous User'}</h4>
+                              {profile.created_at && (
+                                <span className="text-[8px] font-mono bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-sm" title="Date of Joining">
+                                  DOJ: {getLocalDateString(new Date(profile.created_at))}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[10px] font-mono text-white/60 uppercase">{profile.email}</p>
                             <p className="text-[9px] font-mono mt-1"><span className="text-white/40 uppercase">Role:</span> <span className="text-blue-400 uppercase">{(systemData.userCustomRoles && systemData.userCustomRoles[profile.id]) || profile.role}</span></p>
                           </div>
@@ -668,10 +688,10 @@ export function LogisticsDashboard({
                       className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
                     >
                       <option value="USD">USD ($) - US Dollar</option>
-                      <option value="INR">INR (â‚¹) - Indian Rupee</option>
-                      <option value="EUR">EUR (â‚¬) - Euro</option>
+                      <option value="INR">INR (₹) - Indian Rupee</option>
+                      <option value="EUR">EUR (€) - Euro</option>
                       <option value="CAD">CAD (C$) - Canadian Dollar</option>
-                      <option value="AED">AED (Ø¯.Ø¥) - UAE Dirham</option>
+                      <option value="AED">AED (د.إ) - UAE Dirham</option>
                     </select>
                     <p className="text-[9px] font-mono text-white/40 italic">Set the primary currency used across salary listings, calculations, and deductions.</p>
                   </div>
@@ -878,7 +898,8 @@ export function LogisticsDashboard({
                       uuCount,
                       totalUnpaidDays,
                       totalDeductions,
-                      netPayable
+                      netPayable,
+                      expectedWorkingDays
                     }) => {
                       const isEditing = editingSalaryUserId === profile.id;
 
@@ -894,7 +915,14 @@ export function LogisticsDashboard({
                               )}
                             </div>
                             <div>
-                              <h4 className="text-xs font-semibold text-white/90">{profile.full_name || 'Anonymous User'}</h4>
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="text-xs font-semibold text-white/90">{profile.full_name || 'Anonymous User'}</h4>
+                                {profile.created_at && (
+                                  <span className="text-[7.5px] font-mono bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1 py-0.2 rounded-sm" title={`Joined: ${getLocalDateString(new Date(profile.created_at))}`}>
+                                    DOJ: {getLocalDateString(new Date(profile.created_at))}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[9px] font-mono text-white/50 uppercase">{profile.email}</p>
                             </div>
                           </td>
@@ -934,10 +962,13 @@ export function LogisticsDashboard({
 
                           {/* Attendance */}
                           <td className="p-4 text-center">
-                            <div className="flex items-center justify-center gap-2 text-[10px] font-mono">
-                              <span className="bg-green-500/10 text-green-400 px-2 py-0.5 border border-green-500/15" title="Present Days">P: {presentCount}</span>
-                              <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 border border-yellow-500/15" title="Half Days">HD: {halfDayCount}</span>
-                              <span className="bg-red-500/10 text-red-400 px-2 py-0.5 border border-red-500/15" title="Unexcused Absences">UU: {uuCount}</span>
+                            <div className="flex flex-col items-center gap-1 font-mono">
+                              <div className="flex items-center justify-center gap-2 text-[10px]">
+                                <span className="bg-green-500/10 text-green-400 px-2 py-0.5 border border-green-500/15" title="Present Days">P: {presentCount}</span>
+                                <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 border border-yellow-500/15" title="Half Days">HD: {halfDayCount}</span>
+                                <span className="bg-red-500/10 text-red-400 px-2 py-0.5 border border-red-500/15" title="Unexcused Absences">UU: {uuCount}</span>
+                              </div>
+                              <span className="text-[8px] text-white/40 uppercase tracking-wider">Bandwidth: {expectedWorkingDays} working days</span>
                             </div>
                           </td>
 

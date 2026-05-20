@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { List } from 'react-window';
 import { Users, Shield, Terminal, X, AlertTriangle, Activity, Lock, Layers, Search, ChevronRight, BrainCircuit, Plus, Clock } from 'lucide-react';
 import { Team, User, Profile, Project } from '../../types';
-import { calculateExpectedTime } from '../../utils/timeUtils';
+import { calculateExpectedTime, getLocalDateString } from '../../utils/timeUtils';
 
 export function TeamRosterModal({
   teams,
@@ -161,7 +161,11 @@ export function TeamRosterModal({
     let halfDays = 0;
     let absentDays = 0;
 
+    const joiningDateStr = profile.created_at ? getLocalDateString(new Date(profile.created_at)) : '';
+
     Object.keys(attendanceRecords).forEach(dateStr => {
+      if (joiningDateStr && dateStr < joiningDateStr) return; // Skip dates before onboarding
+
       const dayData = attendanceRecords[dateStr]?.[profile.id];
       if (dayData) {
         if (dayData.status === 'present') presentDays++;
