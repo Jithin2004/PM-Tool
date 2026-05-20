@@ -19,6 +19,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Refs to prevent stale closures in event listeners
+  const loadingRef = React.useRef(loading);
+  const userRef = React.useRef(user);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   const syncProfile = useCallback(async (authUser: any) => {
     if (!isSupabaseConfigured) return;
     if (import.meta.env.DEV) {
@@ -222,19 +234,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return;
       
       if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
-        setLoading(true);
+        // Ignore initial dummy events during loading/initialization
+        if (loadingRef.current) {
+          if (import.meta.env.DEV) {
+            console.log("AuthContext: ignoring SIGNED_OUT/TOKEN_REFRESHED during initial load");
+          }
+          return;
+        }
+
         setUser(null);
         setProfile(null);
         supabase.removeAllChannels();
-        setLoading(false);
-        window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Session expired. Redirecting...", type: "error" } }));
-        setTimeout(() => { window.location.href = '/'; }, 1000);
+        
+        // Only show toast and redirect if the user was previously logged in
+        if (userRef.current) {
+          window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Session expired. Redirecting...", type: "error" } }));
+          setTimeout(() => {
+            if (window.location.pathname !== '/') {
+              window.history.replaceState(null, '', '/');
+              window.dispatchEvent(new CustomEvent('popstate'));
+            }
+          }, 1000);
+        }
         return;
       } else {
         // Handle all other events, including INITIAL_SESSION
         // If we already have the profile, we can skip syncProfile to save a query
         if (session?.user) {
-          if (user?.id !== session.user.id) {
+          if (userRef.current?.id !== session.user.id) {
             setUser(session.user);
             await syncProfile(session.user);
           }
