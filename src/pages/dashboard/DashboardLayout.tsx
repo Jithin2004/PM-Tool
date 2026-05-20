@@ -656,6 +656,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const [newClientDeadline, setNewClientDeadline] = useState<string>('');
   const [newPriority, setNewPriority] = useState<string>('medium');
   const [newTeamId, setNewTeamId] = useState<string>('');
+  const [newExecutionMode, setNewExecutionMode] = useState<string>('KANBAN');
 
   useEffect(() => {
     let isMounted = true;
@@ -796,6 +797,10 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   }, [teams, workspace?.id]);
 
   const handleWorkingTimeChange = async (from: string, to: string) => {
+    if (profile?.role !== 'super_admin' || profile?.id !== workspace?.owner_id) {
+      notify("Only the workspace owner can update working hours.", "error");
+      return;
+    }
     setWorkingTimeFrom(from);
     setWorkingTimeTo(to);
     
@@ -824,6 +829,10 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   };
 
   const handleSaveLogisticsData = async (updatedData: any) => {
+    if (profile?.role !== 'super_admin' || profile?.id !== workspace?.owner_id) {
+      notify("Only the workspace owner can modify logistics settings.", "error");
+      return;
+    }
     // 1. Intercept attendance updates
     if (updatedData.attendance) {
       if (isSupabaseConfigured) {
@@ -1448,6 +1457,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       name: newName,
       status: 'planning',
       priority: newPriority,
+      execution_mode: newExecutionMode,
       efficiency: 0.8,
       pert_best: bestNum,
       pert_likely: likelyNum,
@@ -1802,6 +1812,18 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Execution Mode</label>
+                    <select
+                      value={newExecutionMode}
+                      onChange={e => setNewExecutionMode(e.target.value)}
+                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
+                    >
+                      <option value="KANBAN">KANBAN</option>
+                      <option value="SCRUM">SCRUM</option>
+                      <option value="SDLC">SDLC</option>
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Priority Selection</label>
                     <select
                       value={newPriority}
@@ -1908,7 +1930,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       <AnimatePresence>
         {selectedProject && (
           <ProjectDetailsModal
-            project={selectedProject}
+            project={projectsWithAggregatedPERT.find(p => p.id === selectedProject.id) || selectedProject}
             teams={activeTeams}
             onClose={() => setSelectedProject(null)}
             onUpdate={handleUpdateProjectMetadata}

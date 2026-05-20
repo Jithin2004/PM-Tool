@@ -4,7 +4,7 @@ import {
   AlertTriangle, BrainCircuit, Activity, Clock, GripVertical, Diamond, Calendar,
   Folder, BookOpen, ListChecks, Target, Users
 } from 'lucide-react';
-import type { Milestone, Meeting, Project, Epic, CalendarEvent } from '../../types';
+import type { Milestone, Meeting, Project, Epic, Task, CalendarEvent } from '../../types';
 
 const ROW_H      = 56;
 const HEADER_H   = 72;
@@ -109,52 +109,74 @@ export function GanttView({
   const sidebarBodyRef = useRef<HTMLDivElement>(null);
   const containerRef   = useRef<HTMLDivElement>(null);
 
-  // Build hierarchy
+  // Build hierarchy (optimized with Map lookups)
   const hierarchy: GanttHierarchyItem[] = useMemo(() => {
     const items: GanttHierarchyItem[] = [];
     const isCollapsed = (id: string) => collapsed.has(id);
 
+    const tasksByProject = new Map<string, Task[]>();
+    const tasksByEpic = new Map<string, Task[]>();
+    const orphanTasksByProject = new Map<string, Task[]>();
+    for (const t of tasks) {
+      const pid = t.project_id;
+      if (!tasksByProject.has(pid)) tasksByProject.set(pid, []);
+      tasksByProject.get(pid)!.push(t);
+      if (t.epic_id) {
+        if (!tasksByEpic.has(t.epic_id)) tasksByEpic.set(t.epic_id, []);
+        tasksByEpic.get(t.epic_id)!.push(t);
+      } else {
+        if (!orphanTasksByProject.has(pid)) orphanTasksByProject.set(pid, []);
+        orphanTasksByProject.get(pid)!.push(t);
+      }
+    }
+
+    const epicsByProject = new Map<string, Epic[]>();
+    for (const ep of epics) {
+      if (!epicsByProject.has(ep.project_id)) epicsByProject.set(ep.project_id, []);
+      epicsByProject.get(ep.project_id)!.push(ep);
+    }
+
+    const statusProgress: Record<string, number> = { backlog: 0, ready: 0, in_progress: 50, review: 85, done: 100 };
+
     // Projects
-    projects.forEach(p => {
-      const pTasks = tasks.filter(t => t.project_id === p.id);
+    for (const p of projects) {
+      const pTasks = tasksByProject.get(p.id) || [];
       const pStart = pTasks.length > 0 ? sod(new Date(Math.min(...pTasks.map(t => new Date(t.start_date || t.created_at).getTime())))) : sod(new Date());
       const pEnd = pTasks.length > 0 ? sod(new Date(Math.max(...pTasks.map(t => new Date(t.deadline || t.created_at).getTime())))) : addDays(pStart, 14);
-      items.push({ id: `proj-${p.id}`, type: 'project', name: p.name, start: pStart, end: pEnd, progress: pTasks.length > 0 ? Math.round(pTasks.filter(t => t.status === 'done').length / pTasks.length * 100) : 0, depth: 0 });
+      const doneCount = pTasks.filter(t => t.status === 'done').length;
+      items.push({ id: `proj-${p.id}`, type: 'project', name: p.name, start: pStart, end: pEnd, progress: pTasks.length > 0 ? Math.round(doneCount / pTasks.length * 100) : 0, depth: 0 });
 
-      if (isCollapsed(`proj-${p.id}`)) return;
+      if (isCollapsed(`proj-${p.id}`)) continue;
 
       // Epics under project
-      const projectEpics = epics.filter(e => e.project_id === p.id);
-      projectEpics.forEach(ep => {
-        const epTasks = tasks.filter(t => t.project_id === p.id && t.epic_id === ep.id);
+      const projectEpics = epicsByProject.get(p.id) || [];
+      for (const ep of projectEpics) {
+        const epTasks = tasksByEpic.get(ep.id) || [];
         const epStart = epTasks.length > 0 ? sod(new Date(Math.min(...epTasks.map(t => new Date(t.start_date || t.created_at).getTime())))) : sod(new Date());
         const epEnd = epTasks.length > 0 ? sod(new Date(Math.max(...epTasks.map(t => new Date(t.deadline || t.created_at).getTime())))) : addDays(epStart, 7);
-        items.push({ id: `epic-${ep.id}`, type: 'epic', name: `📋 ${ep.name}`, start: epStart, end: epEnd, progress: epTasks.length > 0 ? Math.round(epTasks.filter(t => t.status === 'done').length / epTasks.length * 100) : 0, parentId: `proj-${p.id}`, depth: 1 });
+        const epDoneCount = epTasks.filter(t => t.status === 'done').length;
+        items.push({ id: `epic-${ep.id}`, type: 'epic', name: `📋 ${ep.name}`, start: epStart, end: epEnd, progress: epTasks.length > 0 ? Math.round(epDoneCount / epTasks.length * 100) : 0, parentId: `proj-${p.id}`, depth: 1 });
 
-        if (isCollapsed(`epic-${ep.id}`)) return;
+        if (isCollapsed(`epic-${ep.id}`)) continue;
 
         // Tasks under epic
-        epTasks.forEach(t => {
+        for (const t of epTasks) {
           let start = sod(new Date()); let end = addDays(start, 1);
           if (t.start_date) { const d = new Date(t.start_date); if (!isNaN(d.getTime())) start = sod(d); }
           if (t.deadline) { const d = new Date(t.deadline); if (!isNaN(d.getTime()) && d > start) end = sod(d); }
-          const progress = ({ backlog: 0, ready: 0, in_progress: 50, review: 85, done: 100 })[t.status] ?? 0;
-          items.push({ id: t.id, type: 'task', name: t.name, start, end, progress, parentId: `epic-${ep.id}`, status: t.status, depth: 2 });
-        });
-      });
+          items.push({ id: t.id, type: 'task', name: t.name, start, end, progress: statusProgress[t.status] ?? 0, parentId: `epic-${ep.id}`, status: t.status, depth: 2 });
+        }
+      }
 
       // Orphan tasks (no epic)
-      const orphanTasks = pTasks.filter(t => !t.epic_id);
-      if (!collapsed.has(`proj-${p.id}`) && orphanTasks.length > 0) {
-        orphanTasks.forEach(t => {
-          let start = sod(new Date()); let end = addDays(start, 1);
-          if (t.start_date) { const d = new Date(t.start_date); if (!isNaN(d.getTime())) start = sod(d); }
-          if (t.deadline) { const d = new Date(t.deadline); if (!isNaN(d.getTime()) && d > start) end = sod(d); }
-          const progress = ({ backlog: 0, ready: 0, in_progress: 50, review: 85, done: 100 })[t.status] ?? 0;
-          items.push({ id: t.id, type: 'task', name: t.name, start, end, progress, parentId: `proj-${p.id}`, status: t.status, depth: 2 });
-        });
+      const orphanTasks = orphanTasksByProject.get(p.id) || [];
+      for (const t of orphanTasks) {
+        let start = sod(new Date()); let end = addDays(start, 1);
+        if (t.start_date) { const d = new Date(t.start_date); if (!isNaN(d.getTime())) start = sod(d); }
+        if (t.deadline) { const d = new Date(t.deadline); if (!isNaN(d.getTime()) && d > start) end = sod(d); }
+        items.push({ id: t.id, type: 'task', name: t.name, start, end, progress: statusProgress[t.status] ?? 0, parentId: `proj-${p.id}`, status: t.status, depth: 2 });
       }
-    });
+    }
 
     return items;
   }, [projects, epics, tasks, collapsed]);

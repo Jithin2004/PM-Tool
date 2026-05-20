@@ -175,12 +175,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!workspace) throw new Error('No workspace is active.');
 
     try {
-      setWorkspace(await persistWorkspaceSettings(workspace, settings));
+      setWorkspace(await persistWorkspaceSettings(workspace, settings, profile?.id));
     } catch (err: any) {
       setError(err?.message || 'Workspace update failed.');
       throw err;
     }
-  }, [workspace]);
+  }, [workspace, profile?.id]);
 
   const signInWithGoogle = useCallback(async () => {
     const { error: signInError } = await supabase.auth.signInWithOAuth({

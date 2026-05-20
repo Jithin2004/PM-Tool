@@ -118,6 +118,18 @@ function generateOccurrences(
   return results;
 }
 
+function overlapMinutes(
+  eventStart: Date,
+  eventEnd: Date,
+  dayStart: Date,
+  dayEnd: Date
+): number {
+  const overlapStart = eventStart > dayStart ? eventStart : dayStart;
+  const overlapEnd = eventEnd < dayEnd ? eventEnd : dayEnd;
+  if (overlapStart >= overlapEnd) return 0;
+  return (overlapEnd.getTime() - overlapStart.getTime()) / 60000;
+}
+
 export const calendarEventService = {
   async createEvent(
     event: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>,
@@ -158,7 +170,7 @@ export const calendarEventService = {
 
   async deleteEvent(id: string, workspaceId: string, actorId?: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
-    const { error } = await supabase.from('calendar_events').delete().eq('id', id);
+    const { error } = await supabase.from('calendar_events').update({ deleted_at: new Date().toISOString() }).eq('id', id).is('deleted_at', null);
     if (error) { console.error('calendarEventService.deleteEvent:', error); return false; }
     await activityLogService.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
@@ -179,6 +191,7 @@ export const calendarEventService = {
       .from('calendar_events')
       .select('*')
       .eq('workspace_id', workspaceId)
+      .is('deleted_at', null)
       .lte('start_date', endDate)
       .gte('end_date', startDate)
       .order('start_date', { ascending: true });
@@ -206,7 +219,9 @@ export const calendarEventService = {
     baseHoursPerDay: number,
     workingDays: number[],
     userId?: string,
-    timezone?: string
+    timezone?: string,
+    workStart?: string,
+    workEnd?: string
   ): Promise<{ totalCapacity: number; deductedHours: number; events: CalendarEvent[] }> {
     const events = userId
       ? await this.getEventsForUser(workspaceId, userId, startDate, endDate)
@@ -230,18 +245,67 @@ export const calendarEventService = {
       d.setUTCHours(0, 0, 0, 0);
     }
 
+    const workStartMin = workStart ? (() => { const [h, m] = workStart.split(':').map(Number); return h * 60 + m; })() : 0;
+    const workEndMin = workEnd ? (() => { const [h, m] = workEnd.split(':').map(Number); return h * 60 + m; })() : 24 * 60;
+
     let totalDeduction = 0;
     const appliedEvents: CalendarEvent[] = [];
 
     for (const event of events) {
       const es = new Date(event.start_date);
       const ee = new Date(event.end_date);
-      const eventMs = Math.max(3600000, ee.getTime() - es.getTime());
-      const eventDays = Math.ceil(eventMs / 86400000);
       const modifier = event.capacity_modifier ?? 1;
       const effectiveImpact = event.capacity_impact * modifier;
-      const dailyImpact = baseHoursPerDay * (1 - effectiveImpact);
-      totalDeduction += dailyImpact * eventDays;
+
+      if (event.event_type === 'holiday' || event.event_type === 'festival') {
+        const holidayDays = Math.max(1, Math.ceil((ee.getTime() - es.getTime()) / 86400000));
+        let workingHolidayDays = 0;
+        for (let d = 0; d < holidayDays; d++) {
+          const day = new Date(es);
+          day.setUTCDate(day.getUTCDate() + d);
+          let dayOfWeek: number;
+          if (timezone) {
+            const formatter = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
+            const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+            dayOfWeek = map[formatter.format(day)] ?? day.getUTCDay();
+          } else {
+            dayOfWeek = day.getUTCDay();
+          }
+          if (workingDays.includes(dayOfWeek)) workingHolidayDays++;
+        }
+        totalDeduction += baseHoursPerDay * workingHolidayDays;
+        if (workingHolidayDays > 0) appliedEvents.push(event);
+        continue;
+      }
+
+      const eventMidnightStart = new Date(es);
+      eventMidnightStart.setHours(0, 0, 0, 0);
+      const eventMidnightEnd = new Date(ee);
+      eventMidnightEnd.setHours(0, 0, 0, 0);
+      const eventDayCount = Math.max(1, Math.ceil((eventMidnightEnd.getTime() - eventMidnightStart.getTime()) / 86400000));
+
+      for (let dayOffset = 0; dayOffset < eventDayCount; dayOffset++) {
+        const dayStart = new Date(eventMidnightStart);
+        dayStart.setDate(dayStart.getDate() + dayOffset);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const dayOfWeek = dayStart.getUTCDay();
+        if (!workingDays.includes(dayOfWeek)) continue;
+
+        const workDayStart = new Date(dayStart);
+        workDayStart.setHours(Math.floor(workStartMin / 60), workStartMin % 60, 0, 0);
+        const workDayEnd = new Date(dayStart);
+        workDayEnd.setHours(Math.floor(workEndMin / 60), workEndMin % 60, 0, 0);
+
+        const overlapMin = overlapMinutes(es, ee, workDayStart, workDayEnd);
+        if (overlapMin <= 0) continue;
+
+        const overlapHours = overlapMin / 60;
+        const deductionForDay = overlapHours * effectiveImpact;
+        totalDeduction += deductionForDay;
+      }
+
       appliedEvents.push(event);
     }
 
@@ -259,10 +323,12 @@ export const calendarEventService = {
     endDate: string,
     baseHoursPerDay: number,
     workingDays: number[],
-    timezone?: string
+    timezone?: string,
+    workStart?: string,
+    workEnd?: string
   ): Promise<number> {
     const { totalCapacity, deductedHours } = await this.getEffectiveCapacity(
-      workspaceId, startDate, endDate, baseHoursPerDay, workingDays, undefined, timezone
+      workspaceId, startDate, endDate, baseHoursPerDay, workingDays, undefined, timezone, workStart, workEnd
     );
     const totalPossible = totalCapacity + deductedHours;
     if (totalPossible <= 0) return 0;

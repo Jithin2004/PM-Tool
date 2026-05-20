@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { BrainCircuit, TrendingUp, TrendingDown, Activity, BarChart3, User, Code2, Layout, Settings, Building2 } from 'lucide-react';
+import { BrainCircuit, TrendingUp, TrendingDown, Activity, BarChart3, User, Code2, Layout, Settings, Building2, Users, Clock, AlertTriangle } from 'lucide-react';
 import { confidenceCalibrationService, type CalibrationMetrics } from '../../services/confidenceCalibrationService';
 import { contextPredictionService, CONTEXT_TYPES, type ContextAccuracy, type ContextType } from '../../services/contextPredictionService';
+import { teamOutput, effectivenessMultiplier, getDefaultProfile } from '../../services/resourceProfileService';
+import type { SkillLevel } from '../../types';
 
 interface Props {
   workspaceId: string;
@@ -163,6 +165,71 @@ export function PredictionInsights({ workspaceId }: Props) {
           </div>
         </div>
       )}
+
+      <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+        <div className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-wider mb-2">Resource Profile Intelligence</div>
+        <div className="grid grid-cols-2 gap-2">
+          {(['intern', 'junior', 'mid', 'senior', 'lead'] as SkillLevel[]).map(level => {
+            const profile = getDefaultProfile(level);
+            const eff = effectivenessMultiplier(profile);
+            return (
+              <div key={level} className="bg-white/5 rounded-lg p-3 border border-white/5">
+                <div className="flex items-center gap-1.5 text-[10px] font-mono text-white/40 uppercase mb-1">
+                  <User className="w-3 h-3" />
+                  {level}
+                </div>
+                <div className="text-sm font-mono font-bold text-white/90">{eff.toFixed(2)}x</div>
+                <div className="text-[8px] font-mono text-white/40 mt-0.5">{profile.experience_years}y exp</div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          {[1, 2, 3, 5, 8].map(n => {
+            const output = teamOutput(n, [getDefaultProfile('mid')]);
+            const linearExpectation = n * effectivenessMultiplier(getDefaultProfile('mid'));
+            const loss = linearExpectation - output;
+            return (
+              <div key={n} className="bg-white/5 rounded-lg p-3 border border-white/5">
+                <div className="text-[10px] font-mono text-white/40">{n} engineers</div>
+                <div className="text-xs font-mono font-bold text-white/90">{output.toFixed(2)}x</div>
+                <div className="text-[8px] font-mono text-rose-400/60">-{loss.toFixed(2)}x coordination loss</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {contextMetrics.filter(c => c.context_type === 'assignee' && c.sample_size >= 3).length > 0 && (
+          <div className="space-y-1">
+            <div className="text-[10px] font-mono text-white/30 uppercase mb-1">Assignee Performance</div>
+            <div className="grid grid-cols-2 gap-2">
+              {(['best', 'worst'] as const).map(h => {
+                const sorted = contextMetrics
+                  .filter(c => c.context_type === 'assignee' && c.sample_size >= 3)
+                  .sort((a, b) => h === 'best' ? b.historical_accuracy - a.historical_accuracy : a.historical_accuracy - b.historical_accuracy)
+                  .slice(0, 3);
+                return (
+                  <div key={h} className="bg-white/5 rounded-lg p-3 border border-white/5">
+                    <div className="flex items-center gap-1 text-[10px] font-mono text-white/40 uppercase mb-1">
+                      {h === 'best' ? <TrendingUp className="w-3 h-3 text-emerald-400" /> : <TrendingDown className="w-3 h-3 text-rose-400" />}
+                      {h === 'best' ? 'Top' : 'Lowest'}
+                    </div>
+                    {sorted.map(c => (
+                      <div key={c.context_value} className="flex items-center justify-between text-[9px] font-mono">
+                        <span className="text-white/70 truncate max-w-[80px]">{c.context_value.slice(0, 8)}</span>
+                        <span className={c.historical_accuracy >= 80 ? 'text-emerald-400' : c.historical_accuracy >= 60 ? 'text-amber-400' : 'text-rose-400'}>
+                          {c.historical_accuracy}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

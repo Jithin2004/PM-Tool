@@ -47,9 +47,9 @@ export function TeamRosterModal({
   const TeamRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const team = filteredSquads[index];
     if (!team) return null;
-    const metrics = getSquadLoadMetrics(team);
+    const metrics = getCachedMetrics(team.id);
     const isActive = team.id === activeSquadId;
-    const pm = profiles.find(p => p.id === metrics.pmId);
+    const pm = profilesMap.get(metrics.pmId);
     const devsCount = metrics.engineerCount;
 
     return (
@@ -83,25 +83,58 @@ export function TeamRosterModal({
     );
   };
 
+  const projectsByTeam = useMemo(() => {
+    const map = new Map<string, Project[]>();
+    for (const p of projects) {
+      if (p.status === 'deployed') continue;
+      if (!map.has(p.team_id)) map.set(p.team_id, []);
+      map.get(p.team_id)!.push(p);
+    }
+    return map;
+  }, [projects]);
+
+  const teamsMap = useMemo(() => {
+    const map = new Map<string, Team>();
+    for (const t of teams) map.set(t.id, t);
+    return map;
+  }, [teams]);
+
+  const profilesMap = useMemo(() => {
+    const map = new Map<string, Profile>();
+    for (const p of profiles) map.set(p.id, p);
+    return map;
+  }, [profiles]);
+
+  const teamMemberProfileIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of teams) {
+      const data = t.data;
+      if (data?.pm_id) set.add(data.pm_id);
+      if (data?.developer_ids) for (const id of data.developer_ids) set.add(id);
+    }
+    return set;
+  }, [teams]);
+
   const getSquadLoadMetrics = (team: Team) => {
     const parsedData = team.data;
     const devIds = parsedData?.developer_ids || [];
     const engineerCount = Math.max(1, devIds.length);
     const pmId = parsedData?.pm_id;
 
-    // Capacity based on 20 working days per month per engineer
     const totalCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount;
 
-    // Workload from active projects assigned to this team
-    const teamProjects = projects.filter(p => p.team_id === team.id && p.status !== 'deployed');
-    const totalExpectedHours = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
-    const totalWorstHours = teamProjects.reduce((acc, p) => acc + p.pert_worst, 0);
+    const teamProjects = projectsByTeam.get(team.id) || [];
+    let totalExpectedHours = 0;
+    let totalWorstHours = 0;
+    let efficiencySum = 0;
+    for (const p of teamProjects) {
+      totalExpectedHours += calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
+      totalWorstHours += p.pert_worst;
+      efficiencySum += p.efficiency;
+    }
 
     const loadPercentage = Math.round((totalExpectedHours / totalCapacityHours) * 100);
-    const averageEfficiency = teamProjects.length > 0
-      ? teamProjects.reduce((acc, p) => acc + p.efficiency, 0) / teamProjects.length
-      : 1.0;
-
+    const averageEfficiency = teamProjects.length > 0 ? efficiencySum / teamProjects.length : 1.0;
     const potentialDriftHours = Math.max(0, totalWorstHours - totalExpectedHours);
 
     return {
@@ -116,15 +149,39 @@ export function TeamRosterModal({
     };
   };
 
-  const filteredSquads = useMemo(() => {
-    return teams.filter(team => {
-      const metrics = getSquadLoadMetrics(team);
-      const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        profiles.some(p => {
-          const isMember = p.id === team.data?.pm_id || team.data?.developer_ids?.includes(p.id);
-          return isMember && (p.full_name || p.email || '').toLowerCase().includes(searchQuery.toLowerCase());
-        });
+  const squadMetricsCache = useMemo(() => {
+    const cache = new Map<string, ReturnType<typeof getSquadLoadMetrics>>();
+    for (const team of teams) {
+      cache.set(team.id, getSquadLoadMetrics(team));
+    }
+    return cache;
+  }, [teams, projectsByTeam, workingHoursPerDay]);
 
+  const getCachedMetrics = (teamId: string) => {
+    const cached = squadMetricsCache.get(teamId);
+    if (cached) return cached;
+    const team = teamsMap.get(teamId);
+    if (!team) return getSquadLoadMetrics({ id: teamId, data: {} } as Team);
+    return getSquadLoadMetrics(team);
+  };
+
+  const filteredSquads = useMemo(() => {
+    const lowerQuery = searchQuery.toLowerCase();
+    return teams.filter(team => {
+      const metrics = getCachedMetrics(team.id);
+
+      let matchesSearch = team.name.toLowerCase().includes(lowerQuery);
+      if (!matchesSearch) {
+        const data = team.data;
+        const ids = [data?.pm_id, ...(data?.developer_ids || [])].filter(Boolean) as string[];
+        for (const id of ids) {
+          const p = profilesMap.get(id);
+          if (p && (p.full_name || p.email || '').toLowerCase().includes(lowerQuery)) {
+            matchesSearch = true;
+            break;
+          }
+        }
+      }
       if (!matchesSearch) return false;
 
       if (capacityFilter === 'overloaded') return metrics.loadPercentage > 100;
@@ -132,29 +189,29 @@ export function TeamRosterModal({
       if (capacityFilter === 'underutilized') return metrics.loadPercentage < 50;
       return true;
     });
-  }, [teams, searchQuery, capacityFilter, projects, workingHoursPerDay, profiles]);
+  }, [teams, searchQuery, capacityFilter, squadMetricsCache, profilesMap]);
 
   const aggregateMetrics = useMemo(() => {
     if (teams.length === 0) return { totalStaff: profiles.length, avgLoad: 0, overloadedCount: 0 };
 
     let totalLoadSum = 0;
     let overloadedCount = 0;
-    teams.forEach(team => {
-      const metrics = getSquadLoadMetrics(team);
+    for (const team of teams) {
+      const metrics = getCachedMetrics(team.id);
       totalLoadSum += metrics.loadPercentage;
       if (metrics.loadPercentage > 100) overloadedCount++;
-    });
+    }
 
     return {
       totalStaff: profiles.length,
       avgLoad: Math.round(totalLoadSum / teams.length),
       overloadedCount
     };
-  }, [teams, projects, workingHoursPerDay, profiles]);
+  }, [teams, squadMetricsCache, profiles.length]);
 
   const selectedPersonnel = useMemo(() => {
     if (!selectedPersonnelId) return null;
-    const profile = profiles.find(p => p.id === selectedPersonnelId);
+    const profile = profilesMap.get(selectedPersonnelId);
     if (!profile) return null;
 
     let presentDays = 0;
@@ -163,8 +220,8 @@ export function TeamRosterModal({
 
     const joiningDateStr = profile.created_at ? getLocalDateString(new Date(profile.created_at)) : '';
 
-    Object.keys(attendanceRecords).forEach(dateStr => {
-      if (joiningDateStr && dateStr < joiningDateStr) return; // Skip dates before onboarding
+    for (const dateStr of Object.keys(attendanceRecords)) {
+      if (joiningDateStr && dateStr < joiningDateStr) continue;
 
       const dayData = attendanceRecords[dateStr]?.[profile.id];
       if (dayData) {
@@ -174,14 +231,17 @@ export function TeamRosterModal({
       } else {
         presentDays++;
       }
-    });
+    }
 
-    const userProjects = projects.filter(p => {
-      if (p.status === 'deployed') return false;
-      const team = teams.find(t => t.id === p.team_id);
-      if (!team) return false;
-      return team.data?.pm_id === profile.id || team.data?.developer_ids?.includes(profile.id);
-    });
+    const userProjects: Project[] = [];
+    for (const p of projects) {
+      if (p.status === 'deployed') continue;
+      const team = teamsMap.get(p.team_id);
+      if (!team) continue;
+      if (team.data?.pm_id === profile.id || team.data?.developer_ids?.includes(profile.id)) {
+        userProjects.push(p);
+      }
+    }
 
     return {
       profile,
@@ -190,12 +250,12 @@ export function TeamRosterModal({
       absentDays,
       activeProjects: userProjects
     };
-  }, [selectedPersonnelId, profiles, attendanceRecords, projects, teams]);
+  }, [selectedPersonnelId, profilesMap, attendanceRecords, projects, teamsMap]);
 
-  const selectedSquad = teams.find(t => t.id === activeSquadId);
-  const activeMetrics = selectedSquad ? getSquadLoadMetrics(selectedSquad) : null;
-  const activeSquadPM = selectedSquad && activeMetrics ? profiles.find(p => p.id === activeMetrics.pmId) : null;
-  const activeSquadEngineers = selectedSquad ? (selectedSquad.data?.developer_ids || []).map((id: string) => profiles.find(p => p.id === id)).filter(Boolean) : [];
+  const selectedSquad = teamsMap.get(activeSquadId) || null;
+  const activeMetrics = selectedSquad ? getCachedMetrics(selectedSquad.id) : null;
+  const activeSquadPM = selectedSquad && activeMetrics ? profilesMap.get(activeMetrics.pmId) : null;
+  const activeSquadEngineers = selectedSquad ? (selectedSquad.data?.developer_ids || []).map((id: string) => profilesMap.get(id)).filter(Boolean) : [];
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
@@ -295,9 +355,9 @@ export function TeamRosterModal({
             ) : (
               <div className="w-full h-full overflow-y-auto divide-y divide-white/5 scrollbar-thin">
                 {filteredSquads.map(team => {
-                  const metrics = getSquadLoadMetrics(team);
+                  const metrics = getCachedMetrics(team.id);
                   const isActive = team.id === activeSquadId;
-                  const pm = profiles.find(p => p.id === metrics.pmId);
+                  const pm = profilesMap.get(metrics.pmId);
                   const devsCount = metrics.engineerCount;
 
                   return (
@@ -448,20 +508,11 @@ export function TeamRosterModal({
                               </div>
                             </div>
 
-                            {/* Project visual Progress */}
-                            <div className="w-full md:w-60 space-y-1">
-                              <div className="flex justify-between text-[9px] font-mono text-white/50">
-                                <span>PROGRESS</span>
-                                <span>{progress}%</span>
-                              </div>
-                              <div className="w-full bg-white/5 h-1">
-                                <div className="bg-white/40 h-full transition-all" style={{ width: `${progress}%` }} />
-                              </div>
-                            </div>
-
+                            {/* Per-engineer allocation */}
                             <div className="text-right shrink-0">
                               <p className="text-xs font-mono text-white/95 font-bold">{expected.toFixed(1)} hrs</p>
-                              <p className="text-[9px] font-mono text-white/50 uppercase">PERT expectation</p>
+                              <p className="text-[9px] font-mono text-white/50 uppercase">PERT projection</p>
+                              <p className="text-[8px] font-mono text-cyan-400/70 mt-0.5">{(expected / activeMetrics.engineerCount).toFixed(1)}h/engineer projected</p>
                             </div>
                           </div>
                         );

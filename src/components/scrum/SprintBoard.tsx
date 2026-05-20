@@ -6,8 +6,10 @@ import {
   LayoutList, Layers
 } from 'lucide-react';
 import type { Sprint, Task, User, Epic, Project, CalendarEvent } from '../../types';
+import { supabase } from '../../lib/supabase';
 import { TaskCard } from '../task/TaskCard';
 import { TaskCreateModal } from '../task/TaskCreateModal';
+import { CompletionFeedbackModal } from '../task/CompletionFeedbackModal';
 import { SCRUM_COLUMNS } from '../../constants/product';
 import { activityLogService } from '../../services/activityLogService';
 
@@ -48,6 +50,19 @@ export function SprintBoard({
   const [selectedEpic, setSelectedEpic] = useState<string | null>(null);
 
   const hasWriteAccess = currentUserProfile?.role === 'super_admin' || currentUserProfile?.role === 'pm';
+
+  const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
+
+  const handleStatusChange = async (taskId: string, status: Task['status']) => {
+    if (status === 'done') {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setPendingCompletionTask(task);
+        return;
+      }
+    }
+    await onUpdateTaskStatus(taskId, status);
+  };
 
   const userMap = useMemo(() => {
     const map = new Map<string, any>();
@@ -395,7 +410,7 @@ export function SprintBoard({
                           project={null as any}
                           hasWriteAccess={hasWriteAccess}
                           columns={SCRUM_COLUMNS as any}
-                          onTransitionTask={onUpdateTaskStatus}
+                          onTransitionTask={handleStatusChange}
                           onClick={() => {}}
                           assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
                           assigneeLoading={!!task.assignee_id && !userMap.has(task.assignee_id)}
@@ -599,6 +614,28 @@ export function SprintBoard({
           </div>
         )}
       </AnimatePresence>
+      {pendingCompletionTask && (
+        <CompletionFeedbackModal
+          task={pendingCompletionTask}
+          onSubmit={async (feedback) => {
+            await supabase.from('prediction_validations').insert({
+              task_id: pendingCompletionTask.id,
+              workspace_id: workspaceId,
+              predicted_hours: pendingCompletionTask.estimated_hours || 0,
+              actual_hours: feedback.actual_effort,
+              deviation_reason: feedback.deviation_reason,
+              outcome: Math.abs(feedback.actual_effort - (pendingCompletionTask.estimated_hours || 0)) / Math.max(1, pendingCompletionTask.estimated_hours || 1) <= 0.2 ? 'accurate' : 'deviated'
+            });
+            await onUpdateTaskStatus(pendingCompletionTask.id, 'done');
+            setPendingCompletionTask(null);
+          }}
+          onSkip={async () => {
+            await onUpdateTaskStatus(pendingCompletionTask.id, 'done');
+            setPendingCompletionTask(null);
+          }}
+          onClose={() => setPendingCompletionTask(null)}
+        />
+      )}
     </div>
   );
 }

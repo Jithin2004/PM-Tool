@@ -9,6 +9,8 @@ import { useWorkspace } from '../context/WorkspaceContext';
 import { KANBAN_COLUMNS } from '../constants/product';
 import { TaskStatus, Task, Project } from '../types';
 import { supabase } from '../lib/supabase';
+import { CompletionFeedbackModal } from './task/CompletionFeedbackModal';
+import { activityLogService } from '../services/activityLogService';
 
 interface ExecutionBoardProps {
   projects: Project[];
@@ -37,6 +39,8 @@ export default function ExecutionBoard({
   const [filterByProject, setFilterByProject] = useState<string | null>(null);
   const [projectsPanelOpen, setProjectsPanelOpen] = useState(true);
 
+  const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
+
   const role = currentUserProfile?.role || 'viewer';
   const hasWriteAccess = role === 'super_admin' || role === 'pm';
 
@@ -45,6 +49,31 @@ export default function ExecutionBoard({
     users.forEach(u => map.set(u.id, u));
     return map;
   }, [users]);
+
+  const projectMap = useMemo(() => {
+    const map = new Map<string, Project>();
+    projects.forEach(p => map.set(p.id, p));
+    return map;
+  }, [projects]);
+
+  const tasksByProject = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of tasks) {
+      map.set(t.project_id, (map.get(t.project_id) || 0) + 1);
+    }
+    return map;
+  }, [tasks]);
+
+  const tasksByStatus = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    for (const t of tasks) {
+      if (!filterByProject || t.project_id === filterByProject) {
+        if (!map.has(t.status)) map.set(t.status, []);
+        map.get(t.status)!.push(t);
+      }
+    }
+    return map;
+  }, [tasks, filterByProject]);
 
   const blockedByMap = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -69,6 +98,13 @@ export default function ExecutionBoard({
       notify("Access Denied: Only release managers (Super Admins/PMs) can move task lanes.", "error");
       return;
     }
+    if (targetStatus === 'done') {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setPendingCompletionTask(task);
+        return;
+      }
+    }
     try {
       await updateTaskStatus(taskId, targetStatus);
       notify(`Lane transition synced to ${targetStatus}`, "success");
@@ -76,6 +112,47 @@ export default function ExecutionBoard({
     } catch (error) {
       notify("Database error: Could not sync lane movement.", "error");
     }
+  };
+
+  const handleCompletionSubmit = async (feedback: { actual_effort: number; deviation_reason: string; blockers: string; lessons_learned: string }) => {
+    if (!pendingCompletionTask) return;
+    try {
+      await updateTaskStatus(pendingCompletionTask.id, 'done');
+      const task = pendingCompletionTask;
+      await supabase.from('prediction_validations').insert({
+        task_id: task.id,
+        workspace_id: task.workspace_id,
+        predicted_hours: task.estimated_hours || 0,
+        actual_hours: feedback.actual_effort,
+        deviation_reason: feedback.deviation_reason,
+        outcome: Math.abs(feedback.actual_effort - (task.estimated_hours || 0)) / Math.max(1, task.estimated_hours || 1) <= 0.2 ? 'accurate' : 'deviated'
+      });
+      await activityLogService.appendLog({
+        workspace_id: task.workspace_id,
+        actor_id: currentUserProfile?.id,
+        task_id: task.id,
+        project_id: task.project_id,
+        action: 'task_completed_with_feedback',
+        metadata: feedback
+      });
+      notify("Task completed with feedback recorded.", "success");
+    } catch (error) {
+      notify("Could not save completion feedback.", "error");
+    }
+    setPendingCompletionTask(null);
+    onRecalibrateAnalytics();
+  };
+
+  const handleCompletionSkip = async () => {
+    if (!pendingCompletionTask) return;
+    try {
+      await updateTaskStatus(pendingCompletionTask.id, 'done');
+      notify("Task completed.", "success");
+    } catch (error) {
+      notify("Database error: Could not complete task.", "error");
+    }
+    setPendingCompletionTask(null);
+    onRecalibrateAnalytics();
   };
 
   if (loading) {
@@ -148,7 +225,7 @@ export default function ExecutionBoard({
               </div>
             ) : (
               projects.map(project => {
-                const projectTaskCount = tasks.filter(t => t.project_id === project.id).length;
+                const projectTaskCount = tasksByProject.get(project.id) || 0;
                 const isFiltered = filterByProject === project.id;
                 
                 return (
@@ -178,7 +255,7 @@ export default function ExecutionBoard({
       {/* Lane Columns */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-5">
         {KANBAN_COLUMNS.map(col => {
-          const colTasks = tasks.filter(t => t.status === col.id && (!filterByProject || t.project_id === filterByProject));
+          const colTasks = tasksByStatus.get(col.id) || [];
           const TaskRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
             const task = colTasks[index];
             if (!task) return null;
@@ -190,7 +267,7 @@ export default function ExecutionBoard({
               <div style={innerStyle}>
                 <TaskCard
                   task={task}
-                  project={projects.find(p => p.id === task.project_id)}
+                  project={projectMap.get(task.project_id)}
                   hasWriteAccess={hasWriteAccess}
                   columns={KANBAN_COLUMNS}
                   onTransitionTask={handleTransitionTask}
@@ -240,7 +317,7 @@ export default function ExecutionBoard({
                       <TaskCard
                         key={task.id}
                         task={task}
-                        project={projects.find(p => p.id === task.project_id)}
+                        project={projectMap.get(task.project_id)}
                         hasWriteAccess={hasWriteAccess}
                         columns={KANBAN_COLUMNS}
                         onTransitionTask={handleTransitionTask}
@@ -313,6 +390,14 @@ export default function ExecutionBoard({
           </div>
         )}
       </AnimatePresence>
+      {pendingCompletionTask && (
+        <CompletionFeedbackModal
+          task={pendingCompletionTask}
+          onSubmit={handleCompletionSubmit}
+          onSkip={handleCompletionSkip}
+          onClose={() => setPendingCompletionTask(null)}
+        />
+      )}
     </div>
   );
 }

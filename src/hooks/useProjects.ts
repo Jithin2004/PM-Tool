@@ -75,9 +75,10 @@ export function useProjects(workspaceId?: string) {
           const projectId = getRealId(item.payload.projectId);
           const { error: deleteError } = await supabase
             .from('projects')
-            .delete()
+            .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
             .eq('id', projectId)
-            .eq('workspace_id', workspaceId);
+            .eq('workspace_id', workspaceId)
+            .is('deleted_at', null);
 
           if (deleteError) throw deleteError;
         }
@@ -133,6 +134,7 @@ export function useProjects(workspaceId?: string) {
         .from('projects')
         .select('*', { count: 'exact' })
         .eq('workspace_id', workspaceId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -172,6 +174,7 @@ export function useProjects(workspaceId?: string) {
         .from('projects')
         .select('*', { count: 'exact' })
         .eq('workspace_id', workspaceId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -207,12 +210,17 @@ export function useProjects(workspaceId?: string) {
           (payload) => {
             const { eventType, new: newRecord, old: oldRecord } = payload;
             if (eventType === 'INSERT') {
+              if (newRecord.deleted_at) return;
               setProjects(prev => {
                 if (prev.some(p => p.id === newRecord.id)) return prev;
                 return [newRecord as Project, ...prev];
               });
             } else if (eventType === 'UPDATE') {
-              setProjects(prev => prev.map(p => p.id === newRecord.id ? { ...p, ...newRecord } : p));
+              if (newRecord.deleted_at) {
+                setProjects(prev => prev.filter(p => p.id !== newRecord.id));
+              } else {
+                setProjects(prev => prev.map(p => p.id === newRecord.id ? { ...p, ...newRecord } : p));
+              }
             } else if (eventType === 'DELETE') {
               setProjects(prev => prev.filter(p => p.id !== oldRecord.id));
             }
@@ -333,9 +341,10 @@ export function useProjects(workspaceId?: string) {
     if (isSupabaseConfigured) {
       const { error: deleteError } = await supabase
         .from('projects')
-        .delete()
+        .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', projectId)
-        .eq('workspace_id', workspaceId);
+        .eq('workspace_id', workspaceId)
+        .is('deleted_at', null);
         
       if (deleteError) {
         if (!navigator.onLine || deleteError.message?.toLowerCase().includes('fetch')) {

@@ -34,7 +34,7 @@ export const sprintService = {
 
   async deleteSprint(id: string, workspaceId: string, projectId?: string, actorId?: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
-    const { error } = await supabase.from('sprints').delete().eq('id', id);
+    const { error } = await supabase.from('sprints').update({ deleted_at: new Date().toISOString() }).eq('id', id).is('deleted_at', null);
     if (error) { console.error('sprintService.deleteSprint:', error); return false; }
     await activityLogService.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
@@ -46,7 +46,7 @@ export const sprintService = {
 
   async getSprints(workspaceId: string, projectId?: string): Promise<Sprint[]> {
     if (!isSupabaseConfigured) return [];
-    let query = supabase.from('sprints').select('*').eq('workspace_id', workspaceId).order('start_date', { ascending: false });
+    let query = supabase.from('sprints').select('*').eq('workspace_id', workspaceId).is('deleted_at', null).order('start_date', { ascending: false });
     if (projectId) query = query.eq('project_id', projectId);
     const { data, error } = await query;
     if (error) { console.error('sprintService.getSprints:', error); return []; }
@@ -80,7 +80,9 @@ export const sprintService = {
 
   async calculateConfidence(
     workspaceId: string,
-    sprintId: string
+    sprintId: string,
+    workStart?: string,
+    workEnd?: string
   ): Promise<{ effectiveCapacity: number; deductedHours: number; confidence: number; eventCount: number }> {
     if (!isSupabaseConfigured) return { effectiveCapacity: 0, deductedHours: 0, confidence: 0, eventCount: 0 };
     const { data: sprint } = await supabase.from('sprints').select('*').eq('id', sprintId).single();
@@ -88,7 +90,7 @@ export const sprintService = {
     const baseHoursPerDay = 8;
     const workingDays = [1, 2, 3, 4, 5];
     const { totalCapacity, deductedHours, events } = await calendarEventService.getEffectiveCapacity(
-      workspaceId, sprint.start_date, sprint.end_date, baseHoursPerDay, workingDays
+      workspaceId, sprint.start_date, sprint.end_date, baseHoursPerDay, workingDays, undefined, undefined, workStart, workEnd
     );
     const totalPossible = totalCapacity + deductedHours;
     const confidence = totalPossible > 0 ? Math.round((totalCapacity / totalPossible) * 100) : 0;

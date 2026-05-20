@@ -187,9 +187,10 @@ export function useTasks(workspaceId?: string) {
           const taskId = getRealId(item.payload.taskId);
           const { error: deleteError } = await supabase
             .from('tasks')
-            .delete()
+            .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
             .eq('id', taskId)
-            .eq('workspace_id', workspaceId);
+            .eq('workspace_id', workspaceId)
+            .is('deleted_at', null);
 
           if (deleteError) throw deleteError;
         }
@@ -279,6 +280,7 @@ export function useTasks(workspaceId?: string) {
         .from('tasks')
         .select('*', { count: 'exact' })
         .eq('workspace_id', workspaceId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -335,6 +337,7 @@ export function useTasks(workspaceId?: string) {
         .from('tasks')
         .select('*', { count: 'exact' })
         .eq('workspace_id', workspaceId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -346,10 +349,6 @@ export function useTasks(workspaceId?: string) {
       });
       setPage(nextPage);
       setHasMore(count !== null ? (to + 1) < count : false);
-
-      // We technically should also fetch dependencies for the new tasks if needed,
-      // but dependencies are fetched globally right now.
-      
       setError(null);
     } catch (err: any) {
       console.warn("Failed to load more tasks:", err);
@@ -388,12 +387,17 @@ export function useTasks(workspaceId?: string) {
         (payload) => {
           const { eventType, new: newRecord, old: oldRecord } = payload;
           if (eventType === 'INSERT') {
+            if (newRecord.deleted_at) return;
             setTasks(prev => {
               if (prev.some(t => t.id === newRecord.id)) return prev;
               return [newRecord as Task, ...prev];
             });
           } else if (eventType === 'UPDATE') {
-            setTasks(prev => prev.map(t => t.id === newRecord.id ? { ...t, ...newRecord } : t));
+            if (newRecord.deleted_at) {
+              setTasks(prev => prev.filter(t => t.id !== newRecord.id));
+            } else {
+              setTasks(prev => prev.map(t => t.id === newRecord.id ? { ...t, ...newRecord } : t));
+            }
           } else if (eventType === 'DELETE') {
             setTasks(prev => prev.filter(t => t.id !== oldRecord.id));
           }
@@ -654,9 +658,10 @@ export function useTasks(workspaceId?: string) {
     if (isSupabaseConfigured) {
       const { error: deleteError } = await supabase
         .from('tasks')
-        .delete()
+        .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('id', taskId)
-        .eq('workspace_id', workspaceId);
+        .eq('workspace_id', workspaceId)
+        .is('deleted_at', null);
         
       if (deleteError) {
         if (!navigator.onLine || deleteError.message?.toLowerCase().includes('fetch')) {

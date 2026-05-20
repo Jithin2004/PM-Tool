@@ -1,8 +1,9 @@
 import { calculateExpectedEffort, calculatePertStandardDeviation, normalizePertInput } from '../utils/pert';
-import { addWorkingHours, calculateDailyProductiveHours, type WorkWindow } from '../utils/productivity';
+import { addWorkingHours, calculateDailyProductiveHours, findNextWorkingSlot, type WorkWindow } from '../utils/productivity';
 import { calendarEventService } from './calendarEventService';
+import { effectivenessMultiplier, teamOutput } from './resourceProfileService';
 import type { WorkspaceSettings } from '../types/workspace';
-import type { CalendarEvent } from '../types';
+import type { CalendarEvent, Task, ResourceProfile } from '../types';
 
 export interface EtaInput {
   best?: number;
@@ -21,6 +22,8 @@ export interface EtaInput {
   taskName?: string;
   projectId?: string;
   taskTags?: string[];
+  resourceProfiles?: ResourceProfile[];
+  engineerCount?: number;
 }
 
 export async function getSchedulingContext(
@@ -84,6 +87,8 @@ export interface EtaResult {
   risk: 'low' | 'medium' | 'high';
   delayDriftDays: number;
   dailyCapacityHours: number;
+  resourceMultiplier?: number;
+  engineerCount?: number;
 }
 
 export interface CountdownResult {
@@ -112,8 +117,15 @@ function computeEta(input: EtaInput): Omit<EtaResult, 'confidence'> & { rawConfi
   const availabilityFactor = Math.max(0.1, input.availabilityFactor ?? 1);
   const teamLoadFactor = Math.max(1, input.teamLoadFactor ?? 1);
   const interruptionHours = Math.max(0, input.interruptionHours ?? 0);
+
+  let resourceMultiplier = 1;
+  if (input.resourceProfiles && input.resourceProfiles.length > 0) {
+    const engCount = input.engineerCount ?? input.resourceProfiles.length;
+    resourceMultiplier = Math.max(0.1, teamOutput(engCount, input.resourceProfiles));
+  }
+
   const adjustedEffortHours = Number(
-    (((estimatedEffortHours + interruptionHours + uncertaintyHours) * teamLoadFactor) / (attendanceFactor * availabilityFactor)).toFixed(2)
+    (((estimatedEffortHours + interruptionHours + uncertaintyHours) * teamLoadFactor) / (attendanceFactor * availabilityFactor * resourceMultiplier)).toFixed(2)
   );
   const predictedCompletion = addWorkingHours(input.startDate || new Date(), adjustedEffortHours, workWindow);
   const delayDriftDays = input.deadline
@@ -133,7 +145,9 @@ function computeEta(input: EtaInput): Omit<EtaResult, 'confidence'> & { rawConfi
     rawConfidence,
     risk,
     delayDriftDays,
-    dailyCapacityHours: calculateDailyProductiveHours(workWindow)
+    dailyCapacityHours: calculateDailyProductiveHours(workWindow),
+    resourceMultiplier,
+    engineerCount: input.engineerCount ?? input.resourceProfiles?.length
   };
 }
 
@@ -161,6 +175,15 @@ export async function predictEta(input: EtaInput): Promise<EtaResult> {
       const ctxAdj = await contextPredictionService.getContextAdjustment(input.workspaceId, base.rawConfidence, contexts);
       confidence = ctxAdj.adjustedConfidence;
     }
+
+    if (input.resourceProfiles && input.resourceProfiles.length > 0) {
+      const seniorCount = input.resourceProfiles.filter(p => p.skill_level === 'senior' || p.skill_level === 'lead').length;
+      const juniorCount = input.resourceProfiles.filter(p => p.skill_level === 'intern' || p.skill_level === 'junior').length;
+      const totalEng = input.engineerCount ?? input.resourceProfiles.length;
+      if (seniorCount > juniorCount) confidence = Math.min(99, confidence + 3);
+      else if (juniorCount > seniorCount) confidence = Math.max(5, confidence - 5);
+      if (totalEng > 3) confidence = Math.max(5, confidence - 3);
+    }
   }
 
   return {
@@ -169,7 +192,12 @@ export async function predictEta(input: EtaInput): Promise<EtaResult> {
   };
 }
 
-export function calculateTaskCountdown(createdAt: string | undefined, weightHours: number, status: string): CountdownResult {
+export function calculateTaskCountdown(
+  createdAt: string | undefined,
+  weightHours: number,
+  status: string,
+  workWindow?: WorkWindow
+): CountdownResult {
   if (status === 'validation' || status === 'merged' || status === 'done') {
     return { text: 'DONE', color: 'text-emerald-500', pulse: 'bg-emerald-500' };
   }
@@ -178,23 +206,42 @@ export function calculateTaskCountdown(createdAt: string | undefined, weightHour
     return { text: 'No task estimates available', color: 'text-white/30 font-mono', pulse: 'bg-white/10' };
   }
 
-  const now = Date.now();
-  const createdTime = new Date(createdAt || new Date()).getTime();
-  const targetTime = createdTime + weightHours * 60 * 60 * 1000;
-  const remainingMs = targetTime - now;
-
-  if (remainingMs <= 0) {
-    return { text: 'OVERDUE', color: 'text-rose-500 font-bold', pulse: 'bg-rose-500 animate-ping' };
+  if (!workWindow) {
+    const now = Date.now();
+    const createdTime = new Date(createdAt || new Date()).getTime();
+    const targetTime = createdTime + weightHours * 60 * 60 * 1000;
+    const remainingMs = targetTime - now;
+    if (remainingMs <= 0) return { text: 'OVERDUE', color: 'text-rose-500 font-bold', pulse: 'bg-rose-500 animate-ping' };
+    const hours = Math.floor(remainingMs / 3600000);
+    const mins = Math.floor((remainingMs % 3600000) / 60000);
+    const secs = Math.floor((remainingMs % 60000) / 1000);
+    const text = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    if (hours < 2) return { text, color: 'text-amber-500 font-mono font-medium', pulse: 'bg-amber-500 animate-pulse' };
+    return { text, color: 'text-cyan-400 font-mono', pulse: 'bg-cyan-500 animate-pulse' };
   }
 
-  const hours = Math.floor(remainingMs / 3600000);
-  const mins = Math.floor((remainingMs % 3600000) / 60000);
-  const secs = Math.floor((remainingMs % 60000) / 1000);
+  const predictedEnd = addWorkingHours(new Date(createdAt || new Date()), weightHours, workWindow);
+  const now = new Date();
+  if (predictedEnd <= now) return { text: 'OVERDUE', color: 'text-rose-500 font-bold', pulse: 'bg-rose-500 animate-ping' };
+
+  const totalMs = predictedEnd.getTime() - now.getTime();
+  const totalHours = totalMs / 3600000;
+  if (totalHours > 48) {
+    return { text: `${Math.round(totalHours / 24)}d ${Math.round(totalHours % 24)}h`, color: 'text-cyan-400 font-mono', pulse: 'bg-cyan-500 animate-pulse' };
+  }
+  const hours = Math.floor(totalHours);
+  const mins = Math.floor((totalMs % 3600000) / 60000);
+  const secs = Math.floor((totalMs % 60000) / 1000);
   const text = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-
-  if (hours < 2) {
-    return { text, color: 'text-amber-500 font-mono font-medium', pulse: 'bg-amber-500 animate-pulse' };
-  }
-
+  if (hours < 2) return { text, color: 'text-amber-500 font-mono font-medium', pulse: 'bg-amber-500 animate-pulse' };
   return { text, color: 'text-cyan-400 font-mono', pulse: 'bg-cyan-500 animate-pulse' };
 }
+
+export function getNextAvailableSlot(task: Task, workWindow: WorkWindow): string | null {
+  const now = new Date();
+  const slot = findNextWorkingSlot(now, workWindow);
+  if (!slot) return null;
+  return slot.toISOString();
+}
+
+export { getSchedulingReason } from '../utils/productivity';

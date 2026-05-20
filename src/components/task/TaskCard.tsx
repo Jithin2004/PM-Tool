@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { User, ArrowRight, ArrowUp, AlertTriangle, Clock, Users, Shield } from 'lucide-react';
 import { Task, Project } from '../../types';
-import { calculateTaskCountdown } from '../../services/etaService';
+import { calculateTaskCountdown, getSchedulingReason } from '../../services/etaService';
 
 interface TaskCardProps {
   key?: any;
@@ -33,6 +33,9 @@ export function TaskCard({
   dependencyConfidence
 }: TaskCardProps) {
   const countdown = calculateTaskCountdown(task.created_at, task.estimated_hours, task.status);
+  const nextSlot = task.predicted_completion && task.status !== 'done'
+    ? `Slot: ${new Date(task.predicted_completion).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
+    : null;
 
   const riskColors: Record<string, string> = {
     high: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
@@ -141,6 +144,11 @@ export function TaskCard({
         <span className="text-white/40">Time-to-Impact:</span>
         <span className={countdown.color}>{countdown.text}</span>
       </div>
+      {nextSlot && (
+        <div className="px-2 py-1 text-[7px] font-mono text-cyan-400/60 uppercase tracking-widest">
+          {nextSlot}
+        </div>
+      )}
 
       {/* Footer details */}
       <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">

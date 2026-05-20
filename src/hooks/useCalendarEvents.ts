@@ -35,7 +35,9 @@ export function useCalendarEvents(workspaceId?: string) {
     endDate: string,
     baseHoursPerDay: number,
     workingDays: number[],
-    userId?: string
+    userId?: string,
+    workStart?: string,
+    workEnd?: string
   ): { totalCapacity: number; deductedHours: number; events: CalendarEvent[] } => {
     const filtered = userId
       ? events.filter(e => !e.participants || e.participants.length === 0 || e.participants.includes(userId))
@@ -52,13 +54,44 @@ export function useCalendarEvents(workspaceId?: string) {
       d.setDate(d.getDate() + 1);
     }
 
+    const workStartMin = workStart ? (() => { const [h, m] = workStart.split(':').map(Number); return h * 60 + m; })() : 0;
+    const workEndMin = workEnd ? (() => { const [h, m] = workEnd.split(':').map(Number); return h * 60 + m; })() : 24 * 60;
+
     let totalDeduction = 0;
     for (const event of rangeEvents) {
       const es = new Date(event.start_date);
       const ee = new Date(event.end_date);
-      const eventDays = Math.max(1, Math.ceil((ee.getTime() - es.getTime()) / 86400000));
-      const dailyImpact = baseHoursPerDay * (1 - event.capacity_impact);
-      totalDeduction += dailyImpact * eventDays;
+
+      if (event.event_type === 'holiday' || event.event_type === 'festival') {
+        const holidayDays = Math.max(1, Math.ceil((ee.getTime() - es.getTime()) / 86400000));
+        totalDeduction += baseHoursPerDay * holidayDays;
+        continue;
+      }
+
+      const eventStartMidnight = new Date(es);
+      eventStartMidnight.setHours(0, 0, 0, 0);
+      const eventEndMidnight = new Date(ee);
+      eventEndMidnight.setHours(0, 0, 0, 0);
+      const eventDayCount = Math.max(1, Math.ceil((eventEndMidnight.getTime() - eventStartMidnight.getTime()) / 86400000));
+
+      for (let dayOffset = 0; dayOffset < eventDayCount; dayOffset++) {
+        const dayDate = new Date(eventStartMidnight);
+        dayDate.setDate(dayDate.getDate() + dayOffset);
+        if (!workingDays.includes(dayDate.getDay())) continue;
+
+        const workDayStart = new Date(dayDate);
+        workDayStart.setHours(Math.floor(workStartMin / 60), workStartMin % 60, 0, 0);
+        const workDayEnd = new Date(dayDate);
+        workDayEnd.setHours(Math.floor(workEndMin / 60), workEndMin % 60, 0, 0);
+
+        const overlapStart = es > workDayStart ? es : workDayStart;
+        const overlapEnd = ee < workDayEnd ? ee : workDayEnd;
+        if (overlapStart >= overlapEnd) continue;
+
+        const overlapHours = (overlapEnd.getTime() - overlapStart.getTime()) / 3600000;
+        const impact = event.capacity_impact * (event.capacity_modifier ?? 1);
+        totalDeduction += overlapHours * impact;
+      }
     }
 
     return {

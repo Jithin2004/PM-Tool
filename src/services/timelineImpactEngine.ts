@@ -1,4 +1,4 @@
-import { predictEta } from './etaService';
+import { predictEta, getSchedulingContext } from './etaService';
 import { type Task, type TaskDependency, type CalendarEvent } from '../types';
 import type { WorkspaceSettings } from '../types/workspace';
 import type { WorkWindow } from '../utils/productivity';
@@ -84,8 +84,21 @@ function findDownstreamTasks(
 async function recalculateTask(
   task: Task,
   workWindow: WorkWindow,
-  workspaceId?: string
+  workspaceId?: string,
+  assigneeId?: string
 ): Promise<{ eta: string; risk: string; confidence: number }> {
+  let effectiveWorkWindow = workWindow;
+  if (workspaceId && assigneeId) {
+    try {
+      const ctx = await getSchedulingContext(
+        { workStart: workWindow.workStart, workEnd: workWindow.workEnd, lunchDuration: workWindow.lunchDuration, workingDays: workWindow.workingDays, productivityFactor: workWindow.productivityFactor, saturdayRule: workWindow.saturdayRule, shutdowns: workWindow.shutdowns } as any,
+        workspaceId,
+        assigneeId
+      );
+      effectiveWorkWindow = { ...workWindow, ...ctx };
+    } catch {}
+  }
+
   const params = {
     best: task.pert_best,
     likely: task.pert_likely,
@@ -93,7 +106,7 @@ async function recalculateTask(
     estimatedHours: task.estimated_hours,
     startDate: task.start_date ? new Date(task.start_date) : undefined,
     deadline: task.deadline ? new Date(task.deadline) : null,
-    workWindow,
+    workWindow: effectiveWorkWindow,
     attendanceFactor: 1,
     availabilityFactor: 1,
     teamLoadFactor: 1,
@@ -183,15 +196,17 @@ export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
         const parsed = new Date(d);
         return parsed > latest ? parsed : latest;
       }, new Date(0));
-      const candidateStart = new Date(latestPredecessorEnd.getTime() + 86400000);
-      shiftedStartDate = candidateStart.toISOString().split('T')[0];
+      const candidateStart = new Date(latestPredecessorEnd);
+      const { addWorkingHours } = await import('../utils/productivity');
+      const nextSlot = addWorkingHours(candidateStart, 0, workWindow);
+      shiftedStartDate = nextSlot.toISOString().split('T')[0];
     }
 
     const shiftedTask = shiftedStartDate
       ? { ...task, start_date: shiftedStartDate }
       : task;
 
-    const { eta, risk, confidence } = await recalculateTask(shiftedTask, workWindow, workspaceId);
+    const { eta, risk, confidence } = await recalculateTask(shiftedTask, workWindow, workspaceId, task.assignee_id);
 
     const deltaDays = originalEta
       ? Math.round((new Date(eta).getTime() - new Date(originalEta).getTime()) / 86400000)

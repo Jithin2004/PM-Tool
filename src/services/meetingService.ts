@@ -21,13 +21,13 @@ export const meetingService = {
 
   async deleteMeeting(id: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
-    const { error } = await supabase.from('meetings').delete().eq('id', id);
+    const { error } = await supabase.from('meetings').update({ deleted_at: new Date().toISOString() }).eq('id', id).is('deleted_at', null);
     return !error;
   },
 
   async getMeetings(workspaceId: string, projectId?: string): Promise<Meeting[]> {
     if (!isSupabaseConfigured) return [];
-    let query = supabase.from('meetings').select('*').eq('workspace_id', workspaceId).order('start_time', { ascending: true });
+    let query = supabase.from('meetings').select('*').eq('workspace_id', workspaceId).is('deleted_at', null).order('start_time', { ascending: true });
     if (projectId) query = query.eq('project_id', projectId);
     const { data, error } = await query;
     if (error) { console.error('meetingService.getMeetings:', error); return []; }

@@ -328,3 +328,14 @@ export interface Stats {
   teamBandwidth: number;
   dailyFatigue: number;
 }
+
+export type SkillLevel = 'intern' | 'junior' | 'mid' | 'senior' | 'lead';
+
+export interface ResourceProfile {
+  skill_level: SkillLevel;
+  experience_years: number;
+  focus_factor: number;
+  parallel_efficiency: number;
+  context_switch_penalty: number;
+  meeting_burden: number;
+}

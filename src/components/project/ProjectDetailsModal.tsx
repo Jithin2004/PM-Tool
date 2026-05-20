@@ -6,6 +6,7 @@ import { Project, Team, User, Profile } from '../../types';
 import { useDashboard } from '../../context/DashboardContext';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { calculateExpectedTime, calculateVariance } from '../../utils/timeUtils';
+import { activityLogService } from '../../services/activityLogService';
 
 export function ProjectDetailsModal({
   project,
@@ -64,62 +65,40 @@ export function ProjectDetailsModal({
   const [localLogs, setLocalLogs] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchDbLogs = async () => {
-      if (isSupabaseConfigured) {
-        try {
-          const { data, error } = await supabase
-            .from('change_logs')
-            .select('*')
-            .eq('project_id', project.id)
-            .order('timestamp', { ascending: true });
-          if (!error && data && data.length > 0) {
-            const mapped = data.map(d => ({
-              timestamp: d.timestamp,
-              changes: d.changes,
-              reason: d.reason,
-              authorName: d.author_name,
-              authorRole: d.author_role,
-              previousHash: d.previous_hash || 'GENESIS_BLOCK',
-              hash: d.hash || ''
-            }));
-            setDbLogs(mapped);
-            setLocalLogs(mapped);
-          } else {
-            // Offline fallback
-            const fallback = (project.tags || [])
-              .filter(t => t.startsWith('LOG:'))
-              .map(t => {
-                const parsed = JSON.parse(t.substring(4));
-                return {
-                  ...parsed,
-                  previousHash: parsed.previousHash || 'GENESIS_BLOCK',
-                  hash: parsed.hash || ''
-                };
-              });
-            setLocalLogs(fallback);
-          }
-        } catch (err) {
-          console.error("Error fetching change logs from table:", err);
+    const fetchLogs = async () => {
+      try {
+        const logs = await activityLogService.getLogs(project.workspace_id, project.id);
+        if (logs && logs.length > 0) {
+          const mapped = logs.map(d => ({
+            timestamp: d.created_at,
+            changes: { action: d.action, ...d.metadata },
+            reason: d.metadata?.reason || d.action,
+            authorName: d.actor_id,
+            authorRole: '',
+            previousHash: d.previous_hash || 'GENESIS_BLOCK',
+            hash: d.hash || ''
+          }));
+          setDbLogs(mapped);
+          setLocalLogs(mapped);
+        } else {
+          const fallback = (project.tags || [])
+            .filter(t => t.startsWith('LOG:'))
+            .map(t => {
+              const parsed = JSON.parse(t.substring(4));
+              return {
+                ...parsed,
+                previousHash: parsed.previousHash || 'GENESIS_BLOCK',
+                hash: parsed.hash || ''
+              };
+            });
+          setLocalLogs(fallback);
         }
-      } else {
-        const fallback = (project.tags || [])
-          .filter(t => t.startsWith('LOG:'))
-          .map(t => {
-            const parsed = JSON.parse(t.substring(4));
-            return {
-              ...parsed,
-              previousHash: parsed.previousHash || 'GENESIS_BLOCK',
-              hash: parsed.hash || ''
-            };
-          });
-        setLocalLogs(fallback);
+      } catch (err) {
+        console.error("Error fetching activity logs:", err);
       }
-      setVerificationState('UNVERIFIED');
-      setScanningIndex(null);
-      setTamperedIndex(null);
     };
-    fetchDbLogs();
-  }, [project.id, project.tags]);
+    fetchLogs();
+  }, [project.id, project.workspace_id, project.tags]);
 
   const verifyLedger = async () => {
     if (localLogs.length === 0) return;

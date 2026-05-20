@@ -161,7 +161,7 @@ export async function syncWorkspaceHolidays(workspaceId: string, country: string
         .eq('event_type', 'holiday')
         .eq('auto_generated', true);
       if (existing) {
-        await supabase.from('calendar_events').delete().in('id', existing.map(e => e.id));
+        await supabase.from('calendar_events').update({ deleted_at: new Date().toISOString() }).in('id', existing.map(e => e.id)).is('deleted_at', null);
       }
 
       for (const h of allHolidays) {
@@ -225,7 +225,19 @@ export async function createWorkspaceForUser({ name, settings, user }: CreateWor
   return rowToWorkspace(workspaceRow as WorkspaceRow);
 }
 
-export async function updateWorkspaceSettings(workspace: Workspace, settings: Partial<WorkspaceSettings>): Promise<Workspace> {
+export async function updateWorkspaceSettings(workspace: Workspace, settings: Partial<WorkspaceSettings>, actorId?: string): Promise<Workspace> {
+  if (actorId) {
+    const { data: actor, error: actorError } = await supabase
+      .from('users')
+      .select('id, role, workspace_id')
+      .eq('id', actorId)
+      .maybeSingle();
+
+    if (actorError || !actor) throw new Error('Access denied: actor not found');
+    if (actor.workspace_id !== workspace.id) throw new Error('Access denied: cross-workspace operation');
+    if (actor.role !== 'super_admin' && actor.id !== workspace.ownerId) throw new Error('Access denied: only super_admin or workspace owner can update settings');
+  }
+
   const nextSettings = { ...workspace.settings, ...settings };
   const { data, error } = await supabase
     .from('workspaces')
