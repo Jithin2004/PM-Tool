@@ -34,7 +34,7 @@ import {
   Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { DashboardProvider } from '../../context/DashboardContext';
@@ -152,7 +152,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
     if (workspace?.id && isSupabaseConfigured) {
       // Real-time listener for incoming notifications
-      const notifChannel = supabase.channel(`notifications-changes-${workspace.id}`)
+      const notifChannel = createRealtimeChannel(`notifications-changes-${workspace.id}`)
         .on('postgres_changes', {
             event: 'INSERT',
             schema: 'public',

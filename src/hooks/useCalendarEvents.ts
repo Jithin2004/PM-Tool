@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
 import type { CalendarEvent, CalendarEventType } from '../types';
 
 export function useCalendarEvents(workspaceId?: string) {
@@ -71,7 +71,7 @@ export function useCalendarEvents(workspaceId?: string) {
   useEffect(() => {
     fetchEvents();
     if (workspaceId && isSupabaseConfigured) {
-      const channel = supabase.channel(`calendar-events-${workspaceId}`)
+      const channel = createRealtimeChannel(`calendar-events-${workspaceId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events', filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
           if (payload.eventType === 'INSERT') setEvents(prev => [payload.new as CalendarEvent, ...prev]);
           else if (payload.eventType === 'UPDATE') setEvents(prev => prev.map(e => e.id === payload.new.id ? { ...e, ...payload.new } : e));

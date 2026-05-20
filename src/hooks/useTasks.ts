@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
 import { Task, TaskStatus, TaskDependency } from '../types';
 import { sendNotification } from '../services/notificationService';
 import { predictionValidationService } from '../services/predictionValidationService';
@@ -378,7 +378,7 @@ export function useTasks(workspaceId?: string) {
     }
     channelsRef.current = [];
 
-    const taskChannel = supabase.channel(`tasks-changes-${workspaceId}`)
+    const taskChannel = createRealtimeChannel(`tasks-changes-${workspaceId}`)
       .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -401,7 +401,7 @@ export function useTasks(workspaceId?: string) {
       )
       .subscribe();
 
-    const depChannel = supabase.channel(`task-dependencies-changes-${workspaceId}`)
+    const depChannel = createRealtimeChannel(`task-dependencies-changes-${workspaceId}`)
       .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 

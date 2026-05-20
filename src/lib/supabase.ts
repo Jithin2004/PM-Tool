@@ -27,4 +27,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
+export function createRealtimeChannel(name: string) {
+  const existing = supabase.getChannels().find(c => c.topic === `realtime:${name}`);
+  if (existing) {
+    supabase.removeChannel(existing);
+  }
+  return supabase.channel(name);
+}
+
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('your-project-id'));

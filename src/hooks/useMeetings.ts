@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
 import type { Meeting } from '../types';
 
 export function useMeetings(workspaceId?: string, projectId?: string) {
@@ -24,7 +24,7 @@ export function useMeetings(workspaceId?: string, projectId?: string) {
   useEffect(() => {
     fetchMeetings();
     if (workspaceId && isSupabaseConfigured) {
-      const channel = supabase.channel(`meetings-${workspaceId}`)
+      const channel = createRealtimeChannel(`meetings-${workspaceId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings', filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
           if (payload.eventType === 'INSERT') setMeetings(prev => [payload.new as Meeting, ...prev]);
           else if (payload.eventType === 'UPDATE') setMeetings(prev => prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m));

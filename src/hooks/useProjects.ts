@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
 import { Project, ProjectStatus } from '../types';
 
 export function useProjects(workspaceId?: string) {
@@ -197,7 +197,7 @@ export function useProjects(workspaceId?: string) {
     
     if (workspaceId && isSupabaseConfigured) {
       // Setup real-time subscription for this workspace's projects
-      const channel = supabase.channel(`projects-changes-${workspaceId}`)
+      const channel = createRealtimeChannel(`projects-changes-${workspaceId}`)
         .on('postgres_changes', { 
             event: '*', 
             schema: 'public', 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
 import type { Sprint } from '../types';
 
 export function useSprints(workspaceId?: string, projectId?: string) {
@@ -24,7 +24,7 @@ export function useSprints(workspaceId?: string, projectId?: string) {
   useEffect(() => {
     fetchSprints();
     if (workspaceId && isSupabaseConfigured) {
-      const channel = supabase.channel(`sprints-${workspaceId}`)
+      const channel = createRealtimeChannel(`sprints-${workspaceId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sprints', filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
           if (payload.eventType === 'INSERT') setSprints(prev => [payload.new as Sprint, ...prev]);
           else if (payload.eventType === 'UPDATE') setSprints(prev => prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s));
