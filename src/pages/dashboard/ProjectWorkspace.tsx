@@ -722,7 +722,7 @@ export function ProjectWorkspace({
     setIsAdding,
     workingHoursPerDay: ctxWorkingHours,
     tilesPerRow: ctxTiles,
-    setIsRosterOpen: ctxSetRosterOpen,
+    setIsRosterOpen: ctxSetIsRosterOpen,
     setSelectedProject: ctxSetSelectedProject,
   } = useDashboard() as any;
 

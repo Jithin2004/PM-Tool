@@ -38,6 +38,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { DashboardProvider } from '../../context/DashboardContext';
+import { sha256 } from '../../utils/cryptoUtils';
 import { useTasks } from '../../hooks/useTasks';
 import { fetchNotifications, markAsRead as markNotifAsRead, sendNotification } from '../../services/notificationService';
 import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
@@ -1183,13 +1184,28 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     // Store change log directly in dedicated database table
     if (changeLog && isSupabaseConfigured) {
       try {
+        const { data: latestLog, error: latestError } = await supabase
+          .from('change_logs')
+          .select('hash')
+          .eq('project_id', id)
+          .order('timestamp', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const previousHash = (!latestError && latestLog?.hash) ? latestLog.hash : 'GENESIS_BLOCK';
+        const timestamp = new Date().toISOString();
+        const message = `${id}${timestamp}${changeLog.changes}${changeLog.reason}${changeLog.authorName}${changeLog.authorRole}${previousHash}`;
+        const newHash = await sha256(message);
+
         await supabase.from('change_logs').insert({
           project_id: id,
           changes: changeLog.changes,
           reason: changeLog.reason,
           author_name: changeLog.authorName,
           author_role: changeLog.authorRole,
-          timestamp: new Date().toISOString()
+          timestamp: timestamp,
+          previous_hash: previousHash,
+          hash: newHash
         });
         console.log("Successfully saved change log in dedicated table.");
       } catch (e) {

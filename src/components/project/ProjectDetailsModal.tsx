@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2, History } from 'lucide-react';
+import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2, History, ShieldCheck, ShieldAlert, RefreshCw } from 'lucide-react';
+import { sha256 } from '../../utils/cryptoUtils';
 import { Project, Team, User, Profile } from '../../types';
 import { useDashboard } from '../../context/DashboardContext';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
@@ -55,8 +56,12 @@ export function ProjectDetailsModal({
   const [changeReasonPrompt, setChangeReasonPrompt] = useState<{ changes: any, open: boolean }>({ changes: null, open: false });
   const [changeReason, setChangeReason] = useState('');
   const [showLogs, setShowLogs] = useState(false);
-
   const [dbLogs, setDbLogs] = useState<any[]>([]);
+
+  const [verificationState, setVerificationState] = useState<'UNVERIFIED' | 'VERIFYING' | 'SECURED' | 'TAMPERED'>('UNVERIFIED');
+  const [scanningIndex, setScanningIndex] = useState<number | null>(null);
+  const [tamperedIndex, setTamperedIndex] = useState<number | null>(null);
+  const [localLogs, setLocalLogs] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchDbLogs = async () => {
@@ -68,26 +73,109 @@ export function ProjectDetailsModal({
             .eq('project_id', project.id)
             .order('timestamp', { ascending: true });
           if (!error && data && data.length > 0) {
-            setDbLogs(data.map(d => ({
+            const mapped = data.map(d => ({
               timestamp: d.timestamp,
               changes: d.changes,
               reason: d.reason,
               authorName: d.author_name,
-              authorRole: d.author_role
-            })));
+              authorRole: d.author_role,
+              previousHash: d.previous_hash || 'GENESIS_BLOCK',
+              hash: d.hash || ''
+            }));
+            setDbLogs(mapped);
+            setLocalLogs(mapped);
+          } else {
+            // Offline fallback
+            const fallback = (project.tags || [])
+              .filter(t => t.startsWith('LOG:'))
+              .map(t => {
+                const parsed = JSON.parse(t.substring(4));
+                return {
+                  ...parsed,
+                  previousHash: parsed.previousHash || 'GENESIS_BLOCK',
+                  hash: parsed.hash || ''
+                };
+              });
+            setLocalLogs(fallback);
           }
         } catch (err) {
           console.error("Error fetching change logs from table:", err);
         }
+      } else {
+        const fallback = (project.tags || [])
+          .filter(t => t.startsWith('LOG:'))
+          .map(t => {
+            const parsed = JSON.parse(t.substring(4));
+            return {
+              ...parsed,
+              previousHash: parsed.previousHash || 'GENESIS_BLOCK',
+              hash: parsed.hash || ''
+            };
+          });
+        setLocalLogs(fallback);
       }
+      setVerificationState('UNVERIFIED');
+      setScanningIndex(null);
+      setTamperedIndex(null);
     };
     fetchDbLogs();
-  }, [project.id]);
+  }, [project.id, project.tags]);
+
+  const verifyLedger = async () => {
+    if (localLogs.length === 0) return;
+    setVerificationState('VERIFYING');
+    setTamperedIndex(null);
+
+    let currentPrevHash = 'GENESIS_BLOCK';
+
+    for (let i = 0; i < localLogs.length; i++) {
+      setScanningIndex(i);
+      // artificial delay for scanning progress visualization
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const log = localLogs[i];
+
+      // 1. Verify previous hash matches current chain predecessor
+      if (log.previousHash !== currentPrevHash) {
+        setVerificationState('TAMPERED');
+        setTamperedIndex(i);
+        return;
+      }
+
+      // 2. Re-compute block hash
+      const message = `${project.id}${log.timestamp}${log.changes}${log.reason}${log.authorName}${log.authorRole}${log.previousHash}`;
+      const computedHash = await sha256(message);
+
+      if (log.hash !== computedHash) {
+        setVerificationState('TAMPERED');
+        setTamperedIndex(i);
+        return;
+      }
+
+      currentPrevHash = log.hash;
+    }
+
+    setVerificationState('SECURED');
+    setScanningIndex(null);
+  };
+
+  const simulateTampering = () => {
+    if (localLogs.length === 0) return;
+    const updated = [...localLogs];
+    const targetIdx = Math.floor(Math.random() * updated.length);
+    updated[targetIdx] = {
+      ...updated[targetIdx],
+      changes: updated[targetIdx].changes + ' [TAMPERED_METADATA_VALUE]'
+    };
+    setLocalLogs(updated);
+    setVerificationState('UNVERIFIED');
+    setTamperedIndex(null);
+    setScanningIndex(null);
+  };
 
   const logs = useMemo(() => {
-    if (dbLogs.length > 0) return dbLogs;
-    return (project.tags || []).filter(t => t.startsWith('LOG:')).map(t => JSON.parse(t.substring(4)));
-  }, [project.tags, dbLogs]);
+    return localLogs;
+  }, [localLogs]);
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -167,29 +255,216 @@ export function ProjectDetailsModal({
 
         {showLogs && (
           <div className="absolute inset-0 z-50 bg-[#0c0c0c] flex flex-col">
+            {/* Header */}
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#0a0a0a]">
-              <h4 className="text-sm font-mono text-white/90 uppercase tracking-widest flex items-center gap-2"><History className="w-4 h-4" /> Project Change Log</h4>
-              <button type="button" onClick={() => setShowLogs(false)} className="p-2 border border-white/10 hover:bg-white/5 transition-colors"><Plus className="w-4 h-4 rotate-45 text-white/75" /></button>
+              <h4 className="text-sm font-mono text-white/90 uppercase tracking-widest flex items-center gap-2">
+                <History className="w-4 h-4 text-blue-400" /> Project Ledger Center
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShowLogs(false)}
+                className="p-2 border border-white/10 hover:bg-white/5 transition-colors"
+              >
+                <Plus className="w-4 h-4 rotate-45 text-white/75" />
+              </button>
             </div>
-            <div className="flex-1 p-6 overflow-y-auto space-y-4">
-              {logs.length === 0 ? (
-                <p className="text-xs font-mono text-white/50 italic">No historical adjustments recorded.</p>
-              ) : (
-                [...logs].reverse().map((log, i) => (
-                  <div key={i} className="border border-white/10 bg-white/5 p-4 flex flex-col gap-2">
-                    <div className="flex justify-between items-center text-[10px] font-mono">
-                      <span className="text-white/50">{new Date(log.timestamp).toLocaleString()}</span>
-                      {log.authorName && (
-                        <span className="text-blue-400 font-bold uppercase tracking-wider">
-                          BY: {log.authorName} ({log.authorRole || 'Viewer'})
-                        </span>
-                      )}
+
+            {/* Main Content Area */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-6">
+              
+              {/* Ledger Integrity Guard Panel */}
+              <div className="border border-white/10 bg-white/[0.02] backdrop-blur-md p-6 rounded-sm space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    {verificationState === 'UNVERIFIED' && (
+                      <div className="p-3 bg-white/5 border border-white/10 text-white/60">
+                        <Shield className="w-6 h-6" />
+                      </div>
+                    )}
+                    {verificationState === 'VERIFYING' && (
+                      <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 animate-pulse">
+                        <RefreshCw className="w-6 h-6 animate-spin" />
+                      </div>
+                    )}
+                    {verificationState === 'SECURED' && (
+                      <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                        <ShieldCheck className="w-6 h-6" />
+                      </div>
+                    )}
+                    {verificationState === 'TAMPERED' && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 animate-bounce">
+                        <ShieldAlert className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div>
+                      <h5 className="text-xs font-mono uppercase tracking-[0.2em] font-bold">
+                        {verificationState === 'UNVERIFIED' && "Ledger Verification Pending"}
+                        {verificationState === 'VERIFYING' && "Analyzing Ledger Integrity"}
+                        {verificationState === 'SECURED' && "Ledger Verified & Secured"}
+                        {verificationState === 'TAMPERED' && "WARNING: TAMPERING DETECTED!"}
+                      </h5>
+                      <p className="text-[10px] font-mono text-white/50 mt-1 leading-relaxed">
+                        {verificationState === 'UNVERIFIED' && "Cryptographic blockchain verification ready. Confirm WORM ledger sequence status."}
+                        {verificationState === 'VERIFYING' && `Scanning block #${(scanningIndex ?? 0) + 1} of ${localLogs.length}... verifying signature matching.`}
+                        {verificationState === 'SECURED' && `All ${localLogs.length} historical blocks matched SHA-256 genesis hashes perfectly.`}
+                        {verificationState === 'TAMPERED' && `Chain validation broken at Block #${(tamperedIndex ?? 0) + 1}. Predecessor pointer mismatch detected.`}
+                      </p>
                     </div>
-                    <p className="text-xs font-mono text-white/90 leading-relaxed"><span className="text-white/50 uppercase tracking-widest text-[9px] mr-2">CHANGES:</span> {log.changes}</p>
-                    <p className="text-xs font-mono text-yellow-500/90 leading-relaxed"><span className="text-white/50 uppercase tracking-widest text-[9px] mr-2">REASON:</span> {log.reason}</p>
                   </div>
-                ))
-              )}
+
+                  <div className="flex gap-2">
+                    {localLogs.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={verifyLedger}
+                        disabled={verificationState === 'VERIFYING'}
+                        className={`px-4 py-2 text-[10px] uppercase font-mono tracking-widest font-bold border transition-all ${
+                          verificationState === 'SECURED'
+                            ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/20'
+                            : verificationState === 'TAMPERED'
+                            ? 'bg-red-500/10 border-red-500/35 text-red-400 hover:bg-red-500/20'
+                            : 'bg-white text-black border-white hover:bg-neutral-200'
+                        }`}
+                      >
+                        {verificationState === 'VERIFYING' ? "Scanning..." : verificationState === 'SECURED' ? "Re-Verify" : "Verify Ledger"}
+                      </button>
+                    )}
+                    {localLogs.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={simulateTampering}
+                        disabled={verificationState === 'VERIFYING'}
+                        className="px-4 py-2 text-[10px] uppercase font-mono tracking-widest border border-red-500/20 text-red-400/90 hover:bg-red-500/10 transition-all"
+                        title="Mutate local block state to trigger warning UI"
+                      >
+                        Simulate Tamper
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Verification Progress Bar */}
+                {verificationState === 'VERIFYING' && (
+                  <div className="w-full bg-white/5 h-1 relative overflow-hidden rounded-full">
+                    <div
+                      className="bg-yellow-500 h-full transition-all duration-300"
+                      style={{ width: `${((scanningIndex ?? 0) / localLogs.length) * 100}%` }}
+                    />
+                  </div>
+                )}
+                {verificationState === 'SECURED' && (
+                  <div className="w-full bg-emerald-500/20 h-1 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full w-full" />
+                  </div>
+                )}
+                {verificationState === 'TAMPERED' && (
+                  <div className="w-full bg-red-500/20 h-1 rounded-full overflow-hidden">
+                    <div className="bg-red-500 h-full w-full animate-pulse" />
+                  </div>
+                )}
+              </div>
+
+              {/* Logs List */}
+              <div className="space-y-4">
+                {localLogs.length === 0 ? (
+                  <p className="text-xs font-mono text-white/50 italic">No historical adjustments recorded.</p>
+                ) : (
+                  [...localLogs].reverse().map((log, reversedIndex) => {
+                    const originalIndex = localLogs.length - 1 - reversedIndex;
+                    const isScanning = verificationState === 'VERIFYING' && scanningIndex === originalIndex;
+                    const isTamperedBlock = verificationState === 'TAMPERED' && tamperedIndex === originalIndex;
+                    const isSecuredBlock = verificationState === 'SECURED';
+
+                    return (
+                      <div
+                        key={originalIndex}
+                        className={`border p-5 flex flex-col gap-3 transition-all relative ${
+                          isScanning
+                            ? 'border-yellow-500 bg-yellow-500/[0.02] shadow-[0_0_10px_rgba(234,179,8,0.05)]'
+                            : isTamperedBlock
+                            ? 'border-red-500 bg-red-500/[0.04] shadow-[0_0_15px_rgba(239,68,68,0.1)]'
+                            : isSecuredBlock
+                            ? 'border-emerald-500/20 bg-emerald-500/[0.01]'
+                            : 'border-white/10 bg-white/5'
+                        }`}
+                      >
+                        {/* Upper Details Row */}
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-[10px] font-mono">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white/30 uppercase tracking-widest font-bold">Block #{originalIndex + 1}</span>
+                            <span className="text-white/50">{new Date(log.timestamp).toLocaleString()}</span>
+                          </div>
+                          
+                          {/* Block Status Badge */}
+                          <div className="flex items-center gap-2">
+                            {isScanning && (
+                              <span className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 px-2 py-0.5 rounded-sm uppercase tracking-wider text-[8px] animate-pulse">
+                                Scanning...
+                              </span>
+                            )}
+                            {isTamperedBlock && (
+                              <span className="bg-red-500/20 border border-red-500/40 text-red-400 px-2 py-0.5 rounded-sm uppercase tracking-wider text-[8px] font-bold animate-pulse">
+                                TAMPER DETECTED
+                              </span>
+                            )}
+                            {isSecuredBlock && !isTamperedBlock && (
+                              <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-sm uppercase tracking-wider text-[8px]">
+                                Secured Block
+                              </span>
+                            )}
+                            {log.authorName && (
+                              <span className="text-blue-400 font-bold uppercase tracking-wider">
+                                BY: {log.authorName} ({log.authorRole || 'Viewer'})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Audit Details */}
+                        <div className="space-y-1.5 py-1 border-y border-white/[0.03]">
+                          <p className="text-xs font-mono text-white/90 leading-relaxed">
+                            <span className="text-white/40 uppercase tracking-widest text-[9px] mr-2">Changes:</span> 
+                            {log.changes}
+                          </p>
+                          <p className="text-xs font-mono text-yellow-500/90 leading-relaxed">
+                            <span className="text-white/40 uppercase tracking-widest text-[9px] mr-2">Reason:</span> 
+                            {log.reason}
+                          </p>
+                        </div>
+
+                        {/* Hash badging */}
+                        <div className="flex flex-wrap items-center gap-3 pt-1 text-[9px] font-mono">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-white/30 uppercase tracking-tighter">HASH:</span>
+                            <span className={`px-2 py-0.5 border rounded-sm font-mono tracking-tight transition-colors ${
+                              isTamperedBlock
+                                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                                : 'bg-black/40 border-white/10 text-white/70'
+                            }`} title={log.hash}>
+                              {log.hash ? `0x${log.hash.substring(0, 8)}...` : 'None'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-white/30 uppercase tracking-tighter">PREV HASH:</span>
+                            {log.previousHash === 'GENESIS_BLOCK' ? (
+                              <span className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-2 py-0.5 rounded-sm uppercase text-[8px] tracking-widest font-bold">
+                                GENESIS
+                              </span>
+                            ) : (
+                              <span className="bg-black/40 border border-white/10 text-white/50 px-2 py-0.5 rounded-sm font-mono tracking-tight" title={log.previousHash}>
+                                {log.previousHash ? `0x${log.previousHash.substring(0, 8)}...` : 'None'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
             </div>
           </div>
         )}

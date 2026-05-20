@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Task, TaskStatus, TaskDependency } from '../types';
 import { sendNotification } from '../services/notificationService';
+import { useAuth } from '../context/AuthContext';
+import { sha256 } from '../utils/cryptoUtils';
+
 
 // Recursive utility function for DFS-based circular dependency detection
 export const wouldCreateCycle = (
@@ -42,6 +45,61 @@ export function useTasks(workspaceId?: string) {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const limit = 50;
+
+  const { user, profile } = useAuth();
+
+  const insertTaskHistoryLog = useCallback(async (
+    taskId: string,
+    fieldName: string,
+    oldValue: string | null,
+    newValue: string | null,
+    telemetrySnapshot: any = {}
+  ) => {
+    if (!isSupabaseConfigured || !user) return;
+
+    try {
+      const { data: latestLog, error: latestError } = await supabase
+        .from('task_history_logs')
+        .select('hash')
+        .eq('task_id', taskId)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const previousHash = (!latestError && latestLog?.hash) ? latestLog.hash : 'GENESIS_BLOCK';
+      const timestamp = new Date().toISOString();
+      
+      const authorId = user.id;
+      const authorName = profile?.full_name || user.email?.split('@')[0] || 'Unknown';
+      const authorRole = profile?.role === 'super_admin' ? 'Super Admin' : profile?.role === 'pm' ? 'Project Manager' : 'Developer';
+      
+      const message = `${taskId}${timestamp}${authorName}${authorRole}${fieldName}${oldValue ?? ''}${newValue ?? ''}${previousHash}`;
+      const newHash = await sha256(message);
+
+      const { error: insertError } = await supabase
+        .from('task_history_logs')
+        .insert({
+          task_id: taskId,
+          author_id: authorId,
+          author_name: authorName,
+          author_role: authorRole,
+          field_name: fieldName,
+          old_value: oldValue,
+          new_value: newValue,
+          telemetry_snapshot: telemetrySnapshot,
+          timestamp: timestamp,
+          previous_hash: previousHash,
+          hash: newHash
+        });
+
+      if (insertError) {
+        console.error("Failed to insert task history log:", insertError);
+      }
+    } catch (e) {
+      console.error("Error inserting task history log:", e);
+    }
+  }, [user, profile]);
+
 
   const queueMutation = useCallback((operation: string, payload: any) => {
     if (!workspaceId) return;
@@ -388,20 +446,14 @@ export function useTasks(workspaceId?: string) {
       setTasks(prev => [data as Task, ...prev]);
 
       // Write canonical task history log
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user && data) {
-          await supabase.from('task_history_logs').insert({
-            task_id: data.id,
-            actor_id: user.id,
-            action_type: 'create',
-            old_status: null,
-            new_status: data.status,
-            payload: { timestamp: new Date().toISOString(), name: data.name }
-          });
-        }
-      } catch (logErr) {
-        console.error("Failed to write task history log for creation:", logErr);
+      if (data) {
+        await insertTaskHistoryLog(
+          data.id,
+          'task',
+          null,
+          'created',
+          { timestamp: new Date().toISOString(), name: data.name, status: data.status }
+        );
       }
 
       return data as Task;
@@ -446,21 +498,13 @@ export function useTasks(workspaceId?: string) {
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
 
       // Write canonical task history log
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('task_history_logs').insert({
-            task_id: taskId,
-            actor_id: user.id,
-            action_type: 'transition',
-            old_status: oldStatus,
-            new_status: status,
-            payload: { timestamp: new Date().toISOString() }
-          });
-        }
-      } catch (logErr) {
-        console.error("Failed to write task history log for transition:", logErr);
-      }
+      await insertTaskHistoryLog(
+        taskId,
+        'status',
+        oldStatus,
+        status,
+        { timestamp: new Date().toISOString() }
+      );
     } else {
       const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, status } : t);
       setTasks(updatedTasks);
@@ -499,26 +543,23 @@ export function useTasks(workspaceId?: string) {
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, start_date: startDate ?? undefined, deadline: deadline ?? undefined } : t));
 
       // Write canonical task history log
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('task_history_logs').insert({
-            task_id: taskId,
-            actor_id: user.id,
-            action_type: 'reschedule',
-            old_status: task?.status || null,
-            new_status: task?.status || null,
-            payload: { 
-              timestamp: new Date().toISOString(),
-              old_start_date: oldStartDate,
-              new_start_date: startDate,
-              old_deadline: oldDeadline,
-              new_deadline: deadline
-            }
-          });
-        }
-      } catch (logErr) {
-        console.error("Failed to write task history log for rescheduling:", logErr);
+      if (oldStartDate !== startDate) {
+        await insertTaskHistoryLog(
+          taskId,
+          'start_date',
+          oldStartDate,
+          startDate,
+          { timestamp: new Date().toISOString() }
+        );
+      }
+      if (oldDeadline !== deadline) {
+        await insertTaskHistoryLog(
+          taskId,
+          'deadline',
+          oldDeadline,
+          deadline,
+          { timestamp: new Date().toISOString() }
+        );
       }
 
       // Dispatch notification
@@ -547,6 +588,8 @@ export function useTasks(workspaceId?: string) {
     if (!workspaceId) return;
     
     if (isSupabaseConfigured) {
+      const originalTask = tasks.find(t => t.id === taskId);
+
       const { error: updateError } = await supabase
         .from('tasks')
         .update({ ...updates, updated_at: new Date().toISOString() })
@@ -564,6 +607,23 @@ export function useTasks(workspaceId?: string) {
       }
       
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+
+      // Write canonical task history log for metadata updates
+      if (originalTask) {
+        for (const [key, value] of Object.entries(updates)) {
+          if (key === 'updated_at' || key === 'id' || key === 'workspace_id') continue;
+          const oldVal = (originalTask as any)[key];
+          if (oldVal !== value) {
+            await insertTaskHistoryLog(
+              taskId,
+              key,
+              oldVal !== undefined && oldVal !== null ? String(oldVal) : null,
+              value !== undefined && value !== null ? String(value) : null,
+              { timestamp: new Date().toISOString() }
+            );
+          }
+        }
+      }
     } else {
       const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, ...updates } : t);
       setTasks(updatedTasks);
