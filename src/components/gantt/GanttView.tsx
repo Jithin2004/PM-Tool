@@ -196,6 +196,25 @@ export function GanttView({
   }, [effectiveItems]);
 
   const columns = useMemo(() => buildColumns(origin, terminus, viewMode), [origin, terminus, viewMode]);
+
+  const visibleRangeStart = origin;
+  const visibleRangeEnd = terminus;
+  const toDateOnly = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const isEventInRange = (e: CalendarEvent) => {
+    const eStart = e.start_date.split('T')[0];
+    return eStart >= toDateOnly(visibleRangeStart) && eStart <= toDateOnly(visibleRangeEnd);
+  };
+
+  const visibleCalendarEvents = useMemo(() => {
+    const inRange = calendarEvents.filter(isEventInRange);
+    const seen = new Set<string>();
+    return inRange.filter(e => {
+      const key = `${e.event_type}|${e.title}|${e.start_date?.split('T')[0]}|${e.workspace_id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [calendarEvents, visibleRangeStart, visibleRangeEnd]);
   const totalWidth = useMemo(() => {
     if (columns.length === 0) return 800;
     const last = columns[columns.length - 1];
@@ -273,8 +292,8 @@ export function GanttView({
         out.push({ id: `r-${t.id}`, title: 'High Delivery Risk', message: `"${t.name}" has high estimation variance`, severity: 'high' });
     });
 
-    // Holiday warnings from CalendarEvents
-    const holidays = calendarEvents.filter(e => e.event_type === 'holiday');
+    // Holiday warnings from visible CalendarEvents
+    const holidays = visibleCalendarEvents.filter(e => e.event_type === 'holiday');
     holidays.forEach(h => {
       out.push({ id: `hol-${h.id}`, title: 'Holiday', message: `"${h.title}" on ${h.start_date} (full capacity loss)`, severity: 'medium' });
     });
@@ -282,7 +301,7 @@ export function GanttView({
     profiles?.forEach(p => {
       const hrs = tasks.filter(t => t.assignee_id === p.id && t.status !== 'done').reduce((s, t) => s + (t.estimated_hours || 0), 0);
       const meetingHrs = meetings.filter(m => new Date(m.start_time) > new Date()).reduce((s, m) => s + (new Date(m.end_time).getTime() - new Date(m.start_time).getTime()) / 3600000, 0);
-      const leaveHrs = calendarEvents.filter(e => e.event_type === 'leave' && e.participants?.includes(p.id)).reduce((s, e) => {
+      const leaveHrs = visibleCalendarEvents.filter(e => e.event_type === 'leave' && e.participants?.includes(p.id)).reduce((s, e) => {
         const dur = (new Date(e.end_date).getTime() - new Date(e.start_date).getTime()) / 3600000;
         return s + dur * (1 - e.capacity_impact);
       }, 0);
@@ -291,7 +310,7 @@ export function GanttView({
       if (hrs > cap) out.push({ id: `o-${p.id}`, title: 'Capacity Breach', message: `"${p.full_name || p.email}" ${hrs}h / ${cap}h limit (${totalDeduction.toFixed(1)}h events)`, severity: 'high' });
     });
     return out;
-  }, [tasks, profiles, meetings, calendarEvents]);
+  }, [tasks, profiles, meetings, visibleCalendarEvents]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -488,7 +507,8 @@ export function GanttView({
             <div className="flex items-center gap-2 mb-5 pb-4 border-b border-white/[0.07]">
               <BrainCircuit className="w-4 h-4 text-cyan-400" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-white/90">Timeline Intel</h3>
-              {alerts.length > 0 && <span className="ml-auto text-[9px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/25 px-1.5 py-0.5 rounded-sm">{alerts.length} alert{alerts.length !== 1 ? 's' : ''}</span>}
+              <span className="ml-auto text-[9px] font-mono text-white/30">{viewMode}</span>
+              {alerts.length > 0 && <span className="ml-1 text-[9px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/25 px-1.5 py-0.5 rounded-sm">{alerts.length} alert{alerts.length !== 1 ? 's' : ''}</span>}
             </div>
             <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
               {alerts.length === 0 ? (
@@ -513,11 +533,11 @@ export function GanttView({
               <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Epics</span><span className="text-[9px] font-mono font-bold text-pink-400">{effectiveItems.filter(i => i.type === 'epic').length}</span></div>
               <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Tasks</span><span className="text-[9px] font-mono font-bold text-cyan-400">{effectiveItems.filter(i => i.type === 'task').length}</span></div>
               <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Milestones</span><span className="text-[9px] font-mono font-bold text-cyan-400">{milestones.length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Calendar Events</span><span className="text-[9px] font-mono font-bold text-amber-400">{calendarEvents.length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Holidays</span><span className="text-[9px] font-mono font-bold text-amber-400">{calendarEvents.filter(e => e.event_type === 'holiday').length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Leaves</span><span className="text-[9px] font-mono font-bold text-rose-400">{calendarEvents.filter(e => e.event_type === 'leave').length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Meetings</span><span className="text-[9px] font-mono font-bold text-purple-400">{calendarEvents.filter(e => e.event_type === 'meeting').length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Event Hours</span><span className="text-[9px] font-mono font-bold text-purple-400">{calendarEvents.reduce((s, e) => s + (new Date(e.end_date).getTime() - new Date(e.start_date).getTime()) / 3600000, 0).toFixed(1)}h</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Calendar Events</span><span className="text-[9px] font-mono font-bold text-amber-400">{visibleCalendarEvents.length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Holidays</span><span className="text-[9px] font-mono font-bold text-amber-400">{visibleCalendarEvents.filter(e => e.event_type === 'holiday').length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Leaves</span><span className="text-[9px] font-mono font-bold text-rose-400">{visibleCalendarEvents.filter(e => e.event_type === 'leave').length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Meetings</span><span className="text-[9px] font-mono font-bold text-purple-400">{visibleCalendarEvents.filter(e => e.event_type === 'meeting').length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Event Hours</span><span className="text-[9px] font-mono font-bold text-purple-400">{visibleCalendarEvents.reduce((s, e) => s + (new Date(e.end_date).getTime() - new Date(e.start_date).getTime()) / 3600000, 0).toFixed(1)}h</span></div>
             </div>
           </div>
         )}
