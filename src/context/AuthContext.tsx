@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Refs to prevent stale closures in event listeners
   const loadingRef = React.useRef(loading);
   const userRef = React.useRef(user);
+  const lastSyncedUserIdRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     loadingRef.current = loading;
@@ -31,8 +32,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userRef.current = user;
   }, [user]);
 
-  const syncProfile = useCallback(async (authUser: any) => {
+  const syncProfile = useCallback(async (authUser: any, force = false) => {
     if (!isSupabaseConfigured) return;
+    if (!force && lastSyncedUserIdRef.current === authUser.id) {
+      if (import.meta.env.DEV) {
+        console.log("AuthContext: syncProfile() already synced/syncing for:", authUser.id);
+      }
+      return;
+    }
+    lastSyncedUserIdRef.current = authUser.id;
+
     if (import.meta.env.DEV) {
       console.log("AuthContext: syncProfile() started for user:", authUser.id);
     }
@@ -220,9 +229,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
 
     // Bulletproof fallback to absolutely prevent infinite loading screens
+    // Increased to 15 seconds to allow paused Supabase project (free tier database cold-starts) plenty of time to wake up.
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
-    }, 8000);
+    }, 15000);
 
     if (import.meta.env.DEV) {
       console.log("AuthContext: subscribing to onAuthStateChange...");
@@ -322,7 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (user) {
-      await syncProfile(user);
+      await syncProfile(user, true);
     }
   }, [user, syncProfile]);
 

@@ -134,11 +134,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     loadWorkspace();
 
     // Bulletproof fallback to absolutely prevent infinite loading screens
+    // Increased to 15 seconds to allow paused Supabase project (free tier database cold-starts) plenty of time to wake up.
     const safetyTimeout = setTimeout(() => {
       if (active) {
         setLoading(false);
       }
-    }, 8000);
+    }, 15000);
 
     return () => {
       active = false;
