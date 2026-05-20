@@ -1,24 +1,47 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { calendarEventService } from './calendarEventService';
+import { activityLogService } from './activityLogService';
+import { calculateDailyProductiveHours } from '../utils/productivity';
 import type { Sprint } from '../types';
 
 export const sprintService = {
-  async createSprint(sprint: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>): Promise<Sprint | null> {
+  async createSprint(sprint: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>, actorId?: string): Promise<Sprint | null> {
     if (!isSupabaseConfigured) return null;
     const { data, error } = await supabase.from('sprints').insert(sprint).select().single();
     if (error) { console.error('sprintService.createSprint:', error); return null; }
-    return data as Sprint;
+    const created = data as Sprint;
+    await activityLogService.appendLog({
+      workspace_id: sprint.workspace_id, actor_id: actorId,
+      project_id: sprint.project_id, action: 'sprint_created',
+      metadata: { sprint_id: created.id, sprint_name: sprint.name, start_date: sprint.start_date, end_date: sprint.end_date }
+    });
+    return created;
   },
 
-  async updateSprint(id: string, updates: Partial<Sprint>): Promise<boolean> {
+  async updateSprint(id: string, updates: Partial<Sprint>, actorId?: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
     const { error } = await supabase.from('sprints').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
-    return !error;
+    if (error) { console.error('sprintService.updateSprint:', error); return false; }
+    if (updates.workspace_id) {
+      await activityLogService.appendLog({
+        workspace_id: updates.workspace_id, actor_id: actorId,
+        action: 'sprint_updated',
+        metadata: { sprint_id: id, updates: Object.keys(updates) }
+      });
+    }
+    return true;
   },
 
-  async deleteSprint(id: string): Promise<boolean> {
+  async deleteSprint(id: string, workspaceId: string, projectId?: string, actorId?: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
     const { error } = await supabase.from('sprints').delete().eq('id', id);
-    return !error;
+    if (error) { console.error('sprintService.deleteSprint:', error); return false; }
+    await activityLogService.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      project_id: projectId, action: 'sprint_deleted',
+      metadata: { sprint_id: id }
+    });
+    return true;
   },
 
   async getSprints(workspaceId: string, projectId?: string): Promise<Sprint[]> {
@@ -55,7 +78,29 @@ export const sprintService = {
     return { committed, completed };
   },
 
-  async getBurndownData(sprintId: string, startDate: string, endDate: string): Promise<{ date: string; ideal: number; actual: number }[]> {
+  async calculateConfidence(
+    workspaceId: string,
+    sprintId: string
+  ): Promise<{ effectiveCapacity: number; deductedHours: number; confidence: number; eventCount: number }> {
+    if (!isSupabaseConfigured) return { effectiveCapacity: 0, deductedHours: 0, confidence: 0, eventCount: 0 };
+    const { data: sprint } = await supabase.from('sprints').select('*').eq('id', sprintId).single();
+    if (!sprint) return { effectiveCapacity: 0, deductedHours: 0, confidence: 0, eventCount: 0 };
+    const baseHoursPerDay = 8;
+    const workingDays = [1, 2, 3, 4, 5];
+    const { totalCapacity, deductedHours, events } = await calendarEventService.getEffectiveCapacity(
+      workspaceId, sprint.start_date, sprint.end_date, baseHoursPerDay, workingDays
+    );
+    const totalPossible = totalCapacity + deductedHours;
+    const confidence = totalPossible > 0 ? Math.round((totalCapacity / totalPossible) * 100) : 0;
+    return { effectiveCapacity: totalCapacity, deductedHours, confidence, eventCount: events.length };
+  },
+
+  async getBurndownData(
+    sprintId: string,
+    startDate: string,
+    endDate: string,
+    workspaceId?: string
+  ): Promise<{ date: string; ideal: number; actual: number; effectiveIdeal: number }[]> {
     if (!isSupabaseConfigured) return [];
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -64,15 +109,36 @@ export const sprintService = {
     if (!tasks) return [];
     const totalPoints = tasks.reduce((sum, t) => sum + (t.story_points || 0), 0);
     const dailyIdeal = totalPoints / Math.max(1, totalDays);
+
+    // Get calendar events for effective ideal line
+    const events = workspaceId
+      ? await calendarEventService.getEventsInRange(workspaceId, startDate, endDate)
+      : [];
+    const eventDaysMap = new Map<string, boolean>();
+    events.forEach(e => {
+      const es = new Date(e.start_date);
+      const ee = new Date(e.end_date);
+      const d = new Date(es);
+      while (d <= ee) {
+        eventDaysMap.set(d.toISOString().split('T')[0], true);
+        d.setDate(d.getDate() + 1);
+      }
+    });
+
+    let workingDaysRemaining = totalDays;
     const points = [];
     for (let i = 0; i <= totalDays; i++) {
       const date = new Date(start.getTime() + i * 86400000);
       const dateStr = date.toISOString().split('T')[0];
       const ideal = Math.max(0, totalPoints - dailyIdeal * i);
+      const isEventDay = eventDaysMap.has(dateStr);
+      if (isEventDay) workingDaysRemaining--;
+      const effectiveDailyRate = workingDaysRemaining > 0 ? totalPoints / workingDaysRemaining : totalPoints;
+      const effectiveIdeal = Math.max(0, totalPoints - effectiveDailyRate * i);
       const actual = tasks
         .filter(t => t.status === 'done' && t.updated_at && new Date(t.updated_at) <= date)
         .reduce((sum, t) => sum + (t.story_points || 0), 0);
-      points.push({ date: dateStr, ideal: Math.round(ideal * 10) / 10, actual: totalPoints - actual });
+      points.push({ date: dateStr, ideal: Math.round(ideal * 10) / 10, actual: totalPoints - actual, effectiveIdeal: Math.round(effectiveIdeal * 10) / 10 });
     }
     return points;
   }

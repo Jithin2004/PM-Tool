@@ -3,7 +3,7 @@ import { Check, Plus, X } from 'lucide-react';
 import { BUSINESS_TYPES } from '../../constants/product';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
-import { predictEta } from '../../services/etaService';
+import { predictEtaSync } from '../../services/etaService';
 import type { BusinessType, WorkspaceSettings } from '../../types/workspace';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
 import { supabase } from '../../lib/supabase';
@@ -54,7 +54,7 @@ export function WorkspaceSetupPage() {
     }
   }, []);
 
-  const preview = useMemo(() => predictEta({
+  const preview = useMemo(() => predictEtaSync({
     likely: 40,
     workWindow: settings,
     startDate: new Date()

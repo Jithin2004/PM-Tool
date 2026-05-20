@@ -6,7 +6,7 @@ import { useTasks } from '../hooks/useTasks';
 import { TaskCard } from './task/TaskCard';
 import { TaskCreateModal } from './task/TaskCreateModal';
 import { useWorkspace } from '../context/WorkspaceContext';
-import { KANBAN_COLUMNS, SCRUM_COLUMNS } from '../constants/product';
+import { KANBAN_COLUMNS } from '../constants/product';
 import { TaskStatus, Task, Project } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -28,9 +28,8 @@ export default function ExecutionBoard({
   onPromoteToAsset
 }: ExecutionBoardProps) {
   const { workspace } = useWorkspace();
-  const { tasks, loading, addTask, updateTaskStatus } = useTasks(workspace?.id);
+  const { tasks, dependencies, loading, addTask, updateTaskStatus } = useTasks(workspace?.id);
   
-  const [viewMode, setViewMode] = useState<'kanban' | 'scrum'>('kanban');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -38,18 +37,23 @@ export default function ExecutionBoard({
   const [filterByProject, setFilterByProject] = useState<string | null>(null);
   const [projectsPanelOpen, setProjectsPanelOpen] = useState(true);
 
-  // Role verification helper
   const role = currentUserProfile?.role || 'viewer';
   const hasWriteAccess = role === 'super_admin' || role === 'pm';
 
-  // Columns definition based on Toggle mode
-  const columns = useMemo(() => {
-    if (viewMode === 'kanban') {
-      return KANBAN_COLUMNS;
-    } else {
-      return SCRUM_COLUMNS;
-    }
-  }, [viewMode]);
+  const userMap = useMemo(() => {
+    const map = new Map<string, any>();
+    users.forEach(u => map.set(u.id, u));
+    return map;
+  }, [users]);
+
+  const blockedByMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    dependencies.forEach(d => {
+      if (!map.has(d.task_id)) map.set(d.task_id, []);
+      map.get(d.task_id)!.push(d.depends_on_task_id);
+    });
+    return map;
+  }, [dependencies]);
 
   const handleCreateTask = async (taskData: any) => {
     if (!hasWriteAccess) {
@@ -83,36 +87,19 @@ export default function ExecutionBoard({
       {/* Visual Accent top gradient line */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500/80 via-purple-500/80 to-pink-500/80" />
 
-      {/* Header controls & toggles */}
+      {/* Header controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-white/5 pb-4">
         <div>
           <h2 className="text-sm font-mono uppercase tracking-widest text-white flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping" />
-            Task Board
+            Kanban Board
           </h2>
           <p className="text-[10px] font-mono text-white/40 mt-1 uppercase tracking-wider">
-            Canonical data source
+            {KANBAN_COLUMNS.length} lanes · {projects.length} projects synced
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="bg-white/5 p-1 rounded-sm border border-white/5 flex gap-1">
-            <button
-              onClick={() => { setViewMode('kanban'); notify("Layout shifted to Kanban delivery board.", "info"); }}
-              className={`px-3 py-1 text-[9px] font-mono uppercase tracking-wider rounded-sm transition-all flex items-center gap-1.5 cursor-pointer ${viewMode === 'kanban' ? 'bg-cyan-600 text-white shadow-[0_0_8px_rgba(8,145,178,0.4)]' : 'text-white/40 hover:text-white'}`}
-            >
-              <LayoutGrid className="w-3 h-3" />
-              Kanban
-            </button>
-            <button
-              onClick={() => { setViewMode('scrum'); notify("Layout shifted to Sprint release iteration.", "info"); }}
-              className={`px-3 py-1 text-[9px] font-mono uppercase tracking-wider rounded-sm transition-all flex items-center gap-1.5 cursor-pointer ${viewMode === 'scrum' ? 'bg-purple-600 text-white shadow-[0_0_8px_rgba(147,51,234,0.4)]' : 'text-white/40 hover:text-white'}`}
-            >
-              <Layers className="w-3 h-3" />
-              Scrum
-            </button>
-          </div>
-
           {hasWriteAccess && (
             <button
               onClick={() => setIsAddingTask(true)}
@@ -124,23 +111,6 @@ export default function ExecutionBoard({
           )}
         </div>
       </div>
-
-      {/* Active scrum metadata banner */}
-      {viewMode === 'scrum' && (
-        <div className="mb-6 bg-purple-950/20 border border-purple-500/10 px-4 py-3 rounded-sm flex flex-wrap justify-between items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-purple-400" />
-            <span className="text-[10px] font-mono uppercase tracking-widest text-purple-200">
-              Active Sprint: Iteration Alpha
-            </span>
-          </div>
-          <div className="flex items-center gap-6 text-[9px] font-mono text-purple-300 uppercase tracking-widest">
-            <div>Velocity Multiplier: <span className="text-white font-bold">1.4x</span></div>
-            <div>Time Remaining: <span className="text-white font-bold">4 days</span></div>
-            <div>Release Confidence: <span className="text-emerald-400 font-bold">96.8%</span></div>
-          </div>
-        </div>
-      )}
 
       {/* Projects Overview Panel */}
       <div className="mb-6 bg-black/30 border border-white/5 rounded-sm overflow-hidden">
@@ -206,8 +176,8 @@ export default function ExecutionBoard({
       </div>
 
       {/* Lane Columns */}
-      <div className={`grid gap-4 ${columns.length > 4 ? 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5' : 'grid-cols-1 md:grid-cols-3 lg:grid-cols-4'}`}>
-        {columns.map(col => {
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3 lg:grid-cols-5">
+        {KANBAN_COLUMNS.map(col => {
           const colTasks = tasks.filter(t => t.status === col.id && (!filterByProject || t.project_id === filterByProject));
           const TaskRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {
             const task = colTasks[index];
@@ -222,13 +192,17 @@ export default function ExecutionBoard({
                   task={task}
                   project={projects.find(p => p.id === task.project_id)}
                   hasWriteAccess={hasWriteAccess}
-                  columns={columns}
+                  columns={KANBAN_COLUMNS}
                   onTransitionTask={handleTransitionTask}
                   onPromoteToAsset={onPromoteToAsset}
                   onClick={(t) => {
                     setSelectedTask(t);
                     setIsDrawerOpen(true);
                   }}
+                  assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
+                  assigneeLoading={!!task.assignee_id && !userMap.has(task.assignee_id)}
+                  blockedByTasks={blockedByMap.get(task.id)}
+                  dependencyConfidence={task.confidence}
                 />
               </div>
             );
@@ -268,13 +242,17 @@ export default function ExecutionBoard({
                         task={task}
                         project={projects.find(p => p.id === task.project_id)}
                         hasWriteAccess={hasWriteAccess}
-                        columns={columns}
+                        columns={KANBAN_COLUMNS}
                         onTransitionTask={handleTransitionTask}
                         onPromoteToAsset={onPromoteToAsset}
                         onClick={(t) => {
                           setSelectedTask(t);
                           setIsDrawerOpen(true);
                         }}
+                        assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
+                        assigneeLoading={!!task.assignee_id && !userMap.has(task.assignee_id)}
+                        blockedByTasks={blockedByMap.get(task.id)}
+                        dependencyConfidence={task.confidence}
                       />
                     ))}
                   </div>
@@ -292,7 +270,7 @@ export default function ExecutionBoard({
           onClose={() => setIsAddingTask(false)}
           projects={projects}
           users={users}
-          defaultStatus={viewMode === 'kanban' ? 'backlog' : 'backlog'}
+          defaultStatus="backlog"
           onSubmit={handleCreateTask}
           notify={notify}
         />

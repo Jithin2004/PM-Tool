@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Task, TaskStatus, TaskDependency } from '../types';
 import { sendNotification } from '../services/notificationService';
+import { predictionValidationService } from '../services/predictionValidationService';
 import { useAuth } from '../context/AuthContext';
 import { sha256 } from '../utils/cryptoUtils';
 
@@ -505,6 +506,13 @@ export function useTasks(workspaceId?: string) {
         status,
         { timestamp: new Date().toISOString() }
       );
+
+      if (status === 'done') {
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+          await predictionValidationService.recordCompletion(task);
+        }
+      }
     } else {
       const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, status } : t);
       setTasks(updatedTasks);

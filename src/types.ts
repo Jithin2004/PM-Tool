@@ -94,12 +94,6 @@ export interface Project {
 
 export type Profile = User;
 
-export interface TaskDependency {
-  workspace_id: string;
-  task_id: string;
-  depends_on_task_id: string;
-}
-
 export interface Task {
   id: string;
   workspace_id: string;
@@ -122,6 +116,8 @@ export interface Task {
   story_points?: number;
   epic_id?: string;
   sprint_id?: string;
+  story_id?: string;
+  parent_task_id?: string;
   definition_of_done?: string;
   acceptance_criteria?: string;
   created_at: string;
@@ -253,18 +249,77 @@ export interface Milestone {
   updated_at: string;
 }
 
+export interface UserStory {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  epic_id?: string;
+  sprint_id?: string;
+  title: string;
+  description?: string;
+  acceptance_criteria?: string;
+  story_points: number;
+  priority: TaskPriority;
+  pert_best?: number;
+  pert_likely?: number;
+  pert_worst?: number;
+  risk?: RiskLevel;
+  confidence?: number;
+  assignee_id?: string;
+  status: TaskStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Subtask {
+  id: string;
+  workspace_id: string;
+  task_id: string;
+  name: string;
+  description?: string;
+  status: TaskStatus;
+  assignee_id?: string;
+  estimated_hours: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Approval {
   id: string;
   workspace_id: string;
   project_id: string;
   milestone_id?: string;
   task_id?: string;
+  story_id?: string;
   phase: string;
   approver_id?: string;
   status: ApprovalStatus;
   comment?: string;
   reviewed_at?: string;
   created_at: string;
+}
+
+export type CalendarEventType = 'holiday' | 'leave' | 'meeting' | 'festival' | 'regional' | 'company' | 'sprint' | 'deployment' | 'client_review' | 'approval';
+
+export interface CalendarEvent {
+  id: string;
+  workspace_id: string;
+  event_type: CalendarEventType;
+  title: string;
+  description?: string;
+  start_date: string;
+  end_date: string;
+  participants?: string[];
+  capacity_impact: number;
+  is_recurring?: boolean;
+  recurrence_rule?: string;
+  timezone?: string;
+  auto_generated?: boolean;
+  capacity_modifier?: number;
+  source_id?: string;
+  source_table?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Stats {

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { PROJECT_TEMPLATES, EXECUTION_MODES } from '../../constants/product';
-import { predictEta } from '../../services/etaService';
+import { predictEtaSync } from '../../services/etaService';
 import type { Priority, ProjectDraft, ProjectTemplate } from '../../types/project';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
 
@@ -16,7 +16,7 @@ const INITIAL_PROJECT: ProjectDraft = {
 export function ProjectCreatePage() {
   const [draft, setDraft] = useState<ProjectDraft>(INITIAL_PROJECT);
   const [executionMode, setExecutionMode] = useState('KANBAN');
-  const prediction = useMemo(() => predictEta({
+  const prediction = useMemo(() => predictEtaSync({
     best: 24,
     likely: 40,
     worst: 72,

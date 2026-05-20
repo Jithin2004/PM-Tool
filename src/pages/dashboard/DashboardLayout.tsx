@@ -1530,6 +1530,20 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     }
   };
 
+  const updateExecutionMode = async (projectId: string, mode: import('../../types').ExecutionMode) => {
+    if (!workspace?.id || !isSupabaseConfigured) return;
+    const { error } = await supabase
+      .from('projects')
+      .update({ execution_mode: mode, updated_at: new Date().toISOString() })
+      .eq('id', projectId);
+    if (!error) {
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, execution_mode: mode } : p));
+      notify(`Project execution mode updated to ${mode}`, 'success');
+    } else {
+      notify(`Failed to update execution mode: ${error.message}`, 'error');
+    }
+  };
+
   // Promote a task from Task Board into the Project creation form
   const handlePromoteTaskToAsset = (taskData: { title: string; description: string; projectId: string }) => {
     setNewName(taskData.title);
@@ -1640,7 +1654,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       workingHoursPerDay,
       tilesPerRow,
       setIsRosterOpen,
-      setSelectedProject
+      setSelectedProject,
+      updateExecutionMode
     }}>
       <div className={`min-h-screen bg-[#0a0a0a] font-sans text-white/90 selection:bg-white selection:text-black ${theme === 'light' ? 'light' : ''}`}>
         <Header

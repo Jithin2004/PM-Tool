@@ -1,6 +1,8 @@
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { Workspace, WorkspaceSettings } from '../types/workspace';
+import { calendarEventService } from './calendarEventService';
+import { getHolidaysForRegion } from '../utils/holidays';
 
 export interface CreateWorkspaceInput {
   name: string;
@@ -142,9 +144,7 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
   return workspaceRow ? rowToWorkspace(workspaceRow as WorkspaceRow) : null;
 }
 
-import { getHolidaysForRegion } from '../utils/holidays';
-
-export async function syncWorkspaceHolidays(workspaceId: string, country: string, region: string) {
+export async function syncWorkspaceHolidays(workspaceId: string, country: string, region: string, actorId?: string) {
   if (!country) return;
 
   const currentYear = new Date().getFullYear();
@@ -154,18 +154,30 @@ export async function syncWorkspaceHolidays(workspaceId: string, country: string
 
   if (allHolidays.length > 0) {
     try {
-      await supabase
-        .from('workspace_holidays')
-        .delete()
-        .eq('workspace_id', workspaceId);
+      const { data: existing } = await supabase
+        .from('calendar_events')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('event_type', 'holiday')
+        .eq('auto_generated', true);
+      if (existing) {
+        await supabase.from('calendar_events').delete().in('id', existing.map(e => e.id));
+      }
 
-      const holidayRows = allHolidays.map(h => ({
-        workspace_id: workspaceId,
-        date: h.date,
-        name: h.name,
-        type: h.type
-      }));
-      await supabase.from('workspace_holidays').insert(holidayRows);
+      for (const h of allHolidays) {
+        await calendarEventService.createEvent({
+          workspace_id: workspaceId,
+          event_type: h.type === 'festival' ? 'festival' : 'holiday',
+          title: h.name,
+          start_date: `${h.date}T00:00:00Z`,
+          end_date: `${h.date}T23:59:59Z`,
+          capacity_impact: 1,
+          is_recurring: true,
+          recurrence_rule: 'FREQ=YEARLY',
+          auto_generated: true,
+          timezone: 'UTC'
+        }, actorId);
+      }
     } catch (err) {
       console.error("Failed to sync workspace holidays:", err);
     }

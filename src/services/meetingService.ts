@@ -52,29 +52,4 @@ export const meetingService = {
     if (error) { console.error('meetingService.getAttendees:', error); return []; }
     return (data || []) as MeetingAttendee[];
   },
-
-  async getMeetingHoursForUser(workspaceId: string, userId: string, date: string): Promise<number> {
-    if (!isSupabaseConfigured) return 0;
-    const startOfDay = `${date}T00:00:00`;
-    const endOfDay = `${date}T23:59:59`;
-    const { data: attendeeRecords } = await supabase
-      .from('meeting_attendees')
-      .select('meeting_id')
-      .eq('user_id', userId);
-    if (!attendeeRecords) return 0;
-    const meetingIds = attendeeRecords.map(r => r.meeting_id);
-    if (meetingIds.length === 0) return 0;
-    const { data, error } = await supabase
-      .from('meetings')
-      .select('start_time, end_time')
-      .eq('workspace_id', workspaceId)
-      .gte('start_time', startOfDay)
-      .lte('start_time', endOfDay)
-      .in('id', meetingIds);
-    if (error || !data) return 0;
-    return data.reduce((total, m) => {
-      const duration = (new Date(m.end_time).getTime() - new Date(m.start_time).getTime()) / (1000 * 60 * 60);
-      return total + duration;
-    }, 0);
-  }
 };

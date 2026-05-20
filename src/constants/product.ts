@@ -66,5 +66,12 @@ export const SDLC_PHASES = [
 
 export const MEETING_TYPES = [
   'sync', 'planning', 'review', 'retrospective', 'standup',
-  'design', 'qa', 'release', 'post-mortem', 'custom'
+  'design', 'qa', 'release', 'post-mortem', 'custom',
+  'client_review', 'architecture_review', 'deployment'
+];
+
+export const MILESTONE_TITLES = [
+  'Requirements Approved',
+  'QA Signoff',
+  'Release Complete'
 ];

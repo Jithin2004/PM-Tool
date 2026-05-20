@@ -1,7 +1,8 @@
 import { calculateExpectedEffort, calculatePertStandardDeviation, normalizePertInput } from '../utils/pert';
 import { addWorkingHours, calculateDailyProductiveHours, type WorkWindow } from '../utils/productivity';
-import { supabase } from '../lib/supabase';
+import { calendarEventService } from './calendarEventService';
 import type { WorkspaceSettings } from '../types/workspace';
+import type { CalendarEvent } from '../types';
 
 export interface EtaInput {
   best?: number;
@@ -15,6 +16,11 @@ export interface EtaInput {
   availabilityFactor?: number;
   teamLoadFactor?: number;
   interruptionHours?: number;
+  workspaceId?: string;
+  assigneeId?: string;
+  taskName?: string;
+  projectId?: string;
+  taskTags?: string[];
 }
 
 export async function getSchedulingContext(
@@ -22,7 +28,7 @@ export async function getSchedulingContext(
   workspaceId: string,
   assigneeId?: string | null,
   teamId?: string | null
-): Promise<WorkWindow> {
+): Promise<WorkWindow & { calendarEvents?: CalendarEvent[] }> {
   const window: WorkWindow = {
     ...workspaceSettings,
     holidays: [],
@@ -30,52 +36,41 @@ export async function getSchedulingContext(
     personalLeaves: []
   };
 
-  try {
-    const { data: holidaysData } = await supabase
-      .from('workspace_holidays')
-      .select('date')
-      .eq('workspace_id', workspaceId);
-    if (holidaysData) {
-      window.holidays = holidaysData.map(h => h.date);
-    }
-  } catch (err) {
-    // Fallback if table doesn't exist
-  }
+  const farFuture = new Date();
+  farFuture.setFullYear(farFuture.getFullYear() + 1);
+  const rangeStart = new Date().toISOString().split('T')[0];
+  const rangeEnd = farFuture.toISOString().split('T')[0];
 
   try {
+    const events = await calendarEventService.getEventsInRange(workspaceId, rangeStart, rangeEnd);
+
+    window.holidays = events
+      .filter(e => e.event_type === 'holiday' || e.event_type === 'festival')
+      .map(e => e.start_date.split('T')[0]);
+
     if (teamId) {
-      const { data: teamEventsData } = await supabase
-        .from('team_events')
-        .select('*')
-        .eq('team_id', teamId);
-      if (teamEventsData) {
-        window.teamEvents = teamEventsData.map(e => ({
+      window.teamEvents = events
+        .filter(e => (e.event_type === 'company' || e.event_type === 'sprint' || e.event_type === 'meeting') && (!e.participants || e.participants.length === 0))
+        .map(e => ({
           start: new Date(e.start_date),
           end: new Date(e.end_date),
-          availabilityFactor: Number(e.availability_factor ?? 1)
+          availabilityFactor: 1 - (e.capacity_impact * (e.capacity_modifier ?? 1))
         }));
-      }
     }
-  } catch (err) {
-    // Fallback if table doesn't exist
-  }
 
-  try {
     if (assigneeId) {
-      const { data: leaveData } = await supabase
-        .from('personal_leave')
-        .select('*')
-        .eq('user_id', assigneeId);
-      if (leaveData) {
-        window.personalLeaves = leaveData.map(l => ({
-          start: new Date(l.start_date),
-          end: new Date(l.end_date),
-          availabilityFactor: Number(l.availability_factor ?? 0)
+      window.personalLeaves = events
+        .filter(e => e.event_type === 'leave' || (e.event_type === 'meeting' && e.participants?.includes(assigneeId)))
+        .map(e => ({
+          start: new Date(e.start_date),
+          end: new Date(e.end_date),
+          availabilityFactor: e.event_type === 'leave' ? 1 - (e.capacity_impact * (e.capacity_modifier ?? 1)) : 0
         }));
-      }
     }
+
+    (window as any).calendarEvents = events;
   } catch (err) {
-    // Fallback if table doesn't exist
+    (window as any).calendarEvents = [];
   }
 
   return window;
@@ -97,16 +92,19 @@ export interface CountdownResult {
   pulse: string;
 }
 
-const DEFAULT_WORK_WINDOW: WorkWindow = {
-  workStart: '09:00',
-  workEnd: '17:00',
-  lunchDuration: 60,
-  workingDays: [1, 2, 3, 4, 5],
-  productivityFactor: 0.8
-};
+function computeRawConfidence(
+  uncertaintyHours: number,
+  delayDriftDays: number,
+  teamLoadFactor: number
+): number {
+  return Math.max(
+    5,
+    Math.min(99, Math.round(100 - uncertaintyHours * 3 - Math.max(0, delayDriftDays) * 8 - (teamLoadFactor - 1) * 20))
+  );
+}
 
-export function predictEta(input: EtaInput): EtaResult {
-  const workWindow = input.workWindow || DEFAULT_WORK_WINDOW;
+function computeEta(input: EtaInput): Omit<EtaResult, 'confidence'> & { rawConfidence: number } {
+  const workWindow = input.workWindow;
   const pert = normalizePertInput(input.best, input.likely ?? input.estimatedHours, input.worst);
   const estimatedEffortHours = input.estimatedHours ?? calculateExpectedEffort(pert);
   const uncertaintyHours = calculatePertStandardDeviation(pert);
@@ -126,19 +124,48 @@ export function predictEta(input: EtaInput): EtaResult {
     : delayDriftDays > 0 || uncertaintyHours > estimatedEffortHours * 0.2
       ? 'medium'
       : 'low';
-  const confidence = Math.max(
-    5,
-    Math.min(99, Math.round(100 - uncertaintyHours * 3 - Math.max(0, delayDriftDays) * 8 - (teamLoadFactor - 1) * 20))
-  );
+  const rawConfidence = computeRawConfidence(uncertaintyHours, delayDriftDays, teamLoadFactor);
 
   return {
     estimatedEffortHours,
     adjustedEffortHours,
     predictedCompletion,
-    confidence,
+    rawConfidence,
     risk,
     delayDriftDays,
     dailyCapacityHours: calculateDailyProductiveHours(workWindow)
+  };
+}
+
+export function predictEtaSync(input: EtaInput): EtaResult {
+  const base = computeEta(input);
+  return {
+    ...base,
+    confidence: base.rawConfidence
+  };
+}
+
+export async function predictEta(input: EtaInput): Promise<EtaResult> {
+  const base = computeEta(input);
+  let confidence = base.rawConfidence;
+  if (input.workspaceId) {
+    const { confidenceCalibrationService } = await import('./confidenceCalibrationService');
+    const adj = await confidenceCalibrationService.getConfidenceAdjustment(input.workspaceId, base.rawConfidence);
+    confidence = adj.adjustedConfidence;
+
+    if (input.assigneeId || input.taskName || input.projectId) {
+      const { contextPredictionService, inferTaskCategory } = await import('./contextPredictionService');
+      const contexts: Array<{ type: 'assignee' | 'task_category' | 'project_type' | 'execution_mode' | 'industry'; value: string }> = [];
+      if (input.assigneeId) contexts.push({ type: 'assignee', value: input.assigneeId });
+      if (input.taskName) contexts.push({ type: 'task_category', value: inferTaskCategory(input.taskName, input.taskTags) });
+      const ctxAdj = await contextPredictionService.getContextAdjustment(input.workspaceId, base.rawConfidence, contexts);
+      confidence = ctxAdj.adjustedConfidence;
+    }
+  }
+
+  return {
+    ...base,
+    confidence
   };
 }
 
@@ -147,9 +174,13 @@ export function calculateTaskCountdown(createdAt: string | undefined, weightHour
     return { text: 'DONE', color: 'text-emerald-500', pulse: 'bg-emerald-500' };
   }
 
+  if (!weightHours || weightHours <= 0) {
+    return { text: 'No task estimates available', color: 'text-white/30 font-mono', pulse: 'bg-white/10' };
+  }
+
   const now = Date.now();
   const createdTime = new Date(createdAt || new Date()).getTime();
-  const targetTime = createdTime + Math.max(0.1, weightHours || 5) * 60 * 60 * 1000;
+  const targetTime = createdTime + weightHours * 60 * 60 * 1000;
   const remainingMs = targetTime - now;
 
   if (remainingMs <= 0) {
