@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Project, Team, Task, TaskDependency } from '../types';
+import { Project, Team, Task, TaskDependency, Sprint, Epic, Milestone, Approval, Meeting, ExecutionMode } from '../types';
 
 interface DashboardContextType {
   projects: Project[];
@@ -7,6 +7,11 @@ interface DashboardContextType {
   dependencies: TaskDependency[];
   profiles: any[];
   teams: Team[];
+  sprints: Sprint[];
+  epics: Epic[];
+  milestones: Milestone[];
+  approvals: Approval[];
+  meetings: Meeting[];
   userCustomRoles: Record<string, string>;
   customRoles: string[];
   systemData: any;
@@ -38,6 +43,9 @@ interface DashboardContextType {
   tilesPerRow?: number;
   setIsRosterOpen?: (open: boolean) => void;
   setSelectedProject?: (project: Project | null) => void;
+  createSprint?: (sprint: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createMeeting?: (meeting: Omit<Meeting, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateExecutionMode?: (projectId: string, mode: ExecutionMode) => Promise<void>;
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null);

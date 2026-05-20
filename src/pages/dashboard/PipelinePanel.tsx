@@ -3,7 +3,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import ExecutionBoard from '../../components/ExecutionBoard';
 import { GanttView } from '../../components/gantt/GanttView';
+import { SprintBoard } from '../../components/scrum/SprintBoard';
+import { SDLCBoard } from '../../components/sdlc/SDLCBoard';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import type { Milestone, Approval, Meeting, Epic, Sprint } from '../../types';
 
 export function PipelinePanel() {
   const { profile } = useAuth();
@@ -16,15 +19,24 @@ export function PipelinePanel() {
     handlePromoteTaskToAsset 
   } = useDashboard();
 
+  const [milestones] = useState<Milestone[]>([]);
+  const [approvals] = useState<Approval[]>([]);
+  const [meetings] = useState<Meeting[]>([]);
+  const [epics] = useState<Epic[]>([]);
+  const [sprints] = useState<Sprint[]>([]);
+
   React.useEffect(() => {
     const handleSwitch = () => setViewMode('board');
     window.addEventListener('switch-to-board', handleSwitch);
     return () => window.removeEventListener('switch-to-board', handleSwitch);
   }, []);
 
+  const kanbanProjects = projects.filter(p => p.execution_mode !== 'SCRUM');
+  const scrumProjects = projects.filter(p => p.execution_mode === 'SCRUM');
+  const sdlcProjects = projects.filter(p => p.execution_mode === 'SDLC');
+
   return (
     <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12">
-      {/* Sleek Board/Gantt Switcher */}
       <div className="flex justify-between items-center mb-8 bg-[#090a0f]/40 border border-white/10 p-4 rounded-lg backdrop-blur-md">
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wider text-white">Pipeline Workspace</h2>
@@ -55,18 +67,54 @@ export function PipelinePanel() {
       </div>
 
       {viewMode === 'board' ? (
-        <ExecutionBoard
-          projects={projects}
-          users={profiles}
-          currentUserProfile={profile}
-          notify={notify}
-          onRecalibrateAnalytics={() => {
-            fetchProjects();
-          }}
-          onPromoteToAsset={handlePromoteTaskToAsset}
-        />
+        <div className="space-y-8">
+          <ExecutionBoard
+            projects={kanbanProjects}
+            users={profiles}
+            currentUserProfile={profile}
+            notify={notify}
+            onRecalibrateAnalytics={() => {
+              fetchProjects();
+            }}
+            onPromoteToAsset={handlePromoteTaskToAsset}
+          />
+
+          {scrumProjects.map(project => (
+            <SprintBoard
+              key={project.id}
+              projectId={project.id}
+              workspaceId={project.workspace_id}
+              sprints={sprints.filter(s => s.project_id === project.id)}
+              tasks={[]}
+              users={profiles}
+              epics={epics.filter(e => e.project_id === project.id)}
+              currentUserProfile={profile}
+              notify={notify}
+              onUpdateTaskStatus={async () => {}}
+              onCreateTask={async () => {}}
+              onCreateSprint={async () => {}}
+            />
+          ))}
+
+          {sdlcProjects.map(project => (
+            <SDLCBoard
+              key={project.id}
+              project={project}
+              workspaceId={project.workspace_id}
+              tasks={[]}
+              users={profiles}
+              milestones={milestones.filter(m => m.project_id === project.id)}
+              approvals={approvals.filter(a => a.project_id === project.id)}
+              meetings={meetings.filter(m => m.project_id === project.id)}
+              currentUserProfile={profile}
+              notify={notify}
+              onUpdateTaskStatus={async () => {}}
+              onCreateTask={async () => {}}
+            />
+          ))}
+        </div>
       ) : (
-        <GanttView />
+        <GanttView milestones={milestones} meetings={meetings} />
       )}
     </main>
   );

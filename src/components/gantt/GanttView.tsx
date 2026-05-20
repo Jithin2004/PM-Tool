@@ -1,6 +1,7 @@
 import React, { useRef, useState, useMemo, useCallback, useEffect } from 'react';
 import { useDashboard } from '../../context/DashboardContext';
-import { AlertTriangle, BrainCircuit, Activity, Clock, GripVertical } from 'lucide-react';
+import { AlertTriangle, BrainCircuit, Activity, Clock, GripVertical, Diamond, Calendar } from 'lucide-react';
+import type { Milestone, Meeting } from '../../types';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 const ROW_H      = 56;   // px per task row
@@ -103,7 +104,7 @@ interface DragState {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export function GanttView() {
+export function GanttView({ milestones = [], meetings = [] }: { milestones?: Milestone[]; meetings?: Meeting[] }) {
   const { tasks, dependencies, profiles, updateTaskDates, notify } = useDashboard();
 
   const [viewMode,  setViewMode]  = useState<ViewMode>('Week');
@@ -474,6 +475,40 @@ export function GanttView() {
                       })}
                     </svg>
 
+                    {/* Milestones (diamond markers) */}
+                    {(milestones ?? []).map((m, mi) => {
+                      const mDate = sod(new Date(m.target_date));
+                      const mX = getX(mDate, origin, viewMode);
+                      if (mX < 0 || mX > totalWidth) return null;
+                      return (
+                        <div
+                          key={`ms-${m.id}`}
+                          className="absolute z-20 pointer-events-none"
+                          style={{ left: `${mX - 8}px`, top: '-4px' }}
+                          title={`${m.title} (${m.status})`}
+                        >
+                          <Diamond className={`w-4 h-4 ${m.status === 'achieved' ? 'text-emerald-400' : m.status === 'missed' ? 'text-red-400' : 'text-cyan-400'}`} />
+                        </div>
+                      );
+                    })}
+
+                    {/* Meeting markers (calendar icons on timeline) */}
+                    {(meetings ?? []).slice(0, 20).map((m, mi) => {
+                      const mDate = sod(new Date(m.start_time));
+                      const mX = getX(mDate, origin, viewMode);
+                      if (mX < 0 || mX > totalWidth) return null;
+                      return (
+                        <div
+                          key={`mt-${m.id}`}
+                          className="absolute z-15 pointer-events-none"
+                          style={{ left: `${mX - 6}px`, top: `${totalBodyH + 4}px` }}
+                          title={`${m.title} (${m.meeting_type})`}
+                        >
+                          <Calendar className="w-3 h-3 text-purple-400/60" />
+                        </div>
+                      );
+                    })}
+
                     {/* Task bars */}
                     {effectiveTasks.map((task, i) => {
                       const sc      = STATUS_COLORS[task.status] ?? STATUS_COLORS.backlog;
@@ -598,6 +633,14 @@ export function GanttView() {
               <div className="flex justify-between items-center">
                 <span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Tasks Mapped</span>
                 <span className="text-[9px] font-mono font-bold text-cyan-400">{effectiveTasks.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Milestones</span>
+                <span className="text-[9px] font-mono font-bold text-cyan-400">{(milestones ?? []).length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Meetings</span>
+                <span className="text-[9px] font-mono font-bold text-purple-400">{(meetings ?? []).length}</span>
               </div>
             </div>
           </div>

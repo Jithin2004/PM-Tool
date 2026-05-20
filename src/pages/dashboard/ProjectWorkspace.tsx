@@ -735,6 +735,7 @@ export function ProjectWorkspace({
 
   const filteredProjects = useMemo(() => {
     return projects
+      .filter(p => p.execution_mode !== 'SCRUM')
       .filter(p => dashboardTab === 'active' ? p.status !== 'deployed' : p.status === 'deployed')
       .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [projects, dashboardTab, searchTerm]);

@@ -6,6 +6,7 @@ import { useTasks } from '../hooks/useTasks';
 import { TaskCard } from './task/TaskCard';
 import { TaskCreateModal } from './task/TaskCreateModal';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { KANBAN_COLUMNS, SCRUM_COLUMNS } from '../constants/product';
 import { TaskStatus, Task, Project } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -44,18 +45,9 @@ export default function ExecutionBoard({
   // Columns definition based on Toggle mode
   const columns = useMemo(() => {
     if (viewMode === 'kanban') {
-      return [
-        { id: 'backlog', title: 'Triage / Backlog', color: 'border-blue-500/20' },
-        { id: 'in_progress', title: 'In Flight', color: 'border-yellow-500/20' },
-        { id: 'review', title: 'Validation Roster', color: 'border-green-500/20' }
-      ];
+      return KANBAN_COLUMNS;
     } else {
-      return [
-        { id: 'backlog', title: 'Sprint Backlog', color: 'border-purple-500/20' },
-        { id: 'in_progress', title: 'In Progress', color: 'border-yellow-500/20' },
-        { id: 'review', title: 'Code Review', color: 'border-orange-500/20' },
-        { id: 'done', title: 'Merged Releases', color: 'border-emerald-500/20' }
-      ];
+      return SCRUM_COLUMNS;
     }
   }, [viewMode]);
 
@@ -214,7 +206,7 @@ export default function ExecutionBoard({
       </div>
 
       {/* Lane Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className={`grid gap-4 ${columns.length > 4 ? 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5' : 'grid-cols-1 md:grid-cols-3 lg:grid-cols-4'}`}>
         {columns.map(col => {
           const colTasks = tasks.filter(t => t.status === col.id && (!filterByProject || t.project_id === filterByProject));
           const TaskRow = ({ index, style }: { index: number; style: React.CSSProperties }) => {

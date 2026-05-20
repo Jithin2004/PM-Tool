@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { PROJECT_TEMPLATES } from '../../constants/product';
+import { PROJECT_TEMPLATES, EXECUTION_MODES } from '../../constants/product';
 import { predictEta } from '../../services/etaService';
 import type { Priority, ProjectDraft, ProjectTemplate } from '../../types/project';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
@@ -15,6 +15,7 @@ const INITIAL_PROJECT: ProjectDraft = {
 
 export function ProjectCreatePage() {
   const [draft, setDraft] = useState<ProjectDraft>(INITIAL_PROJECT);
+  const [executionMode, setExecutionMode] = useState('KANBAN');
   const prediction = useMemo(() => predictEta({
     best: 24,
     likely: 40,
@@ -62,6 +63,12 @@ export function ProjectCreatePage() {
               Template
               <select value={draft.template} onChange={event => setDraft(prev => ({ ...prev, template: event.target.value as ProjectTemplate }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white">
                 {PROJECT_TEMPLATES.map(template => <option key={template}>{template}</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-medium">
+              Execution Mode
+              <select value={executionMode} onChange={event => setExecutionMode(event.target.value)} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white">
+                {EXECUTION_MODES.map(mode => <option key={mode} value={mode}>{mode}</option>)}
               </select>
             </label>
           </div>
