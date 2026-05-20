@@ -37,6 +37,16 @@ export function ResolveRouter() {
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
   const { profile, logout, loading: authLoading } = useAuth();
 
+  console.log(
+    "[ResolveRouter RENDER]:",
+    "\n- pathname:", pathname,
+    "\n- user (WorkspaceContext):", user?.email,
+    "\n- profile (AuthContext):", profile?.email,
+    "\n- workspace:", workspace?.name,
+    "\n- workspaceLoading:", workspaceLoading,
+    "\n- authLoading:", authLoading
+  );
+
   if (workspaceLoading || authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white">
@@ -49,9 +59,6 @@ export function ResolveRouter() {
   }
 
   if (!user) {
-    if (window.location.pathname !== '/' && window.location.pathname !== '/onboarding/workspace') {
-      window.history.replaceState(null, '', '/');
-    }
     return <AuthPage />;
   }
 

@@ -63,18 +63,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [profile?.workspace_id]);
 
   useEffect(() => {
+    console.log("[WorkspaceContext useEffect TRIGGERED]: authLoading:", authLoading, "profile:", profile ? profile.email : "null");
     if (authLoading) {
       setLoading(true);
       return;
     }
 
     if (!isSupabaseConfigured) {
+      console.warn("[WorkspaceContext]: Supabase not configured, skipping");
       setWorkspace(null);
       setLoading(false);
       return;
     }
 
     if (!profile) {
+      console.log("[WorkspaceContext]: profile is null, resetting user/workspace and stopping load");
       setUser(null);
       setWorkspace(null);
       setLoading(false);
@@ -82,30 +85,35 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Align active user with profile identity
+    console.log("[WorkspaceContext]: setting user to profile:", profile.email);
     setUser(profile as any);
 
     if (!profile.workspace_id) {
+      console.log("[WorkspaceContext]: profile has no workspace_id, stopping load");
       setWorkspace(null);
       setLoading(false);
       return;
     }
 
+    console.log("[WorkspaceContext]: profile workspace_id found:", profile.workspace_id, "loading workspace row...");
     setLoading(true);
     let active = true;
 
     const loadWorkspace = async () => {
       try {
-        if (import.meta.env.DEV) {
-          console.log("WorkspaceContext: Loading workspace matching profile:", profile.workspace_id);
-        }
+        console.log("[WorkspaceContext loadWorkspace querying workspaces table for id]:", profile.workspace_id);
         const { data: workspaceRow, error: workspaceError } = await supabase
           .from('workspaces')
           .select('*')
           .eq('id', profile.workspace_id)
           .maybeSingle();
 
-        if (!active) return;
+        if (!active) {
+          console.log("[WorkspaceContext loadWorkspace]: not active, ignoring query result");
+          return;
+        }
 
+        console.log("[WorkspaceContext loadWorkspace completed]: error:", workspaceError, "row:", workspaceRow);
         if (workspaceError) throw workspaceError;
         if (workspaceRow) {
           setWorkspace(prev => {
@@ -134,12 +142,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     loadWorkspace();
 
     // Bulletproof fallback to absolutely prevent infinite loading screens
-    // Shortened to 2.5s for normal quick-refresh experience.
+    // Extended to 15s to support cold starts and network delays on reload.
     const safetyTimeout = setTimeout(() => {
-      if (active) {
-        setLoading(false);
-      }
-    }, 2500);
+       if (active) {
+         setLoading(false);
+       }
+    }, 15000);
 
     return () => {
       active = false;

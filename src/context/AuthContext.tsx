@@ -56,18 +56,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     syncUserRef.current = authUser.id;
 
     const promise = (async () => {
-      if (import.meta.env.DEV) {
-        console.log("AuthContext: syncProfile() started for user:", authUser.id);
-      }
+      console.log("[AuthContext syncProfile START]: user email:", authUser.email, "id:", authUser.id);
 
       try {
         const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
         const email = authUser.email;
         const fullName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email?.split('@')[0] || 'User';
 
-        if (import.meta.env.DEV) {
-          console.log("AuthContext: syncProfile() querying users table...");
-        }
+        console.log("[AuthContext syncProfile querying users table...]");
         // 1. Primary Query: Canonical users table
         let { data, error } = await supabase
           .from('users')
@@ -75,9 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', authUser.id)
           .maybeSingle();
 
-        if (import.meta.env.DEV) {
-          console.log("AuthContext: syncProfile() users query completed. error:", error, "data:", data);
-        }
+        console.log("[AuthContext syncProfile query complete]: error:", error, "data:", data);
         if (error && error.code !== 'PGRST116') {
           console.error("Error fetching from users table:", error);
         }
@@ -196,14 +190,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             auth_user_id: data.id,
             designation: data.role === 'super_admin' ? 'Super Admin' : data.role === 'pm' ? 'Project Manager' : data.role === 'pending-workspace-setup' ? 'Pending Setup' : 'Developer'
           };
+          console.log("[AuthContext syncProfile success]: profile set with designation:", profileWithDesignation.designation);
           setProfile(profileWithDesignation as User);
           // Only mark as successfully synced if we actually successfully retrieved/bootstrapped the profile
           lastSyncedUserIdRef.current = authUser.id;
         } else {
+          console.warn("[AuthContext syncProfile]: no user data returned, setting profile to null");
           setProfile(null);
         }
       } catch (err) {
-        console.error("Identity sync failed:", err);
+        console.error("[AuthContext syncProfile CRITICAL ERROR]:", err);
       } finally {
         if (syncUserRef.current === authUser.id) {
           syncPromiseRef.current = null;
@@ -225,12 +221,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initAuth = async () => {
       try {
-        if (import.meta.env.DEV) {
-          console.log("AuthContext: Initializing auth state...");
-        }
+        console.log("[AuthContext initAuth START]");
         const { data: { session } } = await supabase.auth.getSession();
         if (!mounted) return;
         
+        console.log("[AuthContext initAuth getSession resolved]: session:", session ? "FOUND" : "NULL", "user:", session?.user?.email);
         setUser(session?.user || null);
         if (session?.user) {
           await syncProfile(session.user);
@@ -238,8 +233,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
         }
       } catch (err) {
-        console.error("AuthContext initialization error:", err);
+        console.error("[AuthContext initAuth CRITICAL ERROR]:", err);
       } finally {
+        console.log("[AuthContext initAuth FINISHED] setting loading to false");
         setLoading(false);
       }
     };
@@ -248,26 +244,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
 
     // Bulletproof fallback to absolutely prevent infinite loading screens
-    // Shortened to 2.5s for normal quick-refresh experience.
+    // Extended to 15s to support cold starts and network delays on reload.
     const safetyTimeout = setTimeout(() => {
+      console.warn("[AuthContext safetyTimeout triggered!] forcing loading to false");
       setLoading(false);
-    }, 2500);
+    }, 15000);
 
-    if (import.meta.env.DEV) {
-      console.log("AuthContext: subscribing to onAuthStateChange...");
-    }
+    console.log("[AuthContext subscribing to onAuthStateChange]");
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (import.meta.env.DEV) {
-        console.log("AuthContext: onAuthStateChange event:", event, "session user:", session?.user?.id || 'none');
-      }
+      console.log("[AuthContext onAuthStateChange TRIGGERED]: event:", event, "session user:", session?.user?.email);
       if (!mounted) return;
       
       if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
         // Ignore initial dummy events during loading/initialization
         if (loadingRef.current) {
-          if (import.meta.env.DEV) {
-            console.log("AuthContext: ignoring SIGNED_OUT/TOKEN_REFRESHED during initial load");
-          }
+          console.log("[AuthContext onAuthStateChange]: ignoring SIGNED_OUT during initial load");
           return;
         }
 
