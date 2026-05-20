@@ -35,7 +35,7 @@ function usePathname() {
 export function ResolveRouter() {
   const pathname = usePathname();
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
-  const { profile, logout, loading: authLoading, profileResolved } = useAuth();
+  const { profile, logout, loading: authLoading, profileResolved, profileHydrating } = useAuth();
 
   console.log(
     "[ResolveRouter RENDER]:",
@@ -44,10 +44,19 @@ export function ResolveRouter() {
     "\n- profile (AuthContext):", profile?.email,
     "\n- workspace:", workspace?.name,
     "\n- workspaceLoading:", workspaceLoading,
-    "\n- authLoading:", authLoading
+    "\n- authLoading:", authLoading,
+    "\n- profileHydrating:", profileHydrating
   );
 
-  if (workspaceLoading || authLoading || !profileResolved) {
+  // Navigate home when profile hydrates successfully during onboarding
+  useEffect(() => {
+    if (profile && !profileHydrating && pathname.startsWith('/onboarding')) {
+      window.history.replaceState(null, '', '/');
+      window.dispatchEvent(new CustomEvent('popstate'));
+    }
+  }, [profile, profileHydrating, pathname]);
+
+  if (workspaceLoading || authLoading || !profileResolved || profileHydrating) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white">
         <div className="text-center">

@@ -7,6 +7,7 @@ interface AuthContextType {
   profile: User | null;
   loading: boolean;
   profileResolved: boolean;
+  profileHydrating: boolean;
   logout: () => Promise<void>;
   updateRole: (id: string, role: User['role']) => Promise<boolean>;
   updateProfile: (updates: Partial<User>) => Promise<boolean>;
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileResolved, setProfileResolved] = useState(false);
+  const [profileHydrating, setProfileHydrating] = useState(false);
 
   // Refs to prevent stale closures in event listeners
   const loadingRef = React.useRef(loading);
@@ -87,10 +89,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (!data) {
-          // Retry loop: users table may lag behind auth on cold start / replication delay
-          const delays = [250, 500, 1000];
-          for (const ms of delays) {
-            await new Promise(r => setTimeout(r, ms));
+          setProfileHydrating(true);
+          const delays = [250, 500, 1000, 2000];
+          for (let i = 0; i < delays.length; i++) {
+            await new Promise(r => setTimeout(r, delays[i]));
+            console.log(`[AuthContext] hydrating profile retry ${i + 1}/${delays.length}`);
             const retry = await supabase
               .from('users')
               .select('*')
@@ -106,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               break;
             }
           }
+          setProfileHydrating(false);
         }
 
         // Still no data after retries — fall through to invitation / bootstrap logic
@@ -404,7 +408,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, syncProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, profileResolved, logout, updateRole, updateProfile, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileResolved, profileHydrating, logout, updateRole, updateProfile, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
