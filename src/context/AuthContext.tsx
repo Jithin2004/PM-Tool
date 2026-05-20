@@ -23,6 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadingRef = React.useRef(loading);
   const userRef = React.useRef(user);
   const lastSyncedUserIdRef = React.useRef<string | null>(null);
+  const syncPromiseRef = React.useRef<Promise<void> | null>(null);
+  const syncUserRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     loadingRef.current = loading;
@@ -34,108 +36,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const syncProfile = useCallback(async (authUser: any, force = false) => {
     if (!isSupabaseConfigured) return;
+    
+    // If we already synced this user and it's not a forced refresh, skip
     if (!force && lastSyncedUserIdRef.current === authUser.id) {
       if (import.meta.env.DEV) {
-        console.log("AuthContext: syncProfile() already synced/syncing for:", authUser.id);
+        console.log("AuthContext: syncProfile() already completed for:", authUser.id);
       }
       return;
     }
-    lastSyncedUserIdRef.current = authUser.id;
 
-    if (import.meta.env.DEV) {
-      console.log("AuthContext: syncProfile() started for user:", authUser.id);
+    // If a sync for the same user is currently in progress, return the existing promise
+    if (!force && syncUserRef.current === authUser.id && syncPromiseRef.current) {
+      if (import.meta.env.DEV) {
+        console.log("AuthContext: syncProfile() already in progress for:", authUser.id);
+      }
+      return syncPromiseRef.current;
     }
 
-    try {
-      const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
-      const email = authUser.email;
-      const fullName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email?.split('@')[0] || 'User';
+    syncUserRef.current = authUser.id;
 
+    const promise = (async () => {
       if (import.meta.env.DEV) {
-        console.log("AuthContext: syncProfile() querying users table...");
-      }
-      // 1. Primary Query: Canonical users table
-      let { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .maybeSingle();
-
-      if (import.meta.env.DEV) {
-        console.log("AuthContext: syncProfile() users query completed. error:", error, "data:", data);
-      }
-      if (error && error.code !== 'PGRST116') {
-        console.error("Error fetching from users table:", error);
+        console.log("AuthContext: syncProfile() started for user:", authUser.id);
       }
 
-      if (!data) {
-        // 1. Look up pending invitation first, supporting case-insensitive checks
-        let inviteToUse = null;
-        if (email) {
-          const { data: invite, error: inviteError } = await supabase
-            .from('invitations')
-            .select('*')
-            .or(`email.eq.${email},email.eq.${email.toLowerCase()},email.eq.${email.toUpperCase()}`)
-            .in('status', ['pending', 'accepted'])
-            .maybeSingle();
+      try {
+        const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
+        const email = authUser.email;
+        const fullName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email?.split('@')[0] || 'User';
 
-          if (!inviteError && invite && new Date(invite.expires_at) >= new Date()) {
-            inviteToUse = invite;
-          }
+        if (import.meta.env.DEV) {
+          console.log("AuthContext: syncProfile() querying users table...");
+        }
+        // 1. Primary Query: Canonical users table
+        let { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+        if (import.meta.env.DEV) {
+          console.log("AuthContext: syncProfile() users query completed. error:", error, "data:", data);
+        }
+        if (error && error.code !== 'PGRST116') {
+          console.error("Error fetching from users table:", error);
         }
 
-        if (inviteToUse) {
-          if (import.meta.env.DEV) {
-            console.log("Valid pending invitation found. Bootstrapping invited user row...");
-          }
-          // 1. Create canonical users row with pre-assigned role and workspace FIRST
-          // This must happen before updating invitation status to satisfy RLS!
-          const { data: newUserRow, error: insertError } = await supabase
-            .from('users')
-            .upsert({
-              id: authUser.id,
-              email: email,
-              workspace_id: inviteToUse.workspace_id,
-              role: inviteToUse.role,
-              full_name: fullName,
-              avatar_url: googleAvatar,
-              availability_factor: 1
-            })
-            .select()
-            .single();
+        if (!data) {
+          // Look up pending invitation first, supporting case-insensitive checks
+          let inviteToUse = null;
+          if (email) {
+            const { data: invite, error: inviteError } = await supabase
+              .from('invitations')
+              .select('*')
+              .or(`email.eq.${email},email.eq.${email.toLowerCase()},email.eq.${email.toUpperCase()}`)
+              .in('status', ['pending', 'accepted'])
+              .maybeSingle();
 
-          if (insertError) {
-            console.error("Failed to bootstrap invited user row:", insertError);
-          } else {
-            data = newUserRow;
-            
-            // 2. Only accept invitation AFTER user is successfully created
-            if (inviteToUse.status === 'pending') {
-              await supabase
-                .from('invitations')
-                .update({ status: 'accepted' })
-                .eq('id', inviteToUse.id);
+            if (!inviteError && invite && new Date(invite.expires_at) >= new Date()) {
+              inviteToUse = invite;
             }
           }
-        } else {
-          // No invitation found. Check if the system is completely empty for bootstrap setup.
-          const { count, error: countError } = await supabase
-            .from('users')
-            .select('*', { count: 'exact', head: true });
 
-          const isFreshOrg = !countError && count === 0;
-
-          if (isFreshOrg) {
+          if (inviteToUse) {
             if (import.meta.env.DEV) {
-              console.log("First user detected in AuthContext. Allowing bootstrap as pending-workspace-setup...");
+              console.log("Valid pending invitation found. Bootstrapping invited user row...");
             }
+            // Create canonical users row with pre-assigned role and workspace FIRST
             const { data: newUserRow, error: insertError } = await supabase
               .from('users')
               .upsert({
                 id: authUser.id,
                 email: email,
-                workspace_id: null,
-                role: 'pending-workspace-setup',
+                workspace_id: inviteToUse.workspace_id,
+                role: inviteToUse.role,
                 full_name: fullName,
                 avatar_url: googleAvatar,
                 availability_factor: 1
@@ -144,56 +118,101 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .single();
 
             if (insertError) {
-              console.error("Failed to insert pending user row in AuthContext:", insertError);
+              console.error("Failed to bootstrap invited user row:", insertError);
             } else {
               data = newUserRow;
+              
+              if (inviteToUse.status === 'pending') {
+                await supabase
+                  .from('invitations')
+                  .update({ status: 'accepted' })
+                  .eq('id', inviteToUse.id);
+              }
             }
           } else {
-            // Not a fresh org and no invitation found -> Block and show Access Restrained
-            if (import.meta.env.DEV) {
-              console.log("Uninvited user. Access blocked for:", email);
+            // No invitation found. Check if the system is completely empty for bootstrap setup.
+            const { count, error: countError } = await supabase
+              .from('users')
+              .select('*', { count: 'exact', head: true });
+
+            const isFreshOrg = !countError && count === 0;
+
+            if (isFreshOrg) {
+              if (import.meta.env.DEV) {
+                console.log("First user detected in AuthContext. Allowing bootstrap as pending-workspace-setup...");
+              }
+              const { data: newUserRow, error: insertError } = await supabase
+                .from('users')
+                .upsert({
+                  id: authUser.id,
+                  email: email,
+                  workspace_id: null,
+                  role: 'pending-workspace-setup',
+                  full_name: fullName,
+                  avatar_url: googleAvatar,
+                  availability_factor: 1
+                })
+                .select()
+                .single();
+
+              if (insertError) {
+                console.error("Failed to insert pending user row in AuthContext:", insertError);
+              } else {
+                data = newUserRow;
+              }
+            } else {
+              if (import.meta.env.DEV) {
+                console.log("Uninvited user. Access blocked for:", email);
+              }
+              const uninvitedProfile = {
+                id: authUser.id,
+                email: email,
+                role: 'uninvited',
+                full_name: fullName,
+                avatar_url: googleAvatar,
+                workspace_id: null,
+                designation: 'Uninvited User'
+              } as any;
+              setProfile(uninvitedProfile);
+              setLoading(false);
+              return;
             }
-            const uninvitedProfile = {
-              id: authUser.id,
-              email: email,
-              role: 'uninvited',
-              full_name: fullName,
-              avatar_url: googleAvatar,
-              workspace_id: null,
-              designation: 'Uninvited User'
-            } as any;
-            setProfile(uninvitedProfile);
-            setLoading(false);
-            return;
+          }
+        } else {
+          if (!data.avatar_url && googleAvatar) {
+            const { data: updatedUser } = await supabase
+              .from('users')
+              .update({ avatar_url: googleAvatar })
+              .eq('id', authUser.id)
+              .select()
+              .maybeSingle();
+            if (updatedUser) data = updatedUser;
           }
         }
-      } else {
-        // We found canonical user in users table. Update avatar if missing.
-        if (!data.avatar_url && googleAvatar) {
-          const { data: updatedUser } = await supabase
-            .from('users')
-            .update({ avatar_url: googleAvatar })
-            .eq('id', authUser.id)
-            .select()
-            .maybeSingle();
-          if (updatedUser) data = updatedUser;
+
+        if (data) {
+          const profileWithDesignation = {
+            ...data,
+            auth_user_id: data.id,
+            designation: data.role === 'super_admin' ? 'Super Admin' : data.role === 'pm' ? 'Project Manager' : data.role === 'pending-workspace-setup' ? 'Pending Setup' : 'Developer'
+          };
+          setProfile(profileWithDesignation as User);
+          // Only mark as successfully synced if we actually successfully retrieved/bootstrapped the profile
+          lastSyncedUserIdRef.current = authUser.id;
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error("Identity sync failed:", err);
+      } finally {
+        if (syncUserRef.current === authUser.id) {
+          syncPromiseRef.current = null;
         }
       }
+    })();
 
-      // Ensure designation field is attached if needed by any consuming components
-      if (data) {
-        const profileWithDesignation = {
-          ...data,
-          auth_user_id: data.id,
-          designation: data.role === 'super_admin' ? 'Super Admin' : data.role === 'pm' ? 'Project Manager' : data.role === 'pending-workspace-setup' ? 'Pending Setup' : 'Developer'
-        };
-        setProfile(profileWithDesignation as User);
-      } else {
-        setProfile(null);
-      }
-    } catch (err) {
-      console.error("Identity sync failed:", err);
-    }
+    syncPromiseRef.current = promise;
+    return promise;
   }, []);
 
   useEffect(() => {
@@ -229,10 +248,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
 
     // Bulletproof fallback to absolutely prevent infinite loading screens
-    // Increased to 15 seconds to allow paused Supabase project (free tier database cold-starts) plenty of time to wake up.
+    // Shortened to 2.5s for normal quick-refresh experience.
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
-    }, 15000);
+    }, 2500);
 
     if (import.meta.env.DEV) {
       console.log("AuthContext: subscribing to onAuthStateChange...");
