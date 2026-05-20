@@ -14,6 +14,14 @@ CREATE TABLE IF NOT EXISTS calendar_sync_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE calendar_sync_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Sync logs are isolated by workspace" ON calendar_sync_logs;
+CREATE POLICY "Sync logs are isolated by workspace"
+  ON calendar_sync_logs FOR ALL
+  USING (workspace_id = current_workspace())
+  WITH CHECK (workspace_id = current_workspace());
+
 CREATE INDEX IF NOT EXISTS idx_calendar_sync_logs_workspace ON calendar_sync_logs (workspace_id);
 CREATE INDEX IF NOT EXISTS idx_calendar_sync_logs_created ON calendar_sync_logs (workspace_id, created_at DESC);
 
