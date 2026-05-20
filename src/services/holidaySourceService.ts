@@ -67,6 +67,19 @@ class HolidaySourceService {
   async syncForWorkspace(workspaceId: string, country: string, region: string, actorId?: string): Promise<{ imported: number; status: string }> {
     if (!country) return { imported: 0, status: 'skipped' };
 
+    // Only workspace owner or super_admin may sync
+    if (actorId) {
+      const { data: actor } = await supabase
+        .from('users')
+        .select('id, role, workspace_id')
+        .eq('id', actorId)
+        .maybeSingle();
+      if (!actor || (actor.role !== 'super_admin' && actor.workspace_id !== workspaceId)) {
+        console.log('[Calendar Sync] skipped: non-owner');
+        return { imported: 0, status: 'skipped' };
+      }
+    }
+
     const currentYear = new Date().getFullYear();
     const provider = this.resolveProvider(country);
     if (!provider) return { imported: 0, status: 'unsupported' };
@@ -205,7 +218,19 @@ class HolidaySourceService {
       }));
   }
 
-  async checkAndSyncNextYear(workspaceId: string, country: string, region: string): Promise<boolean> {
+  async checkAndSyncNextYear(workspaceId: string, country: string, region: string, actorId?: string): Promise<boolean> {
+    if (actorId) {
+      const { data: actor } = await supabase
+        .from('users')
+        .select('id, role, workspace_id')
+        .eq('id', actorId)
+        .maybeSingle();
+      if (!actor || (actor.role !== 'super_admin' && actor.workspace_id !== workspaceId)) {
+        console.log('[Calendar Sync] skipped: non-owner');
+        return false;
+      }
+    }
+
     const currentYear = new Date().getFullYear();
     const { data: existing } = await supabase
       .from('calendar_sync_logs')
@@ -215,7 +240,7 @@ class HolidaySourceService {
       .maybeSingle();
 
     if (!existing) {
-      await this.syncForWorkspace(workspaceId, country, region);
+      await this.syncForWorkspace(workspaceId, country, region, actorId);
       return true;
     }
     return false;

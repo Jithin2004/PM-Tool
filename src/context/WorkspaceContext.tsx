@@ -129,11 +129,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             return parsed;
           });
 
-          // Auto-fetch next year's holidays in background
-          if (parsed.settings?.country) {
+          // Auto-fetch next year's holidays in background (owner / super_admin only)
+          if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || profile.role === 'super_admin')) {
             import('../services/holidaySourceService').then(({ holidaySourceService }) => {
-              holidaySourceService.checkAndSyncNextYear(parsed.id, parsed.settings.country, parsed.settings.region || '').catch(() => {});
+              holidaySourceService.checkAndSyncNextYear(parsed.id, parsed.settings.country, parsed.settings.region || '', profile?.id).catch(() => {});
             });
+          } else if (parsed.settings?.country) {
+            console.log('[Calendar Sync] skipped: non-owner');
           }
         } else {
           setWorkspace(null);
