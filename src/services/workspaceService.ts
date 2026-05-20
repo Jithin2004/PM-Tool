@@ -2,7 +2,7 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { Workspace, WorkspaceSettings } from '../types/workspace';
 import { calendarEventService } from './calendarEventService';
-import { getHolidaysForRegion } from '../utils/holidays';
+import { holidaySourceService } from './holidaySourceService';
 
 export interface CreateWorkspaceInput {
   name: string;
@@ -40,6 +40,7 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
   let saturdayRule: WorkspaceSettings['saturdayRule'] = 'off';
   let country = '';
   let region = '';
+  let city = '';
   let shutdowns: WorkspaceSettings['shutdowns'] = [];
 
   const rawBusinessType = row.business_type || 'Software';
@@ -51,6 +52,7 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
       saturdayRule = parsed.saturdayRule || 'off';
       country = parsed.country || '';
       region = parsed.region || '';
+      city = parsed.city || '';
       shutdowns = parsed.shutdowns || [];
     } catch (err) {
       // Fallback
@@ -92,6 +94,7 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
       saturdayRule,
       country,
       region,
+      city,
       shutdowns
     }
   };
@@ -103,6 +106,7 @@ export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
     saturdayRule: settings.saturdayRule || 'off',
     country: settings.country || '',
     region: settings.region || '',
+    city: settings.city || '',
     shutdowns: settings.shutdowns || []
   };
 
@@ -157,43 +161,7 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
 }
 
 export async function syncWorkspaceHolidays(workspaceId: string, country: string, region: string, actorId?: string) {
-  if (!country) return;
-
-  const currentYear = new Date().getFullYear();
-  const holidays = getHolidaysForRegion(country, region, currentYear);
-  const nextYearHolidays = getHolidaysForRegion(country, region, currentYear + 1);
-  const allHolidays = [...holidays, ...nextYearHolidays];
-
-  if (allHolidays.length > 0) {
-    try {
-      const { data: existing } = await supabase
-        .from('calendar_events')
-        .select('id')
-        .eq('workspace_id', workspaceId)
-        .eq('event_type', 'holiday')
-        .eq('auto_generated', true);
-      if (existing) {
-        await supabase.from('calendar_events').update({ deleted_at: new Date().toISOString() }).in('id', existing.map(e => e.id)).is('deleted_at', null);
-      }
-
-      for (const h of allHolidays) {
-        await calendarEventService.createEvent({
-          workspace_id: workspaceId,
-          event_type: h.type === 'festival' ? 'festival' : 'holiday',
-          title: h.name,
-          start_date: `${h.date}T00:00:00Z`,
-          end_date: `${h.date}T23:59:59Z`,
-          capacity_impact: 1,
-          is_recurring: true,
-          recurrence_rule: 'FREQ=YEARLY',
-          auto_generated: true,
-          timezone: 'UTC'
-        }, actorId);
-      }
-    } catch (err) {
-      console.error("Failed to sync workspace holidays:", err);
-    }
-  }
+  await holidaySourceService.syncForWorkspace(workspaceId, country, region, actorId);
 }
 
 export async function createWorkspaceForUser({ name, settings, user, templateId, executionMode, defaultLanes, workflowRules }: CreateWorkspaceInput): Promise<Workspace> {

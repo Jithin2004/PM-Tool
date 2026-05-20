@@ -1,7 +1,8 @@
 export interface DerivedHoliday {
-  date: string; // YYYY-MM-DD
+  date: string;
   name: string;
   type: 'public' | 'regional' | 'festival' | 'company';
+  source?: string;
 }
 
 export function getHolidaysForRegion(country: string, region: string, year: number): DerivedHoliday[] {

@@ -19,6 +19,7 @@ export interface WorkspaceSettings {
   saturdayRule?: 'all' | 'off' | '2nd_4th' | '1st_3rd' | 'custom';
   country?: string;
   region?: string;
+  city?: string;
   shutdowns?: Array<{ start: string; end: string; name: string }>;
 }
 

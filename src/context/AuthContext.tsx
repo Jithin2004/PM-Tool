@@ -3,9 +3,10 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User } from '../types';
 
 interface AuthContextType {
-  user: any | null; // Supabase auth user
-  profile: User | null; // Canonical profile
+  user: any | null;
+  profile: User | null;
   loading: boolean;
+  profileResolved: boolean;
   logout: () => Promise<void>;
   updateRole: (id: string, role: User['role']) => Promise<boolean>;
   updateProfile: (updates: Partial<User>) => Promise<boolean>;
@@ -18,6 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileResolved, setProfileResolved] = useState(false);
 
   // Refs to prevent stale closures in event listeners
   const loadingRef = React.useRef(loading);
@@ -77,6 +79,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (!data) {
+          // Retry loop: users table may lag behind auth on cold start / replication delay
+          const delays = [250, 500, 1000];
+          for (const ms of delays) {
+            await new Promise(r => setTimeout(r, ms));
+            const retry = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', authUser.id)
+              .maybeSingle();
+            if (retry.data) {
+              data = retry.data;
+              error = null;
+              break;
+            }
+            if (retry.error && retry.error.code !== 'PGRST116') {
+              error = retry.error;
+              break;
+            }
+          }
+        }
+
+        // Still no data after retries — fall through to invitation / bootstrap logic
+        if (!data) {
           // Look up pending invitation first, supporting case-insensitive checks
           let inviteToUse = null;
           if (email) {
@@ -96,7 +121,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (import.meta.env.DEV) {
               console.log("Valid pending invitation found. Bootstrapping invited user row...");
             }
-            // Create canonical users row with pre-assigned role and workspace FIRST
             const { data: newUserRow, error: insertError } = await supabase
               .from('users')
               .upsert({
@@ -115,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.error("Failed to bootstrap invited user row:", insertError);
             } else {
               data = newUserRow;
-              
+
               if (inviteToUse.status === 'pending') {
                 await supabase
                   .from('invitations')
@@ -124,7 +148,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
             }
           } else {
-            // No invitation found. Check if the system is completely empty for bootstrap setup.
             const { count, error: countError } = await supabase
               .from('users')
               .select('*', { count: 'exact', head: true });
@@ -168,20 +191,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 designation: 'Uninvited User'
               } as any;
               setProfile(uninvitedProfile);
+              setProfileResolved(true);
               setLoading(false);
               return;
             }
           }
-        } else {
-          if (!data.avatar_url && googleAvatar) {
-            const { data: updatedUser } = await supabase
-              .from('users')
-              .update({ avatar_url: googleAvatar })
-              .eq('id', authUser.id)
-              .select()
-              .maybeSingle();
-            if (updatedUser) data = updatedUser;
-          }
+        }
+
+        if (data && !data.avatar_url && googleAvatar) {
+          const { data: updatedUser } = await supabase
+            .from('users')
+            .update({ avatar_url: googleAvatar })
+            .eq('id', authUser.id)
+            .select()
+            .maybeSingle();
+          if (updatedUser) data = updatedUser;
         }
 
         if (data) {
@@ -192,14 +216,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           console.log("[AuthContext syncProfile success]: profile set with designation:", profileWithDesignation.designation);
           setProfile(profileWithDesignation as User);
-          // Only mark as successfully synced if we actually successfully retrieved/bootstrapped the profile
           lastSyncedUserIdRef.current = authUser.id;
+          setProfileResolved(true);
         } else {
           console.warn("[AuthContext syncProfile]: no user data returned, setting profile to null");
           setProfile(null);
+          setProfileResolved(true);
         }
       } catch (err) {
         console.error("[AuthContext syncProfile CRITICAL ERROR]:", err);
+        setProfileResolved(true);
       } finally {
         if (syncUserRef.current === authUser.id) {
           syncPromiseRef.current = null;
@@ -352,7 +378,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, syncProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, logout, updateRole, updateProfile, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileResolved, logout, updateRole, updateProfile, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

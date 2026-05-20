@@ -35,7 +35,7 @@ function usePathname() {
 export function ResolveRouter() {
   const pathname = usePathname();
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
-  const { profile, logout, loading: authLoading } = useAuth();
+  const { profile, logout, loading: authLoading, profileResolved } = useAuth();
 
   console.log(
     "[ResolveRouter RENDER]:",
@@ -47,7 +47,7 @@ export function ResolveRouter() {
     "\n- authLoading:", authLoading
   );
 
-  if (workspaceLoading || authLoading) {
+  if (workspaceLoading || authLoading || !profileResolved) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white">
         <div className="text-center">

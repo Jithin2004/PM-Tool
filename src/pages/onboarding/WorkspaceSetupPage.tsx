@@ -1,13 +1,16 @@
-import React, { useMemo, useState } from 'react';
-import { Check, Plus, X, Layers, GitBranch, Users, Hash, BadgeCheck } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Check, Plus, X, Layers, GitBranch, Users, Hash, BadgeCheck, CalendarDays } from 'lucide-react';
 import { BUSINESS_TYPES, WORKFLOW_TEMPLATES, getTemplatesForBusiness, EXECUTION_MODES } from '../../constants/product';
 import type { WorkflowTemplate } from '../../constants/product';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { predictEtaSync } from '../../services/etaService';
+import { holidaySourceService } from '../../services/holidaySourceService';
 import type { BusinessType, WorkspaceSettings } from '../../types/workspace';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
 import { supabase } from '../../lib/supabase';
+import { COUNTRIES, getCountryByCode } from '../../data/countries';
+import type { DerivedHoliday } from '../../utils/holidays';
 
 const WORKDAYS = [
   { value: 1, label: 'Mon' },
@@ -48,13 +51,33 @@ export function WorkspaceSetupPage() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [invites, setInvites] = useState<string[]>([]);
+  const [previewHolidays, setPreviewHolidays] = useState<DerivedHoliday[]>([]);
+  const [ignoredHolidayDates, setIgnoredHolidayDates] = useState<Set<string>>(new Set());
+  const [previewLoading, setPreviewLoading] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (window.location.pathname !== '/onboarding/workspace') {
       window.history.replaceState(null, '', '/onboarding/workspace');
       window.dispatchEvent(new PopStateEvent('popstate'));
     }
   }, []);
+
+  useEffect(() => {
+    if (step === 4 && settings.country && previewHolidays.length === 0 && !previewLoading) {
+      setPreviewLoading(true);
+      const year = new Date().getFullYear();
+      Promise.all([
+        holidaySourceService.fetchHolidays(settings.country, settings.region || '', year),
+        holidaySourceService.fetchHolidays(settings.country, settings.region || '', year + 1)
+      ]).then(([thisYear, nextYear]) => {
+        setPreviewHolidays([...thisYear, ...nextYear]);
+      }).catch(() => {
+        setPreviewHolidays([]);
+      }).finally(() => {
+        setPreviewLoading(false);
+      });
+    }
+  }, [step, settings.country, settings.region]);
 
   const templateOptions = useMemo(() => getTemplatesForBusiness(settings.businessType), [settings.businessType]);
 
@@ -69,10 +92,12 @@ export function WorkspaceSetupPage() {
     setLocalError(null);
 
     try {
+      let wsId = workspace?.id;
       if (workspace) {
         await updateWorkspaceSettings(settings);
+        wsId = workspace.id;
       } else {
-        await createWorkspace({
+        const created = await createWorkspace({
           name: workspaceName.trim() || 'Resolve Workspace',
           settings,
           templateId: selectedTemplate?.id,
@@ -83,9 +108,33 @@ export function WorkspaceSetupPage() {
             teamStructure: selectedTemplate?.teamStructure || ''
           }
         });
+        wsId = created.id;
         await refreshProfile();
       }
-      setStep(5);
+
+      if (ignoredHolidayDates.size > 0 && wsId) {
+        const ignoreList = Array.from(ignoredHolidayDates);
+        const { data: toRemove } = await supabase
+          .from('calendar_events')
+          .select('id')
+          .eq('workspace_id', wsId)
+          .in('event_type', ['holiday', 'festival'])
+          .eq('auto_generated', true)
+          .is('deleted_at', null);
+        if (toRemove) {
+          const idsToRemove = toRemove.filter(e => {
+            const d = (e as any).start_date?.split('T')[0] || '';
+            return ignoreList.includes(d);
+          }).map(e => e.id);
+          if (idsToRemove.length > 0) {
+            await supabase.from('calendar_events')
+              .update({ deleted_at: new Date().toISOString() })
+              .in('id', idsToRemove);
+          }
+        }
+      }
+
+      setStep(6);
     } catch (err: any) {
       setLocalError(err?.message || 'Workspace setup failed.');
     } finally {
@@ -173,9 +222,9 @@ export function WorkspaceSetupPage() {
         <section className="border border-white/10 bg-white/[0.03] p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Step {step} of 6</p>
+              <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Step {step} of 7</p>
               <h2 className="mt-2 text-2xl font-semibold">
-                {step <= 4 ? 'Set up your workspace' : step === 5 ? 'Invite your team' : 'Create your first project'}
+                {step <= 5 ? 'Set up your workspace' : step === 6 ? 'Invite your team' : 'Create your first project'}
               </h2>
             </div>
           </div>
@@ -211,6 +260,24 @@ export function WorkspaceSetupPage() {
                   ))}
                 </div>
               </div>
+
+              <label className="block text-sm font-medium">
+                Country <span className="text-red-400">*</span>
+                <select
+                  value={settings.country || ''}
+                  onChange={event => {
+                    setSettings(prev => ({ ...prev, country: event.target.value, region: '' }));
+                    setIgnoredHolidayDates(new Set());
+                    setPreviewHolidays([]);
+                  }}
+                  className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none focus:border-white/40"
+                >
+                  <option value="">Select country</option>
+                  {COUNTRIES.map(c => (
+                    <option key={c.code} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </label>
             </div>
           )}
 
@@ -292,13 +359,42 @@ export function WorkspaceSetupPage() {
                 Timezone
                 <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
               </label>
+              {(() => {
+                const countryData = getCountryByCode(settings.country || '');
+                return countryData && countryData.states.length > 0 ? (
+                  <label className="text-sm font-medium">
+                    State/Region
+                    <select
+                      value={settings.region || ''}
+                      onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
+                      className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none focus:border-white/40"
+                    >
+                      <option value="">Select state/region</option>
+                      {countryData.states.map(s => (
+                        <option key={s.code} value={s.name}>{s.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <label className="text-sm font-medium">
+                    State/Region
+                    <input
+                      value={settings.region || ''}
+                      onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
+                      placeholder="Optional"
+                      className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none"
+                    />
+                  </label>
+                );
+              })()}
               <label className="text-sm font-medium">
-                Country
-                <input value={settings.country || ''} onChange={event => setSettings(prev => ({ ...prev, country: event.target.value }))} placeholder="e.g. India" className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none" />
-              </label>
-              <label className="text-sm font-medium">
-                State/Region
-                <input value={settings.region || ''} onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))} placeholder="e.g. Kerala" className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none" />
+                City
+                <input
+                  value={settings.city || ''}
+                  onChange={event => setSettings(prev => ({ ...prev, city: event.target.value }))}
+                  placeholder="Optional"
+                  className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none"
+                />
               </label>
               <div className="sm:col-span-2">
                 <label className="mb-3 block text-sm font-medium">Workdays</label>
@@ -394,6 +490,77 @@ export function WorkspaceSetupPage() {
           )}
 
           {step === 4 && (
+            <div className="space-y-5">
+              <p className="text-sm text-white/70">
+                Review holidays detected for <strong>{settings.country}{settings.region ? ` / ${settings.region}` : ''}</strong>.
+                Uncheck any holidays that do not apply to your workspace. They can be re-enabled later from Settings.
+              </p>
+
+              {previewLoading && (
+                <div className="flex items-center gap-3 py-8 text-sm text-white/50">
+                  <div className="h-4 w-4 animate-spin rounded-full border border-white/30 border-t-white" />
+                  Loading holidays...
+                </div>
+              )}
+
+              {!previewLoading && previewHolidays.length === 0 && settings.country && (
+                <div className="border border-white/10 bg-white/5 p-6 text-center text-sm text-white/50">
+                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40" />
+                  <p>No holidays found for {settings.country}{settings.region ? ` / ${settings.region}` : ''}.</p>
+                  <p className="mt-1 text-xs text-white/40">Holiday coverage is limited to countries with registered providers.</p>
+                </div>
+              )}
+
+              {!previewLoading && previewHolidays.length > 0 && (
+                <div className="divide-y divide-white/5 border border-white/10 max-h-[360px] overflow-y-auto">
+                  {previewHolidays.map(h => {
+                    const dateStr = h.date;
+                    const isIgnored = ignoredHolidayDates.has(dateStr);
+                    return (
+                      <label key={dateStr} className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors cursor-pointer hover:bg-white/[0.02] ${isIgnored ? 'opacity-40' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={!isIgnored}
+                          onChange={() => {
+                            setIgnoredHolidayDates(prev => {
+                              const next = new Set(prev);
+                              if (next.has(dateStr)) next.delete(dateStr);
+                              else next.add(dateStr);
+                              return next;
+                            });
+                          }}
+                          className="accent-white"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium">{h.name}</span>
+                          <span className="ml-2 text-xs text-white/50">{dateStr}</span>
+                        </div>
+                        <span className={`text-[10px] font-mono uppercase px-2 py-0.5 border ${h.type === 'public' ? 'border-amber-500/30 text-amber-400 bg-amber-500/5' : h.type === 'festival' ? 'border-purple-500/30 text-purple-400 bg-purple-500/5' : 'border-blue-500/30 text-blue-400 bg-blue-500/5'}`}>
+                          {h.type}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!settings.country && (
+                <div className="border border-white/10 bg-white/5 p-6 text-center text-sm text-white/50">
+                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40" />
+                  <p>Select a country in step 1 to preview applicable holidays.</p>
+                </div>
+              )}
+
+              {previewHolidays.length > 0 && (
+                <p className="text-xs text-white/40">
+                  {previewHolidays.length - ignoredHolidayDates.size} of {previewHolidays.length} holidays will be imported.
+                  Ignored holidays can be re-enabled later from the Calendar Intelligence panel.
+                </p>
+              )}
+            </div>
+          )}
+
+          {step === 5 && (
             <div className="space-y-4">
               <label className="block text-sm font-medium">
                 Productivity Factor
@@ -418,7 +585,7 @@ export function WorkspaceSetupPage() {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="space-y-5">
               <div className="flex gap-2">
                 <input
@@ -446,7 +613,7 @@ export function WorkspaceSetupPage() {
             </div>
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <div className="border border-white/10 bg-black/30 p-6">
               <div className="mb-4 flex h-12 w-12 items-center justify-center bg-emerald-500/15 text-emerald-300">
                 <Check className="h-5 w-5" />
@@ -474,31 +641,32 @@ export function WorkspaceSetupPage() {
               Back
             </button>
 
-            {step < 4 && (
+            {step < 5 && (
               <button
                 onClick={() => {
                   if (step === 2 && !selectedTemplate) return;
+                  if (step === 4 && !settings.country) return;
                   setStep(prev => prev + 1);
                 }}
-                className={`bg-white px-4 py-2 text-sm font-medium text-black ${step === 2 && !selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''}`}
+                className={`bg-white px-4 py-2 text-sm font-medium text-black ${step === 2 && !selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''} ${step === 4 && !settings.country ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
-                Next
+                {step === 4 ? 'Skip Preview' : 'Next'}
               </button>
             )}
 
-            {step === 4 && (
+            {step === 5 && (
               <button disabled={saving} onClick={saveWorkspace} className="bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50">
                 {saving ? 'Saving...' : 'Save Workspace'}
               </button>
             )}
 
-            {step === 5 && (
-              <button onClick={() => setStep(6)} className="bg-white px-4 py-2 text-sm font-medium text-black">
+            {step === 6 && (
+              <button onClick={() => setStep(7)} className="bg-white px-4 py-2 text-sm font-medium text-black">
                 {invites.length > 0 ? 'Continue' : 'Skip'}
               </button>
             )}
 
-            {step === 6 && (
+            {step === 7 && (
               <button onClick={() => navigate('/')} className="bg-white px-4 py-2 text-sm font-medium text-black">
                 Go to Dashboard
               </button>
