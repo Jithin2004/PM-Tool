@@ -283,7 +283,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           if (userRef.current?.id !== session.user.id) {
             setUser(session.user);
-            await syncProfile(session.user);
+            // Defer the syncProfile call to release the auth event lock and prevent deadlocks
+            setTimeout(() => {
+              if (mounted) {
+                syncProfile(session.user);
+              }
+            }, 0);
           }
         } else {
           setUser(null);
