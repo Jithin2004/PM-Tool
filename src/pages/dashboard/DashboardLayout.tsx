@@ -244,6 +244,11 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   });
   const [guideStep, setGuideStep] = useState(0);
 
+  const dismissGuide = () => {
+    localStorage.setItem('resolve-pm-onboarded', 'true');
+    setShowGuide(false);
+  };
+
   const systemSettings = useMemo(() => teams.find(t => t.name === 'SYSTEM_SETTINGS'), [teams]);
   const rawSystemData = useMemo(() => systemSettings?.data as any || {}, [systemSettings]);
 
@@ -1896,7 +1901,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 </div>
                 <button
                   onClick={() => {
-                    setShowGuide(false);
+                    dismissGuide();
                     setShowFeedbackGate(true);
                   }}
                   className="text-white/40 hover:text-white transition-colors cursor-pointer text-[10px] font-mono uppercase tracking-wider bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded"
@@ -1932,7 +1937,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                       setGuideStep(nextStep);
                       tourSteps[nextStep]?.actionBefore?.();
                     } else {
-                      setShowGuide(false);
+                      dismissGuide();
                       setShowFeedbackGate(true);
                     }
                   }}
