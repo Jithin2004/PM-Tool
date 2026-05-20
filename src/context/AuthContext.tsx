@@ -249,6 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     if (!isSupabaseConfigured) {
+      setProfileResolved(true);
       setLoading(false);
       return;
     }
@@ -263,11 +264,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user || null);
         if (session?.user) {
           await syncProfile(session.user);
+          console.log("[AuthContext] resolved: authenticated");
         } else {
           setProfile(null);
+          setProfileResolved(true);
+          console.log("[AuthContext] resolved: anonymous");
         }
       } catch (err) {
         console.error("[AuthContext initAuth CRITICAL ERROR]:", err);
+        setProfile(null);
+        setProfileResolved(true);
+        console.log("[AuthContext] resolved: anonymous (error fallback)");
       } finally {
         if (safetyTimeoutRef.current) {
           clearTimeout(safetyTimeoutRef.current);
