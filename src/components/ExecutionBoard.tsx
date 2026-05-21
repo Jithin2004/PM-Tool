@@ -89,7 +89,16 @@ export default function ExecutionBoard({
       notify("Authentication error: Only Super Admins & PMs can register release tasks.", "error");
       return;
     }
-    await addTask(taskData);
+    const result = await addTask(taskData);
+    if (result && workspace?.id && currentUserProfile?.id) {
+      activityLogService.appendLog({
+        workspace_id: workspace.id,
+        actor_id: currentUserProfile.id,
+        task_id: result.id || undefined,
+        action: 'task_created',
+        metadata: { name: taskData.name, project_id: taskData.project_id, estimated_hours: taskData.estimated_hours }
+      }).catch(() => {});
+    }
     onRecalibrateAnalytics();
   };
 
@@ -176,16 +185,8 @@ export default function ExecutionBoard({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {hasWriteAccess && (
-            <button
-              onClick={() => setIsAddingTask(true)}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-mono uppercase tracking-widest transition-all rounded-sm flex items-center gap-1 shadow-[0_0_12px_rgba(59,130,246,0.3)] cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Queue Task
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider">{tasks.length} items</span>
         </div>
       </div>
 
@@ -234,6 +235,11 @@ export default function ExecutionBoard({
                       <span className="text-[10px] font-mono text-white/75 truncate">{project.name}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                      {hasWriteAccess && (
+                        <>
+                          <button onClick={() => { setFilterByProject(project.id); setIsAddingTask(true); }} className="text-[8px] font-mono text-cyan-400 hover:text-cyan-300 border border-cyan-500/20 px-1.5 py-0.5 rounded-sm transition-colors cursor-pointer">+Task</button>
+                        </>
+                      )}
                       <span className="text-[8px] font-mono text-white/25 bg-white/5 px-1.5 py-0.5 rounded-sm">
                         {projectTaskCount} task{projectTaskCount !== 1 ? 's' : ''}
                       </span>
@@ -348,6 +354,7 @@ export default function ExecutionBoard({
           projects={projects}
           users={users}
           defaultStatus="backlog"
+          defaultProjectId={filterByProject || undefined}
           onSubmit={handleCreateTask}
           notify={notify}
         />

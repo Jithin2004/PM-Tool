@@ -1,37 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  BarChart3,
-  Activity,
-  Users,
-  Clock,
-  Target,
-  Plus,
-  Search,
-  ChevronRight,
-  ChevronLeft,
-  AlertTriangle,
-  BrainCircuit,
-  Settings,
-  LogOut,
-  Zap,
-  TrendingUp,
-  Cpu,
-  Edit2,
-  Trash2,
-  History,
-  Calendar,
-  DollarSign,
-  Sliders,
-  Check,
-  Lock,
-  Calculator,
-  TrendingDown,
-  Banknote,
-  Download,
-  Menu,
-  X,
-  Sun,
-  Moon
+  BarChart3, Activity, Users, Clock, Target, Plus, Search,
+  ChevronRight, ChevronLeft, AlertTriangle, BrainCircuit,
+  Settings, LogOut, Zap, TrendingUp, Cpu, Edit2, Trash2,
+  History, Calendar, DollarSign, Sliders, Check, Lock,
+  Calculator, TrendingDown, Banknote, Download, Menu, X,
+  Sun, Moon, Layers, ListOrdered, Kanban, Play
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../../lib/supabase';
@@ -41,6 +15,7 @@ import { DashboardProvider } from '../../context/DashboardContext';
 import { sha256 } from '../../utils/cryptoUtils';
 import { useTasks } from '../../hooks/useTasks';
 import { fetchNotifications, markAsRead as markNotifAsRead, sendNotification } from '../../services/notificationService';
+import { activityLogService } from '../../services/activityLogService';
 import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
 import { Login } from '../../components/auth/Login';
 import { Header } from '../../components/ui/Header';
@@ -290,15 +265,16 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const customRoles = useMemo(() => systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'], [systemData]);
 
   const [isAdding, setIsAdding] = useState(false);
-  const [isAdminView, setIsAdminView] = useState(() => window.location.pathname === '/admin');
-  const [isLogisticsView, setIsLogisticsView] = useState(() => window.location.pathname === '/logistics');
-  const [isPipelineView, setIsPipelineView] = useState(() => window.location.pathname === '/pipeline');
+  const [isAdminView, setIsAdminView] = useState(() => window.location.pathname === '/control');
+  const [isLogisticsView, setIsLogisticsView] = useState(() => window.location.pathname === '/resources');
+  const [isPipelineView, setIsPipelineView] = useState(() => window.location.pathname === '/execution');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isRosterOpen, setIsRosterOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'active' | 'completed' | 'intelligence'>('active');
+  const [projectSetupGuide, setProjectSetupGuide] = useState<{ projectId: string; executionMode: string; step: number } | null>(null);
   const [showFeedbackGate, setShowFeedbackGate] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
   const [feedbackTags, setFeedbackTags] = useState<string[]>([]);
@@ -569,14 +545,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   }, [tourSteps]);
 
 
-  // URL Sync Effect â€” keeps pathname in sync with view state
-  // State initializers already read the pathname on mount, so this only
-  // fires on actual user-driven view changes (not on initial load if paths match).
+  // URL Sync Effect — keeps pathname in sync with view state
   useEffect(() => {
-    let targetPath = '/';
-    if (isAdminView) targetPath = '/admin';
-    else if (isLogisticsView) targetPath = '/logistics';
-    else if (isPipelineView) targetPath = '/pipeline';
+    let targetPath = '/workspace';
+    if (isAdminView) targetPath = '/control';
+    else if (isLogisticsView) targetPath = '/resources';
+    else if (isPipelineView) targetPath = '/execution';
 
     if (window.location.pathname !== targetPath) {
       window.history.pushState({}, '', targetPath);
@@ -587,12 +561,22 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname;
-      setIsAdminView(path === '/admin');
-      setIsLogisticsView(path === '/logistics');
-      setIsPipelineView(path === '/pipeline');
+      setIsAdminView(path === '/control');
+      setIsLogisticsView(path === '/resources');
+      setIsPipelineView(path === '/execution');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Listen for project setup guide trigger
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setProjectSetupGuide({ projectId: detail.projectId, executionMode: detail.executionMode, step: 0 });
+    };
+    window.addEventListener('start-project-setup', handler);
+    return () => window.removeEventListener('start-project-setup', handler);
   }, []);
   const [workingTimeFrom, setWorkingTimeFrom] = useState("09:00");
   const [workingTimeTo, setWorkingTimeTo] = useState("17:00");
@@ -1492,50 +1476,17 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       notify("Project created successfully.", "success");
       fetchProjects();
 
-      // Auto-sync new project to Task Board as a triage task
-      if (isSupabaseConfigured && workspace?.id) {
-        try {
-          await supabase.from('tasks').insert({
-            workspace_id: workspace.id,
-            project_id: data.id,
-            name: data.name,
-            description: `Project auto-synced from workspace. Priority: ${newPriority}.`,
-            status: 'backlog',
-            estimated_hours: 5,
-            priority: 'medium',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        } catch (syncErr) {
-          console.warn('Could not auto-sync project to Task Board:', syncErr);
-        }
-      } else if (workspace?.id) {
-        // Offline: append to localStorage task cache
-        try {
-          const localTasks = JSON.parse(localStorage.getItem(`tasks_${workspace.id}`) || '[]');
-          localTasks.unshift({
-            id: `local-task-${Date.now()}`,
-            workspace_id: workspace.id,
-            project_id: data.id || `local-${Date.now()}`,
-            name: data.name,
-            description: `Project auto-synced. Priority: ${newPriority}.`,
-            status: 'backlog',
-            estimated_hours: 5,
-            priority: 'medium',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-          localStorage.setItem(`tasks_${workspace.id}`, JSON.stringify(localTasks));
-        } catch (err) {
-          console.warn("Dashboard Layout Error:", {
-            source: "DashboardLayout",
-            operation: "offline_task_sync_cache",
-            workspace_id: workspace.id,
-            timestamp: new Date().toISOString(),
-            error: err
-          });
-          notify("Warning: Offline project task failed to sync to local cache.", "warning");
-        }
+      // Immutable log
+      activityLogService.appendLog({
+        workspace_id: workspace.id,
+        actor_id: user.id,
+        action: 'project_created',
+        metadata: { project_id: data.id, name: data.name, execution_mode: data.execution_mode }
+      }).catch(() => {});
+
+      // Open guided setup for execution mode
+      if (data?.execution_mode) {
+        window.dispatchEvent(new CustomEvent('start-project-setup', { detail: { projectId: data.id, executionMode: data.execution_mode } }));
       }
     } else {
       console.error("Project creation failed:", error);
@@ -2062,6 +2013,99 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                   {guideStep === tourSteps.length - 1 ? 'Finish' : 'Next'}
                   <ChevronRight className="w-3 h-3 animate-pulse" />
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Project Setup Guide */}
+      <AnimatePresence>
+        {projectSetupGuide && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-[#0a0a0a] border border-white/10 w-full max-w-lg mx-4 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                <h3 className="text-sm font-mono uppercase tracking-widest">
+                  {projectSetupGuide.executionMode === 'scrum' ? 'Sprint' : 'Kanban'} Setup
+                </h3>
+                <button onClick={() => setProjectSetupGuide(null)} className="text-white/40 hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+
+              {projectSetupGuide.executionMode === 'kanban' && (
+                <div className="space-y-4">
+                  {projectSetupGuide.step === 0 && (
+                    <div className="text-center py-8 space-y-4">
+                      <Kanban className="w-12 h-12 text-cyan-400 mx-auto" />
+                      <h4 className="text-base font-semibold">Kanban Board Ready</h4>
+                      <p className="text-xs text-white/60">Project created. Add work items to your board to start tracking progress.</p>
+                      <div className="flex justify-center gap-3 pt-4">
+                        <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 0 })} className="px-4 py-2 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider">Add Work Items</button>
+                        <button onClick={() => setProjectSetupGuide(null)} className="px-4 py-2 bg-cyan-600 text-white text-[10px] font-mono uppercase tracking-wider">Launch Board</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {projectSetupGuide.executionMode === 'scrum' && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 text-[10px] font-mono text-white/40">
+                    {['Epics', 'Stories', 'Sprint', 'Launch'].map((s, i) => (
+                      <React.Fragment key={s}>
+                        <span className={`flex items-center gap-1 ${i <= projectSetupGuide.step ? 'text-cyan-400' : ''}`}>
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${i <= projectSetupGuide.step ? 'bg-cyan-500/20 border border-cyan-500' : 'bg-white/5 border border-white/10'}`}>{i < projectSetupGuide.step ? <Check className="w-2.5 h-2.5" /> : i + 1}</span>
+                          {s}
+                        </span>
+                        {i < 3 && <span className="text-white/10">→</span>}
+                      </React.Fragment>
+                    ))}
+                  </div>
+
+                  {projectSetupGuide.step === 0 && (
+                    <div className="text-center py-6 space-y-4">
+                      <Layers className="w-10 h-10 text-pink-400 mx-auto" />
+                      <h4 className="text-sm font-semibold">Create Epics</h4>
+                      <p className="text-[11px] text-white/60">Epics are large bodies of work that contain multiple stories.</p>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 1 })} className="px-4 py-2 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip — Next</button>
+                    </div>
+                  )}
+
+                  {projectSetupGuide.step === 1 && (
+                    <div className="text-center py-6 space-y-4">
+                      <ListOrdered className="w-10 h-10 text-amber-400 mx-auto" />
+                      <h4 className="text-sm font-semibold">Create Stories</h4>
+                      <p className="text-[11px] text-white/60">Break epics into user stories with acceptance criteria.</p>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 2 })} className="px-4 py-2 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip — Next</button>
+                    </div>
+                  )}
+
+                  {projectSetupGuide.step === 2 && (
+                    <div className="text-center py-6 space-y-4">
+                      <Play className="w-10 h-10 text-blue-400 mx-auto" />
+                      <h4 className="text-sm font-semibold">Create Sprint</h4>
+                      <p className="text-[11px] text-white/60">Define sprint duration and assign stories to the backlog.</p>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 3 })} className="px-4 py-2 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip — Next</button>
+                    </div>
+                  )}
+
+                  {projectSetupGuide.step === 3 && (
+                    <div className="text-center py-6 space-y-4">
+                      <Play className="w-12 h-12 text-green-400 mx-auto" />
+                      <h4 className="text-base font-semibold">Ready to Launch</h4>
+                      <p className="text-xs text-white/60">Your sprint is configured. Launch to begin tracking velocity.</p>
+                      <button onClick={() => { setProjectSetupGuide(null); window.history.replaceState(null, '', '/execution'); window.dispatchEvent(new CustomEvent('popstate')); }} className="px-6 py-2 bg-green-600 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-green-500 transition-colors">Launch Sprint</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-between mt-6 pt-4 border-t border-white/10">
+                <button onClick={() => setProjectSetupGuide(null)} className="text-[10px] font-mono text-white/40 hover:text-white transition-colors uppercase tracking-wider">Dismiss</button>
+                {projectSetupGuide.executionMode === 'scrum' && projectSetupGuide.step < 3 && (
+                  <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: projectSetupGuide.step + 1 })} className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-cyan-400 hover:text-cyan-300 transition-colors">
+                    Next <ChevronRight className="w-3 h-3" />
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>

@@ -100,22 +100,24 @@ export function ResolveRouter() {
     return <WorkspaceSetupPage />;
   }
 
+  // Redirect legacy paths to new structure
+  if (pathname === '/admin' || pathname === '/logistics' || pathname === '/pipeline' || pathname === '/projects/new') {
+    const target = pathname === '/admin' ? '/control' : pathname === '/logistics' ? '/resources' : pathname === '/pipeline' ? '/execution' : '/workspace';
+    window.history.replaceState(null, '', target);
+    window.dispatchEvent(new CustomEvent('popstate'));
+    return null;
+  }
+
   if (pathname === '/onboarding/workspace') {
     return <WorkspaceSetupPage />;
   }
 
-  if (pathname === '/projects/new') {
-    return <ProjectCreatePage />;
-  }
-
-  if (pathname === '/admin') {
+  // New route structure
+  if (pathname === '/control') {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/');
-      return (
-        <DashboardLayout>
-          <ProjectWorkspace />
-        </DashboardLayout>
-      );
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
     }
     return (
       <DashboardLayout>
@@ -124,14 +126,11 @@ export function ResolveRouter() {
     );
   }
 
-  if (pathname === '/logistics') {
+  if (pathname === '/resources') {
     if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
-      window.history.replaceState(null, '', '/');
-      return (
-        <DashboardLayout>
-          <ProjectWorkspace />
-        </DashboardLayout>
-      );
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
     }
     return (
       <DashboardLayout>
@@ -140,7 +139,7 @@ export function ResolveRouter() {
     );
   }
 
-  if (pathname === '/pipeline') {
+  if (pathname === '/execution') {
     return (
       <DashboardLayout>
         <PipelinePanel />
@@ -148,6 +147,7 @@ export function ResolveRouter() {
     );
   }
 
+  // /workspace and all other paths render ProjectWorkspace
   return (
     <DashboardLayout>
       <ProjectWorkspace />

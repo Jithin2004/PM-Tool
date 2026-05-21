@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, BrainCircuit, Sun, Users, Menu, LogOut, LayoutGrid, Moon, X, Bell, Check } from 'lucide-react';
+import { Clock, BrainCircuit, Sun, Users, Menu, LogOut, Moon, X, Bell, Check, ChevronDown, ChevronRight, Briefcase, PlayCircle, Database, Shield } from 'lucide-react';
 import { Profile } from '../../types';
 import { calculateHoursFromRange } from '../../utils/timeUtils';
 
@@ -49,9 +49,14 @@ export function Header({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ Workspace: true, Execution: false, Resources: false, Control: false });
   const canAccessLogistics = profile?.role === 'super_admin' || profile?.role === 'pm';
   const canAccessAdmin = profile?.role === 'super_admin';
+  const canAccessControl = profile?.role === 'super_admin' || profile?.role === 'pm';
   const unreadCount = notifications.filter(n => !n.read_at).length;
+
+  const toggleSection = (section: string) => setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const isActive = (path: string) => window.location.pathname === path;
 
   return (
     <>
@@ -116,28 +121,53 @@ export function Header({
             </div>
           </div>
 
-          {/* Unified navigation menu */}
-          <div className="flex items-center gap-2">
-            <button onClick={onGoHome}
-              className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${(!showAdmin && !showLogistics && !showPipeline) ? 'bg-white text-black border-white shadow-[0_0_8px_rgba(255,255,255,0.2)]' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-              Projects
-            </button>
-            <button onClick={onTogglePipeline}
-              className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showPipeline ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-              Task Board
-            </button>
-            {canAccessLogistics && (
-              <button onClick={onToggleLogistics}
-                className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-                Logistics
-              </button>
-            )}
-            {canAccessAdmin && (
-              <button onClick={onToggleAdmin}
-                className={`text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 border transition-all cursor-pointer ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30'}`}>
-                Admin
-              </button>
-            )}
+          {/* Expandable navigation sections */}
+          <div className="flex items-start gap-1">
+            {[
+              { label: 'Workspace', icon: Briefcase, items: [
+                { label: 'Projects', path: '/workspace', onClick: onGoHome, active: isActive('/workspace') || isActive('/') }
+              ]},
+              { label: 'Execution', icon: PlayCircle, items: [
+                { label: 'Task Board', path: '/execution', onClick: onTogglePipeline, active: isActive('/execution') || showPipeline },
+                ...(canAccessLogistics ? [{ label: 'Logistics', path: '/resources', onClick: onToggleLogistics, active: isActive('/resources') || showLogistics }] : [])
+              ]},
+              { label: 'Resources', icon: Database, items: [
+                ...(canAccessLogistics ? [{ label: 'Logistics', path: '/resources', onClick: onToggleLogistics, active: isActive('/resources') || showLogistics }] : []),
+                ...(profile?.role === 'viewer' ? [] : [{ label: 'Timesheets', path: '/resources/timesheets', onClick: () => {}, active: false }])
+              ]},
+              { label: 'Control', icon: Shield, items: [
+                ...(canAccessAdmin ? [{ label: 'Admin', path: '/control', onClick: onToggleAdmin, active: isActive('/control') || showAdmin }] : []),
+                ...(canAccessControl ? [{ label: 'Reports', path: '/control/reports', onClick: () => {}, active: false }] : [])
+              ]}
+            ].map(section => (
+              <div key={section.label} className="relative">
+                <button
+                  onClick={() => toggleSection(section.label)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-mono uppercase tracking-widest border transition-all cursor-pointer ${
+                    expandedSections[section.label] ? 'bg-white/10 border-white/25 text-white' : 'text-white/60 border-white/5 hover:border-white/20'
+                  }`}
+                >
+                  <section.icon className="w-3 h-3" />
+                  {section.label}
+                  {expandedSections[section.label] ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
+                </button>
+                {expandedSections[section.label] && (
+                  <div className="absolute top-full left-0 mt-1 w-44 bg-[#0a0a0a] border border-white/10 shadow-2xl z-50 py-1">
+                    {section.items.map(item => (
+                      <button
+                        key={item.label}
+                        onClick={() => { item.onClick(); toggleSection(section.label); }}
+                        className={`w-full text-left px-3 py-2 text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                          item.active ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
           {/* Role badge */}
@@ -341,33 +371,40 @@ export function Header({
                 </div>
               )}
 
-              {/* Unified navigation menu for mobile */}
+              {/* Expandable navigation sections for mobile */}
               <div className="space-y-2">
                 <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1">Navigation</p>
-                <button
-                  onClick={() => { onGoHome(); setMobileMenuOpen(false); }}
-                  className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${(!showAdmin && !showLogistics && !showPipeline) ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                  Projects
-                </button>
-                <button
-                  onClick={() => { onTogglePipeline(); setMobileMenuOpen(false); }}
-                  className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showPipeline ? 'bg-purple-600 border-purple-500 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                  Task Board
-                </button>
-                {canAccessLogistics && (
-                  <button
-                    onClick={() => { onToggleLogistics(); setMobileMenuOpen(false); }}
-                    className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showLogistics ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                    Logistics Console
-                  </button>
-                )}
-                {canAccessAdmin && (
-                  <button
-                    onClick={() => { onToggleAdmin(); setMobileMenuOpen(false); }}
-                    className={`w-full text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border transition-all cursor-pointer ${showAdmin ? 'bg-white text-black border-white' : 'text-white/85 border-white/10 hover:border-white/30 hover:bg-white/5'}`}>
-                    Admin Console
-                  </button>
-                )}
+                {[
+                  { label: 'Workspace', icon: Briefcase, items: [
+                    { label: 'Projects', onClick: () => { onGoHome(); setMobileMenuOpen(false); }, active: (!showAdmin && !showLogistics && !showPipeline) }
+                  ]},
+                  { label: 'Execution', icon: PlayCircle, items: [
+                    { label: 'Task Board', onClick: () => { onTogglePipeline(); setMobileMenuOpen(false); }, active: showPipeline },
+                    ...(canAccessLogistics ? [{ label: 'Logistics', onClick: () => { onToggleLogistics(); setMobileMenuOpen(false); }, active: showLogistics }] : [])
+                  ]},
+                  { label: 'Resources', icon: Database, items: [
+                    ...(canAccessLogistics ? [{ label: 'Logistics', onClick: () => { onToggleLogistics(); setMobileMenuOpen(false); }, active: showLogistics }] : [])
+                  ]},
+                  { label: 'Control', icon: Shield, items: [
+                    ...(canAccessAdmin ? [{ label: 'Admin', onClick: () => { onToggleAdmin(); setMobileMenuOpen(false); }, active: showAdmin }] : [])
+                  ]}
+                ].map(section => (
+                  <div key={section.label} className="border border-white/5">
+                    <button
+                      onClick={() => toggleSection(section.label)}
+                      className="w-full flex items-center justify-between text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border-b border-white/5 text-white/70"
+                    >
+                      <span className="flex items-center gap-2"><section.icon className="w-3.5 h-3.5" />{section.label}</span>
+                      {expandedSections[section.label] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                    </button>
+                    {expandedSections[section.label] && section.items.map(item => (
+                      <button key={item.label} onClick={item.onClick}
+                        className={`w-full text-left text-[11px] font-mono uppercase tracking-wider px-6 py-2.5 border-b border-white/5 transition-all cursor-pointer ${item.active ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                ))}
               </div>
 
               {/* Settings */}

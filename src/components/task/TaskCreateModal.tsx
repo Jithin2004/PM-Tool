@@ -9,6 +9,8 @@ interface TaskCreateModalProps {
   projects: Project[];
   users: any[];
   defaultStatus: TaskStatus;
+  defaultProjectId?: string;
+  mode?: 'task' | 'epic' | 'story';
   onSubmit: (task: {
     project_id: string;
     name: string;
@@ -16,7 +18,7 @@ interface TaskCreateModalProps {
     estimated_hours: number;
     assignee_id?: string;
     status: TaskStatus;
-    priority: 'medium'; // Default priority
+    priority: 'medium';
   }) => Promise<void>;
   notify: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
@@ -27,12 +29,14 @@ export function TaskCreateModal({
   projects,
   users,
   defaultStatus,
+  defaultProjectId,
+  mode = 'task',
   onSubmit,
   notify
 }: TaskCreateModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [projectId, setProjectId] = useState('');
+  const [projectId, setProjectId] = useState(defaultProjectId || '');
   const [estimatedHours, setEstimatedHours] = useState(5);
   const [assigneeId, setAssigneeId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,7 +90,7 @@ export function TaskCreateModal({
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xs font-mono uppercase tracking-widest text-white flex items-center gap-1.5">
             <Terminal className="w-4 h-4 text-blue-500" />
-            Queue Task
+            {mode === 'epic' ? 'Add Epic' : mode === 'story' ? 'Add Story' : 'Add Task'}
           </h3>
           <button
             onClick={onClose}
@@ -98,7 +102,7 @@ export function TaskCreateModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[8px] font-mono uppercase tracking-wider text-white/40 mb-1">Task Title *</label>
+            <label className="block text-[8px] font-mono uppercase tracking-wider text-white/40 mb-1">{mode === 'epic' ? 'Epic Name' : mode === 'story' ? 'Story Title' : 'Task Title'} *</label>
             <input
               type="text"
               required
@@ -111,17 +115,21 @@ export function TaskCreateModal({
 
           <div>
             <label className="block text-[8px] font-mono uppercase tracking-wider text-white/40 mb-1">Target Project *</label>
-            <select
-              required
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="w-full bg-black border border-white/10 p-2 text-xs font-mono text-white focus:border-blue-500 focus:outline-none transition-colors"
-            >
-              <option value="">-- SELECT PROJECT --</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            {defaultProjectId ? (
+              <div className="w-full bg-black/50 border border-white/10 p-2 text-xs font-mono text-white/60">{projects.find(p => p.id === defaultProjectId)?.name || projects[0]?.name}</div>
+            ) : (
+              <select
+                required
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="w-full bg-black border border-white/10 p-2 text-xs font-mono text-white focus:border-blue-500 focus:outline-none transition-colors"
+              >
+                <option value="">-- SELECT PROJECT --</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
@@ -175,7 +183,7 @@ export function TaskCreateModal({
               disabled={isSubmitting}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-mono uppercase tracking-widest transition-colors shadow-[0_0_12px_rgba(59,130,246,0.3)] disabled:opacity-50"
             >
-              {isSubmitting ? 'Processing...' : 'Queue Task'}
+              {isSubmitting ? 'Processing...' : mode === 'epic' ? 'Create Epic' : mode === 'story' ? 'Create Story' : 'Create Task'}
             </button>
           </div>
         </form>
