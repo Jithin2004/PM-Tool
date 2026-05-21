@@ -262,4 +262,62 @@ export const activityLogService = {
       metadata: { job_id: jobId, service, error, attempts },
     });
   },
+
+  // ── Stage 3 Ignition Logging ──
+
+  async logAutomationCreated(workspaceId: string, ruleId: string, name: string, triggerEvent: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'automation_created',
+      metadata: { rule_id: ruleId, name, trigger_event: triggerEvent },
+    });
+  },
+
+  async logAutomationExecuted(workspaceId: string, ruleId: string, ruleName: string, event: string, payloadKeys: string[]): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'automation_executed',
+      metadata: { rule_id: ruleId, rule_name: ruleName, event, payload_keys: payloadKeys },
+    });
+  },
+
+  async logApprovalCreated(workspaceId: string, instanceId: string, targetType: string, targetId: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'approval_created',
+      metadata: { instance_id: instanceId, target_type: targetType, target_id: targetId },
+    });
+  },
+
+  async logApprovalCompleted(workspaceId: string, instanceId: string, targetType: string, targetId: string, result: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'approval_completed',
+      metadata: { instance_id: instanceId, target_type: targetType, target_id: targetId, result },
+    });
+  },
+
+  async logApiKeyCreated(workspaceId: string, keyId: string, name: string, permissions: string[]): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'api_key_created',
+      metadata: { key_id: keyId, name, permissions },
+    });
+  },
+
+  async logWebhookSent(workspaceId: string, webhookId: string, webhookName: string, event: string, statusCode: number, attempt: number): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'webhook_sent',
+      metadata: { webhook_id: webhookId, webhook_name: webhookName, event, status_code: statusCode, attempt },
+    });
+  },
+
+  async logTemplateInstalled(workspaceId: string, templateId: string, templateName: string, ruleId: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'workflow_template_installed',
+      metadata: { template_id: templateId, template_name: templateName, rule_id: ruleId },
+    });
+  },
 };

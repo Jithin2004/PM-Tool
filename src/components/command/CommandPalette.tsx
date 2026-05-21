@@ -195,6 +195,10 @@ const ACTION_ITEMS: { label: string; icon: React.ReactNode; roles?: string[]; on
   { label: 'Create Work Item', icon: <PlusCircle className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.onNavigate('/execution') },
   { label: 'Add Company Holiday', icon: <CalendarPlus className="w-3.5 h-3.5" />, roles: ['super_admin'], onSelect: (p) => p.onNavigate('/control/settings') },
   { label: 'Start Retrospective', icon: <RefreshCw className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.onNavigate('/execution/sprints') },
+  { label: 'Create Automation', icon: <Zap className="w-3.5 h-3.5" />, roles: ['super_admin'], onSelect: (p) => p.onNavigate('/control/automations') },
+  { label: 'Create Approval', icon: <Check className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.onNavigate('/control/automations') },
+  { label: 'Generate API Key', icon: <Shield className="w-3.5 h-3.5" />, roles: ['super_admin'], onSelect: (p) => p.onNavigate('/control/settings') },
+  { label: 'View Execution History', icon: <Activity className="w-3.5 h-3.5" />, roles: ['super_admin'], onSelect: (p) => p.onNavigate('/control/automations') },
 ];
 
 const AI_ITEMS: { label: string; icon: React.ReactNode; onSelect: (props: Props) => void }[] = [
