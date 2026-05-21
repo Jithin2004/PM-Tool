@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -11,11 +11,47 @@ import { activityLogService } from '../../services/activityLogService';
 import { useCalendarEvents } from '../../hooks/useCalendarEvents';
 import type { Milestone, Approval, Meeting, Epic, Sprint, Project } from '../../types';
 
+const ROUTE_IDENTITY: Record<string, { title: string; subtitle: string; view: 'board' | 'gantt' }> = {
+  '/execution': { title: 'Execution Board', subtitle: 'Kanban · Scrum · Hybrid workflow execution', view: 'board' },
+  '/execution/board': { title: 'Execution Board', subtitle: 'Kanban · Scrum · Hybrid workflow execution', view: 'board' },
+  '/execution/timeline': { title: 'Timeline Engine', subtitle: 'Dependency propagation and scheduling intelligence', view: 'board' },
+  '/execution/gantt': { title: 'Gantt Workspace', subtitle: 'Critical path + delivery planning', view: 'gantt' },
+  '/execution/sprints': { title: 'Sprint Center', subtitle: 'Velocity · Burndown · Retrospectives', view: 'board' },
+};
+
+function getRouteIdentity() {
+  const p = window.location.pathname.replace(/\/+$/, '');
+  return ROUTE_IDENTITY[p] || ROUTE_IDENTITY['/execution'];
+}
+
 export function PipelinePanel() {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
   const { tasks: allTasks } = useTasks(workspace?.id);
-  const [viewMode, setViewMode] = useState<'board' | 'gantt'>('board');
+  const initialRoute = useMemo(() => getRouteIdentity(), []);
+  const [viewMode, setViewMode] = useState<'board' | 'gantt'>(initialRoute.view);
+  const [routeTitle, setRouteTitle] = useState(initialRoute.title);
+  const [routeSubtitle, setRouteSubtitle] = useState(initialRoute.subtitle);
+
+  // Reactively update title/subtitle when route changes
+  useEffect(() => {
+    const handler = () => {
+      const id = getRouteIdentity();
+      setRouteTitle(id.title);
+      setRouteSubtitle(id.subtitle);
+      if (id.view === 'gantt' || id.view === 'board') setViewMode(id.view);
+    };
+    window.addEventListener('popstate', handler);
+    const orig = window.history.pushState;
+    window.history.pushState = function pushState(...args) {
+      orig.apply(window.history, args);
+      handler();
+    };
+    return () => {
+      window.removeEventListener('popstate', handler);
+      window.history.pushState = orig;
+    };
+  }, []);
   const { 
     projects, 
     profiles, 
@@ -59,8 +95,8 @@ export function PipelinePanel() {
     <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12">
       <div className="flex justify-between items-center mb-8 bg-[#090a0f]/40 border border-white/10 p-4 rounded-lg backdrop-blur-md">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-white">Execution Board</h2>
-          <p className="text-[10px] font-mono text-white/50 uppercase">Kanban · Scrum · Hybrid workflow execution</p>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-white">{routeTitle}</h2>
+          <p className="text-[10px] font-mono text-white/50 uppercase">{routeSubtitle}</p>
         </div>
         <div className="flex bg-black/40 border border-white/10 p-0.5 rounded-sm gap-0.5">
           <button onClick={() => setViewMode('board')} className={`px-4 py-1.5 text-[10px] font-mono uppercase tracking-wider rounded-sm transition-all cursor-pointer ${viewMode === 'board' ? 'bg-blue-600/30 text-blue-400 border border-blue-500/20 shadow-[0_0_12px_rgba(59,130,246,0.15)]' : 'text-white/60 hover:text-white border border-transparent'}`}>Board</button>

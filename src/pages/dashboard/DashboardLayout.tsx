@@ -281,6 +281,38 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
   const [feedbackTags, setFeedbackTags] = useState<string[]>([]);
   const [feedbackComment, setFeedbackComment] = useState('');
+  const [pathname, setPathname] = useState(window.location.pathname);
+
+  // Track route changes reactively
+  useEffect(() => {
+    const handler = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', handler);
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function pushState(...args) {
+      originalPushState.apply(window.history, args);
+      handler();
+    };
+    return () => {
+      window.removeEventListener('popstate', handler);
+      window.history.pushState = originalPushState;
+    };
+  }, []);
+
+  const breadcrumb = useMemo(() => {
+    const p = pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+    if (p.length === 0) return null;
+    const sectionLabels: Record<string, string> = { workspace: 'WORKSPACE', execution: 'EXECUTION', resources: 'RESOURCES', control: 'CONTROL' };
+    const pageLabels: Record<string, string> = {
+      projects: 'PROJECTS', portfolio: 'PORTFOLIO', decisions: 'DECISION CENTER',
+      board: 'BOARD', timeline: 'TIMELINE', gantt: 'GANTT', sprints: 'SPRINT CENTER',
+      teams: 'TEAMS', logistics: 'LOGISTICS', capacity: 'CAPACITY', 'work-logs': 'WORK LOGS',
+      admin: 'ADMIN', audit: 'AUDIT', analytics: 'ANALYTICS', settings: 'SETTINGS'
+    };
+    const section = sectionLabels[p[0]];
+    const page = p[1] ? pageLabels[p[1]] : null;
+    if (!section) return null;
+    return { section, page };
+  }, [pathname]);
 
   const tourSteps = useMemo(() => {
     const role = profile?.role || 'viewer';
@@ -1510,7 +1542,19 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           setTheme={setTheme}
         />
 
-      <StatsGrid stats={stats} />
+        {breadcrumb && (
+          <div className="hidden sm:flex items-center gap-2 px-6 py-2 border-b border-white/5 text-[10px] font-mono uppercase tracking-wider text-white/40">
+            <span className="text-white/60">{breadcrumb.section}</span>
+            {breadcrumb.page && (
+              <>
+                <span className="text-white/20">/</span>
+                <span className="text-white/80">{breadcrumb.page}</span>
+              </>
+            )}
+          </div>
+        )}
+
+        <StatsGrid stats={stats} />
 
       <AnimatePresence>
         {notifications.map(n => (

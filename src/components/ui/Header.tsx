@@ -86,14 +86,16 @@ export function Header({
   const [notifOpen, setNotifOpen] = useState(false);
   const [pathname, setPathname] = useState(window.location.pathname);
   const [expandedSection, setExpandedSection] = useState<string | null>(() => {
-    const saved = localStorage.getItem('resolve-nav-section');
+    const isDesktopDevice = window.matchMedia('(hover:hover)').matches;
+    const primaryKey = isDesktopDevice ? 'resolve-nav-section' : 'resolve-mobile-nav-section';
+    const saved = localStorage.getItem(primaryKey);
     if (saved && NAV.some(s => s.label === saved)) return saved;
     return getSectionForPath(window.location.pathname);
   });
   const role = profile?.role || 'viewer';
   const unreadCount = notifications.filter(n => !n.read_at).length;
 
-  const isDesktop = useMemo(() => window.matchMedia('(hover:hover) and (pointer:fine)').matches, []);
+  const isDesktop = useMemo(() => window.matchMedia('(hover:hover)').matches, []);
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
@@ -115,17 +117,50 @@ export function Header({
     };
   }, []);
 
-  // Persist expanded section
+  // Persist expanded section (desktop)
   useEffect(() => {
+    if (!isDesktop) return;
     if (expandedSection) localStorage.setItem('resolve-nav-section', expandedSection);
     else localStorage.removeItem('resolve-nav-section');
-  }, [expandedSection]);
+  }, [expandedSection, isDesktop]);
+
+  // Persist expanded section (mobile)
+  useEffect(() => {
+    if (isDesktop) return;
+    if (expandedSection) {
+      const allowed = NAV.some(s => s.label === expandedSection && s.items.filter(item => canAccessItem(item, role)).length !== 0);
+      if (allowed) localStorage.setItem('resolve-mobile-nav-section', expandedSection);
+      else localStorage.removeItem('resolve-mobile-nav-section');
+    }
+  }, [expandedSection, isDesktop, role]);
+
+  // Lock body scroll when mobile drawer open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileMenuOpen]);
 
   // Auto-expand on route change
   useEffect(() => {
     const section = getSectionForPath(pathname);
     if (section && section !== expandedSection) setExpandedSection(section);
   }, [pathname]);
+
+  // Mobile: restore last section when drawer opens
+  useEffect(() => {
+    if (!mobileMenuOpen || isDesktop) return;
+    if (!expandedSection) {
+      const saved = localStorage.getItem('resolve-mobile-nav-section');
+      if (saved) {
+        const allowed = NAV.some(s => s.label === saved && s.items.filter(item => canAccessItem(item, role)).length !== 0);
+        if (allowed) setExpandedSection(saved);
+      }
+    }
+  }, [mobileMenuOpen]);
 
   // Mobile: close when tapping outside nav
   useEffect(() => {
@@ -465,11 +500,15 @@ export function Header({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={{ left: 0, right: 0.4 }}
+              drag={true}
+              dragDirectionLock={true}
+              dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+              dragElastic={{ left: 0, right: 0.4, top: 0, bottom: 0 }}
               onDragEnd={(_, info) => {
-                if (info.offset.x > 80 || (info.velocity.x > 300 && info.offset.x > 0)) {
+                if (
+                  Math.abs(info.offset.x) > Math.abs(info.offset.y) &&
+                  (info.offset.x > 80 || (info.velocity.x > 300 && info.offset.x > 0))
+                ) {
                   setMobileMenuOpen(false);
                 }
               }}
