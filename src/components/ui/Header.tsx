@@ -1,21 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, BrainCircuit, Sun, Users, Menu, LogOut, Moon, X, Bell, Check, ChevronDown, ChevronRight, Briefcase, PlayCircle, Database, Shield } from 'lucide-react';
+import { Clock, BrainCircuit, Sun, Users, Menu, LogOut, Moon, X, Bell, Check, ChevronDown, ChevronRight, Briefcase, PlayCircle, Database, Shield, FolderOpen, BarChart3, LayoutDashboard, Activity, GitBranch, GitFork, Target, Settings as SettingsIcon, FileText, ChartArea } from 'lucide-react';
 import { Profile } from '../../types';
 import { calculateHoursFromRange } from '../../utils/timeUtils';
+
+interface NavItem {
+  label: string; path: string; icon?: React.ReactNode; roles?: string[];
+}
+interface NavSection {
+  label: string; icon: React.ReactNode; items: NavItem[];
+}
+
+const NAV: NavSection[] = [
+  { label: 'WORKSPACE', icon: <Briefcase className="w-3 h-3" />, items: [
+    { label: 'Projects', path: '/workspace', icon: <FolderOpen className="w-2.5 h-2.5" /> },
+    { label: 'Portfolio', path: '/workspace/portfolio', icon: <BarChart3 className="w-2.5 h-2.5" /> },
+    { label: 'Decision Center', path: '/workspace/decisions', icon: <BrainCircuit className="w-2.5 h-2.5" /> },
+  ]},
+  { label: 'EXECUTION', icon: <PlayCircle className="w-3 h-3" />, items: [
+    { label: 'Board', path: '/execution', icon: <LayoutDashboard className="w-2.5 h-2.5" /> },
+    { label: 'Timeline', path: '/execution/timeline', icon: <Activity className="w-2.5 h-2.5" /> },
+    { label: 'Gantt', path: '/execution/gantt', icon: <GitBranch className="w-2.5 h-2.5" /> },
+    { label: 'Sprint Center', path: '/execution/sprints', icon: <GitFork className="w-2.5 h-2.5" /> },
+  ]},
+  { label: 'RESOURCES', icon: <Database className="w-3 h-3" />, items: [
+    { label: 'Teams', path: '/resources/teams', icon: <Users className="w-2.5 h-2.5" /> },
+    { label: 'Logistics', path: '/resources', icon: <Target className="w-2.5 h-2.5" /> },
+    { label: 'Capacity', path: '/resources/capacity', icon: <BarChart3 className="w-2.5 h-2.5" /> },
+    { label: 'Work Logs', path: '/resources/work-logs', icon: <Clock className="w-2.5 h-2.5" /> },
+  ]},
+  { label: 'CONTROL', icon: <Shield className="w-3 h-3" />, items: [
+    { label: 'Admin', path: '/control', icon: <SettingsIcon className="w-2.5 h-2.5" />, roles: ['super_admin'] },
+    { label: 'Audit', path: '/control/audit', icon: <FileText className="w-2.5 h-2.5" />, roles: ['super_admin'] },
+    { label: 'Analytics', path: '/control/analytics', icon: <ChartArea className="w-2.5 h-2.5" /> },
+    { label: 'Settings', path: '/control/settings', icon: <SettingsIcon className="w-2.5 h-2.5" /> },
+  ]},
+];
+
+function getSectionForPath(path: string): string | null {
+  const p = path.replace(/\/+$/, '');
+  if (p === '/workspace' || p.startsWith('/workspace/')) return 'WORKSPACE';
+  if (p === '/execution' || p.startsWith('/execution/')) return 'EXECUTION';
+  if (p === '/resources' || p.startsWith('/resources/')) return 'RESOURCES';
+  if (p === '/control' || p.startsWith('/control/')) return 'CONTROL';
+  return null;
+}
+
+function canAccessItem(item: NavItem, role: string | undefined): boolean {
+  if (!item.roles) return true;
+  return item.roles.includes(role || '');
+}
 
 export function Header({
   user,
   profile,
   userCustomRoles = {},
   onLogout,
-  onToggleAdmin,
-  showAdmin,
-  onToggleLogistics,
-  showLogistics,
-  onTogglePipeline,
-  showPipeline,
-  onGoHome,
+  onNavigate,
   workingTimeFrom,
   workingTimeTo,
   onWorkingTimeChange,
@@ -30,13 +71,7 @@ export function Header({
   profile: Profile | null,
   userCustomRoles?: Record<string, string>,
   onLogout: () => void,
-  onToggleAdmin: () => void,
-  showAdmin: boolean,
-  onToggleLogistics: () => void,
-  showLogistics: boolean,
-  onTogglePipeline: () => void,
-  showPipeline: boolean,
-  onGoHome: () => void,
+  onNavigate: (path: string) => void,
   workingTimeFrom: string,
   workingTimeTo: string,
   onWorkingTimeChange: (from: string, to: string) => void,
@@ -49,21 +84,92 @@ export function Header({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ Workspace: true, Execution: false, Resources: false, Control: false });
-  const canAccessLogistics = profile?.role === 'super_admin' || profile?.role === 'pm';
-  const canAccessAdmin = profile?.role === 'super_admin';
-  const canAccessControl = profile?.role === 'super_admin' || profile?.role === 'pm';
+  const [pathname, setPathname] = useState(window.location.pathname);
+  const [expandedSection, setExpandedSection] = useState<string | null>(() => {
+    const saved = localStorage.getItem('resolve-nav-section');
+    if (saved && NAV.some(s => s.label === saved)) return saved;
+    return getSectionForPath(window.location.pathname);
+  });
+  const role = profile?.role || 'viewer';
   const unreadCount = notifications.filter(n => !n.read_at).length;
 
-  const toggleSection = (section: string) => setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  const isActive = (path: string) => window.location.pathname === path;
+  const isDesktop = useMemo(() => window.matchMedia('(hover:hover) and (pointer:fine)').matches, []);
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  // Track route changes
+  useEffect(() => {
+    const handler = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', handler);
+
+    const originalPushState = window.history.pushState;
+    window.history.pushState = function pushState(...args) {
+      originalPushState.apply(window.history, args);
+      handler();
+    };
+
+    return () => {
+      window.removeEventListener('popstate', handler);
+      window.history.pushState = originalPushState;
+    };
+  }, []);
+
+  // Persist expanded section
+  useEffect(() => {
+    if (expandedSection) localStorage.setItem('resolve-nav-section', expandedSection);
+    else localStorage.removeItem('resolve-nav-section');
+  }, [expandedSection]);
+
+  // Auto-expand on route change
+  useEffect(() => {
+    const section = getSectionForPath(pathname);
+    if (section && section !== expandedSection) setExpandedSection(section);
+  }, [pathname]);
+
+  // Mobile: close when tapping outside nav
+  useEffect(() => {
+    if (isDesktop || !expandedSection) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setExpandedSection(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [isDesktop, expandedSection]);
+
+  const handleSectionEnter = (label: string) => {
+    if (!isDesktop) return;
+    clearTimeout(closeTimer.current);
+    clearTimeout(openTimer.current);
+    openTimer.current = setTimeout(() => setExpandedSection(label), 150);
+  };
+
+  const handleSectionLeave = () => {
+    if (!isDesktop) return;
+    clearTimeout(openTimer.current);
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setExpandedSection(null), 200);
+  };
+
+  const handleParentClick = (label: string) => {
+    if (isDesktop) return;
+    setExpandedSection(prev => prev === label ? null : label);
+  };
+
+  const handleNav = (path: string) => {
+    onNavigate(path);
+    setMobileMenuOpen(false);
+    setExpandedSection(null);
+  };
 
   return (
     <>
       <header className="border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-md z-50">
         {/* Logo */}
         <button
-          onClick={() => { onGoHome(); setMobileMenuOpen(false); }}
+          onClick={() => { handleNav('/workspace'); }}
           className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group"
           title="Go to Project Workspace"
           id="logo-home-btn"
@@ -121,46 +227,42 @@ export function Header({
             </div>
           </div>
 
-          {/* Expandable navigation sections */}
-          <div className="flex items-start gap-1">
-            {[
-              { label: 'Workspace', icon: Briefcase, items: [
-                { label: 'Projects', path: '/workspace', onClick: onGoHome, active: isActive('/workspace') || isActive('/') }
-              ]},
-              { label: 'Execution', icon: PlayCircle, items: [
-                { label: 'Task Board', path: '/execution', onClick: onTogglePipeline, active: isActive('/execution') || showPipeline },
-                ...(canAccessLogistics ? [{ label: 'Logistics', path: '/resources', onClick: onToggleLogistics, active: isActive('/resources') || showLogistics }] : [])
-              ]},
-              { label: 'Resources', icon: Database, items: [
-                ...(canAccessLogistics ? [{ label: 'Logistics', path: '/resources', onClick: onToggleLogistics, active: isActive('/resources') || showLogistics }] : []),
-                ...(profile?.role === 'viewer' ? [] : [{ label: 'Timesheets', path: '/resources/timesheets', onClick: () => {}, active: false }])
-              ]},
-              { label: 'Control', icon: Shield, items: [
-                ...(canAccessAdmin ? [{ label: 'Admin', path: '/control', onClick: onToggleAdmin, active: isActive('/control') || showAdmin }] : []),
-                ...(canAccessControl ? [{ label: 'Reports', path: '/control/reports', onClick: () => {}, active: false }] : [])
-              ]}
-            ].map(section => (
-              <div key={section.label} className="relative">
+          {/* Expandable navigation sections — hover desktop / tap mobile */}
+          <div ref={navRef} className="flex items-start gap-1">
+            {NAV.map(section => (
+              <div
+                key={section.label}
+                className="relative"
+                onMouseEnter={() => handleSectionEnter(section.label)}
+                onMouseLeave={handleSectionLeave}
+              >
                 <button
-                  onClick={() => toggleSection(section.label)}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-mono uppercase tracking-widest border transition-all cursor-pointer ${
-                    expandedSections[section.label] ? 'bg-white/10 border-white/25 text-white' : 'text-white/60 border-white/5 hover:border-white/20'
+                  onClick={() => handleParentClick(section.label)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-mono uppercase tracking-widest transition-all cursor-pointer ${
+                    expandedSection === section.label
+                      ? 'bg-white/10 text-white border border-white/25 border-b-transparent'
+                      : 'text-white/60 border border-white/5 hover:border-white/20'
                   }`}
                 >
-                  <section.icon className="w-3 h-3" />
+                  {section.icon}
                   {section.label}
-                  {expandedSections[section.label] ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
+                  {expandedSection === section.label ? <ChevronDown className="w-2.5 h-2.5" /> : <ChevronRight className="w-2.5 h-2.5" />}
                 </button>
-                {expandedSections[section.label] && (
-                  <div className="absolute top-full left-0 mt-1 w-44 bg-[#0a0a0a] border border-white/10 shadow-2xl z-50 py-1">
-                    {section.items.map(item => (
+                {expandedSection === section.label && (
+                  <div
+                    className="absolute top-full left-0 w-44 bg-[#0a0a0a] border border-t-0 border-white/25 shadow-2xl z-50 py-1"
+                    onMouseEnter={() => { clearTimeout(closeTimer.current); }}
+                    onMouseLeave={handleSectionLeave}
+                  >
+                    {section.items.filter(item => canAccessItem(item, role)).map(item => (
                       <button
                         key={item.label}
-                        onClick={() => { item.onClick(); toggleSection(section.label); }}
-                        className={`w-full text-left px-3 py-2 text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                          item.active ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        onClick={() => handleNav(item.path)}
+                        className={`w-full flex items-center gap-2 text-left px-3 py-2 text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                          pathname === item.path ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
                         }`}
                       >
+                        {item.icon}
                         {item.label}
                       </button>
                     ))}
@@ -371,35 +473,22 @@ export function Header({
                 </div>
               )}
 
-              {/* Expandable navigation sections for mobile */}
+              {/* Mobile navigation sections — single expanded at a time */}
               <div className="space-y-2">
                 <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1">Navigation</p>
-                {[
-                  { label: 'Workspace', icon: Briefcase, items: [
-                    { label: 'Projects', onClick: () => { onGoHome(); setMobileMenuOpen(false); }, active: (!showAdmin && !showLogistics && !showPipeline) }
-                  ]},
-                  { label: 'Execution', icon: PlayCircle, items: [
-                    { label: 'Task Board', onClick: () => { onTogglePipeline(); setMobileMenuOpen(false); }, active: showPipeline },
-                    ...(canAccessLogistics ? [{ label: 'Logistics', onClick: () => { onToggleLogistics(); setMobileMenuOpen(false); }, active: showLogistics }] : [])
-                  ]},
-                  { label: 'Resources', icon: Database, items: [
-                    ...(canAccessLogistics ? [{ label: 'Logistics', onClick: () => { onToggleLogistics(); setMobileMenuOpen(false); }, active: showLogistics }] : [])
-                  ]},
-                  { label: 'Control', icon: Shield, items: [
-                    ...(canAccessAdmin ? [{ label: 'Admin', onClick: () => { onToggleAdmin(); setMobileMenuOpen(false); }, active: showAdmin }] : [])
-                  ]}
-                ].map(section => (
+                {NAV.map(section => (
                   <div key={section.label} className="border border-white/5">
                     <button
-                      onClick={() => toggleSection(section.label)}
+                      onClick={() => handleParentClick(section.label)}
                       className="w-full flex items-center justify-between text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border-b border-white/5 text-white/70"
                     >
-                      <span className="flex items-center gap-2"><section.icon className="w-3.5 h-3.5" />{section.label}</span>
-                      {expandedSections[section.label] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      <span className="flex items-center gap-2">{section.icon}{section.label}</span>
+                      {expandedSection === section.label ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                     </button>
-                    {expandedSections[section.label] && section.items.map(item => (
-                      <button key={item.label} onClick={item.onClick}
-                        className={`w-full text-left text-[11px] font-mono uppercase tracking-wider px-6 py-2.5 border-b border-white/5 transition-all cursor-pointer ${item.active ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+                    {expandedSection === section.label && section.items.filter(item => canAccessItem(item, role)).map(item => (
+                      <button key={item.label} onClick={() => handleNav(item.path)}
+                        className={`w-full flex items-center gap-2 text-left text-[11px] font-mono uppercase tracking-wider px-6 py-2.5 border-b border-white/5 transition-all cursor-pointer ${pathname === item.path ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+                        {item.icon}
                         {item.label}
                       </button>
                     ))}

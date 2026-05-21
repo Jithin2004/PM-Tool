@@ -6,7 +6,7 @@ export const TERMINOLOGY = {
   project: 'Project',
   projects: 'Projects',
   addAsset: 'Create Project',
-  executionPipeline: 'Task Board',
+  executionPipeline: 'Board',
   operationalSquadRoster: 'Teams',
   predictiveDecay: 'Delivery Risk',
   assetAnalysisConsole: 'Project Overview',

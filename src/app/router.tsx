@@ -112,8 +112,8 @@ export function ResolveRouter() {
     return <WorkspaceSetupPage />;
   }
 
-  // New route structure
-  if (pathname === '/control') {
+  // New route structure — exact matches for parent pages, prefix matches for sub-routes
+  if (pathname.startsWith('/control/') || pathname === '/control') {
     if (profile?.role !== 'super_admin') {
       window.history.replaceState(null, '', '/workspace');
       window.dispatchEvent(new CustomEvent('popstate'));
@@ -126,7 +126,7 @@ export function ResolveRouter() {
     );
   }
 
-  if (pathname === '/resources') {
+  if (pathname.startsWith('/resources/') || pathname === '/resources') {
     if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
       window.history.replaceState(null, '', '/workspace');
       window.dispatchEvent(new CustomEvent('popstate'));
@@ -139,7 +139,7 @@ export function ResolveRouter() {
     );
   }
 
-  if (pathname === '/execution') {
+  if (pathname.startsWith('/execution/') || pathname === '/execution') {
     return (
       <DashboardLayout>
         <PipelinePanel />

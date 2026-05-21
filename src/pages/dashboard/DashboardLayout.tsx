@@ -226,6 +226,11 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     setShowGuide(false);
   };
 
+  const navigateTo = (path: string) => {
+    window.history.pushState(null, '', path);
+    window.dispatchEvent(new CustomEvent('popstate'));
+  };
+
   const systemSettings = useMemo(() => teams.find(t => t.name === 'SYSTEM_SETTINGS'), [teams]);
   const rawSystemData = useMemo(() => systemSettings?.data as any || {}, [systemSettings]);
 
@@ -265,9 +270,6 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const customRoles = useMemo(() => systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'], [systemData]);
 
   const [isAdding, setIsAdding] = useState(false);
-  const [isAdminView, setIsAdminView] = useState(() => window.location.pathname === '/control');
-  const [isLogisticsView, setIsLogisticsView] = useState(() => window.location.pathname === '/resources');
-  const [isPipelineView, setIsPipelineView] = useState(() => window.location.pathname === '/execution');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -288,86 +290,52 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         {
           title: "Welcome, Commander!",
           description: "Step into your high-fidelity Resolve PM workspace. This guide will brief you on all administrative and scheduling tools at your disposal.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Tactical Navigation Console",
           description: "In the Header, use the 'Admin Console' button to manage team structure, the 'Logistics Console' button to access payroll, and the 'Brain' button to restart this tour.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "AI-Powered Strategy Analytics",
           description: "Click 'Analytics' or monitor stats at the top: Delivery Confidence (calculated from team load), daily Fatigue, and live AI Strategy Briefings.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Project Workspace Grid",
           description: "Your primary project workspace. Click the '+' button to add new projects. Switch between 'Active' and 'Completed' tabs. Click 'Details' on any card to view PERT estimates and enter audit logs.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Admin Console (Teams & Roles)",
           description: "Here, click 'Configure Roles' to manage team titles. Click 'Create Team' to create a team, set their load limit, and assign developers.",
-          actionBefore: () => {
-            setIsAdminView(true);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/control')
         },
         {
           title: "Logistics & Payroll Controls",
           description: "Use the calendar to mark daily attendance. Change pay slabs under settings, calculate automated deductions, and click 'Export CSV' to download detailed payroll reports.",
-          actionBefore: () => {
-            setIsLogisticsView(true);
-            setIsAdminView(false);
-          }
+          actionBefore: () => navigateTo('/resources')
         },
         {
-          title: "Task Board",
-          description: "Explore the brand new premium, tactical Task Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
-          actionBefore: () => {
-            setIsPipelineView(true);
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          title: "Board",
+          description: "Explore the brand new premium, tactical Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
+          actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Visual Lenses & Task Lanes",
           description: "Switch between 'Kanban' (Triage, In Flight, Validation) and 'Scrum' (Sprint Backlog, In Progress, Code Review, Merged) lenses instantly.",
-          actionBefore: () => {
-            setIsPipelineView(true);
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Developer Activity Logs",
           description: "Click on any task card to reveal the slide-out developer activity log drawer and inspect live historical records.",
-          actionBefore: () => {
-            setIsPipelineView(true);
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Calibrated & Ready!",
           description: "Use the Sun/Moon button next to the Help Tour button to switch themes. Your console is fully synced to Supabase. Enjoy allocation!",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         }
       ];
     } else if (role === 'pm') {
@@ -375,83 +343,47 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         {
           title: "Welcome, Project Manager!",
           description: "Step into your allocation workspace. This guide will brief you on how to coordinate teams and track client deadlines.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "PM Header Controls",
           description: "Use the 'Logistics Console' button in the Header to access developers' attendance, and the glowing 'Brain' button to trigger this guide anytime.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Strategy Analytics",
           description: "Track project counts, daily fatigue levels, and dynamic AI briefings to report overall delivery confidence to supervisors.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Project Management Grid",
           description: "Click the '+' button to setup new project deadlines. Click 'Details' on any card to edit its proposed start, set priorities, and write change reason logs.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "PM Logistics & Analytics",
           description: "Click on the calendar dates to mark daily attendance. View net payout totals and click 'Export CSV' to generate reports for the ownership.",
-          actionBefore: () => {
-            setIsLogisticsView(true);
-            setIsAdminView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/resources')
         },
         {
-          title: "Task Board",
+          title: "Board",
           description: "Track project task progression, visualize Kanban/Scrum lanes, and inspect live clock-synced ETAs.",
-          actionBefore: () => {
-            setIsPipelineView(true);
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Visual Lenses & Task Lanes",
           description: "Switch visual layouts between Kanban and Scrum on the fly to match your team's tactical coordination model.",
-          actionBefore: () => {
-            setIsPipelineView(true);
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Developer Activity Logs",
           description: "Open cards to monitor detailed, immutable logs showing developer status transitions and audits.",
-          actionBefore: () => {
-            setIsPipelineView(true);
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Calibrated & Ready!",
           description: "Toggle themes with the Sun/Moon header button, coordinate with your assigned engineers, and keep timelines on target!",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         }
       ];
     } else {
@@ -460,74 +392,42 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         {
           title: "Welcome to Resolve PM!",
           description: "This workspace displays live engineering allocations, delivery schedules, and historical project logs in Read-Only mode.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Viewing Header & Themes",
           description: "Your session role is set to 'Viewer'. You can read stats, switch themes using the Sun/Moon button, or restart this guide using the 'Brain' button.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "AI Analytics & Delivery Confidence",
           description: "Monitor overall project stats, daily fatigue limits, and AI Strategy briefings right from the top dashboard analytics panel.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Project Grid & Search",
           description: "Use the top Search bar to find projects. Toggle 'Active' or 'Completed' tabs to view archives. Click 'Details' on cards to view PERT estimates and past audit logs.",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         },
         {
-          title: "Task Board",
+          title: "Board",
           description: "View real-time task progression lanes and live clock-synced ETAs in premium Read-Only mode.",
-          actionBefore: () => {
-            setIsPipelineView(true);
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Visual Lenses & Task Lanes",
           description: "Switch visual layouts between Kanban and Scrum lanes to inspect matching task distributions.",
-          actionBefore: () => {
-            setIsPipelineView(true);
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Developer Activity Logs",
           description: "Click on task cards to read historical compliance logs showing past status transitions.",
-          actionBefore: () => {
-            setIsPipelineView(true);
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-          }
+          actionBefore: () => navigateTo('/execution')
         },
         {
           title: "All Calibrated!",
           description: "You are fully up to date with live team activities. Keep track of project updates as developers coordinate tasks!",
-          actionBefore: () => {
-            setIsAdminView(false);
-            setIsLogisticsView(false);
-            setIsPipelineView(false);
-          }
+          actionBefore: () => navigateTo('/workspace')
         }
       ];
     }
@@ -538,36 +438,9 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     (window as any).startOnboardingTour = () => {
       setGuideStep(0);
       setShowGuide(true);
-      setIsAdminView(false);
-      setIsLogisticsView(false);
-      setIsPipelineView(false);
+      navigateTo('/workspace');
     };
   }, [tourSteps]);
-
-
-  // URL Sync Effect — keeps pathname in sync with view state
-  useEffect(() => {
-    let targetPath = '/workspace';
-    if (isAdminView) targetPath = '/control';
-    else if (isLogisticsView) targetPath = '/resources';
-    else if (isPipelineView) targetPath = '/execution';
-
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState({}, '', targetPath);
-    }
-  }, [isAdminView, isLogisticsView, isPipelineView]);
-
-  // Browser Back/Forward Sync Effect
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      setIsAdminView(path === '/control');
-      setIsLogisticsView(path === '/resources');
-      setIsPipelineView(path === '/execution');
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
 
   // Listen for project setup guide trigger
   useEffect(() => {
@@ -1508,14 +1381,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     }
   };
 
-  // Promote a task from Task Board into the Project creation form
+  // Promote a task from Board into the Project creation form
   const handlePromoteTaskToAsset = (taskData: { title: string; description: string; projectId: string }) => {
     setNewName(taskData.title);
-    setIsPipelineView(false);
-    setIsAdminView(false);
-    setIsLogisticsView(false);
+    navigateTo('/workspace');
     setIsAdding(true);
-    notify(`Task "${taskData.title}" elevated â€” fill in PERT estimates to register as a project.`, 'info');
+    notify(`Task "${taskData.title}" elevated — fill in PERT estimates to register as a project.`, 'info');
   };
 
   const getSuggestedTeam = () => {
@@ -1629,37 +1500,15 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           onLogout={handleLogout}
           notifications={dbNotifications}
           onMarkAsRead={handleMarkAsRead}
-        onToggleAdmin={() => {
-          setIsAdminView(!isAdminView);
-          setIsLogisticsView(false);
-          setIsPipelineView(false);
-        }}
-        showAdmin={isAdminView}
-        onToggleLogistics={() => {
-          setIsLogisticsView(!isLogisticsView);
-          setIsAdminView(false);
-          setIsPipelineView(false);
-        }}
-        showLogistics={isLogisticsView}
-        onTogglePipeline={() => {
-          setIsPipelineView(!isPipelineView);
-          setIsAdminView(false);
-          setIsLogisticsView(false);
-        }}
-        showPipeline={isPipelineView}
-        onGoHome={() => {
-          setIsAdminView(false);
-          setIsLogisticsView(false);
-          setIsPipelineView(false);
-        }}
-        workingTimeFrom={workingTimeFrom}
-        workingTimeTo={workingTimeTo}
-        onWorkingTimeChange={handleWorkingTimeChange}
-        tilesPerRow={tilesPerRow}
-        setTilesPerRow={setTilesPerRow}
-        theme={theme}
-        setTheme={setTheme}
-      />
+        onNavigate={navigateTo}
+          workingTimeFrom={workingTimeFrom}
+          workingTimeTo={workingTimeTo}
+          onWorkingTimeChange={handleWorkingTimeChange}
+          tilesPerRow={tilesPerRow}
+          setTilesPerRow={setTilesPerRow}
+          theme={theme}
+          setTheme={setTheme}
+        />
 
       <StatsGrid stats={stats} />
 
