@@ -25,11 +25,14 @@ interface Props {
   notify: (msg: string, t: 'success' | 'error' | 'info' | 'warning') => void;
   setIsAdding?: (v: boolean) => void;
   workspaceId?: string;
+  onOpenAnalytics?: () => void;
 }
 
 const STORAGE_KEY = 'resolve-command-recent';
 const USAGE_KEY = 'resolve-command-usage';
+const TIMELINE_KEY = 'resolve-command-timeline';
 const MAX_RECENT = 10;
+const MAX_TIMELINE = 1000;
 
 // --- Alias Engine ---
 const ALIASES: Record<string, string> = {
@@ -82,6 +85,85 @@ function getTopUsageIds(limit = 5): string[] {
   } catch { return []; }
 }
 
+function getUsageCounts(): Record<string, number> {
+  try {
+    return JSON.parse(localStorage.getItem(USAGE_KEY) || '{}');
+  } catch { return {}; }
+}
+
+// --- Timeline for trends ---
+interface TimelineEntry {
+  id: string;
+  ts: number;
+  group: string;
+  label: string;
+}
+function addTimelineEntry(entry: TimelineEntry) {
+  try {
+    const raw = localStorage.getItem(TIMELINE_KEY);
+    const timeline: TimelineEntry[] = raw ? JSON.parse(raw) : [];
+    timeline.push(entry);
+    if (timeline.length > MAX_TIMELINE) timeline.splice(0, timeline.length - MAX_TIMELINE);
+    localStorage.setItem(TIMELINE_KEY, JSON.stringify(timeline));
+  } catch { /* ignore */ }
+}
+function getTimeline(): TimelineEntry[] {
+  try {
+    return JSON.parse(localStorage.getItem(TIMELINE_KEY) || '[]');
+  } catch { return []; }
+}
+
+interface CommandTrend { id: string; label: string; group: string; count: number; trend: number; }
+
+// Returns top N commands with 7d count and % change vs 7d prior
+function getTopCommandsWithTrend(limit = 5): CommandTrend[] {
+  const timeline = getTimeline();
+  const now = Date.now();
+  const week = 7 * 24 * 60 * 60 * 1000;
+  const recent = timeline.filter(e => now - e.ts < week);
+  const prior = timeline.filter(e => now - e.ts >= week && now - e.ts < 2 * week);
+  const recentCounts: Record<string, { count: number; label: string; group: string }> = {};
+  const priorCounts: Record<string, number> = {};
+  recent.forEach(e => {
+    if (!recentCounts[e.id]) recentCounts[e.id] = { count: 0, label: e.label, group: e.group };
+    recentCounts[e.id].count++;
+  });
+  prior.forEach(e => { priorCounts[e.id] = (priorCounts[e.id] || 0) + 1; });
+  return Object.entries(recentCounts)
+    .sort(([, a], [, b]) => b.count - a.count)
+    .slice(0, limit)
+    .map(([id, info]) => ({
+      id, label: info.label, group: info.group, count: info.count,
+      trend: priorCounts[id] ? Math.round(((info.count - priorCounts[id]) / priorCounts[id]) * 100) : 0,
+    }));
+}
+
+// Sequence-based suggestions: looks at last-used command and suggests most common next
+function getSequenceSuggestions(): { id: string; label: string; group: string }[] {
+  const timeline = getTimeline();
+  if (timeline.length < 2) return [];
+  const lastId = timeline[timeline.length - 1]?.id;
+  if (!lastId) return [];
+  const transitions: Record<string, Record<string, number>> = {};
+  for (let i = 0; i < timeline.length - 1; i++) {
+    const from = timeline[i].id;
+    const to = timeline[i + 1].id;
+    if (!transitions[from]) transitions[from] = {};
+    transitions[from][to] = (transitions[from][to] || 0) + 1;
+  }
+  const nextCandidates = transitions[lastId];
+  if (!nextCandidates) return [];
+  return Object.entries(nextCandidates)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([id]) => {
+      const entry = timeline.find(e => e.id === id);
+      return { id, label: entry?.label || id, group: entry?.group || 'SUGGESTED' };
+    });
+}
+
+export { getTimeline, getTopCommandsWithTrend, getSequenceSuggestions, type TimelineEntry, type CommandTrend };
+
 const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode; roles?: string[] }[] = [
   { label: 'Workspace', path: '/workspace', icon: <FolderOpen className="w-3.5 h-3.5" /> },
   { label: 'Execution Board', path: '/execution', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
@@ -114,6 +196,7 @@ const AI_ITEMS: { label: string; icon: React.ReactNode; onSelect: (props: Props)
   { label: 'Capacity Forecast', icon: <Cpu className="w-3.5 h-3.5" />, onSelect: (p) => p.onNavigate('/resources/capacity') },
   { label: 'Prediction Insights', icon: <BrainCircuit className="w-3.5 h-3.5" />, onSelect: (p) => p.onNavigate('/workspace') },
   { label: 'Decision Center', icon: <Zap className="w-3.5 h-3.5" />, onSelect: (p) => p.onNavigate('/workspace/decisions') },
+  { label: 'Command Analytics', icon: <TrendingUp className="w-3.5 h-3.5" />, onSelect: (p) => p.onOpenAnalytics?.() },
 ];
 
 function scoreMatch(query: string, target: string): number {
@@ -158,12 +241,13 @@ function commandIcon(group: string): React.ReactNode {
     AI: <BrainCircuit className="w-3 h-3 text-cyan-400" />,
     RECENT: <Clock className="w-3 h-3 text-white/40" />,
     SUGGESTED: <TrendingUp className="w-3 h-3 text-white/30" />,
+    MOST_USED: <Cpu className="w-3 h-3 text-orange-400" />,
   };
   return map[group] || null;
 }
 
 export default function CommandPalette(props: Props) {
-  const { isOpen, onClose, onNavigate, profile, projects, tasks, setSelectedProject, notify, setIsAdding, workspaceId } = props;
+  const { isOpen, onClose, onNavigate, profile, projects, tasks, setSelectedProject, notify, setIsAdding, workspaceId, onOpenAnalytics } = props;
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
@@ -224,6 +308,21 @@ export default function CommandPalette(props: Props) {
       matchedAiNlp.forEach(r => out.push(r));
     }
 
+    // --- MOST_USED — top commands with trend (empty query only) ---
+    if (!q && !hasFilter) {
+      const topTrend = getTopCommandsWithTrend(5);
+      if (topTrend.length > 0) {
+        out.push({ id: '_mostused_header', group: 'MOST_USED', label: 'MOST USED', onSelect: () => {} });
+        topTrend.forEach(t => out.push({
+          id: `trend:${t.id}`, group: 'MOST_USED',
+          label: `${t.label}`,
+          description: `${t.count}x this week · ${t.trend >= 0 ? '↑' : '↓'} ${Math.abs(t.trend)}%`,
+          icon: <Cpu className="w-3.5 h-3.5 text-orange-400" />,
+          onSelect: () => { logCmd('most_used', t.label); },
+        }));
+      }
+    }
+
     // --- SUGGESTED — preload likely next when query empty and no filter ---
     if (!q && !hasFilter) {
       const recent = getRecent();
@@ -247,6 +346,27 @@ export default function CommandPalette(props: Props) {
       if (suggested.length > 0) {
         out.push({ id: '_suggested_header', group: 'SUGGESTED', label: 'SUGGESTED', onSelect: () => {} });
         suggested.forEach(r => out.push(r));
+      }
+
+      // Sequence-based: predict next command from workflow patterns
+      const sequenceSuggestions = getSequenceSuggestions();
+      if (sequenceSuggestions.length > 0) {
+        // Only show if not already in suggested
+        const suggestedIds = new Set(suggested.map(s => s.id));
+        const uniqueSequences = sequenceSuggestions.filter(s => !suggestedIds.has(s.id) && !seen.has(s.id));
+        if (uniqueSequences.length > 0) {
+          // Add a divider label
+          out.push({ id: '_predict_header', group: 'SUGGESTED', label: 'PREDICTED', onSelect: () => {} });
+          uniqueSequences.forEach(s => {
+            seen.add(s.id);
+            out.push({
+              id: `predict:${s.id}`, group: 'SUGGESTED', label: s.label,
+              description: 'Workflow prediction',
+              icon: <Zap className="w-3.5 h-3.5 text-amber-400" />,
+              onSelect: () => { logCmd('predict', s.label); },
+            });
+          });
+        }
       }
     }
 
@@ -353,7 +473,9 @@ export default function CommandPalette(props: Props) {
   }, [flatResults, selectedIndex, onClose]);
 
   const logCmd = async (type: string, target: string, extra?: Record<string, string>) => {
-    incrementUsage(`${type}:${target}`);
+    const id = `${type}:${target}`;
+    incrementUsage(id);
+    addTimelineEntry({ id, ts: Date.now(), group: type.toUpperCase(), label: target });
     if (!workspaceId) return;
     await activityLogService.appendLog({
       workspace_id: workspaceId,

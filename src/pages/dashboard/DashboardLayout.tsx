@@ -20,6 +20,7 @@ import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
 import { Login } from '../../components/auth/Login';
 import { Header } from '../../components/ui/Header';
 import CommandPalette from '../../components/command/CommandPalette';
+import CommandAnalytics from '../../components/command/CommandAnalytics';
 import { NotificationToast, Notification } from '../../components/ui/NotificationToast';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 import { LiveClock } from '../../components/ui/LiveClock';
@@ -284,6 +285,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const [feedbackComment, setFeedbackComment] = useState('');
   const [pathname, setPathname] = useState(window.location.pathname);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandAnalyticsOpen, setCommandAnalyticsOpen] = useState(false);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -1600,6 +1602,15 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         notify={notify}
         setIsAdding={setIsAdding}
         workspaceId={workspace?.id}
+        onOpenAnalytics={() => { setCommandPaletteOpen(false); setCommandAnalyticsOpen(true); }}
+      />
+
+      <CommandAnalytics
+        isOpen={commandAnalyticsOpen}
+        onClose={() => setCommandAnalyticsOpen(false)}
+        role={profile?.role || 'viewer'}
+        workspaceId={workspace?.id}
+        profileId={profile?.id}
       />
 
       {children}
