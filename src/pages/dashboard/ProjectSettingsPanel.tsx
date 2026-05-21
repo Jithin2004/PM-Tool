@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
   fetchIntegrationConfigs, saveIntegrationConfig, updateIntegrationConfig,
-  syncGitHubRepo, syncGitLabRepo, syncFigmaFrame, syncGoogleDrive,
   enqueueSync, fetchIntegrationHealth, getCooldownRemaining, formatCooldown,
-  IntegrationConfig, SyncResult, IntegrationHealth,
+  IntegrationConfig, IntegrationHealth,
 } from '../../services/integrationService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
@@ -65,19 +64,14 @@ export default function ProjectSettingsPanel({ projectId, onClose }: Props) {
     setSyncing(prev => ({ ...prev, [service]: true }));
     setMessages(prev => ({ ...prev, [msgKey]: 'Queued...' }));
     const cfg = editing[service] || {};
-    const fn = async (): Promise<SyncResult> => {
-      switch (service) {
-        case 'github': return syncGitHubRepo(wsId, cfg.repo_url || '', cfg.branch || 'main');
-        case 'gitlab': return syncGitLabRepo(wsId, cfg.repo_url || '', cfg.branch || 'main');
-        case 'figma': {
-          const r = await syncFigmaFrame(wsId, cfg.frame_url || '');
-          if (r.frameId) setFigmaPreview(`https://www.figma.com/embed?embed_host=resolve&url=${encodeURIComponent(cfg.frame_url || '')}`);
-          return r;
-        }
-        default: return { success: false, message: 'Sync unavailable' };
-      }
-    };
-    const result = await enqueueSync(wsId, service, fn);
+    const payload: Record<string, any> = {};
+    if (cfg.repo_url) payload.repo_url = cfg.repo_url;
+    if (cfg.branch) payload.branch = cfg.branch;
+    if (cfg.frame_url) payload.frame_url = cfg.frame_url;
+    const result = await enqueueSync(wsId, service, payload);
+    if (service === 'figma' && result.itemsSynced && (result as any).frameId) {
+      setFigmaPreview(`https://www.figma.com/embed?embed_host=resolve&url=${encodeURIComponent(cfg.frame_url || '')}`);
+    }
     setSyncing(prev => ({ ...prev, [service]: false }));
     setMessages(prev => ({ ...prev, [msgKey]: result.message }));
     const h = await fetchIntegrationHealth(wsId);

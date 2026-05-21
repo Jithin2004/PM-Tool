@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   fetchConnectedAccounts, fetchIntegrationHealth, updateIntegrationHealth,
-  disconnectService, syncGoogleCalendar, syncGoogleDrive,
-  enqueueSync, getHealthDisplay, getHealthTrend, getCooldownRemaining, formatCooldown,
-  ConnectedAccount, IntegrationHealth, SyncResult, getQueueStats,
+  disconnectService, enqueueSync, getHealthDisplay, getHealthTrend, getCooldownRemaining, formatCooldown,
+  ConnectedAccount, IntegrationHealth, QueueState, getQueueStats,
 } from '../../services/integrationService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -41,8 +40,10 @@ export default function ConnectionsPanel() {
   const [loading, setLoading] = useState(true);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
   const [showQueue, setShowQueue] = useState(false);
+  const [queueStats, setQueueStats] = useState<{ length: number; pending: number; active: number; failed: number; items: { id: string; service: string; state: QueueState; attempt: number }[] }>({ length: 0, pending: 0, active: 0, failed: 0, items: [] });
   const cooldownRef = useRef<Record<string, number>>({});
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const queueTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadData = useCallback(async () => {
     if (!wsId) return;
@@ -72,6 +73,17 @@ export default function ConnectionsPanel() {
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
   }, [health]);
 
+  // Queue stats ticker
+  useEffect(() => {
+    const refresh = async () => {
+      const stats = await getQueueStats();
+      setQueueStats(stats);
+    };
+    refresh();
+    queueTickRef.current = setInterval(refresh, 5000);
+    return () => { if (queueTickRef.current) clearInterval(queueTickRef.current); };
+  }, []);
+
   const handleConnect = async (service: string) => {
     setMessages(prev => ({ ...prev, [`${service}_msg`]: 'Connect pending — OAuth setup required' }));
     await updateIntegrationHealth(wsId, service, 'disconnected', 'Connect pending');
@@ -91,18 +103,7 @@ export default function ConnectionsPanel() {
     setSyncing(prev => ({ ...prev, [service]: true }));
     setMessages(prev => ({ ...prev, [msgKey]: 'Queued...' }));
     const acct = accounts[service];
-    let syncFn: () => Promise<SyncResult>;
-    switch (service) {
-      case 'google_calendar':
-        syncFn = () => syncGoogleCalendar(wsId, acct?.access_token);
-        break;
-      case 'google_drive':
-        syncFn = () => syncGoogleDrive(wsId, acct?.access_token);
-        break;
-      default:
-        syncFn = async () => ({ success: false, message: 'Sync unavailable for this service' });
-    }
-    const result = await enqueueSync(wsId, service, syncFn);
+    const result = await enqueueSync(wsId, service, {}, acct?.access_token);
     setSyncing(prev => ({ ...prev, [service]: false }));
     setMessages(prev => ({ ...prev, [msgKey]: result.message }));
     await loadData();
@@ -170,8 +171,6 @@ export default function ConnectionsPanel() {
     );
   };
 
-  const stats = getQueueStats();
-
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -183,7 +182,7 @@ export default function ConnectionsPanel() {
         {/* Queue observability toggle */}
         <button onClick={() => setShowQueue(!showQueue)}
           className="text-[9px] font-mono text-white/30 hover:text-white/60 border border-white/10 px-2 py-1">
-          Queue {stats.length > 0 ? `(${stats.pending + stats.active})` : ''}
+          Queue {queueStats.length > 0 ? `(${queueStats.pending + queueStats.active})` : ''}
         </button>
       </div>
 
@@ -192,14 +191,14 @@ export default function ConnectionsPanel() {
         <div className="border border-white/10 bg-white/[0.02] p-3 mb-4">
           <div className="text-[9px] font-mono text-white/30 uppercase tracking-wider mb-2">Sync Queue</div>
           <div className="flex gap-4 text-[10px] font-mono">
-            <span className="text-white/50">Total: {stats.length}</span>
-            <span className="text-cyan-400">Pending: {stats.pending}</span>
-            <span className="text-amber-400">Active: {stats.active}</span>
-            <span className="text-red-400">Failed: {stats.failed}</span>
+            <span className="text-white/50">Total: {queueStats.length}</span>
+            <span className="text-cyan-400">Pending: {queueStats.pending}</span>
+            <span className="text-amber-400">Active: {queueStats.active}</span>
+            <span className="text-red-400">Failed: {queueStats.failed}</span>
           </div>
-          {stats.items.length > 0 && (
+          {queueStats.items.length > 0 && (
             <div className="mt-2 space-y-1">
-              {stats.items.map(item => (
+              {queueStats.items.map(item => (
                 <div key={item.id} className="text-[8px] font-mono text-white/30 flex gap-2">
                   <span>{item.service}</span>
                   <span className={

@@ -63,21 +63,54 @@ export interface QueueItem {
   resolve: (r: SyncResult) => void;
 }
 
-// ── Sync Queue ──
-
-const queue: QueueItem[] = [];
-let activeCount = 0;
-
-function generateQueueId(): string {
-  return `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+export interface SyncJob {
+  id: string;
+  workspace_id: string;
+  service: string;
+  payload: Record<string, any>;
+  status: 'queued' | 'processing' | 'retrying' | 'success' | 'failed' | 'cancelled';
+  attempts: number;
+  max_attempts: number;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+  next_retry_at?: string;
+  last_error?: string;
+  created_by?: string;
 }
 
-function processQueue(): void {
-  while (activeCount < QUEUE_MAX_CONCURRENT && queue.length > 0) {
-    const item = queue.find(q => q.state === 'queued');
+// ── Sync Queue (DB-backed) ──
+
+const STUCK_TIMEOUT_MS = 5 * 60 * 1000;
+
+const inMemoryQueue: QueueItem[] = [];
+let activeCount = 0;
+
+function resolveSyncFn(service: string, payload: Record<string, any>, _workspaceId: string, _accessToken?: string): () => Promise<SyncResult> {
+  switch (service) {
+    case 'github': return () => syncGitHubRepo(_workspaceId, (payload as any).repo_url || '', (payload as any).branch || 'main');
+    case 'gitlab': return () => syncGitLabRepo(_workspaceId, (payload as any).repo_url || '', (payload as any).branch || 'main');
+    case 'figma': return () => syncFigmaFrame(_workspaceId, (payload as any).frame_url || '');
+    case 'google_calendar': return () => syncGoogleCalendar(_workspaceId, _accessToken);
+    case 'google_drive': return () => syncGoogleDrive(_workspaceId, _accessToken);
+    default: return async () => ({ success: false, message: 'Unknown service' });
+  }
+}
+
+async function updateJobStatus(jobId: string, status: string, extra: Record<string, any> = {}): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  try {
+    await supabase.from('integration_sync_jobs').update({ status, ...extra }).eq('id', jobId);
+  } catch { /* ignore */ }
+}
+
+async function processQueue(): Promise<void> {
+  while (activeCount < QUEUE_MAX_CONCURRENT) {
+    const item = inMemoryQueue.find(q => q.state === 'queued');
     if (!item) break;
     item.state = 'processing';
     activeCount++;
+    await updateJobStatus(item.id, 'processing', { started_at: new Date().toISOString() });
     activityLogService.appendLog({
       workspace_id: item.workspaceId, action: 'integration_sync_started',
       metadata: { queue_id: item.id, service: item.service },
@@ -88,15 +121,19 @@ function processQueue(): void {
     item.fn().then(result => {
       if (result.success) {
         item.state = 'success';
+        updateJobStatus(item.id, 'success', { completed_at: new Date().toISOString() }).catch(() => {});
         activityLogService.appendLog({
           workspace_id: item.workspaceId, action: 'integration_sync_completed',
           metadata: { queue_id: item.id, service: item.service, items_synced: result.itemsSynced },
         }).catch(() => {});
+        activityLogService.logJobCompleted(item.workspaceId, item.id, item.service, result.itemsSynced).catch(() => {});
       } else {
         item.attempt++;
         if (item.attempt <= QUEUE_RETRY_BACKOFFS.length) {
           item.state = 'retrying';
           const backoff = QUEUE_RETRY_BACKOFFS[item.attempt - 1];
+          const nextRetry = new Date(Date.now() + backoff).toISOString();
+          updateJobStatus(item.id, 'retrying', { attempts: item.attempt, next_retry_at: nextRetry, last_error: result.message }).catch(() => {});
           activityLogService.appendLog({
             workspace_id: item.workspaceId, action: 'integration_sync_retry',
             metadata: { queue_id: item.id, service: item.service, attempt: item.attempt, backoff_ms: backoff, error: result.message },
@@ -107,16 +144,19 @@ function processQueue(): void {
           setTimeout(() => {
             item.state = 'queued';
             activeCount--;
+            updateJobStatus(item.id, 'queued').catch(() => {});
             processQueue();
           }, backoff);
           return;
         }
         item.state = 'failed';
         item.error = result.message;
+        updateJobStatus(item.id, 'failed', { completed_at: new Date().toISOString(), last_error: result.message, attempts: item.attempt }).catch(() => {});
         activityLogService.appendLog({
           workspace_id: item.workspaceId, action: 'integration_sync_failed',
           metadata: { queue_id: item.id, service: item.service, error: result.message },
         }).catch(() => {});
+        activityLogService.logJobFailed(item.workspaceId, item.id, item.service, result.message, item.attempt).catch(() => {});
       }
       activeCount--;
       item.resolve(result);
@@ -125,35 +165,102 @@ function processQueue(): void {
       item.state = 'failed';
       item.error = e.message;
       activeCount--;
+      updateJobStatus(item.id, 'failed', { completed_at: new Date().toISOString(), last_error: e.message, attempts: item.attempt }).catch(() => {});
       item.resolve({ success: false, message: e.message });
       processQueue();
     });
   }
 }
 
-export function enqueueSync(
-  workspaceId: string, service: string, fn: () => Promise<SyncResult>
+export async function enqueueSync(
+  workspaceId: string, service: string, payload: Record<string, any> = {},
+  _accessToken?: string
 ): Promise<SyncResult> {
-  return new Promise(resolve => {
-    const id = generateQueueId();
-    queue.push({ id, workspaceId, service, state: 'queued', attempt: 0, createdAt: Date.now(), fn, resolve });
-    activityLogService.appendLog({
-      workspace_id: workspaceId, action: 'integration_sync_queued',
-      metadata: { queue_id: id, service },
-    }).catch(() => {});
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[IntegrationQueue] Queued ${service} (${id}) — queue length: ${queue.length}`);
+  return new Promise(async resolve => {
+    if (!isSupabaseConfigured) {
+      const fallback = resolveSyncFn(service, payload, workspaceId, _accessToken);
+      const result = await fallback();
+      resolve(result);
+      return;
     }
-    processQueue();
+    try {
+      const { data: job } = await supabase.from('integration_sync_jobs').insert({
+        workspace_id: workspaceId, service, payload, status: 'queued',
+      }).select('id').single();
+      const id = job?.id || `fallback_${Date.now()}`;
+      const fn = resolveSyncFn(service, payload, workspaceId, _accessToken);
+      inMemoryQueue.push({ id, workspaceId, service, state: 'queued', attempt: 0, createdAt: Date.now(), fn, resolve });
+      activityLogService.appendLog({
+        workspace_id: workspaceId, action: 'integration_sync_queued',
+        metadata: { queue_id: id, service },
+      }).catch(() => {});
+      activityLogService.logJobCreated(workspaceId, id, service).catch(() => {});
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[IntegrationQueue] Queued ${service} (${id}) — queue length: ${inMemoryQueue.length}`);
+      }
+      processQueue();
+    } catch {
+      const fn = resolveSyncFn(service, payload, workspaceId, _accessToken);
+      const result = await fn();
+      resolve(result);
+    }
   });
 }
 
-export function getQueueStats(): { length: number; pending: number; active: number; failed: number; items: { id: string; service: string; state: QueueState; attempt: number }[] } {
-  const pending = queue.filter(q => q.state === 'queued' || q.state === 'retrying').length;
-  const active = activeCount;
-  const failed = queue.filter(q => q.state === 'failed').length;
-  const items = queue.map(q => ({ id: q.id, service: q.service, state: q.state, attempt: q.attempt }));
-  return { length: queue.length, pending, active, failed, items };
+export async function recoverJobs(): Promise<number> {
+  if (!isSupabaseConfigured) return 0;
+  try {
+    const cutoff = new Date(Date.now() - STUCK_TIMEOUT_MS).toISOString();
+    // Recover stuck processing jobs
+    await supabase.from('integration_sync_jobs')
+      .update({ status: 'queued', started_at: null })
+      .eq('status', 'processing')
+      .lt('started_at', cutoff);
+    // Load recoverable jobs
+    const { data: jobs } = await supabase
+      .from('integration_sync_jobs')
+      .select('*')
+      .in('status', ['queued', 'retrying'])
+      .or(`next_retry_at.is.null,next_retry_at.lte.${new Date().toISOString()}`)
+      .order('created_at', { ascending: true })
+      .limit(10);
+    if (!jobs || jobs.length === 0) return 0;
+    let recovered = 0;
+    for (const job of jobs) {
+      const fn = resolveSyncFn(job.service, job.payload, job.workspace_id);
+      inMemoryQueue.push({
+        id: job.id, workspaceId: job.workspace_id, service: job.service,
+        state: 'queued', attempt: job.attempts, createdAt: new Date(job.created_at).getTime(),
+        fn,
+        resolve: () => {},
+      });
+      activityLogService.appendLog({
+        workspace_id: job.workspace_id, action: 'integration_job_recovered',
+        metadata: { job_id: job.id, service: job.service },
+      }).catch(() => {});
+      recovered++;
+    }
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[IntegrationQueue] Recovered ${recovered} jobs`);
+    }
+    processQueue();
+    return recovered;
+  } catch { return 0; }
+}
+
+export async function getQueueStats(): Promise<{ length: number; pending: number; active: number; failed: number; items: { id: string; service: string; state: QueueState; attempt: number }[] }> {
+  const memItems = inMemoryQueue.map(q => ({ id: q.id, service: q.service, state: q.state as QueueState, attempt: q.attempt }));
+  try {
+    if (isSupabaseConfigured) {
+      const { data: counts } = await supabase
+        .from('integration_sync_jobs')
+        .select('status, count');
+      const dbPending = (counts || []).filter((c: any) => c.status === 'queued' || c.status === 'retrying').reduce((s: number, c: any) => s + (Number(c.count) || 0), 0);
+      const dbFailed = (counts || []).filter((c: any) => c.status === 'failed').reduce((s: number, c: any) => s + (Number(c.count) || 0), 0);
+      return { length: inMemoryQueue.length + dbPending + dbFailed, pending: dbPending + (memItems.filter(i => i.state === 'queued').length), active: activeCount, failed: dbFailed, items: memItems };
+    }
+  } catch { /* ignore */ }
+  return { length: inMemoryQueue.length, pending: memItems.filter(i => i.state === 'queued' || i.state === 'retrying').length, active: activeCount, failed: memItems.filter(i => i.state === 'failed').length, items: memItems };
 }
 
 // ── Cooldown / Rate Limiting ──
@@ -505,4 +612,13 @@ export async function syncGoogleDrive(workspaceId: string, accessToken?: string)
 
 export async function getRecentActivity(workspaceId: string, service: string, limit = 10): Promise<any[]> {
   return [];
+}
+
+// ── Auto-recovery on module load ──
+if (typeof window !== 'undefined' && isSupabaseConfigured) {
+  recoverJobs().then(count => {
+    if (process.env.NODE_ENV === 'development' && count > 0) {
+      console.log(`[IntegrationQueue] Auto-recovery: ${count} jobs re-queued`);
+    }
+  }).catch(() => {});
 }

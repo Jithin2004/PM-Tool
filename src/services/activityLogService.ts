@@ -228,4 +228,38 @@ export const activityLogService = {
       metadata: { oauth_session_id: sessionId, provider },
     });
   },
+
+  // ── Queue Persistence Logging ──
+
+  async logJobCreated(workspaceId: string, jobId: string, service: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'integration_job_created',
+      metadata: { job_id: jobId, service },
+    });
+  },
+
+  async logJobRecovered(workspaceId: string, jobId: string, service: string, status: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'integration_job_recovered',
+      metadata: { job_id: jobId, service, previous_status: status },
+    });
+  },
+
+  async logJobCompleted(workspaceId: string, jobId: string, service: string, itemsSynced?: number): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'integration_job_completed',
+      metadata: { job_id: jobId, service, items_synced: itemsSynced },
+    });
+  },
+
+  async logJobFailed(workspaceId: string, jobId: string, service: string, error: string, attempts: number): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'integration_job_failed',
+      metadata: { job_id: jobId, service, error, attempts },
+    });
+  },
 };
