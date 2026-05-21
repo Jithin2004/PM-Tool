@@ -7,6 +7,12 @@ import { createApprovalChain, createApprovalInstance } from './approvalService';
 import { sprintService } from './sprintService';
 import { calendarEventService } from './calendarEventService';
 import type { CalendarEvent } from './calendarEventService';
+import { provisionSyntheticUser } from './userProvisionService';
+import { createTeam } from './teamService';
+import { createProject } from './projectService';
+import { createEpic } from './epicService';
+import { createTask, createTaskDependency } from './taskService';
+import { createConnectedAccount, createIntegrationConfig, createIntegrationSyncJob } from './integrationService';
 
 const LOCK_KEY = 'resolve-stress-running';
 const MAX_MULTIPLIER = 2;
@@ -20,11 +26,6 @@ const INTEGRATION_SERVICES = ['github', 'gitlab', 'figma', 'google_calendar', 'g
 const WEBHOOK_EVENTS = ['task.created', 'task.updated', 'task.completed', 'project.created', 'sprint.completed', 'approval.completed', 'document.created'];
 
 const DEFAULT_MAX = { users: 200, projects: 1000, tasks: 10000 } as const;
-
-const TABLE_DOMAIN = new Set([
-  'documents', 'webhooks', 'automation_rules',
-  'approval_chains', 'approval_instances', 'sprints', 'calendar_events',
-]);
 
 export interface StressTestOptions {
   dryRun?: boolean;
@@ -54,6 +55,7 @@ export interface StressReport {
     webhooksCreated: number; automationsCreated: number; approvalsCreated: number;
     timeMs: number; stressRlsErrors: number; blockedTables: number;
     rlsErrorTables: string[]; serviceFallbacks: number; skippedDueToRls: number;
+    servicePathCount: number; rawInsertCount: number;
   };
   performance: {
     projectPageLoadMs: number; portfolioLoadMs: number; timelineCalcMs: number;
@@ -90,17 +92,11 @@ function pickMany<T>(arr: readonly T[], count: number): T[] {
 }
 function ms(t0: number): number { return performance.now() - t0; }
 
-function isRlsError(err: any): boolean {
-  if (!err) return false;
-  const msg = err.message || err.error?.message || '';
-  return err.code === '42501' || msg.includes('permission denied') || msg.includes('violates row-level security') || msg.includes('42501');
-}
-
 function makeBaseReport(runId: string, startTime: string): StressReport {
   return {
     simulationRunId: runId, startTime, endTime: '', durationMs: 0,
     blocked: false, dryRun: false,
-    generation: { usersCreated: 0, teamsCreated: 0, projectsCreated: 0, epicsCreated: 0, tasksCreated: 0, documentsCreated: 0, calendarEventsCreated: 0, integrationsCreated: 0, webhooksCreated: 0, automationsCreated: 0, approvalsCreated: 0, timeMs: 0, stressRlsErrors: 0, blockedTables: 0, rlsErrorTables: [], serviceFallbacks: 0, skippedDueToRls: 0 },
+    generation: { usersCreated: 0, teamsCreated: 0, projectsCreated: 0, epicsCreated: 0, tasksCreated: 0, documentsCreated: 0, calendarEventsCreated: 0, integrationsCreated: 0, webhooksCreated: 0, automationsCreated: 0, approvalsCreated: 0, timeMs: 0, stressRlsErrors: 0, blockedTables: 0, rlsErrorTables: [], serviceFallbacks: 0, skippedDueToRls: 0, servicePathCount: 0, rawInsertCount: 0 },
     performance: { projectPageLoadMs: 0, portfolioLoadMs: 0, timelineCalcMs: 0, ganttRenderMs: 0, commandPaletteSearchMs: 0, queueDepth: 0, memoryEstimateMB: 0, apiThroughput: 0, automationExecMs: 0, webhookProcessingMs: 0, documentSearchMs: 0, calendarCalcMs: 0, slowestQueries: [], largestRenderTrees: [] },
     events: { taskUpdates: 0, sprintCompletions: 0, automationTriggers: 0, integrationSyncs: 0, approvalsProcessed: 0, refreshOperations: 0, recoveryOperations: 0, browserInterruptions: 0, timeMs: 0 },
     cleanup: { recordsBefore: {}, recordsAfter: {}, simRecordsRemaining: {}, success: false, timeMs: 0, orphanCount: 0 },
@@ -275,6 +271,32 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     report.endTime = nowISO(); report.durationMs = ms(t0); return report;
   }
 
+  // ── Preflight: assertWorkspaceContext ──
+  {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      report.blocked = true;
+      report.blockReason = 'No authenticated user — cannot run stress test.';
+      report.riskLevel = 'HIGH';
+      report.endTime = nowISO(); report.durationMs = ms(t0);
+      report.recommendations.push('BLOCKED: Authenticated session required.');
+      return report;
+    }
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('id, workspace_id')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    if (!userRow || !userRow.workspace_id) {
+      report.blocked = true;
+      report.blockReason = 'No valid workspace context — user row missing or workspace_id is null.';
+      report.riskLevel = 'HIGH';
+      report.endTime = nowISO(); report.durationMs = ms(t0);
+      report.recommendations.push('BLOCKED: No valid workspace context. Visit /setup or create a workspace first.');
+      return report;
+    }
+  }
+
   const maxUsers = options?.maxUsers ?? DEFAULT_MAX.users;
   const maxProjects = options?.maxProjects ?? DEFAULT_MAX.projects;
   const maxTasks = options?.maxTasks ?? DEFAULT_MAX.tasks;
@@ -323,97 +345,67 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       metadata: { run_id: runId, test: 'synthetic_stress', timestamp: startTime },
     });
 
-    // ── RLS Circuit Breaker ──
-    const _circuitBlocked = new Set<string>();
-    const _shouldAttempt = (table: string): boolean => {
-      if (_circuitBlocked.has(table)) { report.generation.skippedDueToRls++; return false; }
-      return true;
-    };
-    const _markBlocked = (table: string): void => {
-      if (_circuitBlocked.has(table)) return;
-      _circuitBlocked.add(table);
-      report.generation.stressRlsErrors++;
-      if (!report.generation.rlsErrorTables.includes(table)) {
-        report.generation.rlsErrorTables.push(table);
-        report.generation.blockedTables++;
-      }
-      console.warn('[Stress Circuit Breaker]', table, 'disabled after RLS rejection');
-    };
-
     // ─── GENERATION ────────────────────────────────────────────────
 
     const genStart = performance.now();
 
-    // 1. Users (raw — no domain service)
+    // 1. Users (via userProvisionService)
     const userIds: string[] = [];
     const userBatch = Array.from({ length: maxUsers }, (_, i) => ({
       workspace_id: wsId, email: `${simTag(runId, 'user', i)}@sim.local`,
       full_name: simTag(runId, 'user', i), role: randomFrom(USER_ROLES),
       availability_factor: 0.4 + Math.random() * 0.6,
+      synthetic: true, runId,
     }));
     for (let i = 0; i < userBatch.length; i += CONCURRENCY) {
-      const chunk = userBatch.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map(r =>
-        !_shouldAttempt('users') ? Promise.resolve(null) :
-        supabase.from('users').insert(r).select('id').maybeSingle()
-          .then(res => { if (res.data) userIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('users'); return res; })
-          .catch(err => { if (isRlsError(err)) _markBlocked('users'); })
+      const results = await Promise.all(userBatch.slice(i, i + CONCURRENCY).map(r =>
+        provisionSyntheticUser(r).then(id => { if (id) userIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
       ));
     }
     report.generation.usersCreated = userIds.length;
 
-    // 2. Teams (raw — no domain service)
+    // 2. Teams (via teamService)
     const teamIds: string[] = [];
     const teamNames = ['Alpha','Beta','Gamma','Delta','Epsilon','Zeta','Eta','Theta','Iota','Kappa','Lambda','Mu','Nu','Xi','Omicron','Pi','Rho','Sigma','Tau','Upsilon'];
-    const teamBatch = teamNames.map((_, i) => ({ workspace_id: wsId, name: simTag(runId, 'team', i), description: `Synthetic team ${teamNames[i]}` }));
+    const teamBatch = teamNames.map((_, i) => ({ workspace_id: wsId, name: simTag(runId, 'team', i), description: `Synthetic team ${teamNames[i]}`, synthetic: true, runId }));
     for (let i = 0; i < teamBatch.length; i += CONCURRENCY) {
-      const chunk = teamBatch.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map(r =>
-        !_shouldAttempt('teams') ? Promise.resolve(null) :
-        supabase.from('teams').insert(r).select('id').maybeSingle()
-          .then(res => { if (res.data) teamIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('teams'); })
-          .catch(err => { if (isRlsError(err)) _markBlocked('teams'); })
+      const results = await Promise.all(teamBatch.slice(i, i + CONCURRENCY).map(r =>
+        createTeam(r).then(id => { if (id) teamIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
       ));
     }
     report.generation.teamsCreated = teamIds.length;
 
-    // 3. Projects (raw — no domain service)
+    // 3. Projects (via projectService)
     const projIds: string[] = [];
     const projBatch = Array.from({ length: maxProjects }, (_, i) => ({
       workspace_id: wsId, name: simTag(runId, 'proj', i), description: `Synthetic project ${i}`,
       status: randomFrom(['active','deployed','archived'] as const),
       execution_mode: EXECUTION_MODES[i % EXECUTION_MODES.length],
+      synthetic: true, runId,
     }));
     for (let i = 0; i < projBatch.length; i += CONCURRENCY) {
-      const chunk = projBatch.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map(r =>
-        !_shouldAttempt('projects') ? Promise.resolve(null) :
-        supabase.from('projects').insert(r).select('id').maybeSingle()
-          .then(res => { if (res.data) projIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('projects'); })
-          .catch(err => { if (isRlsError(err)) _markBlocked('projects'); })
+      const results = await Promise.all(projBatch.slice(i, i + CONCURRENCY).map(r =>
+        createProject(r).then(id => { if (id) projIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
       ));
     }
     report.generation.projectsCreated = projIds.length;
 
-    // 4. Epics (raw — no domain service)
+    // 4. Epics (via epicService)
     const epicIds: string[] = [];
     const epicBatch = Array.from({ length: 3000 }, (_, i) => ({
       workspace_id: wsId, project_id: projIds[i % projIds.length] || projIds[0],
       name: simTag(runId, 'epic', i), description: `Synthetic epic ${i}`,
       status: randomFrom(['backlog','in_progress','review','done'] as const), priority: randomFrom(TASK_PRIORITIES),
+      synthetic: true, runId,
     }));
     for (let i = 0; i < epicBatch.length; i += CONCURRENCY) {
-      const chunk = epicBatch.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map(r =>
-        !_shouldAttempt('epics') ? Promise.resolve(null) :
-        supabase.from('epics').insert(r).select('id').maybeSingle()
-          .then(res => { if (res.data) epicIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('epics'); })
-          .catch(err => { if (isRlsError(err)) _markBlocked('epics'); })
+      const results = await Promise.all(epicBatch.slice(i, i + CONCURRENCY).map(r =>
+        createEpic(r).then(id => { if (id) epicIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
       ));
     }
     report.generation.epicsCreated = epicIds.length;
 
-    // 5. Tasks (raw — no domain service)
+    // 5. Tasks (via taskService)
     const taskIds: string[] = [];
     const taskBatch = Array.from({ length: maxTasks }, (_, i) => ({
       workspace_id: wsId, project_id: projIds[i % projIds.length] || projIds[0],
@@ -422,30 +414,25 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       priority: randomFrom(TASK_PRIORITIES), estimated_hours: Math.floor(Math.random() * 80) + 1,
       story_points: Math.floor(Math.random() * 13) + 1,
       assignee_id: userIds[i % userIds.length] || userIds[0],
+      synthetic: true, runId,
     }));
     for (let i = 0; i < taskBatch.length; i += CONCURRENCY) {
-      const chunk = taskBatch.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map(r =>
-        !_shouldAttempt('tasks') ? Promise.resolve(null) :
-        supabase.from('tasks').insert(r).select('id').maybeSingle()
-          .then(res => { if (res.data) taskIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('tasks'); })
-          .catch(err => { if (isRlsError(err)) _markBlocked('tasks'); })
+      const results = await Promise.all(taskBatch.slice(i, i + CONCURRENCY).map(r =>
+        createTask(r).then(id => { if (id) taskIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
       ));
     }
     report.generation.tasksCreated = taskIds.length;
 
-    // 6. Task Dependencies
+    // 6. Task Dependencies (via taskService.createTaskDependency)
     for (let i = 0; i < taskIds.length - 1 && taskIds[i] && taskIds[i + 1]; i += 3) {
-      await supabase.from('task_dependencies').upsert({
-        workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: taskIds[i + 1],
-      }, { onConflict: 'workspace_id,task_id,depends_on_task_id' }).catch(() => {});
+      report.generation.servicePathCount++;
+      await createTaskDependency({ workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: taskIds[i + 1] });
     }
     for (let i = 50; i < taskIds.length; i += 50) {
       const cross = taskIds[(i + 2500) % taskIds.length];
       if (taskIds[i] && cross) {
-        await supabase.from('task_dependencies').upsert({
-          workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: cross,
-        }, { onConflict: 'workspace_id,task_id,depends_on_task_id' }).catch(() => {});
+        report.generation.servicePathCount++;
+        await createTaskDependency({ workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: cross });
       }
     }
 
@@ -479,30 +466,26 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     }
     report.generation.calendarEventsCreated = calCount;
 
-    // 9. Integrations (connected_accounts + configs + jobs — raw, no domain service)
+    // 9. Integrations (via integrationService)
     let intCount = 0;
     for (let i = 0; i < 50; i++) {
       const service = INTEGRATION_SERVICES[i % INTEGRATION_SERVICES.length];
-      let acct: { id: string } | null = null;
-      if (_shouldAttempt('connected_accounts')) {
-        const res = await supabase.from('connected_accounts').insert({
-          workspace_id: wsId, service, access_token: `sst_${runId}_token_${i}`, connected: i % 10 !== 0,
-        }).select('id').maybeSingle().catch(e => { if (isRlsError(e)) _markBlocked('connected_accounts'); return { data: null }; });
-        if (res?.data) acct = res.data; else if (res?.error && isRlsError(res.error)) _markBlocked('connected_accounts');
-      }
-      if (acct?.id) {
+      report.generation.servicePathCount++;
+      const acct = await createConnectedAccount({
+        workspace_id: wsId, service, access_token: `sst_${runId}_token_${i}`, connected: i % 10 !== 0,
+      });
+      if (acct) {
         intCount++;
-        if (_shouldAttempt('integration_configs')) {
-          await supabase.from('integration_configs').insert({
-            workspace_id: wsId, service, config: { repo_url: `https://sst.local/${service}/${i}`, branch: 'main' },
-          }).catch((err) => { if (isRlsError(err)) _markBlocked('integration_configs'); });
-        }
-        if (_shouldAttempt('integration_sync_jobs')) {
-          await supabase.from('integration_sync_jobs').insert({
-            workspace_id: wsId, service, status: randomFrom(['completed','failed','processing','queued','retrying'] as const),
-            payload: { sim: true, run_id: runId }, attempts: Math.floor(Math.random() * 4),
-          }).catch((err) => { if (isRlsError(err)) _markBlocked('integration_sync_jobs'); });
-        }
+        report.generation.servicePathCount++;
+        await createIntegrationConfig({
+          workspace_id: wsId, service, config: { repo_url: `https://sst.local/${service}/${i}`, branch: 'main' },
+        });
+        report.generation.servicePathCount++;
+        await createIntegrationSyncJob({
+          workspace_id: wsId, service,
+          status: randomFrom(['completed','failed','processing','queued','retrying'] as const),
+          payload: { sim: true, run_id: runId }, attempts: Math.floor(Math.random() * 4),
+        });
       }
     }
     report.generation.integrationsCreated = intCount;
@@ -669,9 +652,11 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let syncs = 0;
     const { data: accounts } = await supabase.from('connected_accounts').select('id').eq('workspace_id', wsId).like('access_token', `sst_${runId}_%`).limit(30);
     for (const acct of accounts || []) {
-      await supabase.from('integration_sync_jobs').insert({
-        workspace_id: wsId, service: 'github', status: 'processing', payload: { sim: true, run_id: runId, account_id: acct.id },
-      }).catch(() => {});
+      report.generation.servicePathCount++;
+      await createIntegrationSyncJob({
+        workspace_id: wsId, service: 'github', status: 'processing',
+        payload: { sim: true, run_id: runId, account_id: acct.id },
+      });
       syncs++;
     }
     report.events.integrationSyncs = syncs;

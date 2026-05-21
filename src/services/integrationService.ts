@@ -687,3 +687,60 @@ if (typeof window !== 'undefined' && isSupabaseConfigured) {
     }
   }).catch(() => {});
 }
+
+// ── Synthetic stress test helpers (avoid raw inserts) ──
+
+export async function createConnectedAccount(input: {
+  workspace_id: string;
+  service: string;
+  access_token: string;
+  connected?: boolean;
+}): Promise<{ id: string } | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('connected_accounts').insert({
+      workspace_id: input.workspace_id,
+      service: input.service,
+      access_token: input.access_token,
+      connected: input.connected ?? true,
+    }).select('id').maybeSingle();
+    if (error) return null;
+    return data;
+  } catch { return null; }
+}
+
+export async function createIntegrationConfig(input: {
+  workspace_id: string;
+  service: string;
+  config: Record<string, any>;
+}): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('integration_configs').insert({
+      workspace_id: input.workspace_id,
+      service: input.service,
+      config: input.config,
+    });
+    return !error;
+  } catch { return false; }
+}
+
+export async function createIntegrationSyncJob(input: {
+  workspace_id: string;
+  service: string;
+  status?: string;
+  payload?: Record<string, any>;
+  attempts?: number;
+}): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('integration_sync_jobs').insert({
+      workspace_id: input.workspace_id,
+      service: input.service,
+      status: input.status || 'queued',
+      payload: input.payload || {},
+      attempts: input.attempts ?? 0,
+    });
+    return !error;
+  } catch { return false; }
+}

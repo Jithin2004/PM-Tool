@@ -564,4 +564,24 @@ export const activityLogService = {
       metadata: { run_id: runId, cleaned },
     });
   },
+
+  // ── Auth Integrity Logging ──
+
+  async logWorkspaceRepaired(workspaceId: string, userId: string, reason: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: userId,
+      action: 'workspace_repaired',
+      metadata: { reason },
+    });
+  },
+
+  async logWorkspaceOrphanDetected(userId: string, email?: string): Promise<boolean> {
+    const { data: w } = await supabase.from('workspaces').select('id').limit(1).maybeSingle();
+    if (!w?.id) return false;
+    return this.appendLog({
+      workspace_id: w.id, actor_id: userId,
+      action: 'workspace_orphan_detected',
+      metadata: { email },
+    });
+  },
 };

@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User } from '../types';
 import { clearSession, flushNow } from '../services/commandUsageService';
 import { activityLogService } from '../services/activityLogService';
+import { repairUserWorkspace } from '../services/workspaceService';
 
 interface AuthContextType {
   user: any | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   profileResolved: boolean;
   profileHydrating: boolean;
+  needsWorkspaceSetup: boolean;
   logout: () => Promise<void>;
   updateRole: (id: string, role: User['role']) => Promise<boolean>;
   updateProfile: (updates: Partial<User>) => Promise<boolean>;
@@ -256,6 +258,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return promise;
   }, []);
 
+  // ── Auth Integrity: validate & repair workspace context ──
+
+  const [needsWorkspaceSetup, setNeedsWorkspaceSetup] = useState(false);
+
+  const validateUserWorkspace = useCallback(async (authUser: any, currentProfile: User | null) => {
+    if (!isSupabaseConfigured || !currentProfile) return;
+    if (currentProfile.workspace_id) {
+      setNeedsWorkspaceSetup(false);
+      return;
+    }
+
+    const result = await repairUserWorkspace(authUser.id, authUser.email);
+
+    if (result.repaired && result.workspaceId) {
+      await activityLogService.logWorkspaceRepaired(result.workspaceId, authUser.id, result.reason);
+      const { data } = await supabase.from('users').select('*').eq('id', authUser.id).maybeSingle();
+      if (data) {
+        const refreshed = {
+          ...data,
+          auth_user_id: data.id,
+          designation: data.role === 'super_admin' ? 'Super Admin' : data.role === 'pm' ? 'Project Manager' : data.role === 'pending-workspace-setup' ? 'Pending Setup' : 'Developer',
+        };
+        setProfile(refreshed as User);
+      }
+      setNeedsWorkspaceSetup(false);
+    } else if (result.reason === 'orphaned') {
+      await activityLogService.logWorkspaceOrphanDetected(authUser.id, authUser.email);
+      setNeedsWorkspaceSetup(false);
+      if (window.location.pathname !== '/') {
+        window.dispatchEvent(new CustomEvent('notify-toast', {
+          detail: { message: 'Account has no workspace access. Contact your admin.', type: 'error' },
+        }));
+        setTimeout(() => {
+          window.history.replaceState(null, '', '/');
+          window.dispatchEvent(new CustomEvent('popstate'));
+        }, 1000);
+      }
+    } else {
+      setNeedsWorkspaceSetup(true);
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -275,6 +319,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user || null);
         if (session?.user) {
           await syncProfile(session.user);
+          // After syncProfile completes, validate workspace context
+          if (profileRef.current) {
+            await validateUserWorkspace(session.user, profileRef.current);
+          }
           console.log("[AuthContext] resolved: authenticated");
         } else {
           setProfile(null);
@@ -331,9 +379,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (userRef.current?.id !== session.user.id) {
             setUser(session.user);
             // Defer the syncProfile call to release the auth event lock and prevent deadlocks
-            setTimeout(() => {
+            setTimeout(async () => {
               if (mounted) {
-                syncProfile(session.user);
+                await syncProfile(session.user);
+                if (profileRef.current) {
+                  await validateUserWorkspace(session.user, profileRef.current);
+                }
               }
             }, 0);
           }
@@ -428,7 +479,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, syncProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, profileResolved, profileHydrating, logout, updateRole, updateProfile, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileResolved, profileHydrating, needsWorkspaceSetup, logout, updateRole, updateProfile, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

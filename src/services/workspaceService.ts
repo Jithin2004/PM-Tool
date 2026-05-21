@@ -239,3 +239,63 @@ export async function updateWorkspaceSettings(workspace: Workspace, settings: Pa
 
   return rowToWorkspace(data as WorkspaceRow);
 }
+
+export async function repairUserWorkspace(userId: string, email?: string): Promise<{ repaired: boolean; workspaceId: string | null; reason: string }> {
+  // Case A: user owns a workspace — repair workspace_id
+  const { data: owned, error: ownedError } = await supabase
+    .from('workspaces')
+    .select('id')
+    .eq('owner_id', userId)
+    .limit(1);
+
+  if (!ownedError && owned && owned.length > 0) {
+    const wsId = owned[0].id;
+    const { error: upsertError } = await supabase
+      .from('users')
+      .upsert({
+        id: userId,
+        workspace_id: wsId,
+        email: email || '',
+        role: 'super_admin',
+        availability_factor: 1,
+      }, { onConflict: 'id' });
+
+    if (!upsertError) {
+      return { repaired: true, workspaceId: wsId, reason: 'workspace_owner_repair' };
+    }
+  }
+
+  // Case B: pending invitation exists — signal needs_workspace_setup
+  if (email) {
+    const { data: invite } = await supabase
+      .from('invitations')
+      .select('workspace_id, role')
+      .or(`email.eq.${email},email.eq.${email.toLowerCase()}`)
+      .in('status', ['pending', 'accepted'])
+      .maybeSingle();
+
+    if (invite) {
+      const { error: inviteUpsertError } = await supabase
+        .from('users')
+        .upsert({
+          id: userId,
+          email,
+          workspace_id: invite.workspace_id,
+          role: invite.role,
+          availability_factor: 1,
+        }, { onConflict: 'id' });
+
+      if (!inviteUpsertError) {
+        await supabase
+          .from('invitations')
+          .update({ status: 'accepted' })
+          .eq('id', (invite as any).id);
+        return { repaired: true, workspaceId: invite.workspace_id, reason: 'invitation_repair' };
+      }
+      return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
+    }
+  }
+
+  // Case C: orphaned — no workspace, no invitation
+  return { repaired: false, workspaceId: null, reason: 'orphaned' };
+}
