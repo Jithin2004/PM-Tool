@@ -18,6 +18,8 @@ const WorkLogsView = React.memo(function WorkLogsView() {
       systemData={systemData}
       onSaveData={handleSaveLogisticsData}
       role={profile?.role}
+      defaultTab="attendance"
+      hideTabs={true}
     />
   );
 });

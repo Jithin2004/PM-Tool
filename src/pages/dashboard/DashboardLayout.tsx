@@ -1600,7 +1600,9 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         currentRoute={window.location.pathname}
       />
 
-      {children}
+      <main id="main-content">
+        {children}
+      </main>
 
       {/* --- Overlay Components --- */}
 

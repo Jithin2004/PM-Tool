@@ -206,16 +206,20 @@ export function Header({
 
   return (
     <>
-      <header className="border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-md z-50">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:text-xs focus:font-mono focus:uppercase focus:tracking-wider">
+        Skip to main content
+      </a>
+      <header className="border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-md z-50" role="banner">
         {/* Logo */}
         <button
           onClick={() => { handleNav('/workspace'); }}
           className="flex items-center gap-2.5 hover:opacity-80 transition-opacity cursor-pointer group"
           title="Go to Project Workspace"
           id="logo-home-btn"
+          aria-label="Home: Go to Project Workspace"
         >
           <div className="w-10 h-10 sm:w-14 sm:h-14 border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden group-hover:border-white/40 transition-colors">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover scale-110" />
+            <img src="/logo.png" alt="Resolve PM Logo" className="w-full h-full object-cover scale-110" />
           </div>
           <div>
             <h1 className="font-sans font-semibold text-base sm:text-lg tracking-tight uppercase leading-none">Resolve PM</h1>
@@ -268,7 +272,7 @@ export function Header({
           </div>
 
           {/* Expandable navigation sections — hover desktop / tap mobile */}
-          <div ref={navRef} className="flex items-start gap-1">
+          <nav ref={navRef} className="flex items-start gap-1" aria-label="Main navigation" role="navigation">
             {NAV.map(section => (
               <div
                 key={section.label}
@@ -278,6 +282,9 @@ export function Header({
               >
                 <button
                   onClick={() => handleParentClick(section.label)}
+                  aria-expanded={expandedSection === section.label}
+                  aria-haspopup="true"
+                  aria-controls={`nav-section-${section.label}`}
                   className={`flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-mono uppercase tracking-widest transition-all cursor-pointer ${
                     expandedSection === section.label
                       ? 'bg-white/10 text-white border border-white/25 border-b-transparent'
@@ -290,6 +297,8 @@ export function Header({
                 </button>
                 {expandedSection === section.label && (
                   <div
+                    id={`nav-section-${section.label}`}
+                    role="menu"
                     className="absolute top-full left-0 w-44 bg-[#0a0a0a] border border-t-0 border-white/25 shadow-2xl z-50 py-1"
                     onMouseEnter={() => { clearTimeout(closeTimer.current); }}
                     onMouseLeave={handleSectionLeave}
@@ -297,6 +306,7 @@ export function Header({
                     {section.items.filter(item => canAccessItem(item, role)).map(item => (
                       <button
                         key={item.label}
+                        role="menuitem"
                         onClick={() => handleNav(item.path)}
                         className={`w-full flex items-center gap-2 text-left px-3 py-2 text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
                           pathname === item.path ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
@@ -310,7 +320,7 @@ export function Header({
                 )}
               </div>
             ))}
-          </div>
+          </nav>
 
           {/* Role badge */}
           <div className="flex flex-col items-end">

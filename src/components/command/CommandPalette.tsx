@@ -534,9 +534,12 @@ export default function CommandPalette(props: Props) {
             <div
               className="w-full max-w-xl bg-[#0c0c0c] border border-white/15 shadow-2xl pointer-events-auto overflow-hidden"
               onClick={e => e.stopPropagation()}
+              role="dialog"
+              aria-label="Command palette"
+              aria-modal="true"
             >
               {/* Search input */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10" role="combobox" aria-expanded={allResults.length > 0} aria-haspopup="listbox">
                 <Search className="w-4 h-4 text-white/40 shrink-0" />
                 <input
                   ref={inputRef}
@@ -546,12 +549,16 @@ export default function CommandPalette(props: Props) {
                   onKeyDown={handleKeyDown}
                   placeholder="Search projects, tasks, navigation and actions..."
                   className="flex-1 bg-transparent text-sm font-mono text-white outline-none placeholder:text-white/25"
+                  aria-autocomplete="list"
+                  aria-controls="command-results"
+                  aria-activedescendant={selectedIndex >= 0 ? `cmd-result-${selectedIndex}` : undefined}
+                  aria-label="Command search"
                 />
-                <kbd className="hidden sm:inline-flex text-[9px] font-mono uppercase text-white/30 border border-white/10 px-1.5 py-0.5">esc</kbd>
+                <kbd className="hidden sm:inline-flex text-[9px] font-mono uppercase text-white/30 border border-white/10 px-1.5 py-0.5" aria-label="Close with escape key">esc</kbd>
               </div>
 
               {/* Results */}
-              <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-2" onKeyDown={handleKeyDown}>
+              <div ref={listRef} id="command-results" className="max-h-[50vh] overflow-y-auto py-2" onKeyDown={handleKeyDown} role="listbox" aria-label="Search results">
                 {allResults.length === 0 && (
                   <div className="px-4 py-8 text-center text-[11px] font-mono text-white/30 uppercase">
                     {debouncedQuery ? 'No results found' : 'Type to search...'}
@@ -568,6 +575,9 @@ export default function CommandPalette(props: Props) {
                       key={result.id}
                       onClick={() => { if (!isHeader) result.onSelect(); }}
                       onMouseEnter={() => { if (!isHeader && flatIdx >= 0) setSelectedIndex(flatIdx); }}
+                      role={isHeader ? 'presentation' : 'option'}
+                      aria-selected={isSelected}
+                      id={!isHeader ? `cmd-result-${flatIdx}` : undefined}
                       className={`flex items-center gap-3 px-4 py-2 text-xs font-mono cursor-pointer transition-colors ${
                         isHeader
                           ? 'text-[9px] uppercase tracking-widest text-white/30 pt-4 pb-1.5 px-4 cursor-default'

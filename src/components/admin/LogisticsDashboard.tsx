@@ -9,16 +9,20 @@ export function LogisticsDashboard({
   teams,
   systemData,
   onSaveData,
-  role
+  role,
+  defaultTab,
+  hideTabs
 }: {
   profiles: Profile[],
   teams: Team[],
   systemData: any,
   onSaveData: (updatedData: any) => Promise<void>,
-  role?: string
+  role?: string,
+  defaultTab?: 'attendance' | 'paySlab' | 'payroll',
+  hideTabs?: boolean
 }) {
   // systemData is passed from canonical DashboardContext (attendance merged from dedicated table)
-  const [activeTab, setActiveTab] = useState<'attendance' | 'paySlab' | 'payroll'>('attendance');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'paySlab' | 'payroll'>(defaultTab || 'attendance');
   const isSuperAdmin = role === 'super_admin';
 
   // Attendance states
@@ -386,9 +390,14 @@ export function LogisticsDashboard({
         </div>
 
         {/* Tab Selector */}
-        <div className="flex overflow-x-auto scrollbar-none bg-white/5 p-1 border border-white/5 rounded-sm w-full md:w-auto max-w-full">
+        {!hideTabs && (
+        <div className="flex overflow-x-auto scrollbar-none bg-white/5 p-1 border border-white/5 rounded-sm w-full md:w-auto max-w-full" role="tablist" aria-label="Logistics sections">
           <button
             onClick={() => setActiveTab('attendance')}
+            role="tab"
+            aria-selected={activeTab === 'attendance'}
+            aria-controls="tabpanel-attendance"
+            id="tab-attendance"
             className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'attendance' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
           >
             Attendance
@@ -396,6 +405,10 @@ export function LogisticsDashboard({
           {isSuperAdmin && (
             <button
               onClick={() => setActiveTab('paySlab')}
+              role="tab"
+              aria-selected={activeTab === 'paySlab'}
+              aria-controls="tabpanel-paySlab"
+              id="tab-paySlab"
               className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'paySlab' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
             >
               Rules &amp; Slabs
@@ -403,11 +416,16 @@ export function LogisticsDashboard({
           )}
           <button
             onClick={() => setActiveTab('payroll')}
+            role="tab"
+            aria-selected={activeTab === 'payroll'}
+            aria-controls="tabpanel-payroll"
+            id="tab-payroll"
             className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'payroll' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
           >
             Payroll Analytics
           </button>
         </div>
+        )}
       </div>
 
       {/* Tab Contents */}
@@ -415,6 +433,9 @@ export function LogisticsDashboard({
         {activeTab === 'attendance' && (
           <motion.div
             key="attendance"
+            role="tabpanel"
+            id="tabpanel-attendance"
+            aria-labelledby="tab-attendance"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
@@ -601,6 +622,9 @@ export function LogisticsDashboard({
         {activeTab === 'paySlab' && (
           <motion.div
             key="paySlab"
+            role="tabpanel"
+            id="tabpanel-paySlab"
+            aria-labelledby="tab-paySlab"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
@@ -777,6 +801,9 @@ export function LogisticsDashboard({
         {activeTab === 'payroll' && (
           <motion.div
             key="payroll"
+            role="tabpanel"
+            id="tabpanel-payroll"
+            aria-labelledby="tab-payroll"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}

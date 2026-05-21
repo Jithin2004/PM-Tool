@@ -18,6 +18,8 @@ const CapacityView = React.memo(function CapacityView() {
       systemData={systemData}
       onSaveData={handleSaveLogisticsData}
       role={profile?.role}
+      defaultTab="payroll"
+      hideTabs={true}
     />
   );
 });

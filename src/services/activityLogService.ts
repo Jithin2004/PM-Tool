@@ -421,4 +421,38 @@ export const activityLogService = {
       metadata: { success_count: successCount, failure_count: failureCount, recovery_count: recoveryCount },
     });
   },
+
+  // ── Production Observability ──
+
+  async logClientError(workspaceId: string, source: string, message: string, stack?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'client_error_events',
+      metadata: { source, message, stack: stack?.slice(0, 500) },
+    });
+  },
+
+  async logQueueFailure(workspaceId: string, queueId: string, service: string, error: string, attempt: number): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'queue_failure_events',
+      metadata: { queue_id: queueId, service, error, attempt },
+    });
+  },
+
+  async logApiFailure(workspaceId: string, endpoint: string, method: string, statusCode: number, error: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'api_failure_events',
+      metadata: { endpoint, method, status_code: statusCode, error },
+    });
+  },
+
+  async logRenderFailure(workspaceId: string, boundary: string, error: string, componentStack?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'render_failure_events',
+      metadata: { boundary, error, component_stack: componentStack?.slice(0, 500) },
+    });
+  },
 };

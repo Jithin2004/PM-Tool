@@ -16,7 +16,7 @@ export function ConfirmationModal({ isOpen, title, message, confirmText = 'Confi
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -34,7 +34,7 @@ export function ConfirmationModal({ isOpen, title, message, confirmText = 'Confi
             <div className={`w-10 h-10 rounded-sm border flex items-center justify-center ${confirmText.toLowerCase() === 'delete' ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20'}`}>
               <AlertTriangle className={`w-5 h-5 ${confirmText.toLowerCase() === 'delete' ? 'text-red-500' : 'text-blue-500'}`} />
             </div>
-            <h3 className="text-xl font-medium tracking-tight uppercase">{title}</h3>
+            <h3 id="confirm-title" className="text-xl font-medium tracking-tight uppercase">{title}</h3>
           </div>
           <p className="text-sm font-mono text-white/85 mb-8 leading-relaxed">
             {message}

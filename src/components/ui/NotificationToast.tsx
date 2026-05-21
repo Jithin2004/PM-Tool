@@ -23,6 +23,8 @@ export function NotificationToast({ notification, onClose }: { notification: Not
 
   return (
     <motion.div
+      role="alert"
+      aria-live="assertive"
       initial={{ opacity: 0, x: 20, y: 0 }}
       animate={{ opacity: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
