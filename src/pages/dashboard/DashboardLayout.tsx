@@ -283,7 +283,6 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
   const [feedbackTags, setFeedbackTags] = useState<string[]>([]);
   const [feedbackComment, setFeedbackComment] = useState('');
-  const [pathname, setPathname] = useState(window.location.pathname);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [commandAnalyticsOpen, setCommandAnalyticsOpen] = useState(false);
 
@@ -302,23 +301,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     return () => window.removeEventListener('keydown', handler);
   }, [commandPaletteOpen]);
 
-  // Track route changes reactively
-  useEffect(() => {
-    const handler = () => setPathname(window.location.pathname);
-    window.addEventListener('popstate', handler);
-    const originalPushState = window.history.pushState;
-    window.history.pushState = function pushState(...args) {
-      originalPushState.apply(window.history, args);
-      handler();
-    };
-    return () => {
-      window.removeEventListener('popstate', handler);
-      window.history.pushState = originalPushState;
-    };
-  }, []);
-
   const breadcrumb = useMemo(() => {
-    const p = pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+    const p = window.location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
     if (p.length === 0) return null;
     const sectionLabels: Record<string, string> = { workspace: 'WORKSPACE', execution: 'EXECUTION', resources: 'RESOURCES', control: 'CONTROL' };
     const pageLabels: Record<string, string> = {
@@ -333,7 +317,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     const page = p[1] ? pageLabels[p[1]] : null;
     if (!section) return null;
     return { section, page };
-  }, [pathname]);
+  }, []);
 
   const tourSteps = useMemo(() => {
     const role = profile?.role || 'viewer';
@@ -1613,7 +1597,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         role={profile?.role || 'viewer'}
         workspaceId={workspace?.id}
         profileId={profile?.id}
-        currentRoute={pathname}
+        currentRoute={window.location.pathname}
       />
 
       {children}

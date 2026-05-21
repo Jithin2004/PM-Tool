@@ -1,2 +1,6 @@
-import { AdminPanel } from '../dashboard/AdminPanel';
-export default function AnalyticsPage() { return <AdminPanel />; }
+import React from 'react';
+import AnalyticsView from '../../components/control/AnalyticsView';
+
+export default function AnalyticsPage() {
+  return <AnalyticsView />;
+}
