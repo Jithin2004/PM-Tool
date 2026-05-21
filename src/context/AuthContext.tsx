@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User } from '../types';
+import { clearSession, flushNow } from '../services/commandUsageService';
 
 interface AuthContextType {
   user: any | null;
@@ -362,6 +363,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [syncProfile]);
 
   const logout = async () => {
+    // Flush remaining telemetry and clear session
+    await flushNow();
+    clearSession();
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
     }
