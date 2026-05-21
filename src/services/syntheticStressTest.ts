@@ -15,6 +15,7 @@ import { createTask, createTaskDependency } from './taskService';
 import { createConnectedAccount, createIntegrationConfig, createIntegrationSyncJob } from './integrationService';
 
 const LOCK_KEY = 'resolve-stress-running';
+const STALE_LOCK_MINUTES = 15;
 const MAX_MULTIPLIER = 2;
 const CONCURRENCY = 20;
 
@@ -104,9 +105,38 @@ function makeBaseReport(runId: string, startTime: string): StressReport {
   };
 }
 
-function checkLock(): string | null { try { return localStorage.getItem(LOCK_KEY); } catch { return null; } }
-function setLock(runId: string): void { try { localStorage.setItem(LOCK_KEY, runId); } catch { /* noop */ } }
+interface LockInfo {
+  runId: string;
+  startedAt: string | null;
+}
+
+function checkLock(): LockInfo | null {
+  try {
+    const raw = localStorage.getItem(LOCK_KEY);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.runId) return { runId: parsed.runId, startedAt: parsed.startedAt || null };
+    } catch {
+      return { runId: raw, startedAt: null };
+    }
+  } catch { return null; }
+  return null;
+}
+
+function setLock(runId: string): void {
+  try {
+    localStorage.setItem(LOCK_KEY, JSON.stringify({ runId, startedAt: new Date().toISOString() }));
+  } catch { /* noop */ }
+}
+
 function clearLock(): void { try { localStorage.removeItem(LOCK_KEY); } catch { /* noop */ } }
+
+function getLockAgeMinutes(): number | null {
+  const lock = checkLock();
+  if (!lock || !lock.startedAt) return null;
+  return (Date.now() - new Date(lock.startedAt).getTime()) / 60000;
+}
 
 async function concurrentBatch<T>(items: T[], fn: (item: T, index: number) => Promise<any>): Promise<void> {
   for (let i = 0; i < items.length; i += CONCURRENCY) {
@@ -253,7 +283,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
   const existingLock = checkLock();
   if (existingLock) {
     report.blocked = true;
-    report.blockReason = `Concurrent stress test already running (runId: ${existingLock}).`;
+    report.blockReason = `Concurrent stress test already running (runId: ${existingLock.runId}).`;
     report.riskLevel = 'HIGH';
     report.endTime = nowISO(); report.durationMs = ms(t0);
     report.recommendations.push('Blocked: concurrent stress test rejected.');
@@ -812,4 +842,182 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
   report.endTime = nowISO();
   report.durationMs = ms(t0);
   return report;
+}
+
+// ─── Recovery: count all SST_ records across all tables ─────────
+
+async function countAllSyntheticRecords(wsId: string): Promise<Record<string, number>> {
+  const result: Record<string, number> = {};
+  const checks: [string, string, string][] = [
+    ['users', 'email', 'SST_%'],
+    ['teams', 'name', 'SST_%'],
+    ['projects', 'name', 'SST_%'],
+    ['epics', 'name', 'SST_%'],
+    ['tasks', 'name', 'SST_%'],
+    ['documents', 'title', 'SST_%'],
+    ['calendar_events', 'title', 'SST_%'],
+    ['webhooks', 'name', 'SST_%'],
+    ['automation_rules', 'name', 'SST_%'],
+    ['approval_chains', 'name', 'SST_%'],
+    ['connected_accounts', 'access_token', 'sst_%'],
+    ['sprints', 'name', 'SST_%'],
+  ];
+  for (const [table, col, pattern] of checks) {
+    try {
+      const { count } = await supabase.from(table).select('*', { count: 'exact', head: true })
+        .eq('workspace_id', wsId).like(col, pattern);
+      result[table] = count || 0;
+    } catch { result[table] = -1; }
+  }
+  try {
+    const { count: sj } = await supabase.from('integration_sync_jobs').select('*', { count: 'exact', head: true })
+      .eq('workspace_id', wsId).filter('payload->>sim', 'eq', 'true');
+    result['integration_sync_jobs'] = sj || 0;
+  } catch { result['integration_sync_jobs'] = -1; }
+  try {
+    const { count: ic } = await supabase.from('integration_configs').select('*', { count: 'exact', head: true })
+      .eq('workspace_id', wsId).filter('config->>repo_url', 'like', 'https://sst.local/%');
+    result['integration_configs'] = ic || 0;
+  } catch { result['integration_configs'] = -1; }
+  try {
+    const { data: t } = await supabase.from('tasks').select('id').eq('workspace_id', wsId).like('name', 'SST_%');
+    const ids = t?.map(x => x.id) || [];
+    if (ids.length > 0) {
+      const { count: dc } = await supabase.from('task_dependencies').select('*', { count: 'exact', head: true })
+        .eq('workspace_id', wsId).in('task_id', ids);
+      result['task_dependencies'] = dc || 0;
+      const { count: dc2 } = await supabase.from('task_dependencies').select('*', { count: 'exact', head: true })
+        .eq('workspace_id', wsId).in('depends_on_task_id', ids);
+      result['task_dependencies'] = (result['task_dependencies'] as number) + (dc2 || 0);
+    } else { result['task_dependencies'] = 0; }
+  } catch { result['task_dependencies'] = -1; }
+  try {
+    const { data: c } = await supabase.from('approval_chains').select('id').eq('workspace_id', wsId).like('name', 'SST_%');
+    const cids = c?.map(x => x.id) || [];
+    if (cids.length > 0) {
+      const { count: ai } = await supabase.from('approval_instances').select('*', { count: 'exact', head: true })
+        .in('chain_id', cids);
+      result['approval_instances'] = ai || 0;
+    } else { result['approval_instances'] = 0; }
+  } catch { result['approval_instances'] = -1; }
+  try {
+    const { data: d } = await supabase.from('documents').select('id').eq('workspace_id', wsId).like('title', 'SST_%');
+    const dids = d?.map(x => x.id) || [];
+    if (dids.length > 0) {
+      const { count: dv } = await supabase.from('doc_versions').select('*', { count: 'exact', head: true })
+        .in('doc_id', dids);
+      result['doc_versions'] = dv || 0;
+      const { count: da } = await supabase.from('doc_annotations').select('*', { count: 'exact', head: true })
+        .in('doc_id', dids);
+      result['doc_annotations'] = da || 0;
+    } else { result['doc_versions'] = 0; result['doc_annotations'] = 0; }
+  } catch { result['doc_versions'] = -1; result['doc_annotations'] = -1; }
+  try {
+    const { count: al } = await supabase.from('activity_logs').select('*', { count: 'exact', head: true })
+      .eq('workspace_id', wsId).filter('metadata->>sim', 'eq', 'true');
+    result['activity_logs'] = al || 0;
+  } catch { result['activity_logs'] = -1; }
+  return result;
+}
+
+// ─── Recovery: cleanup ALL synthetic records (any runId) ────────
+
+export async function cleanupAllSyntheticRuns(wsId?: string): Promise<{
+  deletedByTable: Record<string, number>;
+  orphanCount: number;
+  remainingCount: number;
+}> {
+  const result = { deletedByTable: {} as Record<string, number>, orphanCount: 0, remainingCount: 0 };
+  if (!isSupabaseConfigured) return result;
+
+  if (!wsId) {
+    const { data: { user: u } } = await supabase.auth.getUser();
+    if (!u) return result;
+    const { data: row } = await supabase.from('users').select('workspace_id').eq('id', u.id).maybeSingle();
+    if (!row?.workspace_id) return result;
+    wsId = row.workspace_id;
+  }
+
+  await activityLogService.logStressRecoveryStarted(wsId);
+  const before = await countAllSyntheticRecords(wsId);
+
+  // Phase 1: delete children (FK-safe order)
+  const { data: tasks } = await supabase.from('tasks').select('id').eq('workspace_id', wsId).like('name', 'SST_%');
+  const taskIds = tasks?.map(t => t.id) || [];
+  if (taskIds.length > 0) {
+    await supabase.from('task_dependencies').delete().eq('workspace_id', wsId).in('task_id', taskIds);
+    await supabase.from('task_dependencies').delete().eq('workspace_id', wsId).in('depends_on_task_id', taskIds);
+  }
+
+  const { data: chains } = await supabase.from('approval_chains').select('id').eq('workspace_id', wsId).like('name', 'SST_%');
+  const chainIds = chains?.map(c => c.id) || [];
+  if (chainIds.length > 0) {
+    await supabase.from('approval_instances').delete().in('chain_id', chainIds);
+  }
+  if (taskIds.length > 0) {
+    await supabase.from('approval_instances').delete().in('target_id', taskIds);
+  }
+
+  const { data: docs } = await supabase.from('documents').select('id').eq('workspace_id', wsId).like('title', 'SST_%');
+  const docIds = docs?.map(d => d.id) || [];
+  if (docIds.length > 0) {
+    await supabase.from('doc_versions').delete().in('doc_id', docIds);
+    await supabase.from('doc_annotations').delete().in('doc_id', docIds);
+  }
+
+  await supabase.from('integration_sync_jobs').delete().eq('workspace_id', wsId).filter('payload->>sim', 'eq', 'true');
+  await supabase.from('integration_configs').delete().eq('workspace_id', wsId).filter('config->>repo_url', 'like', 'https://sst.local/%');
+  await supabase.from('connected_accounts').delete().eq('workspace_id', wsId).like('access_token', 'sst_%');
+
+  // Phase 2: delete parent tables
+  await supabase.from('sprints').delete().eq('workspace_id', wsId).like('name', 'SST_%');
+  await supabase.from('documents').delete().eq('workspace_id', wsId).like('title', 'SST_%');
+  await supabase.from('tasks').delete().eq('workspace_id', wsId).like('name', 'SST_%');
+  await supabase.from('epics').delete().eq('workspace_id', wsId).like('name', 'SST_%');
+  await supabase.from('calendar_events').delete().eq('workspace_id', wsId).like('title', 'SST_%');
+  await supabase.from('webhooks').delete().eq('workspace_id', wsId).like('name', 'SST_%');
+  await supabase.from('automation_rules').delete().eq('workspace_id', wsId).like('name', 'SST_%');
+  await supabase.from('approval_chains').delete().eq('workspace_id', wsId).like('name', 'SST_%');
+  await supabase.from('activity_logs').delete().eq('workspace_id', wsId).filter('metadata->>sim', 'eq', 'true');
+  await supabase.from('teams').delete().eq('workspace_id', wsId).like('name', 'SST_%');
+  await supabase.from('projects').delete().eq('workspace_id', wsId).like('name', 'SST_%');
+  await supabase.from('users').delete().eq('workspace_id', wsId).like('email', 'SST_%');
+
+  const after = await countAllSyntheticRecords(wsId);
+  for (const k of Object.keys(before)) {
+    result.deletedByTable[k] = Math.max(0, (before[k] || 0) - (after[k] || 0));
+  }
+  result.remainingCount = Object.values(after).reduce((a, b) => a + Math.max(0, b), 0);
+  result.orphanCount = result.remainingCount;
+
+  await activityLogService.logStressRecoveryCompleted(wsId, result.deletedByTable, result.remainingCount);
+  return result;
+}
+
+// ─── Recovery: auto-detect and clean abandoned runs on startup ──
+
+export async function recoverAbandonedStressRuns(wsId?: string): Promise<{
+  recovered: boolean;
+  details?: { deletedByTable: Record<string, number>; orphanCount: number; remainingCount: number };
+  reason?: string;
+}> {
+  const lock = checkLock();
+  if (!lock) return { recovered: false, reason: 'No lock found' };
+
+  const ageMin = getLockAgeMinutes();
+  if (ageMin === null || ageMin < STALE_LOCK_MINUTES) {
+    return { recovered: false, reason: ageMin === null ? 'No timestamp on lock' : `Lock age ${ageMin.toFixed(1)}min < ${STALE_LOCK_MINUTES}min threshold` };
+  }
+
+  if (!wsId) {
+    const { data: { user: u } } = await supabase.auth.getUser();
+    if (!u) return { recovered: false, reason: 'No authenticated user' };
+    const { data: row } = await supabase.from('users').select('workspace_id').eq('id', u.id).maybeSingle();
+    if (!row?.workspace_id) return { recovered: false, reason: 'No workspace context' };
+    wsId = row.workspace_id;
+  }
+
+  const details = await cleanupAllSyntheticRuns(wsId);
+  clearLock();
+  return { recovered: true, details };
 }

@@ -584,4 +584,22 @@ export const activityLogService = {
       metadata: { email },
     });
   },
+
+  // ── Stress Recovery Logging ──
+
+  async logStressRecoveryStarted(workspaceId: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'stress_recovery_started',
+      metadata: { event_type: 'recovery' },
+    });
+  },
+
+  async logStressRecoveryCompleted(workspaceId: string, deletedByTable: Record<string, number>, remainingCount: number): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'stress_recovery_completed',
+      metadata: { event_type: 'recovery', deleted_by_table: deletedByTable, remaining_count: remainingCount },
+    });
+  },
 };
