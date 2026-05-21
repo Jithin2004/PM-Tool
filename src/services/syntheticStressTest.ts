@@ -272,30 +272,29 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
   }
 
   // ── Preflight: assertWorkspaceContext ──
-  {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) {
-      report.blocked = true;
-      report.blockReason = 'No authenticated user — cannot run stress test.';
-      report.riskLevel = 'HIGH';
-      report.endTime = nowISO(); report.durationMs = ms(t0);
-      report.recommendations.push('BLOCKED: Authenticated session required.');
-      return report;
-    }
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('id, workspace_id')
-      .eq('id', authUser.id)
-      .maybeSingle();
-    if (!userRow || !userRow.workspace_id) {
-      report.blocked = true;
-      report.blockReason = 'No valid workspace context — user row missing or workspace_id is null.';
-      report.riskLevel = 'HIGH';
-      report.endTime = nowISO(); report.durationMs = ms(t0);
-      report.recommendations.push('BLOCKED: No valid workspace context. Visit /setup or create a workspace first.');
-      return report;
-    }
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  if (!authUser) {
+    report.blocked = true;
+    report.blockReason = 'No authenticated user — cannot run stress test.';
+    report.riskLevel = 'HIGH';
+    report.endTime = nowISO(); report.durationMs = ms(t0);
+    report.recommendations.push('BLOCKED: Authenticated session required.');
+    return report;
   }
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('id, workspace_id')
+    .eq('id', authUser.id)
+    .maybeSingle();
+  if (!userRow || !userRow.workspace_id) {
+    report.blocked = true;
+    report.blockReason = 'No valid workspace context — user row missing or workspace_id is null.';
+    report.riskLevel = 'HIGH';
+    report.endTime = nowISO(); report.durationMs = ms(t0);
+    report.recommendations.push('BLOCKED: No valid workspace context. Visit /setup or create a workspace first.');
+    return report;
+  }
+  const wsId = userRow.workspace_id;
 
   const maxUsers = options?.maxUsers ?? DEFAULT_MAX.users;
   const maxProjects = options?.maxProjects ?? DEFAULT_MAX.projects;
@@ -318,13 +317,6 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
   if (!dryRun) setLock(runId);
 
   try {
-    const { data: workspaces } = await supabase.from('workspaces').select('id').limit(1);
-    const wsId = workspaces?.[0]?.id;
-    if (!wsId) {
-      report.recommendations.push('No workspace found — create one first');
-      report.endTime = nowISO(); report.durationMs = ms(t0); return report;
-    }
-
     if (dryRun) {
       const estimate = {
         users: maxUsers, teams: 20, projects: maxProjects, epics: 3000,
