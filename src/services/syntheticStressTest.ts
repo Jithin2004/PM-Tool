@@ -53,7 +53,7 @@ export interface StressReport {
     calendarEventsCreated: number; integrationsCreated: number;
     webhooksCreated: number; automationsCreated: number; approvalsCreated: number;
     timeMs: number; stressRlsErrors: number; blockedTables: number;
-    rlsErrorTables: string[]; serviceFallbacks: number;
+    rlsErrorTables: string[]; serviceFallbacks: number; skippedDueToRls: number;
   };
   performance: {
     projectPageLoadMs: number; portfolioLoadMs: number; timelineCalcMs: number;
@@ -100,7 +100,7 @@ function makeBaseReport(runId: string, startTime: string): StressReport {
   return {
     simulationRunId: runId, startTime, endTime: '', durationMs: 0,
     blocked: false, dryRun: false,
-    generation: { usersCreated: 0, teamsCreated: 0, projectsCreated: 0, epicsCreated: 0, tasksCreated: 0, documentsCreated: 0, calendarEventsCreated: 0, integrationsCreated: 0, webhooksCreated: 0, automationsCreated: 0, approvalsCreated: 0, timeMs: 0, stressRlsErrors: 0, blockedTables: 0, rlsErrorTables: [], serviceFallbacks: 0 },
+    generation: { usersCreated: 0, teamsCreated: 0, projectsCreated: 0, epicsCreated: 0, tasksCreated: 0, documentsCreated: 0, calendarEventsCreated: 0, integrationsCreated: 0, webhooksCreated: 0, automationsCreated: 0, approvalsCreated: 0, timeMs: 0, stressRlsErrors: 0, blockedTables: 0, rlsErrorTables: [], serviceFallbacks: 0, skippedDueToRls: 0 },
     performance: { projectPageLoadMs: 0, portfolioLoadMs: 0, timelineCalcMs: 0, ganttRenderMs: 0, commandPaletteSearchMs: 0, queueDepth: 0, memoryEstimateMB: 0, apiThroughput: 0, automationExecMs: 0, webhookProcessingMs: 0, documentSearchMs: 0, calendarCalcMs: 0, slowestQueries: [], largestRenderTrees: [] },
     events: { taskUpdates: 0, sprintCompletions: 0, automationTriggers: 0, integrationSyncs: 0, approvalsProcessed: 0, refreshOperations: 0, recoveryOperations: 0, browserInterruptions: 0, timeMs: 0 },
     cleanup: { recordsBefore: {}, recordsAfter: {}, simRecordsRemaining: {}, success: false, timeMs: 0, orphanCount: 0 },
@@ -323,38 +323,24 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       metadata: { run_id: runId, test: 'synthetic_stress', timestamp: startTime },
     });
 
-    // ─── GENERATION ────────────────────────────────────────────────
-
-    async function rawInsert(table: string, rows: Record<string, any>[], tag: string): Promise<number> {
-      let created = 0;
-      for (let i = 0; i < rows.length; i += CONCURRENCY) {
-        const chunk = rows.slice(i, i + CONCURRENCY);
-        const results = await Promise.all(chunk.map(r =>
-          supabase.from(table).insert(r).select('id').maybeSingle()
-            .then(res => {
-              if (res.data) created++;
-              else if (isRlsError(res.error)) {
-                report.generation.stressRlsErrors++;
-                if (!report.generation.rlsErrorTables.includes(tag)) {
-                  report.generation.rlsErrorTables.push(tag);
-                  report.generation.blockedTables++;
-                }
-              }
-              return res;
-            })
-            .catch(err => {
-              if (isRlsError(err)) {
-                report.generation.stressRlsErrors++;
-                if (!report.generation.rlsErrorTables.includes(tag)) {
-                  report.generation.rlsErrorTables.push(tag);
-                  report.generation.blockedTables++;
-                }
-              }
-            })
-        ));
+    // ── RLS Circuit Breaker ──
+    const _circuitBlocked = new Set<string>();
+    const _shouldAttempt = (table: string): boolean => {
+      if (_circuitBlocked.has(table)) { report.generation.skippedDueToRls++; return false; }
+      return true;
+    };
+    const _markBlocked = (table: string): void => {
+      if (_circuitBlocked.has(table)) return;
+      _circuitBlocked.add(table);
+      report.generation.stressRlsErrors++;
+      if (!report.generation.rlsErrorTables.includes(table)) {
+        report.generation.rlsErrorTables.push(table);
+        report.generation.blockedTables++;
       }
-      return created;
-    }
+      console.warn('[Stress Circuit Breaker]', table, 'disabled after RLS rejection');
+    };
+
+    // ─── GENERATION ────────────────────────────────────────────────
 
     const genStart = performance.now();
 
@@ -368,13 +354,10 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     for (let i = 0; i < userBatch.length; i += CONCURRENCY) {
       const chunk = userBatch.slice(i, i + CONCURRENCY);
       const results = await Promise.all(chunk.map(r =>
+        !_shouldAttempt('users') ? Promise.resolve(null) :
         supabase.from('users').insert(r).select('id').maybeSingle()
-          .then(res => {
-            if (res.data) userIds.push(res.data.id);
-            else if (isRlsError(res.error)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('users')) { report.generation.rlsErrorTables.push('users'); report.generation.blockedTables++; } }
-            return res;
-          })
-          .catch(err => { if (isRlsError(err)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('users')) { report.generation.rlsErrorTables.push('users'); report.generation.blockedTables++; } } })
+          .then(res => { if (res.data) userIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('users'); return res; })
+          .catch(err => { if (isRlsError(err)) _markBlocked('users'); })
       ));
     }
     report.generation.usersCreated = userIds.length;
@@ -386,9 +369,10 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     for (let i = 0; i < teamBatch.length; i += CONCURRENCY) {
       const chunk = teamBatch.slice(i, i + CONCURRENCY);
       const results = await Promise.all(chunk.map(r =>
+        !_shouldAttempt('teams') ? Promise.resolve(null) :
         supabase.from('teams').insert(r).select('id').maybeSingle()
-          .then(res => { if (res.data) teamIds.push(res.data.id); else if (isRlsError(res.error)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('teams')) { report.generation.rlsErrorTables.push('teams'); report.generation.blockedTables++; } } })
-          .catch(err => { if (isRlsError(err)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('teams')) { report.generation.rlsErrorTables.push('teams'); report.generation.blockedTables++; } } })
+          .then(res => { if (res.data) teamIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('teams'); })
+          .catch(err => { if (isRlsError(err)) _markBlocked('teams'); })
       ));
     }
     report.generation.teamsCreated = teamIds.length;
@@ -403,9 +387,10 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     for (let i = 0; i < projBatch.length; i += CONCURRENCY) {
       const chunk = projBatch.slice(i, i + CONCURRENCY);
       const results = await Promise.all(chunk.map(r =>
+        !_shouldAttempt('projects') ? Promise.resolve(null) :
         supabase.from('projects').insert(r).select('id').maybeSingle()
-          .then(res => { if (res.data) projIds.push(res.data.id); else if (isRlsError(res.error)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('projects')) { report.generation.rlsErrorTables.push('projects'); report.generation.blockedTables++; } } })
-          .catch(err => { if (isRlsError(err)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('projects')) { report.generation.rlsErrorTables.push('projects'); report.generation.blockedTables++; } } })
+          .then(res => { if (res.data) projIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('projects'); })
+          .catch(err => { if (isRlsError(err)) _markBlocked('projects'); })
       ));
     }
     report.generation.projectsCreated = projIds.length;
@@ -420,9 +405,10 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     for (let i = 0; i < epicBatch.length; i += CONCURRENCY) {
       const chunk = epicBatch.slice(i, i + CONCURRENCY);
       const results = await Promise.all(chunk.map(r =>
+        !_shouldAttempt('epics') ? Promise.resolve(null) :
         supabase.from('epics').insert(r).select('id').maybeSingle()
-          .then(res => { if (res.data) epicIds.push(res.data.id); else if (isRlsError(res.error)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('epics')) { report.generation.rlsErrorTables.push('epics'); report.generation.blockedTables++; } } })
-          .catch(err => { if (isRlsError(err)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('epics')) { report.generation.rlsErrorTables.push('epics'); report.generation.blockedTables++; } } })
+          .then(res => { if (res.data) epicIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('epics'); })
+          .catch(err => { if (isRlsError(err)) _markBlocked('epics'); })
       ));
     }
     report.generation.epicsCreated = epicIds.length;
@@ -440,9 +426,10 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     for (let i = 0; i < taskBatch.length; i += CONCURRENCY) {
       const chunk = taskBatch.slice(i, i + CONCURRENCY);
       const results = await Promise.all(chunk.map(r =>
+        !_shouldAttempt('tasks') ? Promise.resolve(null) :
         supabase.from('tasks').insert(r).select('id').maybeSingle()
-          .then(res => { if (res.data) taskIds.push(res.data.id); else if (isRlsError(res.error)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('tasks')) { report.generation.rlsErrorTables.push('tasks'); report.generation.blockedTables++; } } })
-          .catch(err => { if (isRlsError(err)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('tasks')) { report.generation.rlsErrorTables.push('tasks'); report.generation.blockedTables++; } } })
+          .then(res => { if (res.data) taskIds.push(res.data.id); else if (isRlsError(res.error)) _markBlocked('tasks'); })
+          .catch(err => { if (isRlsError(err)) _markBlocked('tasks'); })
       ));
     }
     report.generation.tasksCreated = taskIds.length;
@@ -496,20 +483,26 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let intCount = 0;
     for (let i = 0; i < 50; i++) {
       const service = INTEGRATION_SERVICES[i % INTEGRATION_SERVICES.length];
-      const { data: acct } = await supabase.from('connected_accounts').insert({
-        workspace_id: wsId, service, access_token: `sst_${runId}_token_${i}`, connected: i % 10 !== 0,
-      }).select('id').maybeSingle()
-        .then(res => { if (!res.data && isRlsError(res.error)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('connected_accounts')) { report.generation.rlsErrorTables.push('connected_accounts'); report.generation.blockedTables++; } } return res; })
-        .catch(() => ({ data: null }));
+      let acct: { id: string } | null = null;
+      if (_shouldAttempt('connected_accounts')) {
+        const res = await supabase.from('connected_accounts').insert({
+          workspace_id: wsId, service, access_token: `sst_${runId}_token_${i}`, connected: i % 10 !== 0,
+        }).select('id').maybeSingle().catch(e => { if (isRlsError(e)) _markBlocked('connected_accounts'); return { data: null }; });
+        if (res?.data) acct = res.data; else if (res?.error && isRlsError(res.error)) _markBlocked('connected_accounts');
+      }
       if (acct?.id) {
         intCount++;
-        await supabase.from('integration_configs').insert({
-          workspace_id: wsId, service, config: { repo_url: `https://sst.local/${service}/${i}`, branch: 'main' },
-        }).catch((err) => { if (isRlsError(err)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('integration_configs')) { report.generation.rlsErrorTables.push('integration_configs'); report.generation.blockedTables++; } } });
-        await supabase.from('integration_sync_jobs').insert({
-          workspace_id: wsId, service, status: randomFrom(['completed','failed','processing','queued','retrying'] as const),
-          payload: { sim: true, run_id: runId }, attempts: Math.floor(Math.random() * 4),
-        }).catch((err) => { if (isRlsError(err)) { report.generation.stressRlsErrors++; if (!report.generation.rlsErrorTables.includes('integration_sync_jobs')) { report.generation.rlsErrorTables.push('integration_sync_jobs'); report.generation.blockedTables++; } } });
+        if (_shouldAttempt('integration_configs')) {
+          await supabase.from('integration_configs').insert({
+            workspace_id: wsId, service, config: { repo_url: `https://sst.local/${service}/${i}`, branch: 'main' },
+          }).catch((err) => { if (isRlsError(err)) _markBlocked('integration_configs'); });
+        }
+        if (_shouldAttempt('integration_sync_jobs')) {
+          await supabase.from('integration_sync_jobs').insert({
+            workspace_id: wsId, service, status: randomFrom(['completed','failed','processing','queued','retrying'] as const),
+            payload: { sim: true, run_id: runId }, attempts: Math.floor(Math.random() * 4),
+          }).catch((err) => { if (isRlsError(err)) _markBlocked('integration_sync_jobs'); });
+        }
       }
     }
     report.generation.integrationsCreated = intCount;
@@ -722,13 +715,13 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     if (report.performance.webhookProcessingMs > 5000) risks.push('webhookProcessing');
     if (report.performance.documentSearchMs > 2000) risks.push('documentSearch');
     if (report.performance.calendarCalcMs > 2000) risks.push('calendarCalc');
-    if (report.generation.stressRlsErrors > 0) risks.push(`RLS blocked: ${report.generation.stressRlsErrors} inserts across ${report.generation.rlsErrorTables.join(', ')}`);
+    if (report.generation.stressRlsErrors > 0) risks.push(`RLS blocked: ${report.generation.stressRlsErrors} inserts first-hit + ${report.generation.skippedDueToRls} skipped via circuit breaker across ${report.generation.rlsErrorTables.join(', ')}`);
     if (report.generation.serviceFallbacks > 0) risks.push(`service fallbacks: ${report.generation.serviceFallbacks} domain-service calls failed silently`);
     if (risks.length >= 6) report.riskLevel = 'HIGH';
     else if (risks.length >= 3) report.riskLevel = 'MEDIUM';
 
     report.recommendations.push(...risks.map(r => `Investigate: ${r}`));
-    if (report.generation.stressRlsErrors > 0) report.recommendations.push(`RLS blocked ${report.generation.stressRlsErrors} inserts on: ${report.generation.rlsErrorTables.join(', ')}. These tables require service-role or backend-only writes.`);
+    if (report.generation.stressRlsErrors > 0) report.recommendations.push(`RLS blocked ${report.generation.stressRlsErrors} first attempts + ${report.generation.skippedDueToRls} circuit-skipped on: ${report.generation.rlsErrorTables.join(', ')}. Circuit breaker prevented ${report.generation.skippedDueToRls} network requests.`);
     if (report.performance.memoryEstimateMB > 4000) report.recommendations.push('Memory usage exceeds 4GB — consider pagination or virtualization');
     if (report.performance.queueDepth > 50) report.recommendations.push(`Queue depth ${report.performance.queueDepth}`);
     if (report.performance.apiThroughput < 20) report.recommendations.push(`API throughput ${report.performance.apiThroughput} ops/s`);
@@ -825,6 +818,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     };
     if (report.generation.stressRlsErrors > 0) {
       stressMeta.rls_errors = report.generation.stressRlsErrors;
+      stressMeta.rls_skipped = report.generation.skippedDueToRls;
       stressMeta.rls_blocked_tables = report.generation.rlsErrorTables;
       stressMeta.service_fallbacks = report.generation.serviceFallbacks;
     }
