@@ -512,4 +512,30 @@ export const activityLogService = {
       metadata: { boundary, error, component_stack: componentStack?.slice(0, 500) },
     });
   },
+
+  // ── Document Soft Delete Logging ──
+
+  async logDocumentDeleted(workspaceId: string, docId: string, title: string, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'document_deleted',
+      metadata: { doc_id: docId, title },
+    });
+  },
+
+  async logDocumentRestored(workspaceId: string, docId: string, title: string, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'document_restored',
+      metadata: { doc_id: docId, title },
+    });
+  },
+
+  async logDocumentArchivedViewed(workspaceId: string, actorId?: string, archivedCount?: number): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'document_archived_viewed',
+      metadata: { archived_count: archivedCount },
+    });
+  },
 };
