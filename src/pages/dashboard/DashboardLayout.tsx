@@ -19,6 +19,7 @@ import { activityLogService } from '../../services/activityLogService';
 import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
 import { Login } from '../../components/auth/Login';
 import { Header } from '../../components/ui/Header';
+import CommandPalette from '../../components/command/CommandPalette';
 import { NotificationToast, Notification } from '../../components/ui/NotificationToast';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 import { LiveClock } from '../../components/ui/LiveClock';
@@ -282,6 +283,22 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const [feedbackTags, setFeedbackTags] = useState<string[]>([]);
   const [feedbackComment, setFeedbackComment] = useState('');
   const [pathname, setPathname] = useState(window.location.pathname);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(v => !v);
+      }
+      if (e.key === 'Escape' && commandPaletteOpen) {
+        setCommandPaletteOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [commandPaletteOpen]);
 
   // Track route changes reactively
   useEffect(() => {
@@ -1533,6 +1550,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           notifications={dbNotifications}
           onMarkAsRead={handleMarkAsRead}
         onNavigate={navigateTo}
+        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
           workingTimeFrom={workingTimeFrom}
           workingTimeTo={workingTimeTo}
           onWorkingTimeChange={handleWorkingTimeChange}
@@ -1569,6 +1587,19 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         confirmText={confirmState.confirmText}
         onConfirm={confirmState.onConfirm}
         onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onNavigate={navigateTo}
+        profile={profile}
+        projects={projectsWithAggregatedPERT}
+        tasks={tasks}
+        setSelectedProject={setSelectedProject}
+        notify={notify}
+        setIsAdding={setIsAdding}
+        workspaceId={workspace?.id}
       />
 
       {children}

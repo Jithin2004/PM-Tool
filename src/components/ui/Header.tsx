@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, BrainCircuit, Sun, Users, Menu, LogOut, Moon, X, Bell, Check, ChevronDown, ChevronRight, Briefcase, PlayCircle, Database, Shield, FolderOpen, BarChart3, LayoutDashboard, Activity, GitBranch, GitFork, Target, Settings as SettingsIcon, FileText, ChartArea } from 'lucide-react';
+import { Clock, BrainCircuit, Sun, Users, Menu, LogOut, Moon, X, Bell, Check, ChevronDown, ChevronRight, Briefcase, PlayCircle, Database, Shield, FolderOpen, BarChart3, LayoutDashboard, Activity, GitBranch, GitFork, Target, Settings as SettingsIcon, FileText, ChartArea, Search } from 'lucide-react';
 import { Profile } from '../../types';
 import { calculateHoursFromRange } from '../../utils/timeUtils';
 
@@ -57,6 +57,7 @@ export function Header({
   userCustomRoles = {},
   onLogout,
   onNavigate,
+  onOpenCommandPalette,
   workingTimeFrom,
   workingTimeTo,
   onWorkingTimeChange,
@@ -72,6 +73,7 @@ export function Header({
   userCustomRoles?: Record<string, string>,
   onLogout: () => void,
   onNavigate: (path: string) => void,
+  onOpenCommandPalette?: () => void,
   workingTimeFrom: string,
   workingTimeTo: string,
   onWorkingTimeChange: (from: string, to: string) => void,
@@ -444,6 +446,15 @@ export function Header({
 
         {/* Mobile Right Controls */}
         <div className="flex lg:hidden items-center gap-2">
+          {/* Command Palette for Mobile */}
+          <button
+            onClick={() => onOpenCommandPalette?.()}
+            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+            title="Search (Ctrl+K)"
+          >
+            <Search className="w-4 h-4 text-white/70" />
+          </button>
+
           {/* Interactive Tour for Mobile */}
           <button
             onClick={() => (window as any).startOnboardingTour?.()}
