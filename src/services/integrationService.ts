@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { activityLogService } from './activityLogService';
 
 export interface ConnectedAccount {
   id: string;
@@ -31,6 +32,7 @@ export interface IntegrationHealth {
   latency_ms?: number;
   retry_count: number;
   checked_at: string;
+  integration_last_checked?: string;
 }
 
 // ---- Stubs ----
@@ -64,8 +66,14 @@ export async function fetchIntegrationHealth(workspaceId: string): Promise<Integ
   return [];
 }
 
-export async function updateIntegrationHealth(workspaceId: string, service: string, status: IntegrationHealth['status'], error?: string): Promise<boolean> {
+export async function updateIntegrationHealth(
+  workspaceId: string,
+  service: string,
+  status: IntegrationHealth['status'],
+  error?: string
+): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
+  const now = new Date().toISOString();
   try {
     const { data: existing } = await supabase
       .from('integration_health')
@@ -75,15 +83,23 @@ export async function updateIntegrationHealth(workspaceId: string, service: stri
       .maybeSingle();
     if (existing) {
       await supabase.from('integration_health').update({
-        status, last_error: error, last_sync: status === 'connected' ? new Date().toISOString() : undefined,
-        checked_at: new Date().toISOString(),
+        status,
+        last_error: error,
+        last_sync: status === 'connected' ? now : undefined,
+        checked_at: now,
+        integration_last_checked: now,
       }).eq('id', existing.id);
     } else {
       await supabase.from('integration_health').insert({
         workspace_id: workspaceId, service, status,
-        last_error: error, checked_at: new Date().toISOString(),
+        last_error: error, checked_at: now, integration_last_checked: now,
       });
     }
+    activityLogService.appendLog({
+      workspace_id: workspaceId, actor_id: '',
+      action: 'integration_health_checked',
+      metadata: { workspace_id: workspaceId, service, status, error, integration_last_checked: now },
+    });
     return true;
   } catch { return false; }
 }
