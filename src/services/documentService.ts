@@ -13,7 +13,7 @@ export interface Document {
   content: string;
   doc_type: string;
   tags: string[];
-  pinned: boolean;
+  pinned?: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string;
@@ -50,8 +50,6 @@ export async function fetchDocuments(workspaceId: string, projectId?: string): P
       .from('documents')
       .select('*')
       .eq('workspace_id', workspaceId)
-      .is('deleted_at', null)
-      .order('pinned', { ascending: false })
       .order('updated_at', { ascending: false });
     if (projectId) query = query.eq('project_id', projectId);
     const { data } = await query;
@@ -67,7 +65,6 @@ export async function searchDocuments(workspaceId: string, queryText: string): P
       .from('documents')
       .select('*')
       .eq('workspace_id', workspaceId)
-      .is('deleted_at', null)
       .or(`title.ilike.%${queryText}%,content.ilike.%${queryText}%`)
       .order('updated_at', { ascending: false })
       .limit(20);
@@ -83,7 +80,6 @@ export async function fetchDocument(docId: string): Promise<Document | null> {
       .from('documents')
       .select('*')
       .eq('id', docId)
-      .is('deleted_at', null)
       .maybeSingle();
     if (data) return data as Document;
   } catch { /* ignore */ }

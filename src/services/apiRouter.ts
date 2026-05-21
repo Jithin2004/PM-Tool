@@ -96,7 +96,7 @@ async function handleTasks(req: ApiRequest, wsId: string): Promise<ApiResponse> 
 async function handleDocuments(req: ApiRequest, wsId: string): Promise<ApiResponse> {
   switch (req.method) {
     case 'GET': {
-      let query = supabase.from('documents').select('*').eq('workspace_id', wsId).is('deleted_at', null);
+      let query = supabase.from('documents').select('*').eq('workspace_id', wsId);
       if (req.query?.search) query = query.ilike('title', `%${req.query.search}%`);
       const { data } = await query.order('created_at', { ascending: false });
       return { statusCode: 200, body: data || [] };

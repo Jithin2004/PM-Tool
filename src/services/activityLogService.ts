@@ -74,7 +74,8 @@ export const activityLogService = {
         .from('activity_logs')
         .select('*')
         .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
       if (projectId) query = query.eq('project_id', projectId);
       if (taskId) query = query.eq('task_id', taskId);
       const { data, error } = await query;
@@ -91,6 +92,10 @@ export const activityLogService = {
     let currentPrevHash = 'GENESIS_BLOCK';
     for (let i = 0; i < logs.length; i++) {
       const log = logs[i];
+      if (i === 0 && (!log.previous_hash || log.previous_hash === 'GENESIS_BLOCK')) {
+        currentPrevHash = log.hash!;
+        continue;
+      }
       if (log.previous_hash !== currentPrevHash) return { valid: false, tamperedIndex: i };
       const recomputed = await this.computeHash(log, log.previous_hash!);
       if (log.hash !== recomputed) return { valid: false, tamperedIndex: i };
@@ -99,9 +104,22 @@ export const activityLogService = {
     return { valid: true, tamperedIndex: null };
   },
 
-  async verifyHashChain(workspaceId: string): Promise<{ status: 'Valid' | 'Broken' | 'Suspicious'; logCount: number; tamperedIndex: number | null; message: string }> {
+  async verifyHashChain(workspaceId: string): Promise<{ status: 'Valid' | 'Broken' | 'GENESIS_RESET' | 'Suspicious'; logCount: number; tamperedIndex: number | null; message: string }> {
     const logs = await this.getLogs(workspaceId);
     if (logs.length === 0) return { status: 'Valid', logCount: 0, tamperedIndex: null, message: 'No logs to verify' };
+
+    // Check genesis mismatch at index 0
+    if (logs.length > 0) {
+      const first = logs[0];
+      if (!first.previous_hash || first.previous_hash === 'GENESIS_BLOCK') {
+        // Legacy genesis — not corruption
+      } else if (first.previous_hash !== 'GENESIS_BLOCK') {
+        // First entry has a non-genesis hash pointing to nothing — legacy reset
+        await this.logHashChainVerified(workspaceId, 'GENESIS_RESET', logs.length, 0);
+        return { status: 'GENESIS_RESET', logCount: logs.length, tamperedIndex: 0, message: 'Chain initialized from legacy records' };
+      }
+    }
+
     let broken = false;
     let firstBad: number | null = null;
     let suspicious = false;
@@ -109,10 +127,19 @@ export const activityLogService = {
     let prevTimestamp = '';
     for (let i = 0; i < logs.length; i++) {
       const log = logs[i];
+
+      // Genesis entry at index 0 with null/legacy previous_hash is valid
+      if (i === 0 && (!log.previous_hash || log.previous_hash === 'GENESIS_BLOCK')) {
+        currentPrevHash = log.hash!;
+        continue;
+      }
+
+      // Non-genesis hash mismatch = real corruption
       if (log.previous_hash !== currentPrevHash) {
         if (!broken) { broken = true; firstBad = i; }
         continue;
       }
+
       const recomputed = await this.computeHash(log, log.previous_hash!);
       if (log.hash !== recomputed) {
         if (!broken) { broken = true; firstBad = i; }
@@ -136,6 +163,36 @@ export const activityLogService = {
     }
     await this.logHashChainVerified(workspaceId, 'Valid', logs.length, null);
     return { status: 'Valid', logCount: logs.length, tamperedIndex: null, message: 'Chain intact' };
+  },
+
+  async verifyHashChainDetailed(workspaceId: string): Promise<{ valid: boolean; brokenIndex: number | null; severity: 'none' | 'warning' | 'critical'; reason: string }> {
+    const logs = await this.getLogs(workspaceId);
+    if (logs.length === 0) return { valid: true, brokenIndex: null, severity: 'none', reason: 'No logs' };
+
+    if (logs.length > 0) {
+      const first = logs[0];
+      if (first.previous_hash && first.previous_hash !== 'GENESIS_BLOCK') {
+        return { valid: false, brokenIndex: 0, severity: 'warning', reason: 'Chain initialized from legacy records' };
+      }
+    }
+
+    let currentPrevHash = 'GENESIS_BLOCK';
+    for (let i = 0; i < logs.length; i++) {
+      const log = logs[i];
+      if (i === 0 && (!log.previous_hash || log.previous_hash === 'GENESIS_BLOCK')) {
+        currentPrevHash = log.hash!;
+        continue;
+      }
+      if (log.previous_hash !== currentPrevHash) {
+        return { valid: false, brokenIndex: i, severity: 'critical', reason: `Hash mismatch at index ${i}` };
+      }
+      const recomputed = await this.computeHash(log, log.previous_hash!);
+      if (log.hash !== recomputed) {
+        return { valid: false, brokenIndex: i, severity: 'critical', reason: `Tampered hash at index ${i}` };
+      }
+      currentPrevHash = log.hash!;
+    }
+    return { valid: true, brokenIndex: null, severity: 'none', reason: 'Chain intact' };
   },
 
   // ── Command Intelligence Event Logging ──

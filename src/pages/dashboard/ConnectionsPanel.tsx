@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   fetchConnectedAccounts, fetchIntegrationHealth, updateIntegrationHealth,
-  disconnectService, enqueueSync, getHealthDisplay, getHealthTrend, getCooldownRemaining, formatCooldown,
+  disconnectService, enqueueSync, getConnectionDisplayState, getCooldownRemaining, formatCooldown,
   ConnectedAccount, IntegrationHealth, QueueState, getQueueStats,
 } from '../../services/integrationService';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -122,9 +122,9 @@ export default function ConnectionsPanel() {
 
   const renderCard = (svc: { key: string; label: string; scope: string }) => {
     const h = health[svc.key];
-    const display = getHealthDisplay(h?.status || 'disconnected');
-    const trend = h ? getHealthTrend(h.retry_count) : null;
     const acct = accounts[svc.key];
+    const hasAccount = !!acct;
+    const state = getConnectionDisplayState(h?.status, hasAccount, h?.retry_count);
     const isSyncing = syncing[svc.key];
     const cd = getCooldownRemaining(h);
     const cdText = formatCooldown(cd);
@@ -138,8 +138,7 @@ export default function ConnectionsPanel() {
             {isSyncing && <span className="text-[10px] font-mono text-cyan-400 animate-pulse">Syncing...</span>}
           </div>
           <div className="flex items-center gap-2">
-            {trend && <span className={`text-[9px] font-mono ${trend.color}`}>{trend.label}</span>}
-            <span className={`text-[10px] font-mono ${display.color}`}>{display.label}</span>
+            <span className={`text-[10px] font-mono ${state.color}`}>{state.label}</span>
           </div>
         </div>
         <div className="flex items-center gap-4 text-[10px] font-mono text-white/30 mb-3">

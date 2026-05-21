@@ -507,6 +507,35 @@ export function getHealthDisplay(status: string): { label: string; color: string
   }
 }
 
+export function getConnectionDisplayState(
+  healthStatus: string | undefined,
+  hasAccount: boolean,
+  retryCount?: number
+): { label: string; color: string; healthVisible: boolean } {
+  // DISCONNECTED overrides all health states
+  if (!hasAccount || healthStatus === 'disconnected' || !healthStatus) {
+    return { label: 'Disconnected', color: 'text-white/30', healthVisible: false };
+  }
+
+  // TOKEN_EXPIRED → warning
+  if (healthStatus === 'token_expired') {
+    return { label: 'Token Expired', color: 'text-amber-400', healthVisible: false };
+  }
+
+  // CONNECTED + status determines display
+  if (healthStatus === 'connected') {
+    return { label: 'Connected', color: 'text-emerald-400', healthVisible: true };
+  }
+  if (healthStatus === 'syncing') {
+    return { label: 'Syncing', color: 'text-cyan-400', healthVisible: false };
+  }
+  if (healthStatus === 'failed') {
+    return { label: 'Failed', color: 'text-red-400', healthVisible: false };
+  }
+
+  return { label: 'Disconnected', color: 'text-white/30', healthVisible: false };
+}
+
 // ── Sync Functions ──
 
 async function syncUpdateHealth(workspaceId: string, service: string, success: boolean, error?: string, itemsSynced?: number): Promise<void> {
