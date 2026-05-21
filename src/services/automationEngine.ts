@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { enqueueSync } from './integrationService';
+import { fireEventWebhooks } from './webhookService';
 
 export interface AutomationRule {
   id: string;
@@ -174,10 +175,24 @@ async function executeAction(action: any, workspaceId: string, payload: Record<s
   }
 }
 
-export async function evaluateTriggers(event: TriggerEvent, payload: Record<string, any>): Promise<void> {
+const MAX_AUTOMATION_DEPTH = 5;
+const processedEvents = new Set<string>();
+const EVENT_DEDUP_TTL = 1000;
+
+function dedupKey(event: string, payload: Record<string, any>): string {
+  return `${event}_${payload.task_id || payload.doc_id || payload.instance_id || payload.queue_id || ''}_${Date.now()}`;
+}
+
+export async function evaluateTriggers(
+  event: TriggerEvent, payload: Record<string, any>, depth = 0
+): Promise<void> {
   const workspaceId = payload.workspace_id;
-  if (!workspaceId || !isSupabaseConfigured) return;
+  if (!workspaceId || !isSupabaseConfigured || depth >= MAX_AUTOMATION_DEPTH) return;
   try {
+    const key = dedupKey(event, payload);
+    if (processedEvents.has(key)) return;
+    processedEvents.add(key);
+    setTimeout(() => processedEvents.delete(key), EVENT_DEDUP_TTL);
     const { data: rules } = await supabase
       .from('automation_rules')
       .select('*')
@@ -185,12 +200,17 @@ export async function evaluateTriggers(event: TriggerEvent, payload: Record<stri
       .eq('trigger_event', event)
       .eq('enabled', true);
     if (!rules || rules.length === 0) return;
+    activityLogService.logTriggerEvaluated(workspaceId, event, rules.length, depth).catch(() => {});
     for (const rule of rules) {
       await enqueueSync(workspaceId, `automation_${rule.id}`, {
-        rule_id: rule.id, event, payload,
+        rule_id: rule.id, event, payload, _depth: depth + 1,
       });
     }
   } catch { /* ignore */ }
+}
+
+export function getMaxAutomationDepth(): number {
+  return MAX_AUTOMATION_DEPTH;
 }
 
 // Called by queue worker
@@ -211,6 +231,9 @@ export async function executeAutomationRule(
       workspace_id: workspaceId, action: 'automation_executed',
       metadata: { rule_id: ruleId, rule_name: rule.name, event, payload_keys: Object.keys(payload) },
     });
+    fireEventWebhooks('automation_executed', workspaceId, {
+      rule_id: ruleId, rule_name: rule.name, event, payload_keys: Object.keys(payload),
+    }).catch(() => {});
     return { success: true, message: `Executed ${rule.name}` };
   } catch (e: any) {
     return { success: false, message: e.message };

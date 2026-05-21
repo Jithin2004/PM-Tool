@@ -3,6 +3,8 @@ import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/su
 import { Task, TaskStatus, TaskDependency } from '../types';
 import { sendNotification } from '../services/notificationService';
 import { predictionValidationService } from '../services/predictionValidationService';
+import { fireEventWebhooks } from '../services/webhookService';
+import { evaluateTriggers } from '../services/automationEngine';
 import { useAuth } from '../context/AuthContext';
 import { sha256 } from '../utils/cryptoUtils';
 
@@ -468,6 +470,13 @@ export function useTasks(workspaceId?: string) {
           'created',
           { timestamp: new Date().toISOString(), name: data.name, status: data.status }
         );
+        fireEventWebhooks('task_created', workspaceId, {
+          task_id: data.id, project_id: data.project_id, name: data.name, status: data.status,
+        }).catch(() => {});
+        evaluateTriggers('task.created', {
+          workspace_id: workspaceId, task_id: data.id, project_id: data.project_id,
+          name: data.name, status: data.status,
+        }).catch(() => {});
       }
 
       return data as Task;
@@ -520,11 +529,24 @@ export function useTasks(workspaceId?: string) {
         { timestamp: new Date().toISOString() }
       );
 
+      fireEventWebhooks('task_updated', workspaceId, {
+        task_id: taskId, status, previous_status: oldStatus,
+      }).catch(() => {});
+      evaluateTriggers('task.status_changed', {
+        workspace_id: workspaceId, task_id: taskId, status, previous_status: oldStatus,
+      }).catch(() => {});
+
       if (status === 'done') {
         const task = tasks.find(t => t.id === taskId);
         if (task) {
           await predictionValidationService.recordCompletion(task);
         }
+        fireEventWebhooks('task_completed', workspaceId, {
+          task_id: taskId, task_name: task?.name,
+        }).catch(() => {});
+        evaluateTriggers('task.completed', {
+          workspace_id: workspaceId, task_id: taskId, task_name: task?.name,
+        }).catch(() => {});
       }
     } else {
       const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, status } : t);
@@ -645,6 +667,9 @@ export function useTasks(workspaceId?: string) {
           }
         }
       }
+      fireEventWebhooks('task_updated', workspaceId, {
+        task_id: taskId, updates: Object.keys(updates),
+      }).catch(() => {});
     } else {
       const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, ...updates } : t);
       setTasks(updatedTasks);
@@ -674,6 +699,9 @@ export function useTasks(workspaceId?: string) {
       }
       
       setTasks(prev => prev.filter(t => t.id !== taskId));
+      fireEventWebhooks('task_updated', workspaceId, {
+        task_id: taskId, status: 'deleted',
+      }).catch(() => {});
     } else {
       const updatedTasks = tasks.filter(t => t.id !== taskId);
       setTasks(updatedTasks);

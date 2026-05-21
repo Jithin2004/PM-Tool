@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import { fireEventWebhooks } from './webhookService';
 
 const SYNC_COOLDOWN_MS = 30000;
 const QUEUE_MAX_CONCURRENT = 2;
@@ -87,6 +88,13 @@ const inMemoryQueue: QueueItem[] = [];
 let activeCount = 0;
 
 function resolveSyncFn(service: string, payload: Record<string, any>, _workspaceId: string, _accessToken?: string): () => Promise<SyncResult> {
+  if (service.startsWith('automation_')) {
+    return async () => {
+      const mod = await import('./automationEngine');
+      const result = await mod.executeAutomationRule(_workspaceId, payload.rule_id, payload.event, payload.payload || payload);
+      return { success: result.success, message: result.message, itemsSynced: result.success ? 1 : 0 };
+    };
+  }
   switch (service) {
     case 'github': return () => syncGitHubRepo(_workspaceId, (payload as any).repo_url || '', (payload as any).branch || 'main');
     case 'gitlab': return () => syncGitLabRepo(_workspaceId, (payload as any).repo_url || '', (payload as any).branch || 'main');
@@ -127,6 +135,14 @@ async function processQueue(): Promise<void> {
           metadata: { queue_id: item.id, service: item.service, items_synced: result.itemsSynced },
         }).catch(() => {});
         activityLogService.logJobCompleted(item.workspaceId, item.id, item.service, result.itemsSynced).catch(() => {});
+        fireEventWebhooks('integration_sync_completed', item.workspaceId, {
+          queue_id: item.id, service: item.service, items_synced: result.itemsSynced,
+        }).catch(() => {});
+        import('./automationEngine').then(mod => {
+          mod.evaluateTriggers('integration_sync.completed', {
+            workspace_id: item.workspaceId, queue_id: item.id, service: item.service, items_synced: result.itemsSynced,
+          }).catch(() => {});
+        }).catch(() => {});
       } else {
         item.attempt++;
         if (item.attempt <= QUEUE_RETRY_BACKOFFS.length) {
@@ -354,6 +370,9 @@ export async function saveConnectedAccount(account: Partial<ConnectedAccount>): 
         action: 'integration_connected',
         metadata: { service: account.service, account_id: data.id },
       });
+      fireEventWebhooks('integration_connected', account.workspace_id!, {
+        service: account.service, account_id: data.id,
+      }).catch(() => {});
       return data as ConnectedAccount;
     }
   } catch { /* ignore */ }

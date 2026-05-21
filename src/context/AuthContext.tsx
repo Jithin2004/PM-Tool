@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User } from '../types';
 import { clearSession, flushNow } from '../services/commandUsageService';
+import { activityLogService } from '../services/activityLogService';
 
 interface AuthContextType {
   user: any | null;
@@ -27,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Refs to prevent stale closures in event listeners
   const loadingRef = React.useRef(loading);
   const userRef = React.useRef(user);
+  const profileRef = React.useRef(profile);
   const lastSyncedUserIdRef = React.useRef<string | null>(null);
   const syncPromiseRef = React.useRef<Promise<void> | null>(null);
   const syncUserRef = React.useRef<string | null>(null);
@@ -46,6 +48,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   const syncProfile = useCallback(async (authUser: any, force = false) => {
     if (!isSupabaseConfigured) return;
@@ -316,20 +322,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        setUser(null);
-        setProfile(null);
-        supabase.removeAllChannels();
-        
-        // Only show toast and redirect if the user was previously logged in
-        if (userRef.current) {
-          window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Session expired. Redirecting...", type: "error" } }));
-          setTimeout(() => {
-            if (window.location.pathname !== '/') {
-              window.history.replaceState(null, '', '/');
-              window.dispatchEvent(new CustomEvent('popstate'));
-            }
-          }, 1000);
-        }
+        handleSessionExpiry(event === 'SIGNED_OUT' ? 'expired' : 'refresh_failed').catch(() => {});
         return;
       } else {
         // Handle all other events, including INITIAL_SESSION
@@ -362,15 +355,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [syncProfile]);
 
-  const logout = async () => {
-    // Flush remaining telemetry and clear session
+  const handleSessionExpiry = useCallback(async (reason: string) => {
+    if (userRef.current) {
+      try {
+        const p = profileRef.current;
+        const ws = p?.workspace_id;
+        if (ws) {
+          await activityLogService.logSessionExpired(ws, userRef.current.id, reason);
+        }
+      } catch {}
+    }
     await flushNow();
     clearSession();
+    setUser(null);
+    setProfile(null);
+    supabase.removeAllChannels();
+    const redirectPath = window.location.pathname;
+    window.dispatchEvent(new CustomEvent('notify-toast', {
+      detail: { message: `Session ${reason}. Redirecting...`, type: 'error' },
+    }));
+    if (redirectPath !== '/') {
+      setTimeout(() => {
+        window.history.replaceState(null, '', '/');
+        window.dispatchEvent(new CustomEvent('popstate'));
+      }, 1000);
+    }
+  }, []);
+
+  const logout = async () => {
+    await handleSessionExpiry('expired');
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
     }
-    setUser(null);
-    setProfile(null);
   };
 
   const updateRole = async (id: string, role: User['role']) => {

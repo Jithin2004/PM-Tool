@@ -1,6 +1,8 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { sha256 } from '../utils/cryptoUtils';
 import { activityLogService } from './activityLogService';
+import { fireEventWebhooks } from './webhookService';
+import { evaluateTriggers } from './automationEngine';
 
 export interface Document {
   id: string;
@@ -102,6 +104,12 @@ export async function createDocument(doc: Partial<Document>): Promise<Document |
         action: 'document_created',
         metadata: { doc_id: data.id, title: data.title },
       });
+      fireEventWebhooks('document_created', doc.workspace_id!, {
+        doc_id: data.id, title: data.title, author_id: doc.author_id,
+      }).catch(() => {});
+      evaluateTriggers('document.created', {
+        workspace_id: doc.workspace_id!, doc_id: data.id, title: data.title, author_id: doc.author_id,
+      }).catch(() => {});
       return data as Document;
     }
   } catch { /* ignore */ }

@@ -95,6 +95,45 @@ export const activityLogService = {
     return { valid: true, tamperedIndex: null };
   },
 
+  async verifyHashChain(workspaceId: string): Promise<{ status: 'Valid' | 'Broken' | 'Suspicious'; logCount: number; tamperedIndex: number | null; message: string }> {
+    const logs = await this.getLogs(workspaceId);
+    if (logs.length === 0) return { status: 'Valid', logCount: 0, tamperedIndex: null, message: 'No logs to verify' };
+    let broken = false;
+    let firstBad: number | null = null;
+    let suspicious = false;
+    let currentPrevHash = 'GENESIS_BLOCK';
+    let prevTimestamp = '';
+    for (let i = 0; i < logs.length; i++) {
+      const log = logs[i];
+      if (log.previous_hash !== currentPrevHash) {
+        if (!broken) { broken = true; firstBad = i; }
+        continue;
+      }
+      const recomputed = await this.computeHash(log, log.previous_hash!);
+      if (log.hash !== recomputed) {
+        if (!broken) { broken = true; firstBad = i; }
+        continue;
+      }
+      currentPrevHash = log.hash!;
+      if (log.created_at) {
+        if (prevTimestamp && log.created_at < prevTimestamp) {
+          suspicious = true;
+        }
+        prevTimestamp = log.created_at;
+      }
+    }
+    if (broken) {
+      await this.logHashChainVerified(workspaceId, 'Broken', logs.length, firstBad);
+      return { status: 'Broken', logCount: logs.length, tamperedIndex: firstBad, message: `Chain broken at index ${firstBad}` };
+    }
+    if (suspicious) {
+      await this.logHashChainVerified(workspaceId, 'Suspicious', logs.length, null);
+      return { status: 'Suspicious', logCount: logs.length, tamperedIndex: null, message: 'Chain valid but timestamps out of order' };
+    }
+    await this.logHashChainVerified(workspaceId, 'Valid', logs.length, null);
+    return { status: 'Valid', logCount: logs.length, tamperedIndex: null, message: 'Chain intact' };
+  },
+
   // ── Command Intelligence Event Logging ──
 
   async logHeatmapView(workspaceId: string, actorId?: string, metadata?: Record<string, any>): Promise<boolean> {
@@ -318,6 +357,64 @@ export const activityLogService = {
       workspace_id: workspaceId,
       action: 'workflow_template_installed',
       metadata: { template_id: templateId, template_name: templateName, rule_id: ruleId },
+    });
+  },
+
+  // ── Launch Hardening Logging ──
+
+  async logWebhookTriggered(workspaceId: string, event: string, webhookCount: number, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'webhook_triggered',
+      metadata: { event, webhook_count: webhookCount },
+    });
+  },
+
+  async logTriggerEvaluated(workspaceId: string, event: string, ruleCount: number, depth: number, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'automation_trigger_evaluated',
+      metadata: { event, rule_count: ruleCount, depth },
+    });
+  },
+
+  async logApiRequest(workspaceId: string, endpoint: string, method: string, statusCode: number, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'api_request_processed',
+      metadata: { endpoint, method, status_code: statusCode },
+    });
+  },
+
+  async logRoleGuardRejected(workspaceId: string, action: string, userId: string, requiredRole: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'role_guard_rejected',
+      metadata: { attempted_action: action, user_id: userId, required_role: requiredRole },
+    });
+  },
+
+  async logSessionExpired(workspaceId: string, userId: string, reason: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'session_expired',
+      metadata: { user_id: userId, reason },
+    });
+  },
+
+  async logHashChainVerified(workspaceId: string, chainStatus: string, logCount: number, tamperedIndex?: number | null): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'hash_chain_verified',
+      metadata: { chain_status: chainStatus, log_count: logCount, tampered_index: tamperedIndex },
+    });
+  },
+
+  async logSimulationCompleted(workspaceId: string, successCount: number, failureCount: number, recoveryCount: number): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'system_simulation_completed',
+      metadata: { success_count: successCount, failure_count: failureCount, recovery_count: recoveryCount },
     });
   },
 };

@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { evaluateTriggers } from './automationEngine';
+import { fireEventWebhooks } from './webhookService';
 
 export interface ApprovalChain {
   id: string;
@@ -151,6 +152,9 @@ export async function createApprovalInstance(
         workspace_id: wsId, action: 'approval_created',
         metadata: { instance_id: data.id, target_type: instance.target_type, target_id: instance.target_id },
       });
+      fireEventWebhooks('approval_created', wsId, {
+        instance_id: data.id, target_type: instance.target_type, target_id: instance.target_id,
+      }).catch(() => {});
       return data as ApprovalInstance;
     }
   } catch { /* ignore */ }
@@ -177,6 +181,9 @@ export async function approveStep(instanceId: string, stepOrder: number, _userId
         workspace_id: '', action: 'approval_completed',
         metadata: { instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'approved' },
       });
+      fireEventWebhooks('approval_completed', instance.workspace_id, {
+        instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'approved',
+      }).catch(() => {});
       evaluateTriggers('approval.completed', {
         workspace_id: instance.workspace_id, target_type: instance.target_type, target_id: instance.target_id,
       }).catch(() => {});
@@ -202,6 +209,9 @@ export async function rejectStep(instanceId: string, _stepOrder: number, _userId
       workspace_id: '', action: 'approval_completed',
       metadata: { instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'rejected' },
     });
+    fireEventWebhooks('approval_completed', instance.workspace_id, {
+      instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'rejected',
+    }).catch(() => {});
     return true;
   } catch { return false; }
 }
