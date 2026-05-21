@@ -178,4 +178,54 @@ export const activityLogService = {
       metadata: { doc_id: docId, annotation_id: annotationId },
     });
   },
+
+  // ── Stage 2 Hardening Logging ──
+
+  async logSyncQueued(workspaceId: string, queueId: string, service: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'integration_sync_queued',
+      metadata: { queue_id: queueId, service },
+    });
+  },
+
+  async logSyncStarted(workspaceId: string, queueId: string, service: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'integration_sync_started',
+      metadata: { queue_id: queueId, service },
+    });
+  },
+
+  async logSyncCompleted(workspaceId: string, queueId: string, service: string, itemsSynced?: number): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'integration_sync_completed',
+      metadata: { queue_id: queueId, service, items_synced: itemsSynced },
+    });
+  },
+
+  async logSyncRetry(workspaceId: string, queueId: string, service: string, attempt: number, backoffMs: number, error?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'integration_sync_retry',
+      metadata: { queue_id: queueId, service, attempt, backoff_ms: backoffMs, error },
+    });
+  },
+
+  async logOAuthStateCreated(workspaceId: string, provider: string, expiresAt: string, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'oauth_state_created',
+      metadata: { provider, expires_at: expiresAt },
+    });
+  },
+
+  async logOAuthStateVerified(workspaceId: string, sessionId: string, provider: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'oauth_state_verified',
+      metadata: { oauth_session_id: sessionId, provider },
+    });
+  },
 };

@@ -1,6 +1,12 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 
+const SYNC_COOLDOWN_MS = 30000;
+const QUEUE_MAX_CONCURRENT = 2;
+const QUEUE_RETRY_BACKOFFS = [2000, 5000, 15000];
+
+// ── Types ──
+
 export interface ConnectedAccount {
   id: string;
   workspace_id: string;
@@ -33,12 +39,183 @@ export interface IntegrationHealth {
   retry_count: number;
   checked_at: string;
   integration_last_checked?: string;
+  last_sync_attempt?: string;
 }
 
 export interface SyncResult {
   success: boolean;
   message: string;
   itemsSynced?: number;
+}
+
+export type HealthTrend = 'healthy' | 'degrading' | 'critical';
+export type QueueState = 'queued' | 'processing' | 'success' | 'failed' | 'retrying';
+
+export interface QueueItem {
+  id: string;
+  workspaceId: string;
+  service: string;
+  state: QueueState;
+  attempt: number;
+  error?: string;
+  createdAt: number;
+  fn: () => Promise<SyncResult>;
+  resolve: (r: SyncResult) => void;
+}
+
+// ── Sync Queue ──
+
+const queue: QueueItem[] = [];
+let activeCount = 0;
+
+function generateQueueId(): string {
+  return `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function processQueue(): void {
+  while (activeCount < QUEUE_MAX_CONCURRENT && queue.length > 0) {
+    const item = queue.find(q => q.state === 'queued');
+    if (!item) break;
+    item.state = 'processing';
+    activeCount++;
+    activityLogService.appendLog({
+      workspace_id: item.workspaceId, action: 'integration_sync_started',
+      metadata: { queue_id: item.id, service: item.service },
+    }).catch(() => {});
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[IntegrationQueue] Processing ${item.service} (${item.id})`);
+    }
+    item.fn().then(result => {
+      if (result.success) {
+        item.state = 'success';
+        activityLogService.appendLog({
+          workspace_id: item.workspaceId, action: 'integration_sync_completed',
+          metadata: { queue_id: item.id, service: item.service, items_synced: result.itemsSynced },
+        }).catch(() => {});
+      } else {
+        item.attempt++;
+        if (item.attempt <= QUEUE_RETRY_BACKOFFS.length) {
+          item.state = 'retrying';
+          const backoff = QUEUE_RETRY_BACKOFFS[item.attempt - 1];
+          activityLogService.appendLog({
+            workspace_id: item.workspaceId, action: 'integration_sync_retry',
+            metadata: { queue_id: item.id, service: item.service, attempt: item.attempt, backoff_ms: backoff, error: result.message },
+          }).catch(() => {});
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[IntegrationQueue] Retry ${item.service} attempt ${item.attempt} in ${backoff}ms`);
+          }
+          setTimeout(() => {
+            item.state = 'queued';
+            activeCount--;
+            processQueue();
+          }, backoff);
+          return;
+        }
+        item.state = 'failed';
+        item.error = result.message;
+        activityLogService.appendLog({
+          workspace_id: item.workspaceId, action: 'integration_sync_failed',
+          metadata: { queue_id: item.id, service: item.service, error: result.message },
+        }).catch(() => {});
+      }
+      activeCount--;
+      item.resolve(result);
+      processQueue();
+    }).catch(e => {
+      item.state = 'failed';
+      item.error = e.message;
+      activeCount--;
+      item.resolve({ success: false, message: e.message });
+      processQueue();
+    });
+  }
+}
+
+export function enqueueSync(
+  workspaceId: string, service: string, fn: () => Promise<SyncResult>
+): Promise<SyncResult> {
+  return new Promise(resolve => {
+    const id = generateQueueId();
+    queue.push({ id, workspaceId, service, state: 'queued', attempt: 0, createdAt: Date.now(), fn, resolve });
+    activityLogService.appendLog({
+      workspace_id: workspaceId, action: 'integration_sync_queued',
+      metadata: { queue_id: id, service },
+    }).catch(() => {});
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[IntegrationQueue] Queued ${service} (${id}) — queue length: ${queue.length}`);
+    }
+    processQueue();
+  });
+}
+
+export function getQueueStats(): { length: number; pending: number; active: number; failed: number; items: { id: string; service: string; state: QueueState; attempt: number }[] } {
+  const pending = queue.filter(q => q.state === 'queued' || q.state === 'retrying').length;
+  const active = activeCount;
+  const failed = queue.filter(q => q.state === 'failed').length;
+  const items = queue.map(q => ({ id: q.id, service: q.service, state: q.state, attempt: q.attempt }));
+  return { length: queue.length, pending, active, failed, items };
+}
+
+// ── Cooldown / Rate Limiting ──
+
+export function getCooldownRemaining(health: IntegrationHealth | undefined): number {
+  if (!health?.last_sync_attempt) return 0;
+  const elapsed = Date.now() - new Date(health.last_sync_attempt).getTime();
+  return Math.max(0, SYNC_COOLDOWN_MS - elapsed);
+}
+
+export function formatCooldown(ms: number): string {
+  if (ms <= 0) return '';
+  const secs = Math.ceil(ms / 1000);
+  return `Retry in ${secs}s`;
+}
+
+// ── Health Trend ──
+
+export function getHealthTrend(retryCount: number): { trend: HealthTrend; label: string; color: string } {
+  if (retryCount >= 5) return { trend: 'critical', label: 'Critical', color: 'text-red-400' };
+  if (retryCount >= 2) return { trend: 'degrading', label: 'Degrading', color: 'text-amber-400' };
+  return { trend: 'healthy', label: 'Healthy', color: 'text-emerald-400' };
+}
+
+// ── OAuth State ──
+
+export async function createOAuthState(workspaceId: string, provider: string, createdBy?: string): Promise<string | null> {
+  if (!isSupabaseConfigured || !workspaceId) return null;
+  try {
+    const stateToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    await supabase.from('oauth_sessions').insert({
+      workspace_id: workspaceId, provider, state_token: stateToken,
+      expires_at: expiresAt, created_by: createdBy,
+    });
+    activityLogService.appendLog({
+      workspace_id: workspaceId, actor_id: createdBy, action: 'oauth_state_created',
+      metadata: { provider, expires_at: expiresAt },
+    }).catch(() => {});
+    return stateToken;
+  } catch { return null; }
+}
+
+export async function verifyOAuthState(stateToken: string, workspaceId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { data } = await supabase
+      .from('oauth_sessions')
+      .select('*')
+      .eq('state_token', stateToken)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle();
+    if (!data) return false;
+    if (data.used) return false;
+    if (new Date(data.expires_at) < new Date()) return false;
+    await supabase.from('oauth_sessions').update({ used: true }).eq('id', data.id);
+    activityLogService.appendLog({
+      workspace_id: workspaceId, action: 'oauth_state_verified',
+      metadata: { oauth_session_id: data.id, provider: data.provider },
+    }).catch(() => {});
+    return true;
+  } catch { return false; }
 }
 
 // ── Connected Accounts ──
@@ -120,9 +297,7 @@ export async function saveIntegrationConfig(config: Partial<IntegrationConfig>):
   return null;
 }
 
-export async function updateIntegrationConfig(
-  configId: string, updates: Partial<IntegrationConfig>
-): Promise<boolean> {
+export async function updateIntegrationConfig(configId: string, updates: Partial<IntegrationConfig>): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
   try {
     await supabase.from('integration_configs').update(updates).eq('id', configId);
@@ -146,10 +321,7 @@ export async function fetchIntegrationHealth(workspaceId: string): Promise<Integ
 }
 
 export async function updateIntegrationHealth(
-  workspaceId: string,
-  service: string,
-  status: IntegrationHealth['status'],
-  error?: string
+  workspaceId: string, service: string, status: IntegrationHealth['status'], error?: string
 ): Promise<boolean> {
   if (!isSupabaseConfigured || !workspaceId) return false;
   const now = new Date().toISOString();
@@ -163,17 +335,15 @@ export async function updateIntegrationHealth(
     if (existing) {
       const retry_count = status === 'failed' ? (existing.retry_count ?? 0) + 1 : 0;
       await supabase.from('integration_health').update({
-        status,
-        last_error: error,
+        status, last_error: error,
         last_sync: status === 'connected' ? now : undefined,
-        checked_at: now,
-        integration_last_checked: now,
-        retry_count,
+        checked_at: now, integration_last_checked: now,
+        last_sync_attempt: now, retry_count,
       }).eq('id', existing.id);
     } else {
       await supabase.from('integration_health').insert({
-        workspace_id: workspaceId, service, status,
-        last_error: error, checked_at: now, integration_last_checked: now,
+        workspace_id: workspaceId, service, status, last_error: error,
+        checked_at: now, integration_last_checked: now, last_sync_attempt: now,
       });
     }
     activityLogService.appendLog({
@@ -196,9 +366,7 @@ export function getHealthDisplay(status: string): { label: string; color: string
 
 // ── Sync Functions ──
 
-async function syncUpdateHealth(
-  workspaceId: string, service: string, success: boolean, error?: string, itemsSynced?: number
-): Promise<void> {
+async function syncUpdateHealth(workspaceId: string, service: string, success: boolean, error?: string, itemsSynced?: number): Promise<void> {
   await updateIntegrationHealth(workspaceId, service, success ? 'connected' : 'failed', error);
   if (success) {
     await activityLogService.appendLog({
@@ -208,12 +376,9 @@ async function syncUpdateHealth(
   }
 }
 
-export async function syncGitHubRepo(
-  workspaceId: string, repoUrl: string, branch: string
-): Promise<SyncResult> {
+export async function syncGitHubRepo(workspaceId: string, repoUrl: string, branch: string): Promise<SyncResult> {
   await updateIntegrationHealth(workspaceId, 'github', 'syncing');
   try {
-    // Parse owner/repo from URL
     const match = repoUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
     if (!match) throw new Error('Invalid GitHub repository URL');
     const [, owner, repo] = match;
@@ -228,20 +393,14 @@ export async function syncGitHubRepo(
     const issues = issuesRes.status === 'fulfilled' && issuesRes.value.ok
       ? (await issuesRes.value.json()).filter((i: any) => !i.pull_request) : [];
     await syncUpdateHealth(workspaceId, 'github', true, undefined, commits.length + pulls.length + issues.length);
-    return {
-      success: true,
-      message: `Synced ${commits.length} commits, ${pulls.length} PRs, ${issues.length} issues`,
-      itemsSynced: commits.length + pulls.length + issues.length,
-    };
+    return { success: true, message: `Synced ${commits.length} commits, ${pulls.length} PRs, ${issues.length} issues`, itemsSynced: commits.length + pulls.length + issues.length };
   } catch (e: any) {
     await syncUpdateHealth(workspaceId, 'github', false, e.message);
     return { success: false, message: `Sync failed: ${e.message}` };
   }
 }
 
-export async function syncGitLabRepo(
-  workspaceId: string, repoUrl: string, branch: string
-): Promise<SyncResult> {
+export async function syncGitLabRepo(workspaceId: string, repoUrl: string, branch: string): Promise<SyncResult> {
   await updateIntegrationHealth(workspaceId, 'gitlab', 'syncing');
   try {
     const match = repoUrl.match(/gitlab\.com[:/]([^/]+\/[^/.]+)/);
@@ -255,26 +414,19 @@ export async function syncGitLabRepo(
     const commits = commitsRes.status === 'fulfilled' && commitsRes.value.ok ? await commitsRes.value.json() : [];
     const mergeReqs = mergeReqRes.status === 'fulfilled' && mergeReqRes.value.ok ? await mergeReqRes.value.json() : [];
     await syncUpdateHealth(workspaceId, 'gitlab', true, undefined, commits.length + mergeReqs.length);
-    return {
-      success: true,
-      message: `Synced ${commits.length} commits, ${mergeReqs.length} MRs`,
-      itemsSynced: commits.length + mergeReqs.length,
-    };
+    return { success: true, message: `Synced ${commits.length} commits, ${mergeReqs.length} MRs`, itemsSynced: commits.length + mergeReqs.length };
   } catch (e: any) {
     await syncUpdateHealth(workspaceId, 'gitlab', false, e.message);
     return { success: false, message: `Sync failed: ${e.message}` };
   }
 }
 
-export async function syncFigmaFrame(
-  workspaceId: string, frameUrl: string
-): Promise<SyncResult & { frameId?: string; title?: string }> {
+export async function syncFigmaFrame(workspaceId: string, frameUrl: string): Promise<SyncResult & { frameId?: string; title?: string }> {
   await updateIntegrationHealth(workspaceId, 'figma', 'syncing');
   try {
     const match = frameUrl.match(/figma\.com\/(file|proto)\/([a-zA-Z0-9]+)/);
     if (!match) throw new Error('Invalid Figma frame URL');
     const fileKey = match[2];
-    // Use Figma public API (no token — returns limited data but enough for preview)
     const res = await fetch(`https://api.figma.com/v1/files/${fileKey}`, {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -288,9 +440,7 @@ export async function syncFigmaFrame(
   }
 }
 
-export async function syncGoogleCalendar(
-  workspaceId: string, accessToken?: string
-): Promise<SyncResult> {
+export async function syncGoogleCalendar(workspaceId: string, accessToken?: string): Promise<SyncResult> {
   await updateIntegrationHealth(workspaceId, 'google_calendar', 'syncing');
   try {
     if (!accessToken) throw new Error('Connect pending — no access token');
@@ -299,8 +449,7 @@ export async function syncGoogleCalendar(
       new URLSearchParams({
         timeMin: new Date(Date.now() - 7 * 86400000).toISOString(),
         timeMax: new Date(Date.now() + 30 * 86400000).toISOString(),
-        singleEvents: 'true',
-        orderBy: 'startTime',
+        singleEvents: 'true', orderBy: 'startTime',
       }),
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
@@ -312,26 +461,17 @@ export async function syncGoogleCalendar(
       if (!event.start?.dateTime && !event.start?.date) continue;
       const extId = event.id;
       const { data: existing } = await supabase
-        .from('calendar_events')
-        .select('id')
-        .eq('workspace_id', workspaceId)
-        .eq('source_id', extId)
-        .eq('source_table', 'google_calendar')
+        .from('calendar_events').select('id')
+        .eq('workspace_id', workspaceId).eq('source_id', extId).eq('source_table', 'google_calendar')
         .maybeSingle();
       if (existing) continue;
       const start = event.start.dateTime || event.start.date + 'T00:00:00Z';
       const end = event.end.dateTime || event.end.date + 'T23:59:59Z';
       await supabase.from('calendar_events').insert({
-        workspace_id: workspaceId,
-        title: event.summary || '(No title)',
-        description: event.description || '',
-        start_date: start,
-        end_date: end,
-        event_type: 'meeting',
-        source_id: extId,
+        workspace_id: workspaceId, title: event.summary || '(No title)', description: event.description || '',
+        start_date: start, end_date: end, event_type: 'meeting', source_id: extId,
         source_table: 'google_calendar',
-        participants: event.attendees?.map((a: any) => a.email) || [],
-        capacity_impact: 0,
+        participants: event.attendees?.map((a: any) => a.email) || [], capacity_impact: 0,
       });
       synced++;
     }
@@ -343,9 +483,7 @@ export async function syncGoogleCalendar(
   }
 }
 
-export async function syncGoogleDrive(
-  workspaceId: string, accessToken?: string
-): Promise<SyncResult> {
+export async function syncGoogleDrive(workspaceId: string, accessToken?: string): Promise<SyncResult> {
   await updateIntegrationHealth(workspaceId, 'google_drive', 'syncing');
   try {
     if (!accessToken) throw new Error('Connect pending — no access token');
@@ -365,8 +503,6 @@ export async function syncGoogleDrive(
   }
 }
 
-export async function getRecentActivity(
-  workspaceId: string, service: string, limit = 10
-): Promise<any[]> {
+export async function getRecentActivity(workspaceId: string, service: string, limit = 10): Promise<any[]> {
   return [];
 }
