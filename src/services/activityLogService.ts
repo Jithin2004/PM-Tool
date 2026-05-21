@@ -602,4 +602,12 @@ export const activityLogService = {
       metadata: { event_type: 'recovery', deleted_by_table: deletedByTable, remaining_count: remainingCount },
     });
   },
+
+  async logStressCleanupSurvivorDetected(workspaceId: string, survivors: { table: string; id: string; name: string }[], fkFailures: { table: string; error: string }[]): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'stress_cleanup_survivor_detected',
+      metadata: { survivor_count: survivors.length, survivors, fk_failures: fkFailures },
+    });
+  },
 };

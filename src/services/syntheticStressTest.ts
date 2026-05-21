@@ -990,6 +990,15 @@ export async function cleanupAllSyntheticRuns(wsId?: string): Promise<{
   result.remainingCount = Object.values(after).reduce((a, b) => a + Math.max(0, b), 0);
   result.orphanCount = result.remainingCount;
 
+  // Forensic survivor check
+  if (result.remainingCount > 0) {
+    const audit = await cleanupAudit();
+    if (audit.survivors.length > 0) {
+      console.warn('[Cleanup Forensic] Survivors detected after cleanup:', audit.survivors);
+      console.warn('[Cleanup Forensic] FK failures:', audit.fkFailures);
+    }
+  }
+
   await activityLogService.logStressRecoveryCompleted(wsId, result.deletedByTable, result.remainingCount);
   return result;
 }
@@ -1020,4 +1029,210 @@ export async function recoverAbandonedStressRuns(wsId?: string): Promise<{
   const details = await cleanupAllSyntheticRuns(wsId);
   clearLock();
   return { recovered: true, details };
+}
+
+// ─── Forensic Cleanup Audit ─────────────────────────────────────
+
+interface AuditTableDef {
+  name: string;
+  patternCol: string;
+  pattern: string;
+  nameCol: string;
+}
+
+const AUDIT_TABLES: AuditTableDef[] = [
+  { name: 'users', patternCol: 'email', pattern: 'SST_%', nameCol: 'email' },
+  { name: 'teams', patternCol: 'name', pattern: 'SST_%', nameCol: 'name' },
+  { name: 'projects', patternCol: 'name', pattern: 'SST_%', nameCol: 'name' },
+  { name: 'epics', patternCol: 'name', pattern: 'SST_%', nameCol: 'name' },
+  { name: 'tasks', patternCol: 'name', pattern: 'SST_%', nameCol: 'name' },
+  { name: 'documents', patternCol: 'title', pattern: 'SST_%', nameCol: 'title' },
+  { name: 'calendar_events', patternCol: 'title', pattern: 'SST_%', nameCol: 'title' },
+  { name: 'webhooks', patternCol: 'name', pattern: 'SST_%', nameCol: 'name' },
+  { name: 'automation_rules', patternCol: 'name', pattern: 'SST_%', nameCol: 'name' },
+  { name: 'approval_chains', patternCol: 'name', pattern: 'SST_%', nameCol: 'name' },
+  { name: 'connected_accounts', patternCol: 'access_token', pattern: 'sst_%', nameCol: 'service' },
+  { name: 'sprints', patternCol: 'name', pattern: 'SST_%', nameCol: 'name' },
+  { name: 'integration_sync_jobs', patternCol: 'payload', pattern: 'sim', nameCol: 'service' },
+  { name: 'integration_configs', patternCol: 'config', pattern: 'repo_url', nameCol: 'service' },
+  { name: 'activity_logs', patternCol: 'metadata', pattern: 'sim', nameCol: 'action' },
+];
+
+async function scanTableCount(
+  def: AuditTableDef, wsId: string, runId?: string,
+): Promise<number> {
+  try {
+    const likeVal = runId ? `SST_${runId}_%` : def.pattern;
+    let query = supabase.from(def.name).select('*', { count: 'exact', head: true }).eq('workspace_id', wsId);
+    if (def.patternCol === 'payload') {
+      query = query.filter('payload->>sim', 'eq', 'true');
+    } else if (def.patternCol === 'config') {
+      query = query.filter('config->>repo_url', 'like', `https://sst.local/%`);
+    } else if (def.patternCol === 'metadata') {
+      query = query.filter('metadata->>sim', 'eq', 'true');
+    } else {
+      query = query.like(def.patternCol, likeVal);
+    }
+    const { count } = await query;
+    return count || 0;
+  } catch { return -1; }
+}
+
+async function scanChildCount(table: string, wsId: string, parentTable: string, parentCol: string, childFkCol: string, runId?: string): Promise<number> {
+  try {
+    const likeVal = runId ? `SST_${runId}_%` : 'SST_%';
+    const { data: parents } = await supabase.from(parentTable).select('id').eq('workspace_id', wsId).like(parentCol, likeVal);
+    const pids = parents?.map(p => p.id) || [];
+    if (pids.length === 0) return 0;
+    const { count } = await supabase.from(table).select('*', { count: 'exact', head: true }).in(childFkCol, pids);
+    return count || 0;
+  } catch { return -1; }
+}
+
+async function fetchSurvivors(def: AuditTableDef, wsId: string, runId?: string): Promise<{ id: string; name: string }[]> {
+  try {
+    const likeVal = runId ? `SST_${runId}_%` : def.pattern;
+    let query = supabase.from(def.name).select(`id, ${def.nameCol}`).eq('workspace_id', wsId);
+    if (def.patternCol === 'payload') {
+      query = query.filter('payload->>sim', 'eq', 'true');
+    } else if (def.patternCol === 'config') {
+      query = query.filter('config->>repo_url', 'like', `https://sst.local/%`);
+    } else if (def.patternCol === 'metadata') {
+      query = query.filter('metadata->>sim', 'eq', 'true');
+    } else {
+      query = query.like(def.patternCol, likeVal);
+    }
+    const { data } = await query;
+    return (data || []).map((r: any) => ({ id: r.id, name: String(r[def.nameCol] || '') }));
+  } catch { return []; }
+}
+
+async function tryDeleteRow(table: string, id: string): Promise<string | null> {
+  try {
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    if (error) return error.message;
+    return null;
+  } catch (e: any) {
+    return e.message || 'Unknown error';
+  }
+}
+
+export async function cleanupAudit(runId?: string): Promise<{
+  scannedTables: { table: string; count: number }[];
+  deletedByTable: { table: string; count: number }[];
+  survivors: { table: string; id: string; name: string }[];
+  fkFailures: { table: string; error: string }[];
+}> {
+  const result = {
+    scannedTables: [] as { table: string; count: number }[],
+    deletedByTable: [] as { table: string; count: number }[],
+    survivors: [] as { table: string; id: string; name: string }[],
+    fkFailures: [] as { table: string; error: string }[],
+  };
+
+  if (!isSupabaseConfigured) return result;
+
+  // Resolve workspace
+  const { data: { user: u } } = await supabase.auth.getUser();
+  if (!u) return result;
+  const { data: row } = await supabase.from('users').select('workspace_id').eq('id', u.id).maybeSingle();
+  if (!row?.workspace_id) return result;
+  const wsId = row.workspace_id;
+
+  // ── BEFORE ──
+  const beforeCounts: Record<string, number> = {};
+  const childScans: [string, string, string, string][] = [
+    ['task_dependencies', 'tasks', 'name', 'task_id'],
+    ['task_dependencies', 'tasks', 'name', 'depends_on_task_id'],
+    ['approval_instances', 'approval_chains', 'name', 'chain_id'],
+    ['doc_versions', 'documents', 'title', 'doc_id'],
+    ['doc_annotations', 'documents', 'title', 'doc_id'],
+  ];
+
+  for (const def of AUDIT_TABLES) {
+    const c = await scanTableCount(def, wsId, runId);
+    beforeCounts[def.name] = c;
+    result.scannedTables.push({ table: def.name, count: c });
+  }
+  // Child tables
+  for (const [childTable, parentTable, parentCol, childFk] of childScans) {
+    const c = await scanChildCount(childTable, wsId, parentTable, parentCol, childFk, runId);
+    beforeCounts[childTable] = (beforeCounts[childTable] || 0) + c;
+    result.scannedTables.push({ table: childTable, count: c });
+  }
+
+  // ── DELETE ──
+  const likeVal = runId ? `SST_${runId}_%` : 'SST_%';
+
+  // Phase 1: children
+  const { data: tasks } = await supabase.from('tasks').select('id').eq('workspace_id', wsId).like('name', likeVal);
+  const taskIds = tasks?.map(t => t.id) || [];
+  if (taskIds.length > 0) {
+    await supabase.from('task_dependencies').delete().eq('workspace_id', wsId).in('task_id', taskIds);
+    await supabase.from('task_dependencies').delete().eq('workspace_id', wsId).in('depends_on_task_id', taskIds);
+  }
+
+  const { data: chains } = await supabase.from('approval_chains').select('id').eq('workspace_id', wsId).like('name', likeVal);
+  const chainIds = chains?.map(c => c.id) || [];
+  if (chainIds.length > 0) await supabase.from('approval_instances').delete().in('chain_id', chainIds);
+  if (taskIds.length > 0) await supabase.from('approval_instances').delete().in('target_id', taskIds);
+
+  const { data: docs } = await supabase.from('documents').select('id').eq('workspace_id', wsId).like('title', likeVal);
+  const docIds = docs?.map(d => d.id) || [];
+  if (docIds.length > 0) {
+    await supabase.from('doc_versions').delete().in('doc_id', docIds);
+    await supabase.from('doc_annotations').delete().in('doc_id', docIds);
+  }
+
+  await supabase.from('integration_sync_jobs').delete().eq('workspace_id', wsId).filter('payload->>sim', 'eq', 'true');
+  await supabase.from('integration_configs').delete().eq('workspace_id', wsId).filter('config->>repo_url', 'like', 'https://sst.local/%');
+  await supabase.from('connected_accounts').delete().eq('workspace_id', wsId).like('access_token', 'sst_%');
+
+  // Phase 2: parents
+  const parentDeleteOps: { table: string; query: any }[] = [
+    { table: 'sprints', query: supabase.from('sprints').delete().eq('workspace_id', wsId).like('name', likeVal) },
+    { table: 'documents', query: supabase.from('documents').delete().eq('workspace_id', wsId).like('title', likeVal) },
+    { table: 'tasks', query: supabase.from('tasks').delete().eq('workspace_id', wsId).like('name', likeVal) },
+    { table: 'epics', query: supabase.from('epics').delete().eq('workspace_id', wsId).like('name', likeVal) },
+    { table: 'calendar_events', query: supabase.from('calendar_events').delete().eq('workspace_id', wsId).like('title', likeVal) },
+    { table: 'webhooks', query: supabase.from('webhooks').delete().eq('workspace_id', wsId).like('name', likeVal) },
+    { table: 'automation_rules', query: supabase.from('automation_rules').delete().eq('workspace_id', wsId).like('name', likeVal) },
+    { table: 'approval_chains', query: supabase.from('approval_chains').delete().eq('workspace_id', wsId).like('name', likeVal) },
+    { table: 'activity_logs', query: supabase.from('activity_logs').delete().eq('workspace_id', wsId).filter('metadata->>sim', 'eq', 'true') },
+    { table: 'teams', query: supabase.from('teams').delete().eq('workspace_id', wsId).like('name', likeVal) },
+    { table: 'projects', query: supabase.from('projects').delete().eq('workspace_id', wsId).like('name', likeVal) },
+    { table: 'users', query: supabase.from('users').delete().eq('workspace_id', wsId).like('email', likeVal) },
+  ];
+
+  for (const op of parentDeleteOps) {
+    try {
+      const { error } = await op.query;
+      if (error) result.fkFailures.push({ table: op.table, error: error.message });
+    } catch (e: any) {
+      result.fkFailures.push({ table: op.table, error: e.message || 'Unknown error' });
+    }
+  }
+
+  // ── AFTER / SURVIVORS ──
+  for (const def of AUDIT_TABLES) {
+    const afterC = await scanTableCount(def, wsId, runId);
+    const delta = Math.max(0, (beforeCounts[def.name] || 0) - afterC);
+    result.deletedByTable.push({ table: def.name, count: delta });
+
+    if (afterC > 0) {
+      const survivors = await fetchSurvivors(def, wsId, runId);
+      for (const s of survivors) {
+        result.survivors.push({ table: def.name, id: s.id, name: s.name });
+        // Try individual delete to capture FK error
+        const err = await tryDeleteRow(def.name, s.id);
+        if (err) result.fkFailures.push({ table: def.name, error: `id=${s.id} name=${s.name}: ${err}` });
+      }
+    }
+  }
+
+  if (result.survivors.length > 0) {
+    await activityLogService.logStressCleanupSurvivorDetected(wsId, result.survivors, result.fkFailures);
+  }
+
+  return result;
 }

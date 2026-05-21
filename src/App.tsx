@@ -8,6 +8,7 @@ declare global {
       runStressTest: (config?: any) => Promise<any>;
       cleanupStress: (runId: string) => Promise<any>;
       cleanupAllSyntheticRuns: () => Promise<any>;
+      cleanupAudit: (runId?: string) => Promise<any>;
     };
   }
 }
@@ -24,6 +25,7 @@ export default function App() {
           runStressTest: async (config = {}) => stressMod.runSyntheticStressTest(config),
           cleanupStress: async (runId: string) => stressMod.cleanupSyntheticRun(runId),
           cleanupAllSyntheticRuns: async () => stressMod.cleanupAllSyntheticRuns(),
+          cleanupAudit: async (runId?: string) => stressMod.cleanupAudit(runId),
         };
         console.log('[Resolve Debug Enabled]');
       }
