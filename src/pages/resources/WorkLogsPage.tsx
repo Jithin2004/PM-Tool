@@ -1,6 +1,6 @@
 import React from 'react';
-import WorkLogsView from '../../components/resources/WorkLogsView';
+import { WorkLogsPanel } from '../../components/resources/WorkLogsPanel';
 
 export default function WorkLogsPage() {
-  return <WorkLogsView />;
+  return <WorkLogsPanel />;
 }

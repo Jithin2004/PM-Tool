@@ -1,2 +1,2 @@
-import { AdminPanel } from '../dashboard/AdminPanel';
-export default function SettingsPage() { return <AdminPanel />; }
+import { WorkspaceSettings } from '../../components/control/WorkspaceSettings';
+export default function SettingsPage() { return <WorkspaceSettings />; }

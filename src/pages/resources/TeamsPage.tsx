@@ -1,6 +1,6 @@
 import React from 'react';
-import TeamsView from '../../components/resources/TeamsView';
+import { TeamRosterView } from '../../components/resources/TeamRosterView';
 
 export default function TeamsPage() {
-  return <TeamsView />;
+  return <TeamRosterView />;
 }

@@ -1,6 +1,6 @@
 import React from 'react';
-import CapacityView from '../../components/resources/CapacityView';
+import { CapacityAnalytics } from '../../components/resources/CapacityAnalytics';
 
 export default function CapacityPage() {
-  return <CapacityView />;
+  return <CapacityAnalytics />;
 }

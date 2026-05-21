@@ -5,7 +5,6 @@ import { AuthPage } from '../pages/auth/AuthPage';
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { AdminPanel } from '../pages/dashboard/AdminPanel';
 import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
-import { PipelinePanel } from '../pages/dashboard/PipelinePanel';
 import { ProjectWorkspace } from '../pages/dashboard/ProjectWorkspace';
 import { WorkspaceSetupPage } from '../pages/onboarding/WorkspaceSetupPage';
 import { ProjectCreatePage } from '../pages/project/ProjectCreatePage';

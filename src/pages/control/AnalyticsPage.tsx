@@ -1,6 +1,6 @@
 import React from 'react';
-import AnalyticsView from '../../components/control/AnalyticsView';
+import { ExecutiveAnalytics } from '../../components/control/ExecutiveAnalytics';
 
 export default function AnalyticsPage() {
-  return <AnalyticsView />;
+  return <ExecutiveAnalytics />;
 }

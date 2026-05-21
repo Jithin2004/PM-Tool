@@ -1,2 +1,2 @@
-import { ProjectWorkspace } from '../dashboard/ProjectWorkspace';
-export default function PortfolioPage() { return <ProjectWorkspace />; }
+import { PortfolioAnalytics } from '../../components/workspace/PortfolioAnalytics';
+export default function PortfolioPage() { return <PortfolioAnalytics />; }
