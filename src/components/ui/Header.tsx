@@ -445,117 +445,154 @@ export function Header({
         </div>
       </header>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer + Overlay */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18 }}
-            className="lg:hidden fixed top-[57px] left-0 right-0 bg-[#0a0a0a]/98 backdrop-blur-md border-b border-white/10 z-40 shadow-2xl overflow-y-auto max-h-[calc(100vh-57px)]"
-          >
-            <div className="px-4 py-5 space-y-4">
-              {/* User info */}
-              {user && (
-                <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                  <div>
-                    <p className="text-sm font-medium">{user.email?.split('@')[0]}</p>
-                    <p className="text-[10px] font-mono text-white/50 uppercase mt-0.5">
-                      Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/70'}>
-                        {(profile && userCustomRoles[profile.id]) || profile?.role || '—'}
-                      </span>
-                    </p>
-                  </div>
-                  <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${profile?.role === 'viewer' ? 'border-white/10 text-white/50' : 'border-green-500/30 text-green-400'}`}>
-                    {profile?.role === 'viewer' ? 'Read Only' : 'Write Access'}
-                  </span>
-                </div>
-              )}
+          <>
+            {/* Backdrop overlay — tap to close drawer */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="lg:hidden fixed inset-0 z-30 bg-black/60"
+              onClick={() => setMobileMenuOpen(false)}
+            />
 
-              {/* Mobile navigation sections — single expanded at a time */}
-              <div className="space-y-2">
-                <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1">Navigation</p>
-                {NAV.map(section => (
-                  <div key={section.label} className="border border-white/5">
-                    <button
-                      onClick={() => handleParentClick(section.label)}
-                      className="w-full flex items-center justify-between text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border-b border-white/5 text-white/70"
-                    >
-                      <span className="flex items-center gap-2">{section.icon}{section.label}</span>
-                      {expandedSection === section.label ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                    </button>
-                    {expandedSection === section.label && section.items.filter(item => canAccessItem(item, role)).map(item => (
-                      <button key={item.label} onClick={() => handleNav(item.path)}
-                        className={`w-full flex items-center gap-2 text-left text-[11px] font-mono uppercase tracking-wider px-6 py-2.5 border-b border-white/5 transition-all cursor-pointer ${pathname === item.path ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
-                        {item.icon}
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              {/* Settings */}
-              {user && (
-                <div className="space-y-3 pt-2 border-t border-white/5">
-                  <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest">System Parameters</p>
-                  <div className="flex flex-col gap-2">
-                    <span className="text-xs font-mono text-white/70 flex items-center gap-2">
-                      <Clock className="w-3 h-3 text-blue-400" /> Company Working Time
+            {/* Drawer panel — slide from left, swipe right to close */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={{ left: 0, right: 0.4 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.x > 80 || (info.velocity.x > 300 && info.offset.x > 0)) {
+                  setMobileMenuOpen(false);
+                }
+              }}
+              className="lg:hidden fixed top-[57px] left-0 bottom-0 w-80 max-w-[85vw] bg-[#0a0a0a]/98 backdrop-blur-md border-r border-white/10 z-40 shadow-2xl overflow-y-auto"
+            >
+              {/* Drawer content wrapper — tap on padding/background collapses section */}
+              <div
+                className="px-4 py-5 space-y-4 min-h-full"
+                onClick={() => setExpandedSection(null)}
+              >
+                {/* User info */}
+                {user && (
+                  <div onClick={e => e.stopPropagation()} className="flex items-center justify-between pb-4 border-b border-white/10">
+                    <div>
+                      <p className="text-sm font-medium">{user.email?.split('@')[0]}</p>
+                      <p className="text-[10px] font-mono text-white/50 uppercase mt-0.5">
+                        Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/70'}>
+                          {(profile && userCustomRoles[profile.id]) || profile?.role || '—'}
+                        </span>
+                      </p>
+                    </div>
+                    <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${profile?.role === 'viewer' ? 'border-white/10 text-white/50' : 'border-green-500/30 text-green-400'}`}>
+                      {profile?.role === 'viewer' ? 'Read Only' : 'Write Access'}
                     </span>
-                    {profile?.role === 'super_admin' ? (
-                      <div className="flex items-center gap-2 bg-black border border-white/10 p-2 rounded-sm w-full">
-                        <input
-                          type="time"
-                          value={workingTimeFrom}
-                          onChange={(e) => onWorkingTimeChange(e.target.value, workingTimeTo)}
-                          className="flex-1 bg-transparent font-mono text-xs text-white text-center outline-none"
-                        />
-                        <span className="text-xs font-mono text-white/40">to</span>
-                        <input
-                          type="time"
-                          value={workingTimeTo}
-                          onChange={(e) => onWorkingTimeChange(workingTimeFrom, e.target.value)}
-                          className="flex-1 bg-transparent font-mono text-xs text-white text-center outline-none"
-                        />
-                      </div>
-                    ) : (
-                      <span className="font-mono text-xs text-white/70 bg-black/40 border border-white/10 p-2 rounded-sm text-center">
-                        {workingTimeFrom} to {workingTimeTo} ({calculateHoursFromRange(workingTimeFrom, workingTimeTo)}h)
+                  </div>
+                )}
+
+                {/* Mobile navigation sections — single expanded at a time */}
+                <div onClick={e => e.stopPropagation()} className="space-y-2">
+                  <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1">Navigation</p>
+                  {NAV.map(section => (
+                    <div key={section.label} className="border border-white/5">
+                      <button
+                        onClick={() => handleParentClick(section.label)}
+                        className="w-full flex items-center justify-between text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border-b border-white/5 text-white/70"
+                      >
+                        <span className="flex items-center gap-2">{section.icon}{section.label}</span>
+                        {expandedSection === section.label ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {expandedSection === section.label && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeInOut' }}
+                            className="overflow-hidden"
+                          >
+                            {section.items.filter(item => canAccessItem(item, role)).map(item => (
+                              <button key={item.label} onClick={() => handleNav(item.path)}
+                                className={`w-full flex items-center gap-2 text-left text-[11px] font-mono uppercase tracking-wider px-6 py-2.5 border-b border-white/5 transition-all cursor-pointer ${pathname === item.path ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+                                {item.icon}
+                                {item.label}
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Settings */}
+                {user && (
+                  <div onClick={e => e.stopPropagation()} className="space-y-3 pt-2 border-t border-white/5">
+                    <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest">System Parameters</p>
+                    <div className="flex flex-col gap-2">
+                      <span className="text-xs font-mono text-white/70 flex items-center gap-2">
+                        <Clock className="w-3 h-3 text-blue-400" /> Company Working Time
                       </span>
+                      {profile?.role === 'super_admin' ? (
+                        <div className="flex items-center gap-2 bg-black border border-white/10 p-2 rounded-sm w-full">
+                          <input
+                            type="time"
+                            value={workingTimeFrom}
+                            onChange={(e) => onWorkingTimeChange(e.target.value, workingTimeTo)}
+                            className="flex-1 bg-transparent font-mono text-xs text-white text-center outline-none"
+                          />
+                          <span className="text-xs font-mono text-white/40">to</span>
+                          <input
+                            type="time"
+                            value={workingTimeTo}
+                            onChange={(e) => onWorkingTimeChange(workingTimeFrom, e.target.value)}
+                            className="flex-1 bg-transparent font-mono text-xs text-white text-center outline-none"
+                          />
+                        </div>
+                      ) : (
+                        <span className="font-mono text-xs text-white/70 bg-black/40 border border-white/10 p-2 rounded-sm text-center">
+                          {workingTimeFrom} to {workingTimeTo} ({calculateHoursFromRange(workingTimeFrom, workingTimeTo)}h)
+                        </span>
+                      )}
+                    </div>
+                    {profile?.role === 'super_admin' && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-mono text-white/70">Tiles Per Row</span>
+                        <div className="flex bg-white/5 p-1 border border-white/10 rounded-sm">
+                          {[2, 3, 4].map(num => (
+                            <button key={num} onClick={() => setTilesPerRow(num)}
+                              className={`px-3 py-1 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}>
+                              {num}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
-                  {profile?.role === 'super_admin' && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono text-white/70">Tiles Per Row</span>
-                      <div className="flex bg-white/5 p-1 border border-white/10 rounded-sm">
-                        {[2, 3, 4].map(num => (
-                          <button key={num} onClick={() => setTilesPerRow(num)}
-                            className={`px-3 py-1 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}>
-                            {num}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
 
-              {/* Logout */}
-              {user && (
-                <div className="pt-3 border-t border-white/5">
-                  <button
-                    onClick={() => { onLogout(); setMobileMenuOpen(false); }}
-                    className="w-full flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-red-400/80 hover:text-red-400 transition-colors py-2"
-                    id="logout-btn-mobile"
-                  >
-                    <LogOut className="w-3.5 h-3.5" /> Terminate Session
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
+                {/* Logout */}
+                {user && (
+                  <div onClick={e => e.stopPropagation()} className="pt-3 border-t border-white/5">
+                    <button
+                      onClick={() => { onLogout(); setMobileMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-red-400/80 hover:text-red-400 transition-colors py-2"
+                      id="logout-btn-mobile"
+                    >
+                      <LogOut className="w-3.5 h-3.5" /> Terminate Session
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
