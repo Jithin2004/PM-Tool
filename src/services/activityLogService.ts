@@ -538,4 +538,30 @@ export const activityLogService = {
       metadata: { archived_count: archivedCount },
     });
   },
+
+  // ── Stress Test Safety Logging ──
+
+  async logStressTestBlocked(workspaceId: string, reason: string, runId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'stress_test_blocked',
+      metadata: { reason, blocked_run_id: runId },
+    });
+  },
+
+  async logStressTestDryRun(workspaceId: string, runId: string, estimate: Record<string, number>): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'stress_test_dry_run',
+      metadata: { run_id: runId, estimate },
+    });
+  },
+
+  async logStressCleanupManual(workspaceId: string, runId: string, cleaned: Record<string, number>): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'stress_cleanup_manual',
+      metadata: { run_id: runId, cleaned },
+    });
+  },
 };
