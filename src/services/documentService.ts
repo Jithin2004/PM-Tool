@@ -1,4 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { sha256 } from '../utils/cryptoUtils';
+import { activityLogService } from './activityLogService';
 
 export interface Document {
   id: string;
@@ -12,6 +14,7 @@ export interface Document {
   pinned: boolean;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 export interface DocVersion {
@@ -36,45 +39,207 @@ export interface DocAnnotation {
   created_at: string;
 }
 
-// ---- Stubs ----
+// ── Documents ──
 
 export async function fetchDocuments(workspaceId: string, projectId?: string): Promise<Document[]> {
-  if (!isSupabaseConfigured) return [];
+  if (!isSupabaseConfigured || !workspaceId) return [];
+  try {
+    let query = supabase
+      .from('documents')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .is('deleted_at', null)
+      .order('pinned', { ascending: false })
+      .order('updated_at', { ascending: false });
+    if (projectId) query = query.eq('project_id', projectId);
+    const { data } = await query;
+    if (data) return data as Document[];
+  } catch { /* ignore */ }
+  return [];
+}
+
+export async function searchDocuments(workspaceId: string, queryText: string): Promise<Document[]> {
+  if (!isSupabaseConfigured || !workspaceId || !queryText.trim()) return [];
+  try {
+    const { data } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .is('deleted_at', null)
+      .or(`title.ilike.%${queryText}%,content.ilike.%${queryText}%`)
+      .order('updated_at', { ascending: false })
+      .limit(20);
+    if (data) return data as Document[];
+  } catch { /* ignore */ }
   return [];
 }
 
 export async function fetchDocument(docId: string): Promise<Document | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', docId)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (data) return data as Document;
+  } catch { /* ignore */ }
   return null;
 }
 
 export async function createDocument(doc: Partial<Document>): Promise<Document | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data } = await supabase
+      .from('documents')
+      .insert({ ...doc, doc_type: doc.doc_type || 'markdown', tags: doc.tags || [], pinned: doc.pinned || false })
+      .select()
+      .single();
+    if (data) {
+      await activityLogService.appendLog({
+        workspace_id: doc.workspace_id!, actor_id: doc.author_id,
+        action: 'document_created',
+        metadata: { doc_id: data.id, title: data.title },
+      });
+      return data as Document;
+    }
+  } catch { /* ignore */ }
   return null;
 }
 
 export async function updateDocument(docId: string, updates: Partial<Document>): Promise<boolean> {
-  return false;
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { data: current } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', docId)
+      .maybeSingle();
+    if (!current) return false;
+    // Create version from previous content
+    if (updates.content !== undefined || updates.title !== undefined) {
+      const prevContent = updates.content !== undefined ? current.content : '';
+      const prevTitle = updates.title !== undefined ? current.title : '';
+      const versionNum = await getNextVersion(docId);
+      const versionHash = await sha256(prevContent + (updates.author_id || '') + new Date().toISOString());
+      await supabase.from('doc_versions').insert({
+        doc_id: docId, version: versionNum,
+        content: prevContent, author_id: updates.author_id,
+        change_summary: `Updated "${updates.title || prevTitle}"`,
+        hash: versionHash,
+      });
+      await activityLogService.appendLog({
+        workspace_id: current.workspace_id, actor_id: updates.author_id,
+        action: 'file_version_created',
+        metadata: { doc_id: docId, version: versionNum, title: updates.title || current.title },
+      });
+    }
+    await supabase.from('documents').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', docId);
+    return true;
+  } catch { return false; }
 }
 
 export async function deleteDocument(docId: string): Promise<boolean> {
-  return false;
+  if (!isSupabaseConfigured) return false;
+  try {
+    await supabase.from('documents').update({ deleted_at: new Date().toISOString() }).eq('id', docId);
+    return true;
+  } catch { return false; }
+}
+
+export async function togglePinDocument(docId: string, pinned: boolean): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    await supabase.from('documents').update({ pinned, updated_at: new Date().toISOString() }).eq('id', docId);
+    return true;
+  } catch { return false; }
+}
+
+// ── Versions ──
+
+async function getNextVersion(docId: string): Promise<number> {
+  try {
+    const { data } = await supabase
+      .from('doc_versions')
+      .select('version')
+      .eq('doc_id', docId)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return (data?.version ?? 0) + 1;
+  } catch { return 1; }
 }
 
 export async function fetchVersions(docId: string): Promise<DocVersion[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data } = await supabase
+      .from('doc_versions')
+      .select('*')
+      .eq('doc_id', docId)
+      .order('version', { ascending: false });
+    if (data) return data as DocVersion[];
+  } catch { /* ignore */ }
   return [];
 }
 
-export async function createVersion(docId: string, content: string, summary?: string): Promise<DocVersion | null> {
+export async function createVersion(
+  docId: string, content: string, authorId?: string, summary?: string
+): Promise<DocVersion | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const version = await getNextVersion(docId);
+    const hash = await sha256(content + (authorId || '') + new Date().toISOString());
+    const { data } = await supabase
+      .from('doc_versions')
+      .insert({ doc_id: docId, version, content, author_id: authorId, change_summary: summary || '', hash })
+      .select()
+      .single();
+    if (data) return data as DocVersion;
+  } catch { /* ignore */ }
   return null;
 }
 
+// ── Annotations ──
+
 export async function fetchAnnotations(docId: string): Promise<DocAnnotation[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data } = await supabase
+      .from('doc_annotations')
+      .select('*')
+      .eq('doc_id', docId)
+      .order('created_at', { ascending: true });
+    if (data) return data as DocAnnotation[];
+  } catch { /* ignore */ }
   return [];
 }
 
 export async function createAnnotation(annotation: Partial<DocAnnotation>): Promise<DocAnnotation | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data } = await supabase
+      .from('doc_annotations')
+      .insert(annotation)
+      .select()
+      .single();
+    if (data) {
+      await activityLogService.appendLog({
+        workspace_id: '', actor_id: annotation.author_id,
+        action: 'annotation_added',
+        metadata: { doc_id: annotation.doc_id, annotation_id: data.id, selection: `${data.selection_start}-${data.selection_end}` },
+      });
+      return data as DocAnnotation;
+    }
+  } catch { /* ignore */ }
   return null;
 }
 
 export async function resolveAnnotation(annotationId: string): Promise<boolean> {
-  return false;
+  if (!isSupabaseConfigured) return false;
+  try {
+    await supabase.from('doc_annotations').update({ resolved: true }).eq('id', annotationId);
+    return true;
+  } catch { return false; }
 }

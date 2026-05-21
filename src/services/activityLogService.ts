@@ -128,4 +128,54 @@ export const activityLogService = {
       metadata: { ...healthData, event_type: 'health_generated' },
     });
   },
+
+  // ── Ecosystem Event Logging ──
+
+  async logIntegrationConnected(workspaceId: string, service: string, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'integration_connected',
+      metadata: { service },
+    });
+  },
+
+  async logIntegrationSync(workspaceId: string, service: string, itemsSynced: number, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'integration_sync',
+      metadata: { service, items_synced: itemsSynced },
+    });
+  },
+
+  async logFileUploaded(workspaceId: string, fileName: string, taskId?: string, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId, task_id: taskId,
+      action: 'file_uploaded',
+      metadata: { file_name: fileName, task_id: taskId },
+    });
+  },
+
+  async logFileVersionCreated(workspaceId: string, docId: string, version: number, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'file_version_created',
+      metadata: { doc_id: docId, version },
+    });
+  },
+
+  async logDocumentCreated(workspaceId: string, docId: string, title: string, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'document_created',
+      metadata: { doc_id: docId, title },
+    });
+  },
+
+  async logAnnotationAdded(workspaceId: string, docId: string, annotationId: string, actorId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'annotation_added',
+      metadata: { doc_id: docId, annotation_id: annotationId },
+    });
+  },
 };

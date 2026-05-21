@@ -35,26 +35,105 @@ export interface IntegrationHealth {
   integration_last_checked?: string;
 }
 
-// ---- Stubs ----
+export interface SyncResult {
+  success: boolean;
+  message: string;
+  itemsSynced?: number;
+}
+
+// ── Connected Accounts ──
 
 export async function fetchConnectedAccounts(workspaceId: string): Promise<ConnectedAccount[]> {
+  if (!isSupabaseConfigured || !workspaceId) return [];
+  try {
+    const { data } = await supabase
+      .from('connected_accounts')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .order('connected_at', { ascending: false });
+    if (data) return data as ConnectedAccount[];
+  } catch { /* ignore */ }
   return [];
 }
 
+export async function saveConnectedAccount(account: Partial<ConnectedAccount>): Promise<ConnectedAccount | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data } = await supabase
+      .from('connected_accounts')
+      .upsert(account, { onConflict: 'workspace_id,service' })
+      .select()
+      .single();
+    if (data) {
+      await activityLogService.appendLog({
+        workspace_id: account.workspace_id!, actor_id: account.user_id,
+        action: 'integration_connected',
+        metadata: { service: account.service, account_id: data.id },
+      });
+      return data as ConnectedAccount;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+export async function disconnectService(accountId: string, workspaceId?: string, service?: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    await supabase.from('connected_accounts').delete().eq('id', accountId);
+    if (workspaceId && service) {
+      await updateIntegrationHealth(workspaceId, service, 'disconnected', 'Disconnected by user');
+      await activityLogService.appendLog({
+        workspace_id: workspaceId, action: 'integration_disconnected',
+        metadata: { account_id: accountId, service },
+      });
+    }
+    return true;
+  } catch { return false; }
+}
+
+// ── Integration Configs ──
+
 export async function fetchIntegrationConfigs(workspaceId: string, projectId?: string): Promise<IntegrationConfig[]> {
+  if (!isSupabaseConfigured || !workspaceId) return [];
+  try {
+    let query = supabase
+      .from('integration_configs')
+      .select('*')
+      .eq('workspace_id', workspaceId);
+    if (projectId) query = query.eq('project_id', projectId);
+    const { data } = await query;
+    if (data) return data as IntegrationConfig[];
+  } catch { /* ignore */ }
   return [];
 }
 
 export async function saveIntegrationConfig(config: Partial<IntegrationConfig>): Promise<IntegrationConfig | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data } = await supabase
+      .from('integration_configs')
+      .upsert(config, { onConflict: 'id' })
+      .select()
+      .single();
+    if (data) return data as IntegrationConfig;
+  } catch { /* ignore */ }
   return null;
 }
 
-export async function disconnectService(accountId: string): Promise<boolean> {
-  return false;
+export async function updateIntegrationConfig(
+  configId: string, updates: Partial<IntegrationConfig>
+): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    await supabase.from('integration_configs').update(updates).eq('id', configId);
+    return true;
+  } catch { return false; }
 }
 
+// ── Integration Health ──
+
 export async function fetchIntegrationHealth(workspaceId: string): Promise<IntegrationHealth[]> {
-  if (!isSupabaseConfigured) return [];
+  if (!isSupabaseConfigured || !workspaceId) return [];
   try {
     const { data } = await supabase
       .from('integration_health')
@@ -72,22 +151,24 @@ export async function updateIntegrationHealth(
   status: IntegrationHealth['status'],
   error?: string
 ): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
+  if (!isSupabaseConfigured || !workspaceId) return false;
   const now = new Date().toISOString();
   try {
     const { data: existing } = await supabase
       .from('integration_health')
-      .select('id')
+      .select('id, retry_count')
       .eq('workspace_id', workspaceId)
       .eq('service', service)
       .maybeSingle();
     if (existing) {
+      const retry_count = status === 'failed' ? (existing.retry_count ?? 0) + 1 : 0;
       await supabase.from('integration_health').update({
         status,
         last_error: error,
         last_sync: status === 'connected' ? now : undefined,
         checked_at: now,
         integration_last_checked: now,
+        retry_count,
       }).eq('id', existing.id);
     } else {
       await supabase.from('integration_health').insert({
@@ -96,9 +177,8 @@ export async function updateIntegrationHealth(
       });
     }
     activityLogService.appendLog({
-      workspace_id: workspaceId, actor_id: '',
-      action: 'integration_health_checked',
-      metadata: { workspace_id: workspaceId, service, status, error, integration_last_checked: now },
+      workspace_id: workspaceId, action: 'integration_health_checked',
+      metadata: { service, status, error, integration_last_checked: now },
     });
     return true;
   } catch { return false; }
@@ -112,4 +192,181 @@ export function getHealthDisplay(status: string): { label: string; color: string
     case 'token_expired': return { label: 'Token Expired', color: 'text-amber-400' };
     default: return { label: 'Disconnected', color: 'text-white/30' };
   }
+}
+
+// ── Sync Functions ──
+
+async function syncUpdateHealth(
+  workspaceId: string, service: string, success: boolean, error?: string, itemsSynced?: number
+): Promise<void> {
+  await updateIntegrationHealth(workspaceId, service, success ? 'connected' : 'failed', error);
+  if (success) {
+    await activityLogService.appendLog({
+      workspace_id: workspaceId, action: 'integration_sync',
+      metadata: { service, items_synced: itemsSynced ?? 0, last_sync: new Date().toISOString() },
+    });
+  }
+}
+
+export async function syncGitHubRepo(
+  workspaceId: string, repoUrl: string, branch: string
+): Promise<SyncResult> {
+  await updateIntegrationHealth(workspaceId, 'github', 'syncing');
+  try {
+    // Parse owner/repo from URL
+    const match = repoUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
+    if (!match) throw new Error('Invalid GitHub repository URL');
+    const [, owner, repo] = match;
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+    const [commitsRes, pullsRes, issuesRes] = await Promise.allSettled([
+      fetch(`${apiUrl}/commits?sha=${branch}&per_page=10`),
+      fetch(`${apiUrl}/pulls?state=open&per_page=5`),
+      fetch(`${apiUrl}/issues?state=open&per_page=5&filter=all`),
+    ]);
+    const commits = commitsRes.status === 'fulfilled' && commitsRes.value.ok ? await commitsRes.value.json() : [];
+    const pulls = pullsRes.status === 'fulfilled' && pullsRes.value.ok ? await pullsRes.value.json() : [];
+    const issues = issuesRes.status === 'fulfilled' && issuesRes.value.ok
+      ? (await issuesRes.value.json()).filter((i: any) => !i.pull_request) : [];
+    await syncUpdateHealth(workspaceId, 'github', true, undefined, commits.length + pulls.length + issues.length);
+    return {
+      success: true,
+      message: `Synced ${commits.length} commits, ${pulls.length} PRs, ${issues.length} issues`,
+      itemsSynced: commits.length + pulls.length + issues.length,
+    };
+  } catch (e: any) {
+    await syncUpdateHealth(workspaceId, 'github', false, e.message);
+    return { success: false, message: `Sync failed: ${e.message}` };
+  }
+}
+
+export async function syncGitLabRepo(
+  workspaceId: string, repoUrl: string, branch: string
+): Promise<SyncResult> {
+  await updateIntegrationHealth(workspaceId, 'gitlab', 'syncing');
+  try {
+    const match = repoUrl.match(/gitlab\.com[:/]([^/]+\/[^/.]+)/);
+    if (!match) throw new Error('Invalid GitLab repository URL');
+    const encoded = encodeURIComponent(match[1]);
+    const apiUrl = `https://gitlab.com/api/v4/projects/${encoded}`;
+    const [commitsRes, mergeReqRes] = await Promise.allSettled([
+      fetch(`${apiUrl}/repository/commits?ref_name=${branch}&per_page=10`),
+      fetch(`${apiUrl}/merge_requests?state=opened&per_page=5`),
+    ]);
+    const commits = commitsRes.status === 'fulfilled' && commitsRes.value.ok ? await commitsRes.value.json() : [];
+    const mergeReqs = mergeReqRes.status === 'fulfilled' && mergeReqRes.value.ok ? await mergeReqRes.value.json() : [];
+    await syncUpdateHealth(workspaceId, 'gitlab', true, undefined, commits.length + mergeReqs.length);
+    return {
+      success: true,
+      message: `Synced ${commits.length} commits, ${mergeReqs.length} MRs`,
+      itemsSynced: commits.length + mergeReqs.length,
+    };
+  } catch (e: any) {
+    await syncUpdateHealth(workspaceId, 'gitlab', false, e.message);
+    return { success: false, message: `Sync failed: ${e.message}` };
+  }
+}
+
+export async function syncFigmaFrame(
+  workspaceId: string, frameUrl: string
+): Promise<SyncResult & { frameId?: string; title?: string }> {
+  await updateIntegrationHealth(workspaceId, 'figma', 'syncing');
+  try {
+    const match = frameUrl.match(/figma\.com\/(file|proto)\/([a-zA-Z0-9]+)/);
+    if (!match) throw new Error('Invalid Figma frame URL');
+    const fileKey = match[2];
+    // Use Figma public API (no token — returns limited data but enough for preview)
+    const res = await fetch(`https://api.figma.com/v1/files/${fileKey}`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) throw new Error(res.status === 403 ? 'Figma rate limit — retry later' : 'Figma API unavailable');
+    const data = await res.json();
+    await syncUpdateHealth(workspaceId, 'figma', true, undefined, 1);
+    return { success: true, message: 'Frame synced', frameId: fileKey, title: data.name, itemsSynced: 1 };
+  } catch (e: any) {
+    await syncUpdateHealth(workspaceId, 'figma', false, e.message);
+    return { success: false, message: e.message };
+  }
+}
+
+export async function syncGoogleCalendar(
+  workspaceId: string, accessToken?: string
+): Promise<SyncResult> {
+  await updateIntegrationHealth(workspaceId, 'google_calendar', 'syncing');
+  try {
+    if (!accessToken) throw new Error('Connect pending — no access token');
+    const res = await fetch(
+      'https://www.googleapis.com/calendar/v3/calendars/primary/events?' +
+      new URLSearchParams({
+        timeMin: new Date(Date.now() - 7 * 86400000).toISOString(),
+        timeMax: new Date(Date.now() + 30 * 86400000).toISOString(),
+        singleEvents: 'true',
+        orderBy: 'startTime',
+      }),
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!res.ok) throw new Error(res.status === 401 ? 'Token expired' : 'Sync unavailable');
+    const data = await res.json();
+    const events = (data.items || []) as any[];
+    let synced = 0;
+    for (const event of events) {
+      if (!event.start?.dateTime && !event.start?.date) continue;
+      const extId = event.id;
+      const { data: existing } = await supabase
+        .from('calendar_events')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('source_id', extId)
+        .eq('source_table', 'google_calendar')
+        .maybeSingle();
+      if (existing) continue;
+      const start = event.start.dateTime || event.start.date + 'T00:00:00Z';
+      const end = event.end.dateTime || event.end.date + 'T23:59:59Z';
+      await supabase.from('calendar_events').insert({
+        workspace_id: workspaceId,
+        title: event.summary || '(No title)',
+        description: event.description || '',
+        start_date: start,
+        end_date: end,
+        event_type: 'meeting',
+        source_id: extId,
+        source_table: 'google_calendar',
+        participants: event.attendees?.map((a: any) => a.email) || [],
+        capacity_impact: 0,
+      });
+      synced++;
+    }
+    await syncUpdateHealth(workspaceId, 'google_calendar', true, undefined, synced);
+    return { success: true, message: `Synced ${synced} new events`, itemsSynced: synced };
+  } catch (e: any) {
+    await syncUpdateHealth(workspaceId, 'google_calendar', false, e.message);
+    return { success: false, message: e.message };
+  }
+}
+
+export async function syncGoogleDrive(
+  workspaceId: string, accessToken?: string
+): Promise<SyncResult> {
+  await updateIntegrationHealth(workspaceId, 'google_drive', 'syncing');
+  try {
+    if (!accessToken) throw new Error('Connect pending — no access token');
+    const res = await fetch(
+      'https://www.googleapis.com/drive/v3/files?orderBy=modifiedTime_desc&pageSize=20&fields=' +
+      encodeURIComponent('files(id,name,mimeType,size,webViewLink,modifiedTime,version)'),
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!res.ok) throw new Error(res.status === 401 ? 'Token expired' : 'Sync unavailable');
+    const data = await res.json();
+    const files = (data.files || []) as any[];
+    await syncUpdateHealth(workspaceId, 'google_drive', true, undefined, files.length);
+    return { success: true, message: `Indexed ${files.length} files`, itemsSynced: files.length };
+  } catch (e: any) {
+    await syncUpdateHealth(workspaceId, 'google_drive', false, e.message);
+    return { success: false, message: e.message };
+  }
+}
+
+export async function getRecentActivity(
+  workspaceId: string, service: string, limit = 10
+): Promise<any[]> {
+  return [];
 }
