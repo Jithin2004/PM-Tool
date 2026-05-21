@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, BrainCircuit, Sun, Users, Menu, LogOut, Moon, X, Bell, Check, ChevronDown, ChevronRight, Briefcase, PlayCircle, Database, Shield, FolderOpen, BarChart3, LayoutDashboard, Activity, GitBranch, GitFork, Target, Settings as SettingsIcon, FileText, ChartArea, Search } from 'lucide-react';
+import { Clock, BrainCircuit, Sun, Users, Menu, LogOut, Moon, X, Bell, Check, ChevronDown, ChevronRight, Briefcase, PlayCircle, Database, Shield, FolderOpen, BarChart3, LayoutDashboard, Activity, GitBranch, GitFork, Target, Settings as SettingsIcon, FileText, ChartArea, Search, BookOpen, Zap, Link2 } from 'lucide-react';
 import { Profile } from '../../types';
 import { calculateHoursFromRange } from '../../utils/timeUtils';
 
@@ -15,6 +15,7 @@ const NAV: NavSection[] = [
   { label: 'WORKSPACE', icon: <Briefcase className="w-3 h-3" />, items: [
     { label: 'Projects', path: '/workspace', icon: <FolderOpen className="w-2.5 h-2.5" /> },
     { label: 'Portfolio', path: '/workspace/portfolio', icon: <BarChart3 className="w-2.5 h-2.5" /> },
+    { label: 'Knowledge Hub', path: '/workspace/knowledge', icon: <BookOpen className="w-2.5 h-2.5" /> },
     { label: 'Decision Center', path: '/workspace/decisions', icon: <BrainCircuit className="w-2.5 h-2.5" /> },
   ]},
   { label: 'EXECUTION', icon: <PlayCircle className="w-3 h-3" />, items: [
@@ -33,6 +34,8 @@ const NAV: NavSection[] = [
     { label: 'Admin', path: '/control', icon: <SettingsIcon className="w-2.5 h-2.5" />, roles: ['super_admin'] },
     { label: 'Audit', path: '/control/audit', icon: <FileText className="w-2.5 h-2.5" />, roles: ['super_admin'] },
     { label: 'Analytics', path: '/control/analytics', icon: <ChartArea className="w-2.5 h-2.5" /> },
+    { label: 'Automations', path: '/control/automations', icon: <Zap className="w-2.5 h-2.5" />, roles: ['super_admin'] },
+    { label: 'Connections', path: '/control/connections', icon: <Link2 className="w-2.5 h-2.5" />, roles: ['super_admin'] },
     { label: 'Settings', path: '/control/settings', icon: <SettingsIcon className="w-2.5 h-2.5" /> },
   ]},
 ];

@@ -7,6 +7,12 @@ import { AdminPanel } from '../pages/dashboard/AdminPanel';
 import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
 import { PipelinePanel } from '../pages/dashboard/PipelinePanel';
 import { ProjectWorkspace } from '../pages/dashboard/ProjectWorkspace';
+import KnowledgeHubPanel from '../pages/dashboard/KnowledgeHubPanel';
+import DocumentView from '../pages/dashboard/DocumentView';
+import AutomationsPanel from '../pages/dashboard/AutomationsPanel';
+import ConnectionsPanel from '../pages/dashboard/ConnectionsPanel';
+import NotificationSettings from '../pages/dashboard/NotificationSettings';
+import ModeSettings from '../pages/dashboard/ModeSettings';
 import { WorkspaceSetupPage } from '../pages/onboarding/WorkspaceSetupPage';
 import { ProjectCreatePage } from '../pages/project/ProjectCreatePage';
 
@@ -112,7 +118,59 @@ export function ResolveRouter() {
     return <WorkspaceSetupPage />;
   }
 
-  // New route structure — exact matches for parent pages, prefix matches for sub-routes
+  // ── New specific routes (before catch-all handlers) ──
+
+  // /workspace/knowledge — Knowledge Hub (all roles)
+  if (pathname === '/workspace/knowledge' || pathname.startsWith('/workspace/knowledge/')) {
+    const subPath = pathname.replace('/workspace/knowledge', '');
+    if (subPath.startsWith('/') && subPath.length > 1) {
+      return <DashboardLayout><DocumentView /></DashboardLayout>;
+    }
+    return <DashboardLayout><KnowledgeHubPanel /></DashboardLayout>;
+  }
+
+  // /control/automations — super_admin only
+  if (pathname === '/control/automations' || pathname.startsWith('/control/automations/')) {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <DashboardLayout><AutomationsPanel /></DashboardLayout>;
+  }
+
+  // /control/connections — super_admin only
+  if (pathname === '/control/connections' || pathname.startsWith('/control/connections/')) {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <DashboardLayout><ConnectionsPanel /></DashboardLayout>;
+  }
+
+  // /control/settings/notifications
+  if (pathname === '/control/settings/notifications') {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <DashboardLayout><NotificationSettings /></DashboardLayout>;
+  }
+
+  // /control/settings/modes
+  if (pathname === '/control/settings/modes') {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <DashboardLayout><ModeSettings /></DashboardLayout>;
+  }
+
+  // ── Existing catch-all handlers ──
+
   if (pathname.startsWith('/control/') || pathname === '/control') {
     if (profile?.role !== 'super_admin') {
       window.history.replaceState(null, '', '/workspace');

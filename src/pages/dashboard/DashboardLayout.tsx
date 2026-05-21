@@ -322,10 +322,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     if (p.length === 0) return null;
     const sectionLabels: Record<string, string> = { workspace: 'WORKSPACE', execution: 'EXECUTION', resources: 'RESOURCES', control: 'CONTROL' };
     const pageLabels: Record<string, string> = {
-      projects: 'PROJECTS', portfolio: 'PORTFOLIO', decisions: 'DECISION CENTER',
+      projects: 'PROJECTS', portfolio: 'PORTFOLIO', decisions: 'DECISION CENTER', knowledge: 'KNOWLEDGE HUB',
       board: 'BOARD', timeline: 'TIMELINE', gantt: 'GANTT', sprints: 'SPRINT CENTER',
       teams: 'TEAMS', logistics: 'LOGISTICS', capacity: 'CAPACITY', 'work-logs': 'WORK LOGS',
-      admin: 'ADMIN', audit: 'AUDIT', analytics: 'ANALYTICS', settings: 'SETTINGS'
+      admin: 'ADMIN', audit: 'AUDIT', analytics: 'ANALYTICS', settings: 'SETTINGS',
+      automations: 'AUTOMATIONS', connections: 'CONNECTIONS',
+      notifications: 'NOTIFICATIONS', modes: 'MODES',
     };
     const section = sectionLabels[p[0]];
     const page = p[1] ? pageLabels[p[1]] : null;

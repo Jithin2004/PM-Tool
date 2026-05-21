@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, FolderOpen, LayoutDashboard, Activity, GitBranch, GitFork, Users, Target, BarChart3, Clock, Shield, ShieldAlert, FileText, ChartArea, Settings as SettingsIcon, PlusCircle, UserPlus, BookOpen, CalendarPlus, RefreshCw, TrendingUp, Cpu, BrainCircuit, Zap, Check, Loader } from 'lucide-react';
+import { Search, FolderOpen, LayoutDashboard, Activity, GitBranch, GitFork, Users, Target, BarChart3, Clock, Shield, ShieldAlert, FileText, ChartArea, Settings as SettingsIcon, PlusCircle, UserPlus, BookOpen, CalendarPlus, RefreshCw, TrendingUp, Cpu, BrainCircuit, Zap, Check, Loader, Link2 } from 'lucide-react';
 import { Profile, Project, Task } from '../../types';
 import { activityLogService } from '../../services/activityLogService';
 import { recordUsage, getSessionId } from '../../services/commandUsageService';
@@ -167,6 +167,9 @@ export { getTimeline, getTopCommandsWithTrend, getSequenceSuggestions, type Time
 
 const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode; roles?: string[] }[] = [
   { label: 'Workspace', path: '/workspace', icon: <FolderOpen className="w-3.5 h-3.5" /> },
+  { label: 'Portfolio', path: '/workspace/portfolio', icon: <BarChart3 className="w-3.5 h-3.5" /> },
+  { label: 'Knowledge Hub', path: '/workspace/knowledge', icon: <BookOpen className="w-3.5 h-3.5" /> },
+  { label: 'Decision Center', path: '/workspace/decisions', icon: <BrainCircuit className="w-3.5 h-3.5" /> },
   { label: 'Execution Board', path: '/execution', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
   { label: 'Timeline Engine', path: '/execution/timeline', icon: <Activity className="w-3.5 h-3.5" /> },
   { label: 'Gantt Workspace', path: '/execution/gantt', icon: <GitBranch className="w-3.5 h-3.5" /> },
@@ -178,6 +181,8 @@ const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode; roles?: s
   { label: 'Admin', path: '/control', icon: <Shield className="w-3.5 h-3.5" />, roles: ['super_admin'] },
   { label: 'Audit', path: '/control/audit', icon: <FileText className="w-3.5 h-3.5" />, roles: ['super_admin'] },
   { label: 'Analytics', path: '/control/analytics', icon: <ChartArea className="w-3.5 h-3.5" /> },
+  { label: 'Automations', path: '/control/automations', icon: <Zap className="w-3.5 h-3.5" />, roles: ['super_admin'] },
+  { label: 'Connections', path: '/control/connections', icon: <Link2 className="w-3.5 h-3.5" />, roles: ['super_admin'] },
   { label: 'Settings', path: '/control/settings', icon: <SettingsIcon className="w-3.5 h-3.5" /> },
 ];
 
