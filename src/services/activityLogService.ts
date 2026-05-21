@@ -93,5 +93,39 @@ export const activityLogService = {
       currentPrevHash = log.hash!;
     }
     return { valid: true, tamperedIndex: null };
-  }
+  },
+
+  // ── Command Intelligence Event Logging ──
+
+  async logHeatmapView(workspaceId: string, actorId?: string, metadata?: Record<string, any>): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'command_heatmap_viewed',
+      metadata: { ...metadata, event_type: 'heatmap_view' },
+    });
+  },
+
+  async logPredictionUsed(workspaceId: string, actorId?: string, predictionId?: string): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'workflow_prediction_used',
+      metadata: { prediction_id: predictionId, event_type: 'prediction_used' },
+    });
+  },
+
+  async logFrictionDetected(workspaceId: string, actorId?: string, frictionData?: Record<string, any>): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'workflow_friction_detected',
+      metadata: { ...frictionData, event_type: 'friction_detected' },
+    });
+  },
+
+  async logHealthGenerated(workspaceId: string, actorId?: string, healthData?: Record<string, any>): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId, actor_id: actorId,
+      action: 'command_health_generated',
+      metadata: { ...healthData, event_type: 'health_generated' },
+    });
+  },
 };

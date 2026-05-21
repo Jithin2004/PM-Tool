@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, FolderOpen, LayoutDashboard, Activity, GitBranch, GitFork, Users, Target, BarChart3, Clock, Shield, ShieldAlert, FileText, ChartArea, Settings as SettingsIcon, PlusCircle, UserPlus, BookOpen, CalendarPlus, RefreshCw, TrendingUp, Cpu, BrainCircuit, Zap, Check, Loader } from 'lucide-react';
 import { Profile, Project, Task } from '../../types';
 import { activityLogService } from '../../services/activityLogService';
+import { recordUsage, getSessionId } from '../../services/commandUsageService';
 
 interface CmdResult {
   id: string;
@@ -29,10 +30,10 @@ interface Props {
 }
 
 const STORAGE_KEY = 'resolve-command-recent';
-const USAGE_KEY = 'resolve-command-usage';
-const TIMELINE_KEY = 'resolve-command-timeline';
+const USAGE_KEY = 'resolve-command-usage-v2';
+const TIMELINE_KEY = 'resolve-command-timeline-v2';
 const MAX_RECENT = 10;
-const MAX_TIMELINE = 1000;
+const MAX_TIMELINE = 2000;
 
 // --- Alias Engine ---
 const ALIASES: Record<string, string> = {
@@ -474,14 +475,31 @@ export default function CommandPalette(props: Props) {
 
   const logCmd = async (type: string, target: string, extra?: Record<string, string>) => {
     const id = `${type}:${target}`;
-    incrementUsage(id);
-    addTimelineEntry({ id, ts: Date.now(), group: type.toUpperCase(), label: target });
+    const route = window.location.pathname;
+    // Record to Supabase + localStorage cache
+    recordUsage({
+      workspace_id: workspaceId || '',
+      user_id: profile?.id,
+      command_id: target,
+      command_type: type,
+      route,
+      session_id: getSessionId(),
+      metadata: { ...extra },
+    });
+    // Increment local usage counter
+    try {
+      const raw = localStorage.getItem(USAGE_KEY);
+      const usage: Record<string, number> = raw ? JSON.parse(raw) : {};
+      usage[id] = (usage[id] || 0) + 1;
+      localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
+    } catch { /* ignore */ }
+    // Immutable log
     if (!workspaceId) return;
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       actor_id: profile?.id,
       action: 'command_used',
-      metadata: { command_type: type, target, ...extra }
+      metadata: { command_type: type, target, route, ...extra }
     });
   };
 

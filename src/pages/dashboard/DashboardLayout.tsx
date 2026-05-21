@@ -1611,6 +1611,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         role={profile?.role || 'viewer'}
         workspaceId={workspace?.id}
         profileId={profile?.id}
+        currentRoute={pathname}
       />
 
       {children}
