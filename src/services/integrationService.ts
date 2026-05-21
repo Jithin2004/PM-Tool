@@ -264,19 +264,36 @@ export async function recoverJobs(): Promise<number> {
   } catch { return 0; }
 }
 
+let queueStatsFailures = 0;
+let queueStatsCooldownUntil = 0;
+const QUEUE_STATS_MAX_FAILURES = 3;
+const QUEUE_STATS_COOLDOWN_MS = 60000;
+
 export async function getQueueStats(): Promise<{ length: number; pending: number; active: number; failed: number; items: { id: string; service: string; state: QueueState; attempt: number }[] }> {
   const memItems = inMemoryQueue.map(q => ({ id: q.id, service: q.service, state: q.state as QueueState, attempt: q.attempt }));
+  const fallback = () => ({ length: inMemoryQueue.length, pending: memItems.filter(i => i.state === 'queued' || i.state === 'retrying').length, active: activeCount, failed: memItems.filter(i => i.state === 'failed').length, items: memItems });
+  if (Date.now() < queueStatsCooldownUntil) return fallback();
+  if (!isSupabaseConfigured) return fallback();
   try {
-    if (isSupabaseConfigured) {
-      const { data: counts } = await supabase
-        .from('integration_sync_jobs')
-        .select('status, count');
-      const dbPending = (counts || []).filter((c: any) => c.status === 'queued' || c.status === 'retrying').reduce((s: number, c: any) => s + (Number(c.count) || 0), 0);
-      const dbFailed = (counts || []).filter((c: any) => c.status === 'failed').reduce((s: number, c: any) => s + (Number(c.count) || 0), 0);
-      return { length: inMemoryQueue.length + dbPending + dbFailed, pending: dbPending + (memItems.filter(i => i.state === 'queued').length), active: activeCount, failed: dbFailed, items: memItems };
+    const { count: dbPending, error: pendingError } = await supabase
+      .from('integration_sync_jobs')
+      .select('*', { count: 'exact', head: true })
+      .or('status.eq.queued,status.eq.retrying');
+    const { count: dbFailed, error: failedError } = await supabase
+      .from('integration_sync_jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'failed');
+    if (pendingError || failedError) throw new Error(pendingError?.message || failedError?.message);
+    queueStatsFailures = 0;
+    return { length: (dbPending || 0) + (dbFailed || 0), pending: (dbPending || 0) + memItems.filter(i => i.state === 'queued').length, active: activeCount, failed: (dbFailed || 0), items: memItems };
+  } catch {
+    queueStatsFailures++;
+    if (queueStatsFailures >= QUEUE_STATS_MAX_FAILURES) {
+      queueStatsCooldownUntil = Date.now() + QUEUE_STATS_COOLDOWN_MS;
+      queueStatsFailures = 0;
     }
-  } catch { /* ignore */ }
-  return { length: inMemoryQueue.length, pending: memItems.filter(i => i.state === 'queued' || i.state === 'retrying').length, active: activeCount, failed: memItems.filter(i => i.state === 'failed').length, items: memItems };
+    return fallback();
+  }
 }
 
 // ── Cooldown / Rate Limiting ──

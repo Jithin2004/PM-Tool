@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { AuthPage } from '../pages/auth/AuthPage';
@@ -7,14 +7,61 @@ import { AdminPanel } from '../pages/dashboard/AdminPanel';
 import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
 import { PipelinePanel } from '../pages/dashboard/PipelinePanel';
 import { ProjectWorkspace } from '../pages/dashboard/ProjectWorkspace';
-import KnowledgeHubPanel from '../pages/dashboard/KnowledgeHubPanel';
-import DocumentView from '../pages/dashboard/DocumentView';
-import AutomationsPanel from '../pages/dashboard/AutomationsPanel';
-import ConnectionsPanel from '../pages/dashboard/ConnectionsPanel';
-import NotificationSettings from '../pages/dashboard/NotificationSettings';
-import ModeSettings from '../pages/dashboard/ModeSettings';
 import { WorkspaceSetupPage } from '../pages/onboarding/WorkspaceSetupPage';
 import { ProjectCreatePage } from '../pages/project/ProjectCreatePage';
+
+// ── Lazy-loaded route pages ──
+
+const ProjectsPage = lazy(() => import('../pages/workspace/ProjectsPage'));
+const PortfolioPage = lazy(() => import('../pages/workspace/PortfolioPage'));
+const KnowledgePage = lazy(() => import('../pages/workspace/KnowledgePage'));
+const DecisionsPage = lazy(() => import('../pages/workspace/DecisionsPage'));
+
+const BoardPage = lazy(() => import('../pages/execution/BoardPage'));
+const TimelinePage = lazy(() => import('../pages/execution/TimelinePage'));
+const GanttPage = lazy(() => import('../pages/execution/GanttPage'));
+const SprintPage = lazy(() => import('../pages/execution/SprintPage'));
+
+const TeamsPage = lazy(() => import('../pages/resources/TeamsPage'));
+const CapacityPage = lazy(() => import('../pages/resources/CapacityPage'));
+const WorkLogsPage = lazy(() => import('../pages/resources/WorkLogsPage'));
+
+const AnalyticsPage = lazy(() => import('../pages/control/AnalyticsPage'));
+const AuditPage = lazy(() => import('../pages/control/AuditPage'));
+const SettingsPage = lazy(() => import('../pages/control/SettingsPage'));
+
+const DocumentView = lazy(() => import('../pages/dashboard/DocumentView'));
+const AutomationsPanel = lazy(() => import('../pages/dashboard/AutomationsPanel'));
+const ConnectionsPanel = lazy(() => import('../pages/dashboard/ConnectionsPanel'));
+const NotificationSettings = lazy(() => import('../pages/dashboard/NotificationSettings'));
+const ModeSettings = lazy(() => import('../pages/dashboard/ModeSettings'));
+
+// ── Loading fallback ──
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-white" />
+    </div>
+  );
+}
+
+// ── Route guard helper ──
+
+function routeWithGuard(
+  allowedRoles: string[],
+  profileRole: string | undefined,
+  page: React.ReactNode
+): React.ReactNode {
+  if (!allowedRoles.includes(profileRole || '')) {
+    window.history.replaceState(null, '', '/workspace');
+    window.dispatchEvent(new CustomEvent('popstate'));
+    return null;
+  }
+  return page;
+}
+
+// ── Pathname hook ──
 
 function usePathname() {
   const [pathname, setPathname] = useState(window.location.pathname);
@@ -38,29 +85,20 @@ function usePathname() {
   return pathname;
 }
 
+// ── Route group wrapper ──
+
+function RouteShell({ children }: { children: React.ReactNode }) {
+  return (
+    <DashboardLayout>
+      <Suspense fallback={<RouteFallback />}>{children}</Suspense>
+    </DashboardLayout>
+  );
+}
+
 export function ResolveRouter() {
   const pathname = usePathname();
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
   const { profile, logout, loading: authLoading, profileResolved, profileHydrating } = useAuth();
-
-  console.log(
-    "[ResolveRouter RENDER]:",
-    "\n- pathname:", pathname,
-    "\n- user (WorkspaceContext):", user?.email,
-    "\n- profile (AuthContext):", profile?.email,
-    "\n- workspace:", workspace?.name,
-    "\n- workspaceLoading:", workspaceLoading,
-    "\n- authLoading:", authLoading,
-    "\n- profileHydrating:", profileHydrating
-  );
-
-  // Navigate home when profile hydrates successfully during onboarding
-  useEffect(() => {
-    if (profile && !profileHydrating && pathname.startsWith('/onboarding')) {
-      window.history.replaceState(null, '', '/');
-      window.dispatchEvent(new CustomEvent('popstate'));
-    }
-  }, [profile, profileHydrating, pathname]);
 
   if (workspaceLoading || authLoading || !profileResolved || profileHydrating) {
     return (
@@ -73,12 +111,9 @@ export function ResolveRouter() {
     );
   }
 
-  if (!user) {
-    return <AuthPage />;
-  }
+  if (!user) return <AuthPage />;
 
   if (profile?.role === 'uninvited') {
-    console.log(profile);
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white p-6">
         <div className="max-w-md w-full border border-red-500/25 bg-red-500/5 p-8 text-center rounded">
@@ -88,25 +123,17 @@ export function ResolveRouter() {
             </svg>
           </div>
           <h2 className="text-xl font-semibold mb-2">Access Restrained</h2>
-          <p className="text-sm text-white/60 mb-6 font-mono">
-            You haven't been invited to an organization yet.
-          </p>
-          <button
-            onClick={() => logout()}
-            className="w-full border border-white/10 bg-white/5 py-2.5 text-sm font-medium hover:bg-white/10 transition-colors font-mono uppercase tracking-wider"
-          >
-            Sign Out
-          </button>
+          <p className="text-sm text-white/60 mb-6 font-mono">You haven't been invited to an organization yet.</p>
+          <button onClick={() => logout()} className="w-full border border-white/10 bg-white/5 py-2.5 text-sm font-medium hover:bg-white/10 transition-colors font-mono uppercase tracking-wider">Sign Out</button>
         </div>
       </div>
     );
   }
 
-  if (!workspace) {
-    return <WorkspaceSetupPage />;
-  }
+  if (!workspace) return <WorkspaceSetupPage />;
 
-  // Redirect legacy paths to new structure
+  // ── Legacy redirects ──
+
   if (pathname === '/admin' || pathname === '/logistics' || pathname === '/pipeline' || pathname === '/projects/new') {
     const target = pathname === '/admin' ? '/control' : pathname === '/logistics' ? '/resources' : pathname === '/pipeline' ? '/execution' : '/workspace';
     window.history.replaceState(null, '', target);
@@ -114,101 +141,144 @@ export function ResolveRouter() {
     return null;
   }
 
-  if (pathname === '/onboarding/workspace') {
-    return <WorkspaceSetupPage />;
+  if (pathname === '/onboarding/workspace') return <WorkspaceSetupPage />;
+
+  // ── WORKSPACE routes ──
+
+  if (pathname === '/workspace' || pathname === '/') {
+    return <RouteShell><ProjectsPage /></RouteShell>;
   }
-
-  // ── New specific routes (before catch-all handlers) ──
-
-  // /workspace/knowledge — Knowledge Hub (all roles)
+  if (pathname === '/workspace/portfolio') {
+    return <RouteShell><PortfolioPage /></RouteShell>;
+  }
   if (pathname === '/workspace/knowledge' || pathname.startsWith('/workspace/knowledge/')) {
     const subPath = pathname.replace('/workspace/knowledge', '');
     if (subPath.startsWith('/') && subPath.length > 1) {
-      return <DashboardLayout><DocumentView /></DashboardLayout>;
+      return <RouteShell><DocumentView /></RouteShell>;
     }
-    return <DashboardLayout><KnowledgeHubPanel /></DashboardLayout>;
+    return <RouteShell><KnowledgePage /></RouteShell>;
+  }
+  if (pathname === '/workspace/decisions') {
+    return <RouteShell><DecisionsPage /></RouteShell>;
   }
 
-  // /control/automations — super_admin only
+  // ── EXECUTION routes ──
+
+  if (pathname === '/execution' || pathname === '/execution/board') {
+    return <RouteShell><BoardPage /></RouteShell>;
+  }
+  if (pathname === '/execution/timeline') {
+    return <RouteShell><TimelinePage /></RouteShell>;
+  }
+  if (pathname === '/execution/gantt') {
+    return <RouteShell><GanttPage /></RouteShell>;
+  }
+  if (pathname === '/execution/sprints') {
+    return <RouteShell><SprintPage /></RouteShell>;
+  }
+
+  // ── RESOURCES routes ──
+
+  if (pathname === '/resources' || pathname === '/resources/logistics') {
+    if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <RouteShell><LogisticsPanel /></RouteShell>;
+  }
+  if (pathname === '/resources/teams') {
+    if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <RouteShell><TeamsPage /></RouteShell>;
+  }
+  if (pathname === '/resources/capacity') {
+    if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <RouteShell><CapacityPage /></RouteShell>;
+  }
+  if (pathname === '/resources/work-logs') {
+    if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <RouteShell><WorkLogsPage /></RouteShell>;
+  }
+
+  // ── CONTROL routes ──
+
+  if (pathname === '/control' || pathname === '/control/identity') {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <RouteShell><AdminPanel /></RouteShell>;
+  }
+  if (pathname === '/control/analytics') {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <RouteShell><AnalyticsPage /></RouteShell>;
+  }
+  if (pathname === '/control/audit') {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <RouteShell><AuditPage /></RouteShell>;
+  }
   if (pathname === '/control/automations' || pathname.startsWith('/control/automations/')) {
     if (profile?.role !== 'super_admin') {
       window.history.replaceState(null, '', '/workspace');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
-    return <DashboardLayout><AutomationsPanel /></DashboardLayout>;
+    return <RouteShell><AutomationsPanel /></RouteShell>;
   }
-
-  // /control/connections — super_admin only
   if (pathname === '/control/connections' || pathname.startsWith('/control/connections/')) {
     if (profile?.role !== 'super_admin') {
       window.history.replaceState(null, '', '/workspace');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
-    return <DashboardLayout><ConnectionsPanel /></DashboardLayout>;
+    return <RouteShell><ConnectionsPanel /></RouteShell>;
   }
-
-  // /control/settings/notifications
+  if (pathname === '/control/settings') {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <RouteShell><SettingsPage /></RouteShell>;
+  }
   if (pathname === '/control/settings/notifications') {
     if (profile?.role !== 'super_admin') {
       window.history.replaceState(null, '', '/workspace');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
-    return <DashboardLayout><NotificationSettings /></DashboardLayout>;
+    return <RouteShell><NotificationSettings /></RouteShell>;
   }
-
-  // /control/settings/modes
   if (pathname === '/control/settings/modes') {
     if (profile?.role !== 'super_admin') {
       window.history.replaceState(null, '', '/workspace');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
-    return <DashboardLayout><ModeSettings /></DashboardLayout>;
+    return <RouteShell><ModeSettings /></RouteShell>;
   }
 
-  // ── Existing catch-all handlers ──
-
-  if (pathname.startsWith('/control/') || pathname === '/control') {
-    if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
-      window.dispatchEvent(new CustomEvent('popstate'));
-      return null;
-    }
-    return (
-      <DashboardLayout>
-        <AdminPanel />
-      </DashboardLayout>
-    );
-  }
-
-  if (pathname.startsWith('/resources/') || pathname === '/resources') {
-    if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
-      window.history.replaceState(null, '', '/workspace');
-      window.dispatchEvent(new CustomEvent('popstate'));
-      return null;
-    }
-    return (
-      <DashboardLayout>
-        <LogisticsPanel />
-      </DashboardLayout>
-    );
-  }
-
-  if (pathname.startsWith('/execution/') || pathname === '/execution') {
-    return (
-      <DashboardLayout>
-        <PipelinePanel />
-      </DashboardLayout>
-    );
-  }
-
-  // /workspace and all other paths render ProjectWorkspace
-  return (
-    <DashboardLayout>
-      <ProjectWorkspace />
-    </DashboardLayout>
-  );
+  // ── Fallback ──
+  return <RouteShell><ProjectsPage /></RouteShell>;
 }

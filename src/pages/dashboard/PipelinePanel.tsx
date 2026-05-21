@@ -24,17 +24,18 @@ function getRouteIdentity() {
   return ROUTE_IDENTITY[p] || ROUTE_IDENTITY['/execution'];
 }
 
-export function PipelinePanel() {
+export function PipelinePanel({ routePath }: { routePath?: string }) {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
   const { tasks: allTasks } = useTasks(workspace?.id);
-  const initialRoute = useMemo(() => getRouteIdentity(), []);
-  const [viewMode, setViewMode] = useState<'board' | 'gantt'>(initialRoute.view);
-  const [routeTitle, setRouteTitle] = useState(initialRoute.title);
-  const [routeSubtitle, setRouteSubtitle] = useState(initialRoute.subtitle);
+  const identity = routePath ? (ROUTE_IDENTITY[routePath] || ROUTE_IDENTITY['/execution']) : getRouteIdentity();
+  const [viewMode, setViewMode] = useState<'board' | 'gantt'>(identity.view);
+  const [routeTitle, setRouteTitle] = useState(identity.title);
+  const [routeSubtitle, setRouteSubtitle] = useState(identity.subtitle);
 
-  // Reactively update title/subtitle when route changes
+  // If no routePath prop, reactively track popstate
   useEffect(() => {
+    if (routePath) return;
     const handler = () => {
       const id = getRouteIdentity();
       setRouteTitle(id.title);
@@ -51,7 +52,7 @@ export function PipelinePanel() {
       window.removeEventListener('popstate', handler);
       window.history.pushState = orig;
     };
-  }, []);
+  }, [routePath]);
   const { 
     projects, 
     profiles, 

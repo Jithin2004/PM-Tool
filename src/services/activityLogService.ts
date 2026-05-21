@@ -39,6 +39,10 @@ export const activityLogService = {
 
   async appendLog(entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash' | 'id' | 'created_at'>): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
+    if (!entry.workspace_id) {
+      console.warn('ActivityLogService: appendLog skipped — no workspace_id');
+      return false;
+    }
     try {
       const previousHash = await this.getPreviousHash(entry.workspace_id);
       const hash = await this.computeHash(entry, previousHash);

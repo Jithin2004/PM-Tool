@@ -10,7 +10,7 @@ import { ProjectCard } from '../../components/project/ProjectCard';
 import { TeamMember } from '../../components/team/TeamMember';
 import { calculateExpectedTime } from '../../utils/timeUtils';
 
-function DecisionCenterPanel() {
+export function DecisionCenterPanel() {
   const { workspace } = useWorkspace();
   const {
     projects,
