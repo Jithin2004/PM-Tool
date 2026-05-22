@@ -1,4 +1,3 @@
-import { runSyntheticStressTest, cleanupSyntheticRun, cleanupAllSyntheticRuns, cleanupAudit, isStressRunActive, forceUnlockStressRun, getLastStressReport, clearLastStressReport, broadcastSyntheticCleanup, getForensicBuffer, clearForensicBuffer, validateStressReport, peekStressStorage, lastStressRunState } from '../services/syntheticStressTest';
 import { debugActivityLogContext, verifyActivityLogAccess, setForensicDebug, getForensicAggregates } from '../services/activityLogService';
 
 declare global {
@@ -7,34 +6,32 @@ declare global {
   }
 }
 
-const debugRegistry = {
-  runStressTest: async (config?: any) => runSyntheticStressTest(config),
-  cleanupStress: async (runId: string, wsId?: string) => cleanupSyntheticRun(runId, wsId),
-  cleanupAudit: async (runId?: string) => cleanupAudit(runId),
-  cleanupAllSyntheticRuns: async () => cleanupAllSyntheticRuns(),
-  verifyActivityLogAccess: async (workspaceId: string) => verifyActivityLogAccess(workspaceId),
-  debugActivityLogContext: async () => debugActivityLogContext(),
-  getLastStressReport: () => getLastStressReport(),
-  clearLastStressReport: () => clearLastStressReport(),
-  isStressRunActive: () => isStressRunActive(),
-  forceUnlockStressRun: () => forceUnlockStressRun(),
-  broadcastSyntheticCleanup: () => broadcastSyntheticCleanup(),
-  toggleForensics: (enabled: boolean) => setForensicDebug(enabled),
-  getForensicAggregates: () => getForensicAggregates(),
-  getForensicBuffer: () => getForensicBuffer(),
-  clearForensicBuffer: () => clearForensicBuffer(),
-  validateStressReport: (report: any) => validateStressReport(report),
-  peekStressStorage: () => peekStressStorage(),
-  lastStressRunState: () => lastStressRunState(),
-};
-
-export function registerDebugTools(): void {
+export async function registerDebugTools(): Promise<void> {
   const enabled = localStorage.getItem('resolve-debug') === 'true';
   if (!enabled) return;
 
+  const stress = await import('../services/syntheticStressTest');
+
   window.resolveDebug = {
     ...(window.resolveDebug || {}),
-    ...debugRegistry,
+    runStressTest: async (config?: any) => stress.runSyntheticStressTest(config),
+    cleanupStress: async (runId: string, wsId?: string) => stress.cleanupSyntheticRun(runId, wsId),
+    cleanupAudit: async (runId?: string) => stress.cleanupAudit(runId),
+    cleanupAllSyntheticRuns: async () => stress.cleanupAllSyntheticRuns(),
+    verifyActivityLogAccess: async (workspaceId: string) => verifyActivityLogAccess(workspaceId),
+    debugActivityLogContext: async () => debugActivityLogContext(),
+    getLastStressReport: () => stress.getLastStressReport(),
+    clearLastStressReport: () => stress.clearLastStressReport(),
+    isStressRunActive: () => stress.isStressRunActive(),
+    forceUnlockStressRun: () => stress.forceUnlockStressRun(),
+    broadcastSyntheticCleanup: () => stress.broadcastSyntheticCleanup(),
+    toggleForensics: (enabled: boolean) => setForensicDebug(enabled),
+    getForensicAggregates: () => getForensicAggregates(),
+    getForensicBuffer: () => stress.getForensicBuffer(),
+    clearForensicBuffer: () => stress.clearForensicBuffer(),
+    validateStressReport: (report: any) => stress.validateStressReport(report),
+    peekStressStorage: () => stress.peekStressStorage(),
+    lastStressRunState: () => stress.lastStressRunState(),
   };
 
   console.log('[resolveDebug registered]', Object.keys(window.resolveDebug));
