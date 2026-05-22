@@ -210,16 +210,27 @@ const AI_ITEMS: { label: string; icon: React.ReactNode; onSelect: (props: Props)
 ];
 
 function scoreMatch(query: string, target: string): number {
-  const q = query.toLowerCase();
-  const t = target.toLowerCase();
+  const q = query.toLowerCase().trim();
+  const t = target.toLowerCase().trim();
+  if (!q || !t) return 0;
   if (t === q) return 100;
-  if (t.startsWith(q)) return 80;
+  if (t.startsWith(q)) return 85 + (q.length / t.length) * 15;
+  const words = q.split(/\s+/);
+  const tWords = t.split(/\s+/);
+  const wordScore = tWords.filter(w => words.includes(w)).length / Math.max(words.length, 1);
+  if (wordScore > 0) return 50 + wordScore * 30;
   if (t.includes(q)) return 60;
   let qi = 0;
   for (let ti = 0; ti < t.length && qi < q.length; ti++) {
     if (t[ti] === q[qi]) qi++;
   }
-  return qi === q.length ? 40 : 0;
+  if (qi === q.length) {
+    const gap = t.length - q.length;
+    return Math.max(30, 50 - gap * 2);
+  }
+  const acro = tWords.map(w => w[0]).join('');
+  if (acro === q) return 45;
+  return 0;
 }
 
 function filterItems(items: any[], query: string): any[] {
@@ -316,6 +327,35 @@ export default function CommandPalette(props: Props) {
     if (matchedAiNlp.length > 0) {
       out.push({ id: '_ainlp_header', group: 'AI', label: 'AI', onSelect: () => {} });
       matchedAiNlp.forEach(r => out.push(r));
+    }
+
+    // --- CONTEXTUAL — route-aware suggestions (empty query only) ---
+    if (!q && !hasFilter) {
+      const route = typeof window !== 'undefined' ? window.location.pathname : '';
+      const contextual: { label: string; icon: React.ReactNode; action: () => void }[] = [];
+      if (route.startsWith('/execution')) {
+        contextual.push(
+          { label: 'Create Sprint', icon: <GitFork className="w-3.5 h-3.5 text-purple-400" />, action: () => { onNavigate('/execution/sprints'); onClose(); } },
+          { label: 'View Timeline', icon: <Activity className="w-3.5 h-3.5 text-purple-400" />, action: () => { onNavigate('/execution/timeline'); onClose(); } },
+        );
+      } else if (route.startsWith('/workspace')) {
+        contextual.push(
+          { label: 'Create Project', icon: <PlusCircle className="w-3.5 h-3.5 text-purple-400" />, action: () => { setIsAdding?.(true); onClose(); } },
+          { label: 'Decision Center', icon: <BrainCircuit className="w-3.5 h-3.5 text-purple-400" />, action: () => { onNavigate('/workspace/decisions'); onClose(); } },
+        );
+      } else if (route.startsWith('/resources')) {
+        contextual.push(
+          { label: 'View Capacity', icon: <BarChart3 className="w-3.5 h-3.5 text-purple-400" />, action: () => { onNavigate('/resources/capacity'); onClose(); } },
+        );
+      }
+      if (contextual.length > 0) {
+        out.push({ id: '_contextual_header', group: 'MOST_USED', label: `ROUTE: ${route.split('/').filter(Boolean).pop()?.toUpperCase() || 'HOME'}`, onSelect: () => {} });
+        contextual.forEach(c => out.push({
+          id: `ctx:${c.label}`, group: 'MOST_USED', label: c.label, icon: c.icon,
+          onSelect: () => { addRecent({ id: `ctx:${c.label}`, group: 'MOST_USED', label: c.label, icon: c.icon, onSelect: () => {} }); logCmd('contextual', c.label); c.action(); },
+        }));
+        out.push({ id: '_contextual_spacer', group: 'DIVIDER', label: '', onSelect: () => {} });
+      }
     }
 
     // --- MOST_USED — top commands with trend (empty query only) ---
@@ -565,7 +605,7 @@ export default function CommandPalette(props: Props) {
                   </div>
                 )}
 
-                {allResults.map((result, idx) => {
+                {allResults.filter(r => r.group !== 'DIVIDER').map((result, idx) => {
                   const flatIdx = flatResults.indexOf(result);
                   const isHeader = result.id.startsWith('_');
                   const isSelected = flatIdx === selectedIndex && !isHeader;

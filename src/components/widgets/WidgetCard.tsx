@@ -1,6 +1,11 @@
 import { motion } from 'motion/react';
 import { slideUp } from '../../lib/animation';
 
+interface EmptyAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface WidgetCardProps {
   title: string;
   children: React.ReactNode;
@@ -8,11 +13,12 @@ interface WidgetCardProps {
   error?: string | null;
   empty?: boolean;
   emptyMessage?: string;
+  emptyAction?: EmptyAction;
   action?: React.ReactNode;
   className?: string;
 }
 
-export function WidgetCard({ title, children, loading, error, empty, emptyMessage, action, className = '' }: WidgetCardProps) {
+export function WidgetCard({ title, children, loading, error, empty, emptyMessage, emptyAction, action, className = '' }: WidgetCardProps) {
   return (
     <motion.div variants={slideUp} initial="hidden" animate="visible" className={`bg-[#0c0c0c] border border-white/10 ${className}`}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
@@ -29,7 +35,17 @@ export function WidgetCard({ title, children, loading, error, empty, emptyMessag
         ) : error ? (
           <div className="text-[11px] text-red-400/70 font-mono">{error}</div>
         ) : empty ? (
-          <div className="text-[11px] text-white/30 font-mono text-center py-6">{emptyMessage || 'No data'}</div>
+          <div className="text-center py-6">
+            <p className="text-[11px] font-mono text-white/30 mb-3">{emptyMessage || 'No data'}</p>
+            {emptyAction && (
+              <button
+                onClick={emptyAction.onClick}
+                className="text-[10px] uppercase font-mono tracking-wider text-white/50 hover:text-white/80 transition-colors border border-white/10 px-3 py-1.5 hover:border-white/20"
+              >
+                {emptyAction.label} →
+              </button>
+            )}
+          </div>
         ) : children}
       </div>
     </motion.div>
