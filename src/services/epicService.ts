@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import { logServiceFailure } from '../utils/supabaseError';
 
 export interface CreateEpicInput {
   workspace_id: string;
@@ -27,7 +28,7 @@ export async function createEpic(input: CreateEpicInput): Promise<{ id: string }
       })
       .select('id')
       .maybeSingle();
-    if (error) return null;
+    if (error) { logServiceFailure('createEpic', input, error); return null; }
     if (data) {
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
@@ -36,6 +37,6 @@ export async function createEpic(input: CreateEpicInput): Promise<{ id: string }
       });
       return data;
     }
-  } catch { /* ignore */ }
+  } catch (err) { logServiceFailure('createEpic', input, err); }
   return null;
 }

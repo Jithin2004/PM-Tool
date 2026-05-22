@@ -13,11 +13,23 @@ import { createProject } from './projectService';
 import { createEpic } from './epicService';
 import { createTask, createTaskDependency } from './taskService';
 import { createConnectedAccount, createIntegrationConfig, createIntegrationSyncJob } from './integrationService';
+import { normalizeSupabaseError } from '../utils/supabaseError';
 
 const LOCK_KEY = 'resolve-stress-running';
 const STALE_LOCK_MINUTES = 15;
 const MAX_MULTIPLIER = 2;
 const CONCURRENCY = 20;
+const SERVICE_TIMEOUT_MS = 15000;
+
+export interface FailedOperation {
+  service: string;
+  payload: any;
+  error: string;
+  code: string;
+  details: string;
+  hint: string;
+  timestamp: string;
+}
 
 const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'SDLC', 'HYBRID'] as const;
 const TASK_STATUSES = ['backlog', 'ready', 'in_progress', 'review', 'done'] as const;
@@ -78,6 +90,8 @@ export interface StressReport {
   };
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   recommendations: string[];
+  partialFailure: boolean;
+  failedOperations: FailedOperation[];
 }
 
 function simTag(runId: string, label: string, index: number): string { return `SST_${runId}_${label}_${index}`; }
@@ -93,6 +107,47 @@ function pickMany<T>(arr: readonly T[], count: number): T[] {
 }
 function ms(t0: number): number { return performance.now() - t0; }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)),
+  ]);
+}
+
+async function callService<T>(
+  report: StressReport,
+  serviceName: string,
+  payload: any,
+  fn: () => Promise<T>,
+): Promise<T | null> {
+  report.generation.servicePathCount++;
+  let result: T | null = null;
+  try {
+    result = await withTimeout(fn(), SERVICE_TIMEOUT_MS);
+  } catch (err: any) {
+    const norm = normalizeSupabaseError(err);
+    console.log('[service insert failed]', { service: serviceName, payload, error: norm.message, code: norm.code, details: norm.details, hint: norm.hint });
+    report.failedOperations.push({ service: serviceName, payload, error: norm.message, code: norm.code, details: norm.details, hint: norm.hint, timestamp: nowISO() });
+    report.partialFailure = true;
+    report.generation.serviceFallbacks++;
+    return null;
+  }
+  if (result === null || result === false) {
+    report.failedOperations.push({
+      service: serviceName,
+      payload,
+      error: 'returned null/false (see service log for Supabase error)',
+      code: 'SERVICE_REJECTED',
+      details: '',
+      hint: '',
+      timestamp: nowISO(),
+    });
+    report.partialFailure = true;
+    report.generation.serviceFallbacks++;
+  }
+  return result;
+}
+
 function makeBaseReport(runId: string, startTime: string): StressReport {
   return {
     simulationRunId: runId, startTime, endTime: '', durationMs: 0,
@@ -102,6 +157,7 @@ function makeBaseReport(runId: string, startTime: string): StressReport {
     events: { taskUpdates: 0, sprintCompletions: 0, automationTriggers: 0, integrationSyncs: 0, approvalsProcessed: 0, refreshOperations: 0, recoveryOperations: 0, browserInterruptions: 0, timeMs: 0 },
     cleanup: { recordsBefore: {}, recordsAfter: {}, simRecordsRemaining: {}, success: false, timeMs: 0, orphanCount: 0 },
     riskLevel: 'LOW', recommendations: [],
+    partialFailure: false, failedOperations: [],
   };
 }
 
@@ -361,6 +417,8 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       return report;
     }
 
+    console.log('[stress] RUN_STARTED', { runId, wsId, t: startTime });
+
     await activityLogService.appendLog({
       workspace_id: wsId, actor_id: undefined,
       action: 'stress_test_started',
@@ -380,9 +438,13 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       synthetic: true, runId,
     }));
     for (let i = 0; i < userBatch.length; i += CONCURRENCY) {
-      const results = await Promise.all(userBatch.slice(i, i + CONCURRENCY).map(r =>
-        provisionSyntheticUser(r).then(id => { if (id) userIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
-      ));
+      const promises = userBatch.slice(i, i + CONCURRENCY).map(r =>
+        callService(report, 'provisionSyntheticUser', r, () => provisionSyntheticUser(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value?.id) userIds.push(result.value.id);
+      }
     }
     report.generation.usersCreated = userIds.length;
 
@@ -391,9 +453,13 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     const teamNames = ['Alpha','Beta','Gamma','Delta','Epsilon','Zeta','Eta','Theta','Iota','Kappa','Lambda','Mu','Nu','Xi','Omicron','Pi','Rho','Sigma','Tau','Upsilon'];
     const teamBatch = teamNames.map((_, i) => ({ workspace_id: wsId, name: simTag(runId, 'team', i), description: `Synthetic team ${teamNames[i]}`, synthetic: true, runId }));
     for (let i = 0; i < teamBatch.length; i += CONCURRENCY) {
-      const results = await Promise.all(teamBatch.slice(i, i + CONCURRENCY).map(r =>
-        createTeam(r).then(id => { if (id) teamIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
-      ));
+      const promises = teamBatch.slice(i, i + CONCURRENCY).map(r =>
+        callService(report, 'createTeam', r, () => createTeam(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value?.id) teamIds.push(result.value.id);
+      }
     }
     report.generation.teamsCreated = teamIds.length;
 
@@ -406,9 +472,13 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       synthetic: true, runId,
     }));
     for (let i = 0; i < projBatch.length; i += CONCURRENCY) {
-      const results = await Promise.all(projBatch.slice(i, i + CONCURRENCY).map(r =>
-        createProject(r).then(id => { if (id) projIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
-      ));
+      const promises = projBatch.slice(i, i + CONCURRENCY).map(r =>
+        callService(report, 'createProject', r, () => createProject(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value?.id) projIds.push(result.value.id);
+      }
     }
     report.generation.projectsCreated = projIds.length;
 
@@ -421,9 +491,13 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       synthetic: true, runId,
     }));
     for (let i = 0; i < epicBatch.length; i += CONCURRENCY) {
-      const results = await Promise.all(epicBatch.slice(i, i + CONCURRENCY).map(r =>
-        createEpic(r).then(id => { if (id) epicIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
-      ));
+      const promises = epicBatch.slice(i, i + CONCURRENCY).map(r =>
+        callService(report, 'createEpic', r, () => createEpic(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value?.id) epicIds.push(result.value.id);
+      }
     }
     report.generation.epicsCreated = epicIds.length;
 
@@ -439,22 +513,28 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       synthetic: true, runId,
     }));
     for (let i = 0; i < taskBatch.length; i += CONCURRENCY) {
-      const results = await Promise.all(taskBatch.slice(i, i + CONCURRENCY).map(r =>
-        createTask(r).then(id => { if (id) taskIds.push(id.id); else report.generation.serviceFallbacks++; report.generation.servicePathCount++; }).catch(() => { report.generation.serviceFallbacks++; report.generation.servicePathCount++; })
-      ));
+      const promises = taskBatch.slice(i, i + CONCURRENCY).map(r =>
+        callService(report, 'createTask', r, () => createTask(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value?.id) taskIds.push(result.value.id);
+      }
     }
     report.generation.tasksCreated = taskIds.length;
 
     // 6. Task Dependencies (via taskService.createTaskDependency)
     for (let i = 0; i < taskIds.length - 1 && taskIds[i] && taskIds[i + 1]; i += 3) {
-      report.generation.servicePathCount++;
-      await createTaskDependency({ workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: taskIds[i + 1] });
+      await callService(report, 'createTaskDependency', { workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: taskIds[i + 1] }, () =>
+        createTaskDependency({ workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: taskIds[i + 1] })
+      );
     }
     for (let i = 50; i < taskIds.length; i += 50) {
       const cross = taskIds[(i + 2500) % taskIds.length];
       if (taskIds[i] && cross) {
-        report.generation.servicePathCount++;
-        await createTaskDependency({ workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: cross });
+        await callService(report, 'createTaskDependency', { workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: cross }, () =>
+          createTaskDependency({ workspace_id: wsId, task_id: taskIds[i], depends_on_task_id: cross })
+        );
       }
     }
 
@@ -467,24 +547,33 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       doc_type: 'markdown' as const, tags: pickMany(['spec','design','api','arch','ops'], 3),
     }));
     for (let i = 0; i < docBatch.length; i += CONCURRENCY) {
-      const results = await Promise.all(docBatch.slice(i, i + CONCURRENCY).map(r =>
-        createDocument(r).then(d => { if (d) docIds.push(d.id); else report.generation.serviceFallbacks++; }).catch(() => { report.generation.serviceFallbacks++; })
-      ));
+      const promises = docBatch.slice(i, i + CONCURRENCY).map(r =>
+        callService(report, 'createDocument', r, () => createDocument(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) docIds.push(result.value.id);
+      }
     }
     report.generation.documentsCreated = docIds.length;
 
     // 8. Calendar Events (via calendarEventService.createEvent)
     let calCount = 0;
     for (let i = 0; i < 2000; i += CONCURRENCY) {
-      const results = await Promise.all(Array.from({ length: Math.min(CONCURRENCY, 2000 - i) }, (_, j) => ({
+      const batch = Array.from({ length: Math.min(CONCURRENCY, 2000 - i) }, (_, j) => ({
         workspace_id: wsId, user_id: userIds[(i + j) % userIds.length] || userIds[0],
         title: simTag(runId, 'cal', i + j),
         start_time: new Date(Date.now() + Math.random() * 30 * 86400000).toISOString(),
         end_time: new Date(Date.now() + Math.random() * 30 * 86400000 + 3600000).toISOString(),
         event_type: 'meeting' as CalendarEvent['event_type'],
-      })).map(r =>
-        calendarEventService.createEvent(r).then(e => { if (e) calCount++; else report.generation.serviceFallbacks++; }).catch(() => { report.generation.serviceFallbacks++; })
-      ));
+      }));
+      const promises = batch.map(r =>
+        callService(report, 'calendarEventService.createEvent', r, () => calendarEventService.createEvent(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) calCount++;
+      }
     }
     report.generation.calendarEventsCreated = calCount;
 
@@ -492,22 +581,27 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let intCount = 0;
     for (let i = 0; i < 50; i++) {
       const service = INTEGRATION_SERVICES[i % INTEGRATION_SERVICES.length];
-      report.generation.servicePathCount++;
-      const acct = await createConnectedAccount({
+      const acct = await callService(report, 'createConnectedAccount', {
         workspace_id: wsId, service, access_token: `sst_${runId}_token_${i}`, connected: i % 10 !== 0,
-      });
-      if (acct) {
+      }, () => createConnectedAccount({
+        workspace_id: wsId, service, access_token: `sst_${runId}_token_${i}`, connected: i % 10 !== 0,
+      }));
+      if (acct && typeof acct === 'object' && 'id' in acct) {
         intCount++;
-        report.generation.servicePathCount++;
-        await createIntegrationConfig({
+        await callService(report, 'createIntegrationConfig', {
           workspace_id: wsId, service, config: { repo_url: `https://sst.local/${service}/${i}`, branch: 'main' },
-        });
-        report.generation.servicePathCount++;
-        await createIntegrationSyncJob({
+        }, () => createIntegrationConfig({
+          workspace_id: wsId, service, config: { repo_url: `https://sst.local/${service}/${i}`, branch: 'main' },
+        }));
+        await callService(report, 'createIntegrationSyncJob', {
           workspace_id: wsId, service,
           status: randomFrom(['completed','failed','processing','queued','retrying'] as const),
           payload: { sim: true, run_id: runId }, attempts: Math.floor(Math.random() * 4),
-        });
+        }, () => createIntegrationSyncJob({
+          workspace_id: wsId, service,
+          status: randomFrom(['completed','failed','processing','queued','retrying'] as const),
+          payload: { sim: true, run_id: runId }, attempts: Math.floor(Math.random() * 4),
+        }));
       }
     }
     report.generation.integrationsCreated = intCount;
@@ -515,12 +609,17 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     // 10. Webhooks (via webhookService.createWebhook)
     let whCount = 0;
     for (let i = 0; i < 500; i += CONCURRENCY) {
-      const results = await Promise.all(Array.from({ length: Math.min(CONCURRENCY, 500 - i) }, (_, j) => ({
+      const batch = Array.from({ length: Math.min(CONCURRENCY, 500 - i) }, (_, j) => ({
         workspace_id: wsId, name: simTag(runId, 'wh', i + j),
         url: `https://sst-webhook.local/${runId}/${i + j}`, events: pickMany(WEBHOOK_EVENTS, 3), enabled: true,
-      })).map(r =>
-        createWebhook(r).then(w => { if (w) whCount++; else report.generation.serviceFallbacks++; }).catch(() => { report.generation.serviceFallbacks++; })
-      ));
+      }));
+      const promises = batch.map(r =>
+        callService(report, 'createWebhook', r, () => createWebhook(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) whCount++;
+      }
     }
     report.generation.webhooksCreated = whCount;
 
@@ -533,38 +632,52 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       { type: 'assign_task', params: { assignee_id: '' } },
     ];
     for (let i = 0; i < 200; i += CONCURRENCY) {
-      const results = await Promise.all(Array.from({ length: Math.min(CONCURRENCY, 200 - i) }, (_, j) => ({
+      const batch = Array.from({ length: Math.min(CONCURRENCY, 200 - i) }, (_, j) => ({
         workspace_id: wsId, name: simTag(runId, 'auto', i + j),
         trigger_event: randomFrom(WEBHOOK_EVENTS), actions: [randomFrom(autoActions)],
         enabled: true, trigger_filters: {},
-      })).map(r =>
-        createAutomationRule(r).then(a => { if (a) autoCount++; else report.generation.serviceFallbacks++; }).catch(() => { report.generation.serviceFallbacks++; })
-      ));
+      }));
+      const promises = batch.map(r =>
+        callService(report, 'createAutomationRule', r, () => createAutomationRule(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) autoCount++;
+      }
     }
     report.generation.automationsCreated = autoCount;
 
     // 12. Approvals (via createApprovalChain + createApprovalInstance)
     const chainIds: string[] = [];
     for (let i = 0; i < 50; i += CONCURRENCY) {
-      const results = await Promise.all(Array.from({ length: Math.min(CONCURRENCY, 50 - i) }, (_, j) => ({
+      const batch = Array.from({ length: Math.min(CONCURRENCY, 50 - i) }, (_, j) => ({
         workspace_id: wsId, name: simTag(runId, 'chain', i + j),
         enabled: true, trigger_config: { event: randomFrom(WEBHOOK_EVENTS) },
-      })).map(r =>
-        createApprovalChain(r).then(c => { if (c) chainIds.push(c.id); else report.generation.serviceFallbacks++; }).catch(() => { report.generation.serviceFallbacks++; })
-      ));
+      }));
+      const promises = batch.map(r =>
+        callService(report, 'createApprovalChain', r, () => createApprovalChain(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value?.id) chainIds.push(result.value.id);
+      }
     }
     let appCount = 0;
     for (let i = 0; i < 1000; i += CONCURRENCY) {
-      const results = await Promise.all(Array.from({ length: Math.min(CONCURRENCY, 1000 - i) }, () => ({
+      const batch = Array.from({ length: Math.min(CONCURRENCY, 1000 - i) }, () => ({
         chain_id: chainIds[Math.floor(Math.random() * chainIds.length)],
         target_type: 'task' as const,
         target_id: taskIds[Math.floor(Math.random() * taskIds.length)] || taskIds[0],
-        status: randomFrom(['pending','approved','rejected'] as const),
         current_step: Math.floor(Math.random() * 3) + 1,
         initiated_by: userIds[Math.floor(Math.random() * userIds.length)] || userIds[0],
-      })).map(r =>
-        createApprovalInstance(r).then(a => { if (a) appCount++; else report.generation.serviceFallbacks++; }).catch(() => { report.generation.serviceFallbacks++; })
-      ));
+      }));
+      const promises = batch.map(r =>
+        callService(report, 'createApprovalInstance', r, () => createApprovalInstance(r))
+      );
+      const results = await Promise.allSettled(promises);
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) appCount++;
+      }
     }
     report.generation.approvalsCreated = appCount;
     report.generation.timeMs = ms(genStart);
@@ -651,13 +764,18 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let sprintCompletions = 0;
     const { data: sprintProjects } = await supabase.from('projects').select('id').eq('workspace_id', wsId).like('name', `SST_${runId}_%`).eq('execution_mode', 'SCRUM').limit(10);
     for (const sp of sprintProjects || []) {
-      const sprint = await sprintService.createSprint({
+      const payload = {
         workspace_id: wsId, project_id: sp.id, name: simTag(runId, 'sprint', sprintCompletions),
         goal: 'Stress test sprint', start_date: new Date(Date.now() - 14 * 86400000).toISOString(),
         end_date: nowISO(), status: 'active',
-      }).catch(() => null);
-      if (sprint) {
-        await sprintService.updateSprint(sprint.id, { status: 'completed' }).catch(() => {});
+      };
+      const sprint = await callService(report, 'sprintService.createSprint', payload, () =>
+        sprintService.createSprint(payload)
+      );
+      if (sprint && typeof sprint === 'object' && 'id' in sprint) {
+        await callService(report, 'sprintService.updateSprint', { id: sprint.id, status: 'completed' }, () =>
+          sprintService.updateSprint(sprint.id, { status: 'completed' })
+        );
         sprintCompletions++;
       }
     }
@@ -674,11 +792,13 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let syncs = 0;
     const { data: accounts } = await supabase.from('connected_accounts').select('id').eq('workspace_id', wsId).like('access_token', `sst_${runId}_%`).limit(30);
     for (const acct of accounts || []) {
-      report.generation.servicePathCount++;
-      await createIntegrationSyncJob({
+      await callService(report, 'createIntegrationSyncJob', {
         workspace_id: wsId, service: 'github', status: 'processing',
         payload: { sim: true, run_id: runId, account_id: acct.id },
-      });
+      }, () => createIntegrationSyncJob({
+        workspace_id: wsId, service: 'github', status: 'processing',
+        payload: { sim: true, run_id: runId, account_id: acct.id },
+      }));
       syncs++;
     }
     report.events.integrationSyncs = syncs;
@@ -832,18 +952,32 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     await activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_test_completed', metadata: stressMeta });
     await activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_cleanup_completed', metadata: { run_id: runId, success: report.cleanup.success, orphan_count: report.cleanup.orphanCount, remaining, cleanup_ms: Math.round(report.cleanup.timeMs) } });
 
+    console.log('[stress] RUN_COMPLETED', { runId, success: report.cleanup.success });
+
   } catch (e: any) {
+    console.log('[stress] RUN_FAILED', { runId, error: e.message });
     report.recommendations.push(`FATAL: ${e.message}`);
     report.riskLevel = 'HIGH';
   } finally {
     clearLock();
+    console.log('[stress] LOCK_CLEARED', { runId });
   }
 
-  persistReport(report);
+  // Persist in BOTH success and finally path
+  console.log('[stress] REPORT_BUILD', { runId });
+  const validation = validateStressReport(report);
+  if (!validation.valid) {
+    console.warn('[stress] REPORT_INVALID', validation.missingFields);
+    // Fallback: persist minimal report
+    persistMinimalReport(runId, report);
+  } else {
+    persistReport(report);
+  }
   broadcastSyntheticCleanup();
 
   report.endTime = nowISO();
   report.durationMs = ms(t0);
+  console.log('[stress] REPORT_DONE', { runId, durationMs: report.durationMs, riskLevel: report.riskLevel });
   return report;
 }
 
@@ -1265,9 +1399,58 @@ export function forceUnlockStressRun(): void {
 const REPORT_STORAGE_KEY = 'resolve-last-stress-report';
 const REPORT_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
-function persistReport(report: StressReport): void {
+export function validateStressReport(report: any): { valid: boolean; missingFields: string[] } {
+  const missing: string[] = [];
+  if (!report) return { valid: false, missingFields: ['report is null/undefined'] };
+  if (!report.simulationRunId) missing.push('simulationRunId');
+  if (typeof report.blocked !== 'boolean') missing.push('blocked');
+  if (!report.generation) missing.push('generation');
+  else {
+    if (typeof report.generation.usersCreated !== 'number') missing.push('generation.usersCreated');
+    if (typeof report.generation.tasksCreated !== 'number') missing.push('generation.tasksCreated');
+    if (typeof report.generation.projectsCreated !== 'number') missing.push('generation.projectsCreated');
+  }
+  if (!report.performance) missing.push('performance');
+  else {
+    if (typeof report.performance.projectPageLoadMs !== 'number') missing.push('performance.projectPageLoadMs');
+  }
+  if (!report.cleanup) missing.push('cleanup');
+  else {
+    if (typeof report.cleanup.success !== 'boolean') missing.push('cleanup.success');
+    if (typeof report.cleanup.orphanCount !== 'number') missing.push('cleanup.orphanCount');
+  }
+  if (!report.riskLevel) missing.push('riskLevel');
+  return { valid: missing.length === 0, missingFields: missing };
+}
+
+function persistMinimalReport(runId: string, report: any): void {
   try {
     const payload = {
+      savedAt: Date.now(),
+      summary: {
+        simulationRunId: runId,
+        blocked: report?.blocked ?? false,
+        dryRun: report?.dryRun ?? false,
+        durationMs: report?.durationMs ?? 0,
+        riskLevel: report?.riskLevel ?? 'HIGH',
+        startTime: report?.startTime ?? '',
+        endTime: report?.endTime ?? '',
+      },
+      failed: true,
+      reason: report?.recommendations?.[0] || 'missing_report_object_or_fields',
+      missingFields: report ? validateStressReport(report).missingFields : ['report is null'],
+    };
+    localStorage.setItem(REPORT_STORAGE_KEY, JSON.stringify(payload));
+    console.log('[stress] REPORT_PERSIST_MINIMAL', payload.summary);
+  } catch (err) {
+    console.error('[stress] REPORT_PERSIST_MINIMAL_FAILED', err);
+  }
+}
+
+function persistReport(report: StressReport): void {
+  console.log('[stress] REPORT_PERSIST_START', { runId: report.simulationRunId });
+  try {
+    const payload: Record<string, any> = {
       savedAt: Date.now(),
       summary: {
         simulationRunId: report.simulationRunId,
@@ -1308,34 +1491,77 @@ function persistReport(report: StressReport): void {
         orphanCount: report.cleanup.orphanCount,
         timeMs: report.cleanup.timeMs,
       },
-      survivorsCount: undefined as number | undefined,
     };
     if (report.cleanup.simRecordsRemaining) {
       const total = Object.values(report.cleanup.simRecordsRemaining).reduce((a, b) => a + Math.max(0, b), 0);
       payload.survivorsCount = total;
     }
-    localStorage.setItem(REPORT_STORAGE_KEY, JSON.stringify(payload));
-  } catch { /* best effort */ }
+    const json = JSON.stringify(payload);
+    // Checksum log
+    const checksum = json.length;
+    localStorage.setItem(REPORT_STORAGE_KEY, json);
+    console.log('[stress] REPORT_PERSIST_SUCCESS', { runId: report.simulationRunId, bytes: checksum });
+  } catch (err) {
+    console.error('[stress] REPORT_PERSIST_FAILED', err);
+    // Fallback: try minimal
+    persistMinimalReport(report.simulationRunId, report);
+  }
 }
 
 export function getLastStressReport(): Record<string, any> | null {
   try {
     const raw = localStorage.getItem(REPORT_STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) {
+      console.log('[stress] REPORT_LOAD: no data in localStorage');
+      return null;
+    }
     const parsed = JSON.parse(raw);
     if (parsed.savedAt && Date.now() - parsed.savedAt > REPORT_EXPIRY_MS) {
+      console.log('[stress] REPORT_EXPIRED: removing', { savedAt: parsed.savedAt });
       localStorage.removeItem(REPORT_STORAGE_KEY);
       return null;
     }
+    console.log('[stress] REPORT_LOADED', { savedAt: parsed.savedAt, summary: parsed.summary });
     return parsed;
-  } catch {
+  } catch (err) {
+    console.error('[stress] REPORT_LOAD_FAILED, purging corrupt data', err);
     localStorage.removeItem(REPORT_STORAGE_KEY);
     return null;
   }
 }
 
 export function clearLastStressReport(): void {
-  try { localStorage.removeItem(REPORT_STORAGE_KEY); } catch { /* noop */ }
+  try {
+    localStorage.removeItem(REPORT_STORAGE_KEY);
+    console.log('[stress] REPORT_CLEARED');
+  } catch { /* noop */ }
+}
+
+export function peekStressStorage(): Record<string, any> | null {
+  try {
+    const raw = localStorage.getItem(REPORT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return { ...parsed, _raw_length: raw.length };
+  } catch {
+    return { _error: 'corrupt data', _raw: localStorage.getItem(REPORT_STORAGE_KEY)?.slice(0, 200) };
+  }
+}
+
+export function lastStressRunState(): {
+  active: boolean;
+  reportPersisted: boolean;
+  lockExists: boolean;
+  cleanupFinished: boolean;
+} {
+  const lock = checkLock();
+  const report = (() => { try { return localStorage.getItem(REPORT_STORAGE_KEY); } catch { return null; } })();
+  return {
+    active: lock !== null,
+    reportPersisted: report !== null,
+    lockExists: lock !== null,
+    cleanupFinished: lock === null,
+  };
 }
 
 // ─── PATCH 4: Cache Invalidation ───────────────────────────────

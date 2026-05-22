@@ -2,13 +2,14 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { calendarEventService } from './calendarEventService';
 import { activityLogService } from './activityLogService';
 import { calculateDailyProductiveHours } from '../utils/productivity';
+import { logServiceFailure } from '../utils/supabaseError';
 import type { Sprint } from '../types';
 
 export const sprintService = {
   async createSprint(sprint: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>, actorId?: string): Promise<Sprint | null> {
     if (!isSupabaseConfigured) return null;
     const { data, error } = await supabase.from('sprints').insert(sprint).select().single();
-    if (error) { console.error('sprintService.createSprint:', error); return null; }
+    if (error) { logServiceFailure('sprintService.createSprint', sprint, error); return null; }
     const created = data as Sprint;
     await activityLogService.appendLog({
       workspace_id: sprint.workspace_id, actor_id: actorId,

@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import { logServiceFailure } from '../utils/supabaseError';
 
 export interface CreateTaskInput {
   workspace_id: string;
@@ -33,7 +34,7 @@ export async function createTask(input: CreateTaskInput): Promise<{ id: string }
       })
       .select('id')
       .maybeSingle();
-    if (error) return null;
+    if (error) { logServiceFailure('createTask', input, error); return null; }
     if (data) {
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
@@ -42,7 +43,7 @@ export async function createTask(input: CreateTaskInput): Promise<{ id: string }
       });
       return data;
     }
-  } catch { /* ignore */ }
+  } catch (err) { logServiceFailure('createTask', input, err); }
   return null;
 }
 
@@ -60,6 +61,7 @@ export async function createTaskDependency(input: {
         task_id: input.task_id,
         depends_on_task_id: input.depends_on_task_id,
       }, { onConflict: 'workspace_id,task_id,depends_on_task_id' });
-    return !error;
-  } catch { return false; }
+    if (error) { logServiceFailure('createTaskDependency', input, error); return false; }
+    return true;
+  } catch (err) { logServiceFailure('createTaskDependency', input, err); return false; }
 }

@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { evaluateTriggers } from './automationEngine';
 import { fireEventWebhooks } from './webhookService';
+import { logServiceFailure } from '../utils/supabaseError';
 
 export interface ApprovalChain {
   id: string;
@@ -61,7 +62,7 @@ export async function createApprovalChain(chain: Partial<ApprovalChain>): Promis
       });
       return data as ApprovalChain;
     }
-  } catch { /* ignore */ }
+  } catch (error) { logServiceFailure('createApprovalChain', chain, error); }
   return null;
 }
 
@@ -157,7 +158,7 @@ export async function createApprovalInstance(
       }).catch(() => {});
       return data as ApprovalInstance;
     }
-  } catch { /* ignore */ }
+  } catch (error) { logServiceFailure('createApprovalInstance', instance, error); }
   return null;
 }
 

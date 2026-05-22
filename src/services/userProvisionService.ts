@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import { logServiceFailure } from '../utils/supabaseError';
 
 export interface ProvisionSyntheticUserInput {
   workspace_id: string;
@@ -25,7 +26,7 @@ export async function provisionSyntheticUser(input: ProvisionSyntheticUserInput)
       })
       .select('id')
       .maybeSingle();
-    if (error) return null;
+    if (error) { logServiceFailure('provisionSyntheticUser', input, error); return null; }
     if (data) {
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
@@ -34,6 +35,6 @@ export async function provisionSyntheticUser(input: ProvisionSyntheticUserInput)
       });
       return data;
     }
-  } catch { /* ignore */ }
+  } catch (err) { logServiceFailure('provisionSyntheticUser', input, err); }
   return null;
 }

@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { sha256 } from '../utils/cryptoUtils';
+import { logServiceFailure } from '../utils/supabaseError';
 
 const WEBHOOK_RETRY_BACKOFFS = [2000, 5000, 15000];
 
@@ -34,7 +35,7 @@ export async function createWebhook(webhook: Partial<Webhook>): Promise<Webhook 
   try {
     const { data } = await supabase.from('webhooks').insert(webhook).select().single();
     if (data) return data as Webhook;
-  } catch { /* ignore */ }
+  } catch (err) { logServiceFailure('createWebhook', webhook, err); }
   return null;
 }
 

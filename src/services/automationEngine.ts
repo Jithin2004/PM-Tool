@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { logServiceFailure } from '../utils/supabaseError';
 import { activityLogService } from './activityLogService';
 import { enqueueSync } from './integrationService';
 import { fireEventWebhooks } from './webhookService';
@@ -54,7 +55,10 @@ export async function fetchAutomationRules(workspaceId: string): Promise<Automat
 export async function createAutomationRule(rule: Partial<AutomationRule>): Promise<AutomationRule | null> {
   if (!isSupabaseConfigured) return null;
   try {
-    const { data } = await supabase.from('automation_rules').insert(rule).select().single();
+    const { data, error } = await supabase.from('automation_rules').insert(rule).select().single();
+    if (error) {
+      logServiceFailure('createAutomationRule', rule, error);
+    }
     if (data) {
       await activityLogService.appendLog({
         workspace_id: rule.workspace_id!, action: 'automation_created',
@@ -62,7 +66,7 @@ export async function createAutomationRule(rule: Partial<AutomationRule>): Promi
       });
       return data as AutomationRule;
     }
-  } catch { /* ignore */ }
+  } catch (err) { logServiceFailure('createAutomationRule', rule, err); }
   return null;
 }
 

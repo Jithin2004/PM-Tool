@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import { logServiceFailure } from '../utils/supabaseError';
 import type { CalendarEvent, CalendarEventType } from '../types';
 
 interface RecurrenceRule {
@@ -141,7 +142,7 @@ export const calendarEventService = {
       .insert(event)
       .select()
       .single();
-    if (error) { console.error('calendarEventService.createEvent:', error); return null; }
+    if (error) { logServiceFailure('calendarEventService.createEvent', event, error); return null; }
     const created = data as CalendarEvent;
     await activityLogService.appendLog({
       workspace_id: event.workspace_id, actor_id: actorId,

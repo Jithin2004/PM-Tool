@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { sha256 } from '../utils/cryptoUtils';
+import { logServiceFailure } from '../utils/supabaseError';
 import { activityLogService } from './activityLogService';
 import { fireEventWebhooks } from './webhookService';
 import { evaluateTriggers } from './automationEngine';
@@ -151,11 +152,12 @@ export async function fetchArchivedDocuments(workspaceId: string): Promise<Docum
 export async function createDocument(doc: Partial<Document>): Promise<Document | null> {
   if (!isSupabaseConfigured) return null;
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('documents')
       .insert({ ...doc, doc_type: doc.doc_type || 'markdown', tags: doc.tags || [], pinned: doc.pinned || false })
       .select()
       .single();
+    if (error) { logServiceFailure('createDocument', doc, error); return null; }
     if (data) {
       await activityLogService.appendLog({
         workspace_id: doc.workspace_id!, actor_id: doc.author_id,
@@ -170,7 +172,7 @@ export async function createDocument(doc: Partial<Document>): Promise<Document |
       }).catch(() => {});
       return data as Document;
     }
-  } catch { /* ignore */ }
+  } catch (err) { logServiceFailure('createDocument', doc, err); }
   return null;
 }
 

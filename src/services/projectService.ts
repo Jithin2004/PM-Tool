@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import { logServiceFailure } from '../utils/supabaseError';
 
 const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'SDLC', 'HYBRID'] as const;
 
@@ -27,7 +28,7 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
       })
       .select('id')
       .maybeSingle();
-    if (error) return null;
+    if (error) { logServiceFailure('createProject', input, error); return null; }
     if (data) {
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
@@ -36,6 +37,6 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
       });
       return data;
     }
-  } catch { /* ignore */ }
+  } catch (err) { logServiceFailure('createProject', input, err); }
   return null;
 }

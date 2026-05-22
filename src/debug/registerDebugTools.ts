@@ -1,4 +1,4 @@
-import { runSyntheticStressTest, cleanupSyntheticRun, cleanupAllSyntheticRuns, cleanupAudit, isStressRunActive, forceUnlockStressRun, getLastStressReport, clearLastStressReport, broadcastSyntheticCleanup, getForensicBuffer, clearForensicBuffer } from '../services/syntheticStressTest';
+import { runSyntheticStressTest, cleanupSyntheticRun, cleanupAllSyntheticRuns, cleanupAudit, isStressRunActive, forceUnlockStressRun, getLastStressReport, clearLastStressReport, broadcastSyntheticCleanup, getForensicBuffer, clearForensicBuffer, validateStressReport, peekStressStorage, lastStressRunState } from '../services/syntheticStressTest';
 import { debugActivityLogContext, verifyActivityLogAccess, setForensicDebug, getForensicAggregates } from '../services/activityLogService';
 
 declare global {
@@ -23,6 +23,9 @@ const debugRegistry = {
   getForensicAggregates: () => getForensicAggregates(),
   getForensicBuffer: () => getForensicBuffer(),
   clearForensicBuffer: () => clearForensicBuffer(),
+  validateStressReport: (report: any) => validateStressReport(report),
+  peekStressStorage: () => peekStressStorage(),
+  lastStressRunState: () => lastStressRunState(),
 };
 
 export function registerDebugTools(): void {

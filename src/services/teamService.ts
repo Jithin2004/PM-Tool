@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import { logServiceFailure } from '../utils/supabaseError';
 
 export interface CreateTeamInput {
   workspace_id: string;
@@ -21,7 +22,7 @@ export async function createTeam(input: CreateTeamInput): Promise<{ id: string }
       })
       .select('id')
       .maybeSingle();
-    if (error) return null;
+    if (error) { logServiceFailure('createTeam', input, error); return null; }
     if (data) {
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
@@ -30,6 +31,6 @@ export async function createTeam(input: CreateTeamInput): Promise<{ id: string }
       });
       return data;
     }
-  } catch { /* ignore */ }
+  } catch (err) { logServiceFailure('createTeam', input, err); }
   return null;
 }

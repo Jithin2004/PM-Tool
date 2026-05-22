@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { fireEventWebhooks } from './webhookService';
+import { logServiceFailure } from '../utils/supabaseError';
 
 const SYNC_COOLDOWN_MS = 30000;
 const QUEUE_MAX_CONCURRENT = 2;
@@ -704,9 +705,9 @@ export async function createConnectedAccount(input: {
       access_token: input.access_token,
       connected: input.connected ?? true,
     }).select('id').maybeSingle();
-    if (error) return null;
+    if (error) { logServiceFailure('createConnectedAccount', input, error); return null; }
     return data;
-  } catch { return null; }
+  } catch (err) { logServiceFailure('createConnectedAccount', input, err); return null; }
 }
 
 export async function createIntegrationConfig(input: {
@@ -721,8 +722,9 @@ export async function createIntegrationConfig(input: {
       service: input.service,
       config: input.config,
     });
-    return !error;
-  } catch { return false; }
+    if (error) { logServiceFailure('createIntegrationConfig', input, error); return false; }
+    return true;
+  } catch (err) { logServiceFailure('createIntegrationConfig', input, err); return false; }
 }
 
 export async function createIntegrationSyncJob(input: {
@@ -741,6 +743,7 @@ export async function createIntegrationSyncJob(input: {
       payload: input.payload || {},
       attempts: input.attempts ?? 0,
     });
-    return !error;
-  } catch { return false; }
+    if (error) { logServiceFailure('createIntegrationSyncJob', input, error); return false; }
+    return true;
+  } catch (err) { logServiceFailure('createIntegrationSyncJob', input, err); return false; }
 }
