@@ -1,7 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { logServiceFailure } from '../utils/supabaseError';
 import { activityLogService } from './activityLogService';
-import { enqueueSync } from './integrationService';
 import { fireEventWebhooks } from './webhookService';
 
 export interface AutomationRule {
@@ -205,6 +204,7 @@ export async function evaluateTriggers(
       .eq('enabled', true);
     if (!rules || rules.length === 0) return;
     activityLogService.logTriggerEvaluated(workspaceId, event, rules.length, depth).catch(() => {});
+    const { enqueueSync } = await import('./integrationService');
     for (const rule of rules) {
       await enqueueSync(workspaceId, `automation_${rule.id}`, {
         rule_id: rule.id, event, payload, _depth: depth + 1,
