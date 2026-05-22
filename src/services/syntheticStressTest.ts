@@ -815,7 +815,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
     let taskUpdates = 0;
     for (let i = 0; i < 200 && taskIds[i % taskIds.length]; i++) {
-      await supabase.from('tasks').update({ status: randomFrom(TASK_STATUSES), updated_at: nowISO() }).eq('id', taskIds[i % taskIds.length]).eq('workspace_id', wsId).catch(() => {});
+      try { await supabase.from('tasks').update({ status: randomFrom(TASK_STATUSES), updated_at: nowISO() }).eq('id', taskIds[i % taskIds.length]).eq('workspace_id', wsId); } catch {}
       taskUpdates++;
     }
     report.events.taskUpdates = taskUpdates;
@@ -865,7 +865,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let appsProcessed = 0;
     const { data: instances } = await supabase.from('approval_instances').select('id, chain_id').eq('status', 'pending').limit(100);
     for (const inst of instances || []) {
-      await supabase.from('approval_instances').update({ status: randomFrom(['approved','rejected'] as const), completed_at: nowISO() }).eq('id', inst.id).catch(() => {});
+      try { await supabase.from('approval_instances').update({ status: randomFrom(['approved','rejected'] as const), completed_at: nowISO() }).eq('id', inst.id); } catch {}
       appsProcessed++;
       if (appsProcessed >= 50) break;
     }
@@ -882,7 +882,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let recovered = 0;
     const { data: stuckJobs } = await supabase.from('integration_sync_jobs').select('id').eq('workspace_id', wsId).in('status', ['processing','queued']).limit(20);
     for (const job of stuckJobs || []) {
-      await supabase.from('integration_sync_jobs').update({ status: 'retrying', attempts: 1, next_retry_at: new Date(Date.now() + 2000).toISOString() }).eq('id', job.id).catch(() => {});
+      try { await supabase.from('integration_sync_jobs').update({ status: 'retrying', attempts: 1, next_retry_at: new Date(Date.now() + 2000).toISOString() }).eq('id', job.id); } catch {}
       recovered++;
     }
     report.events.recoveryOperations = recovered;
