@@ -318,8 +318,6 @@ export async function cleanupSyntheticRun(runId: string, wsId?: string): Promise
   ops.push(async () => { await supabase.from('activity_logs').delete().eq('workspace_id', wsId).filter('metadata->>run_id', 'eq', runId); });
   ops.push(() => supabase.from('teams').delete().eq('workspace_id', wsId).like('name', `SST_${runId}_%`));
   ops.push(() => supabase.from('projects').delete().eq('workspace_id', wsId).like('name', `SST_${runId}_%`));
-  ops.push(() => supabase.from('users').delete().eq('workspace_id', wsId).like('email', `SST_${runId}_%`));
-
   for (const op of ops) { try { await op(); } catch { /* best effort */ } }
 
   const after = await countSimRecords(runId, wsId);
@@ -856,10 +854,10 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     // ─── CLEANUP ───────────────────────────────────────────────────
     const cleanStart = performance.now();
     const allTables = [
-      'task_dependencies','approval_instances','doc_versions','doc_annotations',
+      'task_dependencies','approval_instances',
       'integration_sync_jobs','integration_configs','sprints','documents','tasks',
       'epics','calendar_events','webhooks','connected_accounts','automation_rules',
-      'approval_chains','activity_logs','teams','projects','users',
+      'approval_chains','activity_logs','teams','projects',
     ];
     for (const table of allTables) {
       try {
