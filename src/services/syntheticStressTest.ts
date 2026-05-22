@@ -839,6 +839,9 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     clearLock();
   }
 
+  persistReport(report);
+  broadcastSyntheticCleanup();
+
   report.endTime = nowISO();
   report.durationMs = ms(t0);
   return report;
@@ -1027,6 +1030,7 @@ export async function recoverAbandonedStressRuns(wsId?: string): Promise<{
   }
 
   const details = await cleanupAllSyntheticRuns(wsId);
+  await activityLogService.logStressLockExpiredCleanup(wsId, lock.runId, ageMin);
   clearLock();
   return { recovered: true, details };
 }
@@ -1235,4 +1239,129 @@ export async function cleanupAudit(runId?: string): Promise<{
   }
 
   return result;
+}
+
+// ─── PATCH 1: Lock Health ──────────────────────────────────────
+
+export function isStressRunActive(): {
+  active: boolean;
+  runId?: string;
+  ageMinutes?: number;
+} {
+  const lock = checkLock();
+  if (!lock) return { active: false };
+  const ageMinutes = lock.startedAt
+    ? (Date.now() - new Date(lock.startedAt).getTime()) / 60000
+    : undefined;
+  return { active: true, runId: lock.runId, ageMinutes };
+}
+
+export function forceUnlockStressRun(): void {
+  clearLock();
+}
+
+// ─── PATCH 3: Report Persistence ───────────────────────────────
+
+const REPORT_STORAGE_KEY = 'resolve-last-stress-report';
+const REPORT_EXPIRY_MS = 24 * 60 * 60 * 1000;
+
+function persistReport(report: StressReport): void {
+  try {
+    const payload = {
+      savedAt: Date.now(),
+      summary: {
+        simulationRunId: report.simulationRunId,
+        blocked: report.blocked,
+        dryRun: report.dryRun,
+        durationMs: report.durationMs,
+        riskLevel: report.riskLevel,
+        startTime: report.startTime,
+        endTime: report.endTime,
+      },
+      generation: {
+        usersCreated: report.generation.usersCreated,
+        teamsCreated: report.generation.teamsCreated,
+        projectsCreated: report.generation.projectsCreated,
+        epicsCreated: report.generation.epicsCreated,
+        tasksCreated: report.generation.tasksCreated,
+        documentsCreated: report.generation.documentsCreated,
+        calendarEventsCreated: report.generation.calendarEventsCreated,
+        integrationsCreated: report.generation.integrationsCreated,
+        webhooksCreated: report.generation.webhooksCreated,
+        automationsCreated: report.generation.automationsCreated,
+        approvalsCreated: report.generation.approvalsCreated,
+        serviceFallbacks: report.generation.serviceFallbacks,
+        servicePathCount: report.generation.servicePathCount,
+      },
+      performance: {
+        projectPageLoadMs: report.performance.projectPageLoadMs,
+        portfolioLoadMs: report.performance.portfolioLoadMs,
+        timelineCalcMs: report.performance.timelineCalcMs,
+        ganttRenderMs: report.performance.ganttRenderMs,
+        commandPaletteSearchMs: report.performance.commandPaletteSearchMs,
+        queueDepth: report.performance.queueDepth,
+        memoryEstimateMB: report.performance.memoryEstimateMB,
+        apiThroughput: report.performance.apiThroughput,
+      },
+      cleanup: {
+        success: report.cleanup.success,
+        orphanCount: report.cleanup.orphanCount,
+        timeMs: report.cleanup.timeMs,
+      },
+      survivorsCount: undefined as number | undefined,
+    };
+    if (report.cleanup.simRecordsRemaining) {
+      const total = Object.values(report.cleanup.simRecordsRemaining).reduce((a, b) => a + Math.max(0, b), 0);
+      payload.survivorsCount = total;
+    }
+    localStorage.setItem(REPORT_STORAGE_KEY, JSON.stringify(payload));
+  } catch { /* best effort */ }
+}
+
+export function getLastStressReport(): Record<string, any> | null {
+  try {
+    const raw = localStorage.getItem(REPORT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.savedAt && Date.now() - parsed.savedAt > REPORT_EXPIRY_MS) {
+      localStorage.removeItem(REPORT_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    localStorage.removeItem(REPORT_STORAGE_KEY);
+    return null;
+  }
+}
+
+export function clearLastStressReport(): void {
+  try { localStorage.removeItem(REPORT_STORAGE_KEY); } catch { /* noop */ }
+}
+
+// ─── PATCH 4: Cache Invalidation ───────────────────────────────
+
+export function broadcastSyntheticCleanup(): void {
+  try {
+    window.dispatchEvent(new CustomEvent('synthetic-cleanup', { detail: { timestamp: Date.now() } }));
+  } catch { /* noop */ }
+}
+
+// ─── PATCH 2: Forensic Log Throttling (buffer) ─────────────────
+
+const FORENSIC_BUFFER: Record<string, any>[] = [];
+const FORENSIC_BUFFER_MAX = 200;
+
+export function pushForensicEvent(event: Record<string, any>): void {
+  FORENSIC_BUFFER.push({ ...event, _ts: Date.now() });
+  if (FORENSIC_BUFFER.length > FORENSIC_BUFFER_MAX) {
+    FORENSIC_BUFFER.shift();
+  }
+}
+
+export function getForensicBuffer(): Record<string, any>[] {
+  return [...FORENSIC_BUFFER];
+}
+
+export function clearForensicBuffer(): void {
+  FORENSIC_BUFFER.length = 0;
 }

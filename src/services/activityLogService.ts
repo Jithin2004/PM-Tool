@@ -169,11 +169,17 @@ export const activityLogService = {
 
     // Forensic preflight
     const access = await verifyActivityLogAccess(entry.workspace_id);
-    console.log('[appendLog forensic]', { access, entry: { ...entry, metadata: '...' } });
+    if (isForensicDebugEnabled()) {
+      console.log('[appendLog forensic]', { access, entry: { ...entry, metadata: '...' } });
+    }
 
     if (!access.canInsert) {
       this._queue.push({ entry, retries: 0 });
       this._startQueue();
+      recordForensicAppend('queued');
+      if (isForensicDebugEnabled() && !this._shouldThrottleRlsWarn(entry.workspace_id)) {
+        console.warn('[appendLog] blocked — queued:', access.reason);
+      }
       return false;
     }
 
@@ -194,17 +200,21 @@ export const activityLogService = {
         if (error.code === '42501') {
           this._queue.push({ entry, retries: 0 });
           this._startQueue();
-          if (!this._shouldThrottleRlsWarn(entry.workspace_id)) {
+          recordForensicAppend('queued');
+          if (isForensicDebugEnabled() && !this._shouldThrottleRlsWarn(entry.workspace_id)) {
             console.warn('[appendLog] RLS blocked — queued for retry:', error.message);
           }
           return false;
         }
         console.error('ActivityLogService: appendLog failed:', error);
+        recordForensicAppend('failed');
         return false;
       }
+      recordForensicAppend('success');
       return true;
     } catch (e) {
       console.error('ActivityLogService: appendLog exception:', e);
+      recordForensicAppend('failed');
       return false;
     }
   },
@@ -752,4 +762,58 @@ export const activityLogService = {
       metadata: { survivor_count: survivors.length, survivors, fk_failures: fkFailures },
     });
   },
+
+  async logStressLockExpiredCleanup(workspaceId: string, runId: string, ageMinutes: number): Promise<boolean> {
+    return this.appendLog({
+      workspace_id: workspaceId,
+      action: 'stress_lock_expired_cleanup',
+      metadata: { expired_run_id: runId, age_minutes: Math.round(ageMinutes * 10) / 10 },
+    });
+  },
 };
+
+// ─── PATCH 2: Forensic Log Throttling ──────────────────────────
+
+const FORENSIC_DEBUG_ENABLED = (() => typeof localStorage !== 'undefined' && localStorage.getItem('resolve-log-forensics') === 'true')();
+
+let _forensicOverride: boolean | null = null;
+
+export function setForensicDebug(enabled: boolean): void {
+  _forensicOverride = enabled;
+  if (enabled) {
+    try { localStorage.setItem('resolve-log-forensics', 'true'); } catch { /* noop */ }
+  } else {
+    try { localStorage.removeItem('resolve-log-forensics'); } catch { /* noop */ }
+  }
+}
+
+export function isForensicDebugEnabled(): boolean {
+  return _forensicOverride !== null ? _forensicOverride : FORENSIC_DEBUG_ENABLED;
+}
+
+let _lastForensicLog = 0;
+const FORENSIC_THROTTLE_MS = 5_000;
+
+const _agg: { total: number; success: number; failed: number; queued: number } = { total: 0, success: 0, failed: 0, queued: 0 };
+
+export function resetForensicAggregates(): void {
+  _agg.total = 0; _agg.success = 0; _agg.failed = 0; _agg.queued = 0;
+}
+
+export function getForensicAggregates(): typeof _agg {
+  return { ..._agg };
+}
+
+export function recordForensicAppend(outcome: 'success' | 'failed' | 'queued'): void {
+  _agg.total++;
+  if (outcome === 'success') _agg.success++;
+  else if (outcome === 'failed') _agg.failed++;
+  else if (outcome === 'queued') _agg.queued++;
+
+  const now = Date.now();
+  if (isForensicDebugEnabled() && now - _lastForensicLog > FORENSIC_THROTTLE_MS) {
+    _lastForensicLog = now;
+    const rates = { ..._agg };
+    console.log('[appendLog forensic summary]', rates);
+  }
+}

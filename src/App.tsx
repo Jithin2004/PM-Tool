@@ -11,6 +11,15 @@ declare global {
       cleanupAudit: (runId?: string) => Promise<any>;
       debugActivityLogContext: () => Promise<any>;
       verifyActivityLogAccess: (workspaceId: string) => Promise<any>;
+      isStressRunActive: () => { active: boolean; runId?: string; ageMinutes?: number };
+      forceUnlockStressRun: () => void;
+      getLastStressReport: () => Record<string, any> | null;
+      clearLastStressReport: () => void;
+      broadcastSyntheticCleanup: () => void;
+      toggleForensics: (enabled: boolean) => void;
+      getForensicAggregates: () => { total: number; success: number; failed: number; queued: number };
+      getForensicBuffer: () => Record<string, any>[];
+      clearForensicBuffer: () => void;
     };
   }
 }
@@ -31,6 +40,15 @@ export default function App() {
           cleanupAudit: async (runId?: string) => stressMod.cleanupAudit(runId),
           debugActivityLogContext: async () => logMod.debugActivityLogContext(),
           verifyActivityLogAccess: async (workspaceId: string) => logMod.verifyActivityLogAccess(workspaceId),
+          isStressRunActive: () => stressMod.isStressRunActive(),
+          forceUnlockStressRun: () => stressMod.forceUnlockStressRun(),
+          getLastStressReport: () => stressMod.getLastStressReport(),
+          clearLastStressReport: () => stressMod.clearLastStressReport(),
+          broadcastSyntheticCleanup: () => stressMod.broadcastSyntheticCleanup(),
+          toggleForensics: (enabled: boolean) => logMod.setForensicDebug(enabled),
+          getForensicAggregates: () => logMod.getForensicAggregates(),
+          getForensicBuffer: () => stressMod.getForensicBuffer(),
+          clearForensicBuffer: () => stressMod.clearForensicBuffer(),
         };
         console.log('[Resolve Debug Enabled]');
       }
