@@ -931,6 +931,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     if (!error && data) setProjects(data);
   };
 
+  const invalidateAll = async () => {
+    await Promise.all([
+      fetchProjects(),
+      workspace?.id ? fetchProfiles() : Promise.resolve(),
+    ]);
+  };
+
   const fetchProfiles = async () => {
     if (!workspace?.id) return;
     const { data, error } = await supabase
@@ -1366,6 +1373,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       tags: ['NEW']
     };
 
+    if (typeof window !== 'undefined') console.debug('[pipeline] createProject:start', { name: newName });
+
     const { data, error } = await supabase
       .from('projects')
       .insert(newProject)
@@ -1373,7 +1382,9 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       .single();
 
     if (!error && data) {
-      setProjects([data, ...projects]);
+      if (typeof window !== 'undefined') console.debug('[pipeline] createProject:success', { id: data.id });
+
+      setProjects(prev => [data as import('../../types').Project, ...prev]);
       setIsAdding(false);
       setNewName('');
       setPertBest('');
@@ -1384,9 +1395,10 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       setNewPriority('medium');
       setNewTeamId('');
       notify("Project created successfully.", "success");
-      fetchProjects();
 
-      // Immutable log
+      if (typeof window !== 'undefined') console.debug('[pipeline] projectVisible:confirmed', { id: data.id, name: data.name });
+
+      // Immutable log (fire-and-forget, never blocks visibility)
       activityLogService.appendLog({
         workspace_id: workspace.id,
         actor_id: user.id,
@@ -1399,7 +1411,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         window.dispatchEvent(new CustomEvent('start-project-setup', { detail: { projectId: data.id, executionMode: data.execution_mode } }));
       }
     } else {
-      console.error("Project creation failed:", error);
+      console.error("[pipeline] createProject:error", error);
       notify(`System Error: ${error?.message || "Failed to create project"}`, "error");
     }
   };
@@ -1517,6 +1529,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       askConfirmation, 
       notify, 
       fetchProjects,
+      invalidateAll,
       addDependency,
       removeDependency,
       updateTaskDates,

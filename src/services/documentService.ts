@@ -43,110 +43,75 @@ export interface DocAnnotation {
   created_at: string;
 }
 
-// ── Soft Delete Support Check ──
-
-let _supportsSoftDelete: boolean | null = null;
+// ── Soft Delete Support ──
+// Self-healing column detection.  First query that uses `.is('deleted_at', null)`
+// determines whether the column exists.  No separate probe — eliminates the 400.
+let _sd: boolean | null = null;
+async function trySd<T>(fn: (sd: boolean) => Promise<T>, fallback: T): Promise<T> {
+  if (_sd !== false) {
+    try { const r = await fn(true); if (_sd === null) _sd = true; return r; }
+    catch { if (_sd === null) { _sd = false; return fn(false); } return fallback; }
+  }
+  try { return await fn(false); } catch { return fallback; }
+}
 
 export async function supportsSoftDelete(): Promise<boolean> {
-  if (_supportsSoftDelete !== null) return _supportsSoftDelete;
+  if (_sd !== null) return _sd;
   try {
-    const { error } = await supabase
-      .from('documents')
-      .select('deleted_at')
-      .limit(1)
-      .maybeSingle();
-    _supportsSoftDelete = !error;
-  } catch {
-    _supportsSoftDelete = false;
-  }
-  return _supportsSoftDelete;
+    await trySd(async (sd) => { if (!sd) throw 0; return null; }, null);
+  } catch { /* probe completed */ }
+  return _sd === true;
 }
 
-export function clearSoftDeleteCache(): void {
-  _supportsSoftDelete = null;
-}
+export function clearSoftDeleteCache(): void { _sd = null; }
 
 // ── Documents ──
 
 export async function fetchDocuments(workspaceId: string, projectId?: string): Promise<Document[]> {
   if (!isSupabaseConfigured || !workspaceId) return [];
-  try {
-    let query = supabase
-      .from('documents')
-      .select('*')
-      .eq('workspace_id', workspaceId);
-    if (await supportsSoftDelete()) {
-      query = query.is('deleted_at', null);
-    }
-    query = query.order('updated_at', { ascending: false });
-    if (projectId) query = query.eq('project_id', projectId);
-    const { data } = await query;
-    if (data) return data as Document[];
-  } catch { /* ignore */ }
-  return [];
+  return await trySd(async (sd) => {
+    let q = supabase.from('documents').select('*').eq('workspace_id', workspaceId);
+    if (sd) q = q.is('deleted_at', null);
+    q = q.order('updated_at', { ascending: false });
+    if (projectId) q = q.eq('project_id', projectId);
+    const { data } = await q; return (data || []) as Document[];
+  }, []);
 }
 
 export async function searchDocuments(workspaceId: string, queryText: string): Promise<Document[]> {
   if (!isSupabaseConfigured || !workspaceId || !queryText.trim()) return [];
-  try {
-    let query = supabase
-      .from('documents')
-      .select('*')
-      .eq('workspace_id', workspaceId)
+  return await trySd(async (sd) => {
+    let q = supabase.from('documents').select('*').eq('workspace_id', workspaceId)
       .or(`title.ilike.%${queryText}%,content.ilike.%${queryText}%`);
-    if (await supportsSoftDelete()) {
-      query = query.is('deleted_at', null);
-    }
-    const { data } = await query
-      .order('updated_at', { ascending: false })
-      .limit(20);
-    if (data) return data as Document[];
-  } catch { /* ignore */ }
-  return [];
+    if (sd) q = q.is('deleted_at', null);
+    const { data } = await q.order('updated_at', { ascending: false }).limit(20);
+    return (data || []) as Document[];
+  }, []);
 }
 
 export async function fetchDocument(docId: string): Promise<Document | null> {
   if (!isSupabaseConfigured) return null;
-  try {
-    let query = supabase
-      .from('documents')
-      .select('*')
-      .eq('id', docId);
-    if (await supportsSoftDelete()) {
-      query = query.is('deleted_at', null);
-    }
-    const { data } = await query.maybeSingle();
-    if (data) return data as Document;
-  } catch { /* ignore */ }
-  return null;
+  return await trySd(async (sd) => {
+    let q = supabase.from('documents').select('*').eq('id', docId);
+    if (sd) q = q.is('deleted_at', null);
+    const { data } = await q.maybeSingle();
+    return (data || null) as Document | null;
+  }, null);
 }
 
 export async function fetchDocumentIncludingDeleted(docId: string): Promise<Document | null> {
   if (!isSupabaseConfigured) return null;
-  try {
-    const { data } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('id', docId)
-      .maybeSingle();
-    if (data) return data as Document;
-  } catch { /* ignore */ }
-  return null;
+  try { const { data } = await supabase.from('documents').select('*').eq('id', docId).maybeSingle(); return data as Document | null; }
+  catch { return null; }
 }
 
 export async function fetchArchivedDocuments(workspaceId: string): Promise<Document[]> {
   if (!isSupabaseConfigured || !workspaceId) return [];
-  if (!(await supportsSoftDelete())) return [];
   try {
-    const { data } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .not('deleted_at', 'is', null)
-      .order('deleted_at', { ascending: false });
-    if (data) return data as Document[];
-  } catch { /* ignore */ }
-  return [];
+    const { data } = await supabase.from('documents').select('*').eq('workspace_id', workspaceId)
+      .not('deleted_at', 'is', null).order('deleted_at', { ascending: false });
+    return (data || []) as Document[];
+  } catch { return []; }
 }
 
 export async function createDocument(doc: Partial<Document>): Promise<Document | null> {

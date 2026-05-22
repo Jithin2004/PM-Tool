@@ -33,6 +33,7 @@ interface DashboardContextType {
   askConfirmation: (title: string, message: string, onConfirm: () => void, confirmText?: string) => void;
   notify: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
   fetchProjects: () => Promise<void>;
+  invalidateAll: () => Promise<void>;
   addDependency: (taskId: string, dependsOnTaskId: string) => Promise<void>;
   removeDependency: (taskId: string, dependsOnTaskId: string) => Promise<void>;
   updateTaskDates: (taskId: string, startDate: string | null, deadline: string | null) => Promise<void>;
