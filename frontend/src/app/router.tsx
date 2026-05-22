@@ -143,15 +143,27 @@ export function ResolveRouter() {
   if (profile?.role === 'uninvited') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white p-6">
-        <div className="max-w-md w-full border border-red-500/25 bg-red-500/5 p-8 text-center rounded">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center bg-red-500/10 text-red-400 rounded-full">
+        <div className="max-w-md w-full border border-white/10 bg-[#0c0c0c] p-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center bg-red-500/10 text-red-400">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold mb-2">Access Restrained</h2>
-          <p className="text-sm text-white/60 mb-6 font-mono">You haven't been invited to an organization yet.</p>
-          <button onClick={() => logout()} className="w-full border border-white/10 bg-white/5 py-2.5 text-sm font-medium hover:bg-white/10 transition-colors font-mono uppercase tracking-wider">Sign Out</button>
+          <h2 className="text-lg font-medium tracking-tight mb-2">Access Restrained</h2>
+          <p className="text-sm font-mono text-white/50 mb-2">Your account hasn't been invited to an organization yet.</p>
+          <p className="text-[11px] font-mono text-white/30 mb-8">Enter a product key to activate your workspace or request access.</p>
+          <div className="space-y-2">
+            <a
+              href="/activate"
+              className="block w-full py-2.5 text-[11px] font-mono uppercase tracking-wider bg-white/10 text-white/90 border border-white/10 hover:bg-white/15 transition-all"
+            >
+              Enter Product Key
+            </a>
+            <p className="text-[10px] font-mono text-white/20 my-2">or</p>
+            <button onClick={() => logout()} className="block w-full py-2.5 text-[11px] font-mono uppercase tracking-wider text-white/50 border border-white/[0.06] hover:border-white/[0.12] hover:text-white/70 transition-all">
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
     );

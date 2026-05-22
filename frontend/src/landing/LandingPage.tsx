@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { isProductKeyVerified } from '../lib/productKey';
+import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 import { LandingHero } from './LandingHero';
 import { ProductShowcase } from './ProductShowcase';
 import { OperationalNarrative } from './OperationalNarrative';
@@ -10,16 +12,26 @@ import { AccessGateway } from './AccessGateway';
 
 export function LandingPage() {
   const verified = isProductKeyVerified();
+  const { user, profile } = useAuth();
+  const { workspace } = useWorkspace();
 
   useEffect(() => {
-    if (verified) {
+    // Verified user with valid access → skip landing entirely
+    if (verified && user && profile && profile.role !== 'uninvited' && workspace) {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new Event('popstate'));
+      return;
+    }
+
+    // Verified but not authenticated yet → brief delay then redirect to auth flow
+    if (verified && !user) {
       const timer = setTimeout(() => {
         window.history.pushState(null, '', '/workspace');
         window.dispatchEvent(new Event('popstate'));
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [verified]);
+  }, [verified, user, profile, workspace]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
