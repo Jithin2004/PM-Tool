@@ -9,6 +9,8 @@ declare global {
       cleanupStress: (runId: string) => Promise<any>;
       cleanupAllSyntheticRuns: () => Promise<any>;
       cleanupAudit: (runId?: string) => Promise<any>;
+      debugActivityLogContext: () => Promise<any>;
+      verifyActivityLogAccess: (workspaceId: string) => Promise<any>;
     };
   }
 }
@@ -21,11 +23,14 @@ export default function App() {
       const stressMod = await import('./services/syntheticStressTest');
 
       if (enableDebug) {
+        const logMod = await import('./services/activityLogService');
         window.resolveDebug = {
           runStressTest: async (config = {}) => stressMod.runSyntheticStressTest(config),
           cleanupStress: async (runId: string) => stressMod.cleanupSyntheticRun(runId),
           cleanupAllSyntheticRuns: async () => stressMod.cleanupAllSyntheticRuns(),
           cleanupAudit: async (runId?: string) => stressMod.cleanupAudit(runId),
+          debugActivityLogContext: async () => logMod.debugActivityLogContext(),
+          verifyActivityLogAccess: async (workspaceId: string) => logMod.verifyActivityLogAccess(workspaceId),
         };
         console.log('[Resolve Debug Enabled]');
       }

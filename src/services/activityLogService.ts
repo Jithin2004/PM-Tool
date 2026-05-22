@@ -14,7 +14,103 @@ export interface ActivityLogEntry {
   created_at?: string;
 }
 
+// ─── Constants for graceful RLS degradation ────────────────────
+
+const LOG_RETRY_MS = 10_000;
+const MAX_LOG_RETRIES = 5;
+const RLS_WARN_THROTTLE_MS = 30_000;
+
+// ─── Debug helpers ─────────────────────────────────────────────
+
+export interface ActivityLogContext {
+  authUid: string | null;
+  usersRowExists: boolean;
+  usersRow: { id: string; workspace_id: string | null; role: string | null } | null;
+  workspaceId: string | null;
+  role: string | null;
+  ownerWorkspaceIds: string[];
+  currentSessionExists: boolean;
+}
+
+export async function debugActivityLogContext(): Promise<ActivityLogContext> {
+  const ctx: ActivityLogContext = {
+    authUid: null,
+    usersRowExists: false,
+    usersRow: null,
+    workspaceId: null,
+    role: null,
+    ownerWorkspaceIds: [],
+    currentSessionExists: false,
+  };
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    ctx.currentSessionExists = !!session;
+    const { data: { user } } = await supabase.auth.getUser();
+    ctx.authUid = user?.id || null;
+    if (user) {
+      const { data: row } = await supabase.from('users').select('id, workspace_id, role').eq('id', user.id).maybeSingle();
+      ctx.usersRow = row || null;
+      ctx.usersRowExists = !!row;
+      ctx.workspaceId = row?.workspace_id || null;
+      ctx.role = row?.role || null;
+    }
+    const { data: owned } = await supabase.from('workspaces').select('id').eq('owner_id', ctx.authUid || '');
+    ctx.ownerWorkspaceIds = (owned || []).map(w => w.id);
+  } catch { /* best effort */ }
+  return ctx;
+}
+
+export interface AccessCheck {
+  canInsert: boolean;
+  reason: string;
+}
+
+export async function verifyActivityLogAccess(workspaceId: string): Promise<AccessCheck> {
+  const ctx = await debugActivityLogContext();
+
+  if (!ctx.currentSessionExists) return { canInsert: false, reason: 'No active session' };
+  if (!ctx.authUid) return { canInsert: false, reason: 'No authenticated user' };
+  if (!ctx.usersRowExists) return { canInsert: false, reason: 'No users row exists for this auth UID' };
+  if (ctx.usersRow && !ctx.usersRow.workspace_id) return { canInsert: false, reason: 'users.workspace_id is null' };
+  if (ctx.workspaceId !== workspaceId) return { canInsert: false, reason: `Workspace mismatch: appendLog workspace_id=${workspaceId}, users.workspace_id=${ctx.workspaceId}` };
+  if (ctx.role === 'pending-workspace-setup') return { canInsert: false, reason: 'Role is pending-workspace-setup, no workspace access' };
+  if (ctx.ownerWorkspaceIds.length === 0 && !ctx.workspaceId) return { canInsert: false, reason: 'No owned workspaces and no workspace context' };
+
+  return { canInsert: true, reason: 'OK' };
+}
+
 export const activityLogService = {
+  _queue: [] as { entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash' | 'id' | 'created_at'>; retries: number }[],
+  _queueTimer: null as ReturnType<typeof setInterval> | null,
+  _rlsWarnTimers: new Map<string, number>(),
+
+  _shouldThrottleRlsWarn(wsId: string): boolean {
+    const now = Date.now();
+    const last = this._rlsWarnTimers.get(wsId) || 0;
+    if (now - last > RLS_WARN_THROTTLE_MS) {
+      this._rlsWarnTimers.set(wsId, now);
+      return false;
+    }
+    return true;
+  },
+
+  _processQueue: async () => {
+    const s = activityLogService;
+    if (s._queue.length === 0) return;
+    const batch = s._queue.splice(0, s._queue.length);
+    for (const item of batch) {
+      const ok = await s.appendLogDirect(item.entry);
+      if (!ok && item.retries + 1 < MAX_LOG_RETRIES) {
+        s._queue.push({ entry: item.entry, retries: item.retries + 1 });
+      }
+    }
+  },
+
+  _startQueue() {
+    if (this._queueTimer) return;
+    this._queueTimer = setInterval(() => activityLogService._processQueue(), LOG_RETRY_MS);
+  },
+
   async getPreviousHash(workspaceId: string): Promise<string> {
     if (!isSupabaseConfigured) return 'GENESIS_BLOCK';
     try {
@@ -37,12 +133,9 @@ export const activityLogService = {
     return sha256(message);
   },
 
-  async appendLog(entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash' | 'id' | 'created_at'>): Promise<boolean> {
+  async appendLogDirect(entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash' | 'id' | 'created_at'>): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
-    if (!entry.workspace_id) {
-      console.warn('ActivityLogService: appendLog skipped — no workspace_id');
-      return false;
-    }
+    if (!entry.workspace_id) return false;
     try {
       const previousHash = await this.getPreviousHash(entry.workspace_id);
       const hash = await this.computeHash(entry, previousHash);
@@ -57,6 +150,55 @@ export const activityLogService = {
         hash
       });
       if (error) {
+        if (error.code !== '42501') console.error('ActivityLogService: appendLog failed:', error);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error('ActivityLogService: appendLog exception:', e);
+      return false;
+    }
+  },
+
+  async appendLog(entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash' | 'id' | 'created_at'>): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+    if (!entry.workspace_id) {
+      console.warn('ActivityLogService: appendLog skipped — no workspace_id');
+      return false;
+    }
+
+    // Forensic preflight
+    const access = await verifyActivityLogAccess(entry.workspace_id);
+    console.log('[appendLog forensic]', { access, entry: { ...entry, metadata: '...' } });
+
+    if (!access.canInsert) {
+      this._queue.push({ entry, retries: 0 });
+      this._startQueue();
+      return false;
+    }
+
+    try {
+      const previousHash = await this.getPreviousHash(entry.workspace_id);
+      const hash = await this.computeHash(entry, previousHash);
+      const { error } = await supabase.from('activity_logs').insert({
+        workspace_id: entry.workspace_id,
+        actor_id: entry.actor_id,
+        project_id: entry.project_id,
+        task_id: entry.task_id,
+        action: entry.action,
+        metadata: entry.metadata,
+        previous_hash: previousHash,
+        hash
+      });
+      if (error) {
+        if (error.code === '42501') {
+          this._queue.push({ entry, retries: 0 });
+          this._startQueue();
+          if (!this._shouldThrottleRlsWarn(entry.workspace_id)) {
+            console.warn('[appendLog] RLS blocked — queued for retry:', error.message);
+          }
+          return false;
+        }
         console.error('ActivityLogService: appendLog failed:', error);
         return false;
       }
