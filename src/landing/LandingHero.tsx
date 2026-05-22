@@ -1,28 +1,20 @@
-import { motion, useScroll, useTransform } from 'motion/react';
-import { ArrowRight, ChevronDown, Shield } from 'lucide-react';
-import { fadeIn, slideUp } from '../lib/animation';
+import { motion } from 'motion/react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
+import { slideUp } from '../lib/animation';
 
 interface LandingHeroProps {
   verified: boolean;
 }
 
 export function LandingHero({ verified }: LandingHeroProps) {
-  const { scrollY } = useScroll();
-  const bgY = useTransform(scrollY, [0, 500], [0, 120]);
-  const opacity = useTransform(scrollY, [0, 400], [1, 0]);
-
   return (
-    <motion.section
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
-      style={{ opacity }}
-    >
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Grid background */}
-      <motion.div
+      <div
         className="absolute inset-0"
         style={{
           backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)',
           backgroundSize: '48px 48px',
-          y: bgY,
         }}
       />
 
@@ -31,15 +23,19 @@ export function LandingHero({ verified }: LandingHeroProps) {
       <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-blue-500/2 rounded-full blur-3xl" />
 
       <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
-        {/* Badge */}
+        {/* Logo */}
         <motion.div
           variants={slideUp}
           initial="hidden"
           animate="visible"
-          className="inline-flex items-center gap-2 px-3 py-1.5 border border-white/[0.06] bg-white/[0.02] mb-8"
+          className="mb-8"
         >
-          <Shield className="w-3 h-3 text-white/40" />
-          <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">Operational Command System</span>
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="w-14 h-14 border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-cover scale-110" />
+            </div>
+          </div>
+          <p className="text-[11px] font-mono uppercase tracking-widest text-white/50">Resolve PM</p>
         </motion.div>
 
         {/* Headline */}
@@ -111,6 +107,6 @@ export function LandingHero({ verified }: LandingHeroProps) {
       >
         <ChevronDown className="w-4 h-4 text-white/20 animate-bounce" />
       </motion.div>
-    </motion.section>
+    </section>
   );
 }
