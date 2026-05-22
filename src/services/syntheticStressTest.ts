@@ -622,8 +622,8 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       const batch = Array.from({ length: Math.min(CONCURRENCY, BATCH.events - i) }, (_, j) => ({
         workspace_id: wsId, user_id: syntheticActorId,
         title: simTag(runId, 'cal', i + j),
-        start_time: new Date(Date.now() + Math.random() * 30 * 86400000).toISOString(),
-        end_time: new Date(Date.now() + Math.random() * 30 * 86400000 + 3600000).toISOString(),
+        start_date: new Date(Date.now() + Math.random() * 30 * 86400000).toISOString(),
+        end_date: new Date(Date.now() + Math.random() * 30 * 86400000 + 3600000).toISOString(),
         event_type: 'meeting' as CalendarEventType,
       }));
       const promises = batch.map(r =>
@@ -806,8 +806,8 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     const cc1 = performance.now();
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
     const thirtyDaysLater = new Date(Date.now() + 30 * 86400000).toISOString();
-    await supabase.from('calendar_events').select('id, start_time, end_time').eq('workspace_id', wsId)
-      .like('title', `SST_${runId}_%`).gte('start_time', thirtyDaysAgo).lte('end_time', thirtyDaysLater);
+    await supabase.from('calendar_events').select('id, start_date, end_date').eq('workspace_id', wsId)
+      .like('title', `SST_${runId}_%`).gte('start_date', thirtyDaysAgo).lte('end_date', thirtyDaysLater);
     report.performance.calendarCalcMs = ms(cc1);
 
     // ─── EVENT SIMULATION ──────────────────────────────────────────
