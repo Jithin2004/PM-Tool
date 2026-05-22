@@ -44,6 +44,7 @@ export interface StressTestOptions {
   maxUsers?: number;
   maxProjects?: number;
   maxTasks?: number;
+  scale?: number;
 }
 
 export interface StressReport {
@@ -393,6 +394,17 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
   const maxProjects = options?.maxProjects ?? DEFAULT_MAX.projects;
   const maxTasks = options?.maxTasks ?? DEFAULT_MAX.tasks;
   const force = options?.force === true;
+  const scale = options?.scale ?? 1;
+  const BATCH = {
+    epics: Math.ceil(3000 * scale),
+    docs: Math.ceil(1000 * scale),
+    events: Math.ceil(2000 * scale),
+    webhooks: Math.ceil(500 * scale),
+    automations: Math.ceil(200 * scale),
+    approvals: Math.ceil(1000 * scale),
+    integrations: Math.ceil(50 * scale),
+    taskDeps: Math.ceil(30 * scale),
+  };
 
   if (!force && (maxUsers > DEFAULT_MAX.users * MAX_MULTIPLIER || maxProjects > DEFAULT_MAX.projects * MAX_MULTIPLIER || maxTasks > DEFAULT_MAX.tasks * MAX_MULTIPLIER)) {
     report.blocked = true;
@@ -475,7 +487,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
     // 4. Epics (via epicService)
     const epicIds: string[] = [];
-    const epicBatch = Array.from({ length: 3000 }, (_, i) => ({
+    const epicBatch = Array.from({ length: BATCH.epics }, (_, i) => ({
       workspace_id: wsId, project_id: projIds[i % projIds.length] || projIds[0],
       name: simTag(runId, 'epic', i), description: `Synthetic epic ${i}`,
       status: randomFrom(['backlog','in_progress','review','done'] as const), priority: randomFrom(TASK_PRIORITIES),
@@ -531,7 +543,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
     // 7. Documents (via documentService.createDocument)
     const docIds: string[] = [];
-    const docBatch = Array.from({ length: 1000 }, (_, i) => ({
+    const docBatch = Array.from({ length: BATCH.docs }, (_, i) => ({
       workspace_id: wsId, project_id: i < 800 ? projIds[i % projIds.length] : undefined,
       author_id: syntheticActorId,
       title: simTag(runId, 'doc', i), content: `Synthetic document ${i}.`,
@@ -550,8 +562,8 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
     // 8. Calendar Events (via calendarEventService.createEvent)
     let calCount = 0;
-    for (let i = 0; i < 2000; i += CONCURRENCY) {
-      const batch = Array.from({ length: Math.min(CONCURRENCY, 2000 - i) }, (_, j) => ({
+    for (let i = 0; i < BATCH.events; i += CONCURRENCY) {
+      const batch = Array.from({ length: Math.min(CONCURRENCY, BATCH.events - i) }, (_, j) => ({
         workspace_id: wsId, user_id: syntheticActorId,
         title: simTag(runId, 'cal', i + j),
         start_time: new Date(Date.now() + Math.random() * 30 * 86400000).toISOString(),
@@ -570,7 +582,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
     // 9. Integrations (via integrationService)
     let intCount = 0;
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < BATCH.integrations; i++) {
       const service = INTEGRATION_SERVICES[i % INTEGRATION_SERVICES.length];
       const acct = await callService(report, 'createConnectedAccount', {
         workspace_id: wsId, service, access_token: `sst_${runId}_token_${i}`, connected: i % 10 !== 0,
@@ -599,8 +611,8 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
     // 10. Webhooks (via webhookService.createWebhook)
     let whCount = 0;
-    for (let i = 0; i < 500; i += CONCURRENCY) {
-      const batch = Array.from({ length: Math.min(CONCURRENCY, 500 - i) }, (_, j) => ({
+    for (let i = 0; i < BATCH.webhooks; i += CONCURRENCY) {
+      const batch = Array.from({ length: Math.min(CONCURRENCY, BATCH.webhooks - i) }, (_, j) => ({
         workspace_id: wsId, name: simTag(runId, 'wh', i + j),
         url: `https://sst-webhook.local/${runId}/${i + j}`, events: pickMany(WEBHOOK_EVENTS, 3), enabled: true,
       }));
@@ -622,8 +634,8 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       { type: 'create_task', params: { title: 'SST Follow-up' } },
       { type: 'assign_task', params: { assignee_id: '' } },
     ];
-    for (let i = 0; i < 200; i += CONCURRENCY) {
-      const batch = Array.from({ length: Math.min(CONCURRENCY, 200 - i) }, (_, j) => ({
+    for (let i = 0; i < BATCH.automations; i += CONCURRENCY) {
+      const batch = Array.from({ length: Math.min(CONCURRENCY, BATCH.automations - i) }, (_, j) => ({
         workspace_id: wsId, name: simTag(runId, 'auto', i + j),
         trigger_event: randomFrom(WEBHOOK_EVENTS), actions: [randomFrom(autoActions)],
         enabled: true, trigger_filters: {},
@@ -640,8 +652,8 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
     // 12. Approvals (via createApprovalChain + createApprovalInstance)
     const chainIds: string[] = [];
-    for (let i = 0; i < 50; i += CONCURRENCY) {
-      const batch = Array.from({ length: Math.min(CONCURRENCY, 50 - i) }, (_, j) => ({
+    for (let i = 0; i < BATCH.approvals; i += CONCURRENCY) {
+      const batch = Array.from({ length: Math.min(CONCURRENCY, BATCH.approvals - i) }, (_, j) => ({
         workspace_id: wsId, name: simTag(runId, 'chain', i + j),
         enabled: true, trigger_config: { event: randomFrom(WEBHOOK_EVENTS) },
       }));
@@ -654,8 +666,8 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       }
     }
     let appCount = 0;
-    for (let i = 0; i < 1000; i += CONCURRENCY) {
-      const batch = Array.from({ length: Math.min(CONCURRENCY, 1000 - i) }, () => ({
+    for (let i = 0; i < BATCH.approvals; i += CONCURRENCY) {
+      const batch = Array.from({ length: Math.min(CONCURRENCY, BATCH.approvals - i) }, () => ({
         chain_id: chainIds[Math.floor(Math.random() * chainIds.length)],
         target_type: 'task' as const,
         target_id: taskIds[Math.floor(Math.random() * taskIds.length)] || taskIds[0],
