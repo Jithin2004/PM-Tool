@@ -222,7 +222,7 @@ export async function executeAutomationRule(
   workspaceId: string, ruleId: string, event: string, payload: Record<string, any>
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const { data: rule } = await supabase.from('automation_rules').select('*').eq('id', ruleId).single();
+    const { data: rule } = await supabase.from('automation_rules').select('*').eq('id', ruleId).maybeSingle();
     if (!rule) return { success: false, message: 'Rule not found' };
     for (const action of rule.actions) {
       await executeAction(action, workspaceId, { ...payload, trigger_event: event });

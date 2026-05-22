@@ -339,18 +339,23 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
   const existingLock = checkLock();
   if (existingLock) {
-    report.blocked = true;
-    report.blockReason = `Concurrent stress test already running (runId: ${existingLock.runId}).`;
-    report.riskLevel = 'HIGH';
-    report.endTime = nowISO(); report.durationMs = ms(t0);
-    report.recommendations.push('Blocked: concurrent stress test rejected.');
-    if (!dryRun) {
-      try {
-        const { data: w } = await supabase.from('workspaces').select('id').limit(1);
-        if (w?.[0]) await activityLogService.logStressTestBlocked(w[0].id, `Concurrent run blocked (existing: ${existingLock})`, runId);
-      } catch { /* noop */ }
+    if (force) {
+      clearLock();
+      console.log('[stress] FORCE_UNLOCK', { cleared: existingLock.runId });
+    } else {
+      report.blocked = true;
+      report.blockReason = `Concurrent stress test already running (runId: ${existingLock.runId}). Use force:true to override.`;
+      report.riskLevel = 'HIGH';
+      report.endTime = nowISO(); report.durationMs = ms(t0);
+      report.recommendations.push('Blocked: concurrent stress test rejected.');
+      if (!dryRun) {
+        try {
+          const { data: w } = await supabase.from('workspaces').select('id').limit(1);
+          if (w?.[0]) await activityLogService.logStressTestBlocked(w[0].id, `Concurrent run blocked (existing: ${existingLock})`, runId);
+        } catch { /* noop */ }
+      }
+      return report;
     }
-    return report;
   }
 
   if (!isSupabaseConfigured) {
