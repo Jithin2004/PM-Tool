@@ -620,11 +620,12 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let calCount = 0;
     for (let i = 0; i < BATCH.events; i += CONCURRENCY) {
       const batch = Array.from({ length: Math.min(CONCURRENCY, BATCH.events - i) }, (_, j) => ({
-        workspace_id: wsId, user_id: syntheticActorId,
+        workspace_id: wsId,
         title: simTag(runId, 'cal', i + j),
         start_date: new Date(Date.now() + Math.random() * 30 * 86400000).toISOString(),
         end_date: new Date(Date.now() + Math.random() * 30 * 86400000 + 3600000).toISOString(),
         event_type: 'meeting' as CalendarEventType,
+        capacity_impact: 1.0,
       }));
       const promises = batch.map(r =>
         callService(report, 'calendarEventService.createEvent', r, () => calendarEventService.createEvent(r))
