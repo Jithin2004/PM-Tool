@@ -7,7 +7,6 @@ import { createApprovalChain, createApprovalInstance } from './approvalService';
 import { sprintService } from './sprintService';
 import { calendarEventService } from './calendarEventService';
 import type { CalendarEvent } from './calendarEventService';
-import { provisionSyntheticUser } from './userProvisionService';
 import { createTeam } from './teamService';
 import { createProject } from './projectService';
 import { createEpic } from './epicService';
@@ -31,10 +30,9 @@ export interface FailedOperation {
   timestamp: string;
 }
 
-const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'SDLC', 'HYBRID'] as const;
+const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'SDLC', 'CUSTOM'] as const;
 const TASK_STATUSES = ['backlog', 'ready', 'in_progress', 'review', 'done'] as const;
 const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
-const USER_ROLES = ['super_admin', 'pm', 'dev', 'viewer'] as const;
 const INTEGRATION_SERVICES = ['github', 'gitlab', 'figma', 'google_calendar', 'google_drive', 'slack', 'jira', 'notion', 'asana', 'trello'] as const;
 const WEBHOOK_EVENTS = ['task.created', 'task.updated', 'task.completed', 'project.created', 'sprint.completed', 'approval.completed', 'document.created'];
 
@@ -69,7 +67,9 @@ export interface StressReport {
     timeMs: number; stressRlsErrors: number; blockedTables: number;
     rlsErrorTables: string[]; serviceFallbacks: number; skippedDueToRls: number;
     servicePathCount: number; rawInsertCount: number;
+    successfulOperations: number;
   };
+  failureSummaryByService: Record<string, number>;
   performance: {
     projectPageLoadMs: number; portfolioLoadMs: number; timelineCalcMs: number;
     ganttRenderMs: number; commandPaletteSearchMs: number; queueDepth: number;
@@ -122,9 +122,11 @@ async function callService<T>(
 ): Promise<T | null> {
   report.generation.servicePathCount++;
   let result: T | null = null;
+  let caught = false;
   try {
     result = await withTimeout(fn(), SERVICE_TIMEOUT_MS);
   } catch (err: any) {
+    caught = true;
     const norm = normalizeSupabaseError(err);
     console.log('[service insert failed]', { service: serviceName, payload, error: norm.message, code: norm.code, details: norm.details, hint: norm.hint });
     report.failedOperations.push({ service: serviceName, payload, error: norm.message, code: norm.code, details: norm.details, hint: norm.hint, timestamp: nowISO() });
@@ -132,7 +134,7 @@ async function callService<T>(
     report.generation.serviceFallbacks++;
     return null;
   }
-  if (result === null || result === false) {
+  if (!caught && (result === null || result === false)) {
     report.failedOperations.push({
       service: serviceName,
       payload,
@@ -152,12 +154,13 @@ function makeBaseReport(runId: string, startTime: string): StressReport {
   return {
     simulationRunId: runId, startTime, endTime: '', durationMs: 0,
     blocked: false, dryRun: false,
-    generation: { usersCreated: 0, teamsCreated: 0, projectsCreated: 0, epicsCreated: 0, tasksCreated: 0, documentsCreated: 0, calendarEventsCreated: 0, integrationsCreated: 0, webhooksCreated: 0, automationsCreated: 0, approvalsCreated: 0, timeMs: 0, stressRlsErrors: 0, blockedTables: 0, rlsErrorTables: [], serviceFallbacks: 0, skippedDueToRls: 0, servicePathCount: 0, rawInsertCount: 0 },
+    generation: { usersCreated: 0, teamsCreated: 0, projectsCreated: 0, epicsCreated: 0, tasksCreated: 0, documentsCreated: 0, calendarEventsCreated: 0, integrationsCreated: 0, webhooksCreated: 0, automationsCreated: 0, approvalsCreated: 0, timeMs: 0, stressRlsErrors: 0, blockedTables: 0, rlsErrorTables: [], serviceFallbacks: 0, skippedDueToRls: 0, servicePathCount: 0, rawInsertCount: 0, successfulOperations: 0 },
     performance: { projectPageLoadMs: 0, portfolioLoadMs: 0, timelineCalcMs: 0, ganttRenderMs: 0, commandPaletteSearchMs: 0, queueDepth: 0, memoryEstimateMB: 0, apiThroughput: 0, automationExecMs: 0, webhookProcessingMs: 0, documentSearchMs: 0, calendarCalcMs: 0, slowestQueries: [], largestRenderTrees: [] },
     events: { taskUpdates: 0, sprintCompletions: 0, automationTriggers: 0, integrationSyncs: 0, approvalsProcessed: 0, refreshOperations: 0, recoveryOperations: 0, browserInterruptions: 0, timeMs: 0 },
     cleanup: { recordsBefore: {}, recordsAfter: {}, simRecordsRemaining: {}, success: false, timeMs: 0, orphanCount: 0 },
     riskLevel: 'LOW', recommendations: [],
     partialFailure: false, failedOperations: [],
+    failureSummaryByService: {},
   };
 }
 
@@ -381,6 +384,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     return report;
   }
   const wsId = userRow.workspace_id;
+  const syntheticActorId = authUser.id;
 
   const maxUsers = options?.maxUsers ?? DEFAULT_MAX.users;
   const maxProjects = options?.maxProjects ?? DEFAULT_MAX.projects;
@@ -429,29 +433,13 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
     const genStart = performance.now();
 
-    // 1. Users (via userProvisionService)
-    const userIds: string[] = [];
-    const userBatch = Array.from({ length: maxUsers }, (_, i) => ({
-      workspace_id: wsId, email: `${simTag(runId, 'user', i)}@sim.local`,
-      full_name: simTag(runId, 'user', i), role: randomFrom(USER_ROLES),
-      availability_factor: 0.4 + Math.random() * 0.6,
-      synthetic: true, runId,
-    }));
-    for (let i = 0; i < userBatch.length; i += CONCURRENCY) {
-      const promises = userBatch.slice(i, i + CONCURRENCY).map(r =>
-        callService(report, 'provisionSyntheticUser', r, () => provisionSyntheticUser(r))
-      );
-      const results = await Promise.allSettled(promises);
-      for (const result of results) {
-        if (result.status === 'fulfilled' && result.value?.id) userIds.push(result.value.id);
-      }
-    }
-    report.generation.usersCreated = userIds.length;
+    // 1. Users — not synthetic; reuse authenticated actor
+    report.generation.usersCreated = 0;
 
     // 2. Teams (via teamService)
     const teamIds: string[] = [];
     const teamNames = ['Alpha','Beta','Gamma','Delta','Epsilon','Zeta','Eta','Theta','Iota','Kappa','Lambda','Mu','Nu','Xi','Omicron','Pi','Rho','Sigma','Tau','Upsilon'];
-    const teamBatch = teamNames.map((_, i) => ({ workspace_id: wsId, name: simTag(runId, 'team', i), description: `Synthetic team ${teamNames[i]}`, synthetic: true, runId }));
+    const teamBatch = teamNames.map((_, i) => ({ workspace_id: wsId, name: simTag(runId, 'team', i), synthetic: true, runId }));
     for (let i = 0; i < teamBatch.length; i += CONCURRENCY) {
       const promises = teamBatch.slice(i, i + CONCURRENCY).map(r =>
         callService(report, 'createTeam', r, () => createTeam(r))
@@ -467,7 +455,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     const projIds: string[] = [];
     const projBatch = Array.from({ length: maxProjects }, (_, i) => ({
       workspace_id: wsId, name: simTag(runId, 'proj', i), description: `Synthetic project ${i}`,
-      status: randomFrom(['active','deployed','archived'] as const),
+      status: randomFrom(['planning', 'active', 'review', 'done', 'archived'] as const),
       execution_mode: EXECUTION_MODES[i % EXECUTION_MODES.length],
       synthetic: true, runId,
     }));
@@ -509,7 +497,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       name: simTag(runId, 'task', i), status: randomFrom(TASK_STATUSES),
       priority: randomFrom(TASK_PRIORITIES), estimated_hours: Math.floor(Math.random() * 80) + 1,
       story_points: Math.floor(Math.random() * 13) + 1,
-      assignee_id: userIds[i % userIds.length] || userIds[0],
+      assignee_id: syntheticActorId,
       synthetic: true, runId,
     }));
     for (let i = 0; i < taskBatch.length; i += CONCURRENCY) {
@@ -542,7 +530,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     const docIds: string[] = [];
     const docBatch = Array.from({ length: 1000 }, (_, i) => ({
       workspace_id: wsId, project_id: i < 800 ? projIds[i % projIds.length] : undefined,
-      author_id: userIds[i % userIds.length],
+      author_id: syntheticActorId,
       title: simTag(runId, 'doc', i), content: `Synthetic document ${i}.`,
       doc_type: 'markdown' as const, tags: pickMany(['spec','design','api','arch','ops'], 3),
     }));
@@ -561,7 +549,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let calCount = 0;
     for (let i = 0; i < 2000; i += CONCURRENCY) {
       const batch = Array.from({ length: Math.min(CONCURRENCY, 2000 - i) }, (_, j) => ({
-        workspace_id: wsId, user_id: userIds[(i + j) % userIds.length] || userIds[0],
+        workspace_id: wsId, user_id: syntheticActorId,
         title: simTag(runId, 'cal', i + j),
         start_time: new Date(Date.now() + Math.random() * 30 * 86400000).toISOString(),
         end_time: new Date(Date.now() + Math.random() * 30 * 86400000 + 3600000).toISOString(),
@@ -669,7 +657,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
         target_type: 'task' as const,
         target_id: taskIds[Math.floor(Math.random() * taskIds.length)] || taskIds[0],
         current_step: Math.floor(Math.random() * 3) + 1,
-        initiated_by: userIds[Math.floor(Math.random() * userIds.length)] || userIds[0],
+        initiated_by: syntheticActorId,
       }));
       const promises = batch.map(r =>
         callService(report, 'createApprovalInstance', r, () => createApprovalInstance(r))
@@ -855,6 +843,16 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     if (report.performance.timelineCalcMs > 2000) report.recommendations.push('Timeline calculations are slow');
     if (report.recommendations.length === 0) report.recommendations.push('All measured metrics within acceptable thresholds');
 
+    // ─── FAILURE SUMMARY ──────────────────────────────────────────
+    report.generation.successfulOperations = report.generation.servicePathCount - report.generation.serviceFallbacks;
+    for (const op of report.failedOperations) {
+      report.failureSummaryByService[op.service] = (report.failureSummaryByService[op.service] || 0) + 1;
+    }
+    if (report.failedOperations.length > 0 && (report.riskLevel === 'LOW' || report.riskLevel === 'MEDIUM')) {
+      report.riskLevel = 'MEDIUM';
+      report.recommendations.push(`${report.failedOperations.length} service operations failed — risk escalated to MEDIUM`);
+    }
+
     // ─── CLEANUP ───────────────────────────────────────────────────
     const cleanStart = performance.now();
     const allTables = [
@@ -910,7 +908,6 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     deleteOps.push(async () => { await supabase.from('activity_logs').delete().eq('workspace_id', wsId).filter('metadata->>run_id', 'eq', runId); });
     deleteOps.push(() => supabase.from('teams').delete().eq('workspace_id', wsId).like('name', `SST_${runId}_%`));
     deleteOps.push(() => supabase.from('projects').delete().eq('workspace_id', wsId).like('name', `SST_${runId}_%`));
-    deleteOps.push(() => supabase.from('users').delete().eq('workspace_id', wsId).like('email', `SST_${runId}_%`));
 
     for (const op of deleteOps) { try { await op(); } catch { /* best effort */ } }
 
@@ -961,23 +958,22 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
   } finally {
     clearLock();
     console.log('[stress] LOCK_CLEARED', { runId });
-  }
 
-  // Persist in BOTH success and finally path
-  console.log('[stress] REPORT_BUILD', { runId });
-  const validation = validateStressReport(report);
-  if (!validation.valid) {
-    console.warn('[stress] REPORT_INVALID', validation.missingFields);
-    // Fallback: persist minimal report
-    persistMinimalReport(runId, report);
-  } else {
-    persistReport(report);
-  }
-  broadcastSyntheticCleanup();
+    // Finalize: persist report, broadcast cleanup, set endTime
+    console.log('[stress] REPORT_BUILD', { runId });
+    const validation = validateStressReport(report);
+    if (!validation.valid) {
+      console.warn('[stress] REPORT_INVALID', validation.missingFields);
+      persistMinimalReport(runId, report);
+    } else {
+      persistReport(report);
+    }
+    broadcastSyntheticCleanup();
 
-  report.endTime = nowISO();
-  report.durationMs = ms(t0);
-  console.log('[stress] REPORT_DONE', { runId, durationMs: report.durationMs, riskLevel: report.riskLevel });
+    report.endTime = nowISO();
+    report.durationMs = ms(t0);
+    console.log('[stress] REPORT_DONE', { runId, durationMs: report.durationMs, riskLevel: report.riskLevel });
+  }
   return report;
 }
 

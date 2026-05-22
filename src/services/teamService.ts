@@ -5,7 +5,6 @@ import { logServiceFailure } from '../utils/supabaseError';
 export interface CreateTeamInput {
   workspace_id: string;
   name: string;
-  description?: string;
   synthetic?: boolean;
   runId?: string;
 }
@@ -18,7 +17,6 @@ export async function createTeam(input: CreateTeamInput): Promise<{ id: string }
       .insert({
         workspace_id: input.workspace_id,
         name: input.name,
-        description: input.description || '',
       })
       .select('id')
       .maybeSingle();
