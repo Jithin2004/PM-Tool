@@ -25,6 +25,12 @@ create policy "Activity logs can be inserted by workspace members"
 on activity_logs for insert
 with check (workspace_id in (select workspace_id from users where id = auth.uid()));
 
+-- Recreate DELETE policy with subquery (was missing — FOR ALL was dropped but no DELETE policy created)
+drop policy if exists "Activity logs can be deleted by workspace members" on activity_logs;
+create policy "Activity logs can be deleted by workspace members"
+on activity_logs for delete
+using (workspace_id in (select workspace_id from users where id = auth.uid()));
+
 -- Verify
 select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
 from pg_policies

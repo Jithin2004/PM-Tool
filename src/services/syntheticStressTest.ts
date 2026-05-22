@@ -1031,7 +1031,9 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     clearLock();
     console.log('[stress] LOCK_CLEARED', { runId });
 
-    // Finalize: persist report, broadcast cleanup, set endTime
+    // Finalize: set endTime/durationMs FIRST, then persist
+    report.endTime = nowISO();
+    report.durationMs = ms(t0);
     console.log('[stress] REPORT_BUILD', { runId });
     const validation = validateStressReport(report);
     if (!validation.valid) {
@@ -1041,9 +1043,6 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       persistReport(report);
     }
     broadcastSyntheticCleanup();
-
-    report.endTime = nowISO();
-    report.durationMs = ms(t0);
     console.log('[stress] REPORT_DONE', { runId, durationMs: report.durationMs, riskLevel: report.riskLevel });
   }
   return report;

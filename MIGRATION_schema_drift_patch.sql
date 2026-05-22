@@ -1,6 +1,6 @@
 -- ============================================================
 -- MIGRATION: Schema Drift Patch
--- Fixes 3 schema drifts discovered by synthetic stress test
+-- Fixes 4 schema drifts discovered by synthetic stress test
 -- Run this in your Supabase Dashboard > SQL Editor
 -- Safe to re-run (uses IF NOT EXISTS / DO blocks)
 -- ============================================================
@@ -32,6 +32,15 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- 3. activity_logs: add missing DELETE RLS policy
+--    MIGRATION_activity_logs_rls_hotfix.sql dropped the FOR ALL policy and
+--    recreated SELECT/INSERT with subquery, but never created a DELETE policy.
+--    This causes cleanup to silently fail deleting 64+ orphan activity_logs.
+DROP POLICY IF EXISTS "Activity logs can be deleted by workspace members" ON activity_logs;
+CREATE POLICY "Activity logs can be deleted by workspace members"
+  ON activity_logs FOR DELETE
+  USING (workspace_id IN (SELECT workspace_id FROM users WHERE id = auth.uid()));
+
 -- ============================================================
 -- Verification queries (run separately to confirm)
 -- ============================================================
@@ -39,3 +48,5 @@ END $$;
 --   WHERE table_name = 'connected_accounts' ORDER BY ordinal_position;
 -- SELECT conname, conkey FROM pg_constraint
 --   WHERE conrelid = 'task_dependencies'::regclass;
+-- SELECT schemaname, tablename, policyname, cmd FROM pg_policies
+--   WHERE tablename = 'activity_logs' ORDER BY policyname;
