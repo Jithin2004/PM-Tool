@@ -419,18 +419,18 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       const dbWrites = maxUsers + 20 + maxProjects + 3000 + maxTasks + 1000 + 2000 + 150 + 500 + 200 + 1000;
       report.estimated = { records: estimate, dbWrites, cleanupTargets: { users: `email LIKE 'SST_${runId}_%'`, projects: `name LIKE 'SST_${runId}_%'`, tasks: `name LIKE 'SST_${runId}_%'` } };
       report.recommendations.push(`DRY RUN: Would generate ~${dbWrites} DB writes. Zero inserts performed.`);
-      await activityLogService.logStressTestDryRun(wsId, runId, estimate);
+      withTimeout(activityLogService.logStressTestDryRun(wsId, runId, estimate), 5000).catch(() => {});
       report.endTime = nowISO(); report.durationMs = ms(t0);
       return report;
     }
 
     console.log('[stress] RUN_STARTED', { runId, wsId, t: startTime });
 
-    await activityLogService.appendLog({
+    withTimeout(activityLogService.appendLog({
       workspace_id: wsId, actor_id: undefined,
       action: 'stress_test_started',
       metadata: { run_id: runId, test: 'synthetic_stress', timestamp: startTime },
-    });
+    }), 5000).catch(() => {});
 
     // ─── GENERATION ────────────────────────────────────────────────
 
@@ -949,8 +949,8 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       stressMeta.rls_blocked_tables = report.generation.rlsErrorTables;
       stressMeta.service_fallbacks = report.generation.serviceFallbacks;
     }
-    await activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_test_completed', metadata: stressMeta });
-    await activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_cleanup_completed', metadata: { run_id: runId, success: report.cleanup.success, orphan_count: report.cleanup.orphanCount, remaining, cleanup_ms: Math.round(report.cleanup.timeMs) } });
+    withTimeout(activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_test_completed', metadata: stressMeta }), 5000).catch(() => {});
+    withTimeout(activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_cleanup_completed', metadata: { run_id: runId, success: report.cleanup.success, orphan_count: report.cleanup.orphanCount, remaining, cleanup_ms: Math.round(report.cleanup.timeMs) } }), 5000).catch(() => {});
 
     console.log('[stress] RUN_COMPLETED', { runId, success: report.cleanup.success });
 
