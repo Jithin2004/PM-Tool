@@ -946,7 +946,14 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       .eq('workspace_id', workspace.id)
       .order('created_at', { ascending: true });
 
-    if (!error && data) setProfiles(data);
+    if (!error && data) {
+      setProfiles(data);
+    } else {
+      const { data: fallback, error: fallbackErr } = await supabase
+        .from('profiles')
+        .select('*');
+      if (!fallbackErr && fallback) setProfiles(fallback as any);
+    }
   };
 
   const fetchAttendance = async () => {

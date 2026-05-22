@@ -25,6 +25,7 @@ const SprintView = React.memo(function SprintView({
       {scrumProjects.map(project => (
         <SprintBoard
           key={project.id}
+          project={project}
           projectId={project.id}
           workspaceId={project.workspace_id}
           sprints={[]}

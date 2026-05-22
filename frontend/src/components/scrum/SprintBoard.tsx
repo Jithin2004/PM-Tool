@@ -16,6 +16,7 @@ import { activityLogService } from '../../services/activityLogService';
 type ScrumTab = 'product-backlog' | 'sprint-planner' | 'sprint-backlog' | 'active-sprint' | 'sprint-review' | 'velocity-analytics' | 'definition-of-done';
 
 interface SprintBoardProps {
+  project: Project;
   projectId: string;
   workspaceId: string;
   sprints: Sprint[];
@@ -33,7 +34,7 @@ interface SprintBoardProps {
 }
 
 export function SprintBoard({
-  projectId, workspaceId, sprints, tasks, users, epics, calendarEvents = [],
+  project, projectId, workspaceId, sprints, tasks, users, epics, calendarEvents = [],
   currentUserProfile, notify, onUpdateTaskStatus, onCreateTask, onCreateSprint,
   onConvertToScrum, allKanbanProjects
 }: SprintBoardProps) {
@@ -570,7 +571,7 @@ export function SprintBoard({
 
       {/* Modals */}
       <AnimatePresence>
-        <TaskCreateModal isOpen={isAddingTask} onClose={() => setIsAddingTask(false)} projects={[]} users={users} defaultStatus="backlog" onSubmit={onCreateTask} notify={notify} />
+        <TaskCreateModal isOpen={isAddingTask} onClose={() => setIsAddingTask(false)} projects={[project]} users={users} defaultStatus="backlog" defaultProjectId={project.id} onSubmit={onCreateTask} notify={notify} />
 
         {isCreatingSprint && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">

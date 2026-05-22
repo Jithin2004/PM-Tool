@@ -169,7 +169,7 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
       </div>
 
       <AnimatePresence>
-        <TaskCreateModal isOpen={isAddingTask} onClose={() => setIsAddingTask(false)} projects={[]} users={users} defaultStatus="backlog" onSubmit={onCreateTask} notify={notify} />
+        <TaskCreateModal isOpen={isAddingTask} onClose={() => setIsAddingTask(false)} projects={[project]} users={users} defaultStatus="backlog" defaultProjectId={project.id} onSubmit={onCreateTask} notify={notify} />
       </AnimatePresence>
     </div>
   );
