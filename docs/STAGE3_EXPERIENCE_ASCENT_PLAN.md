@@ -538,6 +538,48 @@ Before any Stage 3 code is merged:
 
 ---
 
+## Appendix C: Production Activation
+
+### Enabling Feature Flags
+
+All Stage 3 features default to **OFF** in production. Enable via browser DevTools console:
+
+```js
+// Enable all Stage 3 features
+localStorage.setItem('resolve-feature-command-center', 'true');
+localStorage.setItem('resolve-feature-command-palette', 'true');
+localStorage.setItem('resolve-feature-realtime', 'true');
+```
+
+Toggle individual features:
+
+```js
+// Toggle with auto-persist
+import { toggleFeature, isFeatureEnabled } from './features/flags';
+toggleFeature('command-center');
+console.log('command-center enabled:', isFeatureFeatureEnabled('command-center'));
+```
+
+Verify active flags:
+
+```js
+console.table(Object.entries(localStorage).filter(([k]) => k.startsWith('resolve-feature')));
+```
+
+Flags persist across reloads and deploys. No Vite/ dev-only dependency.
+
+### Production Safety Guarantees
+
+- No `import.meta.env.DEV` or runtime dev tooling required
+- All components tree-shaken when flags are OFF
+- Zero direct DB mutations (all routing through Stage 2 domain services)
+- Realtime subscriptions cleanup on unmount (no memory leaks)
+- Abort controller pattern on all async queries
+- SSR-safe with `typeof window === 'undefined'` guard
+- All side effects gated behind feature flag checks
+
+---
+
 ## Appendix B: Success Metrics
 
 | Metric | Current | Stage 3 Target |
