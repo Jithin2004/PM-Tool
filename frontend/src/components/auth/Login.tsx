@@ -1,17 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Zap } from 'lucide-react';
+import { Activity, Zap, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
+function getErrorParam(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('error');
+}
+
 export function Login() {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const err = getErrorParam();
+    if (err === 'uninvited') {
+      setError('Your account is not invited. Ask your admin to invite you.');
+      window.history.replaceState(null, '', '/login');
+    }
+  }, []);
+
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: window.location.origin
       }
     });
-    if (error) console.error("Auth error:", error);
+    if (signInError) console.error("Auth error:", signInError);
   };
 
   return (
@@ -35,6 +50,13 @@ export function Login() {
         </div>
 
         <div className="space-y-6">
+          {error && (
+            <div className="flex items-start gap-3 border border-red-500/25 bg-red-500/5 p-4">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-[12px] font-mono text-red-300 leading-relaxed">{error}</p>
+            </div>
+          )}
+
           <div className="bg-white/5 border border-white/10 p-6 text-xs font-mono text-white/85 leading-relaxed">
             <p className="mb-4">SYSTEM_ACCESS_PROTOCOL: v6.0.1</p>
             <p>Authorized personnel only. By entering, you consent to predictive bias modeling and historical data aggregation.</p>
@@ -60,6 +82,10 @@ export function Login() {
             ENCLAVE_ACTIVE
           </div>
         </div>
+
+        <a href="/" className="block text-center mt-6 text-[10px] font-mono text-white/20 hover:text-white/40 transition-colors">
+          Back to Landing
+        </a>
       </motion.div>
     </div>
   );

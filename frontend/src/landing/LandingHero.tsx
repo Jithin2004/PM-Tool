@@ -96,6 +96,22 @@ export function LandingHero({ verified }: LandingHeroProps) {
             </>
           )}
         </motion.div>
+
+        {/* Already Invited */}
+        <motion.div
+          variants={slideUp}
+          initial="hidden"
+          animate="visible"
+          className="mt-10"
+        >
+          <a
+            href="/login"
+            className="inline-flex items-center gap-2 text-[11px] font-mono text-white/30 hover:text-white/60 transition-colors"
+          >
+            Already invited?
+            <span className="underline underline-offset-2">Login</span>
+          </a>
+        </motion.div>
       </div>
 
       {/* Scroll indicator */}
