@@ -8,6 +8,9 @@ import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
 import { ProjectWorkspace } from '../pages/dashboard/ProjectWorkspace';
 import { WorkspaceSetupPage } from '../pages/onboarding/WorkspaceSetupPage';
 import { ProjectCreatePage } from '../pages/project/ProjectCreatePage';
+import { LandingPage } from '../landing/LandingPage';
+import { ProductKeyGate } from '../components/auth/ProductKeyGate';
+import { isProductKeyVerified } from '../lib/productKey';
 
 // ── Lazy-loaded route pages ──
 
@@ -99,6 +102,31 @@ export function ResolveRouter() {
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
   const { profile, logout, loading: authLoading, profileResolved, profileHydrating } = useAuth();
 
+  // ── Public routes (no auth, no product key required) ──
+
+  if (pathname === '/') {
+    return <LandingPage />;
+  }
+
+  if (pathname === '/activate') {
+    return (
+      <ProductKeyGate
+        onVerified={() => {
+          window.history.pushState(null, '', '/workspace');
+          window.dispatchEvent(new Event('popstate'));
+        }}
+      />
+    );
+  }
+
+  // ── Product key gate ──
+
+  if (!isProductKeyVerified()) {
+    window.history.replaceState(null, '', '/');
+    window.dispatchEvent(new CustomEvent('popstate'));
+    return null;
+  }
+
   if (workspaceLoading || authLoading || !profileResolved || profileHydrating) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white">
@@ -144,7 +172,7 @@ export function ResolveRouter() {
 
   // ── WORKSPACE routes ──
 
-  if (pathname === '/workspace' || pathname === '/') {
+  if (pathname === '/workspace') {
     return <RouteShell><ProjectsPage /></RouteShell>;
   }
   if (pathname === '/workspace/portfolio') {
