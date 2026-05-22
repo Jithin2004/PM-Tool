@@ -1,10 +1,17 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertCircle, Clock, Users, ChevronRight } from 'lucide-react';
 import { Project, Team, User, Profile } from '../../types';
 import { calculateExpectedTime, calculateVariance, getRelativeTime } from '../../utils/timeUtils';
+import { addWorkingHours, getDailyCapacity } from '../../utils/productivity';
 
-export function ProjectCard({ project, teams, profiles, workingHoursPerDay, onClick }: { project: Project; teams: Team[]; profiles: Profile[]; workingHoursPerDay: number; onClick: (p: Project) => void }) {
+export function ProjectCard({ project, teams, profiles, workingHoursPerDay, workingTimeFrom = '09:00', workingTimeTo = '17:00', onClick }: { project: Project; teams: Team[]; profiles: Profile[]; workingHoursPerDay: number; workingTimeFrom?: string; workingTimeTo?: string; onClick: (p: Project) => void }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   const creator = profiles.find(p => p.id === project.owner_id);
   const historicalTeam = project.tags.find(t => t.startsWith('TEAM:'))?.replace('TEAM:', '');
   const team = teams.find(t => t.id === project.team_id);
@@ -18,20 +25,33 @@ export function ProjectCard({ project, teams, profiles, workingHoursPerDay, onCl
   );
 
   const productiveHoursPerDay = workingHoursPerDay * 0.8;
-  const calendarDays = (expectedRealHours / productiveHoursPerDay / engineerCount).toFixed(1);
   const stdDev = Math.sqrt(calculateVariance(project.pert_best, project.pert_worst));
 
   const riskColor = stdDev < 1.5 ? 'text-green-400' : stdDev < 3 ? 'text-yellow-400' : 'text-red-500';
   const riskLabel = stdDev < 1.5 ? 'STABLE' : stdDev < 3 ? 'CAUTION' : 'HIGH_RISK';
 
-  // ETA Calibration Logic
+  // ETA using working hours only (re-computed on each tick for live countdown)
   const startDate = project.proposed_start_date ? new Date(project.proposed_start_date) : new Date(project.created_at);
-  const now = new Date();
-  const daysPassed = Math.max(0, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const now = useMemo(() => new Date(), [tick]);
+  const workWindow = useMemo(() => ({ workStart: workingTimeFrom, workEnd: workingTimeTo, lunchDuration: 60, workingDays: [1, 2, 3, 4, 5], productivityFactor: 0.8, holidays: [], shutdowns: [] }), [workingTimeFrom, workingTimeTo]);
 
-  const remainingDays = Math.max(0, Number(calendarDays) - daysPassed);
+  const completionDate = useMemo(() => {
+    const totalHours = (expectedRealHours / engineerCount);
+    return addWorkingHours(startDate, totalHours, workWindow);
+  }, [startDate, expectedRealHours, engineerCount]);
 
-  const completionDate = new Date(startDate.getTime() + Number(calendarDays) * 24 * 60 * 60 * 1000);
+  const remainingDays = useMemo(() => {
+    if (now >= completionDate) return 0;
+    let count = 0;
+    let cursor = new Date(now);
+    while (cursor < completionDate) {
+      const cap = getDailyCapacity(cursor, workWindow);
+      if (cap > 0) count += cap / workingHoursPerDay;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return Math.max(0, Number(count.toFixed(1)));
+  }, [now, completionDate, workWindow, workingHoursPerDay]);
+
   const completionDateStr = completionDate.toLocaleDateString('en-GB', {
     weekday: 'short',
     day: 'numeric',

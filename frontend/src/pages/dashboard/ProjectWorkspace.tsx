@@ -826,6 +826,8 @@ export function ProjectWorkspace({
                       teams={activeTeams}
                       profiles={profiles}
                       workingHoursPerDay={workingHoursPerDay}
+                      workingTimeFrom="09:00"
+                      workingTimeTo="17:00"
                       onClick={setSelectedProject}
                     />
                   </motion.div>
