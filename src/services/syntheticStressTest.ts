@@ -1,18 +1,72 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { activityLogService } from './activityLogService';
-import { fireEventWebhooks, createWebhook } from './webhookService';
-import { evaluateTriggers, createAutomationRule } from './automationEngine';
-import { createDocument } from './documentService';
-import { createApprovalChain, createApprovalInstance } from './approvalService';
-import { sprintService } from './sprintService';
-import { calendarEventService } from './calendarEventService';
-import type { CalendarEvent } from './calendarEventService';
-import { createTeam } from './teamService';
-import { createProject } from './projectService';
-import { createEpic } from './epicService';
-import { createTask, createTaskDependency } from './taskService';
-import { createConnectedAccount, createIntegrationConfig, createIntegrationSyncJob } from './integrationService';
 import { normalizeSupabaseError } from '../utils/supabaseError';
+
+type CalendarEventType = 'meeting' | 'workshop' | 'review' | 'sprint_planning' | 'retrospective' | 'standup' | 'one_on_one' | 'training' | 'social' | 'focus_time';
+
+interface DynServices {
+  activityLogService: typeof import('./activityLogService')['activityLogService'];
+  fireEventWebhooks: typeof import('./webhookService')['fireEventWebhooks'];
+  createWebhook: typeof import('./webhookService')['createWebhook'];
+  evaluateTriggers: typeof import('./automationEngine')['evaluateTriggers'];
+  createAutomationRule: typeof import('./automationEngine')['createAutomationRule'];
+  createDocument: typeof import('./documentService')['createDocument'];
+  createApprovalChain: typeof import('./approvalService')['createApprovalChain'];
+  createApprovalInstance: typeof import('./approvalService')['createApprovalInstance'];
+  sprintService: typeof import('./sprintService')['sprintService'];
+  calendarEventService: typeof import('./calendarEventService')['calendarEventService'];
+  createTeam: typeof import('./teamService')['createTeam'];
+  createProject: typeof import('./projectService')['createProject'];
+  createEpic: typeof import('./epicService')['createEpic'];
+  createTask: typeof import('./taskService')['createTask'];
+  createTaskDependency: typeof import('./taskService')['createTaskDependency'];
+  createConnectedAccount: typeof import('./integrationService')['createConnectedAccount'];
+  createIntegrationConfig: typeof import('./integrationService')['createIntegrationConfig'];
+  createIntegrationSyncJob: typeof import('./integrationService')['createIntegrationSyncJob'];
+}
+
+let _svc: DynServices | null = null;
+let _svcPromise: Promise<DynServices> | null = null;
+
+async function loadServices(): Promise<DynServices> {
+  if (_svc) return _svc;
+  if (!_svcPromise) {
+    _svcPromise = Promise.all([
+      import('./activityLogService'),
+      import('./webhookService'),
+      import('./automationEngine'),
+      import('./documentService'),
+      import('./approvalService'),
+      import('./sprintService'),
+      import('./calendarEventService'),
+      import('./teamService'),
+      import('./projectService'),
+      import('./epicService'),
+      import('./taskService'),
+      import('./integrationService'),
+    ]).then(([a, w, am, d, ap, sp, c, t, p, e, tk, i]) => ({
+      activityLogService: a.activityLogService,
+      fireEventWebhooks: w.fireEventWebhooks,
+      createWebhook: w.createWebhook,
+      evaluateTriggers: am.evaluateTriggers,
+      createAutomationRule: am.createAutomationRule,
+      createDocument: d.createDocument,
+      createApprovalChain: ap.createApprovalChain,
+      createApprovalInstance: ap.createApprovalInstance,
+      sprintService: sp.sprintService,
+      calendarEventService: c.calendarEventService,
+      createTeam: t.createTeam,
+      createProject: p.createProject,
+      createEpic: e.createEpic,
+      createTask: tk.createTask,
+      createTaskDependency: tk.createTaskDependency,
+      createConnectedAccount: i.createConnectedAccount,
+      createIntegrationConfig: i.createIntegrationConfig,
+      createIntegrationSyncJob: i.createIntegrationSyncJob,
+    }));
+  }
+  _svc = await _svcPromise;
+  return _svc;
+}
 
 const LOCK_KEY = 'resolve-stress-running';
 const STALE_LOCK_MINUTES = 15;
@@ -274,6 +328,7 @@ async function countSimRecords(runId: string, wsId: string): Promise<Record<stri
 // ─── Manual panic cleanup ─────────────────────────────────────────
 
 export async function cleanupSyntheticRun(runId: string, wsId?: string): Promise<{ cleaned: Record<string, number>; success: boolean }> {
+  const { activityLogService } = await loadServices();
   const cleaned: Record<string, number> = {};
   if (!isSupabaseConfigured) return { cleaned, success: false };
   if (!wsId) {
@@ -405,6 +460,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     integrations: Math.ceil(50 * scale),
     taskDeps: Math.ceil(30 * scale),
   };
+  const { activityLogService, fireEventWebhooks, createWebhook, evaluateTriggers, createAutomationRule, createDocument, createApprovalChain, createApprovalInstance, sprintService, calendarEventService, createTeam, createProject, createEpic, createTask, createTaskDependency, createConnectedAccount, createIntegrationConfig, createIntegrationSyncJob } = await loadServices();
 
   if (!force && (maxUsers > DEFAULT_MAX.users * MAX_MULTIPLIER || maxProjects > DEFAULT_MAX.projects * MAX_MULTIPLIER || maxTasks > DEFAULT_MAX.tasks * MAX_MULTIPLIER)) {
     report.blocked = true;
@@ -568,7 +624,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
         title: simTag(runId, 'cal', i + j),
         start_time: new Date(Date.now() + Math.random() * 30 * 86400000).toISOString(),
         end_time: new Date(Date.now() + Math.random() * 30 * 86400000 + 3600000).toISOString(),
-        event_type: 'meeting' as CalendarEvent['event_type'],
+        event_type: 'meeting' as CalendarEventType,
       }));
       const promises = batch.map(r =>
         callService(report, 'calendarEventService.createEvent', r, () => calendarEventService.createEvent(r))
@@ -1075,6 +1131,7 @@ export async function cleanupAllSyntheticRuns(wsId?: string): Promise<{
   orphanCount: number;
   remainingCount: number;
 }> {
+  const { activityLogService } = await loadServices();
   const result = { deletedByTable: {} as Record<string, number>, orphanCount: 0, remainingCount: 0 };
   if (!isSupabaseConfigured) return result;
 
@@ -1158,6 +1215,7 @@ export async function recoverAbandonedStressRuns(wsId?: string): Promise<{
   details?: { deletedByTable: Record<string, number>; orphanCount: number; remainingCount: number };
   reason?: string;
 }> {
+  const { activityLogService } = await loadServices();
   const lock = checkLock();
   if (!lock) return { recovered: false, reason: 'No lock found' };
 
@@ -1272,6 +1330,7 @@ export async function cleanupAudit(runId?: string): Promise<{
   survivors: { table: string; id: string; name: string }[];
   fkFailures: { table: string; error: string }[];
 }> {
+  const { activityLogService } = await loadServices();
   const result = {
     scannedTables: [] as { table: string; count: number }[],
     deletedByTable: [] as { table: string; count: number }[],
