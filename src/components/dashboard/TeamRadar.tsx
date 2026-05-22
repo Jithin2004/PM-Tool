@@ -18,9 +18,10 @@ interface TeamRadarProps {
   error?: string | null;
   blockedCount?: number;
   onMemberClick?: (id: string) => void;
+  emptyAction?: { label: string; onClick: () => void };
 }
 
-export function TeamRadar({ members, loading, error, blockedCount, onMemberClick }: TeamRadarProps) {
+export function TeamRadar({ members, loading, error, blockedCount, onMemberClick, emptyAction }: TeamRadarProps) {
   const hasData = members && members.length > 0;
 
   const overloaded = members?.filter((m) => m.workload > 85).length ?? 0;
@@ -33,6 +34,7 @@ export function TeamRadar({ members, loading, error, blockedCount, onMemberClick
       error={error}
       empty={!loading && !error && !hasData}
       emptyMessage="No team members to display"
+      emptyAction={emptyAction}
       action={
         blockedCount && blockedCount > 0 ? (
           <span className="flex items-center gap-1 text-[10px] font-mono text-red-400/70">

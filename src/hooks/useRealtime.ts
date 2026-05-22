@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { dedupPayload } from '../lib/realtimeDedup';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type EventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
@@ -29,7 +30,7 @@ export function useRealtime({ table, event = '*', filter, onChange, enabled = tr
         'postgres_changes' as any,
         { event, schema: 'public', table, filter },
         (payload: RealtimePostgresChangesPayload<any>) => {
-          onChangeRef.current(payload);
+          dedupPayload(payload, () => onChangeRef.current(payload));
         }
       )
       .subscribe((status) => {

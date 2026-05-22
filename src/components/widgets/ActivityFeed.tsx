@@ -21,6 +21,7 @@ interface ActivityFeedProps {
   loading?: boolean;
   error?: string | null;
   emptyMessage?: string;
+  emptyAction?: { label: string; onClick: () => void };
   onItemClick?: (entry: ActivityEntry) => void;
   maxItems?: number;
 }
@@ -61,7 +62,7 @@ function severityClass(action: string): string {
   return 'border-l-white/5';
 }
 
-export function ActivityFeed({ entries, loading, error, emptyMessage, onItemClick, maxItems = 30 }: ActivityFeedProps) {
+export function ActivityFeed({ entries, loading, error, emptyMessage, emptyAction, onItemClick, maxItems = 30 }: ActivityFeedProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const feedRef = useRef<HTMLDivElement>(null);
   const isAtTopRef = useRef(true);
@@ -95,6 +96,7 @@ export function ActivityFeed({ entries, loading, error, emptyMessage, onItemClic
       error={error}
       empty={!loading && !error && grouped.length === 0}
       emptyMessage={emptyMessage || 'No recent activity'}
+      emptyAction={emptyAction}
     >
       <div ref={feedRef} onScroll={handleScroll} className="space-y-0.5 max-h-[380px] overflow-y-auto scrollbar-thin">
         <AnimatePresence initial={false}>

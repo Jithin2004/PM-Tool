@@ -17,6 +17,7 @@ interface AIInsightsProps {
   loading?: boolean;
   error?: string | null;
   onDismiss?: (id: string) => void;
+  emptyAction?: { label: string; onClick: () => void };
 }
 
 const MAX_INSIGHTS = 3;
@@ -31,7 +32,7 @@ const TYPE_LABELS: Record<string, string> = {
   'stalled-project': 'Project Stalled',
 };
 
-export function AIInsights({ insights, loading, error, onDismiss }: AIInsightsProps) {
+export function AIInsights({ insights, loading, error, onDismiss, emptyAction }: AIInsightsProps) {
   const visible = insights ? insights.slice(0, MAX_INSIGHTS) : [];
 
   return (
@@ -41,6 +42,7 @@ export function AIInsights({ insights, loading, error, onDismiss }: AIInsightsPr
       error={error}
       empty={!loading && !error && visible.length === 0}
       emptyMessage="No insights right now"
+      emptyAction={emptyAction}
       action={<Sparkles className="w-3 h-3 text-white/30" />}
     >
       <AnimatePresence initial={false}>
