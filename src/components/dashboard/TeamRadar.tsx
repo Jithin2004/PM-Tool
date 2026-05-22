@@ -1,4 +1,4 @@
-import { Users, AlertCircle } from 'lucide-react';
+import { Users, AlertCircle, Timer, Moon } from 'lucide-react';
 import { WidgetCard } from '../widgets/WidgetCard';
 import { WorkloadBar } from '../widgets/WorkloadBar';
 import { PresenceAvatar } from '../widgets/PresenceAvatar';
@@ -9,6 +9,7 @@ interface TeamMember {
   workload: number;
   blocked?: boolean;
   online?: boolean;
+  sprintParticipation?: number;
 }
 
 interface TeamRadarProps {
@@ -21,6 +22,9 @@ interface TeamRadarProps {
 
 export function TeamRadar({ members, loading, error, blockedCount, onMemberClick }: TeamRadarProps) {
   const hasData = members && members.length > 0;
+
+  const overloaded = members?.filter((m) => m.workload > 85).length ?? 0;
+  const idle = members?.filter((m) => m.workload < 15).length ?? 0;
 
   return (
     <WidgetCard
@@ -35,18 +39,33 @@ export function TeamRadar({ members, loading, error, blockedCount, onMemberClick
             <AlertCircle className="w-3 h-3" />
             {blockedCount} blocked
           </span>
+        ) : overloaded > 0 ? (
+          <span className="flex items-center gap-1 text-[10px] font-mono text-amber-400/70">
+            <Timer className="w-3 h-3" />
+            {overloaded} overloaded
+          </span>
         ) : undefined
       }
     >
       {hasData && (
         <div className="space-y-1">
           {members.map((member) => (
-            <div key={member.id} className="flex items-center gap-3 py-1.5" onClick={() => onMemberClick?.(member.id)}>
-              <PresenceAvatar name={member.name} online={member.online} typing={false} />
+            <div
+              key={member.id}
+              className="flex items-center gap-3 py-1.5 cursor-pointer hover:bg-white/[0.02] rounded transition-colors"
+              onClick={() => onMemberClick?.(member.id)}
+            >
+              <PresenceAvatar name={member.name} online={member.online} typing={false} size="sm" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-[11px] font-mono text-white/80 truncate">{member.name}</span>
-                  {member.blocked && <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />}
+                  {member.blocked && <AlertCircle className="w-2.5 h-2.5 text-red-400 shrink-0" />}
+                  {member.workload < 15 && <Moon className="w-2.5 h-2.5 text-white/20 shrink-0" />}
+                  {member.sprintParticipation != null && (
+                    <span className="ml-auto text-[9px] font-mono text-white/30">
+                      {member.sprintParticipation} pts
+                    </span>
+                  )}
                 </div>
                 <WorkloadBar
                   label=""

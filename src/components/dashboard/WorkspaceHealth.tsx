@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Clock, TrendingUp, Bot, Wifi } from 'lucide-react';
 import { WidgetCard } from '../widgets/WidgetCard';
 import { MetricTile } from '../widgets/MetricTile';
 
@@ -6,6 +6,8 @@ interface HealthData {
   riskScore: number;
   overdueTasks: number;
   sprintVelocity: number;
+  activeAutomations?: number;
+  integrationHealth?: number;
   velocityTrend?: number;
 }
 
@@ -13,22 +15,39 @@ interface WorkspaceHealthProps {
   data?: HealthData;
   loading?: boolean;
   error?: string | null;
+  tileLoading?: { risk?: boolean; overdue?: boolean; velocity?: boolean; automations?: boolean; integrations?: boolean };
   onViewOverdue?: () => void;
   onViewSprints?: () => void;
   onViewRisks?: () => void;
+  onViewAutomations?: () => void;
+  onViewIntegrations?: () => void;
 }
 
-export function WorkspaceHealth({ data, loading, error, onViewOverdue, onViewSprints, onViewRisks }: WorkspaceHealthProps) {
-  const riskColor = !data ? 'text-white' : data.riskScore > 60 ? 'text-red-400' : data.riskScore > 30 ? 'text-amber-400' : 'text-emerald-400';
+function riskColor(score: number): string {
+  if (score > 60) return 'text-red-400';
+  if (score > 30) return 'text-amber-400';
+  return 'text-emerald-400';
+}
 
+function healthColor(value: number): string {
+  if (value < 60) return 'text-red-400';
+  if (value < 85) return 'text-amber-400';
+  return 'text-emerald-400';
+}
+
+export function WorkspaceHealth({
+  data, loading, error, tileLoading,
+  onViewOverdue, onViewSprints, onViewRisks, onViewAutomations, onViewIntegrations,
+}: WorkspaceHealthProps) {
   return (
     <WidgetCard title="Workspace Health" loading={loading} error={error}>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
         <MetricTile
           label="Risk Score"
           value={data?.riskScore ?? '--'}
           icon={AlertTriangle}
-          color={riskColor}
+          color={data ? riskColor(data.riskScore) : 'text-white'}
+          loading={tileLoading?.risk}
           onClick={onViewRisks}
         />
         <MetricTile
@@ -36,6 +55,7 @@ export function WorkspaceHealth({ data, loading, error, onViewOverdue, onViewSpr
           value={data?.overdueTasks ?? '--'}
           icon={Clock}
           color={data?.overdueTasks && data.overdueTasks > 0 ? 'text-amber-400' : 'text-white'}
+          loading={tileLoading?.overdue}
           onClick={onViewOverdue}
         />
         <MetricTile
@@ -43,7 +63,24 @@ export function WorkspaceHealth({ data, loading, error, onViewOverdue, onViewSpr
           value={data?.sprintVelocity ?? '--'}
           icon={TrendingUp}
           trend={data?.velocityTrend ? { value: Math.abs(data.velocityTrend), positive: data.velocityTrend > 0 } : undefined}
+          loading={tileLoading?.velocity}
           onClick={onViewSprints}
+        />
+        <MetricTile
+          label="Active Automations"
+          value={data?.activeAutomations ?? '--'}
+          icon={Bot}
+          color="text-white"
+          loading={tileLoading?.automations}
+          onClick={onViewAutomations}
+        />
+        <MetricTile
+          label="Integration Health"
+          value={data?.integrationHealth != null ? `${data.integrationHealth}%` : '--'}
+          icon={Wifi}
+          color={data?.integrationHealth != null ? healthColor(data.integrationHealth) : 'text-white'}
+          loading={tileLoading?.integrations}
+          onClick={onViewIntegrations}
         />
       </div>
     </WidgetCard>
