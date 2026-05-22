@@ -128,8 +128,9 @@ export const activityLogService = {
     return 'GENESIS_BLOCK';
   },
 
-  async computeHash(entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash'>, previousHash: string): Promise<string> {
-    const message = `${entry.workspace_id}${entry.actor_id ?? ''}${entry.project_id ?? ''}${entry.task_id ?? ''}${entry.action}${JSON.stringify(entry.metadata)}${previousHash}${new Date().toISOString()}`;
+  async computeHash(entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash'>, previousHash: string, createdAt?: string): Promise<string> {
+    const ts = createdAt || entry.created_at || new Date().toISOString();
+    const message = `${entry.workspace_id}${entry.actor_id ?? ''}${entry.project_id ?? ''}${entry.task_id ?? ''}${entry.action}${JSON.stringify(entry.metadata)}${previousHash}${ts}`;
     return sha256(message);
   },
 
@@ -138,7 +139,8 @@ export const activityLogService = {
     if (!entry.workspace_id) return false;
     try {
       const previousHash = await this.getPreviousHash(entry.workspace_id);
-      const hash = await this.computeHash(entry, previousHash);
+      const createdAt = new Date().toISOString();
+      const hash = await this.computeHash(entry, previousHash, createdAt);
       const { error } = await supabase.from('activity_logs').insert({
         workspace_id: entry.workspace_id,
         actor_id: entry.actor_id,
@@ -147,7 +149,8 @@ export const activityLogService = {
         action: entry.action,
         metadata: entry.metadata,
         previous_hash: previousHash,
-        hash
+        hash,
+        created_at: createdAt
       });
       if (error) {
         if (error.code !== '42501') console.error('ActivityLogService: appendLog failed:', error);
@@ -185,7 +188,8 @@ export const activityLogService = {
 
     try {
       const previousHash = await this.getPreviousHash(entry.workspace_id);
-      const hash = await this.computeHash(entry, previousHash);
+      const createdAt = new Date().toISOString();
+      const hash = await this.computeHash(entry, previousHash, createdAt);
       const { error } = await supabase.from('activity_logs').insert({
         workspace_id: entry.workspace_id,
         actor_id: entry.actor_id,
@@ -194,7 +198,8 @@ export const activityLogService = {
         action: entry.action,
         metadata: entry.metadata,
         previous_hash: previousHash,
-        hash
+        hash,
+        created_at: createdAt
       });
       if (error) {
         if (error.code === '42501') {
