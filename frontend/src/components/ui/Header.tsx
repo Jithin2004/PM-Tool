@@ -95,7 +95,7 @@ export function Header({
     const primaryKey = isDesktopDevice ? 'resolve-nav-section' : 'resolve-mobile-nav-section';
     const saved = localStorage.getItem(primaryKey);
     if (saved && NAV.some(s => s.label === saved)) return saved;
-    return getSectionForPath(window.location.pathname);
+    return null;
   });
   const role = profile?.role || 'viewer';
   const unreadCount = notifications.filter(n => !n.read_at).length;
@@ -149,11 +149,11 @@ export function Header({
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
-  // Auto-expand on route change
+  // Collapse nav on route change if section no longer matches
   useEffect(() => {
     const section = getSectionForPath(pathname);
-    if (section && section !== expandedSection) setExpandedSection(section);
-  }, [pathname]);
+    if (!section && expandedSection) setExpandedSection(null);
+  }, [pathname, expandedSection]);
 
   // Mobile: restore last section when drawer opens
   useEffect(() => {
