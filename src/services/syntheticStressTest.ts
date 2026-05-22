@@ -275,6 +275,7 @@ async function countSimRecords(runId: string, wsId: string): Promise<Record<stri
     ['approval_chains', 'name', `SST_${runId}_%`],
     ['connected_accounts', 'access_token', `sst_${runId}_%`],
     ['sprints', 'name', `SST_${runId}_%`],
+    ['notifications', 'title', `SST_${runId}_%`],
   ];
   for (const [table, col, pattern] of checks) {
     try {
@@ -927,11 +928,11 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
 
     // ─── CLEANUP ───────────────────────────────────────────────────
     const cleanStart = performance.now();
-    const allTables = [
+        const allTables = [
       'task_dependencies','approval_instances',
       'integration_sync_jobs','integration_configs','sprints','documents','tasks',
       'epics','calendar_events','webhooks','connected_accounts','automation_rules',
-      'approval_chains','activity_logs','teams','projects',
+      'approval_chains','activity_logs','notifications','teams','projects',
     ];
     for (const table of allTables) {
       try {
@@ -977,6 +978,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     deleteOps.push(() => supabase.from('webhooks').delete().eq('workspace_id', wsId).like('name', `SST_${runId}_%`));
     deleteOps.push(() => supabase.from('automation_rules').delete().eq('workspace_id', wsId).like('name', `SST_${runId}_%`));
     deleteOps.push(() => supabase.from('approval_chains').delete().eq('workspace_id', wsId).like('name', `SST_${runId}_%`));
+    deleteOps.push(() => supabase.from('notifications').delete().eq('workspace_id', wsId).like('title', `SST_${runId}_%`));
     deleteOps.push(async () => { await supabase.from('activity_logs').delete().eq('workspace_id', wsId).filter('metadata->>run_id', 'eq', runId); });
     deleteOps.push(() => supabase.from('teams').delete().eq('workspace_id', wsId).like('name', `SST_${runId}_%`));
     deleteOps.push(() => supabase.from('projects').delete().eq('workspace_id', wsId).like('name', `SST_${runId}_%`));
@@ -1065,6 +1067,7 @@ async function countAllSyntheticRecords(wsId: string): Promise<Record<string, nu
     ['approval_chains', 'name', 'SST_%'],
     ['connected_accounts', 'access_token', 'sst_%'],
     ['sprints', 'name', 'SST_%'],
+    ['notifications', 'title', 'SST_%'],
   ];
   for (const [table, col, pattern] of checks) {
     try {
@@ -1183,6 +1186,7 @@ export async function cleanupAllSyntheticRuns(wsId?: string): Promise<{
   await supabase.from('webhooks').delete().eq('workspace_id', wsId).like('name', 'SST_%');
   await supabase.from('automation_rules').delete().eq('workspace_id', wsId).like('name', 'SST_%');
   await supabase.from('approval_chains').delete().eq('workspace_id', wsId).like('name', 'SST_%');
+  await supabase.from('notifications').delete().eq('workspace_id', wsId).like('title', 'SST_%');
   await supabase.from('activity_logs').delete().eq('workspace_id', wsId).filter('metadata->>sim', 'eq', 'true');
   await supabase.from('teams').delete().eq('workspace_id', wsId).like('name', 'SST_%');
   await supabase.from('projects').delete().eq('workspace_id', wsId).like('name', 'SST_%');
@@ -1262,6 +1266,7 @@ const AUDIT_TABLES: AuditTableDef[] = [
   { name: 'sprints', patternCol: 'name', pattern: 'SST_%', nameCol: 'name' },
   { name: 'integration_sync_jobs', patternCol: 'payload', pattern: 'sim', nameCol: 'service' },
   { name: 'integration_configs', patternCol: 'config', pattern: 'repo_url', nameCol: 'service' },
+  { name: 'notifications', patternCol: 'title', pattern: 'SST_%', nameCol: 'title' },
   { name: 'activity_logs', patternCol: 'metadata', pattern: 'sim', nameCol: 'action' },
 ];
 
