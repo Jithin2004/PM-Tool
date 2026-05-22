@@ -200,7 +200,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
+        redirectTo: window.location.origin + '/workspace'
       }
     });
 

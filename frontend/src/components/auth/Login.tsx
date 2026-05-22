@@ -23,7 +23,7 @@ export function Login() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
+        redirectTo: window.location.origin + '/workspace'
       }
     });
     if (signInError) console.error("Auth error:", signInError);
