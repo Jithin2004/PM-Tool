@@ -73,26 +73,40 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       if (projectTasks.length === 0) {
         return project;
       }
-      
+
+      // Only aggregate if tasks have *explicit* PERT values set (not just estimated_hours fallback).
+      // This preserves the manually entered project-level PERT values when tasks haven't been
+      // individually estimated yet — avoiding the "all values become 5" bug.
+      const tasksWithExplicitPERT = projectTasks.filter(t =>
+        Number(t.pert_best) > 0 &&
+        Number(t.pert_likely) > 0 &&
+        Number(t.pert_worst) > 0
+      );
+
+      if (tasksWithExplicitPERT.length === 0) {
+        // No tasks have dedicated PERT values — keep the project's own PERT values intact.
+        return project;
+      }
+
       let totalExpected = 0;
       let totalVariance = 0;
-      
-      projectTasks.forEach(task => {
-        const best = Number(task.pert_best) || Number(task.estimated_hours) || 0;
-        const likely = Number(task.pert_likely) || Number(task.estimated_hours) || 0;
-        const worst = Number(task.pert_worst) || Number(task.estimated_hours) || 0;
-        
+
+      tasksWithExplicitPERT.forEach(task => {
+        const best = Number(task.pert_best);
+        const likely = Number(task.pert_likely);
+        const worst = Number(task.pert_worst);
+
         const expected = (best + 4 * likely + worst) / 6;
         const variance = Math.pow((worst - best) / 6, 2);
-        
+
         totalExpected += expected;
         totalVariance += variance;
       });
-      
+
       const stdDev = Math.sqrt(totalVariance);
       const pertBest = Math.max(0, totalExpected - 2 * stdDev);
       const pertWorst = totalExpected + 2 * stdDev;
-      
+
       return {
         ...project,
         pert_best: Number(pertBest.toFixed(1)),
