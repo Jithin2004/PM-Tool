@@ -1508,6 +1508,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
   const calculateDynamicStats = (projList: Project[]) => {
     const activeProjects = projList.filter(p => p.status !== 'deployed');
+    const activeWorkflows = activeProjects.filter(p => p.execution_mode !== 'SCRUM');
     let totalDecayHours = 0;
     activeProjects.forEach(p => {
       const expected = calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
@@ -1522,7 +1523,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     const teamBandwidth = activeTeams.length > 0 ? (teamsWithProjects.size / activeTeams.length) * 100 : 0;
 
     return {
-      totalProjects: activeProjects.length,
+      totalProjects: activeWorkflows.length,
       deliveryConfidence: Number(deliveryConfidence.toFixed(1)),
       teamBandwidth: Number(teamBandwidth.toFixed(1)),
       dailyFatigue: Number(totalDecayHours.toFixed(1))

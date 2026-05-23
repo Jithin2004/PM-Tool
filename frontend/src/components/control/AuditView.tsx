@@ -40,9 +40,10 @@ const AuditView = React.memo(function AuditView() {
           <div className="flex items-center gap-3">
             <span className={`w-2 h-2 rounded-full ${
               chainStatus.status === 'Valid' ? 'bg-green-400' :
+              chainStatus.status === 'CHAIN_REINDEX' ? 'bg-blue-400' :
               chainStatus.status === 'Suspicious' ? 'bg-amber-400' : 'bg-red-400'
             }`} />
-            <span className="text-sm font-mono">{chainStatus.status}</span>
+            <span className="text-sm font-mono">{chainStatus.status === 'CHAIN_REINDEX' ? 'Chain Reindexed' : chainStatus.status}</span>
             <span className="text-[10px] font-mono text-white/40">{chainStatus.logCount} entries — {chainStatus.message}</span>
           </div>
         ) : null}

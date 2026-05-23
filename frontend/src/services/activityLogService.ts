@@ -261,7 +261,7 @@ export const activityLogService = {
     return { valid: true, tamperedIndex: null };
   },
 
-  async verifyHashChain(workspaceId: string): Promise<{ status: 'Valid' | 'Broken' | 'GENESIS_RESET' | 'Suspicious'; logCount: number; tamperedIndex: number | null; message: string }> {
+  async verifyHashChain(workspaceId: string): Promise<{ status: 'Valid' | 'Broken' | 'CHAIN_REINDEX' | 'Suspicious'; logCount: number; tamperedIndex: number | null; message: string }> {
     const logs = await this.getLogs(workspaceId);
     if (logs.length === 0) return { status: 'Valid', logCount: 0, tamperedIndex: null, message: 'No logs to verify' };
 
@@ -272,8 +272,8 @@ export const activityLogService = {
         // Legacy genesis — not corruption
       } else if (first.previous_hash !== 'GENESIS_BLOCK') {
         // First entry has a non-genesis hash pointing to nothing — legacy reset
-        await this.logHashChainVerified(workspaceId, 'GENESIS_RESET', logs.length, 0);
-        return { status: 'GENESIS_RESET', logCount: logs.length, tamperedIndex: 0, message: 'Chain initialized from legacy records' };
+        await this.logHashChainVerified(workspaceId, 'CHAIN_REINDEX', logs.length, 0);
+        return { status: 'CHAIN_REINDEX', logCount: logs.length, tamperedIndex: 0, message: 'Chain initialized from legacy records' };
       }
     }
 

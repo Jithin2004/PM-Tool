@@ -1,11 +1,15 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   fetchConnectedAccounts, fetchIntegrationHealth, updateIntegrationHealth,
-  disconnectService, enqueueSync, getConnectionDisplayState, getCooldownRemaining, formatCooldown,
-  ConnectedAccount, IntegrationHealth, QueueState, getQueueStats,
+  disconnectService,
+  ConnectedAccount, IntegrationHealth,
 } from '../../services/integrationService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
+import { useIntegrationRegistry } from '../../core/integrations/integrationRegistry';
+import { describeChannelState } from '../../core/integrations/oauthStateMachine';
+import type { ChannelState } from '../../core/integrations/operationalChannels';
+import { OPERATIONAL_CHANNELS } from '../../core/integrations/operationalChannels';
 
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return '—';
@@ -19,31 +23,15 @@ function timeAgo(dateStr?: string): string {
   return `${days}d ago`;
 }
 
-const WORKSPACE_SERVICES = [
-  { key: 'google_calendar', label: 'Google Calendar', scope: 'Workspace' },
-];
-const PROJECT_SERVICES = [
-  { key: 'github', label: 'GitHub', scope: 'Project' },
-  { key: 'gitlab', label: 'GitLab', scope: 'Project' },
-  { key: 'figma', label: 'Figma', scope: 'Project' },
-  { key: 'google_drive', label: 'Google Drive', scope: 'Project' },
-];
-
 export default function ConnectionsPanel() {
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
   const wsId = workspace?.id || '';
   const [health, setHealth] = useState<Record<string, IntegrationHealth>>({});
   const [accounts, setAccounts] = useState<Record<string, ConnectedAccount>>({});
-  const [syncing, setSyncing] = useState<Record<string, boolean>>({});
-  const [messages, setMessages] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-  const [showQueue, setShowQueue] = useState(false);
-  const [queueStats, setQueueStats] = useState<{ length: number; pending: number; active: number; failed: number; items: { id: string; service: string; state: QueueState; attempt: number }[] }>({ length: 0, pending: 0, active: 0, failed: 0, items: [] });
-  const cooldownRef = useRef<Record<string, number>>({});
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const queueTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const registry = useIntegrationRegistry();
 
   const loadData = useCallback(async () => {
     if (!wsId) return;
@@ -59,34 +47,9 @@ export default function ConnectionsPanel() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Cooldown ticker
-  useEffect(() => {
-    tickRef.current = setInterval(() => {
-      const updated: Record<string, number> = {};
-      for (const key of Object.keys(cooldownRef.current)) {
-        const remaining = getCooldownRemaining(health[key]);
-        if (remaining > 0) updated[key] = remaining;
-      }
-      cooldownRef.current = updated;
-      setCooldowns({ ...updated });
-    }, 1000);
-    return () => { if (tickRef.current) clearInterval(tickRef.current); };
-  }, [health]);
-
-  // Queue stats ticker
-  useEffect(() => {
-    const refresh = async () => {
-      const stats = await getQueueStats();
-      setQueueStats(stats);
-    };
-    refresh();
-    queueTickRef.current = setInterval(refresh, 5000);
-    return () => { if (queueTickRef.current) clearInterval(queueTickRef.current); };
-  }, []);
-
   const handleConnect = async (service: string) => {
-    setMessages(prev => ({ ...prev, [`${service}_msg`]: 'Connect pending — OAuth setup required' }));
-    await updateIntegrationHealth(wsId, service, 'disconnected', 'Connect pending');
+    registry.initiateConnection(service);
+    await updateIntegrationHealth(wsId, service, 'disconnected', 'OAuth authorization required');
     await loadData();
   };
 
@@ -96,131 +59,91 @@ export default function ConnectionsPanel() {
     await loadData();
   };
 
-  const handleSync = async (service: string) => {
-    const msgKey = `${service}_msg`;
-    const cd = getCooldownRemaining(health[service]);
-    if (cd > 0) return;
-    setSyncing(prev => ({ ...prev, [service]: true }));
-    setMessages(prev => ({ ...prev, [msgKey]: 'Queued...' }));
-    const acct = accounts[service];
-    const result = await enqueueSync(wsId, service, {}, acct?.access_token);
-    setSyncing(prev => ({ ...prev, [service]: false }));
-    setMessages(prev => ({ ...prev, [msgKey]: result.message }));
-    await loadData();
-  };
-
   if (loading) return (
     <div className="p-6">
       <div className="flex items-center gap-3 mb-6">
         <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">CONTROL</span>
         <span className="text-white/20">/</span>
-        <span className="text-xs font-mono text-white/80">Connections</span>
+        <span className="text-xs font-mono text-white/80">Operational Channels</span>
       </div>
-      <div className="text-[11px] font-mono text-white/30">Loading connections...</div>
+      <div className="text-[11px] font-mono text-white/30">Loading channel configuration...</div>
     </div>
   );
 
-  const renderCard = (svc: { key: string; label: string; scope: string }) => {
-    const h = health[svc.key];
-    const acct = accounts[svc.key];
+  function renderChannel(ch: { key: string; label: string; description: string; scope: string }) {
+    const h = health[ch.key];
+    const acct = accounts[ch.key];
     const hasAccount = !!acct;
-    const state = getConnectionDisplayState(h?.status, hasAccount, h?.retry_count);
-    const isSyncing = syncing[svc.key];
-    const cd = getCooldownRemaining(h);
-    const cdText = formatCooldown(cd);
-    const msg = messages[`${svc.key}_msg`];
+    const hasIntegration = !!h;
+
+    let state: ChannelState = 'awaiting_oauth';
+    if (hasIntegration && h?.status === 'connected') state = 'connected';
+    else if (hasIntegration && h?.status === 'failed') state = 'webhook_error';
+    else if (h?.status === 'disconnected') state = 'awaiting_oauth';
+    else if (!hasIntegration) state = 'unavailable';
+
+    const display = describeChannelState(state);
+
     return (
-      <div key={svc.key} className="border border-white/10 bg-white/[0.02] px-4 py-3">
-        <div className="flex items-center justify-between mb-2">
+      <div key={ch.key} className="border border-white/10 bg-white/[0.02] px-4 py-3">
+        <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-mono text-white/70">{svc.label}</span>
-            <span className="text-[8px] font-mono uppercase text-white/20 bg-white/5 px-1.5 py-0.5">{svc.scope}</span>
-            {isSyncing && <span className="text-[10px] font-mono text-cyan-400 animate-pulse">Syncing...</span>}
+            <span className="text-xs font-mono text-white/70">{ch.label}</span>
+            <span className="text-[8px] font-mono uppercase text-white/20 bg-white/5 px-1.5 py-0.5">{ch.scope}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-[10px] font-mono ${state.color}`}>{state.label}</span>
-          </div>
+          <span className={`text-[10px] font-mono ${display.color}`}>{display.label}</span>
         </div>
+        <p className="text-[9px] font-mono text-white/30 mb-3">{ch.description}</p>
         <div className="flex items-center gap-4 text-[10px] font-mono text-white/30 mb-3">
-          <span>Sync: {timeAgo(h?.last_sync)}</span>
+          <span>Last signal: {timeAgo(h?.last_sync)}</span>
           <span>Checked: {timeAgo(h?.integration_last_checked)}</span>
         </div>
         <div className="flex items-center gap-2">
-          {!acct ? (
-            <button onClick={() => handleConnect(svc.key)}
+          {!hasAccount ? (
+            <button onClick={() => handleConnect(ch.key)}
               className="px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-mono uppercase tracking-wider hover:bg-emerald-600/30 transition-colors">
-              Connect
+              Authorize
             </button>
           ) : (
-            <>
-              <button onClick={() => handleSync(svc.key)}
-                disabled={isSyncing || cd > 0}
-                className="px-3 py-1.5 bg-cyan-600/20 border border-cyan-500/30 text-cyan-400 text-[9px] font-mono uppercase tracking-wider hover:bg-cyan-600/30 transition-colors disabled:opacity-30">
-                {cd > 0 ? formatCooldown(cd) : 'Sync Now'}
-              </button>
-              <button onClick={() => handleDisconnect(svc.key)}
-                className="px-3 py-1.5 bg-red-600/20 border border-red-500/30 text-red-400 text-[9px] font-mono uppercase tracking-wider hover:bg-red-600/30 transition-colors">
-                Disconnect
-              </button>
-            </>
+            <button onClick={() => handleDisconnect(ch.key)}
+              className="px-3 py-1.5 bg-red-600/20 border border-red-500/30 text-red-400 text-[9px] font-mono uppercase tracking-wider hover:bg-red-600/30 transition-colors">
+              Disconnect
+            </button>
           )}
         </div>
-        {msg && <div className="mt-2 text-[9px] font-mono text-white/40">{msg}</div>}
+        {!hasAccount && state === 'awaiting_oauth' && (
+          <div className="mt-2 text-[9px] font-mono text-amber-500/60">
+            OAuth provider configuration pending
+          </div>
+        )}
       </div>
     );
-  };
+  }
+
+  const workspaceChannels = OPERATIONAL_CHANNELS.filter(c => c.scope === 'workspace');
+  const projectChannels = OPERATIONAL_CHANNELS.filter(c => c.scope === 'project');
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
           <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">CONTROL</span>
           <span className="text-white/20">/</span>
-          <span className="text-xs font-mono text-white/80">Connections</span>
+          <span className="text-xs font-mono text-white/80">Operational Channels</span>
         </div>
-        {/* Queue observability toggle */}
-        <button onClick={() => setShowQueue(!showQueue)}
-          className="text-[9px] font-mono text-white/30 hover:text-white/60 border border-white/10 px-2 py-1">
-          Queue {queueStats.length > 0 ? `(${queueStats.pending + queueStats.active})` : ''}
-        </button>
+        <p className="text-[10px] font-mono text-white/25">
+          External coordination signal ingestion pipelines
+        </p>
       </div>
 
-      {/* Queue observability */}
-      {showQueue && (
-        <div className="border border-white/10 bg-white/[0.02] p-3 mb-4">
-          <div className="text-[9px] font-mono text-white/30 uppercase tracking-wider mb-2">Sync Queue</div>
-          <div className="flex gap-4 text-[10px] font-mono">
-            <span className="text-white/50">Total: {queueStats.length}</span>
-            <span className="text-cyan-400">Pending: {queueStats.pending}</span>
-            <span className="text-amber-400">Active: {queueStats.active}</span>
-            <span className="text-red-400">Failed: {queueStats.failed}</span>
-          </div>
-          {queueStats.items.length > 0 && (
-            <div className="mt-2 space-y-1">
-              {queueStats.items.map(item => (
-                <div key={item.id} className="text-[8px] font-mono text-white/30 flex gap-2">
-                  <span>{item.service}</span>
-                  <span className={
-                    item.state === 'queued' ? 'text-cyan-400' :
-                    item.state === 'processing' ? 'text-amber-400' :
-                    item.state === 'success' ? 'text-emerald-400' :
-                    item.state === 'retrying' ? 'text-purple-400' : 'text-red-400'
-                  }>{item.state}</span>
-                  {item.attempt > 0 && <span className="text-white/20">attempt {item.attempt}</span>}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="text-[9px] font-mono text-white/30 mb-4 uppercase tracking-wider">Workspace Services</div>
-      <div className="space-y-2 mb-6">
-        {WORKSPACE_SERVICES.map(renderCard)}
+      <div className="text-[9px] font-mono text-white/30 mb-4 uppercase tracking-wider">Coordination Sources</div>
+      <div className="space-y-2 mb-8">
+        {workspaceChannels.map(renderChannel)}
       </div>
-      <div className="text-[9px] font-mono text-white/30 mb-4 uppercase tracking-wider">Project Services</div>
+
+      <div className="text-[9px] font-mono text-white/30 mb-4 uppercase tracking-wider">Project Signal Channels</div>
       <div className="space-y-2">
-        {PROJECT_SERVICES.map(renderCard)}
+        {projectChannels.map(renderChannel)}
       </div>
     </div>
   );

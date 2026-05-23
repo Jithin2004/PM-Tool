@@ -735,10 +735,16 @@ export function ProjectWorkspace({
 
   const filteredProjects = useMemo(() => {
     return projects
-      .filter(p => p.execution_mode !== 'SCRUM')
       .filter(p => dashboardTab === 'active' ? p.status !== 'deployed' : p.status === 'deployed')
       .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [projects, dashboardTab, searchTerm]);
+
+  const scrumProjects = useMemo(() =>
+    projects.filter(p =>
+      p.execution_mode === 'SCRUM' &&
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    ),
+  [projects, searchTerm]);
 
   return (
     <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12">
@@ -840,7 +846,11 @@ export function ProjectWorkspace({
                     <BrainCircuit className="w-8 h-8 text-white/75" />
                   </div>
                   <h3 className="text-xl font-medium mb-2 uppercase tracking-tight">No Projects Found</h3>
-                  <p className="text-sm font-mono text-white/85">Query yielded no matching engineering constructs.</p>
+                  <p className="text-sm font-mono text-white/85">
+                    {scrumProjects.length > 0
+                      ? `${scrumProjects.length} active sprint project${scrumProjects.length !== 1 ? 's' : ''} available in sprint view.`
+                      : 'Query yielded no matching engineering constructs.'}
+                  </p>
                 </div>
               )}
             </div>
