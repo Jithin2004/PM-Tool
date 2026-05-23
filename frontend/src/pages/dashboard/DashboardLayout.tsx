@@ -34,6 +34,7 @@ import { TeamRosterModal } from '../../components/team/TeamRosterModal';
 import { UserProfileModal } from '../../components/user/UserProfileModal';
 import { calculateExpectedTime, calculateVariance, calculateHoursFromRange, getLocalDateString, getRelativeTime } from '../../utils/timeUtils';
 import { isWorkspaceOwner, requireWorkspaceOwner } from '../../utils/workspaceUtils';
+import { buildVisibilityContext, filterVisibleTasks, filterVisibleProjects, getVisibleProjectIds } from '../../utils/visibilityFilter';
 
 import { Project, Team, Profile, User, UserRole } from '../../types';
 
@@ -115,6 +116,23 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       };
     });
   }, [projects, tasks]);
+
+  // ── Role-aware visibility filtering ──
+  const visibilityContext = useMemo(() =>
+    buildVisibilityContext(profile?.id || '', profile?.role || 'viewer', projects),
+  [profile?.id, profile?.role, projects]);
+
+  const visibleTasks = useMemo(() =>
+    filterVisibleTasks(tasks, visibilityContext),
+  [tasks, visibilityContext]);
+
+  const visibleProjectIds = useMemo(() =>
+    getVisibleProjectIds(projects, visibilityContext, tasks),
+  [projects, visibilityContext, tasks]);
+
+  const visibleProjects = useMemo(() =>
+    filterVisibleProjects(projects, visibilityContext, new Set(visibleTasks.map(t => t.project_id))),
+  [projects, visibilityContext, visibleTasks]);
 
   const [attendanceRows, setAttendanceRows] = useState<any[]>([]);
   const [salariesRows, setSalariesRows] = useState<any[]>([]);
@@ -493,11 +511,23 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     };
   }, [tourSteps]);
 
-  // Listen for project setup guide trigger
+  // Listen for project setup guide trigger — redirect to execution initialization
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      setProjectSetupGuide({ projectId: detail.projectId, executionMode: detail.executionMode, step: 0 });
+      const mode = (detail.executionMode || 'KANBAN').toUpperCase();
+      const projectId = detail.projectId;
+
+      if (mode === 'SCRUM' || mode === 'HYBRID') {
+        window.history.pushState(null, '', `/projects/${projectId}/setup/execution`);
+      } else if (mode === 'KANBAN') {
+        window.history.pushState(null, '', `/projects/${projectId}/board`);
+      } else if (mode === 'SDLC' || mode === 'CUSTOM') {
+        window.history.pushState(null, '', `/projects/${projectId}/setup/execution`);
+      } else {
+        window.history.pushState(null, '', `/projects/${projectId}/backlog`);
+      }
+      window.dispatchEvent(new CustomEvent('popstate'));
     };
     window.addEventListener('start-project-setup', handler);
     return () => window.removeEventListener('start-project-setup', handler);
@@ -1521,7 +1551,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   return (
     <DashboardProvider value={{ 
       projects: projectsWithAggregatedPERT, 
-      tasks,
+      tasks: visibleTasks,
       dependencies,
       profiles, 
       teams, 
@@ -1616,8 +1646,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         onClose={() => setCommandPaletteOpen(false)}
         onNavigate={navigateTo}
         profile={profile}
-        projects={projectsWithAggregatedPERT}
-        tasks={tasks}
+        projects={visibleProjects}
+        tasks={visibleTasks}
         setSelectedProject={setSelectedProject}
         notify={notify}
         setIsAdding={setIsAdding}

@@ -38,6 +38,13 @@ const AutomationsPanel = lazy(() => import('../pages/dashboard/AutomationsPanel'
 const ConnectionsPanel = lazy(() => import('../pages/dashboard/ConnectionsPanel'));
 const NotificationSettings = lazy(() => import('../pages/dashboard/NotificationSettings'));
 const ModeSettings = lazy(() => import('../pages/dashboard/ModeSettings'));
+const MissionControlPage = lazy(() => import('../pages/mission-control/MissionControlPage'));
+
+const ExecutionSetupPage = lazy(() => import('../pages/setup/ExecutionSetupPage'));
+const BacklogPage = lazy(() => import('../pages/backlog/BacklogPage'));
+const ProjectBoardPage = lazy(() => import('../pages/board/ProjectBoardPage'));
+const ProjectSprintPage = lazy(() => import('../pages/sprints/ProjectSprintPage'));
+const ProjectTimelinePage = lazy(() => import('../pages/timeline/ProjectTimelinePage'));
 
 // ── Loading fallback ──
 
@@ -298,6 +305,40 @@ export function ResolveRouter() {
       return null;
     }
     return <RouteShell><ModeSettings /></RouteShell>;
+  }
+
+  // ── MISSION CONTROL route (super_admin only) ──
+
+  if (pathname === '/control/mission-control') {
+    if (profile?.role !== 'super_admin') {
+      window.history.replaceState(null, '', '/workspace');
+      window.dispatchEvent(new CustomEvent('popstate'));
+      return null;
+    }
+    return <RouteShell><MissionControlPage /></RouteShell>;
+  }
+
+  // ── PROJECT-SPECIFIC routes ──
+
+  if (pathname.startsWith('/projects/')) {
+    const segments = pathname.split('/');
+    const subRoute = segments[3]; // After /projects/:id/
+
+    if (subRoute === 'setup' && segments[4] === 'execution') {
+      return <RouteShell><ExecutionSetupPage /></RouteShell>;
+    }
+    if (subRoute === 'backlog') {
+      return <RouteShell><BacklogPage /></RouteShell>;
+    }
+    if (subRoute === 'board') {
+      return <RouteShell><ProjectBoardPage /></RouteShell>;
+    }
+    if (subRoute === 'sprints') {
+      return <RouteShell><ProjectSprintPage /></RouteShell>;
+    }
+    if (subRoute === 'timeline') {
+      return <RouteShell><ProjectTimelinePage /></RouteShell>;
+    }
   }
 
   // ── Fallback ──

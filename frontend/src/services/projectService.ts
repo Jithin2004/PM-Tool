@@ -2,7 +2,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { logServiceFailure } from '../utils/supabaseError';
 
-const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'SDLC', 'CUSTOM'] as const;
+const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'HYBRID', 'SDLC', 'CUSTOM'] as const;
 
 export interface CreateProjectInput {
   workspace_id: string;

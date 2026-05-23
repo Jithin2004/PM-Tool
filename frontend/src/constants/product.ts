@@ -36,7 +36,7 @@ export const BUSINESS_TYPES = [
 
 export const TASK_STATUSES = ['backlog', 'ready', 'in_progress', 'review', 'done'] as const;
 
-export const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'SDLC', 'CUSTOM'] as const;
+export const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'HYBRID', 'SDLC', 'CUSTOM'] as const;
 
 export const KANBAN_COLUMNS = [
   { id: 'backlog', title: 'Triage / Backlog', color: 'border-blue-500/20' },
