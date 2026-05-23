@@ -1814,7 +1814,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     />
                   </div>
                   <p className="text-[11px] font-mono text-white/75 mt-2 italic">
-                    Confidence interval adjusted for Â±{Math.sqrt(calculateVariance(Number(pertBest), Number(pertWorst))).toFixed(2)}Ïƒ.
+                    Confidence interval adjusted for ±{Math.sqrt(calculateVariance(Number(pertBest), Number(pertWorst))).toFixed(2)}σ.
                   </p>
                 </div>
 
@@ -1991,7 +1991,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 <button onClick={() => setProjectSetupGuide(null)} className="text-white/40 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
 
-              {projectSetupGuide.executionMode === 'kanban' && (
+              {projectSetupGuide.executionMode.toLowerCase() === 'kanban' && (
                 <div className="space-y-4">
                   {projectSetupGuide.step === 0 && (
                     <div className="text-center py-8 space-y-4">
@@ -2007,7 +2007,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 </div>
               )}
 
-              {projectSetupGuide.executionMode === 'scrum' && (
+              {projectSetupGuide.executionMode.toLowerCase() === 'scrum' && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 text-[10px] font-mono text-white/40">
                     {['Epics', 'Stories', 'Sprint', 'Launch'].map((s, i) => (
@@ -2061,7 +2061,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
               <div className="flex justify-between mt-6 pt-4 border-t border-white/10">
                 <button onClick={() => setProjectSetupGuide(null)} className="text-[10px] font-mono text-white/40 hover:text-white transition-colors uppercase tracking-wider">Dismiss</button>
-                {projectSetupGuide.executionMode === 'scrum' && projectSetupGuide.step < 3 && (
+                {projectSetupGuide.executionMode.toLowerCase() === 'scrum' && projectSetupGuide.step < 3 && (
                   <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: projectSetupGuide.step + 1 })} className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-cyan-400 hover:text-cyan-300 transition-colors">
                     Next <ChevronRight className="w-3 h-3" />
                   </button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2, History, ShieldCheck, ShieldAlert, RefreshCw } from 'lucide-react';
 import { sha256 } from '../../utils/cryptoUtils';
@@ -697,7 +697,7 @@ export function ProjectDetailsModal({
 
                 {hasAllData && (
                   <div className="pt-4 border-t border-white/5">
-                    <div className="flex justify-between items-center"><span className="text-[11px] font-mono text-white/75 uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-yellow-500/80">Â±{stdDev.toFixed(2)}Ïƒ</span></div>
+                    <div className="flex justify-between items-center"><span className="text-[11px] font-mono text-white/75 uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-yellow-500/80">±{stdDev.toFixed(2)}σ</span></div>
                     <p className="text-[10px] font-mono text-white/70 mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
                   </div>
                 )}
