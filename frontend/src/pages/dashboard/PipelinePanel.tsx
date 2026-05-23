@@ -22,7 +22,7 @@ const ROUTE_IDENTITY: Record<string, { title: string; subtitle: string; view: 'b
 export function PipelinePanel({ routePath }: { routePath?: string }) {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
-  const { tasks: allTasks } = useTasks(workspace?.id);
+  const { tasks: allTasks, dependencies } = useTasks(workspace?.id);
   const identity = ROUTE_IDENTITY[routePath || ''] || ROUTE_IDENTITY['/execution'];
   const { projects, profiles, notify, fetchProjects, handlePromoteTaskToAsset, updateExecutionMode } = useDashboard();
   const [milestones] = React.useState<Milestone[]>([]);
@@ -78,12 +78,10 @@ export function PipelinePanel({ routePath }: { routePath?: string }) {
         />
       ) : identity.view === 'timeline' ? (
         <TimelineView
-          kanbanProjects={kanbanProjects}
+          projects={kanbanProjects}
+          tasks={allTasks}
+          dependencies={dependencies || []}
           profiles={profiles}
-          profile={profile}
-          notify={notify}
-          onRecalibrateAnalytics={() => fetchProjects()}
-          onPromoteToAsset={handlePromoteTaskToAsset}
         />
       ) : (
         <BoardView

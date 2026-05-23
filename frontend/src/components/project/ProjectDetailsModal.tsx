@@ -67,6 +67,10 @@ export function ProjectDetailsModal({
   }, []);
   const nowLive = useMemo(() => new Date(), [tick]);
   const workWindow = useMemo(() => ({ workStart: workingTimeFrom, workEnd: workingTimeTo, lunchDuration: 60, workingDays: [1, 2, 3, 4, 5], productivityFactor: 0.8, holidays: [], shutdowns: [] }), [workingTimeFrom, workingTimeTo]);
+  
+  const startDate = proposedStartDate ? new Date(proposedStartDate) : new Date(project.created_at);
+  const deadline = clientDeadline ? new Date(clientDeadline) : null;
+
   const etaCompletionDate = useMemo(() => {
     if (isPlanning) return nowLive;
     return addWorkingHours(startDate, expectedRealHours / engineerCount, workWindow);
@@ -248,9 +252,6 @@ export function ProjectDetailsModal({
     onClose();
   };
 
-  const startDate = proposedStartDate ? new Date(proposedStartDate) : new Date(project.created_at);
-
-  const deadline = clientDeadline ? new Date(clientDeadline) : null;
   const deadlineVariance = deadline ? Math.floor((deadline.getTime() - etaCompletionDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
   return (

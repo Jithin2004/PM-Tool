@@ -21,6 +21,9 @@ export interface WorkspaceSettings {
   region?: string;
   city?: string;
   shutdowns?: Array<{ start: string; end: string; name: string }>;
+  default_mode?: string;
+  auto_archive?: boolean;
+  notifications?: boolean;
 }
 
 export interface Workspace {

@@ -1,7 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { normalizeSupabaseError } from '../utils/supabaseError';
-
-type CalendarEventType = 'meeting' | 'workshop' | 'review' | 'sprint_planning' | 'retrospective' | 'standup' | 'one_on_one' | 'training' | 'social' | 'focus_time';
+import type { CalendarEventType, SprintStatus } from '../types';
 
 interface DynServices {
   activityLogService: typeof import('./activityLogService')['activityLogService'];
@@ -338,7 +337,7 @@ export async function cleanupSyntheticRun(runId: string, wsId?: string): Promise
     if (!wsId) return { cleaned, success: false };
   }
   const before = await countSimRecords(runId, wsId);
-  const ops: (() => Promise<any>)[] = [];
+  const ops: (() => any)[] = [];
 
   ops.push(async () => {
     const { data: t } = await supabase.from('tasks').select('id').eq('workspace_id', wsId).like('name', `SST_${runId}_%`);
@@ -393,6 +392,28 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
   const report = makeBaseReport(runId, startTime);
   const dryRun = options?.dryRun === true;
   report.dryRun = dryRun;
+  const force = options?.force === true;
+
+  const {
+    activityLogService,
+    fireEventWebhooks,
+    createWebhook,
+    evaluateTriggers,
+    createAutomationRule,
+    createDocument,
+    createApprovalChain,
+    createApprovalInstance,
+    sprintService,
+    calendarEventService,
+    createTeam,
+    createProject,
+    createEpic,
+    createTask,
+    createTaskDependency,
+    createConnectedAccount,
+    createIntegrationConfig,
+    createIntegrationSyncJob
+  } = await loadServices();
 
   const existingLock = checkLock();
   if (existingLock) {
@@ -449,7 +470,6 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
   const maxUsers = options?.maxUsers ?? DEFAULT_MAX.users;
   const maxProjects = options?.maxProjects ?? DEFAULT_MAX.projects;
   const maxTasks = options?.maxTasks ?? DEFAULT_MAX.tasks;
-  const force = options?.force === true;
   const scale = options?.scale ?? 1;
   const BATCH = {
     epics: Math.ceil(3000 * scale),
@@ -461,7 +481,6 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     integrations: Math.ceil(50 * scale),
     taskDeps: Math.ceil(30 * scale),
   };
-  const { activityLogService, fireEventWebhooks, createWebhook, evaluateTriggers, createAutomationRule, createDocument, createApprovalChain, createApprovalInstance, sprintService, calendarEventService, createTeam, createProject, createEpic, createTask, createTaskDependency, createConnectedAccount, createIntegrationConfig, createIntegrationSyncJob } = await loadServices();
 
   if (!force && (maxUsers > DEFAULT_MAX.users * MAX_MULTIPLIER || maxProjects > DEFAULT_MAX.projects * MAX_MULTIPLIER || maxTasks > DEFAULT_MAX.tasks * MAX_MULTIPLIER)) {
     report.blocked = true;
@@ -828,14 +847,15 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       const payload = {
         workspace_id: wsId, project_id: sp.id, name: simTag(runId, 'sprint', sprintCompletions),
         goal: 'Stress test sprint', start_date: new Date(Date.now() - 14 * 86400000).toISOString(),
-        end_date: nowISO(), status: 'active',
+        end_date: nowISO(), status: 'active' as SprintStatus,
+        velocity_committed: 0, velocity_completed: 0,
       };
       const sprint = await callService(report, 'sprintService.createSprint', payload, () =>
         sprintService.createSprint(payload)
       );
       if (sprint && typeof sprint === 'object' && 'id' in sprint) {
-        await callService(report, 'sprintService.updateSprint', { id: sprint.id, status: 'completed' }, () =>
-          sprintService.updateSprint(sprint.id, { status: 'completed' })
+        await callService(report, 'sprintService.updateSprint', { id: sprint.id, status: 'completed' as SprintStatus }, () =>
+          sprintService.updateSprint(sprint.id, { status: 'completed' as SprintStatus })
         );
         sprintCompletions++;
       }
@@ -845,7 +865,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     let autoTriggers = 0;
     const { data: rules } = await supabase.from('automation_rules').select('id').eq('workspace_id', wsId).like('name', `SST_${runId}_%`).limit(30);
     for (const rule of rules || []) {
-      await evaluateTriggers('task.updated', { workspace_id: wsId, task_id: taskIds[autoTriggers % taskIds.length] || taskIds[0], task_name: 'SST event task' });
+      await evaluateTriggers('task.status_changed', { workspace_id: wsId, task_id: taskIds[autoTriggers % taskIds.length] || taskIds[0], task_name: 'SST event task' });
       autoTriggers++;
     }
     report.events.automationTriggers = autoTriggers;
@@ -941,7 +961,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       } catch { /* noop */ }
     }
 
-    const deleteOps: (() => Promise<any>)[] = [];
+    const deleteOps: (() => any)[] = [];
 
     deleteOps.push(async () => {
       const { data: t } = await supabase.from('tasks').select('id').eq('workspace_id', wsId).like('name', `SST_${runId}_%`);
