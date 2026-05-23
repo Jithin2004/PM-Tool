@@ -1834,6 +1834,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
             onUpdate={handleUpdateProjectMetadata}
             onDelete={handleDeleteProject}
             workingHoursPerDay={workingHoursPerDay}
+            workingTimeFrom={workingTimeFrom}
+            workingTimeTo={workingTimeTo}
             currentUserProfile={profile}
             userCustomRoles={userCustomRoles}
           />

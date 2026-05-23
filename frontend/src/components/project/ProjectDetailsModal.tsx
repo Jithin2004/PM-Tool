@@ -6,6 +6,7 @@ import { Project, Team, User, Profile } from '../../types';
 import { useDashboard } from '../../context/DashboardContext';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { calculateExpectedTime, calculateVariance } from '../../utils/timeUtils';
+import { addWorkingHours, getDailyCapacity } from '../../utils/productivity';
 import { activityLogService } from '../../services/activityLogService';
 
 export function ProjectDetailsModal({
@@ -16,7 +17,9 @@ export function ProjectDetailsModal({
   onDelete,
   workingHoursPerDay,
   currentUserProfile,
-  userCustomRoles
+  userCustomRoles,
+  workingTimeFrom = '09:00',
+  workingTimeTo = '17:00'
 }: {
   project: Project,
   teams: Team[],
@@ -25,7 +28,9 @@ export function ProjectDetailsModal({
   onDelete: (id: string, reason: string) => void,
   workingHoursPerDay: number,
   currentUserProfile: Profile | null,
-  userCustomRoles: Record<string, string>
+  userCustomRoles: Record<string, string>,
+  workingTimeFrom?: string,
+  workingTimeTo?: string
 }) {
   const { tasks } = useDashboard();
   const hasTasks = tasks.some(t => t.project_id === project.id);
@@ -51,8 +56,33 @@ export function ProjectDetailsModal({
   const expectedRealHours = calculateExpectedTime(Number(pBest), Number(pLikely), Number(pWorst));
   const productiveHoursPerDay = workingHoursPerDay * 0.8;
   const calendarExpected = (expectedRealHours / productiveHoursPerDay / engineerCount).toFixed(2);
-  const variance = calculateVariance(Number(pBest), Number(pWorst));
-  const stdDev = Math.sqrt(variance);
+  const varianceVal = calculateVariance(Number(pBest) || 0, Number(pWorst) || 0);
+  const stdDev = isNaN(varianceVal) ? 0 : Math.sqrt(varianceVal);
+  const isPlanning = status === 'planning';
+
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+  const nowLive = useMemo(() => new Date(), [tick]);
+  const workWindow = useMemo(() => ({ workStart: workingTimeFrom, workEnd: workingTimeTo, lunchDuration: 60, workingDays: [1, 2, 3, 4, 5], productivityFactor: 0.8, holidays: [], shutdowns: [] }), [workingTimeFrom, workingTimeTo]);
+  const etaCompletionDate = useMemo(() => {
+    if (isPlanning) return nowLive;
+    return addWorkingHours(startDate, expectedRealHours / engineerCount, workWindow);
+  }, [startDate, expectedRealHours, engineerCount, workWindow, isPlanning, nowLive]);
+  const etaRemainingDays = useMemo(() => {
+    if (isPlanning) return 0;
+    if (nowLive >= etaCompletionDate) return 0;
+    let count = 0;
+    let cursor = new Date(nowLive);
+    while (cursor < etaCompletionDate) {
+      const cap = getDailyCapacity(cursor, workWindow);
+      if (cap > 0) count += cap / productiveHoursPerDay;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return Math.max(0, Number(count.toFixed(1)));
+  }, [nowLive, etaCompletionDate, workWindow, productiveHoursPerDay, isPlanning]);
 
   const [changeReasonPrompt, setChangeReasonPrompt] = useState<{ changes: any, open: boolean }>({ changes: null, open: false });
   const [changeReason, setChangeReason] = useState('');
@@ -219,13 +249,9 @@ export function ProjectDetailsModal({
   };
 
   const startDate = proposedStartDate ? new Date(proposedStartDate) : new Date(project.created_at);
-  const now = new Date();
-  const daysPassed = Math.max(0, (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  const remainingDays = Math.max(0, Number(calendarExpected) - daysPassed);
-  const completionDate = new Date(startDate.getTime() + Number(calendarExpected) * 24 * 60 * 60 * 1000);
 
   const deadline = clientDeadline ? new Date(clientDeadline) : null;
-  const deadlineVariance = deadline ? Math.floor((deadline.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
+  const deadlineVariance = deadline ? Math.floor((deadline.getTime() - etaCompletionDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
@@ -598,7 +624,7 @@ export function ProjectDetailsModal({
                       </div>
                       <div className="bg-blue-500/10 p-3 border border-blue-500/20">
                         <p className="text-[10px] font-mono text-blue-400 uppercase mb-1">Remaining ETA</p>
-                        <p className="text-xl font-mono text-blue-400">{remainingDays.toFixed(1)}d</p>
+                        <p className="text-xl font-mono text-blue-400">{etaRemainingDays.toFixed(1)}d</p>
                       </div>
                       <div className={`p-3 border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
                         <p className={`text-[10px] font-mono uppercase mb-1 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-green-400'}`}>Variance</p>
@@ -610,7 +636,7 @@ export function ProjectDetailsModal({
 
                     <div className="mb-6">
                       <p className="text-[10px] font-mono text-white/75 uppercase mb-2">Predicted End</p>
-                      <p className="text-lg font-mono text-white">{completionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <p className="text-lg font-mono text-white">{etaCompletionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
                   </>
                 ) : (

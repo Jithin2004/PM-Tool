@@ -25,10 +25,13 @@ export function ProjectCard({ project, teams, profiles, workingHoursPerDay, work
   );
 
   const productiveHoursPerDay = workingHoursPerDay * 0.8;
-  const stdDev = Math.sqrt(calculateVariance(project.pert_best, project.pert_worst));
+  const varianceVal = calculateVariance(project.pert_best ?? 0, project.pert_worst ?? 0);
+  const stdDev = isNaN(varianceVal) ? 0 : Math.sqrt(varianceVal);
 
   const riskColor = stdDev < 1.5 ? 'text-green-400' : stdDev < 3 ? 'text-yellow-400' : 'text-red-500';
   const riskLabel = stdDev < 1.5 ? 'STABLE' : stdDev < 3 ? 'CAUTION' : 'HIGH_RISK';
+
+  const isPlanning = project.status === 'planning';
 
   // ETA using working hours only (re-computed on each tick for live countdown)
   const startDate = project.proposed_start_date ? new Date(project.proposed_start_date) : new Date(project.created_at);
@@ -36,11 +39,13 @@ export function ProjectCard({ project, teams, profiles, workingHoursPerDay, work
   const workWindow = useMemo(() => ({ workStart: workingTimeFrom, workEnd: workingTimeTo, lunchDuration: 60, workingDays: [1, 2, 3, 4, 5], productivityFactor: 0.8, holidays: [], shutdowns: [] }), [workingTimeFrom, workingTimeTo]);
 
   const completionDate = useMemo(() => {
+    if (isPlanning) return now;
     const totalHours = (expectedRealHours / engineerCount);
     return addWorkingHours(startDate, totalHours, workWindow);
-  }, [startDate, expectedRealHours, engineerCount]);
+  }, [startDate, expectedRealHours, engineerCount, isPlanning, now]);
 
   const remainingDays = useMemo(() => {
+    if (isPlanning) return 0;
     if (now >= completionDate) return 0;
     let count = 0;
     let cursor = new Date(now);
@@ -50,7 +55,7 @@ export function ProjectCard({ project, teams, profiles, workingHoursPerDay, work
       cursor.setDate(cursor.getDate() + 1);
     }
     return Math.max(0, Number(count.toFixed(1)));
-  }, [now, completionDate, workWindow, workingHoursPerDay]);
+  }, [now, completionDate, workWindow, workingHoursPerDay, isPlanning]);
 
   const completionDateStr = completionDate.toLocaleDateString('en-GB', {
     weekday: 'short',

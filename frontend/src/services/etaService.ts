@@ -212,6 +212,10 @@ export function calculateTaskCountdown(
     return { text: 'DONE', color: 'text-emerald-500', pulse: 'bg-emerald-500' };
   }
 
+  if (status === 'backlog') {
+    return { text: 'WAITING', color: 'text-white/40 font-mono', pulse: 'bg-white/10' };
+  }
+
   if (!weightHours || weightHours <= 0) {
     return { text: 'No task estimates available', color: 'text-white/30 font-mono', pulse: 'bg-white/10' };
   }

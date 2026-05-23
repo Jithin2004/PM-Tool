@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, ArrowRight, ArrowUp, AlertTriangle, Clock, Users, Shield } from 'lucide-react';
 import { Task, Project } from '../../types';
@@ -32,6 +32,11 @@ export function TaskCard({
   blockedByTasks,
   dependencyConfidence
 }: TaskCardProps) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
   const countdown = calculateTaskCountdown(task.created_at, task.estimated_hours, task.status);
   const nextSlot = task.predicted_completion && task.status !== 'done'
     ? `Slot: ${new Date(task.predicted_completion).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
