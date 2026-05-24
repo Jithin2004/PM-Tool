@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Search, Plus, BrainCircuit, Users, Target, Activity, AlertTriangle, ShieldAlert, Clock, Bell, Cpu,
-  Briefcase, Layers, ArrowUpRight, Sparkles, UserPlus, FileText, CheckCircle2, TrendingUp, BarChart3, Check
+  Briefcase, Layers, ArrowUpRight, Sparkles, UserPlus, FileText, CheckCircle2, TrendingUp, BarChart3, Check, Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
