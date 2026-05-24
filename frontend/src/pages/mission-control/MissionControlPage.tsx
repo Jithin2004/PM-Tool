@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useOperationalPresence } from '../../core/presence/presenceEngine';
 import { useCoordinationEngine } from '../../core/coordination/coordinationEngine';
 import { generateCoordinationInsights } from '../../core/ai/coordinationInsights';
@@ -16,12 +16,18 @@ import { DependencyRiskPanel } from '../../components/mission-control/Dependency
 import { OrganizationalFlowMap } from '../../components/mission-control/OrganizationalFlowMap';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { DensityProvider, useDensity } from '../../core/ui/DensityProvider';
+import { getMissionFocus } from '../../core/mission-control/operationalFocus';
+import { getFocusConfig } from '../../core/dashboard/contextualFocus';
+import type { MissionControlView } from '../../core/mission-control/operationalFocus';
+import { TYPESCALE } from '../../design/typographyScale';
+import { SPACING } from '../../design/spacingSystem';
 
-export default function MissionControlPage() {
+function MissionControlContent() {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
-
-  const wsId = workspace?.id || '';
+  const { tokens } = useDensity();
+  const [view, setView] = useState<MissionControlView>('strategic');
 
   const presence = useOperationalPresence({
     userId: profile?.id || '',
@@ -82,84 +88,157 @@ export default function MissionControlPage() {
     [insights, riskInsights],
   );
 
+  const missionFocus = getMissionFocus(view);
+  const focusConfig = getFocusConfig(missionFocus.focusMode);
+
   const activeCount = useMemo(
     () => presence.collaborators.filter(c => !c.idle).length,
     [presence.collaborators],
   );
 
+  const criticalInsights = allInsights.filter(i => i.severity === 'critical' || i.severity === 'warning').slice(0, 4);
+  const otherInsights = allInsights.filter(i => i.severity !== 'critical' && i.severity !== 'warning');
+
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+    <div style={{ padding: tokens.panel, maxWidth: '1440px', margin: '0 auto' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingBottom: tokens.gap,
+        marginBottom: tokens.sectionGap,
+        borderBottom: '1px solid var(--border)',
+      }}>
         <div>
-          <h1 className="text-lg font-semibold text-gray-800">Mission Control</h1>
-          <p className="text-[11px] text-gray-400 mt-0.5">
-            {activeCount} active contributor{activeCount !== 1 ? 's' : ''} · workspace operational intelligence
+          <h1 style={{ ...TYPESCALE.display, margin: 0, color: 'var(--text-primary)' }}>Mission Control</h1>
+          <p style={{ ...TYPESCALE.caption, marginTop: 4, color: 'var(--text-tertiary)' }}>
+            {activeCount} active contributor{activeCount !== 1 ? 's' : ''} · {missionFocus.label}
           </p>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-gray-500">
-          <span className="w-2 h-2 rounded-full bg-emerald-300" />
-          vitality {coordination.vitality.overall}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['strategic', 'tactical', 'diagnostic'] as const).map(v => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                style={{
+                  padding: '4px 12px',
+                  fontSize: TYPESCALE.telemetry.size,
+                  fontWeight: view === v ? 600 : 400,
+                  letterSpacing: TYPESCALE.telemetry.letterSpacing,
+                  textTransform: 'uppercase',
+                  background: view === v ? 'var(--accent-primary)' : 'transparent',
+                  color: view === v ? 'var(--bg)' : 'var(--text-tertiary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                }}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: coordination.vitality.overall >= 70 ? 'var(--signal-safe)' : coordination.vitality.overall >= 40 ? 'var(--signal-warning)' : 'var(--signal-critical)',
+            }} />
+            <span style={{ fontSize: TYPESCALE.caption.size, color: 'var(--text-secondary)' }}>
+              vitality {coordination.vitality.overall}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
+      {focusConfig.showPrimary && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: tokens.gap,
+          marginBottom: tokens.sectionGap,
+        }}>
+          <div style={{ padding: tokens.panel, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 }}>
             <VitalityOverview vitality={coordination.vitality} />
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <CoordinationRadar density={coordination.density} signals={presence.signals} />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <OperationalTopologyMap
-              presences={presence.collaborators}
-              signals={presence.signals}
-              hotspots={coordination.hotspots}
-            />
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <OrganizationalFlowMap
-              presences={presence.collaborators}
-              signals={presence.signals}
-              feed={presence.feed}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
+          <div style={{ padding: tokens.panel, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 }}>
             <ExecutionPressureZones
               bottlenecks={coordination.bottlenecks}
               hotspots={coordination.hotspots}
               vitality={coordination.vitality}
             />
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
+          <div style={{ padding: tokens.panel, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 }}>
+            <CoordinationRadar density={coordination.density} signals={presence.signals} />
+          </div>
+        </div>
+      )}
+
+      {focusConfig.showSecondary && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: tokens.gap,
+          marginBottom: tokens.sectionGap,
+        }}>
+          <div style={{ padding: tokens.panel, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 }}>
+            <OperationalTopologyMap
+              presences={presence.collaborators}
+              signals={presence.signals}
+              hotspots={coordination.hotspots}
+            />
+          </div>
+          <div style={{ padding: tokens.panel, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 }}>
+            <OrganizationalFlowMap
+              presences={presence.collaborators}
+              signals={presence.signals}
+              feed={presence.feed}
+            />
+          </div>
+          <div style={{ padding: tokens.panel, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 }}>
             <DependencyRiskPanel predictions={predictions} insights={allInsights} />
           </div>
         </div>
-      </div>
+      )}
 
-      {allInsights.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-3">
-          <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold pb-2 border-b border-gray-100 mb-2">
+      {focusConfig.showTertiary && criticalInsights.length > 0 && (
+        <div style={{
+          padding: tokens.panel,
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          marginBottom: tokens.sectionGap,
+        }}>
+          <div style={{
+            ...TYPESCALE.label,
+            textTransform: 'uppercase',
+            color: 'var(--text-tertiary)',
+            paddingBottom: tokens.element,
+            marginBottom: tokens.element,
+            borderBottom: '1px solid var(--border)',
+          }}>
             operational intelligence
           </div>
-          <div className="space-y-1.5">
-            {allInsights.slice(0, 6).map(insight => {
-              let dotColor = 'bg-blue-300';
-              if (insight.severity === 'warning' || insight.severity === 'critical') dotColor = 'bg-amber-400';
-              else if (insight.severity === 'notice') dotColor = 'bg-indigo-300';
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {criticalInsights.map(insight => {
+              let dotColor = 'var(--signal-info)';
+              if (insight.severity === 'warning') dotColor = 'var(--signal-warning)';
+              else if (insight.severity === 'critical') dotColor = 'var(--signal-critical)';
 
               return (
-                <div key={insight.id} className="flex items-start gap-2">
-                  <span className={`w-1.5 h-1.5 rounded-full mt-1 shrink-0 ${dotColor}`} />
+                <div key={insight.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%', background: dotColor,
+                    marginTop: 4, flexShrink: 0,
+                  }} />
                   <div>
-                    <p className="text-[11px] font-medium text-gray-700">{insight.title}</p>
-                    <p className="text-[10px] text-gray-500">{insight.description}</p>
+                    <p style={{ ...TYPESCALE.bodySmall, fontWeight: 500, margin: 0, color: 'var(--text-primary)' }}>
+                      {insight.title}
+                    </p>
+                    <p style={{ ...TYPESCALE.caption, margin: 0, color: 'var(--text-tertiary)' }}>
+                      {insight.description}
+                    </p>
                   </div>
                 </div>
               );
@@ -167,6 +246,44 @@ export default function MissionControlPage() {
           </div>
         </div>
       )}
+
+      {focusConfig.showPassive && otherInsights.length > 0 && (
+        <div style={{
+          padding: tokens.panel,
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+        }}>
+          <div style={{
+            ...TYPESCALE.label,
+            textTransform: 'uppercase',
+            color: 'var(--text-quaternary)',
+            paddingBottom: tokens.element,
+            marginBottom: tokens.element,
+            borderBottom: '1px solid var(--border)',
+          }}>
+            additional signals
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {otherInsights.slice(0, 3).map(insight => (
+              <div key={insight.id} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--text-quaternary)', marginTop: 5, flexShrink: 0 }} />
+                <p style={{ ...TYPESCALE.caption, margin: 0, color: 'var(--text-tertiary)' }}>
+                  {insight.title}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function MissionControlPage() {
+  return (
+    <DensityProvider surface="mission-control">
+      <MissionControlContent />
+    </DensityProvider>
   );
 }

@@ -9,6 +9,25 @@
 :root {
   background-color: #0a0a0a;
   color: #f5f5f5;
+
+  /* Design token variables — dark theme defaults */
+  --bg: #0c0a09;
+  --surface: #1c1917;
+  --border: #292524;
+  --text-primary: #fafaf9;
+  --text-secondary: #a8a29e;
+  --text-tertiary: #57534e;
+  --text-quaternary: #292524;
+  --signal-critical: #fca5a5;
+  --signal-warning: #fcd34d;
+  --signal-safe: #86efac;
+  --signal-info: #93c5fd;
+  --accent-primary: #fafaf9;
+  --accent-secondary: #e7e5e4;
+  --signal-critical-bg: rgba(252, 165, 165, 0.08);
+  --signal-warning-bg: rgba(252, 211, 77, 0.08);
+  --signal-safe-bg: rgba(134, 239, 172, 0.08);
+  --signal-info-bg: rgba(147, 197, 253, 0.08);
 }
 
 body {
@@ -22,6 +41,25 @@ body {
 .light {
   background-color: #f1f5f9 !important;
   color: #090d16 !important;
+
+  /* Design token variables — light theme */
+  --bg: #f5f5f4;
+  --surface: #ffffff;
+  --border: #e7e5e4;
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-tertiary: #a8a29e;
+  --text-quaternary: #d6d3d1;
+  --signal-critical: #dc2626;
+  --signal-warning: #d97706;
+  --signal-safe: #16a34a;
+  --signal-info: #2563eb;
+  --accent-primary: #0f172a;
+  --accent-secondary: #1e293b;
+  --signal-critical-bg: rgba(220, 38, 38, 0.06);
+  --signal-warning-bg: rgba(217, 119, 6, 0.06);
+  --signal-safe-bg: rgba(22, 163, 74, 0.06);
+  --signal-info-bg: rgba(37, 99, 235, 0.06);
 }
 
 .light .bg-\[\#0a0a0a\] {
