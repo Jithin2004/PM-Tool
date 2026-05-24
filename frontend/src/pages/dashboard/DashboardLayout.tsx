@@ -5,7 +5,8 @@ import {
   Settings, LogOut, Zap, TrendingUp, Cpu, Edit2, Trash2,
   History, Calendar, DollarSign, Sliders, Check, Lock,
   Calculator, TrendingDown, Banknote, Download, Menu, X,
-  Sun, Moon, Layers, ListOrdered, Kanban, Play
+  Sun, Moon, Layers, ListOrdered, Kanban, Play,
+  Briefcase, ListTodo, FileText, Link2, Bell, HelpCircle, LayoutDashboard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../../lib/supabase';
@@ -309,7 +310,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isRosterOpen, setIsRosterOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [dashboardTab, setDashboardTab] = useState<'active' | 'completed' | 'intelligence'>('active');
+  const [dashboardTab, setDashboardTab] = useState<'dashboard' | 'active' | 'completed' | 'intelligence'>('dashboard');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [projectSetupGuide, setProjectSetupGuide] = useState<{ projectId: string; executionMode: string; step: number } | null>(null);
   const [showFeedbackGate, setShowFeedbackGate] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
@@ -1594,80 +1596,499 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       setSelectedProject,
       updateExecutionMode
     }}>
-      <div className={`min-h-screen bg-[#0a0a0a] font-sans text-white/90 selection:bg-white selection:text-black ${theme === 'light' ? 'light' : ''}`}>
-        <Header
-          user={user}
-          profile={profile}
-          userCustomRoles={userCustomRoles}
-          onLogout={handleLogout}
-          notifications={dbNotifications}
-          onMarkAsRead={handleMarkAsRead}
-        onNavigate={navigateTo}
-        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-          workingTimeFrom={workingTimeFrom}
-          workingTimeTo={workingTimeTo}
-          onWorkingTimeChange={handleWorkingTimeChange}
-          tilesPerRow={tilesPerRow}
-          setTilesPerRow={setTilesPerRow}
-          theme={theme}
-          setTheme={setTheme}
+      <div className={`min-h-screen bg-bg font-sans text-text-primary selection:bg-accent-primary selection:text-white transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}>
+        
+        {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 bg-surface border-r border-border z-30 shadow-premium">
+          {/* Sidebar Brand Logo */}
+          <div className="flex items-center gap-3 h-16 px-6 border-b border-border shrink-0">
+            <div className="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
+              <Layers className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold tracking-tight text-sm uppercase text-text-primary">Resolve PM</h1>
+              <p className="text-[9px] font-mono text-text-tertiary uppercase tracking-wider">Enterprise Console</p>
+            </div>
+          </div>
+
+          {/* Sidebar Menu Groups */}
+          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-7">
+            {/* MAIN group */}
+            <div className="space-y-2">
+              <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Main</p>
+              <div className="space-y-1">
+                <button
+                  onClick={() => { setDashboardTab('dashboard'); navigateTo('/workspace'); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    dashboardTab === 'dashboard' && window.location.pathname === '/workspace'
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => { setDashboardTab('active'); navigateTo('/workspace'); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    dashboardTab === 'active' && window.location.pathname === '/workspace'
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <Briefcase className="w-4 h-4" />
+                  Projects
+                </button>
+                <button
+                  onClick={() => navigateTo('/execution')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <ListTodo className="w-4 h-4" />
+                  Tasks
+                </button>
+                <button
+                  onClick={() => navigateTo('/execution/timeline')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    window.location.pathname.includes('timeline')
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  Calendar
+                </button>
+                <button
+                  onClick={() => navigateTo('/control/analytics')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    window.location.pathname.includes('analytics')
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Analytics
+                </button>
+                <button
+                  onClick={() => navigateTo('/resources/work-logs')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    window.location.pathname.includes('work-logs')
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  Reports
+                </button>
+              </div>
+            </div>
+
+            {/* TEAM group */}
+            <div className="space-y-2">
+              <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Team</p>
+              <div className="space-y-1">
+                <button
+                  onClick={() => navigateTo('/resources/teams')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    window.location.pathname.includes('teams')
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  Team
+                </button>
+                <button
+                  onClick={() => navigateTo('/workspace/portfolio')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    window.location.pathname.includes('portfolio')
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <Briefcase className="w-4 h-4" />
+                  Clients
+                </button>
+                <button
+                  onClick={() => navigateTo('/control/audit')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    window.location.pathname.includes('audit')
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <Activity className="w-4 h-4" />
+                  Activity
+                </button>
+              </div>
+            </div>
+
+            {/* SETTINGS group */}
+            <div className="space-y-2">
+              <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Settings</p>
+              <div className="space-y-1">
+                <button
+                  onClick={() => navigateTo('/control/settings')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    window.location.pathname === '/control/settings' || window.location.pathname.startsWith('/control/settings/')
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </button>
+                <button
+                  onClick={() => navigateTo('/control/connections')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                    window.location.pathname.includes('connections')
+                      ? 'bg-primary-gradient text-white shadow-md'
+                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                  }`}
+                >
+                  <Link2 className="w-4 h-4" />
+                  Integrations
+                </button>
+                <button
+                  onClick={() => (window as any).startOnboardingTour?.()}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-text-secondary hover:bg-white/5 hover:text-text-primary transition-all"
+                >
+                  <HelpCircle className="w-4 h-4 text-blue-400" />
+                  Help & Support
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* User Profile Card at Bottom */}
+          <div className="p-4 border-t border-border bg-black/10 shrink-0">
+            <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-all group">
+              <div
+                onClick={() => setIsProfileOpen(true)}
+                className="w-9 h-9 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden shrink-0 cursor-pointer group-hover:border-accent-primary transition-colors"
+              >
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : profile?.full_name ? (
+                  <span className="text-xs font-bold text-text-primary">{profile.full_name.substring(0, 2).toUpperCase()}</span>
+                ) : (
+                  <Users className="w-4 h-4 text-text-secondary" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-text-primary truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
+                <p className="text-[10px] text-text-tertiary truncate capitalize">
+                  {(profile && userCustomRoles[profile.id]) || profile?.role?.replace('_', ' ') || 'Viewer'}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 text-text-tertiary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                title="Terminate Session"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* Mobile Slide-out Sidebar Drawer */}
+        <AnimatePresence>
+          {mobileSidebarOpen && (
+            <>
+              {/* Drawer Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileSidebarOpen(false)}
+                className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              />
+
+              {/* Drawer Panel */}
+              <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="lg:hidden fixed inset-y-0 left-0 w-72 bg-surface border-r border-border z-50 flex flex-col shadow-2xl"
+              >
+                <div className="flex items-center justify-between h-16 px-6 border-b border-border shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center">
+                      <Layers className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="font-bold tracking-tight text-sm uppercase text-text-primary">Resolve PM</h1>
+                      <p className="text-[8px] font-mono text-text-tertiary uppercase">Enterprise Console</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className="p-1.5 hover:bg-white/5 rounded-lg text-text-secondary"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-4 py-6 space-y-7">
+                  {/* MAIN group */}
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Main</p>
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => { setDashboardTab('dashboard'); navigateTo('/workspace'); setMobileSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                          dashboardTab === 'dashboard' && window.location.pathname === '/workspace'
+                            ? 'bg-primary-gradient text-white shadow-md'
+                            : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                        }`}
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        Dashboard
+                      </button>
+                      <button
+                        onClick={() => { setDashboardTab('active'); navigateTo('/workspace'); setMobileSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                          dashboardTab === 'active' && window.location.pathname === '/workspace'
+                            ? 'bg-primary-gradient text-white shadow-md'
+                            : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                        }`}
+                      >
+                        <Briefcase className="w-4 h-4" />
+                        Projects
+                      </button>
+                      <button
+                        onClick={() => { navigateTo('/execution'); setMobileSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                          window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
+                            ? 'bg-primary-gradient text-white shadow-md'
+                            : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                        }`}
+                      >
+                        <ListTodo className="w-4 h-4" />
+                        Tasks
+                      </button>
+                      <button
+                        onClick={() => { navigateTo('/execution/timeline'); setMobileSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                          window.location.pathname.includes('timeline')
+                            ? 'bg-primary-gradient text-white shadow-md'
+                            : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                        }`}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        Calendar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* TEAM & SETTINGS on Mobile */}
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Team</p>
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => { navigateTo('/resources/teams'); setMobileSidebarOpen(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs text-text-secondary hover:bg-white/5 hover:text-text-primary"
+                      >
+                        <Users className="w-4 h-4" />
+                        Team
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 border-t border-border bg-black/10 shrink-0">
+                  <div className="flex items-center gap-3 p-2">
+                    <div className="w-9 h-9 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden shrink-0">
+                      {profile?.avatar_url ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> :
+                        <Users className="w-4 h-4 text-text-secondary" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-text-primary truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
+                      <p className="text-[10px] text-text-tertiary truncate uppercase">{profile?.role || 'Viewer'}</p>
+                    </div>
+                    <button onClick={() => { handleLogout(); setMobileSidebarOpen(false); }} className="p-1.5 hover:bg-rose-500/10 text-rose-400 rounded-lg">
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Main Content Area */}
+        <div className="lg:pl-64 flex flex-col flex-1 min-h-screen">
+          
+          {/* Top Bar (Executive Navigation Header) */}
+          <header className="h-16 flex items-center justify-between px-6 border-b border-border bg-surface sticky top-0 z-40 backdrop-blur-md transition-colors duration-200">
+            {/* Mobile menu toggle button */}
+            <div className="flex items-center gap-3 lg:hidden">
+              <button
+                onClick={() => setMobileSidebarOpen(true)}
+                className="p-2 border border-border bg-white/5 rounded-lg text-text-primary"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+              <div className="w-7 h-7 bg-primary-gradient rounded-lg flex items-center justify-center shrink-0">
+                <Layers className="w-3.5 h-3.5 text-white" />
+              </div>
+            </div>
+
+            {/* Top Bar Left: Greetings Dashboard Title */}
+            <div className="hidden sm:block">
+              <h2 className="text-sm font-semibold tracking-tight text-text-primary flex items-center gap-1.5">
+                Welcome back, {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]} <span className="animate-bounce">👋</span>
+              </h2>
+              <p className="text-[10px] text-text-tertiary">Here's what's happening with your workspace today.</p>
+            </div>
+
+            {/* Top Bar Center/Right: Actions */}
+            <div className="flex items-center gap-4 ml-auto sm:ml-0">
+              
+              {/* Unified Search Command Input */}
+              <div
+                onClick={() => setCommandPaletteOpen(true)}
+                className="hidden md:flex items-center gap-2 bg-black/10 hover:bg-black/20 border border-border h-9 px-3 rounded-lg text-text-tertiary cursor-pointer transition-all w-52 lg:w-64"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span className="text-[11px] select-none font-mono">Search console...</span>
+                <span className="ml-auto bg-white/5 border border-border px-1.5 py-0.5 rounded text-[8px] font-mono font-bold tracking-tighter">Ctrl K</span>
+              </div>
+
+              {/* Theme Toggle Button */}
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="p-2 border border-border bg-white/5 hover:bg-white/10 rounded-lg text-text-secondary hover:text-text-primary transition-all shrink-0 cursor-pointer"
+                title={theme === 'dark' ? "Light Theme" : "Dark Theme"}
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
+              </button>
+
+              {/* Notifications Center Toggle */}
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setCommandPaletteOpen(false)} // Toggle palette off
+                  className="p-2 border border-border bg-white/5 hover:bg-white/10 rounded-lg text-text-secondary hover:text-text-primary transition-all shrink-0 cursor-pointer relative"
+                  title="Notifications"
+                >
+                  <Bell className="w-4 h-4 text-cyan-400" />
+                  {dbNotifications.filter(n => !n.read_at).length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-[8px] font-mono font-bold flex items-center justify-center text-white animate-pulse">
+                      {dbNotifications.filter(n => !n.read_at).length}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Settings Action Icon */}
+              <button
+                onClick={() => navigateTo('/control/settings')}
+                className="p-2 border border-border bg-white/5 hover:bg-white/10 rounded-lg text-text-secondary hover:text-text-primary transition-all shrink-0 cursor-pointer"
+                title="Settings Dashboard"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+
+              {/* "+ New Project" Executive CTA Button */}
+              {profile && profile.role !== 'viewer' && (
+                <button
+                  onClick={() => setIsAdding(true)}
+                  className="bg-primary-gradient text-white h-9 px-4 rounded-lg flex items-center gap-1.5 text-xs font-semibold hover:opacity-90 shadow-md shadow-indigo-500/10 transition-all cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Project</span>
+                </button>
+              )}
+            </div>
+          </header>
+
+          {/* Breadcrumb Contextual Info */}
+          {breadcrumb && (
+            <div className="flex items-center gap-2 px-6 py-2 border-b border-border text-[9px] font-mono uppercase tracking-wider text-text-tertiary bg-white/[0.01]">
+              <span className="text-text-secondary">{breadcrumb.section}</span>
+              {breadcrumb.page && (
+                <>
+                  <span className="text-white/20">/</span>
+                  <span className="text-text-primary font-semibold">{breadcrumb.page}</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* StatsGrid Top-level overview (hidden on redesigned dashboard view) */}
+          {dashboardTab !== 'dashboard' && window.location.pathname === '/workspace' && (
+            <StatsGrid stats={stats} />
+          )}
+
+          {/* Dynamic Page Routing Slot */}
+          <main id="main-content" className="flex-1 p-6 overflow-y-auto pb-16">
+            {children}
+          </main>
+
+        </div>
+
+        {/* Floating Session Footer Panel */}
+        <footer className="fixed bottom-0 left-0 right-0 lg:left-64 bg-surface/80 border-t border-border px-6 py-2 flex justify-between items-center pointer-events-none z-20 backdrop-blur-md">
+          <div className="flex items-center gap-4 text-[9px] font-mono text-text-secondary uppercase tracking-widest">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500/60 animate-pulse"></div>
+              <span>System Synced</span>
+            </div>
+            <div className="hidden md:inline">ENC: AES-GCM</div>
+            <LiveClock />
+            <div className="text-text-tertiary hidden md:block border-l border-border pl-4">
+              &copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Cpu className="w-3 h-3 text-text-tertiary" />
+          </div>
+        </footer>
+
+        {/* --- Global Overlay Dialogs --- */}
+        
+        <AnimatePresence>
+          {notifications.map(n => (
+            <NotificationToast key={n.id} notification={n} onClose={() => removeNotification(n.id)} />
+          ))}
+        </AnimatePresence>
+
+        <ConfirmationModal
+          isOpen={confirmState.isOpen}
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          onConfirm={confirmState.onConfirm}
+          onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
         />
 
-        {breadcrumb && (
-          <div className="hidden sm:flex items-center gap-2 px-6 py-2 border-b border-white/5 text-[10px] font-mono uppercase tracking-wider text-white/40">
-            <span className="text-white/60">{breadcrumb.section}</span>
-            {breadcrumb.page && (
-              <>
-                <span className="text-white/20">/</span>
-                <span className="text-white/80">{breadcrumb.page}</span>
-              </>
-            )}
-          </div>
-        )}
+        <CommandPalette
+          isOpen={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+          onNavigate={navigateTo}
+          profile={profile}
+          projects={visibleProjects}
+          tasks={visibleTasks}
+          setSelectedProject={setSelectedProject}
+          notify={notify}
+          setIsAdding={setIsAdding}
+          workspaceId={workspace?.id}
+          onOpenAnalytics={() => { setCommandPaletteOpen(false); setCommandAnalyticsOpen(true); }}
+        />
 
-        <StatsGrid stats={stats} />
-
-      <AnimatePresence>
-        {notifications.map(n => (
-          <NotificationToast key={n.id} notification={n} onClose={() => removeNotification(n.id)} />
-        ))}
-      </AnimatePresence>
-
-      <ConfirmationModal
-        isOpen={confirmState.isOpen}
-        title={confirmState.title}
-        message={confirmState.message}
-        confirmText={confirmState.confirmText}
-        onConfirm={confirmState.onConfirm}
-        onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
-      />
-
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-        onNavigate={navigateTo}
-        profile={profile}
-        projects={visibleProjects}
-        tasks={visibleTasks}
-        setSelectedProject={setSelectedProject}
-        notify={notify}
-        setIsAdding={setIsAdding}
-        workspaceId={workspace?.id}
-        onOpenAnalytics={() => { setCommandPaletteOpen(false); setCommandAnalyticsOpen(true); }}
-      />
-
-      <CommandAnalytics
-        isOpen={commandAnalyticsOpen}
-        onClose={() => setCommandAnalyticsOpen(false)}
-        role={profile?.role || 'viewer'}
-        workspaceId={workspace?.id}
-        profileId={profile?.id}
-        currentRoute={window.location.pathname}
-      />
-
-      <main id="main-content">
-        {children}
-      </main>
+        <CommandAnalytics
+          isOpen={commandAnalyticsOpen}
+          onClose={() => setCommandAnalyticsOpen(false)}
+          role={profile?.role || 'viewer'}
+          workspaceId={workspace?.id}
+          profileId={profile?.id}
+          currentRoute={window.location.pathname}
+        />
 
       {/* --- Overlay Components --- */}
 
