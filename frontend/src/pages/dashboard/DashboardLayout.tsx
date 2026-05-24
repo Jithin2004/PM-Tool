@@ -6,7 +6,8 @@ import {
   History, Calendar, DollarSign, Sliders, Check, Lock,
   Calculator, TrendingDown, Banknote, Download, Menu, X,
   Sun, Moon, Layers, ListOrdered, Kanban, Play,
-  Briefcase, ListTodo, FileText, Link2, Bell, HelpCircle, LayoutDashboard
+  Briefcase, ListTodo, FileText, Link2, Bell, HelpCircle, LayoutDashboard,
+  Truck, Route, GitBranch, Building2, Radar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../../lib/supabase';
@@ -1599,195 +1600,220 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       <div className={`min-h-screen bg-bg font-sans text-text-primary selection:bg-accent-primary selection:text-white transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}>
         
         {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
-        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 bg-surface border-r border-border z-30 shadow-premium">
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] bg-[#0b0c12] border-r border-white/[0.05] z-30">
           {/* Sidebar Brand Logo */}
-          <div className="flex items-center gap-3 h-16 px-6 border-b border-border shrink-0">
-            <div className="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
-              <Layers className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-3 h-16 px-5 border-b border-white/[0.05] shrink-0">
+            <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}>
+              <Layers className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold tracking-tight text-sm uppercase text-text-primary">Resolve PM</h1>
-              <p className="text-[9px] font-mono text-text-tertiary uppercase tracking-wider">Enterprise Console</p>
+              <h1 className="font-semibold tracking-tight text-[13px] text-white/90">Resolve PM</h1>
+              <p className="text-[9px] font-mono text-white/25 uppercase tracking-widest">Enterprise Platform</p>
             </div>
           </div>
 
-          {/* Sidebar Menu Groups */}
-          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-7">
-            {/* MAIN group */}
-            <div className="space-y-2">
-              <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Main</p>
-              <div className="space-y-1">
-                <button
-                  onClick={() => { setDashboardTab('dashboard'); navigateTo('/workspace'); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    dashboardTab === 'dashboard' && window.location.pathname === '/workspace'
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => { setDashboardTab('active'); navigateTo('/workspace'); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    dashboardTab === 'active' && window.location.pathname === '/workspace'
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <Briefcase className="w-4 h-4" />
-                  Projects
-                </button>
-                <button
-                  onClick={() => navigateTo('/execution')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <ListTodo className="w-4 h-4" />
-                  Tasks
-                </button>
-                <button
-                  onClick={() => navigateTo('/execution/timeline')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    window.location.pathname.includes('timeline')
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <Calendar className="w-4 h-4" />
-                  Calendar
-                </button>
-                <button
-                  onClick={() => navigateTo('/control/analytics')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    window.location.pathname.includes('analytics')
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  Analytics
-                </button>
-                <button
-                  onClick={() => navigateTo('/resources/work-logs')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    window.location.pathname.includes('work-logs')
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  Reports
-                </button>
-              </div>
+          {/* Sidebar Menu Groups — Enterprise Navigation Architecture */}
+          <div className="flex-1 overflow-y-auto px-3 py-5 space-y-6" style={{scrollbarWidth: 'none'}}>
+
+            {/* ── CORE group ── */}
+            <div className="space-y-0.5">
+              <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.15em] px-3 mb-2">Core</p>
+              <button
+                onClick={() => { setDashboardTab('dashboard'); navigateTo('/workspace'); }}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  dashboardTab === 'dashboard' && window.location.pathname === '/workspace'
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <LayoutDashboard className="w-[15px] h-[15px] shrink-0" />
+                Overview
+              </button>
+              <button
+                onClick={() => { setDashboardTab('active'); navigateTo('/workspace'); }}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  dashboardTab === 'active' && window.location.pathname === '/workspace'
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Briefcase className="w-[15px] h-[15px] shrink-0" />
+                Projects
+              </button>
+              <button
+                onClick={() => navigateTo('/execution')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <ListTodo className="w-[15px] h-[15px] shrink-0" />
+                Task Board
+              </button>
+              <button
+                onClick={() => navigateTo('/execution/timeline')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('timeline')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Route className="w-[15px] h-[15px] shrink-0" />
+                Scheduling
+              </button>
             </div>
 
-            {/* TEAM group */}
-            <div className="space-y-2">
-              <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Team</p>
-              <div className="space-y-1">
-                <button
-                  onClick={() => navigateTo('/resources/teams')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    window.location.pathname.includes('teams')
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <Users className="w-4 h-4" />
-                  Team
-                </button>
-                <button
-                  onClick={() => navigateTo('/workspace/portfolio')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    window.location.pathname.includes('portfolio')
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <Briefcase className="w-4 h-4" />
-                  Clients
-                </button>
-                <button
-                  onClick={() => navigateTo('/control/audit')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    window.location.pathname.includes('audit')
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <Activity className="w-4 h-4" />
-                  Activity
-                </button>
-              </div>
+            {/* ── INTELLIGENCE group ── */}
+            <div className="space-y-0.5">
+              <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.15em] px-3 mb-2">Intelligence</p>
+              <button
+                onClick={() => navigateTo('/control/analytics')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('analytics')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <BarChart3 className="w-[15px] h-[15px] shrink-0" />
+                Analytics
+              </button>
+              <button
+                onClick={() => { setDashboardTab('intelligence'); navigateTo('/workspace'); }}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  dashboardTab === 'intelligence' && window.location.pathname === '/workspace'
+                    ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <BrainCircuit className="w-[15px] h-[15px] shrink-0" />
+                Decision Center
+              </button>
+              <button
+                onClick={() => navigateTo('/resources/work-logs')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('work-logs')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <FileText className="w-[15px] h-[15px] shrink-0" />
+                Reports
+              </button>
             </div>
 
-            {/* SETTINGS group */}
-            <div className="space-y-2">
-              <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Settings</p>
-              <div className="space-y-1">
-                <button
-                  onClick={() => navigateTo('/control/settings')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    window.location.pathname === '/control/settings' || window.location.pathname.startsWith('/control/settings/')
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <Settings className="w-4 h-4" />
-                  Settings
-                </button>
-                <button
-                  onClick={() => navigateTo('/control/connections')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                    window.location.pathname.includes('connections')
-                      ? 'bg-primary-gradient text-white shadow-md'
-                      : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                  }`}
-                >
-                  <Link2 className="w-4 h-4" />
-                  Integrations
-                </button>
-                <button
-                  onClick={() => (window as any).startOnboardingTour?.()}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-text-secondary hover:bg-white/5 hover:text-text-primary transition-all"
-                >
-                  <HelpCircle className="w-4 h-4 text-blue-400" />
-                  Help & Support
-                </button>
-              </div>
+            {/* ── OPERATIONS group ── */}
+            <div className="space-y-0.5">
+              <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.15em] px-3 mb-2">Operations</p>
+              <button
+                onClick={() => navigateTo('/control/logistics')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('logistics')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Truck className="w-[15px] h-[15px] shrink-0" />
+                Logistics
+              </button>
+              <button
+                onClick={() => navigateTo('/resources/teams')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('teams')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Users className="w-[15px] h-[15px] shrink-0" />
+                Team Roster
+              </button>
+              <button
+                onClick={() => navigateTo('/workspace/portfolio')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('portfolio')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Building2 className="w-[15px] h-[15px] shrink-0" />
+                Stakeholders
+              </button>
+              <button
+                onClick={() => navigateTo('/control/audit')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('audit')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Activity className="w-[15px] h-[15px] shrink-0" />
+                Audit Log
+              </button>
             </div>
+
+            {/* ── SYSTEM group ── */}
+            <div className="space-y-0.5">
+              <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.15em] px-3 mb-2">System</p>
+              <button
+                onClick={() => navigateTo('/control/settings')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname === '/control/settings' || window.location.pathname.startsWith('/control/settings/')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Settings className="w-[15px] h-[15px] shrink-0" />
+                Settings
+              </button>
+              <button
+                onClick={() => navigateTo('/control/connections')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('connections')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Link2 className="w-[15px] h-[15px] shrink-0" />
+                Integrations
+              </button>
+            </div>
+
           </div>
 
-          {/* User Profile Card at Bottom */}
-          <div className="p-4 border-t border-border bg-black/10 shrink-0">
-            <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-all group">
+          {/* Bottom utility strip — Help + Profile */}
+          <div className="shrink-0 border-t border-white/[0.05]">
+            <button
+              onClick={() => (window as any).startOnboardingTour?.()}
+              className="w-full flex items-center gap-2.5 px-5 py-2.5 text-white/20 hover:text-white/40 transition-colors text-[11px]"
+            >
+              <HelpCircle className="w-3.5 h-3.5 shrink-0" />
+              Help & Documentation
+            </button>
+
+            {/* User identity strip */}
+            <div className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.05]">
               <div
                 onClick={() => setIsProfileOpen(true)}
-                className="w-9 h-9 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden shrink-0 cursor-pointer group-hover:border-accent-primary transition-colors"
+                className="w-8 h-8 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-indigo-400/40 transition-colors"
               >
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : profile?.full_name ? (
-                  <span className="text-xs font-bold text-text-primary">{profile.full_name.substring(0, 2).toUpperCase()}</span>
+                  <span className="text-[10px] font-bold text-white/70">{profile.full_name.substring(0, 2).toUpperCase()}</span>
                 ) : (
-                  <Users className="w-4 h-4 text-text-secondary" />
+                  <Users className="w-3.5 h-3.5 text-white/30" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-text-primary truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
-                <p className="text-[10px] text-text-tertiary truncate capitalize">
+                <p className="text-[12px] font-medium text-white/70 truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
+                <p className="text-[9px] text-white/25 truncate capitalize font-mono">
                   {(profile && userCustomRoles[profile.id]) || profile?.role?.replace('_', ' ') || 'Viewer'}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-text-tertiary hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                title="Terminate Session"
+                className="p-1.5 text-white/20 hover:text-rose-400/70 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer"
+                title="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -1922,132 +1948,127 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <div className="lg:pl-64 flex flex-col flex-1 min-h-screen">
+        <div className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen">
           
-          {/* Top Bar (Executive Navigation Header) */}
-          <header className="h-16 flex items-center justify-between px-6 border-b border-border bg-surface sticky top-0 z-40 backdrop-blur-md transition-colors duration-200">
-            {/* Mobile menu toggle button */}
+          {/* Top Bar — utility layer only, no greeting content */}
+          <header className="h-12 flex items-center justify-between px-5 border-b border-white/[0.05] bg-[#0b0c12]/90 sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200">
+            {/* Mobile menu toggle */}
             <div className="flex items-center gap-3 lg:hidden">
               <button
                 onClick={() => setMobileSidebarOpen(true)}
-                className="p-2 border border-border bg-white/5 rounded-lg text-text-primary"
+                className="p-1.5 border border-white/[0.08] bg-white/[0.04] rounded-md text-white/50"
               >
                 <Menu className="w-4 h-4" />
               </button>
-              <div className="w-7 h-7 bg-primary-gradient rounded-lg flex items-center justify-center shrink-0">
-                <Layers className="w-3.5 h-3.5 text-white" />
+              <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}>
+                <Layers className="w-3 h-3 text-white" />
               </div>
             </div>
 
-            {/* Top Bar Left: Greetings Dashboard Title */}
-            <div className="hidden sm:block">
-              <h2 className="text-sm font-semibold tracking-tight text-text-primary flex items-center gap-1.5">
-                Welcome back, {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]} <span className="animate-bounce">👋</span>
-              </h2>
-              <p className="text-[10px] text-text-tertiary">Here's what's happening with your workspace today.</p>
+            {/* Top bar center: live breadcrumb / context label */}
+            <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-white/25">
+              <Radar className="w-3 h-3" />
+              <span className="uppercase tracking-widest">Resolve PM</span>
+              <span className="text-white/15">/</span>
+              <span className="text-white/40">{breadcrumb?.section || 'Command Center'}</span>
+              {breadcrumb?.page && <><span className="text-white/15">/</span><span className="text-white/55">{breadcrumb.page}</span></>}
             </div>
 
-            {/* Top Bar Center/Right: Actions */}
-            <div className="flex items-center gap-4 ml-auto sm:ml-0">
-              
-              {/* Unified Search Command Input */}
+            {/* Top bar right: compact utilities */}
+            <div className="flex items-center gap-2 ml-auto">
+
+              {/* Search */}
               <div
                 onClick={() => setCommandPaletteOpen(true)}
-                className="hidden md:flex items-center gap-2 bg-black/10 hover:bg-black/20 border border-border h-9 px-3 rounded-lg text-text-tertiary cursor-pointer transition-all w-52 lg:w-64"
+                className="hidden md:flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.06] border border-white/[0.07] h-7 px-3 rounded-md text-white/30 cursor-pointer transition-all"
               >
-                <Search className="w-3.5 h-3.5" />
-                <span className="text-[11px] select-none font-mono">Search console...</span>
-                <span className="ml-auto bg-white/5 border border-border px-1.5 py-0.5 rounded text-[8px] font-mono font-bold tracking-tighter">Ctrl K</span>
+                <Search className="w-3 h-3" />
+                <span className="text-[10px] select-none font-mono">Search...</span>
+                <span className="ml-2 bg-white/[0.06] border border-white/[0.07] px-1 py-0.5 rounded text-[8px] font-mono tracking-tighter text-white/20">⌘K</span>
               </div>
 
-              {/* Theme Toggle Button */}
+              {/* Theme */}
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-2 border border-border bg-white/5 hover:bg-white/10 rounded-lg text-text-secondary hover:text-text-primary transition-all shrink-0 cursor-pointer"
-                title={theme === 'dark' ? "Light Theme" : "Dark Theme"}
+                className="p-1.5 border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] rounded-md text-white/30 hover:text-white/60 transition-all shrink-0 cursor-pointer"
+                title={theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
               >
-                {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               </button>
 
-              {/* Notifications Center Toggle */}
+              {/* Notifications */}
               <div className="relative shrink-0">
                 <button
-                  onClick={() => setCommandPaletteOpen(false)} // Toggle palette off
-                  className="p-2 border border-border bg-white/5 hover:bg-white/10 rounded-lg text-text-secondary hover:text-text-primary transition-all shrink-0 cursor-pointer relative"
+                  className="p-1.5 border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] rounded-md text-white/30 hover:text-white/60 transition-all relative cursor-pointer"
                   title="Notifications"
                 >
-                  <Bell className="w-4 h-4 text-cyan-400" />
+                  <Bell className="w-3.5 h-3.5" />
                   {dbNotifications.filter(n => !n.read_at).length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-[8px] font-mono font-bold flex items-center justify-center text-white animate-pulse">
+                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-rose-500 text-[7px] font-bold flex items-center justify-center text-white">
                       {dbNotifications.filter(n => !n.read_at).length}
                     </span>
                   )}
                 </button>
               </div>
 
-              {/* Settings Action Icon */}
-              <button
-                onClick={() => navigateTo('/control/settings')}
-                className="p-2 border border-border bg-white/5 hover:bg-white/10 rounded-lg text-text-secondary hover:text-text-primary transition-all shrink-0 cursor-pointer"
-                title="Settings Dashboard"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-
-              {/* "+ New Project" Executive CTA Button */}
+              {/* New Project CTA */}
               {profile && profile.role !== 'viewer' && (
                 <button
                   onClick={() => setIsAdding(true)}
-                  className="bg-primary-gradient text-white h-9 px-4 rounded-lg flex items-center gap-1.5 text-xs font-semibold hover:opacity-90 shadow-md shadow-indigo-500/10 transition-all cursor-pointer shrink-0"
+                  className="flex items-center gap-1.5 text-[11px] font-medium text-white h-7 px-3 rounded-md transition-all cursor-pointer shrink-0"
+                  style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>New Project</span>
+                  <Plus className="w-3 h-3" />
+                  <span className="hidden sm:inline">New Project</span>
                 </button>
               )}
             </div>
           </header>
 
-          {/* Breadcrumb Contextual Info */}
-          {breadcrumb && (
-            <div className="flex items-center gap-2 px-6 py-2 border-b border-border text-[9px] font-mono uppercase tracking-wider text-text-tertiary bg-white/[0.01]">
-              <span className="text-text-secondary">{breadcrumb.section}</span>
-              {breadcrumb.page && (
-                <>
-                  <span className="text-white/20">/</span>
-                  <span className="text-text-primary font-semibold">{breadcrumb.page}</span>
-                </>
-              )}
+          {/* Context Header — Welcome + operational context, sits clearly below topbar */}
+          {window.location.pathname === '/workspace' && (
+            <div className="px-6 pt-7 pb-5 border-b border-white/[0.04]">
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-[10px] font-mono text-white/25 uppercase tracking-widest mb-1">Command Center</p>
+                  <h2 className="text-[22px] font-semibold text-white/85 tracking-tight leading-none">
+                    {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}'s Workspace
+                  </h2>
+                  <p className="text-[12px] text-white/35 mt-1.5">
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · {dbNotifications.filter(n => !n.read_at).length > 0 ? `${dbNotifications.filter(n => !n.read_at).length} unread notification${dbNotifications.filter(n => !n.read_at).length > 1 ? 's' : ''}` : 'All systems operational'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 text-[9px] font-mono text-white/20 uppercase tracking-widest">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 animate-pulse" />
+                  Live
+                </div>
+              </div>
             </div>
           )}
 
-          {/* StatsGrid Top-level overview (hidden on redesigned dashboard view) */}
-          {dashboardTab !== 'dashboard' && window.location.pathname === '/workspace' && (
+          {/* StatsGrid — only show on project/completed tabs */}
+          {dashboardTab !== 'dashboard' && dashboardTab !== 'intelligence' && window.location.pathname === '/workspace' && (
             <StatsGrid stats={stats} />
           )}
 
           {/* Dynamic Page Routing Slot */}
-          <main id="main-content" className="flex-1 p-6 overflow-y-auto pb-16">
+          <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-20">
             {children}
           </main>
 
         </div>
 
-        {/* Floating Session Footer Panel */}
-        <footer className="fixed bottom-0 left-0 right-0 lg:left-64 bg-surface/80 border-t border-border px-6 py-2 flex justify-between items-center pointer-events-none z-20 backdrop-blur-md">
-          <div className="flex items-center gap-4 text-[9px] font-mono text-text-secondary uppercase tracking-widest">
+        {/* Status Footer */}
+        <footer className="fixed bottom-0 left-0 right-0 lg:left-[15.5rem] bg-[#0b0c12]/80 border-t border-white/[0.04] px-5 py-2 flex justify-between items-center pointer-events-none z-20 backdrop-blur-xl">
+          <div className="flex items-center gap-4 text-[9px] font-mono text-white/20 uppercase tracking-widest">
             <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500/60 animate-pulse"></div>
-              <span>System Synced</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 animate-pulse" />
+              <span>Connected</span>
             </div>
-            <div className="hidden md:inline">ENC: AES-GCM</div>
+            <span className="hidden md:inline">AES-256-GCM</span>
             <LiveClock />
-            <div className="text-text-tertiary hidden md:block border-l border-border pl-4">
-              &copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P
-            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Cpu className="w-3 h-3 text-text-tertiary" />
-          </div>
+          <span className="text-[9px] font-mono text-white/15 hidden md:block">&copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P</span>
         </footer>
 
         {/* --- Global Overlay Dialogs --- */}

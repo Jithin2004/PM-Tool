@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -7,87 +7,87 @@
 }
 
 :root {
-  background-color: #080810;
-  color: #f5f5f7;
+  background-color: #080910;
+  color: #c9ced9;
 
-  /* Premium corporate design tokens */
-  --bg: #090a0f;
-  --surface: #11131c;
-  --border: rgba(255, 255, 255, 0.08);
-  --text-primary: #f5f5f7;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-  --text-quaternary: #334155;
-  --signal-critical: #f87171;
-  --signal-warning: #fbbf24;
-  --signal-safe: #34d399;
-  --signal-info: #60a5fa;
-  --accent-primary: #6366f1;
-  --accent-secondary: #8b5cf6;
-  --signal-critical-bg: rgba(248, 113, 113, 0.08);
-  --signal-warning-bg: rgba(251, 191, 36, 0.08);
-  --signal-safe-bg: rgba(52, 211, 153, 0.08);
-  --signal-info-bg: rgba(96, 165, 250, 0.08);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
-  --radius-card: 16px;
-  --radius-btn: 12px;
+  /* ── Enterprise Dark Design System ─────────────────────────── */
+  --bg:          #08090f;          /* Deepest background layer        */
+  --surface:     #0b0c12;          /* Sidebar / panels                */
+  --surface-2:   #0f1017;          /* Card surfaces                   */
+  --surface-3:   #13141c;          /* Elevated cards                  */
+  --border:      rgba(255,255,255,0.055);
+  --border-subtle: rgba(255,255,255,0.03);
+
+  --text-primary:    #d6dae4;      /* Primary readable text           */
+  --text-secondary:  #737b8c;      /* De-emphasised labels            */
+  --text-tertiary:   #404654;      /* Muted metadata, hints           */
+  --text-quaternary: #272c38;      /* Almost invisible, decorative    */
+
+  --accent-primary:   #6366f1;     /* Indigo — primary interactive    */
+  --accent-secondary: #7c3aed;     /* Violet — secondary / AI states  */
+  --accent-cyan:      #22d3ee;     /* Cyan — live / realtime signals  */
+
+  --signal-critical:    #f87171;
+  --signal-warning:     #fbbf24;
+  --signal-safe:        #34d399;
+  --signal-info:        #60a5fa;
+  --signal-critical-bg: rgba(248,113,113,0.07);
+  --signal-warning-bg:  rgba(251,191,36,0.07);
+  --signal-safe-bg:     rgba(52,211,153,0.07);
+  --signal-info-bg:     rgba(96,165,250,0.07);
+
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.3);
+  --shadow-md:  0 4px 20px rgba(0,0,0,0.4);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.55);
+  --radius-card: 10px;
+  --radius-btn:  8px;
 }
 
 body {
   margin: 0;
   overflow-x: hidden;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Gradients */
+/* ── Gradients ───────────────────────────────────────────────── */
 .bg-primary-gradient {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%) !important;
 }
-
 .bg-secondary-gradient {
   background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%) !important;
 }
-
 .text-primary-gradient {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Premium Shadows & Cards */
+/* ── Cards ───────────────────────────────────────────────────── */
 .shadow-premium {
-  box-shadow: 0px 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.2);
 }
-
 .card-premium {
-  border-radius: 16px;
-  background-color: var(--surface);
+  border-radius: var(--radius-card);
+  background-color: var(--surface-2);
   border: 1px solid var(--border);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-
 .card-premium:hover {
-  transform: translateY(-2px);
+  border-color: rgba(99,102,241,0.18);
   box-shadow: var(--shadow-md);
-  border-color: rgba(99, 102, 241, 0.2);
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* ── Scrollbar ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255,255,255,0.07);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255,255,255,0.14);
+
 }
 
 /* ==========================================
