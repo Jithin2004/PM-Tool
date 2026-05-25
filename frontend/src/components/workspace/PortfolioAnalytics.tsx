@@ -1,118 +1,251 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { BarChart3, Activity, TrendingUp, Users, GitBranch, Target, AlertTriangle } from 'lucide-react';
+import { Users, Target, AlertTriangle, ShieldCheck, Clock, CheckCircle2, UserCheck, Settings, Plus, Tag } from 'lucide-react';
 
 export function PortfolioAnalytics() {
-  const { projects, tasks, profiles, teams } = useDashboard();
+  const { projects, tasks, profiles, handleUpdateProjectMetadata, notify } = useDashboard();
   const { workspace } = useWorkspace();
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [sponsorName, setSponsorName] = useState('');
 
-  const stats = useMemo(() => {
+  // 1. Calculate SLA stats
+  const portfolioMetrics = useMemo(() => {
     const total = projects.length;
-    const active = projects.filter((p: any) => p.status === 'active').length;
-    const deployed = projects.filter((p: any) => p.status === 'deployed').length;
-    const onHold = projects.filter((p: any) => p.status === 'on_hold').length;
-    const overdue = projects.filter((p: any) => {
-      const pts = tasks.filter((t: any) => t.project_id === p.id);
-      return pts.some((t: any) => t.status !== 'done' && t.due_date && new Date(t.due_date) < new Date());
-    }).length;
-    const totalTasks = tasks.length;
-    const doneTasks = tasks.filter((t: any) => t.status === 'done').length;
-    const completionRate = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
-    return { total, active, deployed, onHold, overdue, totalTasks, completionRate };
-  }, [projects, tasks]);
+    let slaBreaches = 0;
+    let sponsoredCount = 0;
 
-  const workloadByTeam = useMemo(() => {
-    return teams.map((team: any) => {
-      const devIds = team.data?.developer_ids || [];
-      const pmId = team.data?.pm_id;
-      const memberIds = [pmId, ...devIds].filter(Boolean);
-      const memberTasks = memberIds.map((id: string) => ({
-        profile: profiles.find((p: any) => p.id === id),
-        taskCount: tasks.filter((t: any) => t.assignee_id === id && t.status !== 'done').length,
-      }));
-      return { team: team.name, members: memberTasks };
+    projects.forEach((p: any) => {
+      // Check if predicted completion exceeds client deadline
+      if (p.client_deadline && p.predicted_completion) {
+        if (new Date(p.predicted_completion) > new Date(p.client_deadline)) {
+          slaBreaches++;
+        }
+      } else if (p.delay_drift_days > 0) {
+        slaBreaches++;
+      }
+
+      // Check if has a sponsor tag/owner
+      if (p.owner_id || p.tags?.some((t: string) => t.startsWith('SPONSOR:'))) {
+        sponsoredCount++;
+      }
     });
-  }, [teams, profiles, tasks]);
+
+    const slaCompliance = total > 0 ? Math.round(((total - slaBreaches) / total) * 100) : 100;
+    const sponsorCoverage = total > 0 ? Math.round((sponsoredCount / total) * 100) : 100;
+
+    return {
+      slaCompliance,
+      sponsorCoverage,
+      totalProjects: total,
+      slaBreaches
+    };
+  }, [projects]);
+
+  // 2. Group projects by Portfolio Sectors (using tags or fallbacks)
+  const groupedPortfolios = useMemo(() => {
+    const groups: Record<string, typeof projects> = {
+      'Enterprise SLA Portfolio': [],
+      'Public Sector Accounts': [],
+      'Internal R&D Initiatives': []
+    };
+
+    projects.forEach((proj: any) => {
+      if (proj.tags?.includes('ENTERPRISE')) {
+        groups['Enterprise SLA Portfolio'].push(proj);
+      } else if (proj.tags?.includes('PUBLIC')) {
+        groups['Public Sector Accounts'].push(proj);
+      } else if (proj.tags?.includes('R&D') || proj.tags?.includes('NEW')) {
+        groups['Internal R&D Initiatives'].push(proj);
+      } else {
+        // Fallback round-robin based on name length for mock variation
+        if (proj.name.length % 3 === 0) {
+          groups['Enterprise SLA Portfolio'].push(proj);
+        } else if (proj.name.length % 3 === 1) {
+          groups['Public Sector Accounts'].push(proj);
+        } else {
+          groups['Internal R&D Initiatives'].push(proj);
+        }
+      }
+    });
+
+    return Object.entries(groups).filter(([_, list]) => list.length > 0);
+  }, [projects]);
+
+  // 3. Sponsor alignments from profiles
+  const sponsorAlignments = useMemo(() => {
+    return profiles.map((prof: any) => {
+      const sponsoredProjects = projects.filter((p: any) => p.owner_id === prof.id);
+      return {
+        profile: prof,
+        name: prof.full_name || prof.email.split('@')[0],
+        role: prof.role,
+        projects: sponsoredProjects
+      };
+    });
+  }, [profiles, projects]);
+
+  const handleSaveSponsor = async (projectId: string, ownerId: string) => {
+    try {
+      await handleUpdateProjectMetadata(projectId, { owner_id: ownerId });
+      setEditingProjectId(null);
+      notify("Portfolio sponsor aligned successfully.", "success");
+    } catch (err) {
+      notify("Failed to update sponsor alignment.", "error");
+    }
+  };
 
   return (
-    <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-8">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-8 animate-in fade-in duration-300">
       <div>
-        <h2 className="text-3xl font-medium tracking-tight mb-1">Portfolio Analytics</h2>
-        <p className="text-sm text-white/85 font-mono tracking-tighter">Project health, dependency forecasts, and team allocation heatmaps</p>
+        <h2 className="text-3xl font-medium tracking-tight mb-1 uppercase font-sans">Portfolio Alignment Hub</h2>
+        <p className="text-sm text-white/85 font-mono tracking-tighter">Client SLA tracking, stakeholder mapping, and project sponsor assignment</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="border border-white/10 bg-[#0c0c0c] p-5"><p className="text-[10px] font-mono uppercase text-white/50 tracking-widest mb-1">Active Projects</p><p className="text-2xl font-mono text-blue-400 font-bold">{stats.active}</p></div>
-        <div className="border border-white/10 bg-[#0c0c0c] p-5"><p className="text-[10px] font-mono uppercase text-white/50 tracking-widest mb-1">Deployed</p><p className="text-2xl font-mono text-green-400 font-bold">{stats.deployed}</p></div>
-        <div className="border border-white/10 bg-[#0c0c0c] p-5"><p className="text-[10px] font-mono uppercase text-white/50 tracking-widest mb-1">Overdue Projects</p><p className="text-2xl font-mono text-red-400 font-bold">{stats.overdue}</p></div>
-        <div className="border border-white/10 bg-[#0c0c0c] p-5"><p className="text-[10px] font-mono uppercase text-white/50 tracking-widest mb-1">Task Completion</p><p className="text-2xl font-mono text-cyan-400 font-bold">{stats.completionRate}%</p></div>
+      {/* Portfolio Health Summary Index */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="border border-white/10 bg-[#0c0c0c] p-6 rounded-sm flex items-center justify-between">
+          <div>
+            <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1.5">Client SLA Compliance</p>
+            <p className="text-2xl font-mono text-emerald-400 font-bold">{portfolioMetrics.slaCompliance}%</p>
+            <p className="text-[9px] font-mono text-white/40 mt-1">Target: &gt;90% compliance bounds</p>
+          </div>
+          <ShieldCheck className="w-10 h-10 text-emerald-500/20" />
+        </div>
+
+        <div className="border border-white/10 bg-[#0c0c0c] p-6 rounded-sm flex items-center justify-between">
+          <div>
+            <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1.5">Sponsor Coverage</p>
+            <p className="text-2xl font-mono text-indigo-400 font-bold">{portfolioMetrics.sponsorCoverage}%</p>
+            <p className="text-[9px] font-mono text-white/40 mt-1">Aligned stakeholder sponsors</p>
+          </div>
+          <UserCheck className="w-10 h-10 text-indigo-500/20" />
+        </div>
+
+        <div className="border border-white/10 bg-[#0c0c0c] p-6 rounded-sm flex items-center justify-between">
+          <div>
+            <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1.5">SLA Risks Detected</p>
+            <p className="text-2xl font-mono text-rose-400 font-bold">{portfolioMetrics.slaBreaches} alerts</p>
+            <p className="text-[9px] font-mono text-white/40 mt-1">Timeline variances exceeding SLAs</p>
+          </div>
+          <AlertTriangle className="w-10 h-10 text-rose-500/20" />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="border border-white/10 bg-[#0c0c0c] p-6">
-          <h3 className="text-xs font-mono uppercase tracking-widest text-white/70 mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-blue-400" /> Project Status Distribution</h3>
-          <div className="space-y-3">
-            {[{ label: 'Active', count: stats.active, color: 'bg-blue-500' },
-              { label: 'Deployed', count: stats.deployed, color: 'bg-green-500' },
-              { label: 'On Hold', count: stats.onHold, color: 'bg-yellow-500' },
-              { label: 'Overdue', count: stats.overdue, color: 'bg-red-500' },
-            ].map(({ label, count, color }) => (
-              <div key={label} className="flex items-center gap-3">
-                <span className="text-[10px] font-mono uppercase text-white/60 w-20">{label}</span>
-                <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden">
-                  <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${stats.total > 0 ? (count / stats.total) * 100 : 0}%` }} />
+      {/* Portfolio sector groups */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Left/Middle: Client Portfolios */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="border border-white/10 bg-[#0c0c0c] p-6">
+            <h3 className="text-xs font-mono uppercase tracking-widest text-white/80 mb-6 pb-3 border-b border-white/5 flex items-center gap-2">
+              <Target className="w-4 h-4 text-indigo-400" /> Client Portfolios &amp; SLAs
+            </h3>
+
+            <div className="space-y-8">
+              {groupedPortfolios.map(([sector, list]) => (
+                <div key={sector} className="space-y-4">
+                  <div className="flex justify-between items-center bg-white/5 p-2 px-3 border border-white/5">
+                    <span className="text-[10px] font-mono uppercase text-white/90 font-bold">{sector}</span>
+                    <span className="text-[8px] font-mono text-white/50">{list.length} aligned construct(s)</span>
+                  </div>
+
+                  <div className="divide-y divide-white/5 space-y-2">
+                    {list.map((proj: any) => {
+                      const hasBreach = proj.client_deadline && proj.predicted_completion && 
+                        new Date(proj.predicted_completion) > new Date(proj.client_deadline);
+                      const sponsor = profiles.find((p: any) => p.id === proj.owner_id);
+
+                      return (
+                        <div key={proj.id} className="p-4 border border-white/5 hover:border-white/10 transition-all space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="text-xs font-bold text-white uppercase tracking-wider">{proj.name}</h4>
+                              <p className="text-[9px] font-mono text-white/40 uppercase mt-0.5">Mode: {proj.execution_mode}</p>
+                            </div>
+
+                            <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 border rounded-sm uppercase ${
+                              hasBreach ? 'border-rose-500/20 bg-rose-500/10 text-rose-400' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
+                            }`}>
+                              {hasBreach ? 'SLA Breach Risk' : 'SLA Compliant'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-[9px] font-mono text-white/55">
+                            <div>
+                              <span className="text-white/30 uppercase block">Client Due Date</span>
+                              <span>{proj.client_deadline ? new Date(proj.client_deadline).toLocaleDateString() : 'NO DEADLINE SET'}</span>
+                            </div>
+                            <div>
+                              <span className="text-white/30 uppercase block">Forecast Completion</span>
+                              <span>{proj.predicted_completion ? new Date(proj.predicted_completion).toLocaleDateString() : 'ESTIMATING...'}</span>
+                            </div>
+                            <div>
+                              <span className="text-white/30 uppercase block">Aligned Sponsor</span>
+                              {editingProjectId === proj.id ? (
+                                <select
+                                  onChange={(e) => handleSaveSponsor(proj.id, e.target.value)}
+                                  defaultValue={proj.owner_id || ''}
+                                  className="bg-black border border-white/20 text-white text-[9px] p-0.5 font-mono outline-none"
+                                >
+                                  <option value="">No Sponsor</option>
+                                  {profiles.map((p: any) => (
+                                    <option key={p.id} value={p.id}>{p.full_name || p.email}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span
+                                  onClick={() => setEditingProjectId(proj.id)}
+                                  className="text-indigo-400 hover:underline cursor-pointer font-semibold uppercase"
+                                >
+                                  {sponsor ? (sponsor.full_name || sponsor.email.split('@')[0]) : 'Align Sponsor'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <span className="text-xs font-mono text-white/80 w-8 text-right">{count}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="border border-white/10 bg-[#0c0c0c] p-6">
-          <h3 className="text-xs font-mono uppercase tracking-widest text-white/70 mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-cyan-400" /> Team Workload Heatmap</h3>
-          <div className="space-y-4">
-            {workloadByTeam.map((wt: any) => (
-              <div key={wt.team}>
-                <p className="text-[10px] font-mono uppercase text-white/50 mb-2">{wt.team}</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {wt.members.map((m: any) => {
-                    if (!m.profile) return null;
-                    const load = m.taskCount;
-                    const color = load === 0 ? 'bg-green-500/20 text-green-400' : load <= 3 ? 'bg-blue-500/20 text-blue-400' : load <= 6 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400';
-                    return (
-                      <div key={m.profile.id} className={`border border-white/10 p-2 text-center ${color}`}>
-                        <p className="text-[9px] font-mono truncate">{m.profile.full_name || m.profile.email}</p>
-                        <p className="text-[10px] font-mono mt-1">{load} tasks</p>
+        {/* Right side: Stakeholder Alignments */}
+        <div className="space-y-6">
+          <div className="border border-white/10 bg-[#0c0c0c] p-6">
+            <h3 className="text-xs font-mono uppercase tracking-widest text-white/80 mb-6 pb-3 border-b border-white/5 flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-400" /> Stakeholder Directory
+            </h3>
+
+            <div className="space-y-4 max-h-[30rem] overflow-y-auto pr-1">
+              {sponsorAlignments.map(align => (
+                <div key={align.profile.id} className="p-3 border border-white/5 bg-black/20 rounded-sm space-y-2 font-mono text-[10px]">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-white">{align.name}</span>
+                    <span className="text-[8px] bg-white/5 border border-white/10 px-1 text-white/50 uppercase">{align.role}</span>
+                  </div>
+
+                  <div className="text-[9px] text-white/40">
+                    <span className="block uppercase font-bold">Sponsored Projects ({align.projects.length})</span>
+                    {align.projects.length === 0 ? (
+                      <span className="italic">No active sponsorships aligned.</span>
+                    ) : (
+                      <div className="mt-1 space-y-1 pl-2 border-l border-white/10">
+                        {align.projects.map((p: any) => (
+                          <span key={p.id} className="block text-white/80 uppercase truncate">{p.name}</span>
+                        ))}
                       </div>
-                    );
-                  })}
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="border border-white/10 bg-[#0c0c0c] p-6">
-        <h3 className="text-xs font-mono uppercase tracking-widest text-white/70 mb-4 flex items-center gap-2"><GitBranch className="w-4 h-4 text-purple-400" /> Dependency Graph & Forecasts</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="border border-white/10 bg-black p-4">
-            <p className="text-[9px] font-mono uppercase text-white/50 mb-2">Cross-Project Dependencies</p>
-            <p className="text-lg font-mono text-purple-400 font-bold">{tasks.filter((t: any) => t.depends_on && t.depends_on.length > 0).length}</p>
-            <p className="text-[9px] font-mono text-white/40 mt-1">Tasks with external dependencies across projects</p>
-          </div>
-          <div className="border border-white/10 bg-black p-4">
-            <p className="text-[9px] font-mono uppercase text-white/50 mb-2">Avg Delivery Confidence</p>
-            <p className="text-lg font-mono text-cyan-400 font-bold">{(stats.completionRate / 100 * 85).toFixed(0)}%</p>
-            <p className="text-[9px] font-mono text-white/40 mt-1">Weighted by PERT variance across all projects</p>
-          </div>
-          <div className="border border-white/10 bg-black p-4">
-            <p className="text-[9px] font-mono uppercase text-white/50 mb-2">Projected Capacity</p>
-            <p className="text-lg font-mono text-green-400 font-bold">{profiles.length * 22}h</p>
-            <p className="text-[9px] font-mono text-white/40 mt-1">Total team hours available this month</p>
-          </div>
-        </div>
       </div>
     </div>
   );

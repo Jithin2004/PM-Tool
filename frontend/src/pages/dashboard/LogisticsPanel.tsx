@@ -8,6 +8,9 @@ export function LogisticsPanel() {
   const { 
     profiles, 
     teams, 
+    projects,
+    tasks,
+    updateTask,
     systemData,
     handleSaveLogisticsData 
   } = useDashboard();
@@ -24,6 +27,9 @@ export function LogisticsPanel() {
     <LogisticsDashboard
       profiles={profiles}
       teams={teams}
+      projects={projects}
+      tasks={tasks}
+      updateTask={updateTask}
       systemData={systemData}
       onSaveData={handleSaveLogisticsData}
       role={profile?.role}

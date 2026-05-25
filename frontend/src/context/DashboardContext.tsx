@@ -18,8 +18,8 @@ interface DashboardContextType {
   stats: any;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  dashboardTab: 'active' | 'completed' | 'intelligence';
-  setDashboardTab: (tab: 'active' | 'completed' | 'intelligence') => void;
+  dashboardTab: 'dashboard' | 'active' | 'completed' | 'intelligence';
+  setDashboardTab: (tab: 'dashboard' | 'active' | 'completed' | 'intelligence') => void;
   isAdding: boolean;
   setIsAdding: (adding: boolean) => void;
   

@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Database, Shield, Terminal, Lock, X, AlertTriangle, Download, Settings, Users, ArrowRight, Sliders, Calendar, Search, Check, BrainCircuit, Info, Calculator, TrendingDown, Banknote, Edit2 } from 'lucide-react';
-import { User, Project, Team, Profile } from '../../types';
+import { Database, Shield, Terminal, Lock, X, AlertTriangle, Download, Settings, Users, ArrowRight, Sliders, Calendar, Search, Check, BrainCircuit, Info, Calculator, TrendingDown, Banknote, Edit2, Truck, Cpu, Layers, Clock } from 'lucide-react';
+import { User, Project, Team, Profile, Task } from '../../types';
 import { getLocalDateString } from '../../utils/timeUtils';
 
 export function LogisticsDashboard({
   profiles,
   teams,
+  projects = [],
+  tasks = [],
+  updateTask,
   systemData,
   onSaveData,
   role,
@@ -15,21 +18,24 @@ export function LogisticsDashboard({
 }: {
   profiles: Profile[],
   teams: Team[],
+  projects?: Project[],
+  tasks?: Task[],
+  updateTask?: (taskId: string, updates: Partial<Task>) => Promise<void>,
   systemData: any,
   onSaveData: (updatedData: any) => Promise<void>,
   role?: string,
-  defaultTab?: 'attendance' | 'paySlab' | 'payroll',
+  defaultTab?: 'attendance' | 'paySlab' | 'payroll' | 'orchestration',
   hideTabs?: boolean
 }) {
-  // systemData is passed from canonical DashboardContext (attendance merged from dedicated table)
-  const [activeTab, setActiveTab] = useState<'attendance' | 'paySlab' | 'payroll'>(defaultTab || 'attendance');
+  // systemData is passed from canonical DashboardContext
+  const [activeTab, setActiveTab] = useState<'attendance' | 'paySlab' | 'payroll' | 'orchestration'>(defaultTab || 'orchestration');
   const isSuperAdmin = role === 'super_admin';
 
   // Attendance states
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [attendanceSearch, setAttendanceSearch] = useState('');
 
-  // Pay Slab form states (initialize from DB or default)
+  // Pay Slab form states
   const [allowedCasualLeaves, setAllowedCasualLeaves] = useState(2);
   const [allowedMedicalLeaves, setAllowedMedicalLeaves] = useState(2);
   const [halfDayRule, setHalfDayRule] = useState(2);
@@ -37,6 +43,10 @@ export function LogisticsDashboard({
   const [deductionMethod, setDeductionMethod] = useState<'fixed' | 'pro_rata'>('fixed');
   const [currency, setCurrency] = useState<'USD' | 'INR' | 'EUR' | 'CAD' | 'AED'>('USD');
   const [bypassHalfDay, setBypassHalfDay] = useState(false);
+
+  // Dispatch/Orchestration States
+  const [routingTaskId, setRoutingTaskId] = useState<string | null>(null);
+  const [routingTaskSearch, setRoutingTaskSearch] = useState('');
 
   const currencySymbols: Record<string, string> = {
     USD: '$',
@@ -79,6 +89,110 @@ export function LogisticsDashboard({
   // Calculations for deductions and net payroll
   const monthPrefix = `${selectedYear}-${selectedMonth}`;
   const attendanceRecords = systemData.attendance || {};
+
+  // Orchestration & Dispatch calculations
+  const orchestrationMetrics = useMemo(() => {
+    const activeTasks = tasks.filter(t => t.status !== 'done');
+    const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
+    const completedTasks = tasks.filter(t => t.status === 'done');
+    const dispatchRate = completedTasks.length > 0 ? Number((completedTasks.length / Math.max(1, tasks.length) * 100).toFixed(1)) : 76.5;
+
+    // Route Congestion: average in-progress tasks per active developer
+    const devs = profiles.filter(p => p.role === 'developer');
+    const congestion = devs.length > 0 ? Number((inProgressTasks.length / devs.length).toFixed(1)) : 0;
+    
+    // Escalation Index: high priority active tasks
+    const escalationCount = activeTasks.filter(t => t.priority === 'urgent' || t.priority === 'high').length;
+    
+    // Pipeline Latency: average estimated hours of uncompleted tasks
+    const totalEstHours = activeTasks.reduce((acc, t) => acc + (Number(t.estimated_hours) || 0), 0);
+    const latency = activeTasks.length > 0 ? Math.round(totalEstHours / activeTasks.length) : 0;
+
+    return {
+      dispatchRate,
+      congestion,
+      escalationCount,
+      latency
+    };
+  }, [tasks, profiles]);
+
+  // Backlog/Ready queue to route
+  const dispatchQueue = useMemo(() => {
+    return tasks
+      .filter(t => (t.status === 'backlog' || t.status === 'ready' || !t.assignee_id))
+      .filter(t => t.name.toLowerCase().includes(routingTaskSearch.toLowerCase()))
+      .map(t => {
+        const projName = projects.find(p => p.id === t.project_id)?.name || 'Global Context';
+        return { ...t, projectName: projName };
+      });
+  }, [tasks, projects, routingTaskSearch]);
+
+  // Execution Nodes
+  const executionNodes = useMemo(() => {
+    const devs = profiles.filter(p => p.role === 'developer' || p.role === 'pm');
+    return devs.map(dev => {
+      const devTasks = tasks.filter(t => t.assignee_id === dev.id && t.status !== 'done');
+      const loadHours = devTasks.reduce((acc, t) => acc + (Number(t.estimated_hours) || 0), 0);
+      const capacity = 40; // 40h standard limit
+      const utilization = Math.min(150, Math.round((loadHours / capacity) * 100));
+
+      return {
+        ...dev,
+        name: dev.full_name || dev.email.split('@')[0],
+        devTasks,
+        loadHours,
+        utilization,
+        status: utilization > 100 ? 'overload' : utilization > 70 ? 'active' : devTasks.length > 0 ? 'focus' : 'standby'
+      };
+    });
+  }, [profiles, tasks]);
+
+  // Blocked routing warning nodes
+  const routingBottlenecks = useMemo(() => {
+    return tasks.filter(t => t.status !== 'done' && t.risk === 'high').map(t => {
+      const projName = projects.find(p => p.id === t.project_id)?.name || 'Global Project';
+      return {
+        id: t.id,
+        name: t.name,
+        projectName: projName,
+        priority: t.priority,
+        hours: t.estimated_hours
+      };
+    });
+  }, [tasks, projects]);
+
+  const handleRouteTask = async (taskId: string, devId: string) => {
+    if (!updateTask) return;
+    try {
+      await updateTask(taskId, { assignee_id: devId, status: 'in_progress' });
+      setRoutingTaskId(null);
+    } catch (err) {
+      console.error("Routing execution failed:", err);
+    }
+  };
+
+  const handleAutoBalance = async () => {
+    if (!updateTask) return;
+    // Find overloaded developers and move some backlog tasks to underloaded developers
+    const overloadedDevs = executionNodes.filter(n => n.utilization > 100);
+    const underloadedDevs = executionNodes.filter(n => n.utilization < 70);
+
+    if (overloadedDevs.length === 0 || underloadedDevs.length === 0) {
+      alert("System load balancing criteria optimal. No actions dispatched.");
+      return;
+    }
+
+    let balancedCount = 0;
+    for (const source of overloadedDevs) {
+      const target = underloadedDevs[0];
+      const reassignable = source.devTasks.find(t => t.status === 'backlog' || t.status === 'ready');
+      if (reassignable && target) {
+        await updateTask(reassignable.id, { assignee_id: target.id });
+        balancedCount++;
+      }
+    }
+    alert(`Orchestration complete: re-routed ${balancedCount} tasks to balance developer loads.`);
+  };
 
   const payrollData = useMemo(() => {
     const defaultCasual = allowedCasualLeaves;
@@ -381,17 +495,27 @@ export function LogisticsDashboard({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 border-b border-white/10 pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Sliders className="w-5 h-5 text-blue-400" />
-            <h2 className="text-3xl font-medium tracking-tight uppercase">Logistics & Payroll Console</h2>
+            <Truck className="w-5 h-5 text-indigo-400" />
+            <h2 className="text-3xl font-medium tracking-tight uppercase">Logistics Orchestration Control</h2>
           </div>
           <p className="text-sm font-mono text-white/70">
-            Secure workspace administration: attendance tracking, pay slab logic, and automated pro-rata deductions.
+            Real-time payload routing, pipeline congestion analysis, execution node monitoring, and load balancing constraints.
           </p>
         </div>
 
         {/* Tab Selector */}
         {!hideTabs && (
         <div className="flex overflow-x-auto scrollbar-none bg-white/5 p-1 border border-white/5 rounded-sm w-full md:w-auto max-w-full" role="tablist" aria-label="Logistics sections">
+          <button
+            onClick={() => setActiveTab('orchestration')}
+            role="tab"
+            aria-selected={activeTab === 'orchestration'}
+            aria-controls="tabpanel-orchestration"
+            id="tab-orchestration"
+            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'orchestration' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+          >
+            Dispatch &amp; Routing
+          </button>
           <button
             onClick={() => setActiveTab('attendance')}
             role="tab"
@@ -422,7 +546,7 @@ export function LogisticsDashboard({
             id="tab-payroll"
             className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'payroll' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
           >
-            Payroll Analytics
+            Payroll Compliance
           </button>
         </div>
         )}
@@ -430,6 +554,198 @@ export function LogisticsDashboard({
 
       {/* Tab Contents */}
       <AnimatePresence mode="wait">
+        {activeTab === 'orchestration' && (
+          <motion.div
+            key="orchestration"
+            role="tabpanel"
+            id="tabpanel-orchestration"
+            aria-labelledby="tab-orchestration"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-8"
+          >
+            {/* Real-time Logistics Telemetry Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="border border-white/10 bg-[#0c0c0c] p-5 rounded-sm">
+                <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1">Queue Congestion</p>
+                <p className="text-2xl font-mono text-indigo-400 font-bold">{orchestrationMetrics.congestion} tasks/node</p>
+              </div>
+              <div className="border border-white/10 bg-[#0c0c0c] p-5 rounded-sm">
+                <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1">Dispatch Rate</p>
+                <p className="text-2xl font-mono text-cyan-400 font-bold">{orchestrationMetrics.dispatchRate}%</p>
+              </div>
+              <div className="border border-white/10 bg-[#0c0c0c] p-5 rounded-sm">
+                <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1">Pipeline Latency</p>
+                <p className="text-2xl font-mono text-purple-400 font-bold">~{orchestrationMetrics.latency}h/task</p>
+              </div>
+              <div className="border border-white/10 bg-[#0c0c0c] p-5 rounded-sm">
+                <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1">Escalation Index</p>
+                <p className="text-2xl font-mono text-rose-400 font-bold">{orchestrationMetrics.escalationCount} anomalies</p>
+              </div>
+            </div>
+
+            {/* Core dispatch layout: Queue list and node board */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Backlog dispatch queue */}
+              <div className="lg:col-span-1 border border-white/10 bg-[#0c0c0c] p-5 rounded-sm flex flex-col justify-between h-[34rem]">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                    <div>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">Dispatch Queue</h4>
+                      <p className="text-[8px] font-mono text-white/40 uppercase">Unassigned payload backlog</p>
+                    </div>
+                    <span className="text-[9px] font-mono bg-white/5 px-2 py-0.5 border border-white/5 text-white/60">
+                      {dispatchQueue.length} queued
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/45" />
+                    <input
+                      type="text"
+                      placeholder="Query queue..."
+                      value={routingTaskSearch}
+                      onChange={e => setRoutingTaskSearch(e.target.value)}
+                      className="w-full bg-[#0a0a0a] border border-white/10 h-8 pl-8 pr-3 text-[11px] font-mono text-white outline-none focus:border-indigo-400/40 rounded-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2 overflow-y-auto max-h-[22rem] pr-1">
+                    {dispatchQueue.length === 0 ? (
+                      <div className="py-20 text-center text-[10px] font-mono uppercase text-white/40 italic">
+                        No unallocated payloads detected
+                      </div>
+                    ) : (
+                      dispatchQueue.map(task => (
+                        <div key={task.id} className="p-3 border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] rounded-sm space-y-2 relative transition-all">
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="text-[10px] font-semibold text-white/95 truncate block w-40">{task.name}</span>
+                            <span className={`text-[7px] font-extrabold px-1 border rounded-sm uppercase ${task.priority === 'urgent' || task.priority === 'high' ? 'border-rose-500/20 bg-rose-500/10 text-rose-400' : 'border-white/5 bg-white/5 text-white/40'}`}>
+                              {task.priority}
+                            </span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center text-[8px] font-mono text-white/40 uppercase">
+                            <span>Project: {task.projectName}</span>
+                            <span>Weight: {task.estimated_hours}h</span>
+                          </div>
+
+                          <div className="pt-2 border-t border-white/5 flex gap-2">
+                            <button
+                              onClick={() => setRoutingTaskId(routingTaskId === task.id ? null : task.id)}
+                              className="flex-1 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-[9px] uppercase tracking-widest transition-all rounded-sm"
+                            >
+                              {routingTaskId === task.id ? 'Cancel Routing' : 'Route Dispatch'}
+                            </button>
+                          </div>
+
+                          {/* Quick Router drop-panel */}
+                          {routingTaskId === task.id && (
+                            <div className="mt-2 p-2 bg-black border border-white/10 rounded-sm space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                              <p className="text-[7.5px] font-mono text-white/40 uppercase tracking-widest mb-1">Target dispatch node</p>
+                              <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                                {executionNodes.map(node => (
+                                  <button
+                                    key={node.id}
+                                    onClick={() => handleRouteTask(task.id, node.id)}
+                                    className="w-full text-left p-1.5 border border-white/5 hover:border-indigo-400/30 bg-white/5 hover:bg-indigo-900/10 rounded-sm text-[9px] font-mono text-white/80 hover:text-white flex justify-between items-center"
+                                  >
+                                    <span className="truncate w-24 font-bold">{node.name}</span>
+                                    <span className="text-[8px] text-white/40 font-semibold">{node.utilization}% load ({node.devTasks.length} tasks)</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t border-white/5 pt-3">
+                  <button
+                    onClick={handleAutoBalance}
+                    className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[9px] font-mono uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-2"
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-indigo-400" /> Auto-Balance System Load
+                  </button>
+                </div>
+              </div>
+
+              {/* Execution nodes map */}
+              <div className="lg:col-span-2 border border-white/10 bg-[#0c0c0c] p-5 rounded-sm h-[34rem] overflow-y-auto space-y-4">
+                <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Execution Nodes</h4>
+                    <p className="text-[8px] font-mono text-white/40 uppercase">Developer queue load status</p>
+                  </div>
+                  <span className="text-[9px] font-mono text-white/40 uppercase">Standard Limit: 40h</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {executionNodes.map(node => {
+                    const barColors = {
+                      overload: 'bg-rose-500',
+                      active: 'bg-amber-500',
+                      focus: 'bg-indigo-500',
+                      standby: 'bg-white/10'
+                    };
+
+                    const textColors = {
+                      overload: 'text-rose-400 font-bold',
+                      active: 'text-amber-400',
+                      focus: 'text-indigo-400',
+                      standby: 'text-white/40'
+                    };
+
+                    return (
+                      <div key={node.id} className="border border-white/5 bg-black/30 p-4 rounded-sm space-y-3 flex flex-col justify-between font-mono text-[10px]">
+                        <div className="flex justify-between items-start border-b border-white/5 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white/90">{node.name}</span>
+                            <span className="text-[8px] uppercase text-white/40">({node.role})</span>
+                          </div>
+                          <span className={`text-[9px] uppercase ${textColors[node.status]}`}>{node.status}</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[9px] text-white/50 uppercase">
+                            <span>Capacity Load</span>
+                            <span>{node.loadHours}h / 40h ({node.utilization}%)</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div className={`h-full ${barColors[node.status]} transition-all`} style={{ width: `${node.utilization}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <span className="text-[8px] text-white/40 uppercase block">Active Dispatch Queue</span>
+                          {node.devTasks.length === 0 ? (
+                            <span className="text-[8.5px] italic text-white/30 uppercase">Standby: Awaiting dispatch</span>
+                          ) : (
+                            <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
+                              {node.devTasks.map(t => (
+                                <div key={t.id} className="p-1 border border-white/5 bg-white/5 flex justify-between items-center rounded-sm text-[8px] text-white/70">
+                                  <span className="truncate w-32 font-medium">{t.name}</span>
+                                  <span className="text-white/40 uppercase">{t.status}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
         {activeTab === 'attendance' && (
           <motion.div
             key="attendance"

@@ -207,7 +207,7 @@ export function ResolveRouter() {
 
   // ── RESOURCES routes ──
 
-  if (pathname === '/resources' || pathname === '/resources/logistics') {
+  if (pathname === '/resources' || pathname === '/resources/logistics' || pathname === '/control/logistics') {
     if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
       window.history.replaceState(null, '', '/workspace');
       window.dispatchEvent(new CustomEvent('popstate'));
