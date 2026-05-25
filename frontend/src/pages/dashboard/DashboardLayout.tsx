@@ -1619,9 +1619,9 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
             <div className="space-y-0.5">
               <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Core</p>
               <button
-                onClick={() => { setDashboardTab('dashboard'); navigateTo('/workspace'); }}
+                onClick={() => navigateTo('/overview')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  dashboardTab === 'dashboard' && window.location.pathname === '/workspace'
+                  window.location.pathname === '/overview' || window.location.pathname === '/'
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
                     : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
@@ -1630,9 +1630,9 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 Overview
               </button>
               <button
-                onClick={() => { setDashboardTab('active'); navigateTo('/workspace'); }}
+                onClick={() => navigateTo('/workspace')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  dashboardTab === 'active' && window.location.pathname === '/workspace'
+                  window.location.pathname === '/workspace'
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
                     : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}

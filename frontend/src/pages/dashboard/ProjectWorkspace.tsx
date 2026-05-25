@@ -1190,9 +1190,7 @@ export function ProjectWorkspace({
         )}
       </div>
 
-      {dashboardTab === 'dashboard' ? (
-        <ExecutiveDashboardPanel />
-      ) : dashboardTab === 'intelligence' ? (
+      {dashboardTab === 'intelligence' ? (
         <DecisionCenterPanel />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8 mb-8 sm:mb-12">

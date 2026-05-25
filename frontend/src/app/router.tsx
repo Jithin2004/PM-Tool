@@ -15,6 +15,7 @@ import { isProductKeyVerified } from '../lib/productKey';
 
 // ── Lazy-loaded route pages ──
 
+const OverviewPage = lazy(() => import('../pages/dashboard/OverviewPage'));
 const ProjectsPage = lazy(() => import('../pages/workspace/ProjectsPage'));
 const PortfolioPage = lazy(() => import('../pages/workspace/PortfolioPage'));
 const KnowledgePage = lazy(() => import('../pages/workspace/KnowledgePage'));
@@ -64,7 +65,7 @@ function routeWithGuard(
   page: React.ReactNode
 ): React.ReactNode {
   if (!allowedRoles.includes(profileRole || '')) {
-    window.history.replaceState(null, '', '/workspace');
+    window.history.replaceState(null, '', '/overview');
     window.dispatchEvent(new CustomEvent('popstate'));
     return null;
   }
@@ -120,7 +121,7 @@ export function ResolveRouter() {
     return (
       <ProductKeyGate
         onVerified={() => {
-          window.history.pushState(null, '', '/workspace');
+          window.history.pushState(null, '', '/overview');
           window.dispatchEvent(new Event('popstate'));
         }}
       />
@@ -173,6 +174,11 @@ export function ResolveRouter() {
 
   // ── WORKSPACE routes ──
 
+  if (pathname === '/overview') {
+    return <RouteShell><OverviewPage /></RouteShell>;
+  }
+
+
   if (pathname === '/workspace') {
     return <RouteShell><ProjectsPage /></RouteShell>;
   }
@@ -209,7 +215,7 @@ export function ResolveRouter() {
 
   if (pathname === '/resources' || pathname === '/resources/logistics' || pathname === '/control/logistics') {
     if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -217,7 +223,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/resources/teams') {
     if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -225,7 +231,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/resources/capacity') {
     if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -233,7 +239,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/resources/work-logs') {
     if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -244,7 +250,7 @@ export function ResolveRouter() {
 
   if (pathname === '/control' || pathname === '/control/identity') {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -252,7 +258,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/control/analytics') {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -260,7 +266,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/control/audit') {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -268,7 +274,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/control/automations' || pathname.startsWith('/control/automations/')) {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -276,7 +282,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/control/connections' || pathname.startsWith('/control/connections/')) {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -284,7 +290,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/control/settings') {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -292,7 +298,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/control/settings/notifications') {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -300,7 +306,7 @@ export function ResolveRouter() {
   }
   if (pathname === '/control/settings/modes') {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
@@ -311,7 +317,7 @@ export function ResolveRouter() {
 
   if (pathname === '/control/mission-control') {
     if (profile?.role !== 'super_admin') {
-      window.history.replaceState(null, '', '/workspace');
+      window.history.replaceState(null, '', '/overview');
       window.dispatchEvent(new CustomEvent('popstate'));
       return null;
     }
