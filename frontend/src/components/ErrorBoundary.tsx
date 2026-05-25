@@ -41,21 +41,21 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       if (this.props.fallback) return this.props.fallback;
       return (
         <div className="flex-1 flex items-center justify-center p-8" role="alert">
-          <div className="border border-red-500/25 bg-red-500/5 p-6 max-w-md text-center rounded">
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center bg-red-500/10 text-red-400 rounded-full">
+          <div className="border border-red-500/25 bg-signal-critical-bg p-6 max-w-md text-center rounded">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center bg-signal-critical-bg text-signal-critical rounded-full">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01" />
               </svg>
             </div>
-            <h3 className="text-sm font-semibold mb-1 text-white" id={`${this.props.name}-error-title`}>
+            <h3 className="text-sm font-semibold mb-1 text-text-primary" id={`${this.props.name}-error-title`}>
               {this.props.name} Error
             </h3>
-            <p className="text-[11px] font-mono text-white/50 mb-4">
+            <p className="text-[11px] font-mono text-text-tertiary mb-4">
               {this.state.error?.message || 'An unexpected error occurred'}
             </p>
             <button
               onClick={this.handleRetry}
-              className="px-4 py-2 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors rounded-sm"
+              className="px-4 py-2 bg-white/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-white/20 transition-colors rounded-sm"
               aria-label={`Retry ${this.props.name}`}
             >
               Retry

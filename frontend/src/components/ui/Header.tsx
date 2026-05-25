@@ -209,7 +209,7 @@ export function Header({
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:text-xs focus:font-mono focus:uppercase focus:tracking-wider">
         Skip to main content
       </a>
-      <header className="border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-md z-50" role="banner">
+      <header className="border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 bg-bg backdrop-blur-md z-50" role="banner">
         {/* Logo */}
         <button
           onClick={() => { handleNav('/workspace'); }}
@@ -218,52 +218,52 @@ export function Header({
           id="logo-home-btn"
           aria-label="Home: Go to Project Workspace"
         >
-          <div className="w-10 h-10 sm:w-14 sm:h-14 border border-white/20 bg-white/5 flex items-center justify-center overflow-hidden group-hover:border-white/40 transition-colors">
+          <div className="w-10 h-10 sm:w-14 sm:h-14 border border-border bg-white/5 flex items-center justify-center overflow-hidden group-hover:border-white/40 transition-colors">
             <img src="/logo.png" alt="Resolve PM Logo" className="w-full h-full object-cover scale-110" />
           </div>
           <div>
             <h1 className="font-sans font-semibold text-base sm:text-lg tracking-tight uppercase leading-none">Resolve PM</h1>
-            <p className="hidden sm:block text-[9px] font-mono text-white/70 uppercase tracking-[0.15em]">High-Fidelity Engineering System</p>
+            <p className="hidden sm:block text-[9px] font-mono text-text-secondary uppercase tracking-[0.15em]">High-Fidelity Engineering System</p>
           </div>
         </button>
 
         {/* Desktop right side */}
         <div className="hidden lg:flex items-center gap-5">
           {/* Working hours + tiles — xl only */}
-          <div className="hidden xl:flex items-center gap-6 border-x border-white/10 px-6">
+          <div className="hidden xl:flex items-center gap-6 border-x border-border px-6">
             <div className="flex flex-col">
-              <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Company Working Time</label>
+              <label className="text-[9px] font-mono text-text-tertiary uppercase tracking-wide mb-1">Company Working Time</label>
               <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-blue-400" />
+                <Clock className="w-3.5 h-3.5 text-signal-info" />
                 {profile?.role === 'super_admin' ? (
                   <div className="flex items-center gap-1">
                     <input
                       type="time"
                       value={workingTimeFrom}
                       onChange={(e) => onWorkingTimeChange(e.target.value, workingTimeTo)}
-                      className="bg-transparent border-b border-blue-400/50 font-mono text-xs focus:border-blue-400 outline-none text-center py-0.5 text-white"
+                      className="bg-transparent border-b border-border font-mono text-xs focus:border-border outline-none text-center py-0.5 text-text-primary"
                     />
-                    <span className="text-[10px] font-mono text-white/40">to</span>
+                    <span className="text-[10px] font-mono text-text-quaternary">to</span>
                     <input
                       type="time"
                       value={workingTimeTo}
                       onChange={(e) => onWorkingTimeChange(workingTimeFrom, e.target.value)}
-                      className="bg-transparent border-b border-blue-400/50 font-mono text-xs focus:border-blue-400 outline-none text-center py-0.5 text-white"
+                      className="bg-transparent border-b border-border font-mono text-xs focus:border-border outline-none text-center py-0.5 text-text-primary"
                     />
                   </div>
                 ) : (
-                  <span className="font-mono text-xs text-white/70">
+                  <span className="font-mono text-xs text-text-secondary">
                     {workingTimeFrom} - {workingTimeTo} ({calculateHoursFromRange(workingTimeFrom, workingTimeTo)}h)
                   </span>
                 )}
               </div>
             </div>
             <div className="flex flex-col">
-              <label className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">Tiles Per Row</label>
-              <div className="flex bg-white/5 p-1 border border-white/10 rounded-sm">
+              <label className="text-[9px] font-mono text-text-tertiary uppercase tracking-wide mb-1">Tiles Per Row</label>
+              <div className="flex bg-white/5 p-1 border border-border rounded-sm">
                 {[2, 3, 4].map(num => (
                   <button key={num} onClick={() => setTilesPerRow(num)}
-                    className={`px-2 py-0.5 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}>
+                    className={`px-2 py-0.5 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-text-tertiary hover:text-text-primary'}`}>
                     {num}
                   </button>
                 ))}
@@ -285,10 +285,10 @@ export function Header({
                   aria-expanded={expandedSection === section.label}
                   aria-haspopup="true"
                   aria-controls={`nav-section-${section.label}`}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-mono uppercase tracking-widest transition-all cursor-pointer ${
+                  className={`flex items-center gap-1 px-2.5 py-1.5 text-[9px] font-mono uppercase tracking-wide transition-all cursor-pointer ${
                     expandedSection === section.label
-                      ? 'bg-white/10 text-white border border-white/25 border-b-transparent'
-                      : 'text-white/60 border border-white/5 hover:border-white/20'
+                      ? 'bg-white/10 text-text-primary border border-white/25 border-b-transparent'
+                      : 'text-text-tertiary border border-border-subtle hover:border-border'
                   }`}
                 >
                   {section.icon}
@@ -299,7 +299,7 @@ export function Header({
                   <div
                     id={`nav-section-${section.label}`}
                     role="menu"
-                    className="absolute top-full left-0 w-44 bg-[#0a0a0a] border border-t-0 border-white/25 shadow-2xl z-50 py-1"
+                    className="absolute top-full left-0 w-44 bg-bg border border-t-0 border-white/25 shadow-2xl z-50 py-1"
                     onMouseEnter={() => { clearTimeout(closeTimer.current); }}
                     onMouseLeave={handleSectionLeave}
                   >
@@ -309,7 +309,7 @@ export function Header({
                         role="menuitem"
                         onClick={() => handleNav(item.path)}
                         className={`w-full flex items-center gap-2 text-left px-3 py-2 text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                          pathname === item.path ? 'bg-white/15 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                          pathname === item.path ? 'bg-white/15 text-text-primary' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
                         }`}
                       >
                         {item.icon}
@@ -324,12 +324,12 @@ export function Header({
 
           {/* Role badge */}
           <div className="flex flex-col items-end">
-            <p className="text-xs font-mono text-white/90 uppercase">
-              Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/85'}>
+            <p className="text-xs font-mono text-text-secondary uppercase">
+              Role: <span className={profile?.role === 'super_admin' ? 'text-signal-critical' : profile?.role === 'pm' ? 'text-signal-info' : 'text-text-secondary'}>
                 {(profile && userCustomRoles[profile.id]) || profile?.role || 'INITIALIZING...'}
               </span>
             </p>
-            <p className="text-[10px] font-mono text-white/60 uppercase tracking-[0.2em]">
+            <p className="text-[10px] font-mono text-text-tertiary uppercase tracking-[0.2em]">
               {profile?.role === 'viewer' ? 'READ ONLY' : 'FULL WRITE ACCESS'}
             </p>
           </div>
@@ -339,22 +339,22 @@ export function Header({
           {/* Interactive Tour Button */}
           <button
             onClick={() => (window as any).startOnboardingTour?.()}
-            className="p-2 border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0 cursor-pointer"
+            className="p-2 border border-border hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0 cursor-pointer"
             title="Start Interactive Tour"
           >
-            <BrainCircuit className="w-4 h-4 text-blue-400" />
+            <BrainCircuit className="w-4 h-4 text-signal-info" />
           </button>
 
           {/* Bell Notification Center */}
           <div className="relative shrink-0">
             <button
               onClick={() => setNotifOpen(prev => !prev)}
-              className="p-2 border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0 cursor-pointer relative"
+              className="p-2 border border-border hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0 cursor-pointer relative"
               title="Notification Center"
             >
               <Bell className="w-4 h-4 text-cyan-400" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-[8px] font-mono font-bold flex items-center justify-center text-white animate-pulse">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-[8px] font-mono font-bold flex items-center justify-center text-text-primary transition-opacity duration-300">
                   {unreadCount}
                 </span>
               )}
@@ -366,10 +366,10 @@ export function Header({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 mt-2.5 w-80 bg-[#090a0f]/95 backdrop-blur-md border border-white/10 rounded-sm shadow-2xl p-4 z-50 max-h-96 overflow-y-auto"
+                  className="absolute right-0 mt-2.5 w-80 bg-[#090a0f]/95 backdrop-blur-md border border-border rounded-sm shadow-2xl p-4 z-50 max-h-96 overflow-y-auto"
                 >
-                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-white/50">Notifications Center</span>
+                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-border-subtle">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Notifications Center</span>
                     {unreadCount > 0 && (
                       <span className="text-[9px] font-mono text-rose-400 font-bold uppercase">{unreadCount} Unread</span>
                     )}
@@ -377,7 +377,7 @@ export function Header({
 
                   <div className="space-y-3">
                     {notifications.length === 0 ? (
-                      <div className="text-center py-6 text-[10px] font-mono text-white/30 uppercase">
+                      <div className="text-center py-6 text-[10px] font-mono text-text-quaternary uppercase">
                         No notifications registered
                       </div>
                     ) : (
@@ -386,33 +386,33 @@ export function Header({
                           key={notif.id}
                           className={`p-2.5 rounded-sm border text-[11px] flex justify-between items-start gap-2 ${
                             notif.read_at 
-                              ? 'bg-white/5 border-white/5 text-white/60' 
-                              : 'bg-blue-950/20 border-blue-500/20 text-white'
+                              ? 'bg-white/5 border-border-subtle text-text-tertiary' 
+                              : 'bg-surface-3 border-border text-text-primary'
                           }`}
                         >
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-1.5">
                               <span className={`w-1.5 h-1.5 rounded-full ${
                                 notif.category === 'risk' 
-                                  ? 'bg-rose-500 animate-pulse' 
+                                  ? 'bg-rose-500 transition-opacity duration-300' 
                                   : notif.category === 'deadlines'
                                     ? 'bg-amber-500'
                                     : notif.category === 'attendance'
                                       ? 'bg-blue-400'
                                       : 'bg-green-400'
                               }`} />
-                              <span className="text-[9px] font-mono uppercase tracking-wider text-white/40">
+                              <span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">
                                 {notif.category}
                               </span>
                             </div>
                             <h4 className="font-semibold leading-snug">{notif.title}</h4>
-                            {notif.body && <p className="text-[10px] text-white/70 leading-relaxed">{notif.body}</p>}
+                            {notif.body && <p className="text-[10px] text-text-secondary leading-relaxed">{notif.body}</p>}
                           </div>
 
                           {!notif.read_at && (
                             <button
                               onClick={() => onMarkAsRead?.(notif.id)}
-                              className="p-1 hover:bg-white/10 rounded-sm cursor-pointer shrink-0 border border-white/5 hover:border-white/20"
+                              className="p-1 hover:bg-white/10 rounded-sm cursor-pointer shrink-0 border border-border-subtle hover:border-border"
                               title="Mark as Read"
                             >
                               <Check className="w-3 h-3 text-emerald-400" />
@@ -430,10 +430,10 @@ export function Header({
           {/* Theme Toggle Button */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0 cursor-pointer"
+            className="p-2 border border-border hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all rounded-sm flex items-center justify-center shrink-0 cursor-pointer"
             title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
           >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-signal-warning" /> : <Moon className="w-4 h-4 text-signal-info" />}
           </button>
 
           <div className="h-8 w-[1px] bg-white/10" />
@@ -443,15 +443,15 @@ export function Header({
             <div className="flex items-center gap-3">
               <div className="flex flex-col items-end">
                 <p className="text-sm font-medium">{user.email?.split('@')[0]}</p>
-                <button onClick={onLogout} className="text-[10px] font-mono uppercase text-white/60 hover:text-white transition-colors" id="logout-btn">
+                <button onClick={onLogout} className="text-[10px] font-medium uppercase text-text-tertiary hover:text-text-primary transition-colors" id="logout-btn">
                   Terminate Session
                 </button>
               </div>
-              <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors"
+              <div className="w-9 h-9 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors"
                 onClick={() => (window as any).openProfileModal()}>
                 {profile?.avatar_url ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> :
                   profile?.full_name ? <span className="text-[10px] font-mono font-bold">{profile.full_name.substring(0, 2).toUpperCase()}</span> :
-                    <Users className="w-4 h-4 text-white/85" />}
+                    <Users className="w-4 h-4 text-text-secondary" />}
               </div>
             </div>
           )}
@@ -462,41 +462,41 @@ export function Header({
           {/* Command Palette for Mobile */}
           <button
             onClick={() => onOpenCommandPalette?.()}
-            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+            className="p-2 border border-border bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
             title="Search (Ctrl+K)"
           >
-            <Search className="w-4 h-4 text-white/70" />
+            <Search className="w-4 h-4 text-text-secondary" />
           </button>
 
           {/* Interactive Tour for Mobile */}
           <button
             onClick={() => (window as any).startOnboardingTour?.()}
-            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+            className="p-2 border border-border bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
             title="Start Interactive Tour"
           >
-            <BrainCircuit className="w-4 h-4 text-blue-400" />
+            <BrainCircuit className="w-4 h-4 text-signal-info" />
           </button>
 
           {/* Theme Toggle for Mobile */}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+            className="p-2 border border-border bg-white/5 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
             title={theme === 'dark' ? "Switch to Light Theme" : "Switch to Dark Theme"}
           >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
+            {theme === 'dark' ? <Sun className="w-4 h-4 text-signal-warning" /> : <Moon className="w-4 h-4 text-signal-info" />}
           </button>
 
           {user && (
-            <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors"
+            <div className="w-8 h-8 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden cursor-pointer hover:border-white/40 transition-colors"
               onClick={() => (window as any).openProfileModal()}>
               {profile?.avatar_url ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> :
                 profile?.full_name ? <span className="text-[9px] font-mono font-bold">{profile.full_name.substring(0, 2).toUpperCase()}</span> :
-                  <Users className="w-3.5 h-3.5 text-white/85" />}
+                  <Users className="w-3.5 h-3.5 text-text-secondary" />}
             </div>
           )}
           <button
             onClick={() => setMobileMenuOpen(prev => !prev)}
-            className="p-2 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+            className="p-2 border border-border bg-white/5 hover:bg-white/10 transition-colors"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -514,7 +514,7 @@ export function Header({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="lg:hidden fixed inset-0 z-30 bg-black/60"
+              className="lg:hidden fixed inset-0 z-30 bg-bg"
               onClick={() => setMobileMenuOpen(false)}
             />
 
@@ -536,7 +536,7 @@ export function Header({
                   setMobileMenuOpen(false);
                 }
               }}
-              className="lg:hidden fixed top-[57px] left-0 bottom-0 w-80 max-w-[85vw] bg-[#0a0a0a]/98 backdrop-blur-md border-r border-white/10 z-40 shadow-2xl overflow-y-auto"
+              className="lg:hidden fixed top-[57px] left-0 bottom-0 w-80 max-w-[85vw] bg-bg backdrop-blur-md border-r border-border z-40 shadow-2xl overflow-y-auto"
             >
               {/* Drawer content wrapper — tap on padding/background collapses section */}
               <div
@@ -545,16 +545,16 @@ export function Header({
               >
                 {/* User info */}
                 {user && (
-                  <div onClick={e => e.stopPropagation()} className="flex items-center justify-between pb-4 border-b border-white/10">
+                  <div onClick={e => e.stopPropagation()} className="flex items-center justify-between pb-4 border-b border-border">
                     <div>
                       <p className="text-sm font-medium">{user.email?.split('@')[0]}</p>
-                      <p className="text-[10px] font-mono text-white/50 uppercase mt-0.5">
-                        Role: <span className={profile?.role === 'super_admin' ? 'text-red-500' : profile?.role === 'pm' ? 'text-blue-400' : 'text-white/70'}>
+                      <p className="text-[10px] font-mono text-text-tertiary uppercase mt-0.5">
+                        Role: <span className={profile?.role === 'super_admin' ? 'text-signal-critical' : profile?.role === 'pm' ? 'text-signal-info' : 'text-text-secondary'}>
                           {(profile && userCustomRoles[profile.id]) || profile?.role || '—'}
                         </span>
                       </p>
                     </div>
-                    <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${profile?.role === 'viewer' ? 'border-white/10 text-white/50' : 'border-green-500/30 text-green-400'}`}>
+                    <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${profile?.role === 'viewer' ? 'border-border text-text-tertiary' : 'border-border text-signal-safe'}`}>
                       {profile?.role === 'viewer' ? 'Read Only' : 'Write Access'}
                     </span>
                   </div>
@@ -562,12 +562,12 @@ export function Header({
 
                 {/* Mobile navigation sections — single expanded at a time */}
                 <div onClick={e => e.stopPropagation()} className="space-y-2">
-                  <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1">Navigation</p>
+                  <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-wide mb-1">Navigation</p>
                   {NAV.map(section => (
-                    <div key={section.label} className="border border-white/5">
+                    <div key={section.label} className="border border-border-subtle">
                       <button
                         onClick={() => handleParentClick(section.label)}
-                        className="w-full flex items-center justify-between text-left text-xs font-mono uppercase tracking-widest px-4 py-3 border-b border-white/5 text-white/70"
+                        className="w-full flex items-center justify-between text-left text-xs font-mono uppercase tracking-wide px-4 py-3 border-b border-border-subtle text-text-secondary"
                       >
                         <span className="flex items-center gap-2">{section.icon}{section.label}</span>
                         {expandedSection === section.label ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -583,7 +583,7 @@ export function Header({
                           >
                             {section.items.filter(item => canAccessItem(item, role)).map(item => (
                               <button key={item.label} onClick={() => handleNav(item.path)}
-                                className={`w-full flex items-center gap-2 text-left text-[11px] font-mono uppercase tracking-wider px-6 py-2.5 border-b border-white/5 transition-all cursor-pointer ${pathname === item.path ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+                                className={`w-full flex items-center gap-2 text-left text-[11px] font-mono uppercase tracking-wider px-6 py-2.5 border-b border-border-subtle transition-all cursor-pointer ${pathname === item.path ? 'bg-white/15 text-text-primary' : 'text-text-tertiary hover:bg-white/5 hover:text-text-primary'}`}>
                                 {item.icon}
                                 {item.label}
                               </button>
@@ -597,41 +597,41 @@ export function Header({
 
                 {/* Settings */}
                 {user && (
-                  <div onClick={e => e.stopPropagation()} className="space-y-3 pt-2 border-t border-white/5">
-                    <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest">System Parameters</p>
+                  <div onClick={e => e.stopPropagation()} className="space-y-3 pt-2 border-t border-border-subtle">
+                    <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-wide">System Parameters</p>
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-mono text-white/70 flex items-center gap-2">
-                        <Clock className="w-3 h-3 text-blue-400" /> Company Working Time
+                      <span className="text-xs font-mono text-text-secondary flex items-center gap-2">
+                        <Clock className="w-3 h-3 text-signal-info" /> Company Working Time
                       </span>
                       {profile?.role === 'super_admin' ? (
-                        <div className="flex items-center gap-2 bg-black border border-white/10 p-2 rounded-sm w-full">
+                        <div className="flex items-center gap-2 bg-bg border border-border p-2 rounded-sm w-full">
                           <input
                             type="time"
                             value={workingTimeFrom}
                             onChange={(e) => onWorkingTimeChange(e.target.value, workingTimeTo)}
-                            className="flex-1 bg-transparent font-mono text-xs text-white text-center outline-none"
+                            className="flex-1 bg-transparent font-mono text-xs text-text-primary text-center outline-none"
                           />
-                          <span className="text-xs font-mono text-white/40">to</span>
+                          <span className="text-xs font-mono text-text-quaternary">to</span>
                           <input
                             type="time"
                             value={workingTimeTo}
                             onChange={(e) => onWorkingTimeChange(workingTimeFrom, e.target.value)}
-                            className="flex-1 bg-transparent font-mono text-xs text-white text-center outline-none"
+                            className="flex-1 bg-transparent font-mono text-xs text-text-primary text-center outline-none"
                           />
                         </div>
                       ) : (
-                        <span className="font-mono text-xs text-white/70 bg-black/40 border border-white/10 p-2 rounded-sm text-center">
+                        <span className="font-mono text-xs text-text-secondary bg-bg border border-border p-2 rounded-sm text-center">
                           {workingTimeFrom} to {workingTimeTo} ({calculateHoursFromRange(workingTimeFrom, workingTimeTo)}h)
                         </span>
                       )}
                     </div>
                     {profile?.role === 'super_admin' && (
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono text-white/70">Tiles Per Row</span>
-                        <div className="flex bg-white/5 p-1 border border-white/10 rounded-sm">
+                        <span className="text-xs font-mono text-text-secondary">Tiles Per Row</span>
+                        <div className="flex bg-white/5 p-1 border border-border rounded-sm">
                           {[2, 3, 4].map(num => (
                             <button key={num} onClick={() => setTilesPerRow(num)}
-                              className={`px-3 py-1 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-white/60 hover:text-white'}`}>
+                              className={`px-3 py-1 text-[10px] font-mono transition-all ${tilesPerRow === num ? 'bg-white text-black' : 'text-text-tertiary hover:text-text-primary'}`}>
                               {num}
                             </button>
                           ))}
@@ -643,10 +643,10 @@ export function Header({
 
                 {/* Logout */}
                 {user && (
-                  <div onClick={e => e.stopPropagation()} className="pt-3 border-t border-white/5">
+                  <div onClick={e => e.stopPropagation()} className="pt-3 border-t border-border-subtle">
                     <button
                       onClick={() => { onLogout(); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-red-400/80 hover:text-red-400 transition-colors py-2"
+                      className="w-full flex items-center gap-2 text-xs font-mono uppercase tracking-wide text-signal-critical/80 hover:text-signal-critical transition-colors py-2"
                       id="logout-btn-mobile"
                     >
                       <LogOut className="w-3.5 h-3.5" /> Terminate Session

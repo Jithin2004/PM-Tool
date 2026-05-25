@@ -255,13 +255,13 @@ function addRecent(result: CmdResult) {
 
 function commandIcon(group: string): React.ReactNode {
   const map: Record<string, React.ReactNode> = {
-    NAVIGATION: <FolderOpen className="w-3 h-3 text-blue-400" />,
+    NAVIGATION: <FolderOpen className="w-3 h-3 text-signal-info" />,
     PROJECTS: <BarChart3 className="w-3 h-3 text-emerald-400" />,
-    TASKS: <Check className="w-3 h-3 text-amber-400" />,
-    ACTIONS: <Zap className="w-3 h-3 text-purple-400" />,
+    TASKS: <Check className="w-3 h-3 text-signal-warning" />,
+    ACTIONS: <Zap className="w-3 h-3 text-accent-secondary" />,
     AI: <BrainCircuit className="w-3 h-3 text-cyan-400" />,
-    RECENT: <Clock className="w-3 h-3 text-white/40" />,
-    SUGGESTED: <TrendingUp className="w-3 h-3 text-white/30" />,
+    RECENT: <Clock className="w-3 h-3 text-text-quaternary" />,
+    SUGGESTED: <TrendingUp className="w-3 h-3 text-text-quaternary" />,
     MOST_USED: <Cpu className="w-3 h-3 text-orange-400" />,
   };
   return map[group] || null;
@@ -335,17 +335,17 @@ export default function CommandPalette(props: Props) {
       const contextual: { label: string; icon: React.ReactNode; action: () => void }[] = [];
       if (route.startsWith('/execution')) {
         contextual.push(
-          { label: 'Create Sprint', icon: <GitFork className="w-3.5 h-3.5 text-purple-400" />, action: () => { onNavigate('/execution/sprints'); onClose(); } },
-          { label: 'View Timeline', icon: <Activity className="w-3.5 h-3.5 text-purple-400" />, action: () => { onNavigate('/execution/timeline'); onClose(); } },
+          { label: 'Create Sprint', icon: <GitFork className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/execution/sprints'); onClose(); } },
+          { label: 'View Timeline', icon: <Activity className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/execution/timeline'); onClose(); } },
         );
       } else if (route.startsWith('/workspace')) {
         contextual.push(
-          { label: 'Create Project', icon: <PlusCircle className="w-3.5 h-3.5 text-purple-400" />, action: () => { setIsAdding?.(true); onClose(); } },
-          { label: 'Decision Center', icon: <BrainCircuit className="w-3.5 h-3.5 text-purple-400" />, action: () => { onNavigate('/workspace/decisions'); onClose(); } },
+          { label: 'Create Project', icon: <PlusCircle className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { setIsAdding?.(true); onClose(); } },
+          { label: 'Decision Center', icon: <BrainCircuit className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/workspace/decisions'); onClose(); } },
         );
       } else if (route.startsWith('/resources')) {
         contextual.push(
-          { label: 'View Capacity', icon: <BarChart3 className="w-3.5 h-3.5 text-purple-400" />, action: () => { onNavigate('/resources/capacity'); onClose(); } },
+          { label: 'View Capacity', icon: <BarChart3 className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/resources/capacity'); onClose(); } },
         );
       }
       if (contextual.length > 0) {
@@ -412,7 +412,7 @@ export default function CommandPalette(props: Props) {
             out.push({
               id: `predict:${s.id}`, group: 'SUGGESTED', label: s.label,
               description: 'Workflow prediction',
-              icon: <Zap className="w-3.5 h-3.5 text-amber-400" />,
+              icon: <Zap className="w-3.5 h-3.5 text-signal-warning" />,
               onSelect: () => { logCmd('predict', s.label); },
             });
           });
@@ -465,7 +465,7 @@ export default function CommandPalette(props: Props) {
         matchedTasks.forEach(t => out.push({
           id: `task:${t.id}`, group: 'TASKS', label: t.name,
           description: `${t.status} · ${t.priority}`,
-          icon: <Check className="w-3.5 h-3.5 text-amber-400" />,
+          icon: <Check className="w-3.5 h-3.5 text-signal-warning" />,
           metadata: { task_id: t.id, status: t.status, priority: t.priority },
           onSelect: () => { addRecent({ id: `task:${t.id}`, group: 'TASKS', label: t.name, icon: <Check className="w-3.5 h-3.5" />, onSelect: () => {} }); logCmd('task_open', t.name, { task_id: t.id }); onNavigate('/execution'); onClose(); },
         }));
@@ -561,7 +561,7 @@ export default function CommandPalette(props: Props) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
-            className="fixed inset-0 z-[200] bg-black/60"
+            className="fixed inset-0 z-[200] bg-bg"
             onClick={onClose}
           />
           <motion.div
@@ -572,15 +572,15 @@ export default function CommandPalette(props: Props) {
             className="fixed inset-0 z-[201] flex items-start justify-center pt-[15vh] px-4 pointer-events-none"
           >
             <div
-              className="w-full max-w-xl bg-[#0c0c0c] border border-white/15 shadow-2xl pointer-events-auto overflow-hidden"
+              className="w-full max-w-xl bg-surface border border-white/15 shadow-2xl pointer-events-auto overflow-hidden"
               onClick={e => e.stopPropagation()}
               role="dialog"
               aria-label="Command palette"
               aria-modal="true"
             >
               {/* Search input */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10" role="combobox" aria-expanded={allResults.length > 0} aria-haspopup="listbox">
-                <Search className="w-4 h-4 text-white/40 shrink-0" />
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border" role="combobox" aria-expanded={allResults.length > 0} aria-haspopup="listbox">
+                <Search className="w-4 h-4 text-text-quaternary shrink-0" />
                 <input
                   ref={inputRef}
                   type="text"
@@ -588,19 +588,19 @@ export default function CommandPalette(props: Props) {
                   onChange={e => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Search projects, tasks, navigation and actions..."
-                  className="flex-1 bg-transparent text-sm font-mono text-white outline-none placeholder:text-white/25"
+                  className="flex-1 bg-transparent text-sm font-mono text-text-primary outline-none placeholder:text-text-quaternary"
                   aria-autocomplete="list"
                   aria-controls="command-results"
                   aria-activedescendant={selectedIndex >= 0 ? `cmd-result-${selectedIndex}` : undefined}
                   aria-label="Command search"
                 />
-                <kbd className="hidden sm:inline-flex text-[9px] font-mono uppercase text-white/30 border border-white/10 px-1.5 py-0.5" aria-label="Close with escape key">esc</kbd>
+                <kbd className="hidden sm:inline-flex text-[9px] font-mono uppercase text-text-quaternary border border-border px-1.5 py-0.5" aria-label="Close with escape key">esc</kbd>
               </div>
 
               {/* Results */}
               <div ref={listRef} id="command-results" className="max-h-[50vh] overflow-y-auto py-2" onKeyDown={handleKeyDown} role="listbox" aria-label="Search results">
                 {allResults.length === 0 && (
-                  <div className="px-4 py-8 text-center text-[11px] font-mono text-white/30 uppercase">
+                  <div className="px-4 py-8 text-center text-[11px] font-mono text-text-quaternary uppercase">
                     {debouncedQuery ? 'No results found' : 'Type to search...'}
                   </div>
                 )}
@@ -620,10 +620,10 @@ export default function CommandPalette(props: Props) {
                       id={!isHeader ? `cmd-result-${flatIdx}` : undefined}
                       className={`flex items-center gap-3 px-4 py-2 text-xs font-mono cursor-pointer transition-colors ${
                         isHeader
-                          ? 'text-[9px] uppercase tracking-widest text-white/30 pt-4 pb-1.5 px-4 cursor-default'
+                          ? 'text-[9px] uppercase tracking-wide text-text-quaternary pt-4 pb-1.5 px-4 cursor-default'
                           : isSelected
-                            ? 'bg-white/10 text-white'
-                            : 'text-white/70 hover:bg-white/5'
+                            ? 'bg-white/10 text-text-primary'
+                            : 'text-text-secondary hover:bg-white/5'
                       }`}
                     >
                       {isHeader && (
@@ -638,14 +638,14 @@ export default function CommandPalette(props: Props) {
                           <div className="flex-1 min-w-0">
                             <div className="truncate">{result.label}</div>
                             {result.description && (
-                              <div className="text-[10px] text-white/40 truncate">{result.description}</div>
+                              <div className="text-[10px] text-text-quaternary truncate">{result.description}</div>
                             )}
                           </div>
                           {result.metadata?.status && (
                             <span className={`text-[9px] uppercase px-1.5 py-0.5 border ${
                               result.metadata.status === 'active' ? 'border-emerald-500/30 text-emerald-400' :
-                              result.metadata.status === 'deployed' ? 'border-blue-500/30 text-blue-400' :
-                              'border-white/10 text-white/40'
+                              result.metadata.status === 'deployed' ? 'border-border text-signal-info' :
+                              'border-border text-text-quaternary'
                             }`}>
                               {result.metadata.status}
                             </span>

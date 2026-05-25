@@ -99,34 +99,34 @@ export function PortfolioAnalytics() {
     <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-8 animate-in fade-in duration-300">
       <div>
         <h2 className="text-3xl font-medium tracking-tight mb-1 uppercase font-sans">Portfolio Alignment Hub</h2>
-        <p className="text-sm text-white/85 font-mono tracking-tighter">Client SLA tracking, stakeholder mapping, and project sponsor assignment</p>
+        <p className="text-sm text-text-secondary font-mono tracking-tighter">Client SLA tracking, stakeholder mapping, and project sponsor assignment</p>
       </div>
 
       {/* Portfolio Health Summary Index */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="border border-white/10 bg-[#0c0c0c] p-6 rounded-sm flex items-center justify-between">
+        <div className="border border-border bg-surface p-6 rounded-sm flex items-center justify-between">
           <div>
-            <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1.5">Client SLA Compliance</p>
-            <p className="text-2xl font-mono text-emerald-400 font-bold">{portfolioMetrics.slaCompliance}%</p>
-            <p className="text-[9px] font-mono text-white/40 mt-1">Target: &gt;90% compliance bounds</p>
+            <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1.5">Client SLA Compliance</p>
+            <p className="text-2xl font-sans tracking-tight text-emerald-400 font-bold">{portfolioMetrics.slaCompliance}%</p>
+            <p className="text-[9px] font-mono text-text-quaternary mt-1">Target: &gt;90% compliance bounds</p>
           </div>
           <ShieldCheck className="w-10 h-10 text-emerald-500/20" />
         </div>
 
-        <div className="border border-white/10 bg-[#0c0c0c] p-6 rounded-sm flex items-center justify-between">
+        <div className="border border-border bg-surface p-6 rounded-sm flex items-center justify-between">
           <div>
-            <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1.5">Sponsor Coverage</p>
-            <p className="text-2xl font-mono text-indigo-400 font-bold">{portfolioMetrics.sponsorCoverage}%</p>
-            <p className="text-[9px] font-mono text-white/40 mt-1">Aligned stakeholder sponsors</p>
+            <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1.5">Sponsor Coverage</p>
+            <p className="text-2xl font-sans tracking-tight text-indigo-400 font-bold">{portfolioMetrics.sponsorCoverage}%</p>
+            <p className="text-[9px] font-mono text-text-quaternary mt-1">Aligned stakeholder sponsors</p>
           </div>
           <UserCheck className="w-10 h-10 text-indigo-500/20" />
         </div>
 
-        <div className="border border-white/10 bg-[#0c0c0c] p-6 rounded-sm flex items-center justify-between">
+        <div className="border border-border bg-surface p-6 rounded-sm flex items-center justify-between">
           <div>
-            <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1.5">SLA Risks Detected</p>
-            <p className="text-2xl font-mono text-rose-400 font-bold">{portfolioMetrics.slaBreaches} alerts</p>
-            <p className="text-[9px] font-mono text-white/40 mt-1">Timeline variances exceeding SLAs</p>
+            <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1.5">SLA Risks Detected</p>
+            <p className="text-2xl font-sans tracking-tight text-rose-400 font-bold">{portfolioMetrics.slaBreaches} alerts</p>
+            <p className="text-[9px] font-mono text-text-quaternary mt-1">Timeline variances exceeding SLAs</p>
           </div>
           <AlertTriangle className="w-10 h-10 text-rose-500/20" />
         </div>
@@ -137,17 +137,17 @@ export function PortfolioAnalytics() {
         
         {/* Left/Middle: Client Portfolios */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="border border-white/10 bg-[#0c0c0c] p-6">
-            <h3 className="text-xs font-mono uppercase tracking-widest text-white/80 mb-6 pb-3 border-b border-white/5 flex items-center gap-2">
+          <div className="border border-border bg-surface p-6">
+            <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-6 pb-3 border-b border-border-subtle flex items-center gap-2">
               <Target className="w-4 h-4 text-indigo-400" /> Client Portfolios &amp; SLAs
             </h3>
 
             <div className="space-y-8">
               {groupedPortfolios.map(([sector, list]) => (
                 <div key={sector} className="space-y-4">
-                  <div className="flex justify-between items-center bg-white/5 p-2 px-3 border border-white/5">
-                    <span className="text-[10px] font-mono uppercase text-white/90 font-bold">{sector}</span>
-                    <span className="text-[8px] font-mono text-white/50">{list.length} aligned construct(s)</span>
+                  <div className="flex justify-between items-center bg-white/5 p-2 px-3 border border-border-subtle">
+                    <span className="text-[10px] font-mono uppercase text-text-secondary font-bold">{sector}</span>
+                    <span className="text-[8px] font-mono text-text-tertiary">{list.length} aligned construct(s)</span>
                   </div>
 
                   <div className="divide-y divide-white/5 space-y-2">
@@ -157,11 +157,11 @@ export function PortfolioAnalytics() {
                       const sponsor = profiles.find((p: any) => p.id === proj.owner_id);
 
                       return (
-                        <div key={proj.id} className="p-4 border border-white/5 hover:border-white/10 transition-all space-y-3">
+                        <div key={proj.id} className="p-4 border border-border-subtle hover:border-border transition-all space-y-3">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h4 className="text-xs font-bold text-white uppercase tracking-wider">{proj.name}</h4>
-                              <p className="text-[9px] font-mono text-white/40 uppercase mt-0.5">Mode: {proj.execution_mode}</p>
+                              <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">{proj.name}</h4>
+                              <p className="text-[9px] font-mono text-text-quaternary uppercase mt-0.5">Mode: {proj.execution_mode}</p>
                             </div>
 
                             <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 border rounded-sm uppercase ${
@@ -171,22 +171,22 @@ export function PortfolioAnalytics() {
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-[9px] font-mono text-white/55">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-[9px] font-mono text-text-tertiary">
                             <div>
-                              <span className="text-white/30 uppercase block">Client Due Date</span>
+                              <span className="text-text-quaternary uppercase block">Client Due Date</span>
                               <span>{proj.client_deadline ? new Date(proj.client_deadline).toLocaleDateString() : 'NO DEADLINE SET'}</span>
                             </div>
                             <div>
-                              <span className="text-white/30 uppercase block">Forecast Completion</span>
+                              <span className="text-text-quaternary uppercase block">Forecast Completion</span>
                               <span>{proj.predicted_completion ? new Date(proj.predicted_completion).toLocaleDateString() : 'ESTIMATING...'}</span>
                             </div>
                             <div>
-                              <span className="text-white/30 uppercase block">Aligned Sponsor</span>
+                              <span className="text-text-quaternary uppercase block">Aligned Sponsor</span>
                               {editingProjectId === proj.id ? (
                                 <select
                                   onChange={(e) => handleSaveSponsor(proj.id, e.target.value)}
                                   defaultValue={proj.owner_id || ''}
-                                  className="bg-black border border-white/20 text-white text-[9px] p-0.5 font-mono outline-none"
+                                  className="bg-bg border border-border text-text-primary text-[9px] p-0.5 font-mono outline-none"
                                 >
                                   <option value="">No Sponsor</option>
                                   {profiles.map((p: any) => (
@@ -215,27 +215,27 @@ export function PortfolioAnalytics() {
 
         {/* Right side: Stakeholder Alignments */}
         <div className="space-y-6">
-          <div className="border border-white/10 bg-[#0c0c0c] p-6">
-            <h3 className="text-xs font-mono uppercase tracking-widest text-white/80 mb-6 pb-3 border-b border-white/5 flex items-center gap-2">
+          <div className="border border-border bg-surface p-6">
+            <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-6 pb-3 border-b border-border-subtle flex items-center gap-2">
               <Users className="w-4 h-4 text-indigo-400" /> Stakeholder Directory
             </h3>
 
             <div className="space-y-4 max-h-[30rem] overflow-y-auto pr-1">
               {sponsorAlignments.map(align => (
-                <div key={align.profile.id} className="p-3 border border-white/5 bg-black/20 rounded-sm space-y-2 font-mono text-[10px]">
+                <div key={align.profile.id} className="p-3 border border-border-subtle bg-bg rounded-sm space-y-2 font-mono text-[10px]">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-white">{align.name}</span>
-                    <span className="text-[8px] bg-white/5 border border-white/10 px-1 text-white/50 uppercase">{align.role}</span>
+                    <span className="font-bold text-text-primary">{align.name}</span>
+                    <span className="text-[8px] bg-white/5 border border-border px-1 text-text-tertiary uppercase">{align.role}</span>
                   </div>
 
-                  <div className="text-[9px] text-white/40">
+                  <div className="text-[9px] text-text-quaternary">
                     <span className="block uppercase font-bold">Sponsored Projects ({align.projects.length})</span>
                     {align.projects.length === 0 ? (
                       <span className="italic">No active sponsorships aligned.</span>
                     ) : (
-                      <div className="mt-1 space-y-1 pl-2 border-l border-white/10">
+                      <div className="mt-1 space-y-1 pl-2 border-l border-border">
                         {align.projects.map((p: any) => (
-                          <span key={p.id} className="block text-white/80 uppercase truncate">{p.name}</span>
+                          <span key={p.id} className="block text-text-secondary uppercase truncate">{p.name}</span>
                         ))}
                       </div>
                     )}

@@ -17,7 +17,7 @@ export function LogisticsPanel() {
 
   if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
     return (
-      <div className="flex-1 flex items-center justify-center text-white/50 font-mono text-sm uppercase">
+      <div className="flex-1 flex items-center justify-center text-text-tertiary font-mono text-sm uppercase">
         Unauthorized: Admin Access Required
       </div>
     );

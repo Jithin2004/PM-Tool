@@ -17,7 +17,7 @@ export function ExecutionPressureZones({ bottlenecks, hotspots, vitality }: Exec
       <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">pressure zones</div>
 
       {vitality.stability < 50 && (
-        <div className="px-2 py-1.5 bg-amber-50 border border-amber-100 rounded">
+        <div className="px-2 py-1.5 bg-amber-50 border border-border rounded">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-medium text-amber-700">stability</span>
             <span className="text-[10px] font-mono text-amber-600">{vitality.stability}</span>
@@ -34,7 +34,7 @@ export function ExecutionPressureZones({ bottlenecks, hotspots, vitality }: Exec
           className={`px-2 py-1.5 rounded border ${
             b.severity === 'critical'
               ? 'bg-red-50 border-red-100'
-              : 'bg-amber-50 border-amber-100'
+              : 'bg-amber-50 border-border'
           }`}
         >
           <div className="flex items-center justify-between">

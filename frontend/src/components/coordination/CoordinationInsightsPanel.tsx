@@ -32,7 +32,7 @@ export function CoordinationInsightsPanel({ density, patterns, bottlenecks, maxI
     <div className="space-y-2">
       <div className="flex items-center gap-3 px-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold pb-1 border-b border-gray-100">
         <span>coordination</span>
-        <span className={density.collaborationIntensity === 'very_high' || density.collaborationIntensity === 'high' ? 'text-amber-500' : ''}>
+        <span className={density.collaborationIntensity === 'very_high' || density.collaborationIntensity === 'high' ? 'text-signal-warning' : ''}>
           {density.totalActive} active · {density.collaborationIntensity}
         </span>
       </div>

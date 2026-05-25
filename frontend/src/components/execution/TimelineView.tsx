@@ -74,16 +74,16 @@ export function TimelineView({ projects, tasks, dependencies, profiles }: Timeli
     <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-8">
       <div>
         <h2 className="text-3xl font-medium tracking-tight mb-1">Timeline Intelligence</h2>
-        <p className="text-sm text-white/85 font-mono tracking-tighter">Dependency propagation and scheduling intelligence across all projects</p>
+        <p className="text-sm text-text-secondary font-mono tracking-tighter">Dependency propagation and scheduling intelligence across all projects</p>
       </div>
 
       {schedulingInsights.length > 0 && (
         <div className="space-y-2">
           {schedulingInsights.map((insight, i) => (
             <div key={i} className={`flex items-center gap-3 px-4 py-3 border text-xs font-mono ${
-              insight.type === 'error' ? 'border-red-500/30 bg-red-500/5 text-red-300' :
-              insight.type === 'warning' ? 'border-yellow-500/30 bg-yellow-500/5 text-yellow-300' :
-              'border-blue-500/30 bg-blue-500/5 text-blue-300'
+              insight.type === 'error' ? 'border-red-500/30 bg-signal-critical-bg text-red-300' :
+              insight.type === 'warning' ? 'border-yellow-500/30 bg-signal-warning-bg text-yellow-300' :
+              'border-border bg-surface-3 text-blue-300'
             }`}>
               <AlertTriangle className="w-4 h-4 shrink-0" />
               {insight.message}
@@ -92,10 +92,10 @@ export function TimelineView({ projects, tasks, dependencies, profiles }: Timeli
         </div>
       )}
 
-      <div className="border border-white/10 bg-[#0c0c0c] p-6">
-        <h3 className="text-xs font-mono uppercase tracking-widest text-white/70 mb-6 flex items-center gap-2"><Activity className="w-4 h-4 text-blue-400" /> Project Timeline Phases</h3>
+      <div className="border border-border bg-surface p-6">
+        <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-6 flex items-center gap-2"><Activity className="w-4 h-4 text-signal-info" /> Project Timeline Phases</h3>
         {timelineData.phases.length === 0 ? (
-          <p className="text-xs font-mono text-white/40 italic text-center py-8">No timeline data available. Add due dates to tasks.</p>
+          <p className="text-xs font-mono text-text-quaternary italic text-center py-8">No timeline data available. Add due dates to tasks.</p>
         ) : (
           <div className="space-y-4">
             {timelineData.phases.map((phase, i) => {
@@ -105,12 +105,12 @@ export function TimelineView({ projects, tasks, dependencies, profiles }: Timeli
               return (
                 <div key={i} className="relative">
                   <div className="flex items-center gap-4 mb-1">
-                    <span className="text-[10px] font-mono text-white/70 w-32 truncate" title={phase.label}>{phase.label}</span>
+                    <span className="text-[10px] font-mono text-text-secondary w-32 truncate" title={phase.label}>{phase.label}</span>
                     <div className="flex-1 h-6 bg-white/5 relative rounded-sm overflow-hidden">
-                      <div className={`absolute h-full ${isPast ? 'bg-white/10' : 'bg-blue-500/20'} rounded-sm`} style={{ left: `${Math.max(0, left)}%`, width: `${Math.max(1, width)}%` }} />
-                      <div className={`absolute h-full ${isPast ? 'bg-white/20' : 'bg-blue-500/40'}`} style={{ left: `${Math.max(0, left)}%`, width: `${Math.max(1, width * (phase.progress / 100))}%` }} />
+                      <div className={`absolute h-full ${isPast ? 'bg-white/10' : 'bg-surface-3'} rounded-sm`} style={{ left: `${Math.max(0, left)}%`, width: `${Math.max(1, width)}%` }} />
+                      <div className={`absolute h-full ${isPast ? 'bg-white/20' : 'bg-surface-3'}`} style={{ left: `${Math.max(0, left)}%`, width: `${Math.max(1, width * (phase.progress / 100))}%` }} />
                     </div>
-                    <span className="text-[9px] font-mono text-white/50 w-12 text-right">{phase.progress}%</span>
+                    <span className="text-[9px] font-mono text-text-tertiary w-12 text-right">{phase.progress}%</span>
                   </div>
                 </div>
               );
@@ -120,18 +120,18 @@ export function TimelineView({ projects, tasks, dependencies, profiles }: Timeli
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="border border-white/10 bg-[#0c0c0c] p-6">
-          <h3 className="text-xs font-mono uppercase tracking-widest text-white/70 mb-4 flex items-center gap-2"><GitBranch className="w-4 h-4 text-purple-400" /> Critical Path Dependencies</h3>
+        <div className="border border-border bg-surface p-6">
+          <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4 flex items-center gap-2"><GitBranch className="w-4 h-4 text-accent-secondary" /> Critical Path Dependencies</h3>
           {timelineData.criticalPath.length === 0 ? (
-            <p className="text-xs font-mono text-white/40 italic py-8 text-center">No chained dependencies detected</p>
+            <p className="text-xs font-mono text-text-quaternary italic py-8 text-center">No chained dependencies detected</p>
           ) : (
             <div className="space-y-3">
               {timelineData.criticalPath.slice(0, 10).map((cp: any, i: number) => (
-                <div key={i} className="flex items-start gap-2 border-l-2 border-purple-500/30 pl-3 py-1">
-                  <ArrowRight className="w-3 h-3 text-purple-400 mt-0.5 shrink-0" />
+                <div key={i} className="flex items-start gap-2 border-l-2 border-border pl-3 py-1">
+                  <ArrowRight className="w-3 h-3 text-accent-secondary mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-[10px] font-mono text-white/80">{cp.task.name}</p>
-                    <p className="text-[8px] font-mono text-white/40">
+                    <p className="text-[10px] font-mono text-text-secondary">{cp.task.name}</p>
+                    <p className="text-[8px] font-mono text-text-quaternary">
                       Depends on: {cp.dependsOn.map((d: any) => d?.name).filter(Boolean).join(', ')}
                     </p>
                   </div>
@@ -141,19 +141,19 @@ export function TimelineView({ projects, tasks, dependencies, profiles }: Timeli
           )}
         </div>
 
-        <div className="border border-white/10 bg-[#0c0c0c] p-6">
-          <h3 className="text-xs font-mono uppercase tracking-widest text-white/70 mb-4 flex items-center gap-2"><Calendar className="w-4 h-4 text-cyan-400" /> Scheduling Intelligence</h3>
+        <div className="border border-border bg-surface p-6">
+          <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4 flex items-center gap-2"><Calendar className="w-4 h-4 text-cyan-400" /> Scheduling Intelligence</h3>
           <div className="space-y-4">
-            <div className="border border-white/10 bg-black p-4">
-              <p className="text-[9px] font-mono uppercase text-white/50 mb-1">Earliest Start</p>
-              <p className="text-sm font-mono text-white/80">{timelineData.phases.length > 0 ? timelineData.phases[0]?.start.toLocaleDateString() : 'N/A'}</p>
+            <div className="border border-border bg-bg p-4">
+              <p className="text-[9px] font-mono uppercase text-text-tertiary mb-1">Earliest Start</p>
+              <p className="text-sm font-mono text-text-secondary">{timelineData.phases.length > 0 ? timelineData.phases[0]?.start.toLocaleDateString() : 'N/A'}</p>
             </div>
-            <div className="border border-white/10 bg-black p-4">
-              <p className="text-[9px] font-mono uppercase text-white/50 mb-1">Latest Delivery</p>
-              <p className="text-sm font-mono text-white/80">{timelineData.phases.length > 0 ? timelineData.phases[timelineData.phases.length - 1]?.end.toLocaleDateString() : 'N/A'}</p>
+            <div className="border border-border bg-bg p-4">
+              <p className="text-[9px] font-mono uppercase text-text-tertiary mb-1">Latest Delivery</p>
+              <p className="text-sm font-mono text-text-secondary">{timelineData.phases.length > 0 ? timelineData.phases[timelineData.phases.length - 1]?.end.toLocaleDateString() : 'N/A'}</p>
             </div>
-            <div className="border border-white/10 bg-black p-4">
-              <p className="text-[9px] font-mono uppercase text-white/50 mb-1">Total Projects in Timeline</p>
+            <div className="border border-border bg-bg p-4">
+              <p className="text-[9px] font-mono uppercase text-text-tertiary mb-1">Total Projects in Timeline</p>
               <p className="text-sm font-mono text-cyan-400 font-bold">{timelineData.phases.length}</p>
             </div>
           </div>

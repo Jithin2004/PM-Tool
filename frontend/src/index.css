@@ -4,28 +4,91 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-quaternary: var(--text-quaternary);
+  
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-cyan: var(--accent-cyan);
+
+  /* Dynamic Density Spacing Overrides */
+  --spacing-1: var(--sp-1, 0.25rem);
+  --spacing-2: var(--sp-2, 0.5rem);
+  --spacing-3: var(--sp-3, 0.75rem);
+  --spacing-4: var(--sp-4, 1rem);
+  --spacing-5: var(--sp-5, 1.25rem);
+  --spacing-6: var(--sp-6, 1.5rem);
+  --spacing-8: var(--sp-8, 2rem);
+  --spacing-12: var(--sp-12, 3rem);
 }
 
 :root {
-  background-color: #080910;
-  color: #c9ced9;
+  background-color: var(--bg, #09090b);
+  color: var(--text-primary, #fafafa);
 
-  /* ── Enterprise Dark Design System ─────────────────────────── */
-  --bg:          #08090f;          /* Deepest background layer        */
-  --surface:     #0b0c12;          /* Sidebar / panels                */
-  --surface-2:   #0f1017;          /* Card surfaces                   */
-  --surface-3:   #13141c;          /* Elevated cards                  */
-  --border:      rgba(255,255,255,0.055);
+  /* Density Default: Comfortable */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.25rem;
+  --sp-6: 1.5rem;
+  --sp-8: 2rem;
+  --sp-12: 3rem;
+}
+
+/* Density: Compact */
+body.density-compact {
+  --sp-1: 0.125rem;
+  --sp-2: 0.25rem;
+  --sp-3: 0.5rem;
+  --sp-4: 0.75rem;
+  --sp-5: 1rem;
+  --sp-6: 1.25rem;
+  --sp-8: 1.5rem;
+  --sp-12: 2.25rem;
+}
+
+/* Density: Executive */
+body.density-executive {
+  --sp-1: 0.5rem;
+  --sp-2: 0.75rem;
+  --sp-3: 1rem;
+  --sp-4: 1.25rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-8: 2.5rem;
+  --sp-12: 4rem;
+}
+
+:root {
+  /* ── Enterprise Dark Design System (Linear/Vercel Inspired) ── */
+  --bg:          #09090b;          /* Graphite deepest layer        */
+  --surface:     #121214;          /* Slate sidebar / panels        */
+  --surface-2:   #18181b;          /* Charcoal cards                */
+  --surface-3:   #27272a;          /* Elevated cards                */
+  --border:      rgba(255,255,255,0.08);
   --border-subtle: rgba(255,255,255,0.03);
 
-  --text-primary:    #d6dae4;      /* Primary readable text           */
-  --text-secondary:  #737b8c;      /* De-emphasised labels            */
-  --text-tertiary:   #404654;      /* Muted metadata, hints           */
-  --text-quaternary: #272c38;      /* Almost invisible, decorative    */
+  --text-primary:    #fafafa;      /* Pure readability              */
+  --text-secondary:  #a1a1aa;      /* De-emphasised labels          */
+  --text-tertiary:   #71717a;      /* Muted metadata, hints         */
+  --text-quaternary: #3f3f46;      /* Almost invisible, decorative  */
 
-  --accent-primary:   #6366f1;     /* Indigo — primary interactive    */
-  --accent-secondary: #7c3aed;     /* Violet — secondary / AI states  */
-  --accent-cyan:      #22d3ee;     /* Cyan — live / realtime signals  */
+  --accent-primary:   #818cf8;     /* Muted Indigo                  */
+  --accent-secondary: #a78bfa;     /* Muted Violet                  */
+  --accent-cyan:      #22d3ee;     /* Cyan — live / realtime        */
 
   --signal-critical:    #f87171;
   --signal-warning:     #fbbf24;

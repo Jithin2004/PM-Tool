@@ -256,22 +256,22 @@ export function ProjectDetailsModal({
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-md" />
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-2xl overflow-y-auto max-h-[90vh] md:max-h-none shadow-2xl rounded-sm my-auto">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-bg backdrop-blur-md" />
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-surface border border-border w-full max-w-2xl overflow-y-auto max-h-[90vh] md:max-h-none shadow-2xl rounded-sm my-auto">
 
         {showLogs && (
-          <div className="absolute inset-0 z-50 bg-[#0c0c0c] flex flex-col">
+          <div className="absolute inset-0 z-50 bg-surface flex flex-col">
             {/* Header */}
-            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#0a0a0a]">
-              <h4 className="text-sm font-mono text-white/90 uppercase tracking-widest flex items-center gap-2">
-                <History className="w-4 h-4 text-blue-400" /> Project Ledger Center
+            <div className="p-6 border-b border-border flex justify-between items-center bg-bg">
+              <h4 className="text-sm font-sans tracking-tight text-text-secondary uppercase tracking-wide flex items-center gap-2">
+                <History className="w-4 h-4 text-signal-info" /> Project Ledger Center
               </h4>
               <button
                 type="button"
                 onClick={() => setShowLogs(false)}
-                className="p-2 border border-white/10 hover:bg-white/5 transition-colors"
+                className="p-2 border border-border hover:bg-white/5 transition-colors"
               >
-                <Plus className="w-4 h-4 rotate-45 text-white/75" />
+                <Plus className="w-4 h-4 rotate-45 text-text-secondary" />
               </button>
             </div>
 
@@ -279,16 +279,16 @@ export function ProjectDetailsModal({
             <div className="flex-1 p-6 overflow-y-auto space-y-6">
               
               {/* Ledger Integrity Guard Panel */}
-              <div className="border border-white/10 bg-white/[0.02] backdrop-blur-md p-6 rounded-sm space-y-4">
+              <div className="border border-border bg-surface-3 backdrop-blur-md p-6 rounded-sm space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
                     {verificationState === 'UNVERIFIED' && (
-                      <div className="p-3 bg-white/5 border border-white/10 text-white/60">
+                      <div className="p-3 bg-white/5 border border-border text-text-tertiary">
                         <Shield className="w-6 h-6" />
                       </div>
                     )}
                     {verificationState === 'VERIFYING' && (
-                      <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 animate-pulse">
+                      <div className="p-3 bg-signal-warning-bg border border-yellow-500/20 text-signal-warning transition-opacity duration-300">
                         <RefreshCw className="w-6 h-6 animate-spin" />
                       </div>
                     )}
@@ -298,18 +298,18 @@ export function ProjectDetailsModal({
                       </div>
                     )}
                     {verificationState === 'TAMPERED' && (
-                      <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 animate-bounce">
+                      <div className="p-3 bg-signal-critical-bg border border-red-500/20 text-signal-critical animate-bounce">
                         <ShieldAlert className="w-6 h-6" />
                       </div>
                     )}
                     <div>
-                      <h5 className="text-xs font-mono uppercase tracking-[0.2em] font-bold">
+                      <h5 className="text-xs font-sans tracking-tight uppercase tracking-[0.2em] font-bold">
                         {verificationState === 'UNVERIFIED' && "Ledger Verification Pending"}
                         {verificationState === 'VERIFYING' && "Analyzing Ledger Integrity"}
                         {verificationState === 'SECURED' && "Ledger Verified & Secured"}
                         {verificationState === 'TAMPERED' && "WARNING: TAMPERING DETECTED!"}
                       </h5>
-                      <p className="text-[10px] font-mono text-white/50 mt-1 leading-relaxed">
+                      <p className="text-[10px] font-mono text-text-tertiary mt-1 leading-relaxed">
                         {verificationState === 'UNVERIFIED' && "Cryptographic blockchain verification ready. Confirm WORM ledger sequence status."}
                         {verificationState === 'VERIFYING' && `Scanning block #${(scanningIndex ?? 0) + 1} of ${localLogs.length}... verifying signature matching.`}
                         {verificationState === 'SECURED' && `All ${localLogs.length} historical blocks matched SHA-256 genesis hashes perfectly.`}
@@ -324,11 +324,11 @@ export function ProjectDetailsModal({
                         type="button"
                         onClick={verifyLedger}
                         disabled={verificationState === 'VERIFYING'}
-                        className={`px-4 py-2 text-[10px] uppercase font-mono tracking-widest font-bold border transition-all ${
+                        className={`px-4 py-2 text-[10px] uppercase font-mono tracking-wide font-bold border transition-all ${
                           verificationState === 'SECURED'
                             ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/20'
                             : verificationState === 'TAMPERED'
-                            ? 'bg-red-500/10 border-red-500/35 text-red-400 hover:bg-red-500/20'
+                            ? 'bg-signal-critical-bg border-red-500/35 text-signal-critical hover:bg-signal-critical-bg'
                             : 'bg-white text-black border-white hover:bg-neutral-200'
                         }`}
                       >
@@ -340,7 +340,7 @@ export function ProjectDetailsModal({
                         type="button"
                         onClick={simulateTampering}
                         disabled={verificationState === 'VERIFYING'}
-                        className="px-4 py-2 text-[10px] uppercase font-mono tracking-widest border border-red-500/20 text-red-400/90 hover:bg-red-500/10 transition-all"
+                        className="px-4 py-2 text-[10px] uppercase font-medium tracking-wide border border-red-500/20 text-signal-critical/90 hover:bg-signal-critical-bg transition-all"
                         title="Mutate local block state to trigger warning UI"
                       >
                         Simulate Tamper
@@ -364,8 +364,8 @@ export function ProjectDetailsModal({
                   </div>
                 )}
                 {verificationState === 'TAMPERED' && (
-                  <div className="w-full bg-red-500/20 h-1 rounded-full overflow-hidden">
-                    <div className="bg-red-500 h-full w-full animate-pulse" />
+                  <div className="w-full bg-signal-critical-bg h-1 rounded-full overflow-hidden">
+                    <div className="bg-red-500 h-full w-full transition-opacity duration-300" />
                   </div>
                 )}
               </div>
@@ -373,7 +373,7 @@ export function ProjectDetailsModal({
               {/* Logs List */}
               <div className="space-y-4">
                 {localLogs.length === 0 ? (
-                  <p className="text-xs font-mono text-white/50 italic">No historical adjustments recorded.</p>
+                  <p className="text-xs font-mono text-text-tertiary italic">No historical adjustments recorded.</p>
                 ) : (
                   [...localLogs].reverse().map((log, reversedIndex) => {
                     const originalIndex = localLogs.length - 1 - reversedIndex;
@@ -386,30 +386,30 @@ export function ProjectDetailsModal({
                         key={originalIndex}
                         className={`border p-5 flex flex-col gap-3 transition-all relative ${
                           isScanning
-                            ? 'border-yellow-500 bg-yellow-500/[0.02] shadow-[0_0_10px_rgba(234,179,8,0.05)]'
+                            ? 'border-yellow-500 bg-yellow-500/[0.02] shadow-sm'
                             : isTamperedBlock
-                            ? 'border-red-500 bg-red-500/[0.04] shadow-[0_0_15px_rgba(239,68,68,0.1)]'
+                            ? 'border-red-500 bg-red-500/[0.04] shadow-sm'
                             : isSecuredBlock
                             ? 'border-emerald-500/20 bg-emerald-500/[0.01]'
-                            : 'border-white/10 bg-white/5'
+                            : 'border-border bg-white/5'
                         }`}
                       >
                         {/* Upper Details Row */}
                         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-[10px] font-mono">
                           <div className="flex items-center gap-2">
-                            <span className="text-white/30 uppercase tracking-widest font-bold">Block #{originalIndex + 1}</span>
-                            <span className="text-white/50">{new Date(log.timestamp).toLocaleString()}</span>
+                            <span className="text-text-quaternary uppercase tracking-wide font-bold">Block #{originalIndex + 1}</span>
+                            <span className="text-text-tertiary">{new Date(log.timestamp).toLocaleString()}</span>
                           </div>
                           
                           {/* Block Status Badge */}
                           <div className="flex items-center gap-2">
                             {isScanning && (
-                              <span className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 px-2 py-0.5 rounded-sm uppercase tracking-wider text-[8px] animate-pulse">
+                              <span className="bg-signal-warning-bg border border-yellow-500/30 text-signal-warning px-2 py-0.5 rounded-sm uppercase tracking-wider text-[8px] transition-opacity duration-300">
                                 Scanning...
                               </span>
                             )}
                             {isTamperedBlock && (
-                              <span className="bg-red-500/20 border border-red-500/40 text-red-400 px-2 py-0.5 rounded-sm uppercase tracking-wider text-[8px] font-bold animate-pulse">
+                              <span className="bg-signal-critical-bg border border-red-500/40 text-signal-critical px-2 py-0.5 rounded-sm uppercase tracking-wider text-[8px] font-bold transition-opacity duration-300">
                                 TAMPER DETECTED
                               </span>
                             )}
@@ -419,7 +419,7 @@ export function ProjectDetailsModal({
                               </span>
                             )}
                             {log.authorName && (
-                              <span className="text-blue-400 font-bold uppercase tracking-wider">
+                              <span className="text-signal-info font-bold uppercase tracking-wider">
                                 BY: {log.authorName} ({log.authorRole || 'Viewer'})
                               </span>
                             )}
@@ -427,13 +427,13 @@ export function ProjectDetailsModal({
                         </div>
 
                         {/* Audit Details */}
-                        <div className="space-y-1.5 py-1 border-y border-white/[0.03]">
-                          <p className="text-xs font-mono text-white/90 leading-relaxed">
-                            <span className="text-white/40 uppercase tracking-widest text-[9px] mr-2">Changes:</span> 
+                        <div className="space-y-1.5 py-1 border-y border-border-subtle">
+                          <p className="text-xs font-mono text-text-secondary leading-relaxed">
+                            <span className="text-text-quaternary uppercase tracking-wide text-[9px] mr-2">Changes:</span> 
                             {log.changes}
                           </p>
-                          <p className="text-xs font-mono text-yellow-500/90 leading-relaxed">
-                            <span className="text-white/40 uppercase tracking-widest text-[9px] mr-2">Reason:</span> 
+                          <p className="text-xs font-mono text-signal-warning/90 leading-relaxed">
+                            <span className="text-text-quaternary uppercase tracking-wide text-[9px] mr-2">Reason:</span> 
                             {log.reason}
                           </p>
                         </div>
@@ -441,24 +441,24 @@ export function ProjectDetailsModal({
                         {/* Hash badging */}
                         <div className="flex flex-wrap items-center gap-3 pt-1 text-[9px] font-mono">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-white/30 uppercase tracking-tighter">HASH:</span>
+                            <span className="text-text-quaternary uppercase tracking-tighter">HASH:</span>
                             <span className={`px-2 py-0.5 border rounded-sm font-mono tracking-tight transition-colors ${
                               isTamperedBlock
-                                ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                                : 'bg-black/40 border-white/10 text-white/70'
+                                ? 'bg-signal-critical-bg border-red-500/30 text-signal-critical'
+                                : 'bg-bg border-border text-text-secondary'
                             }`} title={log.hash}>
                               {log.hash ? `0x${log.hash.substring(0, 8)}...` : 'None'}
                             </span>
                           </div>
                           
                           <div className="flex items-center gap-1.5">
-                            <span className="text-white/30 uppercase tracking-tighter">PREV HASH:</span>
+                            <span className="text-text-quaternary uppercase tracking-tighter">PREV HASH:</span>
                             {log.previousHash === 'GENESIS_BLOCK' ? (
-                              <span className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-2 py-0.5 rounded-sm uppercase text-[8px] tracking-widest font-bold">
+                              <span className="bg-surface-3 border border-border text-signal-info px-2 py-0.5 rounded-sm uppercase text-[8px] tracking-wide font-bold">
                                 GENESIS
                               </span>
                             ) : (
-                              <span className="bg-black/40 border border-white/10 text-white/50 px-2 py-0.5 rounded-sm font-mono tracking-tight" title={log.previousHash}>
+                              <span className="bg-bg border border-border text-text-tertiary px-2 py-0.5 rounded-sm font-mono tracking-tight" title={log.previousHash}>
                                 {log.previousHash ? `0x${log.previousHash.substring(0, 8)}...` : 'None'}
                               </span>
                             )}
@@ -476,14 +476,14 @@ export function ProjectDetailsModal({
         )}
 
         {changeReasonPrompt.open && (
-          <div className="absolute inset-0 z-50 bg-[#0c0c0c]/95 backdrop-blur-sm flex items-center justify-center p-8">
-            <div className="w-full max-w-md bg-black border border-white/20 p-6 space-y-4 shadow-2xl">
+          <div className="absolute inset-0 z-50 bg-surface backdrop-blur-sm flex items-center justify-center p-8">
+            <div className="w-full max-w-md bg-bg border border-border p-6 space-y-4 shadow-2xl">
               <div className="flex items-center gap-2 mb-2">
-                <Activity className="w-4 h-4 text-yellow-500" />
-                <h4 className="text-sm font-mono text-white/90 uppercase tracking-widest">Reason for Adjustment</h4>
+                <Activity className="w-4 h-4 text-signal-warning" />
+                <h4 className="text-sm font-sans tracking-tight text-text-secondary uppercase tracking-wide">Reason for Adjustment</h4>
               </div>
-              <p className="text-[10px] font-mono text-white/60">The following adjustments require documentation for compliance:</p>
-              <ul className="text-[10px] font-mono text-white/80 list-disc pl-4 space-y-1">
+              <p className="text-[10px] font-mono text-text-tertiary">The following adjustments require documentation for compliance:</p>
+              <ul className="text-[10px] font-mono text-text-secondary list-disc pl-4 space-y-1">
                 {changeReasonPrompt.changes._log_summary.split(', ').map((c: string) => <li key={c}>{c}</li>)}
               </ul>
               <textarea
@@ -491,12 +491,12 @@ export function ProjectDetailsModal({
                 required
                 value={changeReason}
                 onChange={e => setChangeReason(e.target.value)}
-                className="w-full bg-[#0a0a0a] border border-white/20 p-3 text-xs font-mono min-h-[100px] focus:border-white/50 outline-none"
+                className="w-full bg-bg border border-border p-3 text-xs font-mono min-h-[100px] focus:border-border-subtle0 outline-none"
                 placeholder="Enter reason for modifying these parameters..."
               />
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={handleConfirmChange} disabled={!changeReason} className="flex-1 bg-white text-black text-[10px] uppercase font-mono py-2 disabled:opacity-50 tracking-widest font-semibold">Log & Commit</button>
-                <button type="button" onClick={() => setChangeReasonPrompt({ changes: null, open: false })} className="flex-1 border border-white/20 text-white/70 text-[10px] uppercase font-mono py-2 hover:bg-white/5 tracking-widest">Cancel</button>
+                <button type="button" onClick={handleConfirmChange} disabled={!changeReason} className="flex-1 bg-white text-black text-[10px] uppercase font-medium py-2 disabled:opacity-50 tracking-wide font-semibold">Log & Commit</button>
+                <button type="button" onClick={() => setChangeReasonPrompt({ changes: null, open: false })} className="flex-1 border border-border text-text-secondary text-[10px] uppercase font-mono py-2 hover:bg-white/5 tracking-wide">Cancel</button>
               </div>
             </div>
           </div>
@@ -506,26 +506,26 @@ export function ProjectDetailsModal({
           <div className="flex justify-between items-start mb-8">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <BrainCircuit className="w-4 h-4 text-white/85" />
-                <span className="text-[10px] font-mono text-white/80 uppercase tracking-[0.2em]">Project Overview</span>
+                <BrainCircuit className="w-4 h-4 text-text-secondary" />
+                <span className="text-[10px] font-mono text-text-secondary uppercase tracking-[0.2em]">Project Overview</span>
               </div>
               <h3 className="text-2xl font-medium tracking-tight">Predictive Workspace: {project.name}</h3>
             </div>
-            <button onClick={onClose} className="p-2 border border-white/10 hover:bg-white/5 transition-colors">
-              <Plus className="w-5 h-5 rotate-45 text-white/75" />
+            <button onClick={onClose} className="p-2 border border-border hover:bg-white/5 transition-colors">
+              <Plus className="w-5 h-5 rotate-45 text-text-secondary" />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Project Designation</label>
-                <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-4 font-mono text-sm focus:border-white/40 outline-none" />
+                <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Project Designation</label>
+                <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-bg border border-border h-11 px-4 font-mono text-sm focus:border-white/40 outline-none" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Status</label>
-                  <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Status</label>
+                  <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
                     <option value="planning">PLANNING</option>
                     <option value="in-progress">IN_PROGRESS</option>
                     <option value="review">REVIEW</option>
@@ -533,8 +533,8 @@ export function ProjectDetailsModal({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Priority</label>
-                  <select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Priority</label>
+                  <select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
                     <option value="low">LOW</option>
                     <option value="medium">MEDIUM</option>
                     <option value="high">HIGH</option>
@@ -543,27 +543,27 @@ export function ProjectDetailsModal({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Proposed Start</label>
-                  <input type="date" value={proposedStartDate} onChange={e => setProposedStartDate(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
+                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Proposed Start</label>
+                  <input type="date" value={proposedStartDate} onChange={e => setProposedStartDate(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Client Deadline</label>
-                  <input type="date" value={clientDeadline} onChange={e => setClientDeadline(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
+                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Client Deadline</label>
+                  <input type="date" value={clientDeadline} onChange={e => setClientDeadline(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Team</label>
-                <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-black border border-white/10 h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Assign Team</label>
+                <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
                   <option value="">UNALLOCATED</option>
                   {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
 
-              <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-4">
+              <div className="pt-4 border-t border-border flex items-center justify-between gap-4">
                 <button
                   type="button"
                   onClick={() => setShowLogs(true)}
-                  className="flex items-center gap-2 text-xs font-mono text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-widest whitespace-nowrap"
+                  className="flex items-center gap-2 text-xs font-mono text-signal-info hover:text-blue-300 transition-colors uppercase tracking-wide whitespace-nowrap"
                 >
                   <History className="w-4 h-4" /> View Logs
                 </button>
@@ -572,32 +572,32 @@ export function ProjectDetailsModal({
                   <button
                     type="button"
                     onClick={() => setIsDeleting(true)}
-                    className="flex items-center gap-2 text-xs font-mono text-red-500 hover:text-red-400 transition-colors uppercase tracking-widest whitespace-nowrap"
+                    className="flex items-center gap-2 text-xs font-mono text-signal-critical hover:text-signal-critical transition-colors uppercase tracking-wide whitespace-nowrap"
                   >
                     <Trash2 className="w-4 h-4" /> Archive
                   </button>
                 ) : (
                   <div className="space-y-3">
-                    <label className="block text-[10px] uppercase font-mono text-red-500/80">Reason for Archiveing</label>
+                    <label className="block text-[10px] uppercase font-mono text-signal-critical/80">Reason for Archiveing</label>
                     <textarea
                       required
                       value={deleteReason}
                       onChange={e => setDeleteReason(e.target.value)}
-                      className="w-full bg-black border border-red-500/30 p-3 font-mono text-xs focus:border-red-500 outline-none min-h-[80px]"
+                      className="w-full bg-bg border border-red-500/30 p-3 font-mono text-xs focus:border-red-500 outline-none min-h-[80px]"
                       placeholder="Specify reason..."
                     />
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => onDelete(project.id, deleteReason)}
-                        className="flex-1 bg-red-500 text-white py-2 text-[10px] font-mono uppercase tracking-widest hover:bg-red-600 transition-colors"
+                        className="flex-1 bg-red-500 text-text-primary py-2 text-[10px] font-mono uppercase tracking-wide hover:bg-red-600 transition-colors"
                       >
                         Confirm Delete
                       </button>
                       <button
                         type="button"
                         onClick={() => setIsDeleting(false)}
-                        className="flex-1 border border-white/10 text-white/70 py-2 text-[10px] font-mono uppercase tracking-widest hover:bg-white/5 transition-colors"
+                        className="flex-1 border border-border text-text-secondary py-2 text-[10px] font-mono uppercase tracking-wide hover:bg-white/5 transition-colors"
                       >
                         Cancel
                       </button>
@@ -608,52 +608,52 @@ export function ProjectDetailsModal({
             </div>
 
             <div className="space-y-6">
-              <div className="bg-white/5 border border-white/10 p-6 rounded-sm relative overflow-hidden">
+              <div className="bg-white/5 border border-border p-6 rounded-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-12 h-12" /></div>
-                <h4 className="text-[10px] font-mono text-white/85 uppercase tracking-widest mb-4">Predictive Outcome</h4>
+                <h4 className="text-[10px] font-sans tracking-tight text-text-secondary uppercase tracking-wide mb-4">Predictive Outcome</h4>
 
                 {hasAllData ? (
                   <>
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-white/5 p-3">
-                        <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Total Real Hours</p>
-                        <p className="text-xl font-mono">{expectedRealHours.toFixed(1)}h</p>
+                        <p className="text-[10px] font-mono text-text-secondary uppercase mb-1">Total Real Hours</p>
+                        <p className="text-xl font-sans tracking-tight">{expectedRealHours.toFixed(1)}h</p>
                       </div>
                       <div className="bg-white/5 p-3">
-                        <p className="text-[10px] font-mono text-white/75 uppercase mb-1">Working Days</p>
-                        <p className="text-xl font-mono">{calendarExpected}d</p>
+                        <p className="text-[10px] font-mono text-text-secondary uppercase mb-1">Working Days</p>
+                        <p className="text-xl font-sans tracking-tight">{calendarExpected}d</p>
                       </div>
-                      <div className="bg-blue-500/10 p-3 border border-blue-500/20">
-                        <p className="text-[10px] font-mono text-blue-400 uppercase mb-1">Remaining ETA</p>
-                        <p className="text-xl font-mono text-blue-400">{etaRemainingDays.toFixed(1)}d</p>
+                      <div className="bg-surface-3 p-3 border border-border">
+                        <p className="text-[10px] font-mono text-signal-info uppercase mb-1">Remaining ETA</p>
+                        <p className="text-xl font-sans tracking-tight text-signal-info">{etaRemainingDays.toFixed(1)}d</p>
                       </div>
-                      <div className={`p-3 border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
-                        <p className={`text-[10px] font-mono uppercase mb-1 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-green-400'}`}>Variance</p>
-                        <p className={`text-xl font-mono ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      <div className={`p-3 border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-signal-critical-bg border-red-500/20' : 'bg-signal-safe-bg border-border'}`}>
+                        <p className={`text-[10px] font-mono uppercase mb-1 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-signal-critical' : 'text-signal-safe'}`}>Variance</p>
+                        <p className={`text-xl font-mono ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-signal-critical' : 'text-signal-safe'}`}>
                           {deadlineVariance !== null ? `${Math.abs(deadlineVariance)}d ${deadlineVariance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
                         </p>
                       </div>
                     </div>
 
                     <div className="mb-6">
-                      <p className="text-[10px] font-mono text-white/75 uppercase mb-2">Predicted End</p>
-                      <p className="text-lg font-mono text-white">{etaCompletionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <p className="text-[10px] font-mono text-text-secondary uppercase mb-2">Predicted End</p>
+                      <p className="text-lg font-sans tracking-tight text-text-primary">{etaCompletionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
                   </>
                 ) : (
-                  <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 mb-6 flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                  <div className="bg-signal-warning-bg border border-yellow-500/20 p-4 mb-6 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-signal-warning shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs font-mono text-yellow-500 uppercase tracking-widest mb-1">Calculation Suspended</p>
-                      <p className="text-[10px] font-mono text-yellow-500/80 leading-relaxed">Please obtain and input all PERT estimates and timeline constraints to initiate the predictive outcome engine.</p>
+                      <p className="text-xs font-mono text-signal-warning uppercase tracking-wide mb-1">Calculation Suspended</p>
+                      <p className="text-[10px] font-mono text-signal-warning/80 leading-relaxed">Please obtain and input all PERT estimates and timeline constraints to initiate the predictive outcome engine.</p>
                     </div>
                   </div>
                 )}
 
                 {hasTasks && (
-                  <div className="bg-blue-500/10 border border-blue-500/20 p-3 mb-4">
-                    <p className="text-[9px] font-mono text-blue-400 uppercase tracking-widest mb-0.5">Automated Aggregation</p>
-                    <p className="text-[10px] font-mono text-white/85 leading-tight">
+                  <div className="bg-surface-3 border border-border p-3 mb-4">
+                    <p className="text-[9px] font-mono text-signal-info uppercase tracking-wide mb-0.5">Automated Aggregation</p>
+                    <p className="text-[10px] font-mono text-text-secondary leading-tight">
                       PERT parameters are dynamically aggregated from task-level estimations. Manual override suspended.
                     </p>
                   </div>
@@ -661,48 +661,48 @@ export function ProjectDetailsModal({
 
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   <div>
-                    <p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">BEST (H)</p>
+                    <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">BEST (H)</p>
                     <input 
                       type="number" 
                       step="0.1" 
                       value={pBest} 
                       onChange={e => setPBest(e.target.value)} 
                       disabled={hasTasks}
-                      className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white disabled:opacity-50 disabled:cursor-not-allowed" 
+                      className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
                     />
                   </div>
                   <div>
-                    <p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">LIKELY (H)</p>
+                    <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">LIKELY (H)</p>
                     <input 
                       type="number" 
                       step="0.1" 
                       value={pLikely} 
                       onChange={e => setPLikely(e.target.value)} 
                       disabled={hasTasks}
-                      className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white disabled:opacity-50 disabled:cursor-not-allowed" 
+                      className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
                     />
                   </div>
                   <div>
-                    <p className="text-[9px] font-mono text-white/90 uppercase tracking-tighter mb-1">WORST (H)</p>
+                    <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">WORST (H)</p>
                     <input 
                       type="number" 
                       step="0.1" 
                       value={pWorst} 
                       onChange={e => setPWorst(e.target.value)} 
                       disabled={hasTasks}
-                      className="w-full bg-black/40 border border-white/10 text-center py-1 font-mono text-[10px] text-white disabled:opacity-50 disabled:cursor-not-allowed" 
+                      className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
                     />
                   </div>
                 </div>
 
                 {hasAllData && (
-                  <div className="pt-4 border-t border-white/5">
-                    <div className="flex justify-between items-center"><span className="text-[11px] font-mono text-white/75 uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-yellow-500/80">±{stdDev.toFixed(2)}σ</span></div>
-                    <p className="text-[10px] font-mono text-white/70 mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
+                  <div className="pt-4 border-t border-border-subtle">
+                    <div className="flex justify-between items-center"><span className="text-[11px] font-mono text-text-secondary uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-signal-warning/80">±{stdDev.toFixed(2)}σ</span></div>
+                    <p className="text-[10px] font-mono text-text-secondary mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
                   </div>
                 )}
               </div>
-              <button type="submit" className="w-full bg-white text-black h-12 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
+              <button type="submit" className="w-full bg-white text-black h-12 font-semibold uppercase tracking-wide text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
                 Commit System Updates
               </button>
             </div>

@@ -14,15 +14,15 @@ function riskColor(ratio: number): string {
 
 function riskText(ratio: number): string {
   if (ratio < 0.3) return 'text-emerald-400';
-  if (ratio < 0.6) return 'text-amber-400';
-  return 'text-red-400';
+  if (ratio < 0.6) return 'text-signal-warning';
+  return 'text-signal-critical';
 }
 
 export function RiskMeter({ score, maxScore = 100, label }: RiskMeterProps) {
   const ratio = Math.min(score / maxScore, 1);
   return (
     <div className="space-y-1">
-      {label && <div className="text-[10px] uppercase font-mono tracking-wider text-white/50">{label}</div>}
+      {label && <div className="text-[10px] uppercase font-mono tracking-wider text-text-tertiary">{label}</div>}
       <div className="flex items-center gap-2">
         <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
           <motion.div

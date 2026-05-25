@@ -1537,13 +1537,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-4">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-2 border-white/10 border-t-white rounded-full"
+          className="w-12 h-12 border-2 border-border border-t-white rounded-full"
         />
-        <p className="font-mono text-sm uppercase tracking-widest text-white/85">Initializing Core Engine...</p>
+        <p className="font-mono text-sm uppercase tracking-wide text-text-secondary">Initializing Core Engine...</p>
       </div>
     );
   }
@@ -1597,18 +1597,18 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       setSelectedProject,
       updateExecutionMode
     }}>
-      <div className={`min-h-screen bg-bg font-sans text-text-primary selection:bg-accent-primary selection:text-white transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}>
+      <div className={`min-h-screen bg-bg font-sans text-text-primary selection:bg-accent-primary selection:text-text-primary transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}>
         
         {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
-        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] bg-[#0b0c12] border-r border-white/[0.05] z-30">
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] bg-[#0b0c12] border-r border-border-subtle z-30">
           {/* Sidebar Brand Logo */}
-          <div className="flex items-center gap-3 h-16 px-5 border-b border-white/[0.05] shrink-0">
+          <div className="flex items-center gap-3 h-16 px-5 border-b border-border-subtle shrink-0">
             <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}>
-              <Layers className="w-3.5 h-3.5 text-white" />
+              <Layers className="w-3.5 h-3.5 text-text-primary" />
             </div>
             <div>
-              <h1 className="font-semibold tracking-tight text-[13px] text-white/90">Resolve PM</h1>
-              <p className="text-[9px] font-mono text-white/25 uppercase tracking-widest">Enterprise Platform</p>
+              <h1 className="font-semibold tracking-tight text-[13px] text-text-secondary">Resolve PM</h1>
+              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-wide">Enterprise Platform</p>
             </div>
           </div>
 
@@ -1617,13 +1617,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
             {/* ── CORE group ── */}
             <div className="space-y-0.5">
-              <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.15em] px-3 mb-2">Core</p>
+              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Core</p>
               <button
                 onClick={() => { setDashboardTab('dashboard'); navigateTo('/workspace'); }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   dashboardTab === 'dashboard' && window.location.pathname === '/workspace'
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <LayoutDashboard className="w-[15px] h-[15px] shrink-0" />
@@ -1634,7 +1634,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   dashboardTab === 'active' && window.location.pathname === '/workspace'
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <Briefcase className="w-[15px] h-[15px] shrink-0" />
@@ -1645,7 +1645,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <ListTodo className="w-[15px] h-[15px] shrink-0" />
@@ -1656,7 +1656,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname.includes('timeline')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <Route className="w-[15px] h-[15px] shrink-0" />
@@ -1666,13 +1666,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
             {/* ── INTELLIGENCE group ── */}
             <div className="space-y-0.5">
-              <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.15em] px-3 mb-2">Intelligence</p>
+              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Intelligence</p>
               <button
                 onClick={() => navigateTo('/control/analytics')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname.includes('analytics')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <BarChart3 className="w-[15px] h-[15px] shrink-0" />
@@ -1683,7 +1683,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   dashboardTab === 'intelligence' && window.location.pathname === '/workspace'
                     ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <BrainCircuit className="w-[15px] h-[15px] shrink-0" />
@@ -1694,7 +1694,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname.includes('work-logs')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <FileText className="w-[15px] h-[15px] shrink-0" />
@@ -1704,13 +1704,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
             {/* ── OPERATIONS group ── */}
             <div className="space-y-0.5">
-              <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.15em] px-3 mb-2">Operations</p>
+              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Operations</p>
               <button
                 onClick={() => navigateTo('/control/logistics')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname.includes('logistics')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <Truck className="w-[15px] h-[15px] shrink-0" />
@@ -1721,7 +1721,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname.includes('teams')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <Users className="w-[15px] h-[15px] shrink-0" />
@@ -1732,7 +1732,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname.includes('portfolio')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <Building2 className="w-[15px] h-[15px] shrink-0" />
@@ -1743,7 +1743,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname.includes('audit')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <Activity className="w-[15px] h-[15px] shrink-0" />
@@ -1753,13 +1753,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
             {/* ── SYSTEM group ── */}
             <div className="space-y-0.5">
-              <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.15em] px-3 mb-2">System</p>
+              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">System</p>
               <button
                 onClick={() => navigateTo('/control/settings')}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname === '/control/settings' || window.location.pathname.startsWith('/control/settings/')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <Settings className="w-[15px] h-[15px] shrink-0" />
@@ -1770,7 +1770,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
                   window.location.pathname.includes('connections')
                     ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-white/45 hover:text-white/80 hover:bg-white/[0.04]'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
               >
                 <Link2 className="w-[15px] h-[15px] shrink-0" />
@@ -1781,38 +1781,38 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           </div>
 
           {/* Bottom utility strip — Help + Profile */}
-          <div className="shrink-0 border-t border-white/[0.05]">
+          <div className="shrink-0 border-t border-border-subtle">
             <button
               onClick={() => (window as any).startOnboardingTour?.()}
-              className="w-full flex items-center gap-2.5 px-5 py-2.5 text-white/20 hover:text-white/40 transition-colors text-[11px]"
+              className="w-full flex items-center gap-2.5 px-5 py-2.5 text-text-quaternary hover:text-text-quaternary transition-colors text-[11px]"
             >
               <HelpCircle className="w-3.5 h-3.5 shrink-0" />
               Help & Documentation
             </button>
 
             {/* User identity strip */}
-            <div className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.05]">
+            <div className="flex items-center gap-3 px-4 py-3 border-t border-border-subtle">
               <div
                 onClick={() => setIsProfileOpen(true)}
-                className="w-8 h-8 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-indigo-400/40 transition-colors"
+                className="w-8 h-8 rounded-full bg-white/5 border border-border-subtle flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-indigo-400/40 transition-colors"
               >
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : profile?.full_name ? (
-                  <span className="text-[10px] font-bold text-white/70">{profile.full_name.substring(0, 2).toUpperCase()}</span>
+                  <span className="text-[10px] font-bold text-text-secondary">{profile.full_name.substring(0, 2).toUpperCase()}</span>
                 ) : (
-                  <Users className="w-3.5 h-3.5 text-white/30" />
+                  <Users className="w-3.5 h-3.5 text-text-quaternary" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-white/70 truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
-                <p className="text-[9px] text-white/25 truncate capitalize font-mono">
+                <p className="text-[12px] font-medium text-text-secondary truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
+                <p className="text-[9px] text-text-quaternary truncate capitalize font-mono">
                   {(profile && userCustomRoles[profile.id]) || profile?.role?.replace('_', ' ') || 'Viewer'}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-white/20 hover:text-rose-400/70 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer"
+                className="p-1.5 text-text-quaternary hover:text-rose-400/70 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer"
                 title="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -1831,7 +1831,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setMobileSidebarOpen(false)}
-                className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+                className="lg:hidden fixed inset-0 z-50 bg-bg backdrop-blur-sm"
               />
 
               {/* Drawer Panel */}
@@ -1845,7 +1845,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 <div className="flex items-center justify-between h-16 px-6 border-b border-border shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center">
-                      <Layers className="w-4 h-4 text-white" />
+                      <Layers className="w-4 h-4 text-text-primary" />
                     </div>
                     <div>
                       <h1 className="font-bold tracking-tight text-sm uppercase text-text-primary">Resolve PM</h1>
@@ -1863,13 +1863,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 <div className="flex-1 overflow-y-auto px-4 py-6 space-y-7">
                   {/* MAIN group */}
                   <div className="space-y-2">
-                    <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Main</p>
+                    <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-wide px-3">Main</p>
                     <div className="space-y-1">
                       <button
                         onClick={() => { setDashboardTab('dashboard'); navigateTo('/workspace'); setMobileSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
                           dashboardTab === 'dashboard' && window.location.pathname === '/workspace'
-                            ? 'bg-primary-gradient text-white shadow-md'
+                            ? 'bg-primary-gradient text-text-primary shadow-md'
                             : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
                         }`}
                       >
@@ -1880,7 +1880,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                         onClick={() => { setDashboardTab('active'); navigateTo('/workspace'); setMobileSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
                           dashboardTab === 'active' && window.location.pathname === '/workspace'
-                            ? 'bg-primary-gradient text-white shadow-md'
+                            ? 'bg-primary-gradient text-text-primary shadow-md'
                             : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
                         }`}
                       >
@@ -1891,7 +1891,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                         onClick={() => { navigateTo('/execution'); setMobileSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
                           window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
-                            ? 'bg-primary-gradient text-white shadow-md'
+                            ? 'bg-primary-gradient text-text-primary shadow-md'
                             : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
                         }`}
                       >
@@ -1902,7 +1902,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                         onClick={() => { navigateTo('/execution/timeline'); setMobileSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
                           window.location.pathname.includes('timeline')
-                            ? 'bg-primary-gradient text-white shadow-md'
+                            ? 'bg-primary-gradient text-text-primary shadow-md'
                             : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
                         }`}
                       >
@@ -1914,7 +1914,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
                   {/* TEAM & SETTINGS on Mobile */}
                   <div className="space-y-2">
-                    <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-widest px-3">Team</p>
+                    <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-wide px-3">Team</p>
                     <div className="space-y-1">
                       <button
                         onClick={() => { navigateTo('/resources/teams'); setMobileSidebarOpen(false); }}
@@ -1927,7 +1927,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                   </div>
                 </div>
 
-                <div className="p-4 border-t border-border bg-black/10 shrink-0">
+                <div className="p-4 border-t border-border bg-bg shrink-0">
                   <div className="flex items-center gap-3 p-2">
                     <div className="w-9 h-9 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden shrink-0">
                       {profile?.avatar_url ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> :
@@ -1951,27 +1951,27 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         <div className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen">
           
           {/* Top Bar — utility layer only, no greeting content */}
-          <header className="h-12 flex items-center justify-between px-5 border-b border-white/[0.05] bg-[#0b0c12]/90 sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200">
+          <header className="h-12 flex items-center justify-between px-5 border-b border-border-subtle bg-[#0b0c12]/90 sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200">
             {/* Mobile menu toggle */}
             <div className="flex items-center gap-3 lg:hidden">
               <button
                 onClick={() => setMobileSidebarOpen(true)}
-                className="p-1.5 border border-white/[0.08] bg-white/[0.04] rounded-md text-white/50"
+                className="p-1.5 border border-border-subtle bg-surface-3 rounded-md text-text-tertiary"
               >
                 <Menu className="w-4 h-4" />
               </button>
               <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}>
-                <Layers className="w-3 h-3 text-white" />
+                <Layers className="w-3 h-3 text-text-primary" />
               </div>
             </div>
 
             {/* Top bar center: live breadcrumb / context label */}
-            <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-white/25">
+            <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-text-quaternary">
               <Radar className="w-3 h-3" />
-              <span className="uppercase tracking-widest">Resolve PM</span>
-              <span className="text-white/15">/</span>
-              <span className="text-white/40">{breadcrumb?.section || 'Command Center'}</span>
-              {breadcrumb?.page && <><span className="text-white/15">/</span><span className="text-white/55">{breadcrumb.page}</span></>}
+              <span className="uppercase tracking-wide">Resolve PM</span>
+              <span className="text-text-quaternary">/</span>
+              <span className="text-text-quaternary">{breadcrumb?.section || 'Command Center'}</span>
+              {breadcrumb?.page && <><span className="text-text-quaternary">/</span><span className="text-text-tertiary">{breadcrumb.page}</span></>}
             </div>
 
             {/* Top bar right: compact utilities */}
@@ -1980,17 +1980,17 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
               {/* Search */}
               <div
                 onClick={() => setCommandPaletteOpen(true)}
-                className="hidden md:flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.06] border border-white/[0.07] h-7 px-3 rounded-md text-white/30 cursor-pointer transition-all"
+                className="hidden md:flex items-center gap-2 bg-surface-3 hover:bg-surface-3 border border-border-subtle h-7 px-3 rounded-md text-text-quaternary cursor-pointer transition-all"
               >
                 <Search className="w-3 h-3" />
                 <span className="text-[10px] select-none font-mono">Search...</span>
-                <span className="ml-2 bg-white/[0.06] border border-white/[0.07] px-1 py-0.5 rounded text-[8px] font-mono tracking-tighter text-white/20">⌘K</span>
+                <span className="ml-2 bg-surface-3 border border-border-subtle px-1 py-0.5 rounded text-[8px] font-mono tracking-tighter text-text-quaternary">⌘K</span>
               </div>
 
               {/* Theme */}
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-1.5 border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] rounded-md text-white/30 hover:text-white/60 transition-all shrink-0 cursor-pointer"
+                className="p-1.5 border border-border-subtle bg-surface-3 hover:bg-surface-3 rounded-md text-text-quaternary hover:text-text-tertiary transition-all shrink-0 cursor-pointer"
                 title={theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
               >
                 {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -1999,12 +1999,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
               {/* Notifications */}
               <div className="relative shrink-0">
                 <button
-                  className="p-1.5 border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] rounded-md text-white/30 hover:text-white/60 transition-all relative cursor-pointer"
+                  className="p-1.5 border border-border-subtle bg-surface-3 hover:bg-surface-3 rounded-md text-text-quaternary hover:text-text-tertiary transition-all relative cursor-pointer"
                   title="Notifications"
                 >
                   <Bell className="w-3.5 h-3.5" />
                   {dbNotifications.filter(n => !n.read_at).length > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-rose-500 text-[7px] font-bold flex items-center justify-center text-white">
+                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-rose-500 text-[7px] font-bold flex items-center justify-center text-text-primary">
                       {dbNotifications.filter(n => !n.read_at).length}
                     </span>
                   )}
@@ -2015,7 +2015,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
               {profile && profile.role !== 'viewer' && (
                 <button
                   onClick={() => setIsAdding(true)}
-                  className="flex items-center gap-1.5 text-[11px] font-medium text-white h-7 px-3 rounded-md transition-all cursor-pointer shrink-0"
+                  className="flex items-center gap-1.5 text-[11px] font-medium text-text-primary h-7 px-3 rounded-md transition-all cursor-pointer shrink-0"
                   style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}
                 >
                   <Plus className="w-3 h-3" />
@@ -2027,19 +2027,19 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
           {/* Context Header — Welcome + operational context, sits clearly below topbar */}
           {window.location.pathname === '/workspace' && (
-            <div className="px-6 pt-7 pb-5 border-b border-white/[0.04]">
+            <div className="px-6 pt-7 pb-5 border-b border-border-subtle">
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[10px] font-mono text-white/25 uppercase tracking-widest mb-1">Command Center</p>
-                  <h2 className="text-[22px] font-semibold text-white/85 tracking-tight leading-none">
+                  <p className="text-[10px] font-mono text-text-quaternary uppercase tracking-wide mb-1">Command Center</p>
+                  <h2 className="text-[22px] font-semibold text-text-secondary tracking-tight leading-none">
                     {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}'s Workspace
                   </h2>
-                  <p className="text-[12px] text-white/35 mt-1.5">
+                  <p className="text-[12px] text-text-quaternary mt-1.5">
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · {dbNotifications.filter(n => !n.read_at).length > 0 ? `${dbNotifications.filter(n => !n.read_at).length} unread notification${dbNotifications.filter(n => !n.read_at).length > 1 ? 's' : ''}` : 'All systems operational'}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 text-[9px] font-mono text-white/20 uppercase tracking-widest">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 animate-pulse" />
+                <div className="flex items-center gap-1.5 text-[9px] font-mono text-text-quaternary uppercase tracking-wide">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 transition-opacity duration-300" />
                   Live
                 </div>
               </div>
@@ -2059,16 +2059,16 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         </div>
 
         {/* Status Footer */}
-        <footer className="fixed bottom-0 left-0 right-0 lg:left-[15.5rem] bg-[#0b0c12]/80 border-t border-white/[0.04] px-5 py-2 flex justify-between items-center pointer-events-none z-20 backdrop-blur-xl">
-          <div className="flex items-center gap-4 text-[9px] font-mono text-white/20 uppercase tracking-widest">
+        <footer className="fixed bottom-0 left-0 right-0 lg:left-[15.5rem] bg-[#0b0c12]/80 border-t border-border-subtle px-5 py-2 flex justify-between items-center pointer-events-none z-20 backdrop-blur-xl">
+          <div className="flex items-center gap-4 text-[9px] font-mono text-text-quaternary uppercase tracking-wide">
             <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 animate-pulse" />
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 transition-opacity duration-300" />
               <span>Connected</span>
             </div>
             <span className="hidden md:inline">AES-256-GCM</span>
             <LiveClock />
           </div>
-          <span className="text-[9px] font-mono text-white/15 hidden md:block">&copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P</span>
+          <span className="text-[9px] font-mono text-text-quaternary hidden md:block">&copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P</span>
         </footer>
 
         {/* --- Global Overlay Dialogs --- */}
@@ -2119,43 +2119,43 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#0a0a0a]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+            className="fixed inset-0 bg-bg backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
           >
             {/* ... rest of the isAdding code ... */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#0c0c0c] border border-white/10 w-full max-w-xl p-6 sm:p-8 overflow-y-auto max-h-[90vh] md:max-h-none rounded-sm my-auto"
+              className="bg-surface border border-border w-full max-w-xl p-6 sm:p-8 overflow-y-auto max-h-[90vh] md:max-h-none rounded-sm my-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-8 h-8 bg-white/5 border border-white/10 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-white/90" />
+                <div className="w-8 h-8 bg-white/5 border border-border flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-text-secondary" />
                 </div>
                 <div>
                   <h3 className="text-xl font-medium tracking-tight">Workspace Setup</h3>
-                  <p className="text-[10px] font-mono text-white/80 uppercase">New project creation</p>
+                  <p className="text-[10px] font-mono text-text-secondary uppercase">New project creation</p>
                 </div>
               </div>
 
               <form onSubmit={handleCreateProject} className="space-y-6">
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Project Designation</label>
+                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Project Designation</label>
                   <input
                     autoFocus
                     required
                     type="text"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
-                    className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                    className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
                     placeholder="E.g. QUANTUM STORAGE OPTIMIZER"
                   />
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: BEST (H) *</label>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary tracking-tighter mb-2">PERT: BEST (H) *</label>
                     <input
                       type="number"
                       step="0.1"
@@ -2163,12 +2163,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                       required
                       value={pertBest}
                       onChange={e => setPertBest(e.target.value)}
-                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: LIKELY (H) *</label>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary tracking-tighter mb-2">PERT: LIKELY (H) *</label>
                     <input
                       type="number"
                       step="0.1"
@@ -2176,12 +2176,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                       required
                       value={pertLikely}
                       onChange={e => setPertLikely(e.target.value)}
-                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/70 tracking-tighter mb-2">PERT: WORST (H) *</label>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary tracking-tighter mb-2">PERT: WORST (H) *</label>
                     <input
                       type="number"
                       step="0.1"
@@ -2189,7 +2189,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                       required
                       value={pertWorst}
                       onChange={e => setPertWorst(e.target.value)}
-                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
                       placeholder="0"
                     />
                   </div>
@@ -2197,11 +2197,11 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Execution Mode</label>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Execution Mode</label>
                     <select
                       value={newExecutionMode}
                       onChange={e => setNewExecutionMode(e.target.value)}
-                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
                     >
                       <option value="KANBAN">KANBAN</option>
                       <option value="SCRUM">SCRUM</option>
@@ -2209,11 +2209,11 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Priority Selection</label>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Priority Selection</label>
                     <select
                       value={newPriority}
                       onChange={e => setNewPriority(e.target.value)}
-                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
                     >
                       <option value="low">LOW PRIORITY</option>
                       <option value="medium">MEDIUM PRIORITY</option>
@@ -2221,11 +2221,11 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Assign Team</label>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Assign Team</label>
                     <select
                       value={newTeamId}
                       onChange={e => setNewTeamId(e.target.value)}
-                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
                     >
                       <option value="">UNALLOCATED</option>
                       {activeTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -2234,15 +2234,15 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 </div>
 
                 {getSuggestedTeam() && !newTeamId && (
-                  <div className="bg-blue-500/10 border border-blue-500/20 p-3 flex justify-between items-center">
+                  <div className="bg-surface-3 border border-border p-3 flex justify-between items-center">
                     <div>
-                      <p className="text-[10px] font-mono text-blue-400 uppercase tracking-widest mb-0.5">AI Suggestion</p>
-                      <p className="text-xs font-mono text-white/80">Team <strong>{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
+                      <p className="text-[10px] font-mono text-signal-info uppercase tracking-wide mb-0.5">AI Suggestion</p>
+                      <p className="text-xs font-mono text-text-secondary">Team <strong>{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setNewTeamId(getSuggestedTeam()?.id || '')}
-                      className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-colors border border-blue-500/30"
+                      className="bg-surface-3 hover:bg-surface-3 text-blue-300 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wide transition-colors border border-border"
                     >
                       Auto-Assign
                     </button>
@@ -2251,31 +2251,31 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Proposed Start Date *</label>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Proposed Start Date *</label>
                     <input
                       type="date"
                       required
                       value={proposedStartDate}
                       onChange={e => setProposedStartDate(e.target.value)}
-                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-white/85 mb-2">Client Deadline *</label>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Client Deadline *</label>
                     <input
                       type="date"
                       required
                       value={newClientDeadline}
                       onChange={e => setNewClientDeadline(e.target.value)}
-                      className="w-full bg-black border border-white/10 h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="bg-white/5 border border-white/10 p-4">
+                <div className="bg-white/5 border border-border p-4">
                   <div className="flex justify-between items-center text-[10px] uppercase font-mono mb-2">
-                    <span className="text-white/85">Statistical Estimate</span>
-                    <span className="text-white/80">
+                    <span className="text-text-secondary">Statistical Estimate</span>
+                    <span className="text-text-secondary">
                       {calculateExpectedTime(Number(pertBest), Number(pertLikely), Number(pertWorst)).toFixed(2)} HOURS
                     </span>
                   </div>
@@ -2286,7 +2286,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                       className="h-full bg-white/40"
                     />
                   </div>
-                  <p className="text-[11px] font-mono text-white/75 mt-2 italic">
+                  <p className="text-[11px] font-mono text-text-secondary mt-2 italic">
                     Confidence interval adjusted for ±{Math.sqrt(calculateVariance(Number(pertBest), Number(pertWorst))).toFixed(2)}σ.
                   </p>
                 </div>
@@ -2294,14 +2294,14 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 <div className="flex gap-4 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-white text-black h-12 font-medium hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest"
+                    className="flex-1 bg-white text-black h-12 font-medium hover:bg-neutral-200 transition-colors uppercase text-xs tracking-wide"
                   >
                     Commit Project
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsAdding(false)}
-                    className="flex-1 border border-white/10 h-12 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-widest"
+                    className="flex-1 border border-border h-12 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-wide"
                   >
                     Abort
                   </button>
@@ -2355,23 +2355,23 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       </AnimatePresence>
 
       {/* --- Footer / Sidebar Accent --- */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/80 border-t border-white/5 px-4 sm:px-6 py-3 flex justify-between items-center pointer-events-none z-40">
-        <div className="flex items-center gap-3 sm:gap-4 text-[9px] sm:text-[11px] font-mono text-white/75 uppercase tracking-widest">
+      <footer className="fixed bottom-0 left-0 right-0 bg-bg border-t border-border-subtle px-4 sm:px-6 py-3 flex justify-between items-center pointer-events-none z-40">
+        <div className="flex items-center gap-3 sm:gap-4 text-[9px] sm:text-[11px] font-mono text-text-secondary uppercase tracking-wide">
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500/50 animate-pulse"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-signal-safe-bg transition-opacity duration-300"></div>
             <span className="hidden sm:inline">SESSION_HEARTBEAT</span>
             <span className="inline sm:hidden">LIVE</span>
           </div>
           <div className="hidden sm:block">ENCRYPTION: AES-256-GCM</div>
           <LiveClock />
           {/* --- Added Copyright Notice --- */}
-          <div className="text-white/40 border-l border-white/10 pl-3 sm:pl-4 hidden md:block">
+          <div className="text-text-quaternary border-l border-border pl-3 sm:pl-4 hidden md:block">
             &copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P
           </div>
         </div>
         <div className="flex items-center gap-4 sm:gap-6">
-          <Settings className="w-3 h-3 text-white/70 pointer-events-auto cursor-pointer hover:text-white transition-colors" />
-          <Cpu className="w-3 h-3 text-white/70" />
+          <Settings className="w-3 h-3 text-text-secondary pointer-events-auto cursor-pointer hover:text-text-primary transition-colors" />
+          <Cpu className="w-3 h-3 text-text-secondary" />
         </div>
       </footer>
 
@@ -2384,7 +2384,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="w-full bg-[#0e0e0e]/95 border border-blue-500/40 rounded-lg p-5 shadow-[0_10px_50px_rgba(59,130,246,0.35)] relative overflow-hidden backdrop-blur-md"
+              className="w-full bg-[#0e0e0e]/95 border border-border rounded-lg p-5 shadow-[0_10px_50px_rgba(59,130,246,0.35)] relative overflow-hidden backdrop-blur-md"
             >
               {/* Core accent gradient bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
@@ -2392,10 +2392,10 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
               {/* Header */}
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <span className="text-[9px] font-mono uppercase tracking-widest text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-sm">
+                  <span className="text-[9px] font-mono uppercase tracking-wide text-signal-info bg-surface-3 px-2 py-0.5 rounded-sm">
                     Interactive briefing â€¢ Step {guideStep + 1} of {tourSteps.length}
                   </span>
-                  <h3 className="text-base font-bold tracking-tight text-white mt-1.5">
+                  <h3 className="text-base font-bold tracking-tight text-text-primary mt-1.5">
                     {tourSteps[guideStep]?.title}
                   </h3>
                 </div>
@@ -2404,7 +2404,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     dismissGuide();
                     setShowFeedbackGate(true);
                   }}
-                  className="text-white/40 hover:text-white transition-colors cursor-pointer text-[10px] font-mono uppercase tracking-wider bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded"
+                  className="text-text-quaternary hover:text-text-primary transition-colors cursor-pointer text-[10px] font-mono uppercase tracking-wider bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded"
                 >
                   Skip
                 </button>
@@ -2416,7 +2416,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
               </p>
 
               {/* Navigation Controls */}
-              <div className="flex justify-between items-center pt-3 border-t border-white/10">
+              <div className="flex justify-between items-center pt-3 border-t border-border">
                 <button
                   disabled={guideStep === 0}
                   onClick={() => {
@@ -2424,7 +2424,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     setGuideStep(prevStep);
                     tourSteps[prevStep]?.actionBefore?.();
                   }}
-                  className={`px-3 py-1.5 border border-white/10 text-[10px] font-mono uppercase tracking-wider hover:bg-white/5 transition-all rounded-sm flex items-center gap-1 cursor-pointer ${guideStep === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  className={`px-3 py-1.5 border border-border text-[10px] font-mono uppercase tracking-wider hover:bg-white/5 transition-all rounded-sm flex items-center gap-1 cursor-pointer ${guideStep === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
                   <ChevronLeft className="w-3 h-3" />
                   Back
@@ -2441,10 +2441,10 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                       setShowFeedbackGate(true);
                     }
                   }}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono uppercase tracking-wider transition-all rounded-sm flex items-center gap-1 shadow-[0_0_12px_rgba(59,130,246,0.3)] cursor-pointer"
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-text-primary text-[10px] font-mono uppercase tracking-wider transition-all rounded-sm flex items-center gap-1 shadow-sm cursor-pointer"
                 >
                   {guideStep === tourSteps.length - 1 ? 'Finish' : 'Next'}
-                  <ChevronRight className="w-3 h-3 animate-pulse" />
+                  <ChevronRight className="w-3 h-3 transition-opacity duration-300" />
                 </button>
               </div>
             </motion.div>
@@ -2455,13 +2455,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       {/* Project Setup Guide */}
       <AnimatePresence>
         {projectSetupGuide && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-[#0a0a0a] border border-white/10 w-full max-w-lg mx-4 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
-                <h3 className="text-sm font-mono uppercase tracking-widest">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-bg backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-bg border border-border w-full max-w-lg mx-4 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
+                <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide">
                   {projectSetupGuide.executionMode === 'scrum' ? 'Sprint' : 'Kanban'} Setup
                 </h3>
-                <button onClick={() => setProjectSetupGuide(null)} className="text-white/40 hover:text-white"><X className="w-4 h-4" /></button>
+                <button onClick={() => setProjectSetupGuide(null)} className="text-text-quaternary hover:text-text-primary"><X className="w-4 h-4" /></button>
               </div>
 
               {projectSetupGuide.executionMode.toLowerCase() === 'kanban' && (
@@ -2470,10 +2470,10 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     <div className="text-center py-8 space-y-4">
                       <Kanban className="w-12 h-12 text-cyan-400 mx-auto" />
                       <h4 className="text-base font-semibold">Kanban Board Ready</h4>
-                      <p className="text-xs text-white/60">Project created. Add work items to your board to start tracking progress.</p>
+                      <p className="text-xs text-text-tertiary">Project created. Add work items to your board to start tracking progress.</p>
                       <div className="flex justify-center gap-3 pt-4">
-                        <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 0 })} className="px-4 py-2 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider">Add Work Items</button>
-                        <button onClick={() => setProjectSetupGuide(null)} className="px-4 py-2 bg-cyan-600 text-white text-[10px] font-mono uppercase tracking-wider">Launch Board</button>
+                        <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 0 })} className="px-4 py-2 bg-white/10 text-text-primary text-[10px] font-mono uppercase tracking-wider">Add Work Items</button>
+                        <button onClick={() => setProjectSetupGuide(null)} className="px-4 py-2 bg-cyan-600 text-text-primary text-[10px] font-mono uppercase tracking-wider">Launch Board</button>
                       </div>
                     </div>
                   )}
@@ -2482,14 +2482,14 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
               {projectSetupGuide.executionMode.toLowerCase() === 'scrum' && (
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2 text-[10px] font-mono text-white/40">
+                  <div className="flex items-center gap-2 text-[10px] font-mono text-text-quaternary">
                     {['Epics', 'Stories', 'Sprint', 'Launch'].map((s, i) => (
                       <React.Fragment key={s}>
                         <span className={`flex items-center gap-1 ${i <= projectSetupGuide.step ? 'text-cyan-400' : ''}`}>
-                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${i <= projectSetupGuide.step ? 'bg-cyan-500/20 border border-cyan-500' : 'bg-white/5 border border-white/10'}`}>{i < projectSetupGuide.step ? <Check className="w-2.5 h-2.5" /> : i + 1}</span>
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${i <= projectSetupGuide.step ? 'bg-cyan-500/20 border border-cyan-500' : 'bg-white/5 border border-border'}`}>{i < projectSetupGuide.step ? <Check className="w-2.5 h-2.5" /> : i + 1}</span>
                           {s}
                         </span>
-                        {i < 3 && <span className="text-white/10">→</span>}
+                        {i < 3 && <span className="text-text-quaternary">→</span>}
                       </React.Fragment>
                     ))}
                   </div>
@@ -2498,42 +2498,42 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     <div className="text-center py-6 space-y-4">
                       <Layers className="w-10 h-10 text-pink-400 mx-auto" />
                       <h4 className="text-sm font-semibold">Create Epics</h4>
-                      <p className="text-[11px] text-white/60">Epics are large bodies of work that contain multiple stories.</p>
-                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 1 })} className="px-4 py-2 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip — Next</button>
+                      <p className="text-[11px] text-text-tertiary">Epics are large bodies of work that contain multiple stories.</p>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 1 })} className="px-4 py-2 bg-white/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip — Next</button>
                     </div>
                   )}
 
                   {projectSetupGuide.step === 1 && (
                     <div className="text-center py-6 space-y-4">
-                      <ListOrdered className="w-10 h-10 text-amber-400 mx-auto" />
+                      <ListOrdered className="w-10 h-10 text-signal-warning mx-auto" />
                       <h4 className="text-sm font-semibold">Create Stories</h4>
-                      <p className="text-[11px] text-white/60">Break epics into user stories with acceptance criteria.</p>
-                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 2 })} className="px-4 py-2 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip — Next</button>
+                      <p className="text-[11px] text-text-tertiary">Break epics into user stories with acceptance criteria.</p>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 2 })} className="px-4 py-2 bg-white/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip — Next</button>
                     </div>
                   )}
 
                   {projectSetupGuide.step === 2 && (
                     <div className="text-center py-6 space-y-4">
-                      <Play className="w-10 h-10 text-blue-400 mx-auto" />
+                      <Play className="w-10 h-10 text-signal-info mx-auto" />
                       <h4 className="text-sm font-semibold">Create Sprint</h4>
-                      <p className="text-[11px] text-white/60">Define sprint duration and assign stories to the backlog.</p>
-                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 3 })} className="px-4 py-2 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip — Next</button>
+                      <p className="text-[11px] text-text-tertiary">Define sprint duration and assign stories to the backlog.</p>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 3 })} className="px-4 py-2 bg-white/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip — Next</button>
                     </div>
                   )}
 
                   {projectSetupGuide.step === 3 && (
                     <div className="text-center py-6 space-y-4">
-                      <Play className="w-12 h-12 text-green-400 mx-auto" />
+                      <Play className="w-12 h-12 text-signal-safe mx-auto" />
                       <h4 className="text-base font-semibold">Ready to Launch</h4>
-                      <p className="text-xs text-white/60">Your sprint is configured. Launch to begin tracking velocity.</p>
-                      <button onClick={() => { setProjectSetupGuide(null); window.history.replaceState(null, '', '/execution'); window.dispatchEvent(new CustomEvent('popstate')); }} className="px-6 py-2 bg-green-600 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-green-500 transition-colors">Launch Sprint</button>
+                      <p className="text-xs text-text-tertiary">Your sprint is configured. Launch to begin tracking velocity.</p>
+                      <button onClick={() => { setProjectSetupGuide(null); window.history.replaceState(null, '', '/execution'); window.dispatchEvent(new CustomEvent('popstate')); }} className="px-6 py-2 bg-green-600 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-green-500 transition-colors">Launch Sprint</button>
                     </div>
                   )}
                 </div>
               )}
 
-              <div className="flex justify-between mt-6 pt-4 border-t border-white/10">
-                <button onClick={() => setProjectSetupGuide(null)} className="text-[10px] font-mono text-white/40 hover:text-white transition-colors uppercase tracking-wider">Dismiss</button>
+              <div className="flex justify-between mt-6 pt-4 border-t border-border">
+                <button onClick={() => setProjectSetupGuide(null)} className="text-[10px] font-mono text-text-quaternary hover:text-text-primary transition-colors uppercase tracking-wider">Dismiss</button>
                 {projectSetupGuide.executionMode.toLowerCase() === 'scrum' && projectSetupGuide.step < 3 && (
                   <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: projectSetupGuide.step + 1 })} className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-cyan-400 hover:text-cyan-300 transition-colors">
                     Next <ChevronRight className="w-3 h-3" />

@@ -88,14 +88,14 @@ export default function ProjectSettingsPanel({ projectId, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-2xl bg-[#0c0c0c] border border-white/15 p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] bg-bg flex items-center justify-center p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-surface border border-white/15 p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <span className="text-xs font-mono text-white/80">Project Settings</span>
-          <button onClick={onClose} className="text-white/30 hover:text-white/70 text-[10px] font-mono">Close</button>
+          <span className="text-xs font-mono text-text-secondary">Project Settings</span>
+          <button onClick={onClose} className="text-text-quaternary hover:text-text-secondary text-[10px] font-medium">Close</button>
         </div>
-        <div className="flex gap-4 mb-6 border-b border-white/10 pb-3">
-          <span className={`text-[10px] font-mono uppercase tracking-wider text-white border-b-2 border-white/40 pb-3`}>Integrations</span>
+        <div className="flex gap-4 mb-6 border-b border-border pb-3">
+          <span className={`text-[10px] font-mono uppercase tracking-wider text-text-primary border-b-2 border-white/40 pb-3`}>Integrations</span>
         </div>
         <div className="space-y-4">
           {INTEGRATIONS.map(svc => {
@@ -104,25 +104,25 @@ export default function ProjectSettingsPanel({ projectId, onClose }: Props) {
             const msg = messages[`${svc.key}_sync`];
             const cd = getCooldownRemaining(health[svc.key]);
             return (
-              <div key={svc.key} className="border border-white/10 bg-white/[0.02] p-4">
+              <div key={svc.key} className="border border-border bg-surface-3 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-mono text-white/70">{svc.label}</span>
-                  {isSyncing && <span className="text-[10px] font-mono text-cyan-400 animate-pulse">Syncing...</span>}
+                  <span className="text-xs font-mono text-text-secondary">{svc.label}</span>
+                  {isSyncing && <span className="text-[10px] font-mono text-cyan-400 transition-opacity duration-300">Syncing...</span>}
                 </div>
                 {svc.fields.map(field => (
                   <div key={field} className="mb-2">
-                    <label className="block text-[8px] font-mono uppercase tracking-wider text-white/30 mb-1">
+                    <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">
                       {field.replace(/_/g, ' ')}
                     </label>
                     <input type="text" value={cfg[field] || ''}
                       onChange={e => handleFieldChange(svc.key, field, e.target.value)}
                       placeholder={`Enter ${field.replace(/_/g, ' ')}`}
-                      className="w-full bg-black border border-white/10 p-2 text-[11px] font-mono text-white placeholder-white/20 focus:border-blue-500 focus:outline-none transition-colors" />
+                      className="w-full bg-bg border border-border p-2 text-[11px] font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors" />
                   </div>
                 ))}
                 <div className="flex items-center gap-2 mt-3">
                   <button onClick={() => handleSaveConfig(svc.key, cfg)}
-                    className="px-3 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 text-[9px] font-mono uppercase tracking-wider hover:bg-blue-600/30 transition-colors">
+                    className="px-3 py-1.5 bg-surface-3 border border-border text-signal-info text-[9px] font-mono uppercase tracking-wider hover:bg-surface-3 transition-colors">
                     Save Config
                   </button>
                   <button onClick={() => handleSync(svc.key)}
@@ -131,23 +131,23 @@ export default function ProjectSettingsPanel({ projectId, onClose }: Props) {
                     {cd > 0 ? formatCooldown(cd) : 'Sync Now'}
                   </button>
                 </div>
-                {msg && <div className="mt-2 text-[9px] font-mono text-white/40">{msg}</div>}
+                {msg && <div className="mt-2 text-[9px] font-mono text-text-quaternary">{msg}</div>}
                 {messages[`${svc.key}_cfg`] && (
                   <div className="mt-1 text-[9px] font-mono text-emerald-400">{messages[`${svc.key}_cfg`]}</div>
                 )}
                 {svc.key === 'figma' && figmaPreview && (
-                  <div className="mt-3 border border-white/10 bg-black/50 p-2">
+                  <div className="mt-3 border border-border bg-bg p-2">
                     <iframe src={figmaPreview} title="Figma Preview" className="w-full h-48 border-0" allowFullScreen />
                   </div>
                 )}
                 {(svc.key === 'github' || svc.key === 'gitlab') && cfg.repo_url && (
-                  <div className="mt-3 border border-white/5 bg-white/[0.01] p-3">
-                    <div className="text-[9px] font-mono text-white/30 uppercase tracking-wider mb-1">Repository</div>
-                    <div className="text-[10px] font-mono text-white/50">
+                  <div className="mt-3 border border-border-subtle bg-surface-3 p-3">
+                    <div className="text-[9px] font-mono text-text-quaternary uppercase tracking-wider mb-1">Repository</div>
+                    <div className="text-[10px] font-mono text-text-tertiary">
                       {cfg.repo_url}<br />
                       Branch: {cfg.branch || 'main'}
                     </div>
-                    {msg && <div className="text-[9px] font-mono text-white/40 mt-1">{msg}</div>}
+                    {msg && <div className="text-[9px] font-mono text-text-quaternary mt-1">{msg}</div>}
                   </div>
                 )}
               </div>

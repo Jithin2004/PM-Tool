@@ -62,11 +62,11 @@ export default function ConnectionsPanel() {
   if (loading) return (
     <div className="p-6">
       <div className="flex items-center gap-3 mb-6">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">CONTROL</span>
-        <span className="text-white/20">/</span>
-        <span className="text-xs font-mono text-white/80">Operational Channels</span>
+        <span className="text-[10px] font-mono uppercase tracking-wide text-text-quaternary">CONTROL</span>
+        <span className="text-text-quaternary">/</span>
+        <span className="text-xs font-mono text-text-secondary">Operational Channels</span>
       </div>
-      <div className="text-[11px] font-mono text-white/30">Loading channel configuration...</div>
+      <div className="text-[11px] font-mono text-text-quaternary">Loading channel configuration...</div>
     </div>
   );
 
@@ -85,16 +85,16 @@ export default function ConnectionsPanel() {
     const display = describeChannelState(state);
 
     return (
-      <div key={ch.key} className="border border-white/10 bg-white/[0.02] px-4 py-3">
+      <div key={ch.key} className="border border-border bg-surface-3 px-4 py-3">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-mono text-white/70">{ch.label}</span>
-            <span className="text-[8px] font-mono uppercase text-white/20 bg-white/5 px-1.5 py-0.5">{ch.scope}</span>
+            <span className="text-xs font-mono text-text-secondary">{ch.label}</span>
+            <span className="text-[8px] font-mono uppercase text-text-quaternary bg-white/5 px-1.5 py-0.5">{ch.scope}</span>
           </div>
           <span className={`text-[10px] font-mono ${display.color}`}>{display.label}</span>
         </div>
-        <p className="text-[9px] font-mono text-white/30 mb-3">{ch.description}</p>
-        <div className="flex items-center gap-4 text-[10px] font-mono text-white/30 mb-3">
+        <p className="text-[9px] font-mono text-text-quaternary mb-3">{ch.description}</p>
+        <div className="flex items-center gap-4 text-[10px] font-mono text-text-quaternary mb-3">
           <span>Last signal: {timeAgo(h?.last_sync)}</span>
           <span>Checked: {timeAgo(h?.integration_last_checked)}</span>
         </div>
@@ -106,13 +106,13 @@ export default function ConnectionsPanel() {
             </button>
           ) : (
             <button onClick={() => handleDisconnect(ch.key)}
-              className="px-3 py-1.5 bg-red-600/20 border border-red-500/30 text-red-400 text-[9px] font-mono uppercase tracking-wider hover:bg-red-600/30 transition-colors">
+              className="px-3 py-1.5 bg-signal-critical-bg border border-red-500/30 text-signal-critical text-[9px] font-mono uppercase tracking-wider hover:bg-signal-critical-bg transition-colors">
               Disconnect
             </button>
           )}
         </div>
         {!hasAccount && state === 'awaiting_oauth' && (
-          <div className="mt-2 text-[9px] font-mono text-amber-500/60">
+          <div className="mt-2 text-[9px] font-mono text-signal-warning/60">
             OAuth provider configuration pending
           </div>
         )}
@@ -127,21 +127,21 @@ export default function ConnectionsPanel() {
     <div className="p-6">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">CONTROL</span>
-          <span className="text-white/20">/</span>
-          <span className="text-xs font-mono text-white/80">Operational Channels</span>
+          <span className="text-[10px] font-mono uppercase tracking-wide text-text-quaternary">CONTROL</span>
+          <span className="text-text-quaternary">/</span>
+          <span className="text-xs font-mono text-text-secondary">Operational Channels</span>
         </div>
-        <p className="text-[10px] font-mono text-white/25">
+        <p className="text-[10px] font-mono text-text-quaternary">
           External coordination signal ingestion pipelines
         </p>
       </div>
 
-      <div className="text-[9px] font-mono text-white/30 mb-4 uppercase tracking-wider">Coordination Sources</div>
+      <div className="text-[9px] font-mono text-text-quaternary mb-4 uppercase tracking-wider">Coordination Sources</div>
       <div className="space-y-2 mb-8">
         {workspaceChannels.map(renderChannel)}
       </div>
 
-      <div className="text-[9px] font-mono text-white/30 mb-4 uppercase tracking-wider">Project Signal Channels</div>
+      <div className="text-[9px] font-mono text-text-quaternary mb-4 uppercase tracking-wider">Project Signal Channels</div>
       <div className="space-y-2">
         {projectChannels.map(renderChannel)}
       </div>

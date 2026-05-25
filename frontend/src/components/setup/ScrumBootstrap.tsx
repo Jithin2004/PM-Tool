@@ -151,27 +151,27 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
   const sectionHeader = (id: string, icon: React.ReactNode, label: string, count: number) => (
     <button
       onClick={() => toggleSection(id)}
-      className="flex items-center justify-between w-full p-3 border border-white/10 rounded-sm bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+      className="flex items-center justify-between w-full p-3 border border-border rounded-sm bg-surface-3 hover:bg-surface-3 transition-colors"
     >
       <div className="flex items-center gap-2">
-        {expandedSection === id ? <ChevronDown className="w-3.5 h-3.5 text-white/30" /> : <ChevronRight className="w-3.5 h-3.5 text-white/30" />}
+        {expandedSection === id ? <ChevronDown className="w-3.5 h-3.5 text-text-quaternary" /> : <ChevronRight className="w-3.5 h-3.5 text-text-quaternary" />}
         {icon}
-        <span className="text-xs font-mono uppercase tracking-wider text-white/60">{label}</span>
-        {count > 0 && <span className="text-[9px] font-mono text-white/30 bg-white/5 px-1.5 py-0.5 rounded-sm">{count}</span>}
+        <span className="text-xs font-mono uppercase tracking-wider text-text-tertiary">{label}</span>
+        {count > 0 && <span className="text-[9px] font-mono text-text-quaternary bg-white/5 px-1.5 py-0.5 rounded-sm">{count}</span>}
       </div>
     </button>
   );
 
-  const inputClass = "w-full bg-white/5 border border-white/10 rounded-sm px-3 py-1.5 text-xs font-mono text-white/70 placeholder-white/20 outline-none focus:border-white/20 focus:text-white transition-colors";
-  const labelClass = "text-[9px] font-mono uppercase tracking-wider text-white/40";
+  const inputClass = "w-full bg-white/5 border border-border rounded-sm px-3 py-1.5 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border focus:text-text-primary transition-colors";
+  const labelClass = "text-[9px] font-mono uppercase tracking-wider text-text-quaternary";
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-        <Target className="w-5 h-5 text-purple-400" />
+      <div className="flex items-center gap-3 pb-4 border-b border-border">
+        <Target className="w-5 h-5 text-accent-secondary" />
         <div>
-          <h3 className="text-sm font-mono uppercase tracking-widest text-white/70">Scrum Setup</h3>
-          <p className="text-[10px] text-white/40 mt-0.5">Create epics, stories, tasks, and your first sprint</p>
+          <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-secondary">Scrum Setup</h3>
+          <p className="text-[10px] text-text-quaternary mt-0.5">Create epics, stories, tasks, and your first sprint</p>
         </div>
       </div>
 
@@ -179,14 +179,14 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
       <div className="space-y-1">
         {sectionHeader('epics', <Layers className="w-4 h-4 text-pink-400" />, 'Epics', epics.length)}
         {expandedSection === 'epics' && (
-          <div className="p-3 border border-white/5 rounded-sm space-y-3">
+          <div className="p-3 border border-border-subtle rounded-sm space-y-3">
             {epics.map((epic, i) => (
-              <div key={i} className="flex items-center justify-between p-2 bg-white/[0.02] border border-white/5 rounded-sm">
+              <div key={i} className="flex items-center justify-between p-2 bg-surface-3 border border-border-subtle rounded-sm">
                 <div>
-                  <span className="text-xs text-white/70">{epic.name}</span>
-                  {epic.description && <p className="text-[9px] text-white/30 mt-0.5">{epic.description}</p>}
+                  <span className="text-xs text-text-secondary">{epic.name}</span>
+                  {epic.description && <p className="text-[9px] text-text-quaternary mt-0.5">{epic.description}</p>}
                 </div>
-                <button onClick={() => removeItem('epics', i)} className="text-white/20 hover:text-white/50"><X className="w-3 h-3" /></button>
+                <button onClick={() => removeItem('epics', i)} className="text-text-quaternary hover:text-text-tertiary"><X className="w-3 h-3" /></button>
               </div>
             ))}
             <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -197,7 +197,7 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
                 className={inputClass}
                 onKeyDown={e => e.key === 'Enter' && addEpic()}
               />
-              <button onClick={addEpic} className="px-3 py-1.5 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-all rounded-sm flex items-center gap-1">
+              <button onClick={addEpic} className="px-3 py-1.5 bg-white/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-white/20 transition-all rounded-sm flex items-center gap-1">
                 <Plus className="w-3 h-3" /> Add
               </button>
             </div>
@@ -207,18 +207,18 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
 
       {/* Stories */}
       <div className="space-y-1">
-        {sectionHeader('stories', <ListOrdered className="w-4 h-4 text-amber-400" />, 'Stories', stories.length)}
+        {sectionHeader('stories', <ListOrdered className="w-4 h-4 text-signal-warning" />, 'Stories', stories.length)}
         {expandedSection === 'stories' && (
-          <div className="p-3 border border-white/5 rounded-sm space-y-3">
+          <div className="p-3 border border-border-subtle rounded-sm space-y-3">
             {stories.map((story, i) => (
-              <div key={i} className="flex items-center justify-between p-2 bg-white/[0.02] border border-white/5 rounded-sm">
+              <div key={i} className="flex items-center justify-between p-2 bg-surface-3 border border-border-subtle rounded-sm">
                 <div>
-                  <span className="text-xs text-white/70">{story.title}</span>
+                  <span className="text-xs text-text-secondary">{story.title}</span>
                   <div className="flex gap-2 mt-0.5">
-                    {story.story_points > 0 && <span className="text-[9px] text-white/30">{story.story_points}pt</span>}
+                    {story.story_points > 0 && <span className="text-[9px] text-text-quaternary">{story.story_points}pt</span>}
                   </div>
                 </div>
-                <button onClick={() => removeItem('stories', i)} className="text-white/20 hover:text-white/50"><X className="w-3 h-3" /></button>
+                <button onClick={() => removeItem('stories', i)} className="text-text-quaternary hover:text-text-tertiary"><X className="w-3 h-3" /></button>
               </div>
             ))}
             <div className="grid grid-cols-[1fr_80px_auto] gap-2">
@@ -237,7 +237,7 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
                 className={inputClass}
                 placeholder="Pts"
               />
-              <button onClick={addStory} className="px-3 py-1.5 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-all rounded-sm flex items-center gap-1">
+              <button onClick={addStory} className="px-3 py-1.5 bg-white/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-white/20 transition-all rounded-sm flex items-center gap-1">
                 <Plus className="w-3 h-3" /> Add
               </button>
             </div>
@@ -247,16 +247,16 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
 
       {/* Tasks */}
       <div className="space-y-1">
-        {sectionHeader('tasks', <ClipboardList className="w-4 h-4 text-blue-400" />, 'Tasks', tasks.length)}
+        {sectionHeader('tasks', <ClipboardList className="w-4 h-4 text-signal-info" />, 'Tasks', tasks.length)}
         {expandedSection === 'tasks' && (
-          <div className="p-3 border border-white/5 rounded-sm space-y-3">
+          <div className="p-3 border border-border-subtle rounded-sm space-y-3">
             {tasks.map((task, i) => (
-              <div key={i} className="flex items-center justify-between p-2 bg-white/[0.02] border border-white/5 rounded-sm">
+              <div key={i} className="flex items-center justify-between p-2 bg-surface-3 border border-border-subtle rounded-sm">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/70">{task.name}</span>
-                  <span className="text-[9px] text-white/30 uppercase">{task.priority}</span>
+                  <span className="text-xs text-text-secondary">{task.name}</span>
+                  <span className="text-[9px] text-text-quaternary uppercase">{task.priority}</span>
                 </div>
-                <button onClick={() => removeItem('tasks', i)} className="text-white/20 hover:text-white/50"><X className="w-3 h-3" /></button>
+                <button onClick={() => removeItem('tasks', i)} className="text-text-quaternary hover:text-text-tertiary"><X className="w-3 h-3" /></button>
               </div>
             ))}
             <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -267,7 +267,7 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
                 className={inputClass}
                 onKeyDown={e => e.key === 'Enter' && addTask()}
               />
-              <button onClick={addTask} className="px-3 py-1.5 bg-white/10 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-all rounded-sm flex items-center gap-1">
+              <button onClick={addTask} className="px-3 py-1.5 bg-white/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-white/20 transition-all rounded-sm flex items-center gap-1">
                 <Plus className="w-3 h-3" /> Add
               </button>
             </div>
@@ -277,9 +277,9 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
 
       {/* Sprint */}
       <div className="space-y-1">
-        {sectionHeader('sprint', <Target className="w-4 h-4 text-green-400" />, 'First Sprint', sprint.name.trim() ? 1 : 0)}
+        {sectionHeader('sprint', <Target className="w-4 h-4 text-signal-safe" />, 'First Sprint', sprint.name.trim() ? 1 : 0)}
         {expandedSection === 'sprint' && (
-          <div className="p-3 border border-white/5 rounded-sm space-y-3">
+          <div className="p-3 border border-border-subtle rounded-sm space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className={labelClass}>Sprint Name</label>
@@ -317,17 +317,17 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
         )}
       </div>
 
-      <div className="flex items-center gap-3 pt-4 border-t border-white/10">
+      <div className="flex items-center gap-3 pt-4 border-t border-border">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-purple-600 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-purple-500 transition-all rounded-sm disabled:opacity-50 shadow-[0_0_12px_rgba(147,51,234,0.2)]"
+          className="px-4 py-2 bg-purple-600 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-purple-500 transition-all rounded-sm disabled:opacity-50 shadow-sm"
         >
           {saving ? 'Saving...' : hasAnyContent ? 'Save & Continue' : 'Skip — Go to Backlog'}
         </button>
         <button
           onClick={onSkip}
-          className="px-4 py-2 text-white/40 text-[10px] font-mono uppercase tracking-wider hover:text-white/60 transition-all"
+          className="px-4 py-2 text-text-quaternary text-[10px] font-medium uppercase tracking-wider hover:text-text-tertiary transition-all"
         >
           Skip Setup
         </button>

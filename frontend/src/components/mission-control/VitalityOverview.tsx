@@ -8,7 +8,7 @@ const LEVEL_LABELS: Record<string, { label: string; color: string; bar: string }
   strong: { label: 'strong', color: 'text-green-600', bar: 'bg-green-400' },
   healthy: { label: 'healthy', color: 'text-emerald-600', bar: 'bg-emerald-400' },
   moderate: { label: 'moderate', color: 'text-amber-600', bar: 'bg-amber-400' },
-  low: { label: 'low', color: 'text-red-500', bar: 'bg-red-300' },
+  low: { label: 'low', color: 'text-signal-critical', bar: 'bg-red-300' },
 };
 
 function Meter({ label, value }: { label: string; value: number }) {

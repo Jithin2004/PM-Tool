@@ -384,19 +384,19 @@ export function DecisionCenterPanel() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 sm:gap-8 mb-8 sm:mb-12">
       {/* 1. Project Health Widget */}
-      <div className="border border-white/10 bg-[#0c0c0c]/80 backdrop-blur-md p-6 rounded-sm flex flex-col justify-between h-64 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <div className="border border-border bg-surface backdrop-blur-md p-6 rounded-sm flex flex-col justify-between h-64 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white/50">Project Health</span>
+            <span className="text-[10px] font-mono uppercase tracking-wide text-text-tertiary">Project Health</span>
             <Activity className="w-4 h-4 text-emerald-400" />
           </div>
-          <p className="text-[11px] font-mono text-white/60 uppercase leading-snug">Calculated from task completion and risk ratio</p>
+          <p className="text-[11px] font-mono text-text-tertiary uppercase leading-snug">Calculated from task completion and risk ratio</p>
         </div>
         <div className="flex items-center gap-6 my-2">
           <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
               <path
-                className="text-white/5"
+                className="text-text-tertiary"
                 strokeWidth="3"
                 stroke="currentColor"
                 fill="none"
@@ -415,46 +415,46 @@ export function DecisionCenterPanel() {
             <span className="absolute font-mono text-base font-bold">{projectHealth}%</span>
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs uppercase font-semibold text-white/90">Operational Health</h4>
+            <h4 className="text-xs uppercase font-semibold text-text-secondary">Operational Health</h4>
             <p className="text-[10px] text-emerald-400 font-mono tracking-wide">
               {projectHealth >= 85 ? 'OPTIMAL BOUNDS' : projectHealth >= 65 ? 'ATTENTION REQUIRED' : 'HIGH CRITICAL RISK'}
             </p>
-            <p className="text-[9px] font-mono text-white/40">Active workloads: {projects.filter(p => p.status !== 'deployed').length}</p>
+            <p className="text-[9px] font-mono text-text-quaternary">Active workloads: {projects.filter(p => p.status !== 'deployed').length}</p>
           </div>
         </div>
       </div>
 
       {/* 2. ETA Confidence Widget */}
-      <div className="border border-white/10 bg-[#0c0c0c]/80 backdrop-blur-md p-6 rounded-sm flex flex-col justify-between h-64 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <div className="border border-border bg-surface backdrop-blur-md p-6 rounded-sm flex flex-col justify-between h-64 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white/50">ETA Confidence</span>
+            <span className="text-[10px] font-mono uppercase tracking-wide text-text-tertiary">ETA Confidence</span>
             <Target className="w-4 h-4 text-cyan-400" />
           </div>
-          <p className="text-[11px] font-mono text-white/60 uppercase leading-snug">Statistical estimation precision derived from PERT bounds</p>
+          <p className="text-[11px] font-mono text-text-tertiary uppercase leading-snug">Statistical estimation precision derived from PERT bounds</p>
         </div>
         <div className="space-y-3">
           <div className="flex justify-between items-baseline">
-            <span className="text-2xl font-mono font-bold text-cyan-400">{etaConfidence.score}%</span>
-            <span className="text-[10px] font-mono text-white/40">Margin: ±{etaConfidence.interval}d</span>
+            <span className="text-2xl font-sans tracking-tight font-bold text-cyan-400">{etaConfidence.score}%</span>
+            <span className="text-[10px] font-mono text-text-quaternary">Margin: ±{etaConfidence.interval}d</span>
           </div>
           <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
             <div className="h-full bg-cyan-400 transition-all duration-500" style={{ width: `${etaConfidence.score}%` }} />
           </div>
-          <p className="text-[10px] font-mono text-white/50 uppercase">
+          <p className="text-[10px] font-mono text-text-tertiary uppercase">
             95% probability of delivery timeline matching predictions.
           </p>
         </div>
       </div>
 
       {/* 3. Delivery Risk Widget */}
-      <div className="border border-white/10 bg-[#0c0c0c]/80 backdrop-blur-md p-6 rounded-sm flex flex-col justify-between h-64 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <div className="border border-border bg-surface backdrop-blur-md p-6 rounded-sm flex flex-col justify-between h-64 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white/50">Delivery Risk</span>
+            <span className="text-[10px] font-mono uppercase tracking-wide text-text-tertiary">Delivery Risk</span>
             <AlertTriangle className="w-4 h-4 text-rose-400" />
           </div>
-          <p className="text-[11px] font-mono text-white/60 uppercase leading-snug">Active workflows displaying high standard deviation</p>
+          <p className="text-[11px] font-mono text-text-tertiary uppercase leading-snug">Active workflows displaying high standard deviation</p>
         </div>
         <div className="space-y-2 flex-1 mt-3 overflow-y-auto">
           {highRiskTasks.length === 0 && mediumRiskTasks.length === 0 ? (
@@ -467,11 +467,11 @@ export function DecisionCenterPanel() {
               {highRiskTasks.slice(0, 3).map(task => (
                 <div key={task.id} className="flex justify-between items-center text-[10px] p-1.5 border border-rose-500/20 bg-rose-500/5 rounded-sm">
                   <span className="truncate w-32 font-medium">{task.name}</span>
-                  <span className="font-mono text-[8px] bg-rose-500 text-white px-1 uppercase shrink-0">HIGH RISK</span>
+                  <span className="font-mono text-[8px] bg-rose-500 text-text-primary px-1 uppercase shrink-0">HIGH RISK</span>
                 </div>
               ))}
               {mediumRiskTasks.slice(0, 2).map(task => (
-                <div key={task.id} className="flex justify-between items-center text-[10px] p-1.5 border border-amber-500/20 bg-amber-500/5 rounded-sm">
+                <div key={task.id} className="flex justify-between items-center text-[10px] p-1.5 border border-border bg-signal-warning-bg rounded-sm">
                   <span className="truncate w-32 font-medium">{task.name}</span>
                   <span className="font-mono text-[8px] bg-amber-500 text-black px-1 uppercase shrink-0">MODERATE</span>
                 </div>
@@ -482,20 +482,20 @@ export function DecisionCenterPanel() {
       </div>
 
       {/* 4. Team Utilization Widget */}
-      <div className="border border-white/10 bg-[#0c0c0c]/80 backdrop-blur-md p-6 rounded-sm flex flex-col justify-between h-64 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <div className="border border-border bg-surface backdrop-blur-md p-6 rounded-sm flex flex-col justify-between h-64 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white/50">Team Utilization</span>
-            <Users className="w-4 h-4 text-purple-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wide text-text-tertiary">Team Utilization</span>
+            <Users className="w-4 h-4 text-accent-secondary" />
           </div>
-          <p className="text-[11px] font-mono text-white/60 uppercase leading-snug">Resource hours allocated vs available weekly limits</p>
+          <p className="text-[11px] font-mono text-text-tertiary uppercase leading-snug">Resource hours allocated vs available weekly limits</p>
         </div>
         <div className="space-y-2.5 overflow-y-auto max-h-[140px] pr-1">
           {teamUtilizations.map(member => (
             <div key={member.id} className="space-y-1">
               <div className="flex justify-between text-[10px] font-mono">
                 <span className="truncate max-w-[120px]">{member.name}</span>
-                <span className={member.util > 100 ? 'text-rose-400 font-bold' : member.util > 80 ? 'text-amber-400' : 'text-emerald-400'}>
+                <span className={member.util > 100 ? 'text-rose-400 font-bold' : member.util > 80 ? 'text-signal-warning' : 'text-emerald-400'}>
                   {member.util}% ({member.hours}h)
                 </span>
               </div>
@@ -513,27 +513,27 @@ export function DecisionCenterPanel() {
       </div>
 
       {/* 5. Upcoming Deadlines Widget */}
-      <div className="border border-white/10 bg-[#0c0c0c]/80 backdrop-blur-md p-6 rounded-sm h-72 flex flex-col justify-between md:col-span-2 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <div className="border border-border bg-surface backdrop-blur-md p-6 rounded-sm h-72 flex flex-col justify-between md:col-span-2 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white/50">Upcoming Deadlines</span>
+            <span className="text-[10px] font-mono uppercase tracking-wide text-text-tertiary">Upcoming Deadlines</span>
             <Clock className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="space-y-2 overflow-y-auto max-h-[180px]">
             {upcomingTasks.length === 0 ? (
-              <p className="text-[10px] font-mono text-white/40 italic text-center py-8 uppercase">No upcoming deadlines flagged.</p>
+              <p className="text-[10px] font-mono text-text-quaternary italic text-center py-8 uppercase">No upcoming deadlines flagged.</p>
             ) : (
               upcomingTasks.map(task => (
-                <div key={task.id} className="flex justify-between items-center p-2 border border-white/5 bg-white/5 rounded-sm hover:border-white/10 transition-colors">
+                <div key={task.id} className="flex justify-between items-center p-2 border border-border-subtle bg-white/5 rounded-sm hover:border-border transition-colors">
                   <div>
-                    <h5 className="text-[11px] font-semibold text-white truncate max-w-[200px]">{task.name}</h5>
-                    <p className="text-[9px] font-mono text-white/40 uppercase">Assignee: {task.assigneeName}</p>
+                    <h5 className="text-[11px] font-semibold text-text-primary truncate max-w-[200px]">{task.name}</h5>
+                    <p className="text-[9px] font-mono text-text-quaternary uppercase">Assignee: {task.assigneeName}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <span className={`text-[9px] font-mono px-2 py-0.5 border ${
                       task.daysLeft <= 2 
-                        ? 'bg-rose-950/20 border-rose-500/30 text-rose-400 font-bold animate-pulse' 
-                        : 'bg-white/5 border-white/10 text-white/60'
+                        ? 'bg-rose-950/20 border-rose-500/30 text-rose-400 font-bold transition-opacity duration-300' 
+                        : 'bg-white/5 border-border text-text-tertiary'
                     }`}>
                       {task.daysLeft <= 0 ? 'OVERDUE' : `${task.daysLeft}d left`}
                     </span>
@@ -546,19 +546,19 @@ export function DecisionCenterPanel() {
       </div>
 
       {/* 6. Recent Activity Widget */}
-      <div className="border border-white/10 bg-[#0c0c0c]/80 backdrop-blur-md p-6 rounded-sm h-72 flex flex-col justify-between md:col-span-2 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <div className="border border-border bg-surface backdrop-blur-md p-6 rounded-sm h-72 flex flex-col justify-between md:col-span-2 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white/50">Recent Activity Logs</span>
-            <Activity className="w-4 h-4 text-amber-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wide text-text-tertiary">Recent Activity Logs</span>
+            <Activity className="w-4 h-4 text-signal-warning" />
           </div>
           <div className="space-y-2 overflow-y-auto max-h-[180px] font-mono">
             {recentActivities.map(act => (
-              <div key={act.id} className="flex items-start gap-2.5 text-[10px] leading-normal py-1.5 border-b border-white/5">
-                <span className="text-white/40 font-mono text-[9px] mt-0.5 shrink-0">{act.time}</span>
+              <div key={act.id} className="flex items-start gap-2.5 text-[10px] leading-normal py-1.5 border-b border-border-subtle">
+                <span className="text-text-quaternary font-mono text-[9px] mt-0.5 shrink-0">{act.time}</span>
                 <div>
-                  <p className="text-white/80">{act.text}</p>
-                  <p className="text-[8px] text-white/40 uppercase mt-0.5">Initiated by: {act.user}</p>
+                  <p className="text-text-secondary">{act.text}</p>
+                  <p className="text-[8px] text-text-quaternary uppercase mt-0.5">Initiated by: {act.user}</p>
                 </div>
               </div>
             ))}
@@ -567,28 +567,28 @@ export function DecisionCenterPanel() {
       </div>
 
       {/* 7. AI Predictive Insights Widget */}
-      <div className="border border-white/10 bg-[#0c0c0c]/80 backdrop-blur-md p-6 rounded-sm md:col-span-2 min-h-[18rem] h-auto flex flex-col justify-between shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <div className="border border-border bg-surface backdrop-blur-md p-6 rounded-sm md:col-span-2 min-h-[18rem] h-auto flex flex-col justify-between shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <BrainCircuit className="w-4 h-4 text-purple-400 animate-pulse" />
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white/95">AI Decision Optimizer</span>
+            <BrainCircuit className="w-4 h-4 text-accent-secondary transition-opacity duration-300" />
+            <span className="text-[10px] font-mono uppercase tracking-wide text-text-secondary">AI Decision Optimizer</span>
           </div>
           <div className="space-y-3 overflow-y-auto max-h-[350px]">
             {aiInsights.map((insight) => (
-              <div key={insight.id} className="p-3 border border-purple-500/20 bg-purple-950/10 rounded-sm relative overflow-hidden flex flex-col gap-2 text-[11px] leading-relaxed">
+              <div key={insight.id} className="p-3 border border-border bg-surface-3 rounded-sm relative overflow-hidden flex flex-col gap-2 text-[11px] leading-relaxed">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500" />
                 <div className="flex items-start gap-2.5">
-                  <Cpu className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                  <Cpu className="w-4 h-4 text-accent-secondary shrink-0 mt-0.5" />
                   <p className="text-neutral-200">{insight.message}</p>
                 </div>
 
                 {insight.simulation && (
-                  <div className="mt-2 pt-2 border-t border-purple-500/10 flex flex-col gap-2 font-mono text-[10px]">
+                  <div className="mt-2 pt-2 border-t border-border flex flex-col gap-2 font-mono text-[10px]">
                     <div className="flex justify-between items-center">
-                      <span className="text-white/40">SIMULATION ENGINE READY</span>
+                      <span className="text-text-quaternary">SIMULATION ENGINE READY</span>
                       <button
                         onClick={() => handlePreviewImpact(insight)}
-                        className="px-2 py-0.5 bg-purple-900/60 hover:bg-purple-800 border border-purple-500/30 text-white font-mono text-[9px] uppercase tracking-wider transition-colors cursor-pointer"
+                        className="px-2 py-0.5 bg-surface-3 hover:bg-purple-800 border border-border text-text-primary font-mono text-[9px] uppercase tracking-wider transition-colors cursor-pointer"
                       >
                         {simulatingInsightId === insight.id ? 'Hide Preview' : 'Preview Impact'}
                       </button>
@@ -600,21 +600,21 @@ export function DecisionCenterPanel() {
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="bg-black/40 border border-purple-500/20 p-2.5 rounded-sm space-y-2 mt-1"
+                          className="bg-bg border border-border p-2.5 rounded-sm space-y-2 mt-1"
                         >
                           <div>
-                            <p className="text-[9px] text-white/50 uppercase tracking-widest mb-1.5">Simulation Parameters</p>
+                            <p className="text-[9px] text-text-tertiary uppercase tracking-wide mb-1.5">Simulation Parameters</p>
                             <div className="grid grid-cols-2 gap-2 text-[9px]">
                               <div>
-                                <p className="text-white/40 uppercase">"{insight.simulation.fromUserName}" LOAD</p>
+                                <p className="text-text-quaternary uppercase">"{insight.simulation.fromUserName}" LOAD</p>
                                 <p className="font-bold text-rose-400">
-                                  {insight.simulation.fromUserLoadBefore}% <span className="text-white/50">→</span> <span className="text-emerald-400 font-extrabold">{insight.simulation.fromUserLoadAfter}%</span>
+                                  {insight.simulation.fromUserLoadBefore}% <span className="text-text-tertiary">→</span> <span className="text-emerald-400 font-extrabold">{insight.simulation.fromUserLoadAfter}%</span>
                                 </p>
                               </div>
                               <div>
-                                <p className="text-white/40 uppercase">"{insight.simulation.toUserName}" LOAD</p>
-                                <p className="font-bold text-amber-400">
-                                  {insight.simulation.toUserLoadBefore}% <span className="text-white/50">→</span> <span className="text-purple-400 font-extrabold">{insight.simulation.toUserLoadAfter}%</span>
+                                <p className="text-text-quaternary uppercase">"{insight.simulation.toUserName}" LOAD</p>
+                                <p className="font-bold text-signal-warning">
+                                  {insight.simulation.toUserLoadBefore}% <span className="text-text-tertiary">→</span> <span className="text-accent-secondary font-extrabold">{insight.simulation.toUserLoadAfter}%</span>
                                 </p>
                               </div>
                             </div>
@@ -624,26 +624,26 @@ export function DecisionCenterPanel() {
 
                           <div className="grid grid-cols-3 gap-2 text-[9px]">
                             <div>
-                              <p className="text-white/40 uppercase">ESTIMATED ETA</p>
+                              <p className="text-text-quaternary uppercase">ESTIMATED ETA</p>
                               <p className="font-bold text-indigo-400">
-                                {insight.simulation.etaBefore}d <span className="text-white/30">→</span> <span className="text-emerald-400 font-extrabold">{insight.simulation.etaAfter}d</span>
+                                {insight.simulation.etaBefore}d <span className="text-text-quaternary">→</span> <span className="text-emerald-400 font-extrabold">{insight.simulation.etaAfter}d</span>
                               </p>
                             </div>
                             <div>
-                              <p className="text-white/40 uppercase">CONFIDENCE</p>
+                              <p className="text-text-quaternary uppercase">CONFIDENCE</p>
                               <p className="font-bold text-cyan-400">
-                                {insight.simulation.confidenceBefore}% <span className="text-white/30">→</span> <span className="text-emerald-400 font-extrabold">{insight.simulation.confidenceAfter}%</span>
+                                {insight.simulation.confidenceBefore}% <span className="text-text-quaternary">→</span> <span className="text-emerald-400 font-extrabold">{insight.simulation.confidenceAfter}%</span>
                               </p>
                             </div>
                             <div>
-                              <p className="text-white/40 uppercase">DELIVERY RISK</p>
+                              <p className="text-text-quaternary uppercase">DELIVERY RISK</p>
                               <p className="font-bold text-rose-400">
-                                {insight.simulation.riskBefore} <span className="text-white/30">→</span> <span className="text-emerald-400 font-extrabold">{insight.simulation.riskAfter}</span>
+                                {insight.simulation.riskBefore} <span className="text-text-quaternary">→</span> <span className="text-emerald-400 font-extrabold">{insight.simulation.riskAfter}</span>
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex gap-2 pt-2 border-t border-white/5 mt-2">
+                          <div className="flex gap-2 pt-2 border-t border-border-subtle mt-2">
                             <button
                               onClick={() => handleAcceptSimulation(insight)}
                               className="flex-1 px-2 py-1.5 bg-emerald-900/40 hover:bg-emerald-900/80 border border-emerald-500/30 text-emerald-400 font-mono text-[9px] uppercase tracking-wider transition-colors cursor-pointer"
@@ -652,7 +652,7 @@ export function DecisionCenterPanel() {
                             </button>
                             <button
                               onClick={() => handleRejectSimulation(insight)}
-                              className="px-4 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-mono text-[9px] uppercase tracking-wider transition-colors cursor-pointer"
+                              className="px-4 py-1.5 bg-white/5 hover:bg-white/10 border border-border text-text-tertiary hover:text-text-primary font-mono text-[9px] uppercase tracking-wider transition-colors cursor-pointer"
                             >
                               Dismiss
                             </button>
@@ -666,38 +666,38 @@ export function DecisionCenterPanel() {
             ))}
           </div>
         </div>
-        <p className="text-[8px] font-mono text-white/30 uppercase mt-2">
+        <p className="text-[8px] font-mono text-text-quaternary uppercase mt-2">
           Predictions auto-calibrated based on real-time roster and historical delay indicators.
         </p>
       </div>
 
       {/* 8. Notification Summary Widget */}
-      <div className="border border-white/10 bg-[#0c0c0c]/80 backdrop-blur-md p-6 rounded-sm md:col-span-2 h-72 flex flex-col justify-between shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <div className="border border-border bg-surface backdrop-blur-md p-6 rounded-sm md:col-span-2 h-72 flex flex-col justify-between shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white/50">Notification Summary</span>
+            <span className="text-[10px] font-mono uppercase tracking-wide text-text-tertiary">Notification Summary</span>
             <Bell className="w-4 h-4 text-cyan-400" />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="border border-white/5 bg-white/5 p-3 rounded-sm text-center">
-              <span className="text-[9px] font-mono uppercase text-white/40 block mb-1">Timeline Drift</span>
-              <span className="text-lg font-mono font-bold text-amber-400">{notifSummary.deadlines}</span>
+            <div className="border border-border-subtle bg-white/5 p-3 rounded-sm text-center">
+              <span className="text-[9px] font-mono uppercase text-text-quaternary block mb-1">Timeline Drift</span>
+              <span className="text-lg font-sans tracking-tight font-bold text-signal-warning">{notifSummary.deadlines}</span>
             </div>
-            <div className="border border-white/5 bg-white/5 p-3 rounded-sm text-center">
-              <span className="text-[9px] font-mono uppercase text-white/40 block mb-1">Delivery Risk</span>
-              <span className="text-lg font-mono font-bold text-rose-400">{notifSummary.risk}</span>
+            <div className="border border-border-subtle bg-white/5 p-3 rounded-sm text-center">
+              <span className="text-[9px] font-mono uppercase text-text-quaternary block mb-1">Delivery Risk</span>
+              <span className="text-lg font-sans tracking-tight font-bold text-rose-400">{notifSummary.risk}</span>
             </div>
-            <div className="border border-white/5 bg-white/5 p-3 rounded-sm text-center">
-              <span className="text-[9px] font-mono uppercase text-white/40 block mb-1">Squad Attendance</span>
-              <span className="text-lg font-mono font-bold text-blue-400">{notifSummary.attendance}</span>
+            <div className="border border-border-subtle bg-white/5 p-3 rounded-sm text-center">
+              <span className="text-[9px] font-mono uppercase text-text-quaternary block mb-1">Squad Attendance</span>
+              <span className="text-lg font-sans tracking-tight font-bold text-signal-info">{notifSummary.attendance}</span>
             </div>
-            <div className="border border-white/5 bg-white/5 p-3 rounded-sm text-center">
-              <span className="text-[9px] font-mono uppercase text-white/40 block mb-1">Standard Tasks</span>
-              <span className="text-lg font-mono font-bold text-green-400">{notifSummary.tasks}</span>
+            <div className="border border-border-subtle bg-white/5 p-3 rounded-sm text-center">
+              <span className="text-[9px] font-mono uppercase text-text-quaternary block mb-1">Standard Tasks</span>
+              <span className="text-lg font-sans tracking-tight font-bold text-signal-safe">{notifSummary.tasks}</span>
             </div>
           </div>
         </div>
-        <div className="flex justify-between items-center text-[9px] font-mono uppercase text-white/40 mt-3 pt-2 border-t border-white/5">
+        <div className="flex justify-between items-center text-[9px] font-mono uppercase text-text-quaternary mt-3 pt-2 border-t border-border-subtle">
           <span>Unread alerts queue</span>
           <span className="font-bold text-rose-400">{unreadNotifs.length} total unread</span>
         </div>
@@ -832,96 +832,96 @@ export function ExecutiveDashboardPanel() {
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       
       {/* Operating Status Strip */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center bg-[#0b0c12] border border-white/[0.06] p-5 rounded-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center bg-[#0b0c12] border border-border-subtle p-5 rounded-sm">
         <div className="lg:col-span-2">
-          <h3 className="text-xs font-mono uppercase tracking-widest text-white/95 font-bold mb-1.5 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary font-bold mb-1.5 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 transition-opacity duration-300" />
             Operational Command Center
           </h3>
-          <p className="text-[11px] font-mono text-white/50 uppercase leading-snug">
+          <p className="text-[11px] font-mono text-text-tertiary uppercase leading-snug">
             Platform operating configuration, solver parameters, and core telemetry dispatch.
           </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-[9px] font-mono uppercase tracking-wider text-white/40">SYSTEM SCHEDULING PROFILE</label>
-          <div className="flex bg-white/5 p-1 border border-white/10 rounded-sm">
+          <label className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">SYSTEM SCHEDULING PROFILE</label>
+          <div className="flex bg-white/5 p-1 border border-border rounded-sm">
             <button
               onClick={() => { setOperatingMode('standard'); notify("Operating profile reverted to standard margins.", "info"); }}
-              className={`flex-1 text-center py-1 text-[9px] font-mono uppercase tracking-wider rounded-sm transition-all ${operatingMode === 'standard' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'}`}
+              className={`flex-1 text-center py-1 text-[9px] font-mono uppercase tracking-wider rounded-sm transition-all ${operatingMode === 'standard' ? 'bg-white text-black font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
             >
               Standard
             </button>
             <button
               onClick={() => { setOperatingMode('crunch'); notify("SYSTEM ALERT: Crunch mode enabled. Deadlines accelerated.", "warning"); }}
-              className={`flex-1 text-center py-1 text-[9px] font-mono uppercase tracking-wider rounded-sm transition-all ${operatingMode === 'crunch' ? 'bg-rose-500 text-white font-bold animate-pulse' : 'text-white/60 hover:text-white'}`}
+              className={`flex-1 text-center py-1 text-[9px] font-mono uppercase tracking-wider rounded-sm transition-all ${operatingMode === 'crunch' ? 'bg-rose-500 text-text-primary font-bold transition-opacity duration-300' : 'text-text-tertiary hover:text-text-primary'}`}
             >
               Crunch
             </button>
             <button
               onClick={() => { setOperatingMode('safe'); notify("Safe mode enabled. Load buffers expanded.", "info"); }}
-              className={`flex-1 text-center py-1 text-[9px] font-mono uppercase tracking-wider rounded-sm transition-all ${operatingMode === 'safe' ? 'bg-indigo-600 text-white font-bold' : 'text-white/60 hover:text-white'}`}
+              className={`flex-1 text-center py-1 text-[9px] font-mono uppercase tracking-wider rounded-sm transition-all ${operatingMode === 'safe' ? 'bg-indigo-600 text-text-primary font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
             >
               Safe
             </button>
           </div>
         </div>
 
-        <div className="flex gap-4 justify-between border-l border-white/10 pl-6 h-full items-center">
+        <div className="flex gap-4 justify-between border-l border-border pl-6 h-full items-center">
           <div>
-            <p className="text-[8px] font-mono text-white/40 uppercase tracking-widest">Dispatch Flow</p>
-            <p className="text-xl font-bold font-mono text-cyan-400">{dispatchFlowRate} tasks/h</p>
+            <p className="text-[8px] font-mono text-text-quaternary uppercase tracking-wide">Dispatch Flow</p>
+            <p className="text-xl font-bold font-sans tracking-tight text-cyan-400">{dispatchFlowRate} tasks/h</p>
           </div>
           <div>
-            <p className="text-[8px] font-mono text-white/40 uppercase tracking-widest">Routing Latency</p>
-            <p className="text-xl font-bold font-mono text-indigo-400">{queueLatencySeconds}s</p>
+            <p className="text-[8px] font-mono text-text-quaternary uppercase tracking-wide">Routing Latency</p>
+            <p className="text-xl font-bold font-sans tracking-tight text-indigo-400">{queueLatencySeconds}s</p>
           </div>
         </div>
       </div>
 
       {/* Real-time Telemetry Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-[#0b0c12] border border-white/[0.05] p-5 rounded-sm flex flex-col justify-between shadow-premium">
+        <div className="bg-[#0b0c12] border border-border-subtle p-5 rounded-sm flex flex-col justify-between shadow-premium">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider">Active Deliveries</span>
+            <span className="text-[10px] font-mono font-bold text-text-tertiary uppercase tracking-wider">Active Deliveries</span>
             <Briefcase className="w-4 h-4 text-indigo-400" />
           </div>
           <div>
-            <h3 className="text-3xl font-bold text-white tracking-tight">{activeProjectsCount}</h3>
-            <p className="text-[9px] font-mono text-white/30 uppercase mt-1">Ongoing pipeline projects</p>
+            <h3 className="text-3xl font-bold text-text-primary tracking-tight">{activeProjectsCount}</h3>
+            <p className="text-[9px] font-mono text-text-quaternary uppercase mt-1">Ongoing pipeline projects</p>
           </div>
         </div>
 
-        <div className="bg-[#0b0c12] border border-white/[0.05] p-5 rounded-sm flex flex-col justify-between shadow-premium">
+        <div className="bg-[#0b0c12] border border-border-subtle p-5 rounded-sm flex flex-col justify-between shadow-premium">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider">In-Flight tasks</span>
+            <span className="text-[10px] font-mono font-bold text-text-tertiary uppercase tracking-wider">In-Flight tasks</span>
             <Activity className="w-4 h-4 text-cyan-400" />
           </div>
           <div>
-            <h3 className="text-3xl font-bold text-white tracking-tight">{inProgressTasksCount}</h3>
-            <p className="text-[9px] font-mono text-white/30 uppercase mt-1">Active transit execution tasks</p>
+            <h3 className="text-3xl font-bold text-text-primary tracking-tight">{inProgressTasksCount}</h3>
+            <p className="text-[9px] font-mono text-text-quaternary uppercase mt-1">Active transit execution tasks</p>
           </div>
         </div>
 
-        <div className="bg-[#0b0c12] border border-white/[0.05] p-5 rounded-sm flex flex-col justify-between shadow-premium">
+        <div className="bg-[#0b0c12] border border-border-subtle p-5 rounded-sm flex flex-col justify-between shadow-premium">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider">Queue Throughput</span>
+            <span className="text-[10px] font-mono font-bold text-text-tertiary uppercase tracking-wider">Queue Throughput</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
-            <h3 className="text-3xl font-bold text-white tracking-tight">{taskCompletionRate}%</h3>
-            <p className="text-[9px] font-mono text-white/30 uppercase mt-1">Completion optimization rate</p>
+            <h3 className="text-3xl font-bold text-text-primary tracking-tight">{taskCompletionRate}%</h3>
+            <p className="text-[9px] font-mono text-text-quaternary uppercase mt-1">Completion optimization rate</p>
           </div>
         </div>
 
-        <div className="bg-[#0b0c12] border border-white/[0.05] p-5 rounded-sm flex flex-col justify-between shadow-premium">
+        <div className="bg-[#0b0c12] border border-border-subtle p-5 rounded-sm flex flex-col justify-between shadow-premium">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider">Active Operators</span>
-            <Users className="w-4 h-4 text-purple-400" />
+            <span className="text-[10px] font-mono font-bold text-text-tertiary uppercase tracking-wider">Active Operators</span>
+            <Users className="w-4 h-4 text-accent-secondary" />
           </div>
           <div>
-            <h3 className="text-3xl font-bold text-white tracking-tight">{teamMembersCount}</h3>
-            <p className="text-[9px] font-mono text-white/30 uppercase mt-1">Registered workspace nodes</p>
+            <h3 className="text-3xl font-bold text-text-primary tracking-tight">{teamMembersCount}</h3>
+            <p className="text-[9px] font-mono text-text-quaternary uppercase mt-1">Registered workspace nodes</p>
           </div>
         </div>
       </div>
@@ -930,23 +930,23 @@ export function ExecutiveDashboardPanel() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Real-time System console & controls */}
-        <div className="lg:col-span-2 bg-[#0c0c0c] border border-white/[0.08] rounded-sm p-5 flex flex-col justify-between h-[30rem]">
-          <div className="flex justify-between items-center pb-3 border-b border-white/5 mb-4">
+        <div className="lg:col-span-2 bg-surface border border-border-subtle rounded-sm p-5 flex flex-col justify-between h-[30rem]">
+          <div className="flex justify-between items-center pb-3 border-b border-border-subtle mb-4">
             <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">System Event Stream</h4>
-              <p className="text-[9px] font-mono text-white/40 uppercase">LIVE DIAGNOSTIC HEARTBEAT</p>
+              <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">System Event Stream</h4>
+              <p className="text-[9px] font-mono text-text-quaternary uppercase">LIVE DIAGNOSTIC HEARTBEAT</p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={runDiagnostic}
-                className="px-2.5 py-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 font-mono text-[9px] uppercase tracking-wider transition-all cursor-pointer"
+                className="px-2.5 py-1 bg-white/5 hover:bg-white/10 border border-border text-text-secondary font-medium text-[9px] uppercase tracking-wider transition-all cursor-pointer"
               >
                 Diagnostic Check
               </button>
               <button
                 onClick={triggerStressTestSimulation}
                 disabled={simulationRunning}
-                className="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-300 font-mono text-[9px] uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
+                className="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-300 font-medium text-[9px] uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
               >
                 {simulationRunning ? 'Simulating...' : 'SST Dry-Run'}
               </button>
@@ -954,12 +954,12 @@ export function ExecutiveDashboardPanel() {
           </div>
 
           {/* Terminal Console Output */}
-          <div className="flex-1 bg-black border border-white/5 font-mono text-[10px] text-green-400 p-4 overflow-y-auto space-y-1.5 scrollbar-thin select-text">
+          <div className="flex-1 bg-bg border border-border-subtle font-mono text-[10px] text-signal-safe p-4 overflow-y-auto space-y-1.5 scrollbar-thin select-text">
             {systemLogs.map((log, i) => (
               <p key={i} className="leading-relaxed whitespace-pre-wrap"><span className="text-green-600 select-none">&gt;</span> {log}</p>
             ))}
             {simulationReport && (
-              <div className="text-cyan-400 border-t border-white/10 pt-2 mt-2 space-y-1">
+              <div className="text-cyan-400 border-t border-border pt-2 mt-2 space-y-1">
                 <p className="text-cyan-500 font-bold">--- SST DRY-RUN REPORT SUMMARY ---</p>
                 <p>Run ID: {simulationReport.simulationRunId}</p>
                 <p>Risk Level: {simulationReport.riskLevel}</p>
@@ -971,16 +971,16 @@ export function ExecutiveDashboardPanel() {
             )}
           </div>
           
-          <p className="text-[8px] font-mono text-white/35 uppercase mt-3">
+          <p className="text-[8px] font-mono text-text-quaternary uppercase mt-3">
             Console feed shows execution events and cryptographic audit checkpoints.
           </p>
         </div>
 
         {/* Bottleneck Warning queue */}
-        <div className="bg-[#0c0c0c] border border-white/[0.08] rounded-sm p-5 flex flex-col justify-between h-[30rem]">
+        <div className="bg-surface border border-border-subtle rounded-sm p-5 flex flex-col justify-between h-[30rem]">
           <div>
-            <div className="flex justify-between items-center pb-3 border-b border-white/5 mb-4">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Critical Bottlenecks</h4>
+            <div className="flex justify-between items-center pb-3 border-b border-border-subtle mb-4">
+              <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Critical Bottlenecks</h4>
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
             </div>
             
@@ -988,16 +988,16 @@ export function ExecutiveDashboardPanel() {
               {timelineSlippages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
                   <ShieldAlert className="w-8 h-8 text-emerald-400 mb-2" />
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-white">0 Slippage Alerts</p>
+                  <p className="text-[10px] font-mono uppercase tracking-wide text-text-primary">0 Slippage Alerts</p>
                 </div>
               ) : (
                 timelineSlippages.map(item => (
                   <div key={item.id} className="p-3 border border-rose-500/20 bg-rose-950/10 rounded-sm space-y-1.5 font-mono text-[10px]">
                     <div className="flex justify-between items-start">
                       <span className="font-semibold text-rose-400 truncate w-36 uppercase tracking-wider">{item.taskName}</span>
-                      <span className="bg-rose-500 text-white font-extrabold text-[8px] px-1 uppercase shrink-0">CRITICAL</span>
+                      <span className="bg-rose-500 text-text-primary font-extrabold text-[8px] px-1 uppercase shrink-0">CRITICAL</span>
                     </div>
-                    <div className="flex justify-between text-[9px] text-white/40 uppercase">
+                    <div className="flex justify-between text-[9px] text-text-quaternary uppercase">
                       <span>Proj: {item.project}</span>
                       <span>Est: {item.hours}h</span>
                     </div>
@@ -1007,10 +1007,10 @@ export function ExecutiveDashboardPanel() {
             </div>
           </div>
 
-          <div className="border-t border-white/5 pt-3">
+          <div className="border-t border-border-subtle pt-3">
             <button
               onClick={() => { setSelectedProject(null); }}
-              className="w-full py-2 bg-white/5 hover:bg-white/10 text-white text-[9px] font-mono uppercase tracking-widest transition-all rounded-sm"
+              className="w-full py-2 bg-white/5 hover:bg-white/10 text-text-primary text-[9px] font-mono uppercase tracking-wide transition-all rounded-sm"
             >
               Verify Active Timelines
             </button>
@@ -1019,15 +1019,15 @@ export function ExecutiveDashboardPanel() {
       </div>
 
       {/* Roster Dispatch Map */}
-      <div className="bg-[#0c0c0c] border border-white/[0.08] rounded-sm p-6">
-        <div className="flex justify-between items-center pb-3 border-b border-white/5 mb-6">
+      <div className="bg-surface border border-border-subtle rounded-sm p-6">
+        <div className="flex justify-between items-center pb-3 border-b border-border-subtle mb-6">
           <div>
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Live Operator Dispatch Board</h4>
-            <p className="text-[9px] font-mono text-white/40 uppercase">REAL-TIME TELEMETRY &amp; LOAD INDEX</p>
+            <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Live Operator Dispatch Board</h4>
+            <p className="text-[9px] font-mono text-text-quaternary uppercase">REAL-TIME TELEMETRY &amp; LOAD INDEX</p>
           </div>
           <button
             onClick={() => setIsRosterOpen(true)}
-            className="text-[9px] font-mono text-indigo-400 hover:text-indigo-300 uppercase tracking-widest"
+            className="text-[9px] font-mono text-indigo-400 hover:text-indigo-300 uppercase tracking-wide"
           >
             Manage Teams
           </button>
@@ -1039,21 +1039,21 @@ export function ExecutiveDashboardPanel() {
               overload: 'border-rose-500/30 bg-rose-950/5 text-rose-400',
               active: 'border-emerald-500/30 bg-emerald-950/5 text-emerald-400',
               focus: 'border-cyan-500/30 bg-cyan-950/5 text-cyan-400',
-              standby: 'border-white/5 bg-white/[0.01] text-white/50'
+              standby: 'border-border-subtle bg-surface-3 text-text-tertiary'
             };
 
             return (
-              <div key={op.id} className="border border-white/10 bg-black/40 p-4 rounded-sm flex flex-col justify-between h-40 font-mono text-[10px]">
+              <div key={op.id} className="border border-border bg-bg p-4 rounded-sm flex flex-col justify-between h-40 font-mono text-[10px]">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="w-8 h-8 rounded-full border border-border bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
                     {op.avatar ? (
                       <img src={op.avatar} alt={op.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-[10px] font-bold text-white/50">{op.name.substring(0, 2).toUpperCase()}</span>
+                      <span className="text-[10px] font-bold text-text-tertiary">{op.name.substring(0, 2).toUpperCase()}</span>
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h5 className="font-bold text-white/90 truncate">{op.name}</h5>
+                    <h5 className="font-bold text-text-secondary truncate">{op.name}</h5>
                     <span className={`inline-block text-[7px] font-extrabold px-1 border rounded-sm uppercase tracking-wider ${statusColors[op.status]}`}>
                       {op.status}
                     </span>
@@ -1061,11 +1061,11 @@ export function ExecutiveDashboardPanel() {
                 </div>
 
                 <div className="my-3 space-y-1">
-                  <p className="text-white/40 text-[8px] uppercase">Active Routing</p>
-                  <p className="text-white/80 truncate font-semibold" title={op.activeTask}>{op.activeTask}</p>
+                  <p className="text-text-quaternary text-[8px] uppercase">Active Routing</p>
+                  <p className="text-text-secondary truncate font-semibold" title={op.activeTask}>{op.activeTask}</p>
                 </div>
 
-                <div className="flex justify-between items-center border-t border-white/5 pt-2 text-[9px] text-white/40">
+                <div className="flex justify-between items-center border-t border-border-subtle pt-2 text-[9px] text-text-quaternary">
                   <span>Queue: {op.queueCount} tasks</span>
                   <span className="font-bold text-cyan-400">{op.velocity}x velocity</span>
                 </div>
@@ -1129,25 +1129,25 @@ export function ProjectWorkspace({
             <div className="flex bg-white/5 p-1 border border-border shrink-0 rounded-lg">
               <button
                 onClick={() => setDashboardTab('dashboard')}
-                className={`px-3 py-1 text-[9px] font-mono uppercase tracking-widest transition-all rounded ${dashboardTab === 'dashboard' ? 'bg-white text-black font-bold shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`px-3 py-1 text-[9px] font-mono uppercase tracking-wide transition-all rounded ${dashboardTab === 'dashboard' ? 'bg-white text-black font-bold shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 Dashboard
               </button>
               <button
                 onClick={() => setDashboardTab('active')}
-                className={`px-3 py-1 text-[9px] font-mono uppercase tracking-widest transition-all rounded ${dashboardTab === 'active' ? 'bg-white text-black font-bold shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`px-3 py-1 text-[9px] font-mono uppercase tracking-wide transition-all rounded ${dashboardTab === 'active' ? 'bg-white text-black font-bold shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 Active
               </button>
               <button
                 onClick={() => setDashboardTab('completed')}
-                className={`px-3 py-1 text-[9px] font-mono uppercase tracking-widest transition-all rounded ${dashboardTab === 'completed' ? 'bg-white text-black font-bold shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`px-3 py-1 text-[9px] font-mono uppercase tracking-wide transition-all rounded ${dashboardTab === 'completed' ? 'bg-white text-black font-bold shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 Completed
               </button>
               <button
                 onClick={() => setDashboardTab('intelligence')}
-                className={`px-3 py-1 text-[9px] font-mono uppercase tracking-widest transition-all rounded ${dashboardTab === 'intelligence' ? 'bg-purple-600 border border-purple-500 text-white' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`px-3 py-1 text-[9px] font-mono uppercase tracking-wide transition-all rounded ${dashboardTab === 'intelligence' ? 'bg-purple-600 border border-border text-text-primary' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 Decision Center
               </button>
@@ -1173,7 +1173,7 @@ export function ProjectWorkspace({
                 placeholder="Query projects..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-[#0c0c0c] border border-border h-10 pl-10 pr-4 text-sm font-mono focus:border-white/30 outline-none transition-all placeholder:text-text-tertiary"
+                className="w-full bg-surface border border-border h-10 pl-10 pr-4 text-sm font-mono focus:border-white/30 outline-none transition-all placeholder:text-text-tertiary"
               />
             </div>
             {profile && profile.role !== 'viewer' && (
@@ -1225,12 +1225,12 @@ export function ProjectWorkspace({
               </AnimatePresence>
 
               {filteredProjects.length === 0 && (
-                <div className="col-span-full border-2 border-dashed border-white/5 py-24 flex flex-col items-center justify-center text-center opacity-50">
+                <div className="col-span-full border-2 border-dashed border-border-subtle py-24 flex flex-col items-center justify-center text-center opacity-50">
                   <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-6">
-                    <BrainCircuit className="w-8 h-8 text-white/75" />
+                    <BrainCircuit className="w-8 h-8 text-text-secondary" />
                   </div>
                   <h3 className="text-xl font-medium mb-2 uppercase tracking-tight">No Projects Found</h3>
-                  <p className="text-sm font-mono text-white/85">
+                  <p className="text-sm font-mono text-text-secondary">
                     {scrumProjects.length > 0
                       ? `${scrumProjects.length} active sprint project${scrumProjects.length !== 1 ? 's' : ''} available in sprint view.`
                       : 'Query yielded no matching engineering constructs.'}
@@ -1241,10 +1241,10 @@ export function ProjectWorkspace({
           </div>
 
           <div className="space-y-6">
-            <div className="border border-white/10 bg-[#0c0c0c] p-6">
+            <div className="border border-border bg-surface p-6">
               <div className="flex items-center gap-2 mb-6">
-                <Users className="w-4 h-4 text-white/85" />
-                <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/90">Team Allocation</h3>
+                <Users className="w-4 h-4 text-text-secondary" />
+                <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary">Team Allocation</h3>
               </div>
 
               <div className="space-y-4">
@@ -1269,12 +1269,12 @@ export function ProjectWorkspace({
                     </div>
                   );
                 })}
-                {activeTeams.length === 0 && <p className="text-[10px] font-mono text-white/75 italic">No operational units detected.</p>}
+                {activeTeams.length === 0 && <p className="text-[10px] font-mono text-text-secondary italic">No operational units detected.</p>}
               </div>
 
               <button
                 onClick={() => setIsRosterOpen(true)}
-                className="w-full mt-8 py-3 border border-white/5 bg-white/5 text-[9px] uppercase font-mono tracking-widest hover:bg-white/10 transition-colors"
+                className="w-full mt-8 py-3 border border-border-subtle bg-white/5 text-[9px] uppercase font-mono tracking-wide hover:bg-white/10 transition-colors"
               >
                 View Full Roster
               </button>

@@ -24,14 +24,14 @@ interface WorkspaceHealthProps {
 }
 
 function riskColor(score: number): string {
-  if (score > 60) return 'text-red-400';
-  if (score > 30) return 'text-amber-400';
+  if (score > 60) return 'text-signal-critical';
+  if (score > 30) return 'text-signal-warning';
   return 'text-emerald-400';
 }
 
 function healthColor(value: number): string {
-  if (value < 60) return 'text-red-400';
-  if (value < 85) return 'text-amber-400';
+  if (value < 60) return 'text-signal-critical';
+  if (value < 85) return 'text-signal-warning';
   return 'text-emerald-400';
 }
 
@@ -46,7 +46,7 @@ export function WorkspaceHealth({
           label="Risk Score"
           value={data?.riskScore ?? '--'}
           icon={AlertTriangle}
-          color={data ? riskColor(data.riskScore) : 'text-white'}
+          color={data ? riskColor(data.riskScore) : 'text-text-primary'}
           loading={tileLoading?.risk}
           onClick={onViewRisks}
         />
@@ -54,7 +54,7 @@ export function WorkspaceHealth({
           label="Overdue Tasks"
           value={data?.overdueTasks ?? '--'}
           icon={Clock}
-          color={data?.overdueTasks && data.overdueTasks > 0 ? 'text-amber-400' : 'text-white'}
+          color={data?.overdueTasks && data.overdueTasks > 0 ? 'text-signal-warning' : 'text-text-primary'}
           loading={tileLoading?.overdue}
           onClick={onViewOverdue}
         />
@@ -70,7 +70,7 @@ export function WorkspaceHealth({
           label="Active Automations"
           value={data?.activeAutomations ?? '--'}
           icon={Bot}
-          color="text-white"
+          color="text-text-primary"
           loading={tileLoading?.automations}
           onClick={onViewAutomations}
         />
@@ -78,7 +78,7 @@ export function WorkspaceHealth({
           label="Integration Health"
           value={data?.integrationHealth != null ? `${data.integrationHealth}%` : '--'}
           icon={Wifi}
-          color={data?.integrationHealth != null ? healthColor(data.integrationHealth) : 'text-white'}
+          color={data?.integrationHealth != null ? healthColor(data.integrationHealth) : 'text-text-primary'}
           loading={tileLoading?.integrations}
           onClick={onViewIntegrations}
         />

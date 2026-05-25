@@ -44,7 +44,7 @@ export default function ExecutionSetupPage() {
     return (
       <main className="max-w-[1200px] mx-auto px-3 sm:px-6 py-12">
         <div className="text-center py-24">
-          <p className="text-xs font-mono uppercase tracking-widest text-white/40">Project not found</p>
+          <p className="text-xs font-mono uppercase tracking-wide text-text-quaternary">Project not found</p>
         </div>
       </main>
     );
@@ -97,52 +97,52 @@ export default function ExecutionSetupPage() {
       <div className="max-w-2xl mx-auto">
         {phase === 'welcome' && (
           <div className="space-y-8">
-            <div className="flex items-center gap-4 pb-6 border-b border-white/10">
+            <div className="flex items-center gap-4 pb-6 border-b border-border">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20">
                 <CheckCircle className="h-7 w-7 text-emerald-400" />
               </div>
               <div>
-                <h1 className="text-lg font-mono uppercase tracking-widest text-white">Project Created Successfully</h1>
-                <p className="text-xs text-white/40 mt-1">Let's prepare your execution workspace.</p>
+                <h1 className="text-lg font-sans tracking-tight uppercase tracking-wide text-text-primary">Project Created Successfully</h1>
+                <p className="text-xs text-text-quaternary mt-1">Let's prepare your execution workspace.</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 border border-white/10 rounded-lg bg-white/[0.02]">
+              <div className="p-4 border border-border rounded-lg bg-surface-3">
                 <div className="flex items-center gap-2 mb-3">
-                  <Layers className="w-4 h-4 text-white/40" />
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Project</span>
+                  <Layers className="w-4 h-4 text-text-quaternary" />
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Project</span>
                 </div>
-                <p className="text-sm text-white/80 font-medium">{project.name}</p>
+                <p className="text-sm text-text-secondary font-medium">{project.name}</p>
               </div>
-              <div className="p-4 border border-white/10 rounded-lg bg-white/[0.02]">
+              <div className="p-4 border border-border rounded-lg bg-surface-3">
                 <div className="flex items-center gap-2 mb-3">
-                  <Clock className="w-4 h-4 text-white/40" />
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Mode</span>
+                  <Clock className="w-4 h-4 text-text-quaternary" />
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Mode</span>
                 </div>
-                <p className="text-sm text-white/80 font-medium">{modeLabel}</p>
+                <p className="text-sm text-text-secondary font-medium">{modeLabel}</p>
               </div>
-              <div className="p-4 border border-white/10 rounded-lg bg-white/[0.02]">
+              <div className="p-4 border border-border rounded-lg bg-surface-3">
                 <div className="flex items-center gap-2 mb-3">
-                  <Users className="w-4 h-4 text-white/40" />
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Team</span>
+                  <Users className="w-4 h-4 text-text-quaternary" />
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Team</span>
                 </div>
-                <p className="text-sm text-white/80 font-medium">{project.team_id ? 'Assigned' : 'Not assigned'}</p>
+                <p className="text-sm text-text-secondary font-medium">{project.team_id ? 'Assigned' : 'Not assigned'}</p>
               </div>
-              <div className="p-4 border border-white/10 rounded-lg bg-white/[0.02]">
+              <div className="p-4 border border-border rounded-lg bg-surface-3">
                 <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="w-4 h-4 text-white/40" />
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Deadline</span>
+                  <Calendar className="w-4 h-4 text-text-quaternary" />
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Deadline</span>
                 </div>
-                <p className="text-sm text-white/80 font-medium">
+                <p className="text-sm text-text-secondary font-medium">
                   {project.deadline ? new Date(project.deadline).toLocaleDateString() : 'Not set'}
                 </p>
               </div>
             </div>
 
             {isWaterfall && (
-              <div className="p-4 border border-white/10 rounded-lg bg-amber-500/5 border-amber-500/20">
-                <p className="text-[11px] text-amber-400/80 font-mono">
+              <div className="p-4 border border-border rounded-lg bg-signal-warning-bg border-border">
+                <p className="text-[11px] text-signal-warning/80 font-mono">
                   Waterfall projects use timeline-based phase tracking. Redirecting to timeline setup...
                 </p>
               </div>
@@ -151,13 +151,13 @@ export default function ExecutionSetupPage() {
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={handleContinue}
-                className="px-6 py-2.5 bg-blue-600 text-white text-[10px] font-mono uppercase tracking-wider hover:bg-blue-500 transition-all rounded-sm shadow-[0_0_12px_rgba(59,130,246,0.3)] flex items-center gap-2"
+                className="px-6 py-2.5 bg-blue-600 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-blue-500 transition-all rounded-sm shadow-sm flex items-center gap-2"
               >
                 Continue Setup <ArrowRight className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={handleSkip}
-                className="flex items-center gap-1.5 px-4 py-2.5 text-white/40 text-[10px] font-mono uppercase tracking-wider hover:text-white/60 transition-all"
+                className="flex items-center gap-1.5 px-4 py-2.5 text-text-quaternary text-[10px] font-medium uppercase tracking-wider hover:text-text-tertiary transition-all"
               >
                 <SkipForward className="w-3.5 h-3.5" /> Skip For Now
               </button>
@@ -167,12 +167,12 @@ export default function ExecutionSetupPage() {
 
         {phase === 'bootstrap' && (
           <div className="space-y-6">
-            <div className="flex items-center gap-2 pb-4 border-b border-white/10">
-              <button onClick={() => setPhase('welcome')} className="text-[10px] font-mono text-white/30 hover:text-white/60 transition-colors uppercase tracking-wider">
+            <div className="flex items-center gap-2 pb-4 border-b border-border">
+              <button onClick={() => setPhase('welcome')} className="text-[10px] font-mono text-text-quaternary hover:text-text-tertiary transition-colors uppercase tracking-wider">
                 Back
               </button>
-              <span className="text-white/10">/</span>
-              <span className="text-[10px] font-mono text-white/60 uppercase tracking-wider">Setup</span>
+              <span className="text-text-quaternary">/</span>
+              <span className="text-[10px] font-mono text-text-tertiary uppercase tracking-wider">Setup</span>
             </div>
 
             {isScrumOrHybrid && (
@@ -195,7 +195,7 @@ export default function ExecutionSetupPage() {
 
             {isWaterfall && (
               <div className="text-center py-12">
-                <p className="text-xs font-mono text-white/40">Redirecting to timeline setup...</p>
+                <p className="text-xs font-mono text-text-quaternary">Redirecting to timeline setup...</p>
               </div>
             )}
           </div>

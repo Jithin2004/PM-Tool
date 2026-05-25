@@ -32,7 +32,7 @@ export function PresenceAvatar({ name, online, typing, idle, editing, size = 'sm
       whileHover={{ scale: 1.05 }}
       transition={{ duration: 0.12 }}
     >
-      <div className={`${sizeMap[size]} rounded-full bg-white/5 flex items-center justify-center font-mono text-white/70`}>
+      <div className={`${sizeMap[size]} rounded-full bg-white/5 flex items-center justify-center font-mono text-text-secondary`}>
         {initials}
       </div>
       {(online || typing) && (
@@ -43,7 +43,7 @@ export function PresenceAvatar({ name, online, typing, idle, editing, size = 'sm
       )}
       {(editing || idle) && (
         <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-          <span className="text-[9px] font-mono text-white/40">
+          <span className="text-[9px] font-mono text-text-quaternary">
             {editing ? `Editing...` : idle ? 'Idle' : ''}
           </span>
         </div>

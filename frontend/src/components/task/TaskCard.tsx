@@ -44,7 +44,7 @@ export function TaskCard({
 
   const riskColors: Record<string, string> = {
     high: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
-    medium: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    medium: 'text-signal-warning bg-signal-warning-bg border-border',
     low: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
   };
 
@@ -52,14 +52,14 @@ export function TaskCard({
     <motion.div
       layoutId={`task-card-${task.id}`}
       onClick={() => onClick(task)}
-      className="bg-[#0b0c10] border border-white/10 hover:border-white/20 transition-all rounded-sm p-3.5 relative overflow-hidden cursor-pointer group"
+      className="bg-[#0b0c10] border border-border hover:border-border transition-all rounded-sm p-3.5 relative overflow-hidden cursor-pointer group"
     >
       {/* Dynamic warning indicator ring glows */}
       <div className={`absolute top-0 bottom-0 left-0 w-1 ${countdown.pulse}`} />
 
       {/* Title & Info */}
       <div className="flex justify-between items-start gap-2 mb-2">
-        <h4 className="text-[11px] font-semibold text-white tracking-wide group-hover:text-blue-400 transition-colors uppercase">
+        <h4 className="text-[11px] font-semibold text-text-primary tracking-wide group-hover:text-signal-info transition-colors uppercase">
           {task.name}
         </h4>
         {task.estimated_hours > 0 && (
@@ -69,7 +69,7 @@ export function TaskCard({
         )}
       </div>
 
-      <p className="text-[9px] text-white/50 leading-relaxed mb-2 line-clamp-2">
+      <p className="text-[9px] text-text-tertiary leading-relaxed mb-2 line-clamp-2">
         {task.description}
       </p>
 
@@ -82,7 +82,7 @@ export function TaskCard({
           </span>
         )}
         {task.confidence !== undefined && task.confidence !== null && (
-          <span className="text-[8px] font-mono text-white/50 bg-white/5 px-1.5 py-0.5 rounded-sm">
+          <span className="text-[8px] font-mono text-text-tertiary bg-white/5 px-1.5 py-0.5 rounded-sm">
             {(task.confidence * 100).toFixed(0)}% conf
           </span>
         )}
@@ -92,27 +92,27 @@ export function TaskCard({
           </span>
         )}
         {task.story_points && (
-          <span className="text-[8px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-sm">
+          <span className="text-[8px] font-mono text-accent-secondary bg-surface-3 px-1.5 py-0.5 rounded-sm">
             {task.story_points} SP
           </span>
         )}
       </div>
 
       {/* Assignee section */}
-      <div className="flex items-center gap-1.5 text-[8px] font-mono text-white/50 mb-2">
+      <div className="flex items-center gap-1.5 text-[8px] font-mono text-text-tertiary mb-2">
         <Users className="w-2.5 h-2.5 shrink-0" />
         {assigneeLoading ? (
-          <span className="text-cyan-400/60 animate-pulse">Loading telemetry...</span>
+          <span className="text-cyan-400/60 transition-opacity duration-300">Loading telemetry...</span>
         ) : assigneeProfile ? (
           <span className="flex items-center gap-1.5">
             {assigneeProfile.avatar_url ? (
               <img src={assigneeProfile.avatar_url} className="w-3.5 h-3.5 rounded-full" alt="" />
             ) : (
-              <User className="w-3 h-3 text-white/40" />
+              <User className="w-3 h-3 text-text-quaternary" />
             )}
-            <span className="text-white/70">{assigneeProfile.full_name || assigneeProfile.email}</span>
+            <span className="text-text-secondary">{assigneeProfile.full_name || assigneeProfile.email}</span>
             {assigneeProfile.role && (
-              <span className="text-white/30 uppercase">({assigneeProfile.role.replace('_', ' ')})</span>
+              <span className="text-text-quaternary uppercase">({assigneeProfile.role.replace('_', ' ')})</span>
             )}
             {assigneeProfile.availability_factor !== undefined && (
               <span className="text-cyan-400/60">
@@ -121,9 +121,9 @@ export function TaskCard({
             )}
           </span>
         ) : task.assignee_id ? (
-          <span className="text-white/30">Loading telemetry...</span>
+          <span className="text-text-quaternary">Loading telemetry...</span>
         ) : (
-          <span className="text-white/30">No task estimates available</span>
+          <span className="text-text-quaternary">No task estimates available</span>
         )}
       </div>
 
@@ -137,27 +137,27 @@ export function TaskCard({
         </div>
       )}
       {dependencyConfidence !== undefined && (
-        <div className="mb-2 px-2 py-1 bg-white/[0.02] border border-white/5 rounded-sm">
-          <span className="text-[7px] font-mono uppercase text-white/40">
+        <div className="mb-2 px-2 py-1 bg-surface-3 border border-border-subtle rounded-sm">
+          <span className="text-[7px] font-mono uppercase text-text-quaternary">
             Dep confidence: {Math.round(dependencyConfidence * 100)}%
           </span>
         </div>
       )}
 
       {/* Dynamic ETA Countdown Banner */}
-      <div className="bg-white/[0.02] border border-white/5 px-2 py-1 rounded-sm flex justify-between items-center text-[8px] font-mono uppercase tracking-wider">
-        <span className="text-white/40">Time-to-Impact:</span>
+      <div className="bg-surface-3 border border-border-subtle px-2 py-1 rounded-sm flex justify-between items-center text-[8px] font-mono uppercase tracking-wider">
+        <span className="text-text-quaternary">Time-to-Impact:</span>
         <span className={countdown.color}>{countdown.text}</span>
       </div>
       {nextSlot && (
-        <div className="px-2 py-1 text-[7px] font-mono text-cyan-400/60 uppercase tracking-widest">
+        <div className="px-2 py-1 text-[7px] font-mono text-cyan-400/60 uppercase tracking-wide">
           {nextSlot}
         </div>
       )}
 
       {/* Footer details */}
-      <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">
-        <div className="flex items-center gap-1.5 text-[8px] font-mono text-white/50">
+      <div className="flex justify-between items-center mt-3 pt-2 border-t border-border-subtle">
+        <div className="flex items-center gap-1.5 text-[8px] font-mono text-text-tertiary">
           <Shield className="w-2.5 h-2.5" />
           <span>{project?.name || 'Project'}</span>
         </div>
@@ -173,7 +173,7 @@ export function TaskCard({
                   onTransitionTask(task.id, c.id as Task['status']);
                 }}
                 title={`Move to ${c.title}`}
-                className="w-4 h-4 bg-white/5 hover:bg-white/20 border border-white/10 hover:border-white/30 text-white rounded-sm flex items-center justify-center transition-all cursor-pointer"
+                className="w-4 h-4 bg-white/5 hover:bg-white/20 border border-border hover:border-white/30 text-text-primary rounded-sm flex items-center justify-center transition-all cursor-pointer"
               >
                 <ArrowRight className="w-2 h-2" />
               </button>

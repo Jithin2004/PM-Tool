@@ -73,30 +73,30 @@ export default function AutomationsPanel() {
   if (loading) return (
     <div className="p-6">
       <div className="flex items-center gap-3 mb-6">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">CONTROL</span>
-        <span className="text-white/20">/</span>
-        <span className="text-xs font-mono text-white/80">Automations</span>
+        <span className="text-[10px] font-mono uppercase tracking-wide text-text-quaternary">CONTROL</span>
+        <span className="text-text-quaternary">/</span>
+        <span className="text-xs font-mono text-text-secondary">Automations</span>
       </div>
-      <div className="text-[11px] font-mono text-white/30">Loading automations...</div>
+      <div className="text-[11px] font-mono text-text-quaternary">Loading automations...</div>
     </div>
   );
 
   return (
     <div className="p-6 max-w-5xl">
       <div className="flex items-center gap-3 mb-6">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">CONTROL</span>
-        <span className="text-white/20">/</span>
-        <span className="text-xs font-mono text-white/80">Automations</span>
+        <span className="text-[10px] font-mono uppercase tracking-wide text-text-quaternary">CONTROL</span>
+        <span className="text-text-quaternary">/</span>
+        <span className="text-xs font-mono text-text-secondary">Automations</span>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-white/10 pb-3 mb-6">
+      <div className="flex gap-4 border-b border-border pb-3 mb-6">
         <button onClick={() => setTab('marketplace')}
-          className={`text-[10px] font-mono uppercase tracking-wider ${tab === 'marketplace' ? 'text-white border-b-2 border-white/40 pb-3' : 'text-white/40 hover:text-white/60'}`}>
+          className={`text-[10px] font-mono uppercase tracking-wider ${tab === 'marketplace' ? 'text-text-primary border-b-2 border-white/40 pb-3' : 'text-text-quaternary hover:text-text-tertiary'}`}>
           Marketplace ({templates.length})
         </button>
         <button onClick={() => setTab('rules')}
-          className={`text-[10px] font-mono uppercase tracking-wider ${tab === 'rules' ? 'text-white border-b-2 border-white/40 pb-3' : 'text-white/40 hover:text-white/60'}`}>
+          className={`text-[10px] font-mono uppercase tracking-wider ${tab === 'rules' ? 'text-text-primary border-b-2 border-white/40 pb-3' : 'text-text-quaternary hover:text-text-tertiary'}`}>
           My Rules ({rules.length})
         </button>
       </div>
@@ -109,23 +109,23 @@ export default function AutomationsPanel() {
               const msgKey = `install_${tmpl.id}`;
               const installed = rules.find(r => r.name === tmpl.name);
               return (
-                <div key={tmpl.id} className="border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-colors">
+                <div key={tmpl.id} className="border border-border bg-surface-3 p-4 hover:border-border transition-colors">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[9px] font-mono uppercase text-white/30 bg-white/5 px-1.5 py-0.5">{tmpl.category}</span>
+                    <span className="text-[9px] font-mono uppercase text-text-quaternary bg-white/5 px-1.5 py-0.5">{tmpl.category}</span>
                   </div>
-                  <div className="text-xs font-mono text-white/80 mb-1">{tmpl.name}</div>
-                  {tmpl.description && <div className="text-[9px] font-mono text-white/40 mb-3">{tmpl.description}</div>}
-                  <div className="text-[8px] font-mono text-white/20 mb-3">Trigger: {tmpl.trigger_event}</div>
+                  <div className="text-xs font-mono text-text-secondary mb-1">{tmpl.name}</div>
+                  {tmpl.description && <div className="text-[9px] font-mono text-text-quaternary mb-3">{tmpl.description}</div>}
+                  <div className="text-[8px] font-mono text-text-quaternary mb-3">Trigger: {tmpl.trigger_event}</div>
                   <div className="flex items-center gap-2">
                     {installed ? (
                       <span className="text-[9px] font-mono text-emerald-400">Installed</span>
                     ) : (
                       <button onClick={() => handleInstall(tmpl)}
-                        className="px-3 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 text-[9px] font-mono uppercase tracking-wider hover:bg-blue-600/30">
+                        className="px-3 py-1.5 bg-surface-3 border border-border text-signal-info text-[9px] font-mono uppercase tracking-wider hover:bg-surface-3">
                         Install
                       </button>
                     )}
-                    {messages[msgKey] && <span className="text-[9px] font-mono text-white/40">{messages[msgKey]}</span>}
+                    {messages[msgKey] && <span className="text-[9px] font-mono text-text-quaternary">{messages[msgKey]}</span>}
                   </div>
                 </div>
               );
@@ -139,18 +139,18 @@ export default function AutomationsPanel() {
         <div>
           <div className="flex justify-end mb-4">
             <button onClick={() => setShowCreate(!showCreate)}
-              className="px-3 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 text-[9px] font-mono uppercase tracking-wider hover:bg-blue-600/30">
+              className="px-3 py-1.5 bg-surface-3 border border-border text-signal-info text-[9px] font-mono uppercase tracking-wider hover:bg-surface-3">
               {showCreate ? 'Cancel' : 'New Rule'}
             </button>
           </div>
 
           {showCreate && (
-            <div className="border border-white/10 bg-white/[0.02] p-4 mb-4">
+            <div className="border border-border bg-surface-3 p-4 mb-4">
               <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
-                placeholder="Rule name" className="w-full bg-black border border-white/10 p-2 text-[11px] font-mono text-white placeholder-white/20 mb-2" />
+                placeholder="Rule name" className="w-full bg-bg border border-border p-2 text-[11px] font-mono text-text-primary placeholder-white/20 mb-2" />
               <div className="flex gap-2 mb-2">
                 <select value={newEvent} onChange={e => setNewEvent(e.target.value)}
-                  className="flex-1 bg-black border border-white/10 p-2 text-[11px] font-mono text-white">
+                  className="flex-1 bg-bg border border-border p-2 text-[11px] font-mono text-text-primary">
                   <option value="task.created">Task created</option>
                   <option value="task.status_changed">Task status changed</option>
                   <option value="task.completed">Task completed</option>
@@ -161,7 +161,7 @@ export default function AutomationsPanel() {
                   <option value="approval.completed">Approval completed</option>
                 </select>
                 <select value={newActionType} onChange={e => setNewActionType(e.target.value)}
-                  className="w-36 bg-black border border-white/10 p-2 text-[11px] font-mono text-white">
+                  className="w-36 bg-bg border border-border p-2 text-[11px] font-mono text-text-primary">
                   <option value="send_notification">Notify</option>
                   <option value="move_task">Move task</option>
                   <option value="assign_task">Assign task</option>
@@ -171,27 +171,27 @@ export default function AutomationsPanel() {
                 </select>
               </div>
               <button onClick={handleCreateRule}
-                className="px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-mono">Create</button>
+                className="px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-medium">Create</button>
             </div>
           )}
 
           {rules.length === 0 ? (
-            <div className="border border-white/10 bg-white/[0.02] p-12 text-center">
-              <span className="text-[10px] font-mono text-white/30">No automation rules yet</span>
-              <span className="text-[8px] font-mono text-white/20 mt-1 block">Install from marketplace or create one</span>
+            <div className="border border-border bg-surface-3 p-12 text-center">
+              <span className="text-[10px] font-mono text-text-quaternary">No automation rules yet</span>
+              <span className="text-[8px] font-mono text-text-quaternary mt-1 block">Install from marketplace or create one</span>
             </div>
           ) : (
             <div className="space-y-1">
               {rules.map(rule => (
-                <div key={rule.id} className="border border-white/10 bg-white/[0.02] px-4 py-3 flex items-center justify-between">
+                <div key={rule.id} className="border border-border bg-surface-3 px-4 py-3 flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-white/70">{rule.name}</span>
-                      <span className={`text-[9px] font-mono ${rule.enabled ? 'text-emerald-400' : 'text-white/30'}`}>
+                      <span className="text-xs font-mono text-text-secondary">{rule.name}</span>
+                      <span className={`text-[9px] font-mono ${rule.enabled ? 'text-emerald-400' : 'text-text-quaternary'}`}>
                         {rule.enabled ? 'Active' : 'Disabled'}
                       </span>
                     </div>
-                    <div className="text-[8px] font-mono text-white/30 mt-0.5">
+                    <div className="text-[8px] font-mono text-text-quaternary mt-0.5">
                       {rule.trigger_event}
                       {rule.execution_count ? ` · ${rule.execution_count} runs` : ''}
                       {rule.last_executed_at ? ` · last ${timeAgo(rule.last_executed_at)}` : ''}
@@ -199,11 +199,11 @@ export default function AutomationsPanel() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0 ml-3">
                     <button onClick={() => handleToggle(rule.id, rule.enabled)}
-                      className={`text-[9px] font-mono px-2 py-1 border ${rule.enabled ? 'border-amber-500/30 text-amber-400' : 'border-emerald-500/30 text-emerald-400'} hover:border-white/30`}>
+                      className={`text-[9px] font-mono px-2 py-1 border ${rule.enabled ? 'border-border text-signal-warning' : 'border-emerald-500/30 text-emerald-400'} hover:border-white/30`}>
                       {rule.enabled ? 'Disable' : 'Enable'}
                     </button>
                     <button onClick={() => handleDelete(rule.id)}
-                      className="text-[9px] font-mono px-2 py-1 border border-red-500/20 text-red-400/60 hover:border-red-500/40">Delete</button>
+                      className="text-[9px] font-mono px-2 py-1 border border-red-500/20 text-signal-critical/60 hover:border-red-500/40">Delete</button>
                   </div>
                 </div>
               ))}

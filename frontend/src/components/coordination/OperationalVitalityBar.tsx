@@ -12,9 +12,9 @@ const LEVEL_COLORS: Record<string, string> = {
 };
 
 const LEVEL_BG: Record<string, string> = {
-  strong: 'bg-green-50 border-green-200',
+  strong: 'bg-green-50 border-border',
   healthy: 'bg-emerald-50 border-emerald-200',
-  moderate: 'bg-amber-50 border-amber-200',
+  moderate: 'bg-amber-50 border-border',
   low: 'bg-red-50 border-red-200',
 };
 

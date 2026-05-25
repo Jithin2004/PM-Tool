@@ -33,21 +33,21 @@ export function ProjectCreatePage() {
   return (
     <ResolveLayout eyebrow="Create Project">
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-        <section className="border border-white/10 bg-white/[0.03] p-6">
+        <section className="border border-border bg-surface-3 p-6">
           <h2 className="text-2xl font-semibold">Create a project with a delivery prediction</h2>
           <div className="mt-6 grid gap-4">
             <label className="text-sm font-medium">
               Project Name
-              <input value={draft.name} onChange={event => setDraft(prev => ({ ...prev, name: event.target.value }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
+              <input value={draft.name} onChange={event => setDraft(prev => ({ ...prev, name: event.target.value }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
             </label>
             <label className="text-sm font-medium">
               Description
-              <textarea value={draft.description} onChange={event => setDraft(prev => ({ ...prev, description: event.target.value }))} rows={4} className="mt-2 w-full border border-white/10 bg-black p-4 text-white" />
+              <textarea value={draft.description} onChange={event => setDraft(prev => ({ ...prev, description: event.target.value }))} rows={4} className="mt-2 w-full border border-border bg-bg p-4 text-text-primary" />
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium">
                 Priority
-                <select value={draft.priority} onChange={event => setDraft(prev => ({ ...prev, priority: event.target.value as Priority }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white">
+                <select value={draft.priority} onChange={event => setDraft(prev => ({ ...prev, priority: event.target.value as Priority }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary">
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
@@ -56,33 +56,33 @@ export function ProjectCreatePage() {
               </label>
               <label className="text-sm font-medium">
                 Deadline
-                <input type="date" value={draft.deadline} onChange={event => setDraft(prev => ({ ...prev, deadline: event.target.value }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
+                <input type="date" value={draft.deadline} onChange={event => setDraft(prev => ({ ...prev, deadline: event.target.value }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
               </label>
             </div>
             <label className="text-sm font-medium">
               Template
-              <select value={draft.template} onChange={event => setDraft(prev => ({ ...prev, template: event.target.value as ProjectTemplate }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white">
+              <select value={draft.template} onChange={event => setDraft(prev => ({ ...prev, template: event.target.value as ProjectTemplate }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary">
                 {PROJECT_TEMPLATES.map(template => <option key={template}>{template}</option>)}
               </select>
             </label>
             <label className="text-sm font-medium">
               Execution Mode
-              <select value={executionMode} onChange={event => setExecutionMode(event.target.value)} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white">
+              <select value={executionMode} onChange={event => setExecutionMode(event.target.value)} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary">
                 {EXECUTION_MODES.map(mode => <option key={mode} value={mode}>{mode}</option>)}
               </select>
             </label>
           </div>
         </section>
 
-        <aside className="border border-white/10 bg-white/[0.03] p-6">
-          <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Prediction Preview</p>
+        <aside className="border border-border bg-surface-3 p-6">
+          <p className="text-xs font-mono uppercase tracking-[0.2em] text-text-tertiary">Prediction Preview</p>
           <h3 className="mt-3 text-lg font-semibold">Resolve estimate</h3>
           <dl className="mt-6 space-y-4 text-sm">
-            <div className="flex justify-between"><dt className="text-white/60">Estimated effort</dt><dd>{prediction.adjustedEffortHours}h</dd></div>
-            <div className="flex justify-between"><dt className="text-white/60">Predicted completion</dt><dd>{prediction.predictedCompletion.toLocaleDateString()}</dd></div>
-            <div className="flex justify-between"><dt className="text-white/60">Confidence</dt><dd>{prediction.confidence}%</dd></div>
-            <div className="flex justify-between"><dt className="text-white/60">Risk</dt><dd className="capitalize">{prediction.risk}</dd></div>
-            <div className="flex justify-between"><dt className="text-white/60">Delivery drift</dt><dd>{prediction.delayDriftDays > 0 ? `+${prediction.delayDriftDays}d` : `${prediction.delayDriftDays}d`}</dd></div>
+            <div className="flex justify-between"><dt className="text-text-tertiary">Estimated effort</dt><dd>{prediction.adjustedEffortHours}h</dd></div>
+            <div className="flex justify-between"><dt className="text-text-tertiary">Predicted completion</dt><dd>{prediction.predictedCompletion.toLocaleDateString()}</dd></div>
+            <div className="flex justify-between"><dt className="text-text-tertiary">Confidence</dt><dd>{prediction.confidence}%</dd></div>
+            <div className="flex justify-between"><dt className="text-text-tertiary">Risk</dt><dd className="capitalize">{prediction.risk}</dd></div>
+            <div className="flex justify-between"><dt className="text-text-tertiary">Delivery drift</dt><dd>{prediction.delayDriftDays > 0 ? `+${prediction.delayDriftDays}d` : `${prediction.delayDriftDays}d`}</dd></div>
           </dl>
         </aside>
       </div>

@@ -117,17 +117,17 @@ export function CalendarIntelligencePanel() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-medium tracking-tight mb-1">Organization Calendar Intelligence</h2>
-          <p className="text-sm text-white/85 font-mono tracking-tighter">
+          <p className="text-sm text-text-secondary font-mono tracking-tighter">
             {isSuperAdmin ? 'Manage holidays, company events, and calendar sync.' : 'View-only calendar.'}
           </p>
         </div>
         <div className="flex items-center gap-3">
           {isSuperAdmin && (
-            <button onClick={() => setShowCreateForm(true)} className="border border-white/10 bg-white/5 px-4 py-2 text-xs font-mono uppercase tracking-wider hover:bg-white/10 transition-colors flex items-center gap-2">
+            <button onClick={() => setShowCreateForm(true)} className="border border-border bg-white/5 px-4 py-2 text-xs font-mono uppercase tracking-wider hover:bg-white/10 transition-colors flex items-center gap-2">
               <Plus className="w-3.5 h-3.5" /> Add Event
             </button>
           )}
-          <div className="flex items-center gap-1 border border-white/10">
+          <div className="flex items-center gap-1 border border-border">
             <button onClick={() => setYear(y => y - 1)} className="p-2 hover:bg-white/5"><ChevronLeft className="w-4 h-4" /></button>
             <span className="px-3 text-sm font-mono">{year}</span>
             <button onClick={() => setYear(y => y + 1)} className="p-2 hover:bg-white/5"><ChevronRight className="w-4 h-4" /></button>
@@ -135,40 +135,40 @@ export function CalendarIntelligencePanel() {
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-white/10 mb-6">
-        <button onClick={() => setTab('calendar')} className={`px-4 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${tab === 'calendar' ? 'border-b-2 border-white text-white' : 'text-white/50 hover:text-white/80'}`}>Calendar View</button>
-        <button onClick={() => setTab('history')} className={`px-4 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${tab === 'history' ? 'border-b-2 border-white text-white' : 'text-white/50 hover:text-white/80'}`}>Sync History</button>
+      <div className="flex gap-1 border-b border-border mb-6">
+        <button onClick={() => setTab('calendar')} className={`px-4 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${tab === 'calendar' ? 'border-b-2 border-white text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}>Calendar View</button>
+        <button onClick={() => setTab('history')} className={`px-4 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${tab === 'history' ? 'border-b-2 border-white text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}>Sync History</button>
       </div>
 
       {tab === 'calendar' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {calendarGrid.map((monthDays, mi) => (
-              <div key={mi} className="border border-white/10 bg-[#0c0c0c] p-3">
-                <h4 className="text-xs font-mono uppercase tracking-wider text-white/60 mb-2">{MONTHS[mi]} {year}</h4>
+              <div key={mi} className="border border-border bg-surface p-3">
+                <h4 className="text-xs font-sans tracking-tight uppercase tracking-wider text-text-tertiary mb-2">{MONTHS[mi]} {year}</h4>
                 <div className="grid grid-cols-7 gap-0.5">
-                  {DAY_HEADERS.map(d => <div key={d} className="text-[8px] font-mono text-white/30 text-center py-1">{d}</div>)}
+                  {DAY_HEADERS.map(d => <div key={d} className="text-[8px] font-mono text-text-quaternary text-center py-1">{d}</div>)}
                   {monthDays.map((cell, ci) => (
                     <div key={ci} className="aspect-square min-h-[28px] text-[9px] font-mono relative group">
                       {cell && (
-                        <div className={`w-full h-full flex items-center justify-center ${cell.events.length > 0 ? 'bg-white/10 text-white font-medium' : 'text-white/50 hover:bg-white/5'} rounded-sm`}>
+                        <div className={`w-full h-full flex items-center justify-center ${cell.events.length > 0 ? 'bg-white/10 text-text-primary font-medium' : 'text-text-tertiary hover:bg-white/5'} rounded-sm`}>
                           {cell.day}
                           {cell.events.length > 0 && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400" />}
                         </div>
                       )}
                       {cell && cell.events.length > 0 && (
-                        <div className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block w-48 bg-[#1a1a1a] border border-white/10 p-2 shadow-xl">
+                        <div className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block w-48 bg-[#1a1a1a] border border-border p-2 shadow-xl">
                           {cell.events.map((ev: any) => {
                             const isDeleted = !!ev.deleted_at;
                             return (
                               <div key={ev.id} className={`flex items-center gap-2 py-1 text-[10px] ${isDeleted ? 'opacity-40' : ''}`}>
-                                {ev.auto_generated ? <Globe className="w-3 h-3 shrink-0 text-cyan-400" /> : <Building2 className="w-3 h-3 shrink-0 text-amber-400" />}
+                                {ev.auto_generated ? <Globe className="w-3 h-3 shrink-0 text-cyan-400" /> : <Building2 className="w-3 h-3 shrink-0 text-signal-warning" />}
                                 <span className="truncate flex-1">{ev.title}</span>
                                 {isSuperAdmin && (
                                   <button
                                     onClick={() => handleToggle(ev.id, ev.deleted_at)}
                                     disabled={togglingIds.has(ev.id)}
-                                    className={`text-[8px] font-mono uppercase px-1 py-0.5 border transition-colors ${isDeleted ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' : 'border-white/10 text-white/50 hover:border-red-500/30 hover:text-red-400'}`}
+                                    className={`text-[8px] font-mono uppercase px-1 py-0.5 border transition-colors ${isDeleted ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' : 'border-border text-text-tertiary hover:border-red-500/30 hover:text-signal-critical'}`}
                                   >
                                     {togglingIds.has(ev.id) ? '...' : isDeleted ? 'Enable' : 'Disable'}
                                   </button>
@@ -185,60 +185,60 @@ export function CalendarIntelligencePanel() {
             ))}
           </div>
 
-          <div className="border border-white/10 bg-[#0c0c0c] p-6">
+          <div className="border border-border bg-surface p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-mono uppercase tracking-widest">Sync</h3>
-              <button onClick={handleSyncNow} disabled={syncing || !workspace?.settings?.country} className="bg-white text-black h-8 px-4 text-[10px] font-semibold hover:bg-neutral-200 transition-colors uppercase tracking-widest disabled:opacity-50 flex items-center gap-2">
+              <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide">Sync</h3>
+              <button onClick={handleSyncNow} disabled={syncing || !workspace?.settings?.country} className="bg-white text-black h-8 px-4 text-[10px] font-semibold hover:bg-neutral-200 transition-colors uppercase tracking-wide disabled:opacity-50 flex items-center gap-2">
                 <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? 'Syncing...' : 'Sync Now'}
               </button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-              <div><span className="text-white/50">Country</span><p className="font-medium">{workspace?.settings?.country || 'Not set'}</p></div>
-              <div><span className="text-white/50">State/Region</span><p className="font-medium">{workspace?.settings?.region || 'None'}</p></div>
-              <div><span className="text-white/50">Imported</span><p className="font-medium">{events.filter(e => e.auto_generated && !e.deleted_at).length} holidays</p></div>
-              <div><span className="text-white/50">Organization</span><p className="font-medium">{events.filter(e => !e.auto_generated && !e.deleted_at).length} events</p></div>
+              <div><span className="text-text-tertiary">Country</span><p className="font-medium">{workspace?.settings?.country || 'Not set'}</p></div>
+              <div><span className="text-text-tertiary">State/Region</span><p className="font-medium">{workspace?.settings?.region || 'None'}</p></div>
+              <div><span className="text-text-tertiary">Imported</span><p className="font-medium">{events.filter(e => e.auto_generated && !e.deleted_at).length} holidays</p></div>
+              <div><span className="text-text-tertiary">Organization</span><p className="font-medium">{events.filter(e => !e.auto_generated && !e.deleted_at).length} events</p></div>
             </div>
             {lastSyncResult && (
-              <div className={`mt-3 text-xs font-mono px-3 py-2 ${lastSyncResult.includes('failed') ? 'bg-red-500/10 text-red-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{lastSyncResult}</div>
+              <div className={`mt-3 text-xs font-mono px-3 py-2 ${lastSyncResult.includes('failed') ? 'bg-signal-critical-bg text-red-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{lastSyncResult}</div>
             )}
           </div>
 
           {showCreateForm && isSuperAdmin && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCreateForm(false)}>
-              <div className="bg-[#0c0c0c] border border-white/10 w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="fixed inset-0 bg-bg backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCreateForm(false)}>
+              <div className="bg-surface border border-border w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-sm font-mono uppercase tracking-widest">Create Organization Event</h3>
-                  <button onClick={() => setShowCreateForm(false)}><X className="w-4 h-4 text-white/60 hover:text-white" /></button>
+                  <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide">Create Organization Event</h3>
+                  <button onClick={() => setShowCreateForm(false)}><X className="w-4 h-4 text-text-tertiary hover:text-text-primary" /></button>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">Title</label>
-                    <input value={newEvent.title} onChange={e => setNewEvent(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Company Retreat, Flood Closure" className="w-full h-10 bg-black border border-white/10 px-3 text-xs font-mono text-white outline-none focus:border-white/40" />
+                    <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Title</label>
+                    <input value={newEvent.title} onChange={e => setNewEvent(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Company Retreat, Flood Closure" className="w-full h-10 bg-bg border border-border px-3 text-xs font-mono text-text-primary outline-none focus:border-white/40" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">Start Date</label>
-                      <input type="date" value={newEvent.start_date} onChange={e => setNewEvent(prev => ({ ...prev, start_date: e.target.value }))} className="w-full h-10 bg-black border border-white/10 px-3 text-xs font-mono text-white outline-none focus:border-white/40" />
+                      <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Start Date</label>
+                      <input type="date" value={newEvent.start_date} onChange={e => setNewEvent(prev => ({ ...prev, start_date: e.target.value }))} className="w-full h-10 bg-bg border border-border px-3 text-xs font-mono text-text-primary outline-none focus:border-white/40" />
                     </div>
                     <div>
-                      <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">End Date</label>
-                      <input type="date" value={newEvent.end_date} onChange={e => setNewEvent(prev => ({ ...prev, end_date: e.target.value }))} className="w-full h-10 bg-black border border-white/10 px-3 text-xs font-mono text-white outline-none focus:border-white/40" />
+                      <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">End Date</label>
+                      <input type="date" value={newEvent.end_date} onChange={e => setNewEvent(prev => ({ ...prev, end_date: e.target.value }))} className="w-full h-10 bg-bg border border-border px-3 text-xs font-mono text-text-primary outline-none focus:border-white/40" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">Capacity Impact</label>
-                    <select value={newEvent.capacity_impact} onChange={e => setNewEvent(prev => ({ ...prev, capacity_impact: Number(e.target.value) }))} className="w-full h-10 bg-black border border-white/10 px-3 text-xs font-mono text-white outline-none focus:border-white/40">
+                    <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Capacity Impact</label>
+                    <select value={newEvent.capacity_impact} onChange={e => setNewEvent(prev => ({ ...prev, capacity_impact: Number(e.target.value) }))} className="w-full h-10 bg-bg border border-border px-3 text-xs font-mono text-text-primary outline-none focus:border-white/40">
                       <option value={1}>Full day (no capacity)</option>
                       <option value={0.5}>Half day (50% capacity)</option>
                       <option value={0}>No impact (informational)</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-mono uppercase text-white/60 mb-1 block">Description</label>
-                    <textarea value={newEvent.description} onChange={e => setNewEvent(prev => ({ ...prev, description: e.target.value }))} rows={2} className="w-full bg-black border border-white/10 px-3 py-2 text-xs font-mono text-white outline-none focus:border-white/40" />
+                    <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Description</label>
+                    <textarea value={newEvent.description} onChange={e => setNewEvent(prev => ({ ...prev, description: e.target.value }))} rows={2} className="w-full bg-bg border border-border px-3 py-2 text-xs font-mono text-text-primary outline-none focus:border-white/40" />
                   </div>
-                  <button onClick={handleCreateEvent} disabled={!newEvent.title || !newEvent.start_date} className="w-full bg-white text-black h-10 font-semibold hover:bg-neutral-200 transition-colors uppercase text-xs tracking-widest disabled:opacity-50">
+                  <button onClick={handleCreateEvent} disabled={!newEvent.title || !newEvent.start_date} className="w-full bg-white text-black h-10 font-semibold hover:bg-neutral-200 transition-colors uppercase text-xs tracking-wide disabled:opacity-50">
                     Create Event
                   </button>
                 </div>
@@ -249,35 +249,35 @@ export function CalendarIntelligencePanel() {
       )}
 
       {tab === 'history' && (
-        <div className="border border-white/10 bg-[#0c0c0c] p-6">
-          <h3 className="text-sm font-mono uppercase tracking-widest mb-4 flex items-center gap-2">
+        <div className="border border-border bg-surface p-6">
+          <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide mb-4 flex items-center gap-2">
             <History className="w-4 h-4" /> Sync History ({syncLogs.length})
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
-                <tr className="bg-white/5 border-b border-white/10">
-                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Date</th>
-                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Provider</th>
-                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Country</th>
-                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Year</th>
-                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Found</th>
-                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Imported</th>
-                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-widest text-white/60">Status</th>
+                <tr className="bg-white/5 border-b border-border">
+                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Date</th>
+                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Provider</th>
+                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Country</th>
+                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Year</th>
+                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Found</th>
+                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Imported</th>
+                  <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {syncLogs.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-xs font-mono text-white/40 italic">No sync logs yet.</td></tr>}
+                {syncLogs.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-xs font-mono text-text-quaternary italic">No sync logs yet.</td></tr>}
                 {syncLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-white/[0.02]">
-                    <td className="px-4 py-3 text-[10px] font-mono text-white/70">{log.created_at ? new Date(log.created_at).toLocaleDateString() : '-'}</td>
-                    <td className="px-4 py-3 text-[10px] font-mono text-white/80">{log.provider}</td>
-                    <td className="px-4 py-3 text-[10px] font-mono text-white/80">{log.country}{log.region ? `/ ${log.region}` : ''}</td>
-                    <td className="px-4 py-3 text-[10px] font-mono text-white/60">{log.year}</td>
-                    <td className="px-4 py-3 text-[10px] font-mono text-white/80">{log.holidays_found}</td>
-                    <td className="px-4 py-3 text-[10px] font-mono text-white/80">{log.holidays_imported}</td>
+                  <tr key={log.id} className="hover:bg-surface-3">
+                    <td className="px-4 py-3 text-[10px] font-mono text-text-secondary">{log.created_at ? new Date(log.created_at).toLocaleDateString() : '-'}</td>
+                    <td className="px-4 py-3 text-[10px] font-mono text-text-secondary">{log.provider}</td>
+                    <td className="px-4 py-3 text-[10px] font-mono text-text-secondary">{log.country}{log.region ? `/ ${log.region}` : ''}</td>
+                    <td className="px-4 py-3 text-[10px] font-mono text-text-tertiary">{log.year}</td>
+                    <td className="px-4 py-3 text-[10px] font-mono text-text-secondary">{log.holidays_found}</td>
+                    <td className="px-4 py-3 text-[10px] font-mono text-text-secondary">{log.holidays_imported}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${log.status === 'success' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' : log.status === 'partial' ? 'border-amber-500/30 text-amber-400 bg-amber-500/5' : log.status === 'failed' ? 'border-red-500/30 text-red-400 bg-red-500/5' : 'border-white/10 text-white/50 bg-white/5'}`}>{log.status}</span>
+                      <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${log.status === 'success' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' : log.status === 'partial' ? 'border-border text-signal-warning bg-signal-warning-bg' : log.status === 'failed' ? 'border-red-500/30 text-signal-critical bg-signal-critical-bg' : 'border-border text-text-tertiary bg-white/5'}`}>{log.status}</span>
                     </td>
                   </tr>
                 ))}

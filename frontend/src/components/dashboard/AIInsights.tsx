@@ -23,7 +23,7 @@ interface AIInsightsProps {
 const MAX_INSIGHTS = 3;
 
 const CONFIDENCE_LABELS = { high: 'High', medium: 'Med', low: 'Low' };
-const CONFIDENCE_COLORS = { high: 'text-emerald-400/70', medium: 'text-amber-400/70', low: 'text-white/30' };
+const CONFIDENCE_COLORS = { high: 'text-emerald-400/70', medium: 'text-signal-warning/70', low: 'text-text-quaternary' };
 
 const TYPE_LABELS: Record<string, string> = {
   'blocked-sprint': 'Sprint Blocked',
@@ -43,7 +43,7 @@ export function AIInsights({ insights, loading, error, onDismiss, emptyAction }:
       empty={!loading && !error && visible.length === 0}
       emptyMessage="No insights right now"
       emptyAction={emptyAction}
-      action={<Sparkles className="w-3 h-3 text-white/30" />}
+      action={<Sparkles className="w-3 h-3 text-text-quaternary" />}
     >
       <AnimatePresence initial={false}>
         <div className="space-y-1.5">
@@ -55,24 +55,24 @@ export function AIInsights({ insights, loading, error, onDismiss, emptyAction }:
               animate="visible"
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               transition={{ duration: 0.2 }}
-              className="group relative bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.1] transition-colors"
+              className="group relative bg-surface-3 border border-border-subtle hover:border-border transition-colors"
             >
               <div className="p-3 pr-8">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-white/40">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-text-quaternary">
                     {TYPE_LABELS[insight.type] || insight.type}
                   </span>
                   <span className={`text-[9px] font-mono ${CONFIDENCE_COLORS[insight.confidence]}`}>
                     {CONFIDENCE_LABELS[insight.confidence]}
                   </span>
                 </div>
-                <p className="text-[12px] font-mono text-white/70 leading-relaxed">
+                <p className="text-[12px] font-mono text-text-secondary leading-relaxed">
                   {insight.message}
                 </p>
                 {insight.actionLabel && insight.onAction && (
                   <button
                     onClick={insight.onAction}
-                    className="mt-1.5 text-[10px] font-mono text-white/50 hover:text-white/80 transition-colors"
+                    className="mt-1.5 text-[10px] font-medium text-text-tertiary hover:text-text-secondary transition-colors"
                   >
                     {insight.actionLabel} →
                   </button>
@@ -81,7 +81,7 @@ export function AIInsights({ insights, loading, error, onDismiss, emptyAction }:
               {onDismiss && (
                 <button
                   onClick={() => onDismiss(insight.id)}
-                  className="absolute top-2 right-2 p-0.5 text-white/20 hover:text-white/60 opacity-0 group-hover:opacity-100 transition-all"
+                  className="absolute top-2 right-2 p-0.5 text-text-quaternary hover:text-text-tertiary opacity-0 group-hover:opacity-100 transition-all"
                 >
                   <X className="w-3 h-3" />
                 </button>

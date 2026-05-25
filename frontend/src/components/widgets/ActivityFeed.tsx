@@ -113,24 +113,24 @@ export function ActivityFeed({ entries, loading, error, emptyMessage, emptyActio
                 layout
               >
                 <div
-                  className={`flex items-start gap-2 px-3 py-2 rounded group cursor-pointer hover:bg-white/[0.02] transition-colors border-l-2 ${severityClass(group.action)}`}
+                  className={`flex items-start gap-2 px-3 py-2 rounded group cursor-pointer hover:bg-surface-3 transition-colors border-l-2 ${severityClass(group.action)}`}
                   onClick={() => {
                     if (group.count > 1) toggleExpand(group.id);
                     else if (onItemClick) onItemClick(group.entries[0]);
                   }}
                 >
                   <div className="w-5 h-5 rounded-full bg-white/5 flex items-center justify-center shrink-0 mt-0.5">
-                    <User className="w-3 h-3 text-white/40" />
+                    <User className="w-3 h-3 text-text-quaternary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-mono text-white/70 truncate">
+                    <div className="text-[11px] font-mono text-text-secondary truncate">
                       {group.actor_name || 'System'} {actionLabel(group.action, group.count)}
                     </div>
                     {group.target_type && (
-                      <div className="text-[10px] font-mono text-white/30 truncate">{group.target_type}</div>
+                      <div className="text-[10px] font-mono text-text-quaternary truncate">{group.target_type}</div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] font-mono text-white/20 shrink-0">
+                  <div className="flex items-center gap-1 text-[10px] font-mono text-text-quaternary shrink-0">
                     <Clock className="w-2.5 h-2.5" />
                     <span>{timeAgo(group.created_at)}</span>
                     {group.count > 1 && (
@@ -152,13 +152,13 @@ export function ActivityFeed({ entries, loading, error, emptyMessage, emptyActio
                       {group.entries.map((e) => (
                         <div
                           key={e.id}
-                          className="flex items-start gap-2 pl-10 pr-3 py-1.5 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                          className="flex items-start gap-2 pl-10 pr-3 py-1.5 cursor-pointer hover:bg-surface-3 transition-colors"
                           onClick={() => onItemClick?.(e)}
                         >
                           <div className="flex-1 min-w-0">
-                            <div className="text-[10px] font-mono text-white/50 truncate">{e.action}</div>
+                            <div className="text-[10px] font-mono text-text-tertiary truncate">{e.action}</div>
                           </div>
-                          <div className="text-[9px] font-mono text-white/20 shrink-0">{timeAgo(e.created_at)}</div>
+                          <div className="text-[9px] font-mono text-text-quaternary shrink-0">{timeAgo(e.created_at)}</div>
                         </div>
                       ))}
                     </motion.div>

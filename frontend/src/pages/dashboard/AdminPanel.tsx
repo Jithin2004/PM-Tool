@@ -22,7 +22,7 @@ export function AdminPanel() {
 
   if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
     return (
-      <div className="flex-1 flex items-center justify-center text-white/50 font-mono text-sm uppercase">
+      <div className="flex-1 flex items-center justify-center text-text-tertiary font-mono text-sm uppercase">
         Unauthorized: Admin Access Required
       </div>
     );
@@ -32,11 +32,11 @@ export function AdminPanel() {
 
   return (
     <div>
-      <div className="flex gap-1 px-3 sm:px-6 pt-6 border-b border-white/10">
+      <div className="flex gap-1 px-3 sm:px-6 pt-6 border-b border-border">
         <button
           onClick={() => setTab('identity')}
-          className={`px-4 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${
-            tab === 'identity' ? 'border-b-2 border-white text-white' : 'text-white/50 hover:text-white/80'
+          className={`px-4 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${
+            tab === 'identity' ? 'border-b-2 border-white text-text-primary' : 'text-text-tertiary hover:text-text-secondary'
           }`}
         >
           Identity & Teams
@@ -44,8 +44,8 @@ export function AdminPanel() {
         {canViewCalendar && (
           <button
             onClick={() => setTab('calendar')}
-            className={`px-4 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${
-              tab === 'calendar' ? 'border-b-2 border-white text-white' : 'text-white/50 hover:text-white/80'
+            className={`px-4 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${
+              tab === 'calendar' ? 'border-b-2 border-white text-text-primary' : 'text-text-tertiary hover:text-text-secondary'
             }`}
           >
             Calendar Intelligence

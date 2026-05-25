@@ -20,27 +20,27 @@ interface WidgetCardProps {
 
 export function WidgetCard({ title, children, loading, error, empty, emptyMessage, emptyAction, action, className = '' }: WidgetCardProps) {
   return (
-    <motion.div variants={slideUp} initial="hidden" animate="visible" className={`bg-[#0c0c0c] border border-white/10 ${className}`}>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-        <h3 className="text-[10px] uppercase font-mono tracking-wider text-white/70">{title}</h3>
+    <motion.div variants={slideUp} initial="hidden" animate="visible" className={`bg-surface border border-border ${className}`}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+        <h3 className="text-[10px] uppercase font-sans tracking-tight tracking-wider text-text-secondary">{title}</h3>
         {action && <div className="flex items-center gap-2">{action}</div>}
       </div>
       <div className="p-4">
         {loading ? (
           <div className="space-y-2">
-            <div className="h-3 bg-white/5 rounded animate-pulse" />
-            <div className="h-3 bg-white/5 rounded w-3/4 animate-pulse" />
-            <div className="h-3 bg-white/5 rounded w-1/2 animate-pulse" />
+            <div className="h-3 bg-white/5 rounded transition-opacity duration-300" />
+            <div className="h-3 bg-white/5 rounded w-3/4 transition-opacity duration-300" />
+            <div className="h-3 bg-white/5 rounded w-1/2 transition-opacity duration-300" />
           </div>
         ) : error ? (
-          <div className="text-[11px] text-red-400/70 font-mono">{error}</div>
+          <div className="text-[11px] text-signal-critical/70 font-mono">{error}</div>
         ) : empty ? (
           <div className="text-center py-6">
-            <p className="text-[11px] font-mono text-white/30 mb-3">{emptyMessage || 'No data'}</p>
+            <p className="text-[11px] font-mono text-text-quaternary mb-3">{emptyMessage || 'No data'}</p>
             {emptyAction && (
               <button
                 onClick={emptyAction.onClick}
-                className="text-[10px] uppercase font-mono tracking-wider text-white/50 hover:text-white/80 transition-colors border border-white/10 px-3 py-1.5 hover:border-white/20"
+                className="text-[10px] uppercase font-medium tracking-wider text-text-tertiary hover:text-text-secondary transition-colors border border-border px-3 py-1.5 hover:border-border"
               >
                 {emptyAction.label} →
               </button>

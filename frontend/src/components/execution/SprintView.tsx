@@ -93,8 +93,8 @@ const SprintView = React.memo(function SprintView({
         />
       ))}
       {scrumProjects.length === 0 && sdlcProjects.length === 0 && (
-        <div className="border border-dashed border-white/10 py-16 text-center">
-          <p className="text-sm font-mono text-white/40">No Scrum or SDLC projects found</p>
+        <div className="border border-dashed border-border py-16 text-center">
+          <p className="text-sm font-mono text-text-quaternary">No Scrum or SDLC projects found</p>
         </div>
       )}
     </div>

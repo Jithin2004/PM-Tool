@@ -19,7 +19,7 @@ export function TypingIndicator({ users }: TypingIndicatorProps) {
         <span className="w-1 h-1 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
         <span className="w-1 h-1 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
       </div>
-      <span className="text-[10px] font-mono text-white/30 italic">{label}</span>
+      <span className="text-[10px] font-mono text-text-quaternary italic">{label}</span>
     </motion.div>
   );
 }

@@ -72,7 +72,7 @@ export function CommandCenterHeader({
       onKeyDown={handleKeyDown}
       className={`sticky top-0 z-40 px-4 md:px-6 py-2.5 transition-shadow duration-200 ${
         scrolled
-          ? 'shadow-[0_1px_0_rgba(255,255,255,0.08)] bg-[#0a0a0a]/80 backdrop-blur-xl'
+          ? 'shadow-[0_1px_0_rgba(255,255,255,0.08)] bg-bg backdrop-blur-xl'
           : 'bg-transparent'
       }`}
     >
@@ -80,9 +80,9 @@ export function CommandCenterHeader({
         <div className="flex items-center gap-3">
           <button
             onClick={onSwitchWorkspace}
-            className="flex items-center gap-2 text-[13px] font-mono text-white/90 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-[13px] font-medium text-text-secondary hover:text-text-primary transition-colors"
           >
-            <span className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[11px] font-mono text-white/50">W</span>
+            <span className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[11px] font-mono text-text-tertiary">W</span>
             <span className="truncate max-w-[160px]">{workspaceName}</span>
           </button>
         </div>
@@ -90,22 +90,22 @@ export function CommandCenterHeader({
         <div className="flex items-center gap-2">
           <button
             onClick={onSearch}
-            className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono text-white/40 bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12] hover:text-white/60 transition-all rounded"
+            className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium text-text-quaternary bg-surface-3 border border-border-subtle hover:border-border hover:text-text-tertiary transition-all rounded"
           >
             <Search className="w-3 h-3" />
             <span className="hidden sm:inline">Search</span>
-            <span className="hidden md:inline text-white/20">⌘F</span>
+            <span className="hidden md:inline text-text-quaternary">⌘F</span>
           </button>
 
           <LiveBadge connected={connectionStatus === 'connected'} />
 
           <button
             onClick={onOpenNotifications}
-            className="relative p-1.5 text-white/40 hover:text-white/70 transition-colors"
+            className="relative p-1.5 text-text-quaternary hover:text-text-secondary transition-colors"
           >
             <Bell className="w-4 h-4" />
             {notificationCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-[9px] font-mono flex items-center justify-center text-white">
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-[9px] font-mono flex items-center justify-center text-text-primary">
                 {notificationCount > 9 ? '9+' : notificationCount}
               </span>
             )}
@@ -123,7 +123,7 @@ export function CommandCenterHeader({
                 />
               ))}
               {overflow > 0 && (
-                <span className="w-6 h-6 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-[10px] font-mono text-white/40">
+                <span className="w-6 h-6 rounded-full bg-surface-3 border border-border-subtle flex items-center justify-center text-[10px] font-mono text-text-quaternary">
                   +{overflow}
                 </span>
               )}
@@ -132,10 +132,10 @@ export function CommandCenterHeader({
 
           <button
             onClick={onOpenPalette}
-            className="flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-mono text-white/50 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/70 transition-all rounded"
+            className="flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-medium text-text-tertiary bg-surface-3 border border-border-subtle hover:bg-surface-3 hover:text-text-secondary transition-all rounded"
           >
             <Command className="w-3 h-3" />
-            <span className="hidden sm:inline text-white/30">K</span>
+            <span className="hidden sm:inline text-text-quaternary">K</span>
           </button>
         </div>
       </div>

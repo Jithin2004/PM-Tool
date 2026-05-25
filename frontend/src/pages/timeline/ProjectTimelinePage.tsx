@@ -19,10 +19,10 @@ export default function ProjectTimelinePage() {
 
   return (
     <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12">
-      <div className="flex justify-between items-center mb-8 bg-[#090a0f]/40 border border-white/10 p-4 rounded-lg backdrop-blur-md">
+      <div className="flex justify-between items-center mb-8 bg-[#090a0f]/40 border border-border p-4 rounded-lg backdrop-blur-md">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-white">{project?.name || 'Project'} — Timeline</h2>
-          <p className="text-[10px] font-mono text-white/50 uppercase">Phase tracking · milestones · critical path</p>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-text-primary">{project?.name || 'Project'} — Timeline</h2>
+          <p className="text-[10px] font-mono text-text-tertiary uppercase">Phase tracking · milestones · critical path</p>
         </div>
       </div>
       <TimelineView

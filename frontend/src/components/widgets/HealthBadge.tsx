@@ -7,8 +7,8 @@ interface HealthBadgeProps {
 
 const colors: Record<HealthStatus, string> = {
   healthy: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  critical: 'bg-red-500/10 text-red-400 border-red-500/20',
+  warning: 'bg-signal-warning-bg text-signal-warning border-border',
+  critical: 'bg-signal-critical-bg text-signal-critical border-red-500/20',
 };
 
 const dots: Record<HealthStatus, string> = {

@@ -123,15 +123,15 @@ export default function DocumentView() {
 
   if (loading) return (
     <div className="p-6">
-      <div className="text-[11px] font-mono text-white/30">Loading document...</div>
+      <div className="text-[11px] font-mono text-text-quaternary">Loading document...</div>
     </div>
   );
 
   if (!doc) return (
     <div className="p-6">
-      <button onClick={handleBack} className="text-[10px] font-mono text-blue-400 hover:text-blue-300 mb-4">&larr; Back to Knowledge Hub</button>
-      <div className="border border-white/10 bg-white/[0.02] p-12 text-center">
-        <span className="text-[11px] font-mono text-white/30">Document not found</span>
+      <button onClick={handleBack} className="text-[10px] font-medium text-signal-info hover:text-blue-300 mb-4">&larr; Back to Knowledge Hub</button>
+      <div className="border border-border bg-surface-3 p-12 text-center">
+        <span className="text-[11px] font-mono text-text-quaternary">Document not found</span>
       </div>
     </div>
   );
@@ -140,16 +140,16 @@ export default function DocumentView() {
     <div className="p-6 max-w-4xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={handleBack} className="text-[10px] font-mono text-blue-400 hover:text-blue-300">&larr; Knowledge Hub</button>
-        <span className="text-white/20">/</span>
-        <span className="text-[10px] font-mono text-white/60 truncate">{doc.title}</span>
+        <button onClick={handleBack} className="text-[10px] font-medium text-signal-info hover:text-blue-300">&larr; Knowledge Hub</button>
+        <span className="text-text-quaternary">/</span>
+        <span className="text-[10px] font-mono text-text-tertiary truncate">{doc.title}</span>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-white/10 pb-3 mb-4">
+      <div className="flex gap-4 border-b border-border pb-3 mb-4">
         {(['view', 'history', 'annotations'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`text-[10px] font-mono uppercase tracking-wider ${tab === t ? 'text-white border-b-2 border-white/40 pb-3' : 'text-white/40 hover:text-white/60'}`}>
+            className={`text-[10px] font-mono uppercase tracking-wider ${tab === t ? 'text-text-primary border-b-2 border-white/40 pb-3' : 'text-text-quaternary hover:text-text-tertiary'}`}>
             {t === 'view' ? 'Document' : t === 'history' ? `History (${versions.length})` : `Annotations (${annotations.filter(a => !a.resolved).length})`}
           </button>
         ))}
@@ -163,13 +163,13 @@ export default function DocumentView() {
             {editing ? (
               <input type="text" value={editTitle}
                 onChange={e => setEditTitle(e.target.value)}
-                className="flex-1 bg-black border border-white/10 p-2 text-sm font-mono text-white focus:border-blue-500 focus:outline-none" />
+                className="flex-1 bg-bg border border-border p-2 text-sm font-mono text-text-primary focus:border-border focus:outline-none" />
             ) : (
               <div>
-                <h1 className="text-sm font-mono text-white">{doc.title}</h1>
-                <div className="text-[9px] font-mono text-white/30 mt-1">
+                <h1 className="text-sm font-sans tracking-tight text-text-primary">{doc.title}</h1>
+                <div className="text-[9px] font-mono text-text-quaternary mt-1">
                   Updated {timeAgo(doc.updated_at)}
-                  {doc.pinned && <span className="text-amber-400 ml-2">📌 Pinned</span>}
+                  {doc.pinned && <span className="text-signal-warning ml-2">📌 Pinned</span>}
                 </div>
               </div>
             )}
@@ -177,22 +177,22 @@ export default function DocumentView() {
               {editing ? (
                 <>
                   <button onClick={handleSave} disabled={isSaving}
-                    className="px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-mono uppercase tracking-wider hover:bg-emerald-600/30 disabled:opacity-30">
+                    className="px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-medium uppercase tracking-wider hover:bg-emerald-600/30 disabled:opacity-30">
                     {isSaving ? 'Saving...' : 'Save'}
                   </button>
                   <button onClick={() => { setEditing(false); setEditContent(doc.content); setEditTitle(doc.title); }}
-                    className="px-3 py-1.5 text-white/30 hover:text-white/60 text-[9px] font-mono">
+                    className="px-3 py-1.5 text-text-quaternary hover:text-text-tertiary text-[9px] font-mono">
                     Cancel
                   </button>
                 </>
               ) : (
                 <>
                   <button onClick={() => setEditing(true)}
-                    className="px-3 py-1.5 bg-blue-600/20 border border-blue-500/30 text-blue-400 text-[9px] font-mono uppercase tracking-wider hover:bg-blue-600/30">
+                    className="px-3 py-1.5 bg-surface-3 border border-border text-signal-info text-[9px] font-mono uppercase tracking-wider hover:bg-surface-3">
                     Edit
                   </button>
                   <button onClick={() => setShowVersionComment(true)}
-                    className="px-3 py-1.5 bg-white/5 border border-white/10 text-white/50 text-[9px] font-mono hover:border-white/30">
+                    className="px-3 py-1.5 bg-white/5 border border-border text-text-tertiary text-[9px] font-mono hover:border-white/30">
                     Create Version
                   </button>
                 </>
@@ -202,18 +202,18 @@ export default function DocumentView() {
 
           {/* Version comment input */}
           {showVersionComment && (
-            <div className="border border-white/10 bg-white/[0.02] p-3 mb-4">
+            <div className="border border-border bg-surface-3 p-3 mb-4">
               <input type="text" value={versionSummary}
                 onChange={e => setVersionSummary(e.target.value)}
                 placeholder="Change summary (optional)"
-                className="w-full bg-black border border-white/10 p-2 text-[11px] font-mono text-white placeholder-white/20 focus:border-blue-500 focus:outline-none mb-2" />
+                className="w-full bg-bg border border-border p-2 text-[11px] font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none mb-2" />
               <div className="flex gap-2">
                 <button onClick={handleCreateVersion}
-                  className="px-3 py-1.5 bg-cyan-600/20 border border-cyan-500/30 text-cyan-400 text-[9px] font-mono uppercase tracking-wider">
+                  className="px-3 py-1.5 bg-cyan-600/20 border border-cyan-500/30 text-cyan-400 text-[9px] font-medium uppercase tracking-wider">
                   Create Snapshot
                 </button>
                 <button onClick={() => setShowVersionComment(false)}
-                  className="px-3 py-1.5 text-white/30 hover:text-white/60 text-[9px] font-mono">Cancel</button>
+                  className="px-3 py-1.5 text-text-quaternary hover:text-text-tertiary text-[9px] font-mono">Cancel</button>
               </div>
             </div>
           )}
@@ -225,25 +225,25 @@ export default function DocumentView() {
               onMouseUp={handleTextSelect}
               ref={contentRef as any}
               rows={20}
-              className="w-full bg-black border border-white/10 p-4 text-[11px] font-mono text-white/80 leading-relaxed focus:border-blue-500 focus:outline-none resize-none" />
+              className="w-full bg-bg border border-border p-4 text-[11px] font-mono text-text-secondary leading-relaxed focus:border-border focus:outline-none resize-none" />
           ) : (
             <div ref={contentRef} onMouseUp={handleTextSelect}
-              className="border border-white/10 bg-black/50 p-4 text-[11px] font-mono text-white/80 leading-relaxed whitespace-pre-wrap min-h-[300px]">
-              {doc.content || <span className="text-white/20 italic">No content</span>}
+              className="border border-border bg-bg p-4 text-[11px] font-mono text-text-secondary leading-relaxed whitespace-pre-wrap min-h-[300px]">
+              {doc.content || <span className="text-text-quaternary italic">No content</span>}
             </div>
           )}
 
           {/* Annotate selection */}
           {selText && (
-            <div className="border border-amber-500/30 bg-amber-500/5 p-3 mt-4">
-              <div className="text-[9px] font-mono text-amber-400/80 mb-1">Selected: &ldquo;{selText.slice(0, 100)}&rdquo;</div>
+            <div className="border border-border bg-signal-warning-bg p-3 mt-4">
+              <div className="text-[9px] font-mono text-signal-warning/80 mb-1">Selected: &ldquo;{selText.slice(0, 100)}&rdquo;</div>
               <textarea value={commentText}
                 onChange={e => setCommentText(e.target.value)}
                 placeholder="Add annotation comment..."
                 rows={2}
-                className="w-full bg-black border border-white/10 p-2 text-[11px] font-mono text-white placeholder-white/20 focus:border-amber-500 focus:outline-none resize-none mb-2" />
+                className="w-full bg-bg border border-border p-2 text-[11px] font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none resize-none mb-2" />
               <button onClick={handleAddAnnotation}
-                className="px-3 py-1.5 bg-amber-600/20 border border-amber-500/30 text-amber-400 text-[9px] font-mono uppercase tracking-wider hover:bg-amber-600/30">
+                className="px-3 py-1.5 bg-signal-warning-bg border border-border text-signal-warning text-[9px] font-medium uppercase tracking-wider hover:bg-signal-warning-bg">
                 Add Annotation
               </button>
             </div>
@@ -255,25 +255,25 @@ export default function DocumentView() {
       {tab === 'history' && (
         <div>
           {versions.length === 0 ? (
-            <div className="border border-white/10 bg-white/[0.02] p-8 text-center">
-              <span className="text-[10px] font-mono text-white/30">No version history yet</span>
+            <div className="border border-border bg-surface-3 p-8 text-center">
+              <span className="text-[10px] font-mono text-text-quaternary">No version history yet</span>
             </div>
           ) : (
             <div className="space-y-1">
               {versions.map(v => (
-                <div key={v.id} className="border border-white/10 bg-white/[0.02] px-4 py-3">
+                <div key={v.id} className="border border-border bg-surface-3 px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-mono text-white/70">v{v.version}</span>
-                      <span className="text-[9px] font-mono text-white/30 ml-3">{timeAgo(v.created_at)}</span>
+                      <span className="text-xs font-mono text-text-secondary">v{v.version}</span>
+                      <span className="text-[9px] font-mono text-text-quaternary ml-3">{timeAgo(v.created_at)}</span>
                     </div>
-                    <span className="text-[9px] font-mono text-white/30">Hash: {v.hash.slice(0, 12)}...</span>
+                    <span className="text-[9px] font-mono text-text-quaternary">Hash: {v.hash.slice(0, 12)}...</span>
                   </div>
                   {v.change_summary && (
-                    <div className="text-[9px] font-mono text-white/40 mt-1">{v.change_summary}</div>
+                    <div className="text-[9px] font-mono text-text-quaternary mt-1">{v.change_summary}</div>
                   )}
                   {v.author_id && (
-                    <div className="text-[8px] font-mono text-white/20 mt-1">Author: {v.author_id}</div>
+                    <div className="text-[8px] font-mono text-text-quaternary mt-1">Author: {v.author_id}</div>
                   )}
                 </div>
               ))}
@@ -286,21 +286,21 @@ export default function DocumentView() {
       {tab === 'annotations' && (
         <div>
           {annotations.length === 0 ? (
-            <div className="border border-white/10 bg-white/[0.02] p-8 text-center">
-              <span className="text-[10px] font-mono text-white/30">No annotations yet</span>
-              <span className="text-[8px] font-mono text-white/20 mt-1 block">Select text in the document and add a comment</span>
+            <div className="border border-border bg-surface-3 p-8 text-center">
+              <span className="text-[10px] font-mono text-text-quaternary">No annotations yet</span>
+              <span className="text-[8px] font-mono text-text-quaternary mt-1 block">Select text in the document and add a comment</span>
             </div>
           ) : (
             <div className="space-y-2">
               {annotations.map(a => (
-                <div key={a.id} className={`border px-4 py-3 ${a.resolved ? 'border-emerald-500/10 bg-emerald-500/[0.01]' : 'border-amber-500/20 bg-amber-500/[0.02]'}`}>
+                <div key={a.id} className={`border px-4 py-3 ${a.resolved ? 'border-emerald-500/10 bg-emerald-500/[0.01]' : 'border-border bg-amber-500/[0.02]'}`}>
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
-                      <div className="text-[9px] font-mono text-white/50 mb-1">
+                      <div className="text-[9px] font-mono text-text-tertiary mb-1">
                         Selection [{a.selection_start}–{a.selection_end}]
                       </div>
-                      <div className="text-[11px] font-mono text-white/70">{a.comment}</div>
-                      <div className="text-[8px] font-mono text-white/30 mt-1">{timeAgo(a.created_at)}</div>
+                      <div className="text-[11px] font-mono text-text-secondary">{a.comment}</div>
+                      <div className="text-[8px] font-mono text-text-quaternary mt-1">{timeAgo(a.created_at)}</div>
                     </div>
                     {!a.resolved && (
                       <button onClick={() => handleResolveAnnotation(a.id)}

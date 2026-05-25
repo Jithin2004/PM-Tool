@@ -253,28 +253,28 @@ export function SprintBoard({
   ];
 
   return (
-    <div className="w-full bg-black/40 border border-white/5 rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
+    <div className="w-full bg-bg border border-border-subtle rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-500/80 via-pink-500/80 to-orange-500/80" />
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 border-b border-white/5 pb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 border-b border-border-subtle pb-4">
         <div className="flex items-center gap-3">
-          <Shield className="w-4 h-4 text-purple-400" />
-          <h2 className="text-sm font-mono uppercase tracking-widest text-white">Scrum Board</h2>
+          <Shield className="w-4 h-4 text-accent-secondary" />
+          <h2 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">Scrum Board</h2>
           {onConvertToScrum && (
-            <button onClick={() => setIsAddingExisting(true)} className="px-2 py-1 bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 text-[8px] font-mono uppercase tracking-wider rounded-sm border border-amber-500/20 transition-all cursor-pointer">
+            <button onClick={() => setIsAddingExisting(true)} className="px-2 py-1 bg-signal-warning-bg hover:bg-signal-warning-bg text-amber-300 text-[8px] font-mono uppercase tracking-wider rounded-sm border border-border transition-all cursor-pointer">
               <Plus className="w-2.5 h-2.5 inline mr-1" />Add Existing Project
             </button>
           )}
         </div>
         <div className="flex items-center gap-2">
           {hasWriteAccess && (
-            <button onClick={() => setIsCreatingSprint(true)} className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-[9px] font-mono uppercase tracking-widest rounded-sm transition-all cursor-pointer">
+            <button onClick={() => setIsCreatingSprint(true)} className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-text-primary text-[9px] font-mono uppercase tracking-wide rounded-sm transition-all cursor-pointer">
               <Plus className="w-3 h-3 inline mr-1" /> New Sprint
             </button>
           )}
           {hasWriteAccess && (
-            <button onClick={() => setIsAddingTask(true)} className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-mono uppercase tracking-widest rounded-sm cursor-pointer">
+            <button onClick={() => setIsAddingTask(true)} className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-text-primary text-[9px] font-mono uppercase tracking-wide rounded-sm cursor-pointer">
               <Plus className="w-3.5 h-3.5" /> Queue Story
             </button>
           )}
@@ -283,7 +283,7 @@ export function SprintBoard({
 
       {/* Sprint selector */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <select value={activeSprintId || ''} onChange={e => setActiveSprintId(e.target.value || null)} className="bg-black border border-white/10 h-8 px-3 text-[10px] font-mono focus:border-white/30 outline-none">
+        <select value={activeSprintId || ''} onChange={e => setActiveSprintId(e.target.value || null)} className="bg-bg border border-border h-8 px-3 text-[10px] font-mono focus:border-white/30 outline-none">
           <option value="">All Tasks (No Sprint)</option>
           {sprints.map(s => <option key={s.id} value={s.id}>{s.name} ({s.status})</option>)}
         </select>
@@ -300,8 +300,8 @@ export function SprintBoard({
           {sprintWarnings.map(w => (
             <div key={w.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-sm text-[9px] font-mono ${
               w.severity === 'high' ? 'bg-rose-950/30 border border-rose-500/20 text-rose-300' :
-              w.severity === 'medium' ? 'bg-amber-950/30 border border-amber-500/20 text-amber-300' :
-              'bg-blue-950/30 border border-blue-500/20 text-blue-300'
+              w.severity === 'medium' ? 'bg-signal-warning-bg border border-border text-amber-300' :
+              'bg-surface-3 border border-border text-blue-300'
             }`}>
               <AlertTriangle className="w-3 h-3 shrink-0" />
               <span>{w.message}</span>
@@ -311,12 +311,12 @@ export function SprintBoard({
       )}
 
       {/* Tab navigation */}
-      <div className="flex border-b border-white/5 mb-4 overflow-x-auto">
+      <div className="flex border-b border-border-subtle mb-4 overflow-x-auto">
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-3 py-2 text-[9px] font-mono uppercase tracking-wider border-b-2 transition-all cursor-pointer shrink-0 ${
             activeTab === tab.id
-              ? 'border-purple-500 text-purple-300 bg-purple-500/5'
-              : 'border-transparent text-white/40 hover:text-white/70'
+              ? 'border-border text-purple-300 bg-surface-3'
+              : 'border-transparent text-text-quaternary hover:text-text-secondary'
           }`}>
             {tab.icon}
             {tab.label}
@@ -328,18 +328,18 @@ export function SprintBoard({
       {activeTab === 'active-sprint' && (
         <>
           {activeSprint && (
-            <div className="mb-6 bg-purple-950/20 border border-purple-500/10 px-4 py-3 rounded-sm flex flex-wrap justify-between items-center gap-3">
+            <div className="mb-6 bg-surface-3 border border-border px-4 py-3 rounded-sm flex flex-wrap justify-between items-center gap-3">
               <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-purple-400" />
-                <span className="text-[10px] font-mono uppercase tracking-widest text-purple-200">{activeSprint.name}</span>
+                <Target className="w-4 h-4 text-accent-secondary" />
+                <span className="text-[10px] font-mono uppercase tracking-wide text-purple-200">{activeSprint.name}</span>
                 {activeSprint.goal && <span className="text-[9px] font-mono text-purple-300/60">— {activeSprint.goal}</span>}
               </div>
-              <div className="flex items-center gap-6 text-[9px] font-mono text-purple-300 uppercase tracking-widest">
+              <div className="flex items-center gap-6 text-[9px] font-mono text-purple-300 uppercase tracking-wide">
                 <div className="flex items-center gap-1">
-                  {velocityData.remaining > 0 ? <TrendingDown className="w-3 h-3 text-amber-400" /> : <TrendingUp className="w-3 h-3 text-emerald-400" />}
-                  <span>Remaining: <span className="text-white font-bold">{velocityData.remaining} SP</span></span>
+                  {velocityData.remaining > 0 ? <TrendingDown className="w-3 h-3 text-signal-warning" /> : <TrendingUp className="w-3 h-3 text-emerald-400" />}
+                  <span>Remaining: <span className="text-text-primary font-bold">{velocityData.remaining} SP</span></span>
                 </div>
-                <div>Velocity: <span className="text-white font-bold">{velocityData.completed}/{velocityData.committed}</span></div>
+                <div>Velocity: <span className="text-text-primary font-bold">{velocityData.completed}/{velocityData.committed}</span></div>
                 <div>Progress: <span className="text-emerald-400 font-bold">{burndownPoints.progress}%</span></div>
               </div>
             </div>
@@ -347,10 +347,10 @@ export function SprintBoard({
 
           {/* Burndown */}
           {activeSprint && burndownPoints.totalDays > 0 && (
-            <div className="mb-6 bg-black/30 border border-white/5 rounded-sm p-4">
+            <div className="mb-6 bg-bg border border-border-subtle rounded-sm p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="text-[9px] font-mono uppercase tracking-widest text-white/60">Burndown Trajectory</span>
+                <span className="text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Burndown Trajectory</span>
               </div>
               <div className="flex items-end gap-[2px] h-16">
                 {Array.from({ length: burndownPoints.totalDays + 1 }).map((_, i) => {
@@ -360,13 +360,13 @@ export function SprintBoard({
                   return (
                     <div key={i} className="flex-1 flex flex-col justify-end h-full">
                       <div className="w-full bg-white/5 rounded-t-sm relative" style={{ height: `${Math.max(2, idealH)}%` }}>
-                        {isPast && <div className="absolute bottom-0 left-0 right-0 bg-purple-500/40 rounded-t-sm" style={{ height: `${Math.max(2, (velocityData.remaining / Math.max(1, velocityData.committed)) * 100)}%` }} />}
+                        {isPast && <div className="absolute bottom-0 left-0 right-0 bg-surface-3 rounded-t-sm" style={{ height: `${Math.max(2, (velocityData.remaining / Math.max(1, velocityData.committed)) * 100)}%` }} />}
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <div className="flex justify-between text-[8px] font-mono text-white/30 mt-1">
+              <div className="flex justify-between text-[8px] font-mono text-text-quaternary mt-1">
                 <span>Day 0</span><span>Day {burndownPoints.daysElapsed}</span><span>Day {burndownPoints.totalDays}</span>
               </div>
             </div>
@@ -375,10 +375,10 @@ export function SprintBoard({
           {/* Epic filter */}
           {epics.length > 0 && (
             <div className="mb-4 flex items-center gap-2 flex-wrap">
-              <span className="text-[9px] font-mono uppercase text-white/40">Epic:</span>
-              <button onClick={() => setSelectedEpic(null)} className={`px-2 py-0.5 text-[8px] font-mono uppercase rounded-sm cursor-pointer ${!selectedEpic ? 'bg-purple-600 text-white' : 'bg-white/5 text-white/40 hover:text-white'}`}>All</button>
+              <span className="text-[9px] font-mono uppercase text-text-quaternary">Epic:</span>
+              <button onClick={() => setSelectedEpic(null)} className={`px-2 py-0.5 text-[8px] font-mono uppercase rounded-sm cursor-pointer ${!selectedEpic ? 'bg-purple-600 text-text-primary' : 'bg-white/5 text-text-quaternary hover:text-text-primary'}`}>All</button>
               {epics.map(ep => (
-                <button key={ep.id} onClick={() => setSelectedEpic(ep.id)} className={`px-2 py-0.5 text-[8px] font-mono uppercase rounded-sm cursor-pointer ${selectedEpic === ep.id ? 'bg-purple-600 text-white' : 'bg-white/5 text-white/40 hover:text-white'}`}>{ep.name}</button>
+                <button key={ep.id} onClick={() => setSelectedEpic(ep.id)} className={`px-2 py-0.5 text-[8px] font-mono uppercase rounded-sm cursor-pointer ${selectedEpic === ep.id ? 'bg-purple-600 text-text-primary' : 'bg-white/5 text-text-quaternary hover:text-text-primary'}`}>{ep.name}</button>
               ))}
             </div>
           )}
@@ -392,17 +392,17 @@ export function SprintBoard({
                 return true;
               });
               return (
-                <div key={col.id} className="bg-white/[0.02] border border-white/5 rounded-sm p-3 flex flex-col min-h-[350px]">
-                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-white/80 font-semibold flex items-center gap-1.5">
+                <div key={col.id} className="bg-surface-3 border border-border-subtle rounded-sm p-3 flex flex-col min-h-[350px]">
+                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-border-subtle">
+                    <span className="text-[10px] font-mono uppercase tracking-wide text-text-secondary font-semibold flex items-center gap-1.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${col.color.replace('border', 'bg').replace('/20', '')}`} />
                       {col.title}
                     </span>
-                    <span className="px-2 py-0.5 bg-white/5 text-[9px] font-mono text-white/60 rounded-sm">{colTasks.length}</span>
+                    <span className="px-2 py-0.5 bg-white/5 text-[9px] font-mono text-text-tertiary rounded-sm">{colTasks.length}</span>
                   </div>
                   <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1 max-h-[450px]">
                     {colTasks.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-sm p-6 text-center text-white/20 font-mono text-[9px] uppercase">Empty</div>
+                      <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-border-subtle rounded-sm p-6 text-center text-text-quaternary font-mono text-[9px] uppercase">Empty</div>
                     ) : (
                       colTasks.map(task => (
                         <TaskCard
@@ -427,20 +427,20 @@ export function SprintBoard({
       )}
 
       {activeTab === 'product-backlog' && (
-        <div className="bg-white/[0.02] border border-white/5 rounded-sm p-4">
-          <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/80 mb-4">Product Backlog</h3>
+        <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
+          <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Product Backlog</h3>
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
             {tasks.filter(t => t.project_id === projectId && !t.sprint_id).length === 0 ? (
-              <div className="py-12 text-center text-white/20 font-mono text-[9px] uppercase">No unassigned stories in backlog</div>
+              <div className="py-12 text-center text-text-quaternary font-mono text-[9px] uppercase">No unassigned stories in backlog</div>
             ) : (
               tasks.filter(t => t.project_id === projectId && !t.sprint_id).map(task => (
-                <div key={task.id} className="flex items-center gap-3 p-3 bg-black/20 border border-white/5 rounded-sm hover:border-white/10 transition-colors">
+                <div key={task.id} className="flex items-center gap-3 p-3 bg-bg border border-border-subtle rounded-sm hover:border-border transition-colors">
                   <div className={`w-2 h-2 rounded-full ${task.status === 'done' ? 'bg-emerald-400' : task.status === 'in_progress' ? 'bg-yellow-400' : 'bg-white/20'}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-mono text-white/80 truncate">{task.name}</p>
-                    <p className="text-[8px] font-mono text-white/40">{task.story_points ? `${task.story_points} SP` : ''} · {task.estimated_hours}h</p>
+                    <p className="text-[11px] font-mono text-text-secondary truncate">{task.name}</p>
+                    <p className="text-[8px] font-mono text-text-quaternary">{task.story_points ? `${task.story_points} SP` : ''} · {task.estimated_hours}h</p>
                   </div>
-                  {task.epic_id && <span className="text-[8px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-sm">Epic bound</span>}
+                  {task.epic_id && <span className="text-[8px] font-mono text-accent-secondary bg-surface-3 px-1.5 py-0.5 rounded-sm">Epic bound</span>}
                 </div>
               ))
             )}
@@ -449,22 +449,22 @@ export function SprintBoard({
       )}
 
       {activeTab === 'sprint-planner' && (
-        <div className="bg-white/[0.02] border border-white/5 rounded-sm p-4">
-          <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/80 mb-4">Sprint Planner — Capacity: {activeSprint ? `${velocityData.committed} SP committed` : 'No active sprint'}</h3>
+        <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
+          <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Sprint Planner — Capacity: {activeSprint ? `${velocityData.committed} SP committed` : 'No active sprint'}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="text-[9px] font-mono uppercase text-white/60 mb-2">Available Stories</h4>
+              <h4 className="text-[9px] font-sans tracking-tight uppercase text-text-tertiary mb-2">Available Stories</h4>
               {tasks.filter(t => t.project_id === projectId && !t.sprint_id).slice(0, 10).map(task => (
-                <div key={task.id} className="flex items-center gap-2 p-2 border border-white/5 mb-1 rounded-sm text-[9px] font-mono text-white/70">
+                <div key={task.id} className="flex items-center gap-2 p-2 border border-border-subtle mb-1 rounded-sm text-[9px] font-mono text-text-secondary">
                   <span className="flex-1 truncate">{task.name}</span>
-                  <span className="text-purple-400">{task.story_points || '-'} SP</span>
+                  <span className="text-accent-secondary">{task.story_points || '-'} SP</span>
                 </div>
               ))}
             </div>
             <div>
-              <h4 className="text-[9px] font-mono uppercase text-white/60 mb-2">Velocity History</h4>
+              <h4 className="text-[9px] font-sans tracking-tight uppercase text-text-tertiary mb-2">Velocity History</h4>
               {sprints.filter(s => s.status === 'completed').slice(0, 5).map(s => (
-                <div key={s.id} className="flex items-center gap-2 p-2 border border-white/5 mb-1 rounded-sm text-[9px] font-mono text-white/70">
+                <div key={s.id} className="flex items-center gap-2 p-2 border border-border-subtle mb-1 rounded-sm text-[9px] font-mono text-text-secondary">
                   <span className="flex-1 truncate">{s.name}</span>
                   <span className="text-emerald-400">{s.velocity_completed}/{s.velocity_committed} SP</span>
                 </div>
@@ -475,20 +475,20 @@ export function SprintBoard({
       )}
 
       {activeTab === 'sprint-backlog' && (
-        <div className="bg-white/[0.02] border border-white/5 rounded-sm p-4">
-          <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/80 mb-4">Sprint Backlog</h3>
+        <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
+          <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Sprint Backlog</h3>
           <div className="space-y-2">
             {sprintTasks.length === 0 ? (
-              <div className="py-12 text-center text-white/20 font-mono text-[9px] uppercase">No tasks in current sprint backlog</div>
+              <div className="py-12 text-center text-text-quaternary font-mono text-[9px] uppercase">No tasks in current sprint backlog</div>
             ) : (
               sprintTasks.map(task => (
-                <div key={task.id} className="flex items-center gap-3 p-3 bg-black/20 border border-white/5 rounded-sm">
+                <div key={task.id} className="flex items-center gap-3 p-3 bg-bg border border-border-subtle rounded-sm">
                   <div className={`w-2 h-2 rounded-full ${task.status === 'done' ? 'bg-emerald-400' : task.status === 'in_progress' ? 'bg-yellow-400' : 'bg-white/20'}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-mono text-white/80 truncate">{task.name}</p>
-                    <p className="text-[8px] font-mono text-white/40">{task.status.replace('_', ' ')} · {task.story_points || '-'} SP</p>
+                    <p className="text-[11px] font-mono text-text-secondary truncate">{task.name}</p>
+                    <p className="text-[8px] font-mono text-text-quaternary">{task.status.replace('_', ' ')} · {task.story_points || '-'} SP</p>
                   </div>
-                  {task.epic_id && <span className="text-[8px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-sm">Epic</span>}
+                  {task.epic_id && <span className="text-[8px] font-mono text-accent-secondary bg-surface-3 px-1.5 py-0.5 rounded-sm">Epic</span>}
                 </div>
               ))
             )}
@@ -497,19 +497,19 @@ export function SprintBoard({
       )}
 
       {activeTab === 'sprint-review' && (
-        <div className="bg-white/[0.02] border border-white/5 rounded-sm p-4">
-          <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/80 mb-4">Sprint Review</h3>
+        <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
+          <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Sprint Review</h3>
           {sprints.filter(s => s.status === 'completed').length === 0 ? (
-            <div className="py-12 text-center text-white/20 font-mono text-[9px] uppercase">No completed sprints to review</div>
+            <div className="py-12 text-center text-text-quaternary font-mono text-[9px] uppercase">No completed sprints to review</div>
           ) : (
             <div className="space-y-3">
               {sprints.filter(s => s.status === 'completed').slice(0, 5).map(s => (
-                <div key={s.id} className="p-3 bg-black/20 border border-white/5 rounded-sm">
+                <div key={s.id} className="p-3 bg-bg border border-border-subtle rounded-sm">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-mono text-white/80 uppercase">{s.name}</span>
+                    <span className="text-[10px] font-mono text-text-secondary uppercase">{s.name}</span>
                     <span className="text-[8px] font-mono text-emerald-400">{s.velocity_completed}/{s.velocity_committed} SP completed</span>
                   </div>
-                  {s.goal && <p className="text-[8px] font-mono text-white/40">Goal: {s.goal}</p>}
+                  {s.goal && <p className="text-[8px] font-mono text-text-quaternary">Goal: {s.goal}</p>}
                 </div>
               ))}
             </div>
@@ -518,26 +518,26 @@ export function SprintBoard({
       )}
 
       {activeTab === 'velocity-analytics' && (
-        <div className="bg-white/[0.02] border border-white/5 rounded-sm p-4">
-          <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/80 mb-4">Velocity Analytics</h3>
+        <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
+          <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Velocity Analytics</h3>
           {sprints.filter(s => s.status === 'completed').length === 0 ? (
-            <div className="py-12 text-center text-white/20 font-mono text-[9px] uppercase">No data — complete a sprint first</div>
+            <div className="py-12 text-center text-text-quaternary font-mono text-[9px] uppercase">No data — complete a sprint first</div>
           ) : (
             <div className="space-y-3">
               {sprints.filter(s => s.status === 'completed').map(s => (
-                <div key={s.id} className="flex items-center gap-3 p-2 border border-white/5 rounded-sm">
-                  <span className="text-[9px] font-mono text-white/70 w-32 truncate">{s.name}</span>
+                <div key={s.id} className="flex items-center gap-3 p-2 border border-border-subtle rounded-sm">
+                  <span className="text-[9px] font-mono text-text-secondary w-32 truncate">{s.name}</span>
                   <div className="flex-1 h-4 bg-white/5 rounded-sm overflow-hidden">
                     <div className="h-full bg-purple-500 transition-all" style={{ width: `${s.velocity_committed > 0 ? (s.velocity_completed / s.velocity_committed) * 100 : 0}%` }} />
                   </div>
-                  <span className="text-[8px] font-mono text-white/40">{Math.round(s.velocity_committed > 0 ? (s.velocity_completed / s.velocity_committed) * 100 : 0)}%</span>
+                  <span className="text-[8px] font-mono text-text-quaternary">{Math.round(s.velocity_committed > 0 ? (s.velocity_completed / s.velocity_committed) * 100 : 0)}%</span>
                 </div>
               ))}
               {(() => {
                 const avg = sprints.filter(s => s.status === 'completed').reduce((sum, s) => sum + s.velocity_completed, 0) / Math.max(1, sprints.filter(s => s.status === 'completed').length);
                 return (
-                  <div className="mt-4 p-3 bg-purple-950/20 border border-purple-500/10 rounded-sm text-[9px] font-mono">
-                    <span className="text-purple-300">Average Velocity: <strong className="text-white">{avg.toFixed(1)} SP</strong> per sprint</span>
+                  <div className="mt-4 p-3 bg-surface-3 border border-border rounded-sm text-[9px] font-mono">
+                    <span className="text-purple-300">Average Velocity: <strong className="text-text-primary">{avg.toFixed(1)} SP</strong> per sprint</span>
                   </div>
                 );
               })()}
@@ -547,8 +547,8 @@ export function SprintBoard({
       )}
 
       {activeTab === 'definition-of-done' && (
-        <div className="bg-white/[0.02] border border-white/5 rounded-sm p-4">
-          <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/80 mb-4">Definition of Done</h3>
+        <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
+          <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Definition of Done</h3>
           <div className="space-y-2">
             {[
               'Code reviewed by at least one peer',
@@ -560,7 +560,7 @@ export function SprintBoard({
               'Deployed to staging environment',
               'Product owner approval obtained'
             ].map((item, i) => (
-              <label key={i} className="flex items-center gap-2 p-2 border border-white/5 rounded-sm text-[9px] font-mono text-white/70 cursor-pointer hover:bg-white/[0.02]">
+              <label key={i} className="flex items-center gap-2 p-2 border border-border-subtle rounded-sm text-[9px] font-mono text-text-secondary cursor-pointer hover:bg-surface-3">
                 <input type="checkbox" className="accent-purple-500" />
                 {item}
               </label>
@@ -575,21 +575,21 @@ export function SprintBoard({
 
         {isCreatingSprint && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCreatingSprint(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-md p-6 rounded-sm">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCreatingSprint(false)} className="absolute inset-0 bg-bg backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-surface border border-border w-full max-w-md p-6 rounded-sm">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white">Create Sprint</h3>
-                <button onClick={() => setIsCreatingSprint(false)} className="p-1.5 border border-white/10 hover:bg-white/5 cursor-pointer"><X className="w-3.5 h-3.5 text-white/60" /></button>
+                <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">Create Sprint</h3>
+                <button onClick={() => setIsCreatingSprint(false)} className="p-1.5 border border-border hover:bg-white/5 cursor-pointer"><X className="w-3.5 h-3.5 text-text-tertiary" /></button>
               </div>
               <form onSubmit={handleCreateSprint} className="space-y-4">
-                <div><label className="block text-[10px] font-mono uppercase text-white/60 mb-1.5">Name</label><input value={sprintName} onChange={e => setSprintName(e.target.value)} className="w-full bg-black border border-white/10 h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" placeholder="Sprint 1..." /></div>
-                <div><label className="block text-[10px] font-mono uppercase text-white/60 mb-1.5">Goal</label><input value={sprintGoal} onChange={e => setSprintGoal(e.target.value)} className="w-full bg-black border border-white/10 h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" placeholder="Sprint goal..." /></div>
+                <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Name</label><input value={sprintName} onChange={e => setSprintName(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" placeholder="Sprint 1..." /></div>
+                <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Goal</label><input value={sprintGoal} onChange={e => setSprintGoal(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" placeholder="Sprint goal..." /></div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-[10px] font-mono uppercase text-white/60 mb-1.5">Start</label><input type="date" value={sprintStart} onChange={e => setSprintStart(e.target.value)} className="w-full bg-black border border-white/10 h-10 px-3 text-xs font-mono focus:border-white/30 outline-none" /></div>
-                  <div><label className="block text-[10px] font-mono uppercase text-white/60 mb-1.5">End</label><input type="date" value={sprintEnd} onChange={e => setSprintEnd(e.target.value)} className="w-full bg-black border border-white/10 h-10 px-3 text-xs font-mono focus:border-white/30 outline-none" /></div>
+                  <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Start</label><input type="date" value={sprintStart} onChange={e => setSprintStart(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none" /></div>
+                  <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">End</label><input type="date" value={sprintEnd} onChange={e => setSprintEnd(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none" /></div>
                 </div>
-                <div><label className="block text-[10px] font-mono uppercase text-white/60 mb-1.5">Committed Velocity (SP)</label><input type="number" value={sprintVelocity} onChange={e => setSprintVelocity(Number(e.target.value))} className="w-full bg-black border border-white/10 h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" /></div>
-                <button type="submit" className="w-full bg-white text-black h-10 font-semibold uppercase tracking-widest text-[10px] hover:bg-neutral-200 transition-all cursor-pointer">Create Sprint</button>
+                <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Committed Velocity (SP)</label><input type="number" value={sprintVelocity} onChange={e => setSprintVelocity(Number(e.target.value))} className="w-full bg-bg border border-border h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" /></div>
+                <button type="submit" className="w-full bg-white text-black h-10 font-semibold uppercase tracking-wide text-[10px] hover:bg-neutral-200 transition-all cursor-pointer">Create Sprint</button>
               </form>
             </motion.div>
           </div>
@@ -597,16 +597,16 @@ export function SprintBoard({
 
         {isAddingExisting && allKanbanProjects && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddingExisting(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-[#0c0c0c] border border-white/10 w-full max-w-md p-6 rounded-sm">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddingExisting(false)} className="absolute inset-0 bg-bg backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-surface border border-border w-full max-w-md p-6 rounded-sm">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white">Add Existing Project</h3>
-                <button onClick={() => setIsAddingExisting(false)} className="p-1.5 border border-white/10 hover:bg-white/5 cursor-pointer"><X className="w-3.5 h-3.5 text-white/60" /></button>
+                <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">Add Existing Project</h3>
+                <button onClick={() => setIsAddingExisting(false)} className="p-1.5 border border-border hover:bg-white/5 cursor-pointer"><X className="w-3.5 h-3.5 text-text-tertiary" /></button>
               </div>
-              <p className="text-[9px] font-mono text-white/50 mb-4">Convert a Kanban project to Scrum. It will be removed from the Kanban board.</p>
+              <p className="text-[9px] font-mono text-text-tertiary mb-4">Convert a Kanban project to Scrum. It will be removed from the Kanban board.</p>
               <div className="space-y-1 max-h-64 overflow-y-auto">
                 {allKanbanProjects.filter(p => p.id !== projectId).map(p => (
-                  <button key={p.id} onClick={() => handleAddExistingProject(p.id)} className="w-full text-left p-3 border border-white/10 hover:border-purple-500/30 rounded-sm text-[10px] font-mono text-white/70 hover:bg-purple-950/20 transition-all cursor-pointer">
+                  <button key={p.id} onClick={() => handleAddExistingProject(p.id)} className="w-full text-left p-3 border border-border hover:border-border rounded-sm text-[10px] font-mono text-text-secondary hover:bg-surface-3 transition-all cursor-pointer">
                     {p.name}
                   </button>
                 ))}

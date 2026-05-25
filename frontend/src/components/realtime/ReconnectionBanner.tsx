@@ -30,8 +30,8 @@ export function ReconnectionBanner() {
           exit="hidden"
           className="fixed top-0 left-0 right-0 z-[300] flex justify-center"
         >
-          <div className="bg-amber-500/10 border border-amber-500/20 px-4 py-2 backdrop-blur-sm">
-            <span className="text-[11px] font-mono text-amber-400/70">
+          <div className="bg-signal-warning-bg border border-border px-4 py-2 backdrop-blur-sm">
+            <span className="text-[11px] font-mono text-signal-warning/70">
               {navigator.onLine ? 'Reconnected' : 'Connection lost — reconnecting...'}
             </span>
           </div>

@@ -116,8 +116,8 @@ export function ExecutionReadinessPanel({ projectId, compact }: ExecutionReadine
 
   const getScoreColor = () => {
     if (score >= 80) return 'text-emerald-400';
-    if (score >= 50) return 'text-amber-400';
-    return 'text-red-400';
+    if (score >= 50) return 'text-signal-warning';
+    return 'text-signal-critical';
   };
 
   const getScoreLabel = () => {
@@ -131,19 +131,19 @@ export function ExecutionReadinessPanel({ projectId, compact }: ExecutionReadine
   const iconForType = (type: string) => {
     switch (type) {
       case 'success': return <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />;
-      case 'warning': return <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />;
-      case 'error': return <XCircle className="w-4 h-4 text-red-400 shrink-0" />;
-      default: return <HelpCircle className="w-4 h-4 text-white/30 shrink-0" />;
+      case 'warning': return <AlertTriangle className="w-4 h-4 text-signal-warning shrink-0" />;
+      case 'error': return <XCircle className="w-4 h-4 text-signal-critical shrink-0" />;
+      default: return <HelpCircle className="w-4 h-4 text-text-quaternary shrink-0" />;
     }
   };
 
   if (compact) {
     return (
-      <div className="border border-white/10 rounded-lg p-4 bg-white/[0.02]">
+      <div className="border border-border rounded-lg p-4 bg-surface-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-white/40" />
-            <span className="text-[10px] font-mono uppercase tracking-wider text-white/50">Execution Readiness</span>
+            <Target className="w-4 h-4 text-text-quaternary" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Execution Readiness</span>
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-sm font-mono font-bold ${getScoreColor()}`}>{score}%</span>
@@ -163,15 +163,15 @@ export function ExecutionReadinessPanel({ projectId, compact }: ExecutionReadine
   }
 
   return (
-    <div className="border border-white/10 rounded-lg p-5 bg-white/[0.02]">
-      <div className="flex items-center justify-between mb-5 pb-4 border-b border-white/10">
+    <div className="border border-border rounded-lg p-5 bg-surface-3">
+      <div className="flex items-center justify-between mb-5 pb-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.03] border border-white/5">
-            <Target className="w-5 h-5 text-white/40" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-3 border border-border-subtle">
+            <Target className="w-5 h-5 text-text-quaternary" />
           </div>
           <div>
-            <h3 className="text-sm font-mono uppercase tracking-widest text-white/70">Execution Readiness</h3>
-            <p className="text-[10px] text-white/40 mt-0.5">Operational preparedness checklist</p>
+            <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-secondary">Execution Readiness</h3>
+            <p className="text-[10px] text-text-quaternary mt-0.5">Operational preparedness checklist</p>
           </div>
         </div>
         <div className="text-right">
@@ -184,25 +184,25 @@ export function ExecutionReadinessPanel({ projectId, compact }: ExecutionReadine
         {checks.map((check, i) => (
           <div
             key={i}
-            className="group relative flex items-start gap-3 p-3 rounded-sm hover:bg-white/[0.02] transition-colors cursor-default"
+            className="group relative flex items-start gap-3 p-3 rounded-sm hover:bg-surface-3 transition-colors cursor-default"
           >
             <div className="mt-0.5 shrink-0">{iconForType(check.type)}</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 {check.icon}
-                <span className={`text-xs font-mono ${check.passed ? 'text-white/70' : 'text-white/50'}`}>{check.label}</span>
+                <span className={`text-xs font-mono ${check.passed ? 'text-text-secondary' : 'text-text-tertiary'}`}>{check.label}</span>
                 <span className={`text-[9px] font-mono uppercase ${
                   check.type === 'success' ? 'text-emerald-400/60' :
-                  check.type === 'warning' ? 'text-amber-400/60' :
-                  check.type === 'error' ? 'text-red-400/60' :
-                  'text-white/20'
+                  check.type === 'warning' ? 'text-signal-warning/60' :
+                  check.type === 'error' ? 'text-signal-critical/60' :
+                  'text-text-quaternary'
                 }`}>{check.passed ? 'Ready' : 'Pending'}</span>
               </div>
-              <p className="text-[10px] text-white/30 mt-1 leading-relaxed">{check.description}</p>
-              <div className="mt-1.5 pt-1.5 border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <p className="text-[9px] text-white/40 leading-relaxed">{check.guidance}</p>
+              <p className="text-[10px] text-text-quaternary mt-1 leading-relaxed">{check.description}</p>
+              <div className="mt-1.5 pt-1.5 border-t border-border-subtle opacity-0 group-hover:opacity-100 transition-opacity">
+                <p className="text-[9px] text-text-quaternary leading-relaxed">{check.guidance}</p>
                 {!check.passed && (
-                  <p className="text-[9px] text-amber-400/60 mt-1 leading-relaxed">{check.impact}</p>
+                  <p className="text-[9px] text-signal-warning/60 mt-1 leading-relaxed">{check.impact}</p>
                 )}
               </div>
             </div>

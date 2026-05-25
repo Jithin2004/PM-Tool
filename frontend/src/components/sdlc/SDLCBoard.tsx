@@ -61,18 +61,18 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
   }, [projectTasks, activePhase]);
 
   return (
-    <div className="w-full bg-black/40 border border-white/5 rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
+    <div className="w-full bg-bg border border-border-subtle rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500/80 via-blue-500/80 to-cyan-500/80" />
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-white/5 pb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-border-subtle pb-4">
         <div className="flex items-center gap-2">
           <Rocket className="w-4 h-4 text-emerald-400" />
-          <h2 className="text-sm font-mono uppercase tracking-widest text-white">SDLC Pipeline</h2>
-          <span className="text-[9px] font-mono text-white/40">— {project.name}</span>
+          <h2 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">SDLC Pipeline</h2>
+          <span className="text-[9px] font-mono text-text-quaternary">— {project.name}</span>
         </div>
         {hasWriteAccess && (
-          <button onClick={() => setIsAddingTask(true)} className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-mono uppercase tracking-widest rounded-sm cursor-pointer">
+          <button onClick={() => setIsAddingTask(true)} className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-text-primary text-[9px] font-mono uppercase tracking-wide rounded-sm cursor-pointer">
             Queue Task
           </button>
         )}
@@ -84,16 +84,16 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
           <button
             key={phase.id}
             onClick={() => setActivePhase(activePhase === phase.id ? null : phase.id)}
-            className={`flex flex-col items-center gap-1 p-2 border rounded-sm transition-all cursor-pointer ${activePhase === phase.id ? 'bg-emerald-900/30 border-emerald-500/40' : 'bg-white/[0.02] border-white/5 hover:border-white/15'}`}
+            className={`flex flex-col items-center gap-1 p-2 border rounded-sm transition-all cursor-pointer ${activePhase === phase.id ? 'bg-emerald-900/30 border-emerald-500/40' : 'bg-surface-3 border-border-subtle hover:border-white/15'}`}
           >
-            <div className={`text-white/60 ${phase.progress === 100 ? 'text-emerald-400' : ''}`}>{PHASE_ICONS[phase.id]}</div>
-            <span className="text-[7px] font-mono uppercase text-white/50 truncate w-full text-center">{phase.title}</span>
+            <div className={`text-text-tertiary ${phase.progress === 100 ? 'text-emerald-400' : ''}`}>{PHASE_ICONS[phase.id]}</div>
+            <span className="text-[7px] font-mono uppercase text-text-tertiary truncate w-full text-center">{phase.title}</span>
             {phase.taskCount > 0 && (
               <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-1">
                 <div className="h-full bg-emerald-500 transition-all" style={{ width: `${phase.progress}%` }} />
               </div>
             )}
-            {phase.approvalStatus === 'pending' && <AlertCircle className="w-2.5 h-2.5 text-amber-400" />}
+            {phase.approvalStatus === 'pending' && <AlertCircle className="w-2.5 h-2.5 text-signal-warning" />}
             {phase.approvalStatus === 'approved' && <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />}
           </button>
         ))}
@@ -101,40 +101,40 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
 
       {/* Milestones & Meetings summary */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-black/30 border border-white/5 rounded-sm p-4">
+        <div className="bg-bg border border-border-subtle rounded-sm p-4">
           <div className="flex items-center gap-2 mb-3">
             <Flag className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[9px] font-mono uppercase tracking-widest text-white/60">Milestones</span>
+            <span className="text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Milestones</span>
           </div>
           {projectMilestones.length === 0 ? (
-            <p className="text-[9px] font-mono text-white/30">No milestones defined.</p>
+            <p className="text-[9px] font-mono text-text-quaternary">No milestones defined.</p>
           ) : (
             <div className="space-y-1.5">
               {projectMilestones.map(m => (
                 <div key={m.id} className="flex items-center justify-between text-[9px] font-mono">
-                  <span className="text-white/70">{m.title}</span>
-                  <span className={`px-1.5 py-0.5 rounded-sm ${m.status === 'achieved' ? 'bg-emerald-500/10 text-emerald-400' : m.status === 'missed' ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-white/40'}`}>{m.status}</span>
+                  <span className="text-text-secondary">{m.title}</span>
+                  <span className={`px-1.5 py-0.5 rounded-sm ${m.status === 'achieved' ? 'bg-emerald-500/10 text-emerald-400' : m.status === 'missed' ? 'bg-signal-critical-bg text-signal-critical' : 'bg-white/5 text-text-quaternary'}`}>{m.status}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="bg-black/30 border border-white/5 rounded-sm p-4">
+        <div className="bg-bg border border-border-subtle rounded-sm p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Users className="w-3.5 h-3.5 text-purple-400" />
-            <span className="text-[9px] font-mono uppercase tracking-widest text-white/60">Meetings</span>
+            <Users className="w-3.5 h-3.5 text-accent-secondary" />
+            <span className="text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Meetings</span>
           </div>
           {projectMeetings.length === 0 ? (
-            <p className="text-[9px] font-mono text-white/30">No meetings scheduled.</p>
+            <p className="text-[9px] font-mono text-text-quaternary">No meetings scheduled.</p>
           ) : (
             <div className="space-y-1.5">
               {projectMeetings.slice(0, 5).map(m => (
                 <div key={m.id} className="flex items-center justify-between text-[9px] font-mono">
                   <div className="flex items-center gap-1.5">
-                    <Clock className="w-2.5 h-2.5 text-white/30" />
-                    <span className="text-white/70">{m.title}</span>
+                    <Clock className="w-2.5 h-2.5 text-text-quaternary" />
+                    <span className="text-text-secondary">{m.title}</span>
                   </div>
-                  <span className="text-white/30">{new Date(m.start_time).toLocaleDateString()}</span>
+                  <span className="text-text-quaternary">{new Date(m.start_time).toLocaleDateString()}</span>
                 </div>
               ))}
             </div>
@@ -143,25 +143,25 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
       </div>
 
       {/* Phase task list */}
-      <div className="bg-white/[0.02] border border-white/5 rounded-sm p-4">
+      <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/80">
+          <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary">
             {activePhase ? `${SDLC_PHASES.find(p => p.id === activePhase)?.title} Tasks` : 'All Phase Tasks'}
           </h3>
-          <span className="text-[9px] font-mono text-white/40">{filteredTasks.length} tasks</span>
+          <span className="text-[9px] font-mono text-text-quaternary">{filteredTasks.length} tasks</span>
         </div>
         <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
           {filteredTasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center text-white/20 font-mono text-[9px] uppercase">No tasks in this phase</div>
+            <div className="flex flex-col items-center justify-center py-12 text-center text-text-quaternary font-mono text-[9px] uppercase">No tasks in this phase</div>
           ) : (
             filteredTasks.map(task => (
-              <div key={task.id} className="flex items-center gap-3 p-3 bg-black/20 border border-white/5 rounded-sm hover:border-white/10 transition-colors">
+              <div key={task.id} className="flex items-center gap-3 p-3 bg-bg border border-border-subtle rounded-sm hover:border-border transition-colors">
                 <div className={`w-2 h-2 rounded-full ${task.status === 'done' ? 'bg-emerald-400' : task.status === 'in_progress' ? 'bg-yellow-400' : task.status === 'review' ? 'bg-orange-400' : 'bg-white/20'}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-mono text-white/80 truncate">{task.name}</p>
-                  <p className="text-[8px] font-mono text-white/40 uppercase">{task.status.replace('_', ' ')} · {task.estimated_hours}h</p>
+                  <p className="text-[11px] font-mono text-text-secondary truncate">{task.name}</p>
+                  <p className="text-[8px] font-mono text-text-quaternary uppercase">{task.status.replace('_', ' ')} · {task.estimated_hours}h</p>
                 </div>
-                {task.story_points && <span className="text-[8px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-sm">{task.story_points} SP</span>}
+                {task.story_points && <span className="text-[8px] font-mono text-accent-secondary bg-surface-3 px-1.5 py-0.5 rounded-sm">{task.story_points} SP</span>}
               </div>
             ))
           )}

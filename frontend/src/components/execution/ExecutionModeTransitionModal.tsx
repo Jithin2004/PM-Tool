@@ -43,35 +43,35 @@ export function ExecutionModeTransitionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="bg-[#0c0c0c] border border-white/10 w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-white/10">
-          <h2 className="text-sm font-semibold text-white">Execution Mode Transition</h2>
-          <p className="text-[10px] font-mono text-white/40 mt-0.5">{projectName}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg" onClick={onClose}>
+      <div className="bg-surface border border-border w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold text-text-primary">Execution Mode Transition</h2>
+          <p className="text-[10px] font-mono text-text-quaternary mt-0.5">{projectName}</p>
         </div>
 
         <div className="px-5 py-4 space-y-4">
           {step === 'select' && (
             <>
-              <div className="flex items-center gap-3 text-[10px] font-mono text-white/30 mb-3">
-                <span>Current: <span className="text-white/60">{currentMode}</span></span>
+              <div className="flex items-center gap-3 text-[10px] font-mono text-text-quaternary mb-3">
+                <span>Current: <span className="text-text-tertiary">{currentMode}</span></span>
                 <span>Tasks: {taskCount}</span>
                 <span>Sprints: {sprintCount}</span>
               </div>
 
-              <p className="text-[10px] font-mono text-white/50 mb-2">Select target execution architecture:</p>
+              <p className="text-[10px] font-mono text-text-tertiary mb-2">Select target execution architecture:</p>
               <div className="space-y-1.5">
                 {availableModes.map(mode => (
                   <button
                     key={mode.value}
                     onClick={() => { setTargetMode(mode.value); setStep('preview'); }}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-white/[0.02] border border-white/10 hover:border-white/30 transition-colors text-left"
+                    className="w-full flex items-center justify-between px-3 py-2 bg-surface-3 border border-border hover:border-white/30 transition-colors text-left"
                   >
                     <div>
-                      <span className="text-xs font-mono text-white/70">{mode.label}</span>
-                      <p className="text-[9px] font-mono text-white/30">{mode.description}</p>
+                      <span className="text-xs font-mono text-text-secondary">{mode.label}</span>
+                      <p className="text-[9px] font-mono text-text-quaternary">{mode.description}</p>
                     </div>
-                    <span className="text-[10px] font-mono text-white/20">{'>'}</span>
+                    <span className="text-[10px] font-mono text-text-quaternary">{'>'}</span>
                   </button>
                 ))}
               </div>

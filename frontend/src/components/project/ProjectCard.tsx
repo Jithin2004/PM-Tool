@@ -28,7 +28,7 @@ export function ProjectCard({ project, teams, profiles, workingHoursPerDay, work
   const varianceVal = calculateVariance(project.pert_best ?? 0, project.pert_worst ?? 0);
   const stdDev = isNaN(varianceVal) ? 0 : Math.sqrt(varianceVal);
 
-  const riskColor = stdDev < 1.5 ? 'text-green-400' : stdDev < 3 ? 'text-yellow-400' : 'text-red-500';
+  const riskColor = stdDev < 1.5 ? 'text-signal-safe' : stdDev < 3 ? 'text-signal-warning' : 'text-signal-critical';
   const riskLabel = stdDev < 1.5 ? 'STABLE' : stdDev < 3 ? 'CAUTION' : 'HIGH_RISK';
 
   const isPlanning = project.status === 'planning';
@@ -67,69 +67,69 @@ export function ProjectCard({ project, teams, profiles, workingHoursPerDay, work
   return (
     <div
       onClick={() => onClick(project)}
-      className={`border border-white/10 bg-[#0c0c0c] p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden ${stdDev >= 3 ? 'border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]' : ''
+      className={`border border-border bg-surface p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden ${stdDev >= 3 ? 'border-red-500/20 shadow-sm' : ''
         }`}
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] -mr-16 -mt-16 rounded-full blur-3xl pointer-events-none group-hover:bg-white/[0.05]"></div>
-      {stdDev >= 3 && <div className="absolute top-0 left-0 w-full h-0.5 bg-red-500/50"></div>}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-surface-3 -mr-16 -mt-16 rounded-full blur-3xl pointer-events-none group-hover:bg-surface-3"></div>
+      {stdDev >= 3 && <div className="absolute top-0 left-0 w-full h-0.5 bg-signal-critical-bg"></div>}
 
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-6 mb-6">
         <div className="space-y-2 w-full sm:w-auto">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 border ${project.status === 'deployed' ? 'border-green-500/50 text-green-400 bg-green-500/15' :
-              project.status === 'in-progress' ? 'border-blue-500/50 text-blue-400 bg-blue-500/15' :
-                'border-white/30 text-white bg-white/20'
+            <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 border ${project.status === 'deployed' ? 'border-border text-signal-safe bg-signal-safe-bg' :
+              project.status === 'in-progress' ? 'border-border text-signal-info bg-surface-3' :
+                'border-white/30 text-text-primary bg-white/20'
               }`}>
               {project.status.replace('-', ' ')}
             </span>
-            <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 border border-white/20 bg-white/10 ${riskColor}`}>
+            <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 border border-border bg-white/10 ${riskColor}`}>
               {riskLabel}
             </span>
           </div>
-          <h3 className="text-base sm:text-lg font-medium leading-tight group-hover:text-white transition-colors">{project.name}</h3>
+          <h3 className="text-base sm:text-lg font-medium leading-tight group-hover:text-text-primary transition-colors">{project.name}</h3>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="text-[10px] font-mono text-white/60 uppercase tracking-wider">{getRelativeTime(project.created_at)}</span>
+            <span className="text-[10px] font-mono text-text-tertiary uppercase tracking-wider">{getRelativeTime(project.created_at)}</span>
             <div className="flex flex-wrap gap-1.5">
               {project.tags
                 .filter(tag => !tag.startsWith('TEAM:') && !tag.startsWith('LOG:'))
                 .map(tag => (
-                  <span key={tag} className="text-[10px] font-mono text-white/70">#{tag}</span>
+                  <span key={tag} className="text-[10px] font-mono text-text-secondary">#{tag}</span>
                 ))}
             </div>
           </div>
           {creator && (
             <div className="mt-2.5 flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/20">
+              <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-border">
                 {creator.avatar_url ? (
                   <img src={creator.avatar_url} alt="Creator" className="w-full h-full object-cover" />
                 ) : (
-                  <Users className="w-2.5 h-2.5 text-white/70" />
+                  <Users className="w-2.5 h-2.5 text-text-secondary" />
                 )}
               </div>
-              <p className="text-[9px] font-mono text-white/50">
-                By <span className="text-white/75">{creator.full_name || creator.email}</span>
+              <p className="text-[9px] font-mono text-text-tertiary">
+                By <span className="text-text-secondary">{creator.full_name || creator.email}</span>
               </p>
             </div>
           )}
         </div>
-        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-3 sm:pt-0 border-t border-white/5 sm:border-t-0 text-right">
+        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-3 sm:pt-0 border-t border-border-subtle sm:border-t-0 text-right">
           <div className="text-left sm:text-right">
-            <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest leading-none mb-1">Finish_ETA</p>
+            <p className="text-[9px] font-mono text-text-tertiary uppercase tracking-wide leading-none mb-1">Finish_ETA</p>
             <div className={`text-xl sm:text-2xl font-mono font-medium ${riskColor} leading-none`}>{remainingDays.toFixed(1)}d</div>
           </div>
           <div className="text-right mt-0 sm:mt-2">
-            <p className="text-[9px] font-mono text-white/50 uppercase leading-none">{completionDateStr}</p>
-            <p className="text-[10px] font-mono text-white/75 uppercase mt-1">Effort: {expectedRealHours.toFixed(1)}h</p>
+            <p className="text-[9px] font-mono text-text-tertiary uppercase leading-none">{completionDateStr}</p>
+            <p className="text-[10px] font-mono text-text-secondary uppercase mt-1">Effort: {expectedRealHours.toFixed(1)}h</p>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-border-subtle">
         <div className="flex items-center gap-2">
-          <Users className="w-3 h-3 text-white/75" />
-          <span className="text-[10px] font-mono text-white/85 uppercase tracking-widest">{teamName}</span>
+          <Users className="w-3 h-3 text-text-secondary" />
+          <span className="text-[10px] font-mono text-text-secondary uppercase tracking-wide">{teamName}</span>
         </div>
-        <button className="flex items-center gap-1 text-[10px] uppercase font-mono text-white/90 hover:text-white transition-all group/btn">
+        <button className="flex items-center gap-1 text-[10px] uppercase font-medium text-text-secondary hover:text-text-primary transition-all group/btn">
           Forecast <ChevronRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
         </button>
       </div>

@@ -492,27 +492,27 @@ export function LogisticsDashboard({
   return (
     <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 pb-16">
       {/* Visual Section Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 border-b border-white/10 pb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 border-b border-border pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <Truck className="w-5 h-5 text-indigo-400" />
             <h2 className="text-3xl font-medium tracking-tight uppercase">Logistics Orchestration Control</h2>
           </div>
-          <p className="text-sm font-mono text-white/70">
+          <p className="text-sm font-mono text-text-secondary">
             Real-time payload routing, pipeline congestion analysis, execution node monitoring, and load balancing constraints.
           </p>
         </div>
 
         {/* Tab Selector */}
         {!hideTabs && (
-        <div className="flex overflow-x-auto scrollbar-none bg-white/5 p-1 border border-white/5 rounded-sm w-full md:w-auto max-w-full" role="tablist" aria-label="Logistics sections">
+        <div className="flex overflow-x-auto scrollbar-none bg-white/5 p-1 border border-border-subtle rounded-sm w-full md:w-auto max-w-full" role="tablist" aria-label="Logistics sections">
           <button
             onClick={() => setActiveTab('orchestration')}
             role="tab"
             aria-selected={activeTab === 'orchestration'}
             aria-controls="tabpanel-orchestration"
             id="tab-orchestration"
-            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'orchestration' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-wide transition-all ${activeTab === 'orchestration' ? 'bg-white text-black font-semibold' : 'text-text-tertiary hover:text-text-primary'}`}
           >
             Dispatch &amp; Routing
           </button>
@@ -522,7 +522,7 @@ export function LogisticsDashboard({
             aria-selected={activeTab === 'attendance'}
             aria-controls="tabpanel-attendance"
             id="tab-attendance"
-            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'attendance' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-wide transition-all ${activeTab === 'attendance' ? 'bg-white text-black font-semibold' : 'text-text-tertiary hover:text-text-primary'}`}
           >
             Attendance
           </button>
@@ -533,7 +533,7 @@ export function LogisticsDashboard({
               aria-selected={activeTab === 'paySlab'}
               aria-controls="tabpanel-paySlab"
               id="tab-paySlab"
-              className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'paySlab' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+              className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-wide transition-all ${activeTab === 'paySlab' ? 'bg-white text-black font-semibold' : 'text-text-tertiary hover:text-text-primary'}`}
             >
               Rules &amp; Slabs
             </button>
@@ -544,7 +544,7 @@ export function LogisticsDashboard({
             aria-selected={activeTab === 'payroll'}
             aria-controls="tabpanel-payroll"
             id="tab-payroll"
-            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest transition-all ${activeTab === 'payroll' ? 'bg-white text-black font-semibold' : 'text-white/60 hover:text-white'}`}
+            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-wide transition-all ${activeTab === 'payroll' ? 'bg-white text-black font-semibold' : 'text-text-tertiary hover:text-text-primary'}`}
           >
             Payroll Compliance
           </button>
@@ -568,21 +568,21 @@ export function LogisticsDashboard({
           >
             {/* Real-time Logistics Telemetry Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <div className="border border-white/10 bg-[#0c0c0c] p-5 rounded-sm">
-                <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1">Queue Congestion</p>
-                <p className="text-2xl font-mono text-indigo-400 font-bold">{orchestrationMetrics.congestion} tasks/node</p>
+              <div className="border border-border bg-surface p-5 rounded-sm">
+                <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Queue Congestion</p>
+                <p className="text-2xl font-sans tracking-tight text-indigo-400 font-bold">{orchestrationMetrics.congestion} tasks/node</p>
               </div>
-              <div className="border border-white/10 bg-[#0c0c0c] p-5 rounded-sm">
-                <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1">Dispatch Rate</p>
-                <p className="text-2xl font-mono text-cyan-400 font-bold">{orchestrationMetrics.dispatchRate}%</p>
+              <div className="border border-border bg-surface p-5 rounded-sm">
+                <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Dispatch Rate</p>
+                <p className="text-2xl font-sans tracking-tight text-cyan-400 font-bold">{orchestrationMetrics.dispatchRate}%</p>
               </div>
-              <div className="border border-white/10 bg-[#0c0c0c] p-5 rounded-sm">
-                <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1">Pipeline Latency</p>
-                <p className="text-2xl font-mono text-purple-400 font-bold">~{orchestrationMetrics.latency}h/task</p>
+              <div className="border border-border bg-surface p-5 rounded-sm">
+                <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Pipeline Latency</p>
+                <p className="text-2xl font-sans tracking-tight text-accent-secondary font-bold">~{orchestrationMetrics.latency}h/task</p>
               </div>
-              <div className="border border-white/10 bg-[#0c0c0c] p-5 rounded-sm">
-                <p className="text-[9px] font-mono uppercase text-white/50 tracking-widest mb-1">Escalation Index</p>
-                <p className="text-2xl font-mono text-rose-400 font-bold">{orchestrationMetrics.escalationCount} anomalies</p>
+              <div className="border border-border bg-surface p-5 rounded-sm">
+                <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Escalation Index</p>
+                <p className="text-2xl font-sans tracking-tight text-rose-400 font-bold">{orchestrationMetrics.escalationCount} anomalies</p>
               </div>
             </div>
 
@@ -590,53 +590,53 @@ export function LogisticsDashboard({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Backlog dispatch queue */}
-              <div className="lg:col-span-1 border border-white/10 bg-[#0c0c0c] p-5 rounded-sm flex flex-col justify-between h-[34rem]">
+              <div className="lg:col-span-1 border border-border bg-surface p-5 rounded-sm flex flex-col justify-between h-[34rem]">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                  <div className="flex justify-between items-center pb-3 border-b border-border-subtle">
                     <div>
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">Dispatch Queue</h4>
-                      <p className="text-[8px] font-mono text-white/40 uppercase">Unassigned payload backlog</p>
+                      <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Dispatch Queue</h4>
+                      <p className="text-[8px] font-mono text-text-quaternary uppercase">Unassigned payload backlog</p>
                     </div>
-                    <span className="text-[9px] font-mono bg-white/5 px-2 py-0.5 border border-white/5 text-white/60">
+                    <span className="text-[9px] font-mono bg-white/5 px-2 py-0.5 border border-border-subtle text-text-tertiary">
                       {dispatchQueue.length} queued
                     </span>
                   </div>
 
                   <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/45" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary" />
                     <input
                       type="text"
                       placeholder="Query queue..."
                       value={routingTaskSearch}
                       onChange={e => setRoutingTaskSearch(e.target.value)}
-                      className="w-full bg-[#0a0a0a] border border-white/10 h-8 pl-8 pr-3 text-[11px] font-mono text-white outline-none focus:border-indigo-400/40 rounded-sm"
+                      className="w-full bg-bg border border-border h-8 pl-8 pr-3 text-[11px] font-mono text-text-primary outline-none focus:border-indigo-400/40 rounded-sm"
                     />
                   </div>
 
                   <div className="space-y-2 overflow-y-auto max-h-[22rem] pr-1">
                     {dispatchQueue.length === 0 ? (
-                      <div className="py-20 text-center text-[10px] font-mono uppercase text-white/40 italic">
+                      <div className="py-20 text-center text-[10px] font-mono uppercase text-text-quaternary italic">
                         No unallocated payloads detected
                       </div>
                     ) : (
                       dispatchQueue.map(task => (
-                        <div key={task.id} className="p-3 border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] rounded-sm space-y-2 relative transition-all">
+                        <div key={task.id} className="p-3 border border-border-subtle bg-surface-3 hover:bg-surface-3 rounded-sm space-y-2 relative transition-all">
                           <div className="flex justify-between items-start gap-2">
-                            <span className="text-[10px] font-semibold text-white/95 truncate block w-40">{task.name}</span>
-                            <span className={`text-[7px] font-extrabold px-1 border rounded-sm uppercase ${task.priority === 'urgent' || task.priority === 'high' ? 'border-rose-500/20 bg-rose-500/10 text-rose-400' : 'border-white/5 bg-white/5 text-white/40'}`}>
+                            <span className="text-[10px] font-semibold text-text-secondary truncate block w-40">{task.name}</span>
+                            <span className={`text-[7px] font-extrabold px-1 border rounded-sm uppercase ${task.priority === 'urgent' || task.priority === 'high' ? 'border-rose-500/20 bg-rose-500/10 text-rose-400' : 'border-border-subtle bg-white/5 text-text-quaternary'}`}>
                               {task.priority}
                             </span>
                           </div>
                           
-                          <div className="flex justify-between items-center text-[8px] font-mono text-white/40 uppercase">
+                          <div className="flex justify-between items-center text-[8px] font-mono text-text-quaternary uppercase">
                             <span>Project: {task.projectName}</span>
                             <span>Weight: {task.estimated_hours}h</span>
                           </div>
 
-                          <div className="pt-2 border-t border-white/5 flex gap-2">
+                          <div className="pt-2 border-t border-border-subtle flex gap-2">
                             <button
                               onClick={() => setRoutingTaskId(routingTaskId === task.id ? null : task.id)}
-                              className="flex-1 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-[9px] uppercase tracking-widest transition-all rounded-sm"
+                              className="flex-1 py-1 bg-indigo-600 hover:bg-indigo-500 text-text-primary font-mono text-[9px] uppercase tracking-wide transition-all rounded-sm"
                             >
                               {routingTaskId === task.id ? 'Cancel Routing' : 'Route Dispatch'}
                             </button>
@@ -644,17 +644,17 @@ export function LogisticsDashboard({
 
                           {/* Quick Router drop-panel */}
                           {routingTaskId === task.id && (
-                            <div className="mt-2 p-2 bg-black border border-white/10 rounded-sm space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
-                              <p className="text-[7.5px] font-mono text-white/40 uppercase tracking-widest mb-1">Target dispatch node</p>
+                            <div className="mt-2 p-2 bg-bg border border-border rounded-sm space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                              <p className="text-[7.5px] font-mono text-text-quaternary uppercase tracking-wide mb-1">Target dispatch node</p>
                               <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
                                 {executionNodes.map(node => (
                                   <button
                                     key={node.id}
                                     onClick={() => handleRouteTask(task.id, node.id)}
-                                    className="w-full text-left p-1.5 border border-white/5 hover:border-indigo-400/30 bg-white/5 hover:bg-indigo-900/10 rounded-sm text-[9px] font-mono text-white/80 hover:text-white flex justify-between items-center"
+                                    className="w-full text-left p-1.5 border border-border-subtle hover:border-indigo-400/30 bg-white/5 hover:bg-indigo-900/10 rounded-sm text-[9px] font-mono text-text-secondary hover:text-text-primary flex justify-between items-center"
                                   >
                                     <span className="truncate w-24 font-bold">{node.name}</span>
-                                    <span className="text-[8px] text-white/40 font-semibold">{node.utilization}% load ({node.devTasks.length} tasks)</span>
+                                    <span className="text-[8px] text-text-quaternary font-semibold">{node.utilization}% load ({node.devTasks.length} tasks)</span>
                                   </button>
                                 ))}
                               </div>
@@ -666,10 +666,10 @@ export function LogisticsDashboard({
                   </div>
                 </div>
 
-                <div className="border-t border-white/5 pt-3">
+                <div className="border-t border-border-subtle pt-3">
                   <button
                     onClick={handleAutoBalance}
-                    className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[9px] font-mono uppercase tracking-widest transition-all rounded-sm flex items-center justify-center gap-2"
+                    className="w-full py-2 bg-white/5 hover:bg-white/10 border border-border text-text-primary text-[9px] font-medium uppercase tracking-wide transition-all rounded-sm flex items-center justify-center gap-2"
                   >
                     <Sliders className="w-3.5 h-3.5 text-indigo-400" /> Auto-Balance System Load
                   </button>
@@ -677,13 +677,13 @@ export function LogisticsDashboard({
               </div>
 
               {/* Execution nodes map */}
-              <div className="lg:col-span-2 border border-white/10 bg-[#0c0c0c] p-5 rounded-sm h-[34rem] overflow-y-auto space-y-4">
-                <div className="flex justify-between items-center pb-3 border-b border-white/5">
+              <div className="lg:col-span-2 border border-border bg-surface p-5 rounded-sm h-[34rem] overflow-y-auto space-y-4">
+                <div className="flex justify-between items-center pb-3 border-b border-border-subtle">
                   <div>
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Execution Nodes</h4>
-                    <p className="text-[8px] font-mono text-white/40 uppercase">Developer queue load status</p>
+                    <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Execution Nodes</h4>
+                    <p className="text-[8px] font-mono text-text-quaternary uppercase">Developer queue load status</p>
                   </div>
-                  <span className="text-[9px] font-mono text-white/40 uppercase">Standard Limit: 40h</span>
+                  <span className="text-[9px] font-mono text-text-quaternary uppercase">Standard Limit: 40h</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -697,23 +697,23 @@ export function LogisticsDashboard({
 
                     const textColors = {
                       overload: 'text-rose-400 font-bold',
-                      active: 'text-amber-400',
+                      active: 'text-signal-warning',
                       focus: 'text-indigo-400',
-                      standby: 'text-white/40'
+                      standby: 'text-text-quaternary'
                     };
 
                     return (
-                      <div key={node.id} className="border border-white/5 bg-black/30 p-4 rounded-sm space-y-3 flex flex-col justify-between font-mono text-[10px]">
-                        <div className="flex justify-between items-start border-b border-white/5 pb-2">
+                      <div key={node.id} className="border border-border-subtle bg-bg p-4 rounded-sm space-y-3 flex flex-col justify-between font-mono text-[10px]">
+                        <div className="flex justify-between items-start border-b border-border-subtle pb-2">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-white/90">{node.name}</span>
-                            <span className="text-[8px] uppercase text-white/40">({node.role})</span>
+                            <span className="font-bold text-text-secondary">{node.name}</span>
+                            <span className="text-[8px] uppercase text-text-quaternary">({node.role})</span>
                           </div>
                           <span className={`text-[9px] uppercase ${textColors[node.status]}`}>{node.status}</span>
                         </div>
 
                         <div className="space-y-1.5">
-                          <div className="flex justify-between text-[9px] text-white/50 uppercase">
+                          <div className="flex justify-between text-[9px] text-text-tertiary uppercase">
                             <span>Capacity Load</span>
                             <span>{node.loadHours}h / 40h ({node.utilization}%)</span>
                           </div>
@@ -723,15 +723,15 @@ export function LogisticsDashboard({
                         </div>
 
                         <div className="space-y-1">
-                          <span className="text-[8px] text-white/40 uppercase block">Active Dispatch Queue</span>
+                          <span className="text-[8px] text-text-quaternary uppercase block">Active Dispatch Queue</span>
                           {node.devTasks.length === 0 ? (
-                            <span className="text-[8.5px] italic text-white/30 uppercase">Standby: Awaiting dispatch</span>
+                            <span className="text-[8.5px] italic text-text-quaternary uppercase">Standby: Awaiting dispatch</span>
                           ) : (
                             <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
                               {node.devTasks.map(t => (
-                                <div key={t.id} className="p-1 border border-white/5 bg-white/5 flex justify-between items-center rounded-sm text-[8px] text-white/70">
+                                <div key={t.id} className="p-1 border border-border-subtle bg-white/5 flex justify-between items-center rounded-sm text-[8px] text-text-secondary">
                                   <span className="truncate w-32 font-medium">{t.name}</span>
-                                  <span className="text-white/40 uppercase">{t.status}</span>
+                                  <span className="text-text-quaternary uppercase">{t.status}</span>
                                 </div>
                               ))}
                             </div>
@@ -759,63 +759,63 @@ export function LogisticsDashboard({
             className="space-y-8"
           >
             {/* Header controls for Attendance */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center bg-[#0c0c0c] border border-white/10 p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center bg-surface border border-border p-6">
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-mono uppercase tracking-wider text-white/50">Tracking Target Date</label>
+                <label className="text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Tracking Target Date</label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
                   <input
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full bg-[#0a0a0a] border border-white/10 h-11 pl-10 pr-4 text-sm font-mono text-white focus:border-white/30 outline-none transition-all"
+                    className="w-full bg-bg border border-border h-11 pl-10 pr-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none transition-all"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-mono uppercase tracking-wider text-white/50">Query Profiles</label>
+                <label className="text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Query Profiles</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
                   <input
                     type="text"
                     placeholder="Search name or email..."
                     value={attendanceSearch}
                     onChange={(e) => setAttendanceSearch(e.target.value)}
-                    className="w-full bg-[#0a0a0a] border border-white/10 h-11 pl-10 pr-4 text-sm font-mono text-white focus:border-white/30 outline-none transition-all placeholder:text-white/40"
+                    className="w-full bg-bg border border-border h-11 pl-10 pr-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none transition-all placeholder:text-text-quaternary"
                   />
                 </div>
               </div>
 
               {/* Day stats counters */}
-              <div className="flex gap-4 items-center justify-between border-t border-white/5 lg:border-t-0 lg:border-l lg:border-white/10 pt-4 lg:pt-0 lg:pl-8 h-full">
+              <div className="flex gap-4 items-center justify-between border-t border-border-subtle lg:border-t-0 lg:border-l lg:border-border pt-4 lg:pt-0 lg:pl-8 h-full">
                 <div className="text-center flex-1">
-                  <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">PRESENT</p>
-                  <p className="text-2xl font-bold text-green-400 font-mono">{dayStats.present}</p>
+                  <p className="text-[9px] font-mono text-text-tertiary uppercase tracking-wide mb-1">PRESENT</p>
+                  <p className="text-2xl font-bold text-signal-safe font-sans tracking-tight">{dayStats.present}</p>
                 </div>
                 <div className="h-8 w-[1px] bg-white/5"></div>
                 <div className="text-center flex-1">
-                  <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">HALF DAY</p>
-                  <p className="text-2xl font-bold text-yellow-400 font-mono">{dayStats.halfDay}</p>
+                  <p className="text-[9px] font-mono text-text-tertiary uppercase tracking-wide mb-1">HALF DAY</p>
+                  <p className="text-2xl font-bold text-signal-warning font-sans tracking-tight">{dayStats.halfDay}</p>
                 </div>
                 <div className="h-8 w-[1px] bg-white/5"></div>
                 <div className="text-center flex-1">
-                  <p className="text-[9px] font-mono text-white/50 uppercase tracking-widest mb-1">ABSENT</p>
-                  <p className="text-2xl font-bold text-red-500 font-mono">{dayStats.absent}</p>
+                  <p className="text-[9px] font-mono text-text-tertiary uppercase tracking-wide mb-1">ABSENT</p>
+                  <p className="text-2xl font-bold text-signal-critical font-sans tracking-tight">{dayStats.absent}</p>
                 </div>
               </div>
             </div>
 
             {/* Attendance Marking Grid */}
-            <div className="border border-white/10 bg-[#0c0c0c] overflow-hidden">
-              <div className="p-6 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center">
-                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90">Mark System Attendance</h3>
-                <span className="text-[9px] font-mono text-white/50 bg-white/5 px-2 py-0.5 border border-white/5 uppercase">TELEMETRY_ONLINE</span>
+            <div className="border border-border bg-surface overflow-hidden">
+              <div className="p-6 border-b border-border bg-bg flex justify-between items-center">
+                <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary">Mark System Attendance</h3>
+                <span className="text-[9px] font-mono text-text-tertiary bg-white/5 px-2 py-0.5 border border-border-subtle uppercase">TELEMETRY_ONLINE</span>
               </div>
 
               <div className="divide-y divide-white/5">
                 {filteredProfiles.length === 0 ? (
-                  <div className="p-12 text-center text-xs font-mono text-white/50 italic">
+                  <div className="p-12 text-center text-xs font-mono text-text-tertiary italic">
                     No active system profiles match your search criteria.
                   </div>
                 ) : (
@@ -825,27 +825,27 @@ export function LogisticsDashboard({
                     const leaveType = record?.leaveType;
 
                     return (
-                      <div key={profile.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-white/[0.01] transition-all">
+                      <div key={profile.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-surface-3 transition-all">
                         {/* User Details */}
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden">
+                          <div className="w-12 h-12 border border-border bg-white/5 flex items-center justify-center overflow-hidden">
                             {profile.avatar_url ? (
                               <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
                             ) : (
-                              <Users className="w-5 h-5 text-white/40" />
+                              <Users className="w-5 h-5 text-text-quaternary" />
                             )}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-semibold text-white/90">{profile.full_name || 'Anonymous User'}</h4>
+                              <h4 className="text-sm font-semibold text-text-secondary">{profile.full_name || 'Anonymous User'}</h4>
                               {profile.created_at && (
-                                <span className="text-[8px] font-mono bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-sm" title="Date of Joining">
+                                <span className="text-[8px] font-mono bg-surface-3 border border-border text-signal-info px-1.5 py-0.5 rounded-sm" title="Date of Joining">
                                   DOJ: {getLocalDateString(new Date(profile.created_at))}
                                 </span>
                               )}
                             </div>
-                            <p className="text-[10px] font-mono text-white/60 uppercase">{profile.email}</p>
-                            <p className="text-[9px] font-mono mt-1"><span className="text-white/40 uppercase">Role:</span> <span className="text-blue-400 uppercase">{(systemData.userCustomRoles && systemData.userCustomRoles[profile.id]) || profile.role}</span></p>
+                            <p className="text-[10px] font-mono text-text-tertiary uppercase">{profile.email}</p>
+                            <p className="text-[9px] font-mono mt-1"><span className="text-text-quaternary uppercase">Role:</span> <span className="text-signal-info uppercase">{(systemData.userCustomRoles && systemData.userCustomRoles[profile.id]) || profile.role}</span></p>
                           </div>
                         </div>
 
@@ -854,16 +854,16 @@ export function LogisticsDashboard({
                           {/* Present button */}
                           <button
                             onClick={() => handleMarkAttendance(profile.id, 'present')}
-                            className={`w-full sm:w-auto px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'present' ? 'bg-green-500/20 border-green-500 text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.15)]' : 'border-white/10 hover:border-white/20 text-white/60 hover:text-white'}`}
+                            className={`w-full sm:w-auto px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'present' ? 'bg-signal-safe-bg border-border text-signal-safe font-bold shadow-sm' : 'border-border hover:border-border text-text-tertiary hover:text-text-primary'}`}
                           >
                             Present
                           </button>
 
                           {/* Half Day split options */}
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-black/40 border border-white/10 p-1 gap-1 sm:gap-0 w-full sm:w-auto">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-bg border border-border p-1 gap-1 sm:gap-0 w-full sm:w-auto">
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', false)}
-                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'unexcused' && !record?.isPaidHalfDay ? 'bg-yellow-500/20 text-yellow-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'unexcused' && !record?.isPaidHalfDay ? 'bg-signal-warning-bg text-signal-warning font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
                             >
                               Half Day (Unpaid)
                             </button>
@@ -871,7 +871,7 @@ export function LogisticsDashboard({
 
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', true)}
-                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && record?.isPaidHalfDay ? 'bg-green-500/20 text-green-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && record?.isPaidHalfDay ? 'bg-signal-safe-bg text-signal-safe font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
                             >
                               Half Day (Paid)
                             </button>
@@ -879,7 +879,7 @@ export function LogisticsDashboard({
 
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'casual', false)} style={{ display: 'none' }}
-                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'casual' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'casual' ? 'bg-surface-3 text-signal-info font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
                             >
 
                             </button>
@@ -887,7 +887,7 @@ export function LogisticsDashboard({
 
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'medical', false)} style={{ display: 'none' }}
-                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'medical' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'medical' ? 'bg-surface-3 text-accent-secondary font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
                             >
 
                             </button>
@@ -895,16 +895,16 @@ export function LogisticsDashboard({
                           {/* HIDE_OLD_BUTTON_START */}
                           <button style={{ display: 'none' }}
                             onClick={() => handleMarkAttendance(profile.id, 'half_day')}
-                            className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'half_day' ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400 font-bold shadow-[0_0_10px_rgba(234,179,8,0.15)]' : 'border-white/10 hover:border-white/20 text-white/60 hover:text-white'}`}
+                            className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'half_day' ? 'bg-signal-warning-bg border-yellow-500 text-signal-warning font-bold shadow-sm' : 'border-border hover:border-border text-text-tertiary hover:text-text-primary'}`}
                           >
                             Half Day
                           </button>
 
                           {/* Absent Option split */}
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-black/40 border border-white/10 p-1 gap-1 sm:gap-0 w-full sm:w-auto">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-bg border border-border p-1 gap-1 sm:gap-0 w-full sm:w-auto">
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'absent', 'unexcused')}
-                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'unexcused' ? 'bg-red-500/20 text-red-500 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'unexcused' ? 'bg-signal-critical-bg text-signal-critical font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
                             >
                               Absent (Unpaid)
                             </button>
@@ -912,7 +912,7 @@ export function LogisticsDashboard({
 
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'absent', 'casual')}
-                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'casual' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'casual' ? 'bg-surface-3 text-signal-info font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
                             >
                               Casual Leave (CL)
                             </button>
@@ -920,7 +920,7 @@ export function LogisticsDashboard({
 
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'absent', 'medical')}
-                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'medical' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-white/50 hover:text-white'}`}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'absent' && leaveType === 'medical' ? 'bg-surface-3 text-accent-secondary font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
                             >
                               Medical Leave (ML)
                             </button>
@@ -948,17 +948,17 @@ export function LogisticsDashboard({
             className="grid grid-cols-1 lg:grid-cols-3 gap-8"
           >
             {/* Rules configurator Form */}
-            <div className="lg:col-span-2 border border-white/10 bg-[#0c0c0c] p-8 space-y-6">
-              <div className="border-b border-white/10 pb-4 flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-blue-400" />
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90 font-semibold font-bold">Global System Pay Slabs</h3>
+            <div className="lg:col-span-2 border border-border bg-surface p-8 space-y-6">
+              <div className="border-b border-border pb-4 flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-signal-info" />
+                <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-secondary font-semibold font-bold">Global System Pay Slabs</h3>
               </div>
 
               <form onSubmit={handleSaveSettings} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Casual Leaves */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Allowed Paid Casual Leaves (CL) / Month</label>
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-text-secondary">Allowed Paid Casual Leaves (CL) / Month</label>
                     <input
                       type="number"
                       required
@@ -966,14 +966,14 @@ export function LogisticsDashboard({
                       onChange={(e) => setAllowedCasualLeaves(Number(e.target.value))}
                       min={0}
                       max={31}
-                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
                     />
-                    <p className="text-[9px] font-mono text-white/40 italic">Allocated paid leave allowance per user. Exceeding days trigger deductions.</p>
+                    <p className="text-[9px] font-mono text-text-quaternary italic">Allocated paid leave allowance per user. Exceeding days trigger deductions.</p>
                   </div>
 
                   {/* Medical Leaves */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Allowed Paid Medical Leaves (ML) / Month</label>
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-text-secondary">Allowed Paid Medical Leaves (ML) / Month</label>
                     <input
                       type="number"
                       required
@@ -981,14 +981,14 @@ export function LogisticsDashboard({
                       onChange={(e) => setAllowedMedicalLeaves(Number(e.target.value))}
                       min={0}
                       max={31}
-                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
                     />
-                    <p className="text-[9px] font-mono text-white/40 italic">Allocated paid sick/medical leave. Excess days trigger deductions.</p>
+                    <p className="text-[9px] font-mono text-text-quaternary italic">Allocated paid sick/medical leave. Excess days trigger deductions.</p>
                   </div>
 
                   {/* Half-day Conversion Rule */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Half-Day Conversion Threshold</label>
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-text-secondary">Half-Day Conversion Threshold</label>
                     <input
                       type="number"
                       required
@@ -996,15 +996,15 @@ export function LogisticsDashboard({
                       onChange={(e) => setHalfDayRule(Number(e.target.value))}
                       min={1}
                       max={10}
-                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
                     />
-                    <p className="text-[9px] font-mono text-white/40 italic">Specify how many marked Half-Day absences equal 1 Full-Day leave (e.g. 2 half-days = 1 full day).</p>
+                    <p className="text-[9px] font-mono text-text-quaternary italic">Specify how many marked Half-Day absences equal 1 Full-Day leave (e.g. 2 half-days = 1 full day).</p>
                   </div>
 
                   {/* Half-day Empathy Bypass Toggle */}
                   <div className="flex flex-col gap-2" style={{ display: 'none' }}>
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Half-Day Empathy Bypass</label>
-                    <div className="flex items-center gap-3 bg-[#0a0a0a] border border-white/10 h-11 px-4">
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-text-secondary">Half-Day Empathy Bypass</label>
+                    <div className="flex items-center gap-3 bg-bg border border-border h-11 px-4">
                       <input
                         type="checkbox"
                         id="bypassHalfDay"
@@ -1012,20 +1012,20 @@ export function LogisticsDashboard({
                         onChange={(e) => setBypassHalfDay(e.target.checked)}
                         className="w-4 h-4 accent-white cursor-pointer"
                       />
-                      <label htmlFor="bypassHalfDay" className="text-xs font-mono text-white/80 cursor-pointer select-none">
+                      <label htmlFor="bypassHalfDay" className="text-xs font-mono text-text-secondary cursor-pointer select-none">
                         Bypass half-day pay deductions
                       </label>
                     </div>
-                    <p className="text-[9px] font-mono text-white/40 italic">When enabled, employees will NOT have pay deducted for marked half-day leaves (showing empathy for genuine needs).</p>
+                    <p className="text-[9px] font-mono text-text-quaternary italic">When enabled, employees will NOT have pay deducted for marked half-day leaves (showing empathy for genuine needs).</p>
                   </div>
 
                   {/* Currency Selector */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Global System Currency</label>
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-text-secondary">Global System Currency</label>
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value as any)}
-                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
                     >
                       <option value="USD">USD ($) - US Dollar</option>
                       <option value="INR">INR (₹) - Indian Rupee</option>
@@ -1033,47 +1033,47 @@ export function LogisticsDashboard({
                       <option value="CAD">CAD (C$) - Canadian Dollar</option>
                       <option value="AED">AED (د.إ) - UAE Dirham</option>
                     </select>
-                    <p className="text-[9px] font-mono text-white/40 italic">Set the primary currency used across salary listings, calculations, and deductions.</p>
+                    <p className="text-[9px] font-mono text-text-quaternary italic">Set the primary currency used across salary listings, calculations, and deductions.</p>
                   </div>
 
                   {/* Deduction Method Selector */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Leave Deduction Calculation Method</label>
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-text-secondary">Leave Deduction Calculation Method</label>
                     <select
                       value={deductionMethod}
                       onChange={(e) => setDeductionMethod(e.target.value as any)}
-                      className="w-full bg-[#0a0a0a] border border-white/10 h-11 px-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
                     >
                       <option value="fixed">Fixed Currency Value per Leave Day</option>
                       <option value="pro_rata">Daily Pro-Rata (Base Monthly Salary / 22 Working Days)</option>
                     </select>
-                    <p className="text-[9px] font-mono text-white/40 italic">Choose whether unexcused leaves deduct a flat fee or calculate dynamic pro-rata daily wage cuts.</p>
+                    <p className="text-[9px] font-mono text-text-quaternary italic">Choose whether unexcused leaves deduct a flat fee or calculate dynamic pro-rata daily wage cuts.</p>
                   </div>
 
                   {/* Fixed Amount input */}
                   {deductionMethod === 'fixed' && (
                     <div className="flex flex-col gap-2 md:col-span-2">
-                      <label className="text-[10px] font-mono uppercase tracking-wider text-white/70">Flat Deduction Value ({activeSymbol.trim()}) per Excess Leave</label>
+                      <label className="text-[10px] font-mono uppercase tracking-wider text-text-secondary">Flat Deduction Value ({activeSymbol.trim()}) per Excess Leave</label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-white/60">{activeSymbol}</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-text-tertiary">{activeSymbol}</span>
                         <input
                           type="number"
                           required
                           value={unexcusedDeductionAmount}
                           onChange={(e) => setUnexcusedDeductionAmount(Number(e.target.value))}
                           min={0}
-                          className="w-full bg-[#0a0a0a] border border-white/10 h-11 pl-10 pr-4 text-sm font-mono text-white focus:border-white/30 outline-none"
+                          className="w-full bg-bg border border-border h-11 pl-10 pr-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
                         />
                       </div>
-                      <p className="text-[9px] font-mono text-white/40 italic">Configured deduction amount deducted from the user's monthly payload for each exceeding unexcused day.</p>
+                      <p className="text-[9px] font-mono text-text-quaternary italic">Configured deduction amount deducted from the user's monthly payload for each exceeding unexcused day.</p>
                     </div>
                   )}
                 </div>
 
-                <div className="pt-4 border-t border-white/10 flex justify-end">
+                <div className="pt-4 border-t border-border flex justify-end">
                   <button
                     type="submit"
-                    className="bg-white text-black font-semibold text-[10px] font-mono uppercase tracking-widest px-8 py-3 hover:bg-neutral-200 transition-colors flex items-center gap-2"
+                    className="bg-white text-black font-semibold text-[10px] font-medium uppercase tracking-wide px-8 py-3 hover:bg-neutral-200 transition-colors flex items-center gap-2"
                   >
                     <Check className="w-4 h-4" /> Save Slab System Configuration
                   </button>
@@ -1082,30 +1082,30 @@ export function LogisticsDashboard({
             </div>
 
             {/* Quick Helper Rules Info panel */}
-            <div className="border border-white/10 bg-[#0c0c0c] p-8 space-y-6">
-              <div className="border-b border-white/10 pb-4 flex items-center gap-2">
-                <BrainCircuit className="w-4 h-4 text-blue-400" />
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90 font-semibold font-bold">Formula Analytics</h3>
+            <div className="border border-border bg-surface p-8 space-y-6">
+              <div className="border-b border-border pb-4 flex items-center gap-2">
+                <BrainCircuit className="w-4 h-4 text-signal-info" />
+                <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-secondary font-semibold font-bold">Formula Analytics</h3>
               </div>
 
-              <div className="space-y-4 text-xs font-mono text-white/70 leading-relaxed">
+              <div className="space-y-4 text-xs font-mono text-text-secondary leading-relaxed">
                 <p>
                   The payroll deduction calculation is computed in real-time using high-fidelity rules matching standard corporate infrastructure:
                 </p>
-                <div className="border border-white/10 bg-[#0a0a0a] p-4 text-[11px] space-y-2">
-                  <p className="font-bold text-white">1. Total Unpaid Leave Days (LD):</p>
-                  <p className="text-white/60">LD = Excess(CL) + Excess(ML) + (Half-Days / Threshold) + Unexcused Absences</p>
+                <div className="border border-border bg-bg p-4 text-[11px] space-y-2">
+                  <p className="font-bold text-text-primary">1. Total Unpaid Leave Days (LD):</p>
+                  <p className="text-text-tertiary">LD = Excess(CL) + Excess(ML) + (Half-Days / Threshold) + Unexcused Absences</p>
 
-                  <p className="font-bold text-white pt-2">2. Daily Wage Rate (DR):</p>
-                  <p className="text-white/60">DR = Base Salary / 22 (Industry average working days)</p>
+                  <p className="font-bold text-text-primary pt-2">2. Daily Wage Rate (DR):</p>
+                  <p className="text-text-tertiary">DR = Base Salary / 22 (Industry average working days)</p>
 
-                  <p className="font-bold text-white pt-2">3. Total Deductions:</p>
-                  <p className="text-white/60">If Fixed Method: Deduct = LD * Flat Deduction Amount</p>
-                  <p className="text-white/60">If Pro-Rata Method: Deduct = LD * DR</p>
+                  <p className="font-bold text-text-primary pt-2">3. Total Deductions:</p>
+                  <p className="text-text-tertiary">If Fixed Method: Deduct = LD * Flat Deduction Amount</p>
+                  <p className="text-text-tertiary">If Pro-Rata Method: Deduct = LD * DR</p>
                 </div>
-                <div className="bg-blue-500/10 border border-blue-500/20 p-4 flex items-start gap-3">
-                  <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-blue-400/90">
+                <div className="bg-surface-3 border border-border p-4 flex items-start gap-3">
+                  <Info className="w-4 h-4 text-signal-info shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-signal-info/90">
                     Paid leave allocations are automatically assigned to all active user roles (both Project Managers and Developers/Viewers) inside the database.
                   </p>
                 </div>
@@ -1127,17 +1127,17 @@ export function LogisticsDashboard({
             className="space-y-8"
           >
             {/* Payroll filters */}
-            <div className="flex flex-col md:flex-row gap-6 items-center bg-[#0c0c0c] border border-white/10 p-6 justify-between">
+            <div className="flex flex-col md:flex-row gap-6 items-center bg-surface border border-border p-6 justify-between">
               <div>
-                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90 font-semibold font-bold mb-1">Payroll Analytics</h3>
-                <p className="text-[10px] font-mono text-white/50 uppercase">MONTHLY TEAM COMPENSATION COMPLIANCE</p>
+                <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary font-semibold font-bold mb-1">Payroll Analytics</h3>
+                <p className="text-[10px] font-mono text-text-tertiary uppercase">MONTHLY TEAM COMPENSATION COMPLIANCE</p>
               </div>
 
               <div className="flex flex-col xl:flex-row items-center gap-4">
                 <select
                   value={payrollMode}
                   onChange={(e) => setPayrollMode(e.target.value as any)}
-                  className="bg-[#0a0a0a] border border-white/10 h-10 px-4 text-xs font-mono text-white focus:border-white/30 outline-none"
+                  className="bg-bg border border-border h-10 px-4 text-xs font-mono text-text-primary focus:border-white/30 outline-none"
                 >
                   <option value="monthly">Monthly Cycle</option>
                   <option value="custom">Custom Range</option>
@@ -1148,7 +1148,7 @@ export function LogisticsDashboard({
                     <select
                       value={selectedMonth}
                       onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="bg-[#0a0a0a] border border-white/10 h-10 px-4 text-xs font-mono text-white focus:border-white/30 outline-none"
+                      className="bg-bg border border-border h-10 px-4 text-xs font-mono text-text-primary focus:border-white/30 outline-none"
                     >
                       <option value="01">January</option>
                       <option value="02">February</option>
@@ -1167,7 +1167,7 @@ export function LogisticsDashboard({
                     <select
                       value={selectedYear}
                       onChange={(e) => setSelectedYear(e.target.value)}
-                      className="bg-[#0a0a0a] border border-white/10 h-10 px-4 text-xs font-mono text-white focus:border-white/30 outline-none"
+                      className="bg-bg border border-border h-10 px-4 text-xs font-mono text-text-primary focus:border-white/30 outline-none"
                     >
                       <option value="2025">2025</option>
                       <option value="2026">2026</option>
@@ -1176,15 +1176,15 @@ export function LogisticsDashboard({
                   </>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} className="bg-[#0a0a0a] border border-white/10 h-10 px-2 text-xs font-mono text-white focus:border-white/30 outline-none" />
-                    <span className="text-white/50 text-xs font-mono">to</span>
-                    <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="bg-[#0a0a0a] border border-white/10 h-10 px-2 text-xs font-mono text-white focus:border-white/30 outline-none" />
+                    <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} className="bg-bg border border-border h-10 px-2 text-xs font-mono text-text-primary focus:border-white/30 outline-none" />
+                    <span className="text-text-tertiary text-xs font-mono">to</span>
+                    <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="bg-bg border border-border h-10 px-2 text-xs font-mono text-text-primary focus:border-white/30 outline-none" />
                   </div>
                 )}
 
                 <button
                   onClick={handleExportCSV}
-                  className="bg-white text-black h-10 px-4 text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-neutral-200 transition-colors flex items-center gap-2 whitespace-nowrap ml-2"
+                  className="bg-white text-black h-10 px-4 text-[10px] font-medium font-bold uppercase tracking-wide hover:bg-neutral-200 transition-colors flex items-center gap-2 whitespace-nowrap ml-2"
                 >
                   <Download className="w-3 h-3" /> Export CSV
                 </button>
@@ -1193,41 +1193,41 @@ export function LogisticsDashboard({
 
             {/* Payroll Aggregate Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-[#0c0c0c] border border-white/10 p-6 flex flex-col justify-center relative overflow-hidden">
+              <div className="bg-surface border border-border p-6 flex flex-col justify-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10"><Calculator className="w-16 h-16" /></div>
-                <p className="text-[10px] font-mono uppercase text-white/50 tracking-widest mb-2 relative z-10">Total Gross Liability</p>
-                <p className="text-2xl font-mono text-white font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.baseSalary, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-[10px] font-mono uppercase text-text-tertiary tracking-wide mb-2 relative z-10">Total Gross Liability</p>
+                <p className="text-2xl font-sans tracking-tight text-text-primary font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.baseSalary, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-[#0c0c0c] border border-red-500/20 p-6 flex flex-col justify-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10 text-red-500"><TrendingDown className="w-16 h-16" /></div>
-                <p className="text-[10px] font-mono uppercase text-red-400/80 tracking-widest mb-2 relative z-10">Total Deductions</p>
-                <p className="text-2xl font-mono text-red-500 font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.totalDeductions, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <div className="bg-surface border border-red-500/20 p-6 flex flex-col justify-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10 text-signal-critical"><TrendingDown className="w-16 h-16" /></div>
+                <p className="text-[10px] font-mono uppercase text-signal-critical/80 tracking-wide mb-2 relative z-10">Total Deductions</p>
+                <p className="text-2xl font-sans tracking-tight text-signal-critical font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.totalDeductions, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-green-500/10 border border-green-500/30 p-6 flex flex-col justify-center relative overflow-hidden shadow-[0_0_30px_rgba(34,197,94,0.1)]">
-                <div className="absolute top-0 right-0 p-4 opacity-20 text-green-500"><Banknote className="w-16 h-16" /></div>
-                <p className="text-[10px] font-mono uppercase text-green-400 tracking-widest mb-2 relative z-10">Total Net Payable</p>
-                <p className="text-2xl font-mono text-white font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.netPayable, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <div className="bg-signal-safe-bg border border-border p-6 flex flex-col justify-center relative overflow-hidden shadow-sm">
+                <div className="absolute top-0 right-0 p-4 opacity-20 text-signal-safe"><Banknote className="w-16 h-16" /></div>
+                <p className="text-[10px] font-mono uppercase text-signal-safe tracking-wide mb-2 relative z-10">Total Net Payable</p>
+                <p className="text-2xl font-sans tracking-tight text-text-primary font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.netPayable, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
             </div>
 
             {/* Payroll Data Grid */}
-            <div className="border border-white/10 bg-[#0c0c0c] overflow-hidden">
-              <div className="p-6 border-b border-white/10 bg-[#0a0a0a] flex justify-between items-center">
-                <h3 className="text-xs font-mono uppercase tracking-widest text-white/90 font-bold">Compiled Month Analytics Sheet</h3>
-                <span className="text-[10px] font-mono text-white/50">Scope: {payrollMode === 'monthly' ? monthPrefix : `${customStartDate || 'TBD'} to ${customEndDate || 'TBD'}`}</span>
+            <div className="border border-border bg-surface overflow-hidden">
+              <div className="p-6 border-b border-border bg-bg flex justify-between items-center">
+                <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary font-bold">Compiled Month Analytics Sheet</h3>
+                <span className="text-[10px] font-mono text-text-tertiary">Scope: {payrollMode === 'monthly' ? monthPrefix : `${customStartDate || 'TBD'} to ${customEndDate || 'TBD'}`}</span>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[1000px]">
                   <thead>
-                    <tr className="border-b border-white/10 bg-white/[0.02]">
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50">System Profile</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-right">Base Salary ({activeSymbol.trim()})</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-center">Attendance Summary (Days)</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-center">Leaves / Exceeded Allowed</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-center font-bold text-red-500/90">Deductible Days</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-right font-bold text-red-400">Total Deductions ({activeSymbol.trim()})</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-white/50 text-right font-bold text-green-400">Net Payable ({activeSymbol.trim()})</th>
+                    <tr className="border-b border-border bg-surface-3">
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">System Profile</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-right">Base Salary ({activeSymbol.trim()})</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center">Attendance Summary (Days)</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center">Leaves / Exceeded Allowed</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center font-bold text-signal-critical/90">Deductible Days</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-right font-bold text-signal-critical">Total Deductions ({activeSymbol.trim()})</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-right font-bold text-signal-safe">Net Payable ({activeSymbol.trim()})</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -1247,26 +1247,26 @@ export function LogisticsDashboard({
                       const isEditing = editingSalaryUserId === profile.id;
 
                       return (
-                        <tr key={profile.id} className="hover:bg-white/[0.01] transition-all">
+                        <tr key={profile.id} className="hover:bg-surface-3 transition-all">
                           {/* Profile */}
                           <td className="p-4 flex items-center gap-3">
-                            <div className="w-8 h-8 border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
+                            <div className="w-8 h-8 border border-border bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
                               {profile.avatar_url ? (
                                 <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
                               ) : (
-                                <Users className="w-4 h-4 text-white/40" />
+                                <Users className="w-4 h-4 text-text-quaternary" />
                               )}
                             </div>
                             <div>
                               <div className="flex items-center gap-1.5">
-                                <h4 className="text-xs font-semibold text-white/90">{profile.full_name || 'Anonymous User'}</h4>
+                                <h4 className="text-xs font-semibold text-text-secondary">{profile.full_name || 'Anonymous User'}</h4>
                                 {profile.created_at && (
-                                  <span className="text-[7.5px] font-mono bg-blue-500/10 border border-blue-500/20 text-blue-400 px-1 py-0.2 rounded-sm" title={`Joined: ${getLocalDateString(new Date(profile.created_at))}`}>
+                                  <span className="text-[7.5px] font-mono bg-surface-3 border border-border text-signal-info px-1 py-0.2 rounded-sm" title={`Joined: ${getLocalDateString(new Date(profile.created_at))}`}>
                                     DOJ: {getLocalDateString(new Date(profile.created_at))}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[9px] font-mono text-white/50 uppercase">{profile.email}</p>
+                              <p className="text-[9px] font-mono text-text-tertiary uppercase">{profile.email}</p>
                             </div>
                           </td>
 
@@ -1278,24 +1278,24 @@ export function LogisticsDashboard({
                                   type="number"
                                   value={editingSalaryValue}
                                   onChange={(e) => setEditingSalaryValue(e.target.value)}
-                                  className="w-20 bg-black border border-white/20 px-2 py-1 text-xs font-mono text-right text-white focus:border-white/50 outline-none"
+                                  className="w-20 bg-bg border border-border px-2 py-1 text-xs font-mono text-right text-text-primary focus:border-border-subtle0 outline-none"
                                 />
                                 <button
                                   onClick={() => handleSaveSalary(profile.id)}
-                                  className="p-1 border border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                                  className="p-1 border border-border bg-signal-safe-bg text-signal-safe hover:bg-signal-safe-bg"
                                 >
                                   <Check className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             ) : (
                               <div className="flex items-center justify-end gap-2 group/sal">
-                                <span className="font-mono text-xs text-white/80">{activeSymbol}{baseSalary.toLocaleString()}</span>
+                                <span className="font-mono text-xs text-text-secondary">{activeSymbol}{baseSalary.toLocaleString()}</span>
                                 <button
                                   onClick={() => {
                                     setEditingSalaryUserId(profile.id);
                                     setEditingSalaryValue(baseSalary.toString());
                                   }}
-                                  className="opacity-0 group-hover/sal:opacity-100 p-1 hover:bg-white/5 text-white/60 hover:text-white transition-all"
+                                  className="opacity-0 group-hover/sal:opacity-100 p-1 hover:bg-white/5 text-text-tertiary hover:text-text-primary transition-all"
                                 >
                                   <Edit2 className="w-3 h-3" />
                                 </button>
@@ -1307,11 +1307,11 @@ export function LogisticsDashboard({
                           <td className="p-4 text-center">
                             <div className="flex flex-col items-center gap-1 font-mono">
                               <div className="flex items-center justify-center gap-2 text-[10px]">
-                                <span className="bg-green-500/10 text-green-400 px-2 py-0.5 border border-green-500/15" title="Present Days">P: {presentCount}</span>
-                                <span className="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 border border-yellow-500/15" title="Half Days">HD: {halfDayCount}</span>
-                                <span className="bg-red-500/10 text-red-400 px-2 py-0.5 border border-red-500/15" title="Unexcused Absences">UU: {uuCount}</span>
+                                <span className="bg-signal-safe-bg text-signal-safe px-2 py-0.5 border border-border" title="Present Days">P: {presentCount}</span>
+                                <span className="bg-signal-warning-bg text-signal-warning px-2 py-0.5 border border-yellow-500/15" title="Half Days">HD: {halfDayCount}</span>
+                                <span className="bg-signal-critical-bg text-signal-critical px-2 py-0.5 border border-red-500/15" title="Unexcused Absences">UU: {uuCount}</span>
                               </div>
-                              <span className="text-[8px] text-white/40 uppercase tracking-wider">Bandwidth: {expectedWorkingDays} working days</span>
+                              <span className="text-[8px] text-text-quaternary uppercase tracking-wider">Bandwidth: {expectedWorkingDays} working days</span>
                             </div>
                           </td>
 
@@ -1319,28 +1319,28 @@ export function LogisticsDashboard({
                           <td className="p-4 text-center">
                             <div className="flex flex-col items-center justify-center gap-1 text-[9px] font-mono">
                               <div>
-                                <span className="text-white/60">CL: {clCount}</span>
-                                <span className="text-white/40"> / Allowed: {allowedCasualLeaves}</span>
+                                <span className="text-text-tertiary">CL: {clCount}</span>
+                                <span className="text-text-quaternary"> / Allowed: {allowedCasualLeaves}</span>
                               </div>
                               <div>
-                                <span className="text-white/60">ML: {mlCount}</span>
-                                <span className="text-white/40"> / Allowed: {allowedMedicalLeaves}</span>
+                                <span className="text-text-tertiary">ML: {mlCount}</span>
+                                <span className="text-text-quaternary"> / Allowed: {allowedMedicalLeaves}</span>
                               </div>
                             </div>
                           </td>
 
                           {/* Deductible Days */}
-                          <td className="p-4 text-center font-bold font-mono text-xs text-red-400">
+                          <td className="p-4 text-center font-bold font-mono text-xs text-signal-critical">
                             {totalUnpaidDays > 0 ? `${totalUnpaidDays.toFixed(1)} Days` : '0 Days'}
                           </td>
 
                           {/* Deductions */}
-                          <td className="p-4 text-right font-mono text-xs text-red-500 font-bold">
+                          <td className="p-4 text-right font-mono text-xs text-signal-critical font-bold">
                             {totalDeductions > 0 ? `-${activeSymbol}${totalDeductions.toFixed(2)}` : `${activeSymbol}0.00`}
                           </td>
 
                           {/* Net Payable */}
-                          <td className="p-4 text-right font-mono text-xs text-green-400 font-bold">
+                          <td className="p-4 text-right font-mono text-xs text-signal-safe font-bold">
                             {activeSymbol}{netPayable.toFixed(2)}
                           </td>
                         </tr>

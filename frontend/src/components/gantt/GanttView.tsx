@@ -314,51 +314,51 @@ export function GanttView({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap justify-between items-center gap-4 bg-[#07080e]/70 border border-white/10 rounded-xl px-5 py-3.5 backdrop-blur-md">
+      <div className="flex flex-wrap justify-between items-center gap-4 bg-[#07080e]/70 border border-border rounded-xl px-5 py-3.5 backdrop-blur-md">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">Timeline Engine</h3>
-          <p className="text-[10px] font-mono text-white/35 mt-0.5">Hierarchy: Project → Epic → Task · Drag to reschedule · Delay auto-propagates</p>
+          <p className="text-[10px] font-mono text-text-quaternary mt-0.5">Hierarchy: Project → Epic → Task · Drag to reschedule · Delay auto-propagates</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex bg-black/50 border border-white/10 p-0.5 rounded-md gap-0.5">
+          <div className="flex bg-bg border border-border p-0.5 rounded-md gap-0.5">
             {(['Day', 'Week', 'Month'] as ViewMode[]).map(m => (
-              <button key={m} onClick={() => setViewMode(m)} className={`px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-wider rounded-sm transition-all cursor-pointer ${viewMode === m ? 'bg-blue-600/35 text-blue-300 border border-blue-500/30 shadow-[0_0_14px_rgba(59,130,246,0.18)]' : 'text-white/45 hover:text-white/80 border border-transparent'}`}>{m}</button>
+              <button key={m} onClick={() => setViewMode(m)} className={`px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-wider rounded-sm transition-all cursor-pointer ${viewMode === m ? 'bg-surface-3 text-blue-300 border border-border shadow-sm' : 'text-text-tertiary hover:text-text-secondary border border-transparent'}`}>{m}</button>
             ))}
           </div>
-          <button onClick={() => setShowIntel(v => !v)} className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider border rounded-md transition-all cursor-pointer ${showIntel ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.1)]' : 'bg-black/30 border-white/10 text-white/40 hover:text-cyan-400 hover:border-cyan-500/25'}`}>
+          <button onClick={() => setShowIntel(v => !v)} className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider border rounded-md transition-all cursor-pointer ${showIntel ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 shadow-sm' : 'bg-bg border-border text-text-quaternary hover:text-cyan-400 hover:border-cyan-500/25'}`}>
             <BrainCircuit className="w-3 h-3" />
             {showIntel ? 'Hide Intel' : 'Intel'}
-            {alerts.length > 0 && <span className="ml-1 bg-rose-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">{alerts.length}</span>}
+            {alerts.length > 0 && <span className="ml-1 bg-rose-500 text-text-primary text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none">{alerts.length}</span>}
           </button>
         </div>
       </div>
 
       <div className="flex gap-4 items-start min-h-0">
-        <div ref={containerRef} className={`flex-1 min-w-0 bg-[#07080e]/80 border border-white/10 rounded-xl overflow-hidden backdrop-blur-md ${dragState ? 'cursor-grabbing select-none' : ''}`} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => setDragState(null)}>
+        <div ref={containerRef} className={`flex-1 min-w-0 bg-[#07080e]/80 border border-border rounded-xl overflow-hidden backdrop-blur-md ${dragState ? 'cursor-grabbing select-none' : ''}`} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={() => setDragState(null)}>
           {effectiveItems.length === 0 ? (
             <div className="h-64 flex flex-col justify-center items-center gap-4 text-center p-8">
-              <Activity className="w-4 h-4 text-white/25" />
-              <p className="text-[11px] font-mono uppercase tracking-widest text-white/30">No items to render on timeline</p>
+              <Activity className="w-4 h-4 text-text-quaternary" />
+              <p className="text-[11px] font-mono uppercase tracking-wide text-text-quaternary">No items to render on timeline</p>
             </div>
           ) : (
             <div className="flex" style={{ height: `${HEADER_H + bodyH}px` }}>
               <div className="flex-none flex flex-col z-10" style={{ width: `${SIDEBAR_W}px`, background: 'rgba(5,6,10,0.97)' }}>
-                <div className="flex-none flex items-end px-4 pb-3 border-b border-r border-white/[0.08]" style={{ height: `${HEADER_H}px` }}>
-                  <span className="text-[9px] font-mono uppercase tracking-[0.18em] text-white/20">Hierarchy · Name</span>
+                <div className="flex-none flex items-end px-4 pb-3 border-b border-r border-border-subtle" style={{ height: `${HEADER_H}px` }}>
+                  <span className="text-[9px] font-mono uppercase tracking-[0.18em] text-text-quaternary">Hierarchy · Name</span>
                 </div>
-                <div ref={sidebarBodyRef} className="flex-1 overflow-hidden border-r border-white/[0.07]" style={{ overflowY: 'hidden' }}>
+                <div ref={sidebarBodyRef} className="flex-1 overflow-hidden border-r border-border-subtle" style={{ overflowY: 'hidden' }}>
                   {effectiveItems.map((item, i) => {
                     const hColor = HIERARCHY_COLORS[item.type] || '#94a3b8';
                     return (
-                      <div key={item.id} className={`flex items-center gap-2 px-4 border-b border-white/[0.04] transition-colors ${hoveredId === item.id ? 'bg-white/[0.03]' : 'hover:bg-white/[0.02]'}`}
+                      <div key={item.id} className={`flex items-center gap-2 px-4 border-b border-border-subtle transition-colors ${hoveredId === item.id ? 'bg-surface-3' : 'hover:bg-surface-3'}`}
                         style={{ height: `${ROW_H}px`, paddingLeft: `${16 + item.depth * 16}px` }}
                         onMouseEnter={() => setHoveredId(item.id)} onMouseLeave={() => setHoveredId(null)}>
-                        <button onClick={() => toggleCollapse(item.id)} className="w-3 h-3 flex items-center justify-center text-white/30 hover:text-white/70 cursor-pointer">
+                        <button onClick={() => toggleCollapse(item.id)} className="w-3 h-3 flex items-center justify-center text-text-quaternary hover:text-text-secondary cursor-pointer">
                           {item.depth < 2 && <span>{collapsed.has(item.id) ? '▶' : '▼'}</span>}
                         </button>
                         <div className="w-2 h-2 rounded-full flex-none ring-1" style={{ background: hColor, boxShadow: `0 0 6px ${hColor}55` }} />
                         <div className="min-w-0">
-                          <p className="text-[11.5px] font-medium text-white/85 truncate leading-tight">{item.name}</p>
+                          <p className="text-[11.5px] font-medium text-text-secondary truncate leading-tight">{item.name}</p>
                           <p className="text-[9px] font-mono uppercase tracking-wider mt-0.5" style={{ color: item.type === 'task' ? (STATUS_COLORS[item.status || 'backlog']?.text || '#cbd5e1') : hColor }}>
                             {item.type} {item.status ? `· ${item.status.replace('_', ' ')}` : ''}
                           </p>
@@ -371,13 +371,13 @@ export function GanttView({
 
               <div ref={timelineRef} className="flex-1 overflow-auto" onScroll={onTimelineScroll} style={{ overflowX: 'auto', overflowY: 'auto' }}>
                 <div style={{ width: `${totalWidth}px`, minWidth: '100%' }}>
-                  <div className="sticky top-0 z-20 flex border-b border-white/[0.09]" style={{ height: `${HEADER_H}px`, background: 'rgba(5,6,10,0.96)', backdropFilter: 'blur(8px)' }}>
+                  <div className="sticky top-0 z-20 flex border-b border-border-subtle" style={{ height: `${HEADER_H}px`, background: 'rgba(5,6,10,0.96)', backdropFilter: 'blur(8px)' }}>
                     {columns.map((col, ci) => {
                       const x = getX(col.date, origin, viewMode);
                       return (
-                        <div key={ci} className="flex-none flex flex-col items-center justify-end pb-2.5 border-r border-white/[0.05]" style={{ width: `${col.width}px`, background: col.isToday ? 'rgba(6,182,212,0.06)' : col.isWeekend ? 'rgba(255,255,255,0.008)' : 'transparent' }}>
-                          <span className={`text-[10px] font-semibold font-mono uppercase tracking-wider leading-tight ${col.isToday ? 'text-cyan-400' : 'text-white/65'}`}>{col.mainLabel}</span>
-                          {col.subLabel && <span className={`text-[8.5px] font-mono mt-0.5 leading-tight ${col.isToday ? 'text-cyan-500/70' : 'text-white/25'}`}>{col.subLabel}</span>}
+                        <div key={ci} className="flex-none flex flex-col items-center justify-end pb-2.5 border-r border-border-subtle" style={{ width: `${col.width}px`, background: col.isToday ? 'rgba(6,182,212,0.06)' : col.isWeekend ? 'rgba(255,255,255,0.008)' : 'transparent' }}>
+                          <span className={`text-[10px] font-semibold font-mono uppercase tracking-wider leading-tight ${col.isToday ? 'text-cyan-400' : 'text-text-tertiary'}`}>{col.mainLabel}</span>
+                          {col.subLabel && <span className={`text-[8.5px] font-mono mt-0.5 leading-tight ${col.isToday ? 'text-cyan-500/70' : 'text-text-quaternary'}`}>{col.subLabel}</span>}
                         </div>
                       );
                     })}
@@ -387,14 +387,14 @@ export function GanttView({
                     {columns.map((col, ci) => {
                       const x = getX(col.date, origin, viewMode);
                       return (
-                        <div key={ci} className="absolute top-0 bottom-0 border-r border-white/[0.04]" style={{ left: `${x}px`, width: `${col.width}px`, background: col.isToday ? 'rgba(6,182,212,0.04)' : col.isWeekend ? 'rgba(255,255,255,0.008)' : 'transparent' }} />
+                        <div key={ci} className="absolute top-0 bottom-0 border-r border-border-subtle" style={{ left: `${x}px`, width: `${col.width}px`, background: col.isToday ? 'rgba(6,182,212,0.04)' : col.isWeekend ? 'rgba(255,255,255,0.008)' : 'transparent' }} />
                       );
                     })}
                     {effectiveItems.filter(e => e.type === 'task').map((_, i) => {
                       const item = effectiveItems.find(e => e.type === 'task');
                       if (!item) return null;
                       return (
-                        <div key={i} className="absolute left-0 right-0 border-b border-white/[0.03]" style={{ top: `${(i + 1) * ROW_H - 1}px` }} />
+                        <div key={i} className="absolute left-0 right-0 border-b border-border-subtle" style={{ top: `${(i + 1) * ROW_H - 1}px` }} />
                       );
                     })}
 
@@ -438,7 +438,7 @@ export function GanttView({
                       if (mX < 0 || mX > totalWidth) return null;
                       return (
                         <div key={`ms-${m.id}`} className="absolute z-20" style={{ left: `${mX - 8}px`, top: '-4px' }}>
-                          <Diamond className={`w-4 h-4 ${m.status === 'achieved' ? 'text-emerald-400' : m.status === 'missed' ? 'text-red-400' : 'text-cyan-400'}`} />
+                          <Diamond className={`w-4 h-4 ${m.status === 'achieved' ? 'text-emerald-400' : m.status === 'missed' ? 'text-signal-critical' : 'text-cyan-400'}`} />
                         </div>
                       );
                     })}
@@ -450,7 +450,7 @@ export function GanttView({
                       if (mX < 0 || mX > totalWidth) return null;
                       return (
                         <div key={`mt-${m.id}`} className="absolute z-15" style={{ left: `${mX - 6}px`, top: `${totalBodyH + 4}px` }} title={`${m.title} (${m.meeting_type})`}>
-                          <Calendar className="w-3 h-3 text-purple-400/60" />
+                          <Calendar className="w-3 h-3 text-accent-secondary/60" />
                         </div>
                       );
                     })}
@@ -482,7 +482,7 @@ export function GanttView({
                       const sc = STATUS_COLORS[item.status || 'backlog'] || STATUS_COLORS.backlog;
 
                       return (
-                        <div key={item.id} className={`absolute rounded-md border overflow-hidden flex items-center select-none transition-shadow ${isDrag ? 'z-30 shadow-[0_0_20px_rgba(59,130,246,0.45)]' : isHov ? 'z-20 shadow-[0_0_12px_rgba(255,255,255,0.08)]' : 'z-10'}`}
+                        <div key={item.id} className={`absolute rounded-md border overflow-hidden flex items-center select-none transition-shadow ${isDrag ? 'z-30 shadow-sm' : isHov ? 'z-20 shadow-sm' : 'z-10'}`}
                           style={{ left: `${barX}px`, top: `${barTop}px`, width: `${barW}px`, height: `${barH}px`, background: sc.bg, borderColor: sc.border, cursor: dragState ? (dragState.mode === 'move' ? 'grabbing' : 'ew-resize') : 'grab' }}
                           onPointerDown={e => startDrag(e, item.id, 'move')} onMouseEnter={() => setHoveredId(item.id)} onMouseLeave={() => setHoveredId(null)}>
                           <div className="absolute left-0 top-0 bottom-0 opacity-55" style={{ width: `${progW}px`, background: sc.fill, borderRadius: '6px 0 0 6px' }} />
@@ -503,41 +503,41 @@ export function GanttView({
 
         {/* Intel Panel */}
         {showIntel && (
-          <div className="w-76 flex-none bg-[#07080e]/85 border border-white/10 rounded-xl p-5 backdrop-blur-md" style={{ minWidth: '280px', maxWidth: '304px' }}>
-            <div className="flex items-center gap-2 mb-5 pb-4 border-b border-white/[0.07]">
+          <div className="w-76 flex-none bg-[#07080e]/85 border border-border rounded-xl p-5 backdrop-blur-md" style={{ minWidth: '280px', maxWidth: '304px' }}>
+            <div className="flex items-center gap-2 mb-5 pb-4 border-b border-border-subtle">
               <BrainCircuit className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-white/90">Timeline Intel</h3>
-              <span className="ml-auto text-[9px] font-mono text-white/30">{viewMode}</span>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Timeline Intel</h3>
+              <span className="ml-auto text-[9px] font-mono text-text-quaternary">{viewMode}</span>
               {alerts.length > 0 && <span className="ml-1 text-[9px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/25 px-1.5 py-0.5 rounded-sm">{alerts.length} alert{alerts.length !== 1 ? 's' : ''}</span>}
             </div>
             <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
               {alerts.length === 0 ? (
-                <div className="h-28 flex flex-col justify-center items-center text-center p-4 border border-dashed border-white/[0.06] rounded-lg">
-                  <Activity className="w-4 h-4 text-white/15 mb-2 animate-pulse" />
-                  <p className="text-[9px] font-mono uppercase tracking-widest text-white/20">Zero anomalies detected</p>
+                <div className="h-28 flex flex-col justify-center items-center text-center p-4 border border-dashed border-border-subtle rounded-lg">
+                  <Activity className="w-4 h-4 text-text-quaternary mb-2 transition-opacity duration-300" />
+                  <p className="text-[9px] font-mono uppercase tracking-wide text-text-quaternary">Zero anomalies detected</p>
                 </div>
               ) : alerts.map(a => (
-                <div key={a.id} className={`p-3 rounded-lg border flex gap-2.5 ${a.severity === 'high' ? 'bg-rose-950/25 border-rose-500/20 text-rose-200' : a.severity === 'medium' ? 'bg-amber-950/25 border-amber-500/20 text-amber-200' : 'bg-blue-950/25 border-blue-500/20 text-blue-200'}`}>
+                <div key={a.id} className={`p-3 rounded-lg border flex gap-2.5 ${a.severity === 'high' ? 'bg-rose-950/25 border-rose-500/20 text-rose-200' : a.severity === 'medium' ? 'bg-signal-warning-bg border-border text-amber-200' : 'bg-surface-3 border-border text-blue-200'}`}>
                   <div className="mt-0.5 flex-none">
-                    {a.severity === 'high' ? <AlertTriangle className="w-3.5 h-3.5 text-rose-500 animate-pulse" /> : a.severity === 'medium' ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> : <Clock className="w-3.5 h-3.5 text-blue-400" />}
+                    {a.severity === 'high' ? <AlertTriangle className="w-3.5 h-3.5 text-rose-500 transition-opacity duration-300" /> : a.severity === 'medium' ? <AlertTriangle className="w-3.5 h-3.5 text-signal-warning" /> : <Clock className="w-3.5 h-3.5 text-signal-info" />}
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-[9px] font-mono uppercase tracking-wider font-bold mb-1">{a.title}</h4>
-                    <p className="text-[10px] leading-relaxed text-white/65 break-words">{a.message}</p>
+                    <h4 className="text-[9px] font-sans tracking-tight uppercase tracking-wider font-bold mb-1">{a.title}</h4>
+                    <p className="text-[10px] leading-relaxed text-text-tertiary break-words">{a.message}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-5 pt-4 border-t border-white/[0.06] space-y-2.5">
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Projects</span><span className="text-[9px] font-mono font-bold text-cyan-400">{effectiveItems.filter(i => i.type === 'project').length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Epics</span><span className="text-[9px] font-mono font-bold text-pink-400">{effectiveItems.filter(i => i.type === 'epic').length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Tasks</span><span className="text-[9px] font-mono font-bold text-cyan-400">{effectiveItems.filter(i => i.type === 'task').length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Milestones</span><span className="text-[9px] font-mono font-bold text-cyan-400">{milestones.length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Calendar Events</span><span className="text-[9px] font-mono font-bold text-amber-400">{visibleCalendarEvents.length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Holidays</span><span className="text-[9px] font-mono font-bold text-amber-400">{visibleCalendarEvents.filter(e => e.event_type === 'holiday').length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Leaves</span><span className="text-[9px] font-mono font-bold text-rose-400">{visibleCalendarEvents.filter(e => e.event_type === 'leave').length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Meetings</span><span className="text-[9px] font-mono font-bold text-purple-400">{visibleCalendarEvents.filter(e => e.event_type === 'meeting').length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-white/40">Event Hours</span><span className="text-[9px] font-mono font-bold text-purple-400">{visibleCalendarEvents.reduce((s, e) => s + (new Date(e.end_date).getTime() - new Date(e.start_date).getTime()) / 3600000, 0).toFixed(1)}h</span></div>
+            <div className="mt-5 pt-4 border-t border-border-subtle space-y-2.5">
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Projects</span><span className="text-[9px] font-mono font-bold text-cyan-400">{effectiveItems.filter(i => i.type === 'project').length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Epics</span><span className="text-[9px] font-mono font-bold text-pink-400">{effectiveItems.filter(i => i.type === 'epic').length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Tasks</span><span className="text-[9px] font-mono font-bold text-cyan-400">{effectiveItems.filter(i => i.type === 'task').length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Milestones</span><span className="text-[9px] font-mono font-bold text-cyan-400">{milestones.length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Calendar Events</span><span className="text-[9px] font-mono font-bold text-signal-warning">{visibleCalendarEvents.length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Holidays</span><span className="text-[9px] font-mono font-bold text-signal-warning">{visibleCalendarEvents.filter(e => e.event_type === 'holiday').length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Leaves</span><span className="text-[9px] font-mono font-bold text-rose-400">{visibleCalendarEvents.filter(e => e.event_type === 'leave').length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Meetings</span><span className="text-[9px] font-mono font-bold text-accent-secondary">{visibleCalendarEvents.filter(e => e.event_type === 'meeting').length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary">Event Hours</span><span className="text-[9px] font-mono font-bold text-accent-secondary">{visibleCalendarEvents.reduce((s, e) => s + (new Date(e.end_date).getTime() - new Date(e.start_date).getTime()) / 3600000, 0).toFixed(1)}h</span></div>
             </div>
           </div>
         )}

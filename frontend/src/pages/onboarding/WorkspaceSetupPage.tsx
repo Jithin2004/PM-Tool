@@ -219,10 +219,10 @@ export function WorkspaceSetupPage() {
   return (
     <ResolveLayout eyebrow="Workspace Setup">
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-        <section className="border border-white/10 bg-white/[0.03] p-6">
+        <section className="border border-border bg-surface-3 p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Step {step} of 7</p>
+              <p className="text-xs font-mono uppercase tracking-[0.2em] text-text-tertiary">Step {step} of 7</p>
               <h2 className="mt-2 text-2xl font-semibold">
                 {step <= 5 ? 'Set up your workspace' : step === 6 ? 'Invite your team' : 'Create your first project'}
               </h2>
@@ -230,7 +230,7 @@ export function WorkspaceSetupPage() {
           </div>
 
           {(localError || error) && (
-            <div className="mb-5 border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+            <div className="mb-5 border border-red-500/30 bg-signal-critical-bg p-3 text-sm text-red-200">
               {localError || error}
             </div>
           )}
@@ -242,7 +242,7 @@ export function WorkspaceSetupPage() {
                 <input
                   value={workspaceName}
                   onChange={event => setWorkspaceName(event.target.value)}
-                  className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none focus:border-white/40"
+                  className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none focus:border-white/40"
                 />
               </label>
 
@@ -253,7 +253,7 @@ export function WorkspaceSetupPage() {
                     <button
                       key={type}
                       onClick={() => setSettings(prev => ({ ...prev, businessType: type as BusinessType }))}
-                      className={`border px-4 py-3 text-left text-sm transition-colors ${settings.businessType === type ? 'border-white bg-white text-black' : 'border-white/10 bg-white/5 text-white/80 hover:border-white/25'}`}
+                      className={`border px-4 py-3 text-left text-sm transition-colors ${settings.businessType === type ? 'border-white bg-white text-black' : 'border-border bg-white/5 text-text-secondary hover:border-white/25'}`}
                     >
                       {type}
                     </button>
@@ -262,7 +262,7 @@ export function WorkspaceSetupPage() {
               </div>
 
               <label className="block text-sm font-medium">
-                Country <span className="text-red-400">*</span>
+                Country <span className="text-signal-critical">*</span>
                 <select
                   value={settings.country || ''}
                   onChange={event => {
@@ -270,7 +270,7 @@ export function WorkspaceSetupPage() {
                     setIgnoredHolidayDates(new Set());
                     setPreviewHolidays([]);
                   }}
-                  className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none focus:border-white/40"
+                  className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none focus:border-white/40"
                 >
                   <option value="">Select country</option>
                   {COUNTRIES.map(c => (
@@ -283,7 +283,7 @@ export function WorkspaceSetupPage() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-sm text-white/70">
+              <p className="text-sm text-text-secondary">
                 Choose a workflow template for <strong>{settings.businessType}</strong>. This sets up your first board with the appropriate structure.
               </p>
               <div className="grid gap-3 max-h-[420px] overflow-y-auto pr-1">
@@ -302,20 +302,20 @@ export function WorkspaceSetupPage() {
                           workflowRules: { ceremonies: tpl.ceremonies, teamStructure: tpl.teamStructure }
                         }));
                       }}
-                      className={`w-full text-left border p-4 transition-all ${isSelected ? 'border-cyan-400 bg-cyan-950/20' : 'border-white/10 bg-white/5 hover:border-white/25'}`}
+                      className={`w-full text-left border p-4 transition-all ${isSelected ? 'border-cyan-400 bg-cyan-950/20' : 'border-border bg-white/5 hover:border-white/25'}`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <h4 className="text-base font-semibold">{tpl.name}</h4>
-                          <p className="mt-1 text-xs text-white/60 leading-relaxed">{tpl.description}</p>
+                          <p className="mt-1 text-xs text-text-tertiary leading-relaxed">{tpl.description}</p>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-white/10 px-2 py-0.5 text-white/70">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-border px-2 py-0.5 text-text-secondary">
                               <Layers className="w-3 h-3" />{tpl.lanes} lanes
                             </span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-white/10 px-2 py-0.5 text-white/70">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-border px-2 py-0.5 text-text-secondary">
                               <GitBranch className="w-3 h-3" />{tpl.executionMode}
                             </span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-white/10 px-2 py-0.5 text-white/70">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-border px-2 py-0.5 text-text-secondary">
                               <Users className="w-3 h-3" />{tpl.teamStructure}
                             </span>
                           </div>
@@ -331,7 +331,7 @@ export function WorkspaceSetupPage() {
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {tpl.badges.map(b => (
-                          <span key={b} className="text-[9px] font-mono uppercase tracking-wider bg-white/10 px-2 py-0.5 text-white/60">{b}</span>
+                          <span key={b} className="text-[9px] font-mono uppercase tracking-wider bg-white/10 px-2 py-0.5 text-text-tertiary">{b}</span>
                         ))}
                       </div>
                     </button>
@@ -345,19 +345,19 @@ export function WorkspaceSetupPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium">
                 Work Start
-                <input type="time" value={settings.workStart} onChange={event => setSettings(prev => ({ ...prev, workStart: event.target.value }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
+                <input type="time" value={settings.workStart} onChange={event => setSettings(prev => ({ ...prev, workStart: event.target.value }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
               </label>
               <label className="text-sm font-medium">
                 Work End
-                <input type="time" value={settings.workEnd} onChange={event => setSettings(prev => ({ ...prev, workEnd: event.target.value }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
+                <input type="time" value={settings.workEnd} onChange={event => setSettings(prev => ({ ...prev, workEnd: event.target.value }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
               </label>
               <label className="text-sm font-medium">
                 Lunch Duration
-                <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
+                <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
               </label>
               <label className="text-sm font-medium">
                 Timezone
-                <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white" />
+                <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
               </label>
               {(() => {
                 const countryData = getCountryByCode(settings.country || '');
@@ -367,7 +367,7 @@ export function WorkspaceSetupPage() {
                     <select
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
-                      className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none focus:border-white/40"
+                      className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none focus:border-white/40"
                     >
                       <option value="">Select state/region</option>
                       {countryData.states.map(s => (
@@ -382,7 +382,7 @@ export function WorkspaceSetupPage() {
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
                       placeholder="Optional"
-                      className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none"
+                      className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none"
                     />
                   </label>
                 );
@@ -393,7 +393,7 @@ export function WorkspaceSetupPage() {
                   value={settings.city || ''}
                   onChange={event => setSettings(prev => ({ ...prev, city: event.target.value }))}
                   placeholder="Optional"
-                  className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white outline-none"
+                  className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none"
                 />
               </label>
               <div className="sm:col-span-2">
@@ -405,7 +405,7 @@ export function WorkspaceSetupPage() {
                       <button
                         key={day.value}
                         onClick={() => toggleWorkday(day.value)}
-                        className={`h-10 border text-sm ${active ? 'border-white bg-white text-black' : 'border-white/10 bg-white/5 text-white/70'}`}
+                        className={`h-10 border text-sm ${active ? 'border-white bg-white text-black' : 'border-border bg-white/5 text-text-secondary'}`}
                       >
                         {day.label}
                       </button>
@@ -419,7 +419,7 @@ export function WorkspaceSetupPage() {
                   <select
                     value={settings.saturdayRule || 'all'}
                     onChange={event => setSettings(prev => ({ ...prev, saturdayRule: event.target.value as any }))}
-                    className="h-12 w-full border border-white/10 bg-black px-4 text-white focus:border-white/40 outline-none"
+                    className="h-12 w-full border border-border bg-bg px-4 text-text-primary focus:border-white/40 outline-none"
                   >
                     <option value="all">All Saturdays Working</option>
                     <option value="off">All Saturdays Off</option>
@@ -435,33 +435,33 @@ export function WorkspaceSetupPage() {
 
           {step === 4 && (
             <div className="space-y-5">
-              <p className="text-sm text-white/70">
+              <p className="text-sm text-text-secondary">
                 Review holidays detected for <strong>{settings.country}{settings.region ? ` / ${settings.region}` : ''}</strong>.
                 Uncheck any holidays that do not apply to your workspace. They can be re-enabled later from Settings.
               </p>
 
               {previewLoading && (
-                <div className="flex items-center gap-3 py-8 text-sm text-white/50">
+                <div className="flex items-center gap-3 py-8 text-sm text-text-tertiary">
                   <div className="h-4 w-4 animate-spin rounded-full border border-white/30 border-t-white" />
                   Loading holidays...
                 </div>
               )}
 
               {!previewLoading && previewHolidays.length === 0 && settings.country && (
-                <div className="border border-white/10 bg-white/5 p-6 text-center text-sm text-white/50">
+                <div className="border border-border bg-white/5 p-6 text-center text-sm text-text-tertiary">
                   <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40" />
                   <p>No holidays found for {settings.country}{settings.region ? ` / ${settings.region}` : ''}.</p>
-                  <p className="mt-1 text-xs text-white/40">Holiday coverage is limited to countries with registered providers.</p>
+                  <p className="mt-1 text-xs text-text-quaternary">Holiday coverage is limited to countries with registered providers.</p>
                 </div>
               )}
 
               {!previewLoading && previewHolidays.length > 0 && (
-                <div className="divide-y divide-white/5 border border-white/10 max-h-[360px] overflow-y-auto">
+                <div className="divide-y divide-white/5 border border-border max-h-[360px] overflow-y-auto">
                   {previewHolidays.map(h => {
                     const dateStr = h.date;
                     const isIgnored = ignoredHolidayDates.has(dateStr);
                     return (
-                      <label key={dateStr} className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors cursor-pointer hover:bg-white/[0.02] ${isIgnored ? 'opacity-40' : ''}`}>
+                      <label key={dateStr} className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors cursor-pointer hover:bg-surface-3 ${isIgnored ? 'opacity-40' : ''}`}>
                         <input
                           type="checkbox"
                           checked={!isIgnored}
@@ -477,9 +477,9 @@ export function WorkspaceSetupPage() {
                         />
                         <div className="flex-1 min-w-0">
                           <span className="font-medium">{h.name}</span>
-                          <span className="ml-2 text-xs text-white/50">{dateStr}</span>
+                          <span className="ml-2 text-xs text-text-tertiary">{dateStr}</span>
                         </div>
-                        <span className={`text-[10px] font-mono uppercase px-2 py-0.5 border ${h.type === 'public' ? 'border-amber-500/30 text-amber-400 bg-amber-500/5' : h.type === 'festival' ? 'border-purple-500/30 text-purple-400 bg-purple-500/5' : 'border-blue-500/30 text-blue-400 bg-blue-500/5'}`}>
+                        <span className={`text-[10px] font-mono uppercase px-2 py-0.5 border ${h.type === 'public' ? 'border-border text-signal-warning bg-signal-warning-bg' : h.type === 'festival' ? 'border-border text-accent-secondary bg-surface-3' : 'border-border text-signal-info bg-surface-3'}`}>
                           {h.type}
                         </span>
                       </label>
@@ -489,14 +489,14 @@ export function WorkspaceSetupPage() {
               )}
 
               {!settings.country && (
-                <div className="border border-white/10 bg-white/5 p-6 text-center text-sm text-white/50">
+                <div className="border border-border bg-white/5 p-6 text-center text-sm text-text-tertiary">
                   <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40" />
                   <p>Select a country in step 1 to preview applicable holidays.</p>
                 </div>
               )}
 
               {previewHolidays.length > 0 && (
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-text-quaternary">
                   {previewHolidays.length - ignoredHolidayDates.size} of {previewHolidays.length} holidays will be imported.
                   Ignored holidays can be re-enabled later from the Calendar Intelligence panel.
                 </p>
@@ -515,14 +515,14 @@ export function WorkspaceSetupPage() {
                   step={0.05}
                   value={settings.productivityFactor}
                   onChange={event => setSettings(prev => ({ ...prev, productivityFactor: Number(event.target.value) || 0.8 }))}
-                  className="mt-2 h-12 w-full border border-white/10 bg-black px-4 text-white"
+                  className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary"
                 />
               </label>
-              <label className="flex items-center justify-between border border-white/10 bg-white/5 p-4">
+              <label className="flex items-center justify-between border border-border bg-white/5 p-4">
                 Attendance Enabled
                 <input type="checkbox" checked={settings.attendanceEnabled} onChange={event => setSettings(prev => ({ ...prev, attendanceEnabled: event.target.checked }))} />
               </label>
-              <label className="flex items-center justify-between border border-white/10 bg-white/5 p-4">
+              <label className="flex items-center justify-between border border-border bg-white/5 p-4">
                 Payroll Enabled
                 <input type="checkbox" checked={settings.payrollEnabled} onChange={event => setSettings(prev => ({ ...prev, payrollEnabled: event.target.checked }))} />
               </label>
@@ -537,40 +537,40 @@ export function WorkspaceSetupPage() {
                   value={inviteEmail}
                   onChange={event => setInviteEmail(event.target.value)}
                   placeholder="teammate@company.com"
-                  className="h-12 flex-1 border border-white/10 bg-black px-4 text-white outline-none focus:border-white/40"
+                  className="h-12 flex-1 border border-border bg-bg px-4 text-text-primary outline-none focus:border-white/40"
                 />
-                <button onClick={addInvite} className="flex h-12 w-12 items-center justify-center border border-white/10 bg-white text-black">
+                <button onClick={addInvite} className="flex h-12 w-12 items-center justify-center border border-border bg-white text-black">
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
               <div className="space-y-2">
                 {invites.map(email => (
-                  <div key={email} className="flex items-center justify-between border border-white/10 bg-white/5 px-4 py-3 text-sm">
+                  <div key={email} className="flex items-center justify-between border border-border bg-white/5 px-4 py-3 text-sm">
                     {email}
                     <button onClick={() => removeInvite(email)} disabled={saving}>
-                      <X className="h-4 w-4 text-white/60" />
+                      <X className="h-4 w-4 text-text-tertiary" />
                     </button>
                   </div>
                 ))}
-                {invites.length === 0 && <p className="text-sm text-white/55">No invites added. You can skip this for now.</p>}
+                {invites.length === 0 && <p className="text-sm text-text-tertiary">No invites added. You can skip this for now.</p>}
               </div>
             </div>
           )}
 
           {step === 7 && (
-            <div className="border border-white/10 bg-black/30 p-6">
+            <div className="border border-border bg-bg p-6">
               <div className="mb-4 flex h-12 w-12 items-center justify-center bg-emerald-500/15 text-emerald-300">
                 <Check className="h-5 w-5" />
               </div>
               <h3 className="text-xl font-semibold">Workspace foundation is ready</h3>
-              <p className="mt-3 text-sm leading-6 text-white/65">
+              <p className="mt-3 text-sm leading-6 text-text-tertiary">
                 Your workspace is ready. You can now build projects, delegate tasks, track timelines, and sync offline in real-time.
               </p>
               {selectedTemplate && (
-                <div className="mt-4 border border-white/10 bg-white/5 p-3 text-sm">
+                <div className="mt-4 border border-border bg-white/5 p-3 text-sm">
                   <span className="text-xs font-mono uppercase tracking-wider text-cyan-400">Template</span>
                   <p className="mt-1 font-semibold">{selectedTemplate.name}</p>
-                  <p className="text-xs text-white/60 mt-0.5">{selectedTemplate.executionMode} · {selectedTemplate.lanes} lanes · {selectedTemplate.teamStructure}</p>
+                  <p className="text-xs text-text-tertiary mt-0.5">{selectedTemplate.executionMode} · {selectedTemplate.lanes} lanes · {selectedTemplate.teamStructure}</p>
                 </div>
               )}
             </div>
@@ -580,7 +580,7 @@ export function WorkspaceSetupPage() {
             <button
               disabled={step === 1 || saving}
               onClick={() => setStep(prev => Math.max(1, prev - 1))}
-              className="border border-white/10 px-4 py-2 text-sm text-white/80 disabled:opacity-40"
+              className="border border-border px-4 py-2 text-sm text-text-secondary disabled:opacity-40"
             >
               Back
             </button>
@@ -618,21 +618,21 @@ export function WorkspaceSetupPage() {
           </div>
         </section>
 
-        <aside className="border border-white/10 bg-white/[0.03] p-6">
-          <p className="text-xs font-mono uppercase tracking-[0.2em] text-white/45">Prediction Preview</p>
+        <aside className="border border-border bg-surface-3 p-6">
+          <p className="text-xs font-mono uppercase tracking-[0.2em] text-text-tertiary">Prediction Preview</p>
           <h3 className="mt-3 text-lg font-semibold">A 40 hour project finishes around</h3>
           <p className="mt-4 text-3xl font-semibold">{preview.predictedCompletion.toLocaleDateString()}</p>
-          <dl className="mt-6 space-y-3 text-sm text-white/70">
+          <dl className="mt-6 space-y-3 text-sm text-text-secondary">
             <div className="flex justify-between"><dt>Daily capacity</dt><dd>{preview.dailyCapacityHours}h</dd></div>
             <div className="flex justify-between"><dt>Confidence</dt><dd>{preview.confidence}%</dd></div>
             <div className="flex justify-between"><dt>Risk</dt><dd className="capitalize">{preview.risk}</dd></div>
             <div className="flex justify-between"><dt>Workspace</dt><dd>{workspaceName || 'Untitled'}</dd></div>
           </dl>
           {selectedTemplate && (
-            <div className="mt-6 border-t border-white/10 pt-5">
+            <div className="mt-6 border-t border-border pt-5">
               <p className="text-xs font-mono uppercase tracking-[0.2em] text-cyan-400">Workflow Template</p>
-              <div className="mt-3 space-y-2 text-sm text-white/70">
-                <div className="flex justify-between"><dt>Template</dt><dd className="text-white font-medium">{selectedTemplate.name}</dd></div>
+              <div className="mt-3 space-y-2 text-sm text-text-secondary">
+                <div className="flex justify-between"><dt>Template</dt><dd className="text-text-primary font-medium">{selectedTemplate.name}</dd></div>
                 <div className="flex justify-between"><dt>Execution Mode</dt><dd className="text-cyan-300 font-mono text-xs">{selectedTemplate.executionMode}</dd></div>
                 <div className="flex justify-between"><dt>Default Lanes</dt><dd>{selectedTemplate.lanes}</dd></div>
                 <div className="flex justify-between items-start"><dt>Team</dt><dd className="text-right text-xs">{selectedTemplate.teamStructure}</dd></div>
