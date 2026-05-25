@@ -1,137 +1,152 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { CheckCircle2, AlertCircle, Clock, Users, ChevronRight } from 'lucide-react';
-import { Project, Team, User, Profile } from '../../types';
-import { calculateExpectedTime, calculateVariance, getRelativeTime } from '../../utils/timeUtils';
-import { addWorkingHours, getDailyCapacity } from '../../utils/productivity';
+import React, { useMemo } from 'react';
+import { 
+  Users, ChevronRight, Clock, AlertTriangle, 
+  CheckCircle2, GitPullRequest, GitMerge, Layout, Focus
+} from 'lucide-react';
+import { Project, Team, Profile } from '../../types';
 
-export function ProjectCard({ project, teams, profiles, workingHoursPerDay, workingTimeFrom = '09:00', workingTimeTo = '17:00', onClick }: { project: Project; teams: Team[]; profiles: Profile[]; workingHoursPerDay: number; workingTimeFrom?: string; workingTimeTo?: string; onClick: (p: Project) => void }) {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => setTick(t => t + 1), 60_000);
-    return () => clearInterval(interval);
-  }, []);
-
+export function ProjectCard({ 
+  project, 
+  teams, 
+  profiles, 
+  tasks = [], 
+  onClick 
+}: { 
+  project: Project; 
+  teams: Team[]; 
+  profiles: Profile[]; 
+  tasks?: any[]; 
+  onClick: (p: Project) => void;
+}) {
   const creator = profiles.find(p => p.id === project.owner_id);
-  const historicalTeam = project.tags.find(t => t.startsWith('TEAM:'))?.replace('TEAM:', '');
   const team = teams.find(t => t.id === project.team_id);
-  const teamName = team ? team.name : (historicalTeam || "UNALLOCATED");
-  const parsedTeamData = team ? team.data : null;
-  const engineerCount = Math.max(1, parsedTeamData?.developer_ids?.length || 1);
+  const teamName = team ? team.name : "Unallocated";
+  
+  // Real Data Computations
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => t.status === 'done').length;
+  const inProgressTasks = tasks.filter(t => t.status === 'in_progress').length;
+  const highRiskTasks = tasks.filter(t => t.risk === 'high' && t.status !== 'done');
+  
+  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  
+  // Delivery Confidence based on risk vs progress
+  const activeRiskRatio = totalTasks > 0 ? (highRiskTasks.length / totalTasks) : 0;
+  const confidence = Math.max(0, 100 - Math.round(activeRiskRatio * 100));
+  
+  // Last Activity
+  const latestActivityTask = [...tasks].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0];
+  const lastActivityTime = latestActivityTask ? new Date(latestActivityTask.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date(project.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
-  const expectedRealHours = useMemo(() =>
-    calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst),
-    [project]
-  );
+  // Execution Mode (Derived from template or defaults to hybrid)
+  const executionMode = project.template === 'kanban' ? 'Kanban' : project.template === 'sprint' ? 'Scrum' : 'Hybrid';
+  const ModeIcon = executionMode === 'Scrum' ? Focus : executionMode === 'Kanban' ? Layout : GitMerge;
 
-  const productiveHoursPerDay = workingHoursPerDay * 0.8;
-  const varianceVal = calculateVariance(project.pert_best ?? 0, project.pert_worst ?? 0);
-  const stdDev = isNaN(varianceVal) ? 0 : Math.sqrt(varianceVal);
-
-  const riskColor = stdDev < 1.5 ? 'text-signal-safe' : stdDev < 3 ? 'text-signal-warning' : 'text-signal-critical';
-  const riskLabel = stdDev < 1.5 ? 'STABLE' : stdDev < 3 ? 'CAUTION' : 'HIGH_RISK';
-
-  const isPlanning = project.status === 'planning';
-
-  // ETA using working hours only (re-computed on each tick for live countdown)
-  const startDate = project.proposed_start_date ? new Date(project.proposed_start_date) : new Date(project.created_at);
-  const now = useMemo(() => new Date(), [tick]);
-  const workWindow = useMemo(() => ({ workStart: workingTimeFrom, workEnd: workingTimeTo, lunchDuration: 60, workingDays: [1, 2, 3, 4, 5], productivityFactor: 0.8, holidays: [], shutdowns: [] }), [workingTimeFrom, workingTimeTo]);
-
-  const completionDate = useMemo(() => {
-    if (isPlanning) return now;
-    const totalHours = (expectedRealHours / engineerCount);
-    return addWorkingHours(startDate, totalHours, workWindow);
-  }, [startDate, expectedRealHours, engineerCount, isPlanning, now]);
-
-  const remainingDays = useMemo(() => {
-    if (isPlanning) return 0;
-    if (now >= completionDate) return 0;
-    let count = 0;
-    let cursor = new Date(now);
-    while (cursor < completionDate) {
-      const cap = getDailyCapacity(cursor, workWindow);
-      if (cap > 0) count += cap / workingHoursPerDay;
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return Math.max(0, Number(count.toFixed(1)));
-  }, [now, completionDate, workWindow, workingHoursPerDay, isPlanning]);
-
-  const completionDateStr = completionDate.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
+  // Visual state mapping
+  const isHealthy = highRiskTasks.length === 0;
+  const isCritical = highRiskTasks.length > 3;
 
   return (
     <div
       onClick={() => onClick(project)}
-      className={`border border-border bg-surface p-5 group hover:border-white/30 transition-all cursor-pointer relative overflow-hidden ${stdDev >= 3 ? 'border-red-500/20 shadow-sm' : ''
-        }`}
+      className={`group relative bg-surface border rounded-xl p-5 hover:bg-surface-2 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md ${isCritical ? 'border-rose-500/30' : 'border-border hover:border-border-subtle'}`}
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-surface-3 -mr-16 -mt-16 rounded-full blur-3xl pointer-events-none group-hover:bg-surface-3"></div>
-      {stdDev >= 3 && <div className="absolute top-0 left-0 w-full h-0.5 bg-signal-critical-bg"></div>}
-
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-6 mb-6">
-        <div className="space-y-2 w-full sm:w-auto">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 border ${project.status === 'deployed' ? 'border-border text-signal-safe bg-signal-safe-bg' :
-              project.status === 'in-progress' ? 'border-border text-signal-info bg-surface-3' :
-                'border-white/30 text-text-primary bg-white/20'
-              }`}>
-              {project.status.replace('-', ' ')}
-            </span>
-            <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 border border-border bg-white/10 ${riskColor}`}>
-              {riskLabel}
-            </span>
-          </div>
-          <h3 className="text-base sm:text-lg font-medium leading-tight group-hover:text-text-primary transition-colors">{project.name}</h3>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="text-[10px] font-mono text-text-tertiary uppercase tracking-wider">{getRelativeTime(project.created_at)}</span>
-            <div className="flex flex-wrap gap-1.5">
-              {project.tags
-                .filter(tag => !tag.startsWith('TEAM:') && !tag.startsWith('LOG:'))
-                .map(tag => (
-                  <span key={tag} className="text-[10px] font-mono text-text-secondary">#{tag}</span>
-                ))}
+      <div className="flex flex-col h-full justify-between gap-5">
+        
+        {/* Header: Name, Mode, Status */}
+        <div>
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-text-tertiary bg-surface-3 px-2 py-1 rounded-md border border-border">
+                <ModeIcon className="w-3 h-3" />
+                {executionMode}
+              </span>
+              <span className={`text-[10px] font-medium uppercase tracking-wider px-2 py-1 rounded-md border ${project.status === 'deployed' ? 'bg-emerald-950/30 text-emerald-400 border-emerald-500/20' : project.status === 'in-progress' ? 'bg-indigo-950/30 text-indigo-400 border-indigo-500/20' : 'bg-surface-3 text-text-secondary border-border'}`}>
+                {project.status.replace('-', ' ')}
+              </span>
             </div>
-          </div>
-          {creator && (
-            <div className="mt-2.5 flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-border">
-                {creator.avatar_url ? (
-                  <img src={creator.avatar_url} alt="Creator" className="w-full h-full object-cover" />
-                ) : (
-                  <Users className="w-2.5 h-2.5 text-text-secondary" />
-                )}
+            
+            {/* Risk Indicator */}
+            {isCritical ? (
+              <div className="flex items-center gap-1.5 text-rose-400 bg-rose-950/20 px-2 py-1 rounded border border-rose-500/20">
+                <AlertTriangle className="w-3 h-3" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">At Risk</span>
               </div>
-              <p className="text-[9px] font-mono text-text-tertiary">
-                By <span className="text-text-secondary">{creator.full_name || creator.email}</span>
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-3 sm:pt-0 border-t border-border-subtle sm:border-t-0 text-right">
-          <div className="text-left sm:text-right">
-            <p className="text-[9px] font-mono text-text-tertiary uppercase tracking-wide leading-none mb-1">Finish_ETA</p>
-            <div className={`text-xl sm:text-2xl font-mono font-medium ${riskColor} leading-none`}>{remainingDays.toFixed(1)}d</div>
+            ) : isHealthy && project.status === 'in-progress' ? (
+              <div className="flex items-center gap-1.5 text-emerald-400 bg-emerald-950/20 px-2 py-1 rounded border border-emerald-500/20">
+                <CheckCircle2 className="w-3 h-3" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">On Track</span>
+              </div>
+            ) : null}
           </div>
-          <div className="text-right mt-0 sm:mt-2">
-            <p className="text-[9px] font-mono text-text-tertiary uppercase leading-none">{completionDateStr}</p>
-            <p className="text-[10px] font-mono text-text-secondary uppercase mt-1">Effort: {expectedRealHours.toFixed(1)}h</p>
-          </div>
-        </div>
-      </div>
 
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-border-subtle">
-        <div className="flex items-center gap-2">
-          <Users className="w-3 h-3 text-text-secondary" />
-          <span className="text-[10px] font-mono text-text-secondary uppercase tracking-wide">{teamName}</span>
+          <h3 className="text-lg font-sans font-medium text-text-primary group-hover:text-accent-secondary transition-colors line-clamp-1 mb-1">
+            {project.name}
+          </h3>
+          <p className="text-[11px] text-text-tertiary font-mono truncate">
+            Last active: {lastActivityTime}
+          </p>
         </div>
-        <button className="flex items-center gap-1 text-[10px] uppercase font-medium text-text-secondary hover:text-text-primary transition-all group/btn">
-          Forecast <ChevronRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
-        </button>
+
+        {/* Progress & Metrics */}
+        <div className="space-y-3">
+          
+          {/* Progress Bar */}
+          <div>
+            <div className="flex justify-between items-end mb-1.5">
+              <span className="text-xs font-medium text-text-secondary">Progress</span>
+              <span className="text-xs font-mono font-medium text-text-primary">{progressPercent}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-surface-3 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${progressPercent === 100 ? 'bg-emerald-500' : 'bg-accent-primary'}`} 
+                style={{ width: `${progressPercent}%` }} 
+              />
+            </div>
+          </div>
+
+          {/* Metric Grid */}
+          <div className="grid grid-cols-3 gap-2 py-2 border-y border-border-subtle">
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase tracking-wider text-text-quaternary mb-0.5">Tasks</span>
+              <span className="text-xs font-mono font-medium text-text-secondary">{completedTasks}/{totalTasks}</span>
+            </div>
+            <div className="flex flex-col border-l border-border-subtle pl-2">
+              <span className="text-[9px] uppercase tracking-wider text-text-quaternary mb-0.5">Confidence</span>
+              <span className={`text-xs font-mono font-medium ${confidence > 80 ? 'text-emerald-400' : confidence > 50 ? 'text-signal-warning' : 'text-rose-400'}`}>
+                {confidence}%
+              </span>
+            </div>
+            <div className="flex flex-col border-l border-border-subtle pl-2">
+              <span className="text-[9px] uppercase tracking-wider text-text-quaternary mb-0.5">Blockers</span>
+              <span className={`text-xs font-mono font-medium ${highRiskTasks.length > 0 ? 'text-rose-400' : 'text-text-secondary'}`}>
+                {highRiskTasks.length}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer: Team & Forecast Action */}
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-1">
+              {team ? (
+                <div className="w-5 h-5 rounded-full bg-surface-3 border border-border flex items-center justify-center">
+                  <Users className="w-3 h-3 text-text-secondary" />
+                </div>
+              ) : null}
+              {creator?.avatar_url ? (
+                <img src={creator.avatar_url} className="w-5 h-5 rounded-full border border-border" alt="Owner" />
+              ) : null}
+            </div>
+            <span className="text-[10px] font-medium text-text-secondary">{teamName}</span>
+          </div>
+          
+          <button className="flex items-center gap-1 text-[10px] uppercase font-medium text-text-tertiary group-hover:text-accent-primary transition-all">
+            Forecast <ChevronRight className="w-3 h-3 transform group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        </div>
+
       </div>
     </div>
   );
