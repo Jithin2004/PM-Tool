@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { ProjectCard } from '../../components/project/ProjectCard';
+import { hasCapability } from '../../core/auth/permissions';
 
 export function ProjectWorkspace() {
   const { workspace, projects = [], user } = useWorkspace() as any;
@@ -81,7 +82,7 @@ export function ProjectWorkspace() {
             </div>
           </div>
 
-          {profile?.role !== 'viewer' && (
+          {hasCapability(profile?.role, 'manage_projects') && (
             <button
               onClick={() => setIsAdding(true)}
               className="bg-text-primary text-bg px-4 py-2 rounded-md font-medium text-xs flex items-center gap-2 hover:bg-neutral-200 transition-colors shadow-sm"

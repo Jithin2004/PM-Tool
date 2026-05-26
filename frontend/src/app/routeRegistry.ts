@@ -1,24 +1,12 @@
 import type { Capability } from '../core/auth/permissions';
-import type { UserRole } from '../types';
+import { normalizePath } from './routePaths';
 
-/** Legacy / shorthand paths → canonical app paths */
-export const ROUTE_ALIASES: Record<string, string> = {
-  '/admin': '/control',
-  '/logistics': '/resources',
-  '/pipeline': '/execution',
-  '/control/logistics': '/resources',
-  '/resources/logistics': '/resources',
-  '/settings': '/control/settings',
-  '/integrations': '/control/connections',
-  '/integration': '/control/connections',
-};
-
-export function normalizePath(pathname: string): string {
-  const path = pathname.split('?')[0].replace(/\/+$/, '') || '/';
-  return ROUTE_ALIASES[path] ?? path;
-}
+export { normalizePath, ROUTE_ALIASES } from './routePaths';
 
 export type SidebarGroup = 'core' | 'intelligence' | 'operations' | 'system';
+
+/** Progressive disclosure surface tier (simple → enterprise). */
+export type DisclosureTier = 'essential' | 'operational' | 'intelligence' | 'platform';
 
 export interface SidebarNavItem {
   id: string;
@@ -26,25 +14,29 @@ export interface SidebarNavItem {
   path: string;
   group: SidebarGroup;
   capability?: Capability;
+  /** Progressive disclosure tier — defaults to essential when omitted. */
+  disclosureTier: DisclosureTier;
 }
 
 /**
  * Canonical sidebar targets — every path MUST exist in EXACT_APP_PATHS or PROJECT_SUBROUTES.
  */
 export const SIDEBAR_NAV: SidebarNavItem[] = [
-  { id: 'overview', label: 'Overview', path: '/overview', group: 'core', capability: 'view_projects' },
-  { id: 'projects', label: 'Projects', path: '/workspace', group: 'core', capability: 'view_projects' },
-  { id: 'board', label: 'Task Board', path: '/execution', group: 'core', capability: 'view_tasks' },
-  { id: 'scheduling', label: 'Scheduling', path: '/execution/timeline', group: 'core', capability: 'view_scheduling' },
-  { id: 'analytics', label: 'Analytics', path: '/control/analytics', group: 'intelligence', capability: 'view_analytics' },
-  { id: 'decisions', label: 'Decision Center', path: '/workspace/decisions', group: 'intelligence', capability: 'view_decision_center' },
-  { id: 'reports', label: 'Reports', path: '/resources/work-logs', group: 'intelligence', capability: 'view_reports' },
-  { id: 'logistics', label: 'Logistics', path: '/resources', group: 'operations', capability: 'manage_logistics' },
-  { id: 'teams', label: 'Team Roster', path: '/resources/teams', group: 'operations', capability: 'view_teams' },
-  { id: 'portfolio', label: 'Project Sponsors', path: '/workspace/portfolio', group: 'operations', capability: 'view_stakeholders' },
-  { id: 'audit', label: 'Audit Log', path: '/control/audit', group: 'operations', capability: 'view_audit_log' },
-  { id: 'settings', label: 'Settings', path: '/control/settings', group: 'system', capability: 'manage_settings' },
-  { id: 'integrations', label: 'Integrations', path: '/control/connections', group: 'system', capability: 'manage_integrations' },
+  { id: 'overview', label: 'Overview', path: '/overview', group: 'core', capability: 'view_projects', disclosureTier: 'essential' },
+  { id: 'projects', label: 'Projects', path: '/workspace', group: 'core', capability: 'view_projects', disclosureTier: 'essential' },
+  { id: 'board', label: 'Tasks', path: '/execution', group: 'core', capability: 'view_tasks', disclosureTier: 'essential' },
+  { id: 'scheduling', label: 'Scheduling', path: '/execution/timeline', group: 'core', capability: 'view_scheduling', disclosureTier: 'operational' },
+  { id: 'analytics', label: 'Analytics', path: '/control/analytics', group: 'intelligence', capability: 'view_analytics', disclosureTier: 'intelligence' },
+  { id: 'decisions', label: 'Decision Center', path: '/workspace/decisions', group: 'intelligence', capability: 'view_decision_center', disclosureTier: 'intelligence' },
+  { id: 'reports', label: 'Reports', path: '/resources/work-logs', group: 'intelligence', capability: 'view_reports', disclosureTier: 'intelligence' },
+  { id: 'logistics', label: 'Logistics', path: '/resources', group: 'operations', capability: 'manage_logistics', disclosureTier: 'operational' },
+  { id: 'teams', label: 'Team Roster', path: '/resources/teams', group: 'operations', capability: 'view_teams', disclosureTier: 'operational' },
+  { id: 'portfolio', label: 'Project Sponsors', path: '/workspace/portfolio', group: 'operations', capability: 'view_stakeholders', disclosureTier: 'intelligence' },
+  { id: 'audit', label: 'Audit Log', path: '/control/audit', group: 'operations', capability: 'view_audit_log', disclosureTier: 'platform' },
+  { id: 'automations', label: 'Automations', path: '/control/automations', group: 'system', capability: 'manage_automations', disclosureTier: 'platform' },
+  { id: 'mission-control', label: 'Mission Control', path: '/control/mission-control', group: 'system', capability: 'view_mission_control', disclosureTier: 'platform' },
+  { id: 'settings', label: 'Settings', path: '/control/settings', group: 'system', capability: 'manage_settings', disclosureTier: 'operational' },
+  { id: 'integrations', label: 'Integrations', path: '/control/connections', group: 'system', capability: 'manage_integrations', disclosureTier: 'platform' },
 ];
 
 /** Exact paths handled by ResolveRouter (excluding dynamic /projects/:id/*) */
@@ -87,45 +79,6 @@ export const PROJECT_SUBROUTES = new Set([
   'sprints',
   'timeline',
 ]);
-
-export type RouteAccess =
-  | { kind: 'public' }
-  | { kind: 'auth' }
-  | { kind: 'capability'; capability: Capability }
-  | { kind: 'roles'; roles: UserRole[] };
-
-export interface RouteDefinition {
-  path: string;
-  access: RouteAccess;
-}
-
-export const ROUTE_ACCESS: Record<string, RouteAccess> = {
-  '/overview': { kind: 'auth' },
-  '/workspace': { kind: 'auth' },
-  '/workspace/portfolio': { kind: 'capability', capability: 'view_stakeholders' },
-  '/workspace/knowledge': { kind: 'auth' },
-  '/workspace/decisions': { kind: 'capability', capability: 'view_decision_center' },
-  '/execution': { kind: 'capability', capability: 'view_tasks' },
-  '/execution/board': { kind: 'capability', capability: 'view_tasks' },
-  '/execution/timeline': { kind: 'capability', capability: 'view_scheduling' },
-  '/execution/gantt': { kind: 'capability', capability: 'view_scheduling' },
-  '/execution/sprints': { kind: 'capability', capability: 'view_scheduling' },
-  '/resources': { kind: 'capability', capability: 'manage_logistics' },
-  '/resources/teams': { kind: 'capability', capability: 'view_teams' },
-  '/resources/capacity': { kind: 'capability', capability: 'view_reports' },
-  '/resources/work-logs': { kind: 'capability', capability: 'view_reports' },
-  '/control': { kind: 'capability', capability: 'platform_governance' },
-  '/control/identity': { kind: 'capability', capability: 'platform_governance' },
-  '/control/analytics': { kind: 'capability', capability: 'view_analytics' },
-  '/control/audit': { kind: 'capability', capability: 'view_audit_log' },
-  '/control/automations': { kind: 'capability', capability: 'manage_automations' },
-  '/control/connections': { kind: 'capability', capability: 'manage_integrations' },
-  '/control/settings': { kind: 'capability', capability: 'manage_settings' },
-  '/control/settings/notifications': { kind: 'capability', capability: 'manage_settings' },
-  '/control/settings/modes': { kind: 'capability', capability: 'manage_settings' },
-  '/control/mission-control': { kind: 'roles', roles: ['super_admin'] },
-  '/projects/new': { kind: 'capability', capability: 'manage_projects' },
-};
 
 export function parseProjectRoute(pathname: string): {
   projectId: string;

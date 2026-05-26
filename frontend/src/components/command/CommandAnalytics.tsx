@@ -14,6 +14,8 @@ import {
   type HealthScore,
   type PredictiveSuggestion,
 } from '../../services/commandUsageService';
+import { hasCapability } from '../../core/auth/permissions';
+import type { UserRole } from '../../types';
 
 interface Props {
   isOpen: boolean;
@@ -27,16 +29,16 @@ interface Props {
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function getScopeLabel(role: string): string {
-  if (role === 'viewer' || role === 'developer') return 'PERSONAL';
-  if (role === 'pm') return 'TEAM';
-  if (role === 'super_admin') return 'WORKSPACE';
+  const r = role as UserRole;
+  if (hasCapability(r, 'platform_governance')) return 'WORKSPACE';
+  if (hasCapability(r, 'manage_projects') || hasCapability(r, 'manage_teams')) return 'TEAM';
   return 'PERSONAL';
 }
 
 function getScopeDescription(role: string): string {
-  if (role === 'viewer' || role === 'developer') return 'Your personal command usage only';
-  if (role === 'pm') return 'Aggregate team command patterns';
-  if (role === 'super_admin') return 'Full workspace intelligence';
+  const r = role as UserRole;
+  if (hasCapability(r, 'platform_governance')) return 'Full workspace intelligence';
+  if (hasCapability(r, 'manage_projects') || hasCapability(r, 'manage_teams')) return 'Aggregate team command patterns';
   return 'Your personal command usage only';
 }
 

@@ -8,6 +8,7 @@ import type {
   ActivityEntry,
 } from './types';
 import { buildOperationalContext } from './operationalPresence';
+import { hasCapability } from '../auth/permissions';
 import { translateAction } from './activityContext';
 import { deriveSignals, summarizePresences } from './collaborationSignals';
 import { buildPermissionContext } from '../permissions/types';
@@ -142,7 +143,7 @@ export function useOperationalPresence(options: UseOperationalPresenceOptions) {
   // Permission-gated collaborator visibility
   const visibleCollaborators = useMemo(() => {
     return collaborators.filter(c => {
-      if (options.role === 'super_admin') return true;
+      if (hasCapability(options.role, 'platform_governance')) return true;
       if (!c.context.projectId) return false;
       if (c.context.projectId === operationalContext.projectId) return true;
       return false;

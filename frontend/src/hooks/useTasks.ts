@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
 import { Task, TaskStatus, TaskDependency } from '../types';
+import { normalizeTaskFromRow, normalizeTasksFromRows, taskToDbRow } from '../core/types/normalize';
 import { sendNotification } from '../services/notificationService';
 import { predictionValidationService } from '../services/predictionValidationService';
 import { fireEventWebhooks } from '../services/webhookService';
@@ -162,10 +163,10 @@ export function useTasks(workspaceId?: string) {
           const taskId = getRealId(item.payload.taskId);
           const { error: updateError } = await supabase
             .from('tasks')
-            .update({ 
-              start_date: item.payload.startDate, 
-              deadline: item.payload.deadline, 
-              updated_at: new Date().toISOString() 
+            .update({
+              start_date: item.payload.startDate,
+              ...taskToDbRow({ deadline: item.payload.deadline ?? undefined }),
+              updated_at: new Date().toISOString(),
             })
             .eq('id', taskId)
             .eq('workspace_id', workspaceId);
@@ -179,7 +180,7 @@ export function useTasks(workspaceId?: string) {
           
           const { error: updateError } = await supabase
             .from('tasks')
-            .update({ ...updates, updated_at: new Date().toISOString() })
+            .update({ ...taskToDbRow(updates), updated_at: new Date().toISOString() })
             .eq('id', taskId)
             .eq('workspace_id', workspaceId);
 
@@ -292,7 +293,7 @@ export function useTasks(workspaceId?: string) {
       if (fetchError) throw fetchError;
       if (abortSignal?.aborted) return;
       
-      setTasks(data as Task[]);
+      setTasks(normalizeTasksFromRows((data || []) as Record<string, unknown>[]));
       if (!fetchAllLoaded) setPage(0);
       setHasMore(count !== null ? (to + 1) < count : false);
 
@@ -346,7 +347,9 @@ export function useTasks(workspaceId?: string) {
       if (fetchError) throw fetchError;
       setTasks(prev => {
         const existingIds = new Set(prev.map(t => t.id));
-        const newUnique = (data as Task[]).filter(t => !existingIds.has(t.id));
+        const newUnique = normalizeTasksFromRows((data || []) as Record<string, unknown>[]).filter(
+          t => !existingIds.has(t.id),
+        );
         return [...prev, ...newUnique];
       });
       setPage(nextPage);
@@ -392,13 +395,19 @@ export function useTasks(workspaceId?: string) {
             if (newRecord.deleted_at) return;
             setTasks(prev => {
               if (prev.some(t => t.id === newRecord.id)) return prev;
-              return [newRecord as Task, ...prev];
+              return [normalizeTaskFromRow(newRecord as Record<string, unknown>), ...prev];
             });
           } else if (eventType === 'UPDATE') {
             if (newRecord.deleted_at) {
               setTasks(prev => prev.filter(t => t.id !== newRecord.id));
             } else {
-              setTasks(prev => prev.map(t => t.id === newRecord.id ? { ...t, ...newRecord } : t));
+              setTasks(prev =>
+                prev.map(t =>
+                  t.id === newRecord.id
+                    ? normalizeTaskFromRow({ ...t, ...newRecord } as Record<string, unknown>)
+                    : t,
+                ),
+              );
             }
           } else if (eventType === 'DELETE') {
             setTasks(prev => prev.filter(t => t.id !== oldRecord.id));
@@ -444,7 +453,7 @@ export function useTasks(workspaceId?: string) {
     if (isSupabaseConfigured) {
       const { data, error: insertError } = await supabase
         .from('tasks')
-        .insert({ ...taskData, workspace_id: workspaceId })
+        .insert(taskToDbRow({ ...taskData, workspace_id: workspaceId }))
         .select()
         .single();
         
@@ -459,7 +468,7 @@ export function useTasks(workspaceId?: string) {
         throw insertError;
       }
       
-      setTasks(prev => [data as Task, ...prev]);
+      setTasks(prev => [normalizeTaskFromRow(data as Record<string, unknown>), ...prev]);
 
       // Write canonical task history log
       if (data) {
@@ -479,7 +488,7 @@ export function useTasks(workspaceId?: string) {
         }).catch(() => {});
       }
 
-      return data as Task;
+      return normalizeTaskFromRow(data as Record<string, unknown>);
     } else {
       // Local fallback
       const newTask: Task = {
@@ -561,14 +570,14 @@ export function useTasks(workspaceId?: string) {
     if (isSupabaseConfigured) {
       const task = tasks.find(t => t.id === taskId);
       const oldStartDate = task?.start_date || null;
-      const oldDeadline = task?.deadline || null;
+      const oldDeadline = task?.deadline || task?.due_date || null;
 
       const { error: updateError } = await supabase
         .from('tasks')
-        .update({ 
-          start_date: startDate, 
-          deadline: deadline, 
-          updated_at: new Date().toISOString() 
+        .update({
+          start_date: startDate,
+          ...taskToDbRow({ deadline: deadline ?? undefined }),
+          updated_at: new Date().toISOString(),
         })
         .eq('id', taskId)
         .eq('workspace_id', workspaceId);
@@ -635,7 +644,7 @@ export function useTasks(workspaceId?: string) {
 
       const { error: updateError } = await supabase
         .from('tasks')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...taskToDbRow(updates as Record<string, unknown>), updated_at: new Date().toISOString() })
         .eq('id', taskId)
         .eq('workspace_id', workspaceId);
         

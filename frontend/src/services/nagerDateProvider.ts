@@ -1,5 +1,6 @@
 import type { HolidayProvider } from './holidaySourceService';
 import type { DerivedHoliday } from '../utils/holidays';
+import { normalizeHolidayTitle } from '../core/sync/holidayReconciliation';
 import { COUNTRIES } from '../data/countries';
 
 interface NagerHoliday {
@@ -47,10 +48,12 @@ export class NagerDateProvider implements HolidayProvider {
     const results: DerivedHoliday[] = [];
 
     for (const h of data) {
+      const externalId = `${h.date}:${normalizeHolidayTitle(h.localName)}`;
+      const base = { date: h.date, name: h.localName, source: 'nager-date' as const, externalId };
       if (h.global) {
-        results.push({ date: h.date, name: h.localName, type: 'public', source: 'nager-date' });
+        results.push({ ...base, type: 'public' });
       } else if (regionCode && h.counties?.includes(regionCode)) {
-        results.push({ date: h.date, name: h.localName, type: 'regional', source: 'nager-date' });
+        results.push({ ...base, type: 'regional' });
       }
     }
 

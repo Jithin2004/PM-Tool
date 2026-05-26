@@ -3,6 +3,8 @@ export interface DerivedHoliday {
   name: string;
   type: 'public' | 'regional' | 'festival' | 'company';
   source?: string;
+  /** Provider-native id when available; otherwise derived as date:title-slug */
+  externalId?: string;
 }
 
 export function getHolidaysForRegion(country: string, region: string, year: number): DerivedHoliday[] {

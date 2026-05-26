@@ -3,6 +3,14 @@ import { calendarEventService } from './calendarEventService';
 import { getHolidaysForRegion, DerivedHoliday } from '../utils/holidays';
 import { sha256 } from '../utils/cryptoUtils';
 import { NagerDateProvider } from './nagerDateProvider';
+import { hasCapability } from '../core/auth/permissions';
+import type { UserRole } from '../types';
+import {
+  HOLIDAY_PROVIDER_SOURCE_TABLE,
+  buildHolidaySourceId,
+  findExistingHolidayRecord,
+  indexExistingHolidayEvents,
+} from '../core/sync/holidayReconciliation';
 
 export interface HolidayProvider {
   name: string;
@@ -64,8 +72,13 @@ class HolidaySourceService {
     return provider.getHolidays(country, region, year);
   }
 
-  async syncForWorkspace(workspaceId: string, country: string, region: string, actorId?: string): Promise<{ imported: number; status: string }> {
-    if (!country) return { imported: 0, status: 'skipped' };
+  async syncForWorkspace(
+    workspaceId: string,
+    country: string,
+    region: string,
+    actorId?: string,
+  ): Promise<{ imported: number; skipped: number; status: string }> {
+    if (!country) return { imported: 0, skipped: 0, status: 'skipped' };
 
     // Only workspace owner or super_admin may sync
     if (actorId) {
@@ -74,15 +87,19 @@ class HolidaySourceService {
         .select('id, role, workspace_id')
         .eq('id', actorId)
         .maybeSingle();
-      if (!actor || (actor.role !== 'super_admin' && actor.workspace_id !== workspaceId)) {
+      if (!actor || actor.workspace_id !== workspaceId) {
+        console.log('[Calendar Sync] skipped: non-member');
+        return { imported: 0, skipped: 0, status: 'skipped' };
+      }
+      if (!hasCapability(actor.role as UserRole, 'manage_settings')) {
         console.log('[Calendar Sync] skipped: non-owner');
-        return { imported: 0, status: 'skipped' };
+        return { imported: 0, skipped: 0, status: 'skipped' };
       }
     }
 
     const currentYear = new Date().getFullYear();
     const provider = this.resolveProvider(country);
-    if (!provider) return { imported: 0, status: 'unsupported' };
+    if (!provider) return { imported: 0, skipped: 0, status: 'unsupported' };
 
     let allHolidays: DerivedHoliday[] = [];
     let lastError: string | null = null;
@@ -97,58 +114,109 @@ class HolidaySourceService {
 
     if (allHolidays.length === 0) {
       await this.appendLog(workspaceId, provider.name, country, region, currentYear, 0, 0, 'success');
-      return { imported: 0, status: 'success' };
+      return { imported: 0, skipped: 0, status: 'success' };
     }
 
     let imported = 0;
+    let skipped = 0;
     try {
-      const { data: existing } = await supabase
+      const { data: existingRows } = await supabase
         .from('calendar_events')
-        .select('id')
+        .select('id, source_id, source_table, title, start_date, deleted_at')
         .eq('workspace_id', workspaceId)
-        .eq('event_type', 'holiday')
         .eq('auto_generated', true)
-        .is('deleted_at', null);
+        .in('event_type', ['holiday', 'festival', 'regional']);
 
-      const existingIds = (existing || []).map(e => e.id);
-      if (existingIds.length > 0) {
-        const seen = new Set<string>();
-        const deduped: string[] = [];
-        for (const id of existingIds) {
-          if (!seen.has(id)) { seen.add(id); deduped.push(id); }
-        }
-        if (deduped.length > 0) {
-          await supabase.from('calendar_events')
-            .update({ deleted_at: new Date().toISOString() })
-            .in('id', deduped);
-        }
-      }
+      const index = indexExistingHolidayEvents(existingRows || []);
+      const seenIncoming = new Set<string>();
 
       for (const h of allHolidays) {
-        await calendarEventService.createEvent({
-          workspace_id: workspaceId,
-          event_type: h.type === 'festival' ? 'festival' : 'holiday',
-          title: h.name,
-          start_date: `${h.date}T00:00:00Z`,
-          end_date: `${h.date}T23:59:59Z`,
-          capacity_impact: 1,
-          is_recurring: true,
-          recurrence_rule: 'FREQ=YEARLY',
-          auto_generated: true,
-          source_table: 'holiday_provider',
-          source_id: provider.name,
-          timezone: 'UTC'
-        }, actorId);
-        imported++;
+        const sourceId = buildHolidaySourceId(provider.name, h);
+        if (seenIncoming.has(sourceId)) {
+          skipped++;
+          continue;
+        }
+        seenIncoming.add(sourceId);
+
+        const existing = findExistingHolidayRecord(index, provider.name, h);
+        if (existing) {
+          if (existing.legacy) {
+            await supabase
+              .from('calendar_events')
+              .update({
+                source_table: HOLIDAY_PROVIDER_SOURCE_TABLE,
+                source_id: sourceId,
+                deleted_at: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existing.id);
+            index.bySourceId.set(sourceId, { id: existing.id, deleted_at: null });
+          } else if (existing.deleted_at) {
+            await calendarEventService.upsertBySourceKey(
+              {
+                workspace_id: workspaceId,
+                event_type: h.type === 'festival' ? 'festival' : h.type === 'regional' ? 'regional' : 'holiday',
+                title: h.name,
+                start_date: `${h.date}T00:00:00Z`,
+                end_date: `${h.date}T23:59:59Z`,
+                capacity_impact: 1,
+                is_recurring: true,
+                recurrence_rule: 'FREQ=YEARLY',
+                auto_generated: true,
+                source_table: HOLIDAY_PROVIDER_SOURCE_TABLE,
+                source_id: sourceId,
+                timezone: 'UTC',
+              },
+              actorId,
+            );
+          }
+          skipped++;
+          continue;
+        }
+
+        const { created } = await calendarEventService.upsertBySourceKey(
+          {
+            workspace_id: workspaceId,
+            event_type: h.type === 'festival' ? 'festival' : h.type === 'regional' ? 'regional' : 'holiday',
+            title: h.name,
+            start_date: `${h.date}T00:00:00Z`,
+            end_date: `${h.date}T23:59:59Z`,
+            capacity_impact: 1,
+            is_recurring: true,
+            recurrence_rule: 'FREQ=YEARLY',
+            auto_generated: true,
+            source_table: HOLIDAY_PROVIDER_SOURCE_TABLE,
+            source_id: sourceId,
+            timezone: 'UTC',
+          },
+          actorId,
+        );
+
+        if (created) {
+          imported++;
+          index.bySourceId.set(sourceId, { id: 'pending', deleted_at: null });
+        } else {
+          skipped++;
+        }
       }
 
       const status = lastError ? 'partial' : 'success';
-      await this.appendLog(workspaceId, provider.name, country, region, currentYear, allHolidays.length, imported, status, lastError || undefined);
-      return { imported, status };
+      await this.appendLog(
+        workspaceId,
+        provider.name,
+        country,
+        region,
+        currentYear,
+        allHolidays.length,
+        imported,
+        status,
+        lastError || (skipped > 0 ? `skipped_existing=${skipped}` : undefined),
+      );
+      return { imported, skipped, status };
     } catch (err: any) {
       const msg = err?.message || 'Write failed';
       await this.appendLog(workspaceId, provider.name, country, region, currentYear, allHolidays.length, imported, 'failed', msg);
-      return { imported, status: 'failed' };
+      return { imported, skipped, status: 'failed' };
     }
   }
 
@@ -225,7 +293,11 @@ class HolidaySourceService {
         .select('id, role, workspace_id')
         .eq('id', actorId)
         .maybeSingle();
-      if (!actor || (actor.role !== 'super_admin' && actor.workspace_id !== workspaceId)) {
+      if (!actor || actor.workspace_id !== workspaceId) {
+        console.log('[Calendar Sync] skipped: non-member');
+        return false;
+      }
+      if (!hasCapability(actor.role as UserRole, 'manage_settings')) {
         console.log('[Calendar Sync] skipped: non-owner');
         return false;
       }

@@ -1,9 +1,12 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
-import { hasCapability } from '../core/auth/permissions';
-import type { Capability } from '../core/auth/permissions';
+import { canAccessRoute } from '../core/auth/permissions';
 import type { UserRole } from '../types';
+import {
+  consumeRedirectToAfterAuth,
+  resolveAuthenticatedDestination,
+} from '../core/auth/postAuthRedirect';
 import { AuthPage } from '../pages/auth/AuthPage';
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { AdminPanel } from '../pages/dashboard/AdminPanel';
@@ -14,12 +17,7 @@ import { LandingPage } from '../landing/LandingPage';
 import { Login } from '../components/auth/Login';
 import { ProductKeyGate } from '../components/auth/ProductKeyGate';
 import { isProductKeyVerified } from '../lib/productKey';
-import {
-  normalizePath,
-  ROUTE_ACCESS,
-  parseProjectRoute,
-  isRegisteredPath,
-} from './routeRegistry';
+import { normalizePath, parseProjectRoute, isRegisteredPath } from './routeRegistry';
 
 // ── Lazy-loaded route pages ──
 
@@ -93,19 +91,8 @@ function redirectTo(target: string): null {
   return null;
 }
 
-function canAccess(
-  role: UserRole | undefined,
-  access: { kind: 'public' } | { kind: 'auth' } | { kind: 'capability'; capability: Capability } | { kind: 'roles'; roles: UserRole[] },
-): boolean {
-  if (access.kind === 'public' || access.kind === 'auth') return true;
-  if (access.kind === 'roles') return access.roles.includes(role as UserRole);
-  return hasCapability(role, access.capability);
-}
-
 function guardRoute(role: UserRole | undefined, path: string): boolean {
-  const access = ROUTE_ACCESS[path];
-  if (!access) return true;
-  return canAccess(role, access);
+  return canAccessRoute(role, path);
 }
 
 function RouteShell({ children }: { children: React.ReactNode }) {
@@ -122,6 +109,33 @@ export function ResolveRouter() {
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
   const { profile, loading: authLoading, profileResolved, profileHydrating } = useAuth();
   const role = profile?.role;
+  const postAuthRedirectApplied = useRef(false);
+
+  useEffect(() => {
+    if (postAuthRedirectApplied.current) return;
+    if (workspaceLoading || authLoading || !profileResolved || profileHydrating) return;
+    if (!user || !profile || role === 'uninvited') return;
+
+    const stored = consumeRedirectToAfterAuth();
+    if (!stored) return;
+
+    postAuthRedirectApplied.current = true;
+    const destination = resolveAuthenticatedDestination(role, !!workspace, stored);
+    const target = normalizePath(destination);
+    if (target !== pathname) {
+      redirectTo(target);
+    }
+  }, [
+    workspaceLoading,
+    authLoading,
+    profileResolved,
+    profileHydrating,
+    user,
+    profile,
+    role,
+    workspace,
+    pathname,
+  ]);
 
   // ── Public routes ──
 

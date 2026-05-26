@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { isProductKeyVerified } from '../lib/productKey';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { navigateTo, resolveAuthenticatedDestination } from '../core/auth/postAuthRedirect';
 import { LandingHero } from './LandingHero';
 import { ProductShowcase } from './ProductShowcase';
 import { OperationalNarrative } from './OperationalNarrative';
@@ -12,26 +13,23 @@ import { AccessGateway } from './AccessGateway';
 
 export function LandingPage() {
   const verified = isProductKeyVerified();
-  const { user, profile } = useAuth();
-  const { workspace } = useWorkspace();
+  const { user, profile, profileResolved, loading: authLoading } = useAuth();
+  const { workspace, loading: workspaceLoading } = useWorkspace();
+
+  const authReady = verified && profileResolved && !authLoading;
+  const hasSession = authReady && !!user && !!profile && profile.role !== 'uninvited';
 
   useEffect(() => {
-    // Verified user with valid access → skip landing entirely
-    if (verified && user && profile && profile.role !== 'uninvited' && workspace) {
-      window.history.replaceState(null, '', '/workspace');
-      window.dispatchEvent(new Event('popstate'));
+    if (!hasSession) return;
+
+    const destination = resolveAuthenticatedDestination(profile!.role, !!workspace, null);
+
+    if (workspaceLoading && profile!.role !== 'pending-workspace-setup' && !workspace) {
       return;
     }
 
-    // Verified but not authenticated yet → brief delay then redirect to auth flow
-    if (verified && !user) {
-      const timer = setTimeout(() => {
-        window.history.pushState(null, '', '/workspace');
-        window.dispatchEvent(new Event('popstate'));
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [verified, user, profile, workspace]);
+    navigateTo(destination, true);
+  }, [hasSession, profile, workspace, workspaceLoading]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">

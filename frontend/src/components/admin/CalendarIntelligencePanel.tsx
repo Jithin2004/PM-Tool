@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { holidaySourceService } from '../../services/holidaySourceService';
 import { supabase } from '../../lib/supabase';
 import type { SyncLogEntry } from '../../services/holidaySourceService';
+import { hasCapability } from '../../core/auth/permissions';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_HEADERS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -21,7 +22,7 @@ const COMPANY_EVENT_TYPES = [
 export function CalendarIntelligencePanel() {
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
-  const isSuperAdmin = profile?.role === 'super_admin';
+  const canManageCalendar = hasCapability(profile?.role, 'manage_settings');
   const [tab, setTab] = useState<'calendar' | 'history'>('calendar');
   const [year, setYear] = useState(new Date().getFullYear());
   const [events, setEvents] = useState<any[]>([]);
@@ -54,7 +55,9 @@ export function CalendarIntelligencePanel() {
       const result = await holidaySourceService.syncForWorkspace(
         workspace.id, workspace.settings.country, workspace.settings.region || '', workspace.ownerId
       );
-      setLastSyncResult(`Sync complete: ${result.imported} holidays (${result.status})`);
+      setLastSyncResult(
+        `Sync complete: ${result.imported} new, ${result.skipped} unchanged (${result.status})`,
+      );
       await loadData();
     } catch (err: any) {
       setLastSyncResult(`Sync failed: ${err?.message || 'Unknown error'}`);
@@ -62,7 +65,7 @@ export function CalendarIntelligencePanel() {
   };
 
   const handleToggle = async (eventId: string, currentlyDeleted: string | null) => {
-    if (!isSuperAdmin || togglingIds.has(eventId)) return;
+    if (!canManageCalendar || togglingIds.has(eventId)) return;
     setTogglingIds(prev => new Set(prev).add(eventId));
     const enabled = !!currentlyDeleted;
     await holidaySourceService.toggleHoliday(eventId, workspace!.id, enabled);
@@ -118,11 +121,11 @@ export function CalendarIntelligencePanel() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-text-primary mb-1">Calendar Intelligence</h2>
           <p className="text-[12px] text-text-tertiary font-medium">
-            {isSuperAdmin ? 'Orchestrate organization-wide holidays, company events, and synchronization logic.' : 'Regional and company event schedule visibility.'}
+            {canManageCalendar ? 'Orchestrate organization-wide holidays, company events, and synchronization logic.' : 'Regional and company event schedule visibility.'}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {isSuperAdmin && (
+          {canManageCalendar && (
             <button 
               onClick={() => setShowCreateForm(true)} 
               className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
@@ -185,7 +188,7 @@ export function CalendarIntelligencePanel() {
                                     {ev.auto_generated ? <Globe className="w-3.5 h-3.5 text-accent-primary" /> : <Building2 className="w-3.5 h-3.5 text-signal-warning" />}
                                     <span className="text-[11px] font-bold text-text-primary truncate">{ev.title}</span>
                                   </div>
-                                  {isSuperAdmin && (
+                                  {canManageCalendar && (
                                     <button
                                       onClick={() => handleToggle(ev.id, ev.deleted_at)}
                                       disabled={togglingIds.has(ev.id)}
@@ -260,7 +263,7 @@ export function CalendarIntelligencePanel() {
         </div>
       )}
 
-          {showCreateForm && isSuperAdmin && (
+          {showCreateForm && canManageCalendar && (
             <div className="fixed inset-0 bg-bg backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCreateForm(false)}>
               <div className="bg-surface border border-border w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-6">

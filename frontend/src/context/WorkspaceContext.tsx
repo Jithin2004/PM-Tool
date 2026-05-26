@@ -4,6 +4,8 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { createWorkspaceForUser, getWorkspaceForUser, updateWorkspaceSettings as persistWorkspaceSettings, rowToWorkspace } from '../services/workspaceService';
 import type { Workspace, WorkspaceSettings } from '../types/workspace';
 import { useAuth } from './AuthContext';
+import { hasCapability } from '../core/auth/permissions';
+import { buildOAuthRedirectUrl, setRedirectToAfterAuth } from '../core/auth/postAuthRedirect';
 
 interface WorkspaceContextValue {
   user: User | null;
@@ -130,7 +132,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           });
 
           // Auto-fetch next year's holidays in background (owner / super_admin only)
-          if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || profile.role === 'super_admin')) {
+          if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || hasCapability(profile.role, 'manage_settings'))) {
             import('../services/holidaySourceService').then(({ holidaySourceService }) => {
               holidaySourceService.checkAndSyncNextYear(parsed.id, parsed.settings.country, parsed.settings.region || '', profile?.id).catch(() => {});
             });
@@ -197,11 +199,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [workspace, profile?.id]);
 
   const signInWithGoogle = useCallback(async () => {
+    setRedirectToAfterAuth('/overview');
+
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + '/workspace'
-      }
+        redirectTo: buildOAuthRedirectUrl(),
+      },
     });
 
     if (signInError) {

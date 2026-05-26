@@ -4,6 +4,15 @@ import { User } from '../types';
 import { clearSession, flushNow } from '../services/commandUsageService';
 import { activityLogService } from '../services/activityLogService';
 import { repairUserWorkspace } from '../services/workspaceService';
+import { hasCapability } from '../core/auth/permissions';
+import {
+  reconcileInvitationMembership,
+  rowToProfile,
+} from '../core/auth/reconcileInvitationMembership';
+import {
+  captureRedirectFromLocation,
+  navigateTo,
+} from '../core/auth/postAuthRedirect';
 
 interface AuthContextType {
   user: any | null;
@@ -121,101 +130,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfileHydrating(false);
         }
 
-        // Still no data after retries — fall through to invitation / bootstrap logic
         if (!data) {
-          // Look up pending invitation first, supporting case-insensitive checks
-          let inviteToUse = null;
-          if (email) {
-            const { data: invite, error: inviteError } = await supabase
-              .from('invitations')
-              .select('*')
-              .or(`email.eq.${email},email.eq.${email.toLowerCase()},email.eq.${email.toUpperCase()}`)
-              .in('status', ['pending', 'accepted'])
-              .maybeSingle();
+          const reconciliation = await reconcileInvitationMembership({
+            authUserId: authUser.id,
+            email: email || '',
+            fullName,
+            avatarUrl: googleAvatar,
+          });
 
-            if (!inviteError && invite && new Date(invite.expires_at) >= new Date()) {
-              inviteToUse = invite;
-            }
+          if (import.meta.env.DEV) {
+            console.log('[AuthContext] reconcileInvitationMembership:', reconciliation.outcome);
           }
 
-          if (inviteToUse) {
-            if (import.meta.env.DEV) {
-              console.log("Valid pending invitation found. Bootstrapping invited user row...");
-            }
-            const { data: newUserRow, error: insertError } = await supabase
-              .from('users')
-              .upsert({
-                id: authUser.id,
-                email: email,
-                workspace_id: inviteToUse.workspace_id,
-                role: inviteToUse.role,
-                full_name: fullName,
-                avatar_url: googleAvatar,
-                availability_factor: 1
-              })
-              .select()
-              .single();
+          if (reconciliation.outcome === 'uninvited' && reconciliation.uninvitedProfile) {
+            setProfile(reconciliation.uninvitedProfile);
+            setProfileResolved(true);
+            setLoading(false);
+            return;
+          }
 
-            if (insertError) {
-              console.error("Failed to bootstrap invited user row:", insertError);
-            } else {
-              data = newUserRow;
-
-              if (inviteToUse.status === 'pending') {
-                await supabase
-                  .from('invitations')
-                  .update({ status: 'accepted' })
-                  .eq('id', inviteToUse.id);
-              }
-            }
-          } else {
-            const { count, error: countError } = await supabase
-              .from('users')
-              .select('*', { count: 'exact', head: true });
-
-            const isFreshOrg = !countError && count === 0;
-
-            if (isFreshOrg) {
-              if (import.meta.env.DEV) {
-                console.log("First user detected in AuthContext. Allowing bootstrap as pending-workspace-setup...");
-              }
-              const { data: newUserRow, error: insertError } = await supabase
-                .from('users')
-                .upsert({
-                  id: authUser.id,
-                  email: email,
-                  workspace_id: null,
-                  role: 'pending-workspace-setup',
-                  full_name: fullName,
-                  avatar_url: googleAvatar,
-                  availability_factor: 1
-                })
-                .select()
-                .single();
-
-              if (insertError) {
-                console.error("Failed to insert pending user row in AuthContext:", insertError);
-              } else {
-                data = newUserRow;
-              }
-            } else {
-              if (import.meta.env.DEV) {
-                console.log("Uninvited user. Access blocked for:", email);
-              }
-              const uninvitedProfile = {
-                id: authUser.id,
-                email: email,
-                role: 'uninvited',
-                full_name: fullName,
-                avatar_url: googleAvatar,
-                workspace_id: null,
-                designation: 'Uninvited User'
-              } as any;
-              setProfile(uninvitedProfile);
-              setProfileResolved(true);
-              setLoading(false);
-              return;
-            }
+          if (reconciliation.userRow) {
+            data = reconciliation.userRow;
           }
         }
 
@@ -230,13 +165,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (data) {
-          const profileWithDesignation = {
-            ...data,
-            auth_user_id: data.id,
-            designation: data.role === 'super_admin' ? 'Super Admin' : data.role === 'pm' ? 'Project Manager' : data.role === 'pending-workspace-setup' ? 'Pending Setup' : 'Developer'
-          };
+          const profileWithDesignation = rowToProfile(data as Record<string, unknown>);
           console.log("[AuthContext syncProfile success]: profile set with designation:", profileWithDesignation.designation);
-          setProfile(profileWithDesignation as User);
+          setProfile(profileWithDesignation);
           lastSyncedUserIdRef.current = authUser.id;
           setProfileResolved(true);
         } else {
@@ -275,26 +206,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await activityLogService.logWorkspaceRepaired(result.workspaceId, authUser.id, result.reason);
       const { data } = await supabase.from('users').select('*').eq('id', authUser.id).maybeSingle();
       if (data) {
-        const refreshed = {
-          ...data,
-          auth_user_id: data.id,
-          designation: data.role === 'super_admin' ? 'Super Admin' : data.role === 'pm' ? 'Project Manager' : data.role === 'pending-workspace-setup' ? 'Pending Setup' : 'Developer',
-        };
-        setProfile(refreshed as User);
+        setProfile(rowToProfile(data as Record<string, unknown>));
       }
       setNeedsWorkspaceSetup(false);
     } else if (result.reason === 'orphaned') {
       await activityLogService.logWorkspaceOrphanDetected(authUser.id, authUser.email);
       setNeedsWorkspaceSetup(false);
-      if (window.location.pathname !== '/') {
-        window.dispatchEvent(new CustomEvent('notify-toast', {
-          detail: { message: 'Account has no workspace access. Contact your admin.', type: 'error' },
-        }));
-        setTimeout(() => {
-          window.history.replaceState(null, '', '/');
-          window.dispatchEvent(new CustomEvent('popstate'));
-        }, 1000);
-      }
+      window.dispatchEvent(new CustomEvent('notify-toast', {
+        detail: { message: 'Account has no workspace access. Contact your admin.', type: 'error' },
+      }));
+      navigateTo('/login?error=uninvited', true);
     } else {
       setNeedsWorkspaceSetup(true);
     }
@@ -421,15 +342,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setProfile(null);
     supabase.removeAllChannels();
-    const redirectPath = window.location.pathname;
+    captureRedirectFromLocation();
     window.dispatchEvent(new CustomEvent('notify-toast', {
       detail: { message: `Session ${reason}. Redirecting...`, type: 'error' },
     }));
-    if (redirectPath !== '/') {
-      setTimeout(() => {
-        window.history.replaceState(null, '', '/');
-        window.dispatchEvent(new CustomEvent('popstate'));
-      }, 1000);
+    if (window.location.pathname !== '/') {
+      navigateTo('/', true);
     }
   }, []);
 
@@ -441,7 +359,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateRole = async (id: string, role: User['role']) => {
-    if (profile?.role !== 'super_admin' || !isSupabaseConfigured) return false;
+    if (!hasCapability(profile?.role, 'platform_governance') || !isSupabaseConfigured) return false;
 
     const { error } = await supabase
       .from('users')

@@ -1,5 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import { getCapabilities } from '../core/auth/permissions';
+import type { UserRole } from '../types';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -556,7 +558,8 @@ function computeHealthScore(rows: UsageRow[], role: string): HealthScore {
   const totalActions = rows.filter(r => r.command_type === 'action' || r.command_type === 'ai_nlp' || r.command_type === 'ai').length;
   const uniqueFeatures = new Set(rows.map(r => r.command_id)).size;
   const efficiency = totalNav > 0 ? Math.min(Math.round((totalActions / totalNav) * 100), 100) : 50;
-  const expectedFeatures = role === 'viewer' ? 15 : role === 'pm' ? 30 : 50;
+  const capCount = getCapabilities(role as UserRole).length;
+  const expectedFeatures = capCount > 0 ? Math.max(15, capCount * 2) : 15;
   const discoverability = Math.min(Math.round((uniqueFeatures / expectedFeatures) * 100), 100);
   const navLabels = rows.filter(r => r.command_type === 'navigation').map(r => r.command_id);
   const navSet = new Set(navLabels);

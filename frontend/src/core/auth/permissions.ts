@@ -1,40 +1,50 @@
-import { UserRole } from '../../types';
+import { normalizePath } from '../../app/routePaths';
+import type { UserRole } from '../../types';
 
 /**
- * CAPABILITY DEFINITIONS
- * These represent atomic actions or access points within the system.
+ * Canonical capabilities — single source of operational authority.
  */
 export type Capability =
-  // Project & Task Management
-  | 'view_projects'           // Access project lists and basic details
-  | 'manage_projects'         // Create, edit, archive projects
-  | 'view_tasks'              // Access task board and details
-  | 'manage_tasks'            // Create, edit, move tasks
-  
-  // Advanced Planning & Analytics
-  | 'view_scheduling'         // Access timeline and scheduling views
-  | 'manage_scheduling'       // Adjust timelines and dependencies
-  | 'view_analytics'          // Access performance analytics and metrics
-  | 'view_decision_center'    // Access AI-driven strategy recommendations
-  | 'view_reports'            // Access work logs and operational reports
-  
-  // Operations & Resources
-  | 'manage_logistics'        // Access and modify attendance and salaries
-  | 'view_teams'              // Access team roster
-  | 'manage_teams'            // Create, edit teams and assignments
-  | 'view_stakeholders'       // Access project sponsors/portfolio
-  | 'view_audit_log'          // Access system activity logs
-  
-  // System & Governance
-  | 'manage_settings'         // Modify workspace/project settings
-  | 'manage_integrations'     // Configure external connections (Slack, GitHub, etc)
-  | 'manage_automations'      // Manage automation workflows
-  | 'platform_governance'     // Global user management and role assignment
-  | 'platform_security';      // Root security and infrastructure controls
+  | 'view_projects'
+  | 'manage_projects'
+  | 'view_tasks'
+  | 'manage_tasks'
+  | 'view_scheduling'
+  | 'manage_scheduling'
+  | 'view_analytics'
+  | 'view_decision_center'
+  | 'view_reports'
+  | 'manage_logistics'
+  | 'view_teams'
+  | 'manage_teams'
+  | 'view_stakeholders'
+  | 'view_audit_log'
+  | 'manage_settings'
+  | 'manage_integrations'
+  | 'manage_automations'
+  | 'platform_governance'
+  | 'platform_security'
+  | 'view_mission_control';
+
+const VIEW_CAPABILITIES: Capability[] = [
+  'view_projects',
+  'view_tasks',
+  'view_scheduling',
+  'view_analytics',
+  'view_decision_center',
+  'view_reports',
+  'view_teams',
+  'view_stakeholders',
+  'view_audit_log',
+];
 
 /**
- * ROLE-CAPABILITY MATRIX
- * The canonical source of truth for role-based authority.
+ * Role → capability matrix (canonical).
+ *
+ * PM: operational leadership — settings, integrations, logistics, analytics, delivery systems.
+ * Developer: execution / sprint / task delivery focus.
+ * Viewer: read-only operational visibility.
+ * Super Admin: full platform including governance & security.
  */
 const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
   super_admin: [
@@ -57,6 +67,7 @@ const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
     'manage_automations',
     'platform_governance',
     'platform_security',
+    'view_mission_control',
   ],
   pm: [
     'view_projects',
@@ -72,7 +83,6 @@ const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
     'view_teams',
     'manage_teams',
     'view_stakeholders',
-    'view_audit_log',
     'manage_settings',
     'manage_integrations',
     'manage_automations',
@@ -82,46 +92,92 @@ const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
     'view_tasks',
     'manage_tasks',
     'view_scheduling',
-    'view_analytics',
-    'view_decision_center',
-    'view_reports',
     'view_teams',
   ],
-  viewer: [
-    'view_projects',
-    'view_tasks',
-    'view_scheduling',
-    'view_analytics',
-    'view_decision_center',
-    'view_reports',
-    'view_teams',
-  ],
+  viewer: [...VIEW_CAPABILITIES],
   uninvited: [],
   'pending-workspace-setup': [],
 };
 
-/**
- * Checks if a role has a specific capability.
- */
+/** Route path → required capability (after normalizePath). */
+export const ROUTE_CAPABILITY_MAP: Record<string, Capability | 'auth'> = {
+  '/overview': 'auth',
+  '/workspace': 'view_projects',
+  '/workspace/portfolio': 'view_stakeholders',
+  '/workspace/knowledge': 'view_projects',
+  '/workspace/decisions': 'view_decision_center',
+  '/execution': 'view_tasks',
+  '/execution/board': 'view_tasks',
+  '/execution/timeline': 'view_scheduling',
+  '/execution/gantt': 'view_scheduling',
+  '/execution/sprints': 'view_scheduling',
+  '/resources': 'manage_logistics',
+  '/resources/teams': 'view_teams',
+  '/resources/capacity': 'view_reports',
+  '/resources/work-logs': 'view_reports',
+  '/control': 'platform_governance',
+  '/control/identity': 'platform_governance',
+  '/control/analytics': 'view_analytics',
+  '/control/audit': 'view_audit_log',
+  '/control/automations': 'manage_automations',
+  '/control/connections': 'manage_integrations',
+  '/control/settings': 'manage_settings',
+  '/control/settings/notifications': 'manage_settings',
+  '/control/settings/modes': 'manage_settings',
+  '/control/mission-control': 'view_mission_control',
+  '/projects/new': 'manage_projects',
+};
+
 export function hasCapability(role: UserRole | undefined, capability: Capability): boolean {
   if (!role) return false;
   return ROLE_CAPABILITIES[role]?.includes(capability) ?? false;
 }
 
-/**
- * Returns all capabilities for a given role.
- */
+export function hasAnyCapability(role: UserRole | undefined, capabilities: Capability[]): boolean {
+  return capabilities.some(c => hasCapability(role, c));
+}
+
+export function isOperationalReadOnly(role: UserRole | undefined): boolean {
+  return role === 'viewer';
+}
+
+export function canWriteOperationally(role: UserRole | undefined): boolean {
+  if (!role || role === 'uninvited' || role === 'pending-workspace-setup') return false;
+  return !isOperationalReadOnly(role);
+}
+
 export function getCapabilities(role: UserRole | undefined): Capability[] {
   if (!role) return [];
   return ROLE_CAPABILITIES[role] ?? [];
 }
 
-/**
- * Guards an action by throwing an error if the role lacks the required capability.
- */
-export function guardCapability(role: UserRole | undefined, capability: Capability, operationName?: string): void {
+export function canAccessRoute(role: UserRole | undefined, pathname: string): boolean {
+  if (!role || role === 'uninvited' || role === 'pending-workspace-setup') return false;
+
+  const path = normalizePath(pathname);
+  const required = ROUTE_CAPABILITY_MAP[path];
+
+  if (required === 'auth') return true;
+  if (!required) {
+    if (path.startsWith('/projects/')) {
+      return hasCapability(role, 'view_tasks');
+    }
+    if (path.startsWith('/workspace/knowledge/')) {
+      return hasCapability(role, 'view_projects');
+    }
+    return false;
+  }
+
+  return hasCapability(role, required);
+}
+
+export function guardCapability(
+  role: UserRole | undefined,
+  capability: Capability,
+  operationName?: string,
+): void {
   if (!hasCapability(role, capability)) {
-    const msg = `Unauthorized: Capability "${capability}" required for operation ${operationName || 'unspecified'}. Role: ${role || 'undefined'}`;
+    const msg = `Unauthorized: capability "${capability}" required${operationName ? ` for ${operationName}` : ''}.`;
     console.error(`[Guard] ${msg}`);
     throw new Error(msg);
   }

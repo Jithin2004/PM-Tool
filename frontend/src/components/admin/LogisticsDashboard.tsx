@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Database, Shield, Terminal, Lock, X, AlertTriangle, Download, Settings, Users, ArrowRight, Sliders, Calendar, Search, Check, BrainCircuit, Info, Calculator, TrendingDown, Banknote, Edit2, Truck, Cpu, Layers, Clock } from 'lucide-react';
-import { User, Project, Team, Profile, Task } from '../../types';
+import { User, Project, Team, Profile, Task, UserRole } from '../../types';
+import { hasCapability } from '../../core/auth/permissions';
 import { getLocalDateString } from '../../utils/timeUtils';
 
 export function LogisticsDashboard({
@@ -29,7 +30,7 @@ export function LogisticsDashboard({
 }) {
   // systemData is passed from canonical DashboardContext
   const [activeTab, setActiveTab] = useState<'attendance' | 'paySlab' | 'payroll' | 'orchestration'>(defaultTab || 'orchestration');
-  const isSuperAdmin = role === 'super_admin';
+  const canConfigurePaySlabs = hasCapability(role as UserRole | undefined, 'manage_logistics');
 
   // Attendance states
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
@@ -526,7 +527,7 @@ export function LogisticsDashboard({
           >
             Attendance
           </button>
-          {isSuperAdmin && (
+          {canConfigurePaySlabs && (
             <button
               onClick={() => setActiveTab('paySlab')}
               role="tab"

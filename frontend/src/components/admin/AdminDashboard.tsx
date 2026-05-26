@@ -4,6 +4,7 @@ import { Shield, Terminal, Lock, X, AlertTriangle, Users, Database, Zap, Edit2, 
 import { Project, Team, User, Profile, UserRole } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { hasCapability } from '../../core/auth/permissions';
 
 export function AdminDashboard({
   profiles,
@@ -35,6 +36,7 @@ export function AdminDashboard({
   const [newRoleName, setNewRoleName] = useState('');
 
   const { workspace, user: currentUserProfile } = useWorkspace();
+  const canGovernPlatform = hasCapability(currentUserRole, 'platform_governance');
 
   const [invitations, setInvitations] = useState<any[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -43,7 +45,7 @@ export function AdminDashboard({
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   const fetchInvitations = async () => {
-    if (currentUserRole !== 'super_admin') return;
+    if (!canGovernPlatform) return;
     const { data, error } = await supabase
       .from('invitations')
       .select('*')
@@ -55,7 +57,7 @@ export function AdminDashboard({
 
   useEffect(() => {
     fetchInvitations();
-  }, [currentUserRole]);
+  }, [canGovernPlatform]);
 
   const handleSendInvitation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,7 +228,7 @@ export function AdminDashboard({
         <div className="mb-8">
           <h2 className="text-3xl font-medium tracking-tight mb-2">Internal Identity Console</h2>
           <p className="text-sm text-text-secondary font-mono tracking-tighter">
-            {currentUserRole === 'super_admin' ? 'Super Admin Privileges: Calibrate team access levels and verify engineering credentials.' : 'Project Manager Console: Manage normal user designations and view active teams.'}
+            {canGovernPlatform ? 'Super Admin Privileges: Calibrate team access levels and verify engineering credentials.' : 'Project Manager Console: Manage normal user designations and view active teams.'}
           </p>
         </div>
 
@@ -266,7 +268,7 @@ export function AdminDashboard({
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end items-center gap-4">
                       {/* PM role change (Visible to Super Admin only) */}
-                      {currentUserRole === 'super_admin' && profile.role !== 'super_admin' && (
+                      {canGovernPlatform && profile.role !== 'super_admin' && (
                         <div className="flex items-center gap-2">
                           <span className="text-[9px] font-mono text-text-tertiary uppercase">Role:</span>
                           <select
@@ -311,16 +313,16 @@ export function AdminDashboard({
       <div>
         <div className="mb-6">
           <h2 className="text-3xl font-medium tracking-tight mb-2">
-            {currentUserRole === 'super_admin' ? 'Control & Capabilities Center' : 'Active Team Roster'}
+            {canGovernPlatform ? 'Control & Capabilities Center' : 'Active Team Roster'}
           </h2>
           <p className="text-sm text-text-secondary font-mono tracking-tighter">
-            {currentUserRole === 'super_admin' ? 'Form cross-functional teams, allocate teams, and customize corporate designations.' : 'View current operational team formations and allocation hierarchies.'}
+            {canGovernPlatform ? 'Form cross-functional teams, allocate teams, and customize corporate designations.' : 'View current operational team formations and allocation hierarchies.'}
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Team Configuration Form (Visible to Super Admin) */}
-          {currentUserRole === 'super_admin' && (
+          {canGovernPlatform && (
             <div className="border border-border bg-surface p-6 lg:col-span-4 flex flex-col justify-between" id="team-form">
               <div>
                 <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide mb-6">{editingTeamId ? 'Update Team' : 'Create Team'}</h3>
@@ -396,7 +398,7 @@ export function AdminDashboard({
           )}
 
           {/* Manage Custom Designations (Visible to Super Admin) */}
-          {currentUserRole === 'super_admin' && (
+          {canGovernPlatform && (
             <div className="border border-border bg-surface p-6 lg:col-span-4 flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide mb-6">Manage Custom Designations</h3>
@@ -448,7 +450,7 @@ export function AdminDashboard({
           )}
 
           {/* Active Teams list */}
-          <div className={`border border-border bg-surface overflow-hidden flex flex-col ${currentUserRole === 'super_admin' ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
+          <div className={`border border-border bg-surface overflow-hidden flex flex-col ${canGovernPlatform ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
             <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide p-6 border-b border-border">Active Teams</h3>
             <div className="overflow-y-auto p-6 space-y-4 flex-1 max-h-[400px]">
               {teams.length === 0 && (
@@ -472,7 +474,7 @@ export function AdminDashboard({
                         <h4 className="font-sans font-medium text-lg tracking-tight">{team.name}</h4>
                       </div>
                       <div className="flex items-center gap-2">
-                        {currentUserRole === 'super_admin' && (
+                        {canGovernPlatform && (
                           <>
                             <button
                               onClick={() => startEditing(team)}
@@ -515,7 +517,7 @@ export function AdminDashboard({
           </div>
 
           {/* Invite Member & Pending Invitations (Visible to Super Admin) */}
-          {currentUserRole === 'super_admin' && (
+          {canGovernPlatform && (
             <div className="border border-border bg-surface p-6 lg:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Invite Form */}
               <div>

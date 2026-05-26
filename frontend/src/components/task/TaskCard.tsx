@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, ArrowRight, ArrowUp, AlertTriangle, Clock, Users, Shield, Link2, MoreHorizontal } from 'lucide-react';
 import { Task, Project } from '../../types';
+import { getTaskDeadline } from '../../core/types/temporal';
 import { calculateTaskCountdown } from '../../services/etaService';
 
 interface TaskCardProps {
@@ -138,10 +139,10 @@ export function TaskCard({
             </span>
           )}
 
-          {task.due_date && (
+          {(task.deadline || task.due_date) && (
             <span className="flex items-center gap-1 text-[10px] font-medium text-text-tertiary">
               <Clock className="w-3 h-3" />
-              {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {new Date(getTaskDeadline(task)!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
         </div>

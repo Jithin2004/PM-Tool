@@ -1,8 +1,9 @@
 import type { PROJECT_TEMPLATES, TASK_STATUSES } from '../constants/product';
+import type { ExecutionState, TaskPriority } from '../core/types';
 
 export type ProjectTemplate = typeof PROJECT_TEMPLATES[number];
 export type TaskStatus = typeof TASK_STATUSES[number];
-export type Priority = 'low' | 'medium' | 'high' | 'urgent';
+export type Priority = TaskPriority;
 
 export interface ProjectDraft {
   name: string;
@@ -28,6 +29,7 @@ export interface TaskDraft {
   pertWorst?: number;
 }
 
+/** Draft / form model for tasks — maps to domain Task at persistence. */
 export interface ResolveTask {
   id: string;
   workspaceId: string;
@@ -38,6 +40,7 @@ export interface ResolveTask {
   assigneeId?: string;
   priority: Priority;
   startDate?: string;
+  /** Canonical end date (not dueDate). */
   deadline?: string;
   dependencyIds: string[];
   estimatedHours: number;

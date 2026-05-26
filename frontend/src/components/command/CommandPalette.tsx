@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, FolderOpen, LayoutDashboard, Activity, GitBranch, GitFork, Users, Target, BarChart3, Clock, Shield, ShieldAlert, FileText, ChartArea, Settings as SettingsIcon, PlusCircle, UserPlus, BookOpen, CalendarPlus, RefreshCw, TrendingUp, Cpu, BrainCircuit, Zap, Check, Loader, Link2 } from 'lucide-react';
-import { Profile, Project, Task } from '../../types';
+import { Profile, Project, Task, UserRole } from '../../types';
+import { canAccessRoute, hasCapability, type Capability } from '../../core/auth/permissions';
+import { isRouteDisclosed, type DisclosureLevel } from '../../core/dashboard/progressiveDisclosure';
 import { activityLogService } from '../../services/activityLogService';
 import { recordUsage, getSessionId } from '../../services/commandUsageService';
 
@@ -27,6 +29,8 @@ interface Props {
   setIsAdding?: (v: boolean) => void;
   workspaceId?: string;
   onOpenAnalytics?: () => void;
+  disclosureLevel?: DisclosureLevel;
+  disclosureActive?: boolean;
 }
 
 const STORAGE_KEY = 'resolve-command-recent';
@@ -165,7 +169,7 @@ function getSequenceSuggestions(): { id: string; label: string; group: string }[
 
 export { getTimeline, getTopCommandsWithTrend, getSequenceSuggestions, type TimelineEntry, type CommandTrend };
 
-const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode; roles?: string[] }[] = [
+const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode }[] = [
   { label: 'Overview', path: '/overview', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
   { label: 'Workspace', path: '/workspace', icon: <FolderOpen className="w-3.5 h-3.5" /> },
   { label: 'Portfolio', path: '/workspace/portfolio', icon: <BarChart3 className="w-3.5 h-3.5" /> },
@@ -179,27 +183,27 @@ const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode; roles?: s
   { label: 'Logistics', path: '/resources', icon: <Target className="w-3.5 h-3.5" /> },
   { label: 'Capacity', path: '/resources/capacity', icon: <BarChart3 className="w-3.5 h-3.5" /> },
   { label: 'Work Logs', path: '/resources/work-logs', icon: <Clock className="w-3.5 h-3.5" /> },
-  { label: 'Admin', path: '/control', icon: <Shield className="w-3.5 h-3.5" />, roles: ['super_admin'] },
-  { label: 'Audit', path: '/control/audit', icon: <FileText className="w-3.5 h-3.5" />, roles: ['super_admin'] },
+  { label: 'Admin', path: '/control', icon: <Shield className="w-3.5 h-3.5" /> },
+  { label: 'Audit', path: '/control/audit', icon: <FileText className="w-3.5 h-3.5" /> },
   { label: 'Analytics', path: '/control/analytics', icon: <ChartArea className="w-3.5 h-3.5" /> },
-  { label: 'Automations', path: '/control/automations', icon: <Zap className="w-3.5 h-3.5" />, roles: ['super_admin'] },
-  { label: 'Connections', path: '/control/connections', icon: <Link2 className="w-3.5 h-3.5" />, roles: ['super_admin'] },
+  { label: 'Automations', path: '/control/automations', icon: <Zap className="w-3.5 h-3.5" /> },
+  { label: 'Connections', path: '/control/connections', icon: <Link2 className="w-3.5 h-3.5" /> },
   { label: 'Settings', path: '/control/settings', icon: <SettingsIcon className="w-3.5 h-3.5" /> },
 ];
 
-const ACTION_ITEMS: { label: string; icon: React.ReactNode; roles?: string[]; onSelect: (props: Props) => void }[] = [
-  { label: 'Create Project', icon: <PlusCircle className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.setIsAdding?.(true) },
-  { label: 'Create Sprint', icon: <GitFork className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.onNavigate('/execution/sprints') },
-  { label: 'Invite Member', icon: <UserPlus className="w-3.5 h-3.5" />, roles: ['super_admin'], onSelect: (p) => p.onNavigate('/control') },
-  { label: 'Create Epic', icon: <BookOpen className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.onNavigate('/execution') },
-  { label: 'Create Story', icon: <BookOpen className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.onNavigate('/execution') },
-  { label: 'Create Work Item', icon: <PlusCircle className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.onNavigate('/execution') },
-  { label: 'Add Company Holiday', icon: <CalendarPlus className="w-3.5 h-3.5" />, roles: ['super_admin'], onSelect: (p) => p.onNavigate('/control/settings') },
-  { label: 'Start Retrospective', icon: <RefreshCw className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.onNavigate('/execution/sprints') },
-  { label: 'Create Automation', icon: <Zap className="w-3.5 h-3.5" />, roles: ['super_admin'], onSelect: (p) => p.onNavigate('/control/automations') },
-  { label: 'Create Approval', icon: <Check className="w-3.5 h-3.5" />, roles: ['super_admin', 'pm'], onSelect: (p) => p.onNavigate('/control/automations') },
-  { label: 'Generate API Key', icon: <Shield className="w-3.5 h-3.5" />, roles: ['super_admin'], onSelect: (p) => p.onNavigate('/control/settings') },
-  { label: 'View Execution History', icon: <Activity className="w-3.5 h-3.5" />, roles: ['super_admin'], onSelect: (p) => p.onNavigate('/control/automations') },
+const ACTION_ITEMS: { label: string; icon: React.ReactNode; capability: Capability; onSelect: (props: Props) => void }[] = [
+  { label: 'Create Project', icon: <PlusCircle className="w-3.5 h-3.5" />, capability: 'manage_projects', onSelect: (p) => p.setIsAdding?.(true) },
+  { label: 'Create Sprint', icon: <GitFork className="w-3.5 h-3.5" />, capability: 'manage_scheduling', onSelect: (p) => p.onNavigate('/execution/sprints') },
+  { label: 'Invite Member', icon: <UserPlus className="w-3.5 h-3.5" />, capability: 'platform_governance', onSelect: (p) => p.onNavigate('/control') },
+  { label: 'Create Epic', icon: <BookOpen className="w-3.5 h-3.5" />, capability: 'manage_tasks', onSelect: (p) => p.onNavigate('/execution') },
+  { label: 'Create Story', icon: <BookOpen className="w-3.5 h-3.5" />, capability: 'manage_tasks', onSelect: (p) => p.onNavigate('/execution') },
+  { label: 'Create Work Item', icon: <PlusCircle className="w-3.5 h-3.5" />, capability: 'manage_tasks', onSelect: (p) => p.onNavigate('/execution') },
+  { label: 'Add Company Holiday', icon: <CalendarPlus className="w-3.5 h-3.5" />, capability: 'manage_settings', onSelect: (p) => p.onNavigate('/control/settings') },
+  { label: 'Start Retrospective', icon: <RefreshCw className="w-3.5 h-3.5" />, capability: 'manage_scheduling', onSelect: (p) => p.onNavigate('/execution/sprints') },
+  { label: 'Create Automation', icon: <Zap className="w-3.5 h-3.5" />, capability: 'manage_automations', onSelect: (p) => p.onNavigate('/control/automations') },
+  { label: 'Create Approval', icon: <Check className="w-3.5 h-3.5" />, capability: 'manage_automations', onSelect: (p) => p.onNavigate('/control/automations') },
+  { label: 'Generate API Key', icon: <Shield className="w-3.5 h-3.5" />, capability: 'platform_security', onSelect: (p) => p.onNavigate('/control/settings') },
+  { label: 'View Execution History', icon: <Activity className="w-3.5 h-3.5" />, capability: 'manage_automations', onSelect: (p) => p.onNavigate('/control/automations') },
 ];
 
 const AI_ITEMS: { label: string; icon: React.ReactNode; onSelect: (props: Props) => void }[] = [
@@ -268,8 +272,33 @@ function commandIcon(group: string): React.ReactNode {
   return map[group] || null;
 }
 
+function navDisclosed(
+  path: string,
+  role: UserRole | undefined,
+  disclosureActive: boolean,
+  disclosureLevel: DisclosureLevel,
+): boolean {
+  if (!canAccessRoute(role, path)) return false;
+  if (!disclosureActive) return true;
+  return isRouteDisclosed(path, disclosureLevel, role);
+}
+
 export default function CommandPalette(props: Props) {
-  const { isOpen, onClose, onNavigate, profile, projects, tasks, setSelectedProject, notify, setIsAdding, workspaceId, onOpenAnalytics } = props;
+  const {
+    isOpen,
+    onClose,
+    onNavigate,
+    profile,
+    projects,
+    tasks,
+    setSelectedProject,
+    notify,
+    setIsAdding,
+    workspaceId,
+    onOpenAnalytics,
+    disclosureLevel = 3,
+    disclosureActive = false,
+  } = props;
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
@@ -335,19 +364,31 @@ export default function CommandPalette(props: Props) {
       const route = typeof window !== 'undefined' ? window.location.pathname : '';
       const contextual: { label: string; icon: React.ReactNode; action: () => void }[] = [];
       if (route.startsWith('/execution')) {
-        contextual.push(
-          { label: 'Create Sprint', icon: <GitFork className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/execution/sprints'); onClose(); } },
-          { label: 'View Timeline', icon: <Activity className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/execution/timeline'); onClose(); } },
-        );
+        if (navDisclosed('/execution/sprints', role, disclosureActive, disclosureLevel)) {
+          contextual.push(
+            { label: 'Create Sprint', icon: <GitFork className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/execution/sprints'); onClose(); } },
+          );
+        }
+        if (navDisclosed('/execution/timeline', role, disclosureActive, disclosureLevel)) {
+          contextual.push(
+            { label: 'View Timeline', icon: <Activity className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/execution/timeline'); onClose(); } },
+          );
+        }
       } else if (route.startsWith('/workspace')) {
         contextual.push(
           { label: 'Create Project', icon: <PlusCircle className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { setIsAdding?.(true); onClose(); } },
-          { label: 'Decision Center', icon: <BrainCircuit className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/workspace/decisions'); onClose(); } },
         );
+        if (navDisclosed('/workspace/decisions', role, disclosureActive, disclosureLevel)) {
+          contextual.push(
+            { label: 'Decision Center', icon: <BrainCircuit className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/workspace/decisions'); onClose(); } },
+          );
+        }
       } else if (route.startsWith('/resources')) {
-        contextual.push(
-          { label: 'View Capacity', icon: <BarChart3 className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/resources/capacity'); onClose(); } },
-        );
+        if (navDisclosed('/resources/capacity', role, disclosureActive, disclosureLevel)) {
+          contextual.push(
+            { label: 'View Capacity', icon: <BarChart3 className="w-3.5 h-3.5 text-accent-secondary" />, action: () => { onNavigate('/resources/capacity'); onClose(); } },
+          );
+        }
       }
       if (contextual.length > 0) {
         out.push({ id: '_contextual_header', group: 'MOST_USED', label: `ROUTE: ${route.split('/').filter(Boolean).pop()?.toUpperCase() || 'HOME'}`, onSelect: () => {} });
@@ -432,7 +473,9 @@ export default function CommandPalette(props: Props) {
 
     // --- NAVIGATION ---
     if (!hasFilter || groupFilter === 'NAVIGATION') {
-      const visibleNav = NAV_ITEMS.filter(n => !n.roles || n.roles.includes(role));
+      const visibleNav = NAV_ITEMS.filter(n =>
+        navDisclosed(n.path, role, disclosureActive, disclosureLevel),
+      );
       const matchedNav = q ? filterItems(visibleNav, q) : (hasFilter ? visibleNav : []);
       if (matchedNav.length > 0) {
         out.push({ id: '_nav_header', group: 'NAVIGATION', label: 'NAVIGATION', onSelect: () => {} });
@@ -475,7 +518,18 @@ export default function CommandPalette(props: Props) {
 
     // --- ACTIONS ---
     if (!hasFilter || groupFilter === 'ACTIONS') {
-      const visibleActions = ACTION_ITEMS.filter(a => !a.roles || a.roles.includes(role));
+      const visibleActions = ACTION_ITEMS.filter(a => {
+        if (!hasCapability(role, a.capability)) return false;
+        if (!disclosureActive) return true;
+        if (a.capability === 'platform_governance' || a.capability === 'platform_security') {
+          return disclosureLevel >= 3;
+        }
+        if (a.capability === 'manage_automations') return disclosureLevel >= 3;
+        if (a.capability === 'manage_scheduling' && a.label.includes('Sprint')) {
+          return disclosureLevel >= 1;
+        }
+        return true;
+      });
       const matchedActions = q ? filterItems(visibleActions, q) : (hasFilter ? visibleActions : []);
       if (matchedActions.length > 0) {
         out.push({ id: '_action_header', group: 'ACTIONS', label: 'ACTIONS', onSelect: () => {} });
@@ -488,7 +542,15 @@ export default function CommandPalette(props: Props) {
 
     // --- AI (static items, shown when filtered via /ai) ---
     if (!hasFilter || groupFilter === 'AI') {
-      const matchedAI = q ? filterItems(AI_ITEMS, q) : (hasFilter ? AI_ITEMS : []);
+      const visibleAi = AI_ITEMS.filter(item => {
+        if (!disclosureActive) return true;
+        if (item.label === 'Command Analytics' || item.label === 'Decision Center') {
+          return disclosureLevel >= 2;
+        }
+        if (item.label === 'Capacity Forecast') return disclosureLevel >= 2;
+        return disclosureLevel >= 1;
+      });
+      const matchedAI = q ? filterItems(visibleAi, q) : (hasFilter ? visibleAi : []);
       if (matchedAI.length > 0) {
         out.push({ id: '_ai_header', group: 'AI', label: 'AI', onSelect: () => {} });
         matchedAI.forEach(a => out.push({
@@ -499,7 +561,7 @@ export default function CommandPalette(props: Props) {
     }
 
     return out;
-  }, [debouncedQuery, projects, tasks, role]);
+  }, [debouncedQuery, projects, tasks, role, disclosureActive, disclosureLevel]);
 
   const flatResults = useMemo(() => allResults.filter(r => !r.id.startsWith('_')), [allResults]);
 

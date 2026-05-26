@@ -133,32 +133,129 @@ function overlapMinutes(
 }
 
 export const calendarEventService = {
+  /**
+   * Idempotent write by (workspace_id, source_table, source_id).
+   * Inserts only when missing; restores soft-deleted rows; patches metadata when present.
+   */
+  async upsertBySourceKey(
+    event: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>,
+    actorId?: string,
+  ): Promise<{ event: CalendarEvent | null; created: boolean }> {
+    if (!isSupabaseConfigured) return { event: null, created: false };
+    if (!event.source_table || !event.source_id) {
+      const created = await this.createEvent(event, actorId);
+      return { event: created, created: !!created };
+    }
+
+    const { data: existing } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .eq('workspace_id', event.workspace_id)
+      .eq('source_table', event.source_table)
+      .eq('source_id', event.source_id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const patch = {
+      event_type: event.event_type,
+      title: event.title,
+      start_date: event.start_date,
+      end_date: event.end_date,
+      capacity_impact: event.capacity_impact,
+      is_recurring: event.is_recurring ?? false,
+      recurrence_rule: event.recurrence_rule ?? null,
+      auto_generated: event.auto_generated ?? false,
+      timezone: event.timezone ?? 'UTC',
+      deleted_at: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (existing) {
+      const { data: updated, error } = await supabase
+        .from('calendar_events')
+        .update(patch)
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (error) {
+        logServiceFailure('calendarEventService.upsertBySourceKey', event, error);
+        return { event: null, created: false };
+      }
+
+      if (existing.deleted_at) {
+        await activityLogService.appendLog({
+          workspace_id: event.workspace_id,
+          actor_id: actorId,
+          action: 'calendar_event_updated',
+          metadata: { event_id: existing.id, restored: true, source_id: event.source_id },
+        });
+      }
+
+      return { event: updated as CalendarEvent, created: false };
+    }
+
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .insert({ ...event, ...patch })
+      .select()
+      .single();
+
+    if (error) {
+      logServiceFailure('calendarEventService.upsertBySourceKey', event, error);
+      return { event: null, created: false };
+    }
+
+    const created = data as CalendarEvent;
+    await activityLogService.appendLog({
+      workspace_id: event.workspace_id,
+      actor_id: actorId,
+      action: 'calendar_event_created',
+      metadata: {
+        event_id: created.id,
+        event_type: event.event_type,
+        title: event.title,
+        source_table: event.source_table,
+        source_id: event.source_id,
+      },
+    });
+    return { event: created, created: true };
+  },
+
   async createEvent(
     event: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>,
     actorId?: string
   ): Promise<CalendarEvent | null> {
     if (!isSupabaseConfigured) return null;
 
-    // Idempotency check: use source_id or generate a hash
-    const identityString = event.source_id 
-      ? `${event.source_table || ''}:${event.source_id}`
-      : await sha256(`${event.workspace_id}:${event.event_type}:${event.title}:${event.start_date}`);
+    if (event.source_table && event.source_id) {
+      const { event: upserted } = await this.upsertBySourceKey(event, actorId);
+      return upserted;
+    }
+
+    const identityString = await sha256(
+      `${event.workspace_id}:${event.event_type}:${event.title}:${event.start_date}`,
+    );
 
     const { data: existing } = await supabase
       .from('calendar_events')
       .select('id')
       .eq('workspace_id', event.workspace_id)
-      .or(`source_id.eq.${event.source_id || 'NONE'},description.ilike.%${identityString}%`)
+      .ilike('description', `%[ID:${identityString}]%`)
       .is('deleted_at', null)
       .maybeSingle();
 
     if (existing) {
-      return this.updateEvent(existing.id, event, actorId).then(() => ({ ...event, id: existing.id } as CalendarEvent));
+      await this.updateEvent(existing.id, event, actorId);
+      return { ...event, id: existing.id } as CalendarEvent;
     }
 
     const eventToInsert = {
       ...event,
-      description: event.description ? `${event.description}\n\n[ID:${identityString}]` : `[ID:${identityString}]`
+      description: event.description
+        ? `${event.description}\n\n[ID:${identityString}]`
+        : `[ID:${identityString}]`,
     };
 
     const { data, error } = await supabase

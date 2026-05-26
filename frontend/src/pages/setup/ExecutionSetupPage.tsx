@@ -3,6 +3,7 @@ import { CheckCircle, ArrowRight, SkipForward, Layers, Users, Calendar, Clock } 
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
+import { hasCapability } from '../../core/auth/permissions';
 import { ScrumBootstrap } from '../../components/setup/ScrumBootstrap';
 import { KanbanBootstrap } from '../../components/setup/KanbanBootstrap';
 import { SetupSkipState } from '../../components/setup/SetupSkipState';
@@ -38,7 +39,7 @@ export default function ExecutionSetupPage() {
 
   const [phase, setPhase] = useState<SetupPhase>('welcome');
 
-  const canInitialize = profile?.role === 'super_admin' || profile?.role === 'pm';
+  const canInitialize = hasCapability(profile?.role, 'manage_projects');
 
   if (!projectId || !project) {
     return (

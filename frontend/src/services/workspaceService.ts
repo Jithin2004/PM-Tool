@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase';
 import type { Workspace, WorkspaceSettings } from '../types/workspace';
 import { calendarEventService } from './calendarEventService';
 import { holidaySourceService } from './holidaySourceService';
+import { hasCapability } from '../core/auth/permissions';
+import { reconcileWorkspaceMembership } from '../core/auth/reconcileInvitationMembership';
+import type { UserRole } from '../types';
 
 export interface CreateWorkspaceInput {
   name: string;
@@ -218,7 +221,9 @@ export async function updateWorkspaceSettings(workspace: Workspace, settings: Pa
 
     if (actorError || !actor) throw new Error('Access denied: actor not found');
     if (actor.workspace_id !== workspace.id) throw new Error('Access denied: cross-workspace operation');
-    if (actor.role !== 'super_admin' && actor.id !== workspace.ownerId) throw new Error('Access denied: only super_admin or workspace owner can update settings');
+    if (!hasCapability(actor.role as UserRole, 'manage_settings') && actor.id !== workspace.ownerId) {
+      throw new Error('Access denied: manage_settings capability required to update workspace settings');
+    }
   }
 
   const nextSettings = { ...workspace.settings, ...settings };
@@ -241,61 +246,5 @@ export async function updateWorkspaceSettings(workspace: Workspace, settings: Pa
 }
 
 export async function repairUserWorkspace(userId: string, email?: string): Promise<{ repaired: boolean; workspaceId: string | null; reason: string }> {
-  // Case A: user owns a workspace — repair workspace_id
-  const { data: owned, error: ownedError } = await supabase
-    .from('workspaces')
-    .select('id')
-    .eq('owner_id', userId)
-    .limit(1);
-
-  if (!ownedError && owned && owned.length > 0) {
-    const wsId = owned[0].id;
-    const { error: upsertError } = await supabase
-      .from('users')
-      .upsert({
-        id: userId,
-        workspace_id: wsId,
-        email: email || '',
-        role: 'super_admin',
-        availability_factor: 1,
-      }, { onConflict: 'id' });
-
-    if (!upsertError) {
-      return { repaired: true, workspaceId: wsId, reason: 'workspace_owner_repair' };
-    }
-  }
-
-  // Case B: pending invitation exists — signal needs_workspace_setup
-  if (email) {
-    const { data: invite } = await supabase
-      .from('invitations')
-      .select('workspace_id, role')
-      .or(`email.eq.${email},email.eq.${email.toLowerCase()}`)
-      .in('status', ['pending', 'accepted'])
-      .maybeSingle();
-
-    if (invite) {
-      const { error: inviteUpsertError } = await supabase
-        .from('users')
-        .upsert({
-          id: userId,
-          email,
-          workspace_id: invite.workspace_id,
-          role: invite.role,
-          availability_factor: 1,
-        }, { onConflict: 'id' });
-
-      if (!inviteUpsertError) {
-        await supabase
-          .from('invitations')
-          .update({ status: 'accepted' })
-          .eq('id', (invite as any).id);
-        return { repaired: true, workspaceId: invite.workspace_id, reason: 'invitation_repair' };
-      }
-      return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
-    }
-  }
-
-  // Case C: orphaned — no workspace, no invitation
-  return { repaired: false, workspaceId: null, reason: 'orphaned' };
+  return reconcileWorkspaceMembership(userId, email);
 }

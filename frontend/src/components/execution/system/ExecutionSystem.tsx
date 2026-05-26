@@ -537,7 +537,10 @@ function TimelineView({ tasks, projects, dependencies }: any) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   const { timelineItems, start, end } = useMemo(() => {
-    const dates = tasks.filter((t: any) => t.due_date).map((t: any) => new Date(t.due_date));
+    const dates = tasks
+      .map((t: any) => t.deadline || t.due_date)
+      .filter(Boolean)
+      .map((d: string) => new Date(d));
     if (dates.length === 0) {
       const now = new Date();
       return { timelineItems: [], start: now, end: new Date(now.getTime() + 14 * 86400000) };
@@ -552,7 +555,11 @@ function TimelineView({ tasks, projects, dependencies }: any) {
     const timelineEnd = new Date(max);
     timelineEnd.setDate(timelineEnd.getDate() + 7);
     
-    return { timelineItems: tasks.filter((t: any) => t.due_date), start: timelineStart, end: timelineEnd };
+    return {
+      timelineItems: tasks.filter((t: any) => t.deadline || t.due_date),
+      start: timelineStart,
+      end: timelineEnd,
+    };
   }, [tasks]);
 
   const daysCount = Math.ceil((end.getTime() - start.getTime()) / 86400000);
@@ -634,7 +641,7 @@ function TimelineView({ tasks, projects, dependencies }: any) {
                   </div>
 
                   {projectTasks.map((task: any) => {
-                    const taskDate = new Date(task.due_date);
+                    const taskDate = new Date(task.deadline || task.due_date);
                     const offsetDays = Math.ceil((taskDate.getTime() - start.getTime()) / 86400000);
                     const isBlocked = dependencies.some((d: any) => d.task_id === task.id);
                     
@@ -789,7 +796,7 @@ function CalendarView({ tasks, events }: any) {
     // Days of current month
     for (let i = 1; i <= daysInMonth; i++) {
       const dateStr = `${year}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-      const dayTasks = tasks.filter((t: any) => t.due_date?.startsWith(dateStr));
+      const dayTasks = tasks.filter((t: any) => (t.deadline || t.due_date)?.startsWith(dateStr));
       const dayEvents = events.filter((e: any) => e.start_date?.startsWith(dateStr));
       
       days.push({

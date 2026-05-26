@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, Zap, AlertTriangle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { buildOAuthRedirectUrl, setRedirectToAfterAuth } from '../../core/auth/postAuthRedirect';
 
 function getErrorParam(): string | null {
   const params = new URLSearchParams(window.location.search);
@@ -20,13 +21,16 @@ export function Login() {
   }, []);
 
   const handleGoogleLogin = async () => {
+    const returnPath = window.location.pathname === '/login' ? '/overview' : window.location.pathname;
+    setRedirectToAfterAuth(returnPath);
+
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + '/workspace'
-      }
+        redirectTo: buildOAuthRedirectUrl(),
+      },
     });
-    if (signInError) console.error("Auth error:", signInError);
+    if (signInError) console.error('Auth error:', signInError);
   };
 
   return (
