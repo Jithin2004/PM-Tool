@@ -1,17 +1,9 @@
 const { google } = require('googleapis');
 const UserIntegration = require('../models/UserIntegration');
 const CalendarEvent = require('../models/CalendarEvent');
-const fs = require('fs');
 
-const CLIENT_SECRET_PATH = 'c:\\works\\Antigravity\\PM-Tool\\client_secret_1060839461743-8gp4desmhpg6lflh4vj6amfk2n6d8b6e.apps.googleusercontent.com.json';
-let credentials = { web: {} };
-try {
-    credentials = JSON.parse(fs.readFileSync(CLIENT_SECRET_PATH, 'utf8'));
-} catch (e) {
-    console.error("Could not load Google client secret:", e);
-}
-
-const { client_secret, client_id } = credentials.web;
+const client_id = process.env.GOOGLE_CLIENT_ID;
+const client_secret = process.env.GOOGLE_CLIENT_SECRET;
 const redirectUri = 'http://localhost:5001/api/calendar/oauth2callback';
 const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirectUri);
 
