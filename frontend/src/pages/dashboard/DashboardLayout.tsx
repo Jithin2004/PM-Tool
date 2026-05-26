@@ -901,6 +901,199 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     }
   };
 
+  const handleSaveLogisticsData = async (updatedData: any) => {
+    if (!isWorkspaceOwner(profile?.id, workspace)) {
+      requireWorkspaceOwner(profile?.id, workspace, 'handleSaveLogisticsData');
+      notify("Only the workspace owner can modify logistics settings.", "error");
+      return;
+    }
+    // 1. Intercept attendance updates
+    if (updatedData.attendance) {
+      if (isSupabaseConfigured) {
+        try {
+          const oldAttendance = systemData.attendance || {};
+          const newAttendance = updatedData.attendance;
+
+          const promises: Promise<any>[] = [];
+          Object.keys(newAttendance).forEach(dateStr => {
+            const dayRecords = newAttendance[dateStr];
+            Object.keys(dayRecords).forEach(userId => {
+              const record = dayRecords[userId];
+              const oldRecord = oldAttendance[dateStr]?.[userId];
+              if (
+                !oldRecord ||
+                oldRecord.status !== record.status ||
+                oldRecord.leaveType !== record.leaveType ||
+                oldRecord.isPaidHalfDay !== record.isPaidHalfDay
+              ) {
+                // Changed record: upsert it!
+                promises.push((async () => {
+                  const { data: existing } = await supabase
+                    .from('attendance')
+                    .select('id')
+                    .eq('workspace_id', workspace.id)
+                    .eq('user_id', userId)
+                    .eq('date', dateStr)
+                    .maybeSingle();
+
+                  if (existing) {
+                    return supabase
+                      .from('attendance')
+                      .update({
+                        status: record.status,
+                        leave_type: record.leaveType || null,
+                        availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
+                      })
+                      .eq('id', existing.id);
+                  } else {
+                    return supabase
+                      .from('attendance')
+                      .insert({
+                        workspace_id: workspace.id,
+                        user_id: userId,
+                        date: dateStr,
+                        status: record.status,
+                        leave_type: record.leaveType || null,
+                        availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
+                      });
+                  }
+                })());
+              }
+            });
+          });
+
+          if (promises.length > 0) {
+            await Promise.all(promises);
+            await fetchAttendance();
+          }
+        } catch (e) {
+          console.error("Error saving attendance to dedicated table:", e);
+        }
+      }
+
+      // Save to local state immediately
+      const records: any[] = [];
+      Object.keys(updatedData.attendance).forEach(dateStr => {
+        const dayData = updatedData.attendance[dateStr];
+        Object.keys(dayData).forEach(userId => {
+          const record = dayData[userId];
+          records.push({
+            workspace_id: workspace.id,
+            user_id: userId,
+            date: dateStr,
+            status: record.status,
+            leave_type: record.leaveType || null,
+            is_paid_half_day: !!record.isPaidHalfDay,
+            availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
+          });
+        });
+      });
+      setAttendanceRows(records);
+      delete updatedData.attendance;
+    }
+
+    // 2. Intercept salaries updates
+    if (updatedData.salaries) {
+      if (isSupabaseConfigured) {
+        try {
+          const oldSalaries = systemData.salaries || {};
+          const newSalaries = updatedData.salaries;
+
+          const promises: Promise<any>[] = [];
+          Object.keys(newSalaries).forEach(userId => {
+            const salary = newSalaries[userId];
+            const oldSalary = oldSalaries[userId];
+            if (oldSalary !== salary) {
+              promises.push((async () => {
+                const { data: existing } = await supabase
+                  .from('salaries')
+                  .select('id')
+                  .eq('user_id', userId)
+                  .maybeSingle();
+
+                if (existing) {
+                  return supabase
+                    .from('salaries')
+                    .update({ base_salary: salary })
+                    .eq('id', existing.id);
+                } else {
+                  return supabase
+                    .from('salaries')
+                    .insert({ workspace_id: workspace.id, user_id: userId, base_salary: salary });
+                }
+              })());
+            }
+          });
+
+          if (promises.length > 0) {
+            await Promise.all(promises);
+            await fetchSalaries();
+          }
+        } catch (e) {
+          console.error("Error saving salaries to dedicated table:", e);
+        }
+      }
+
+      // Save to local state immediately
+      const records = Object.keys(updatedData.salaries).map(userId => ({
+        user_id: userId,
+        base_salary: Number(updatedData.salaries[userId]) || 3000
+      }));
+      setSalariesRows(records);
+      delete updatedData.salaries;
+    }
+
+    // Save remainder to localStorage immediately as a fast fallback
+    localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(updatedData));
+
+    // Update in-memory state immediately so responsiveness is instantaneous
+    setWorkspaceSettingsBlob((prev: any) => ({ ...prev, ...updatedData }));
+    
+    // Also update legacy fallback in memory
+    setTeams(prevTeams => {
+      const settingsTeam = prevTeams.find(t => t.name === 'SYSTEM_SETTINGS');
+      if (settingsTeam) {
+        return prevTeams.map(t => t.name === 'SYSTEM_SETTINGS' ? { ...t, data: { ...t.data, ...updatedData } } : t);
+      } else {
+        return [...prevTeams, { id: 'SYSTEM_SETTINGS', workspace_id: workspace?.id || '', name: 'SYSTEM_SETTINGS', data: updatedData, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }];
+      }
+    });
+
+    if (workspace?.id && isSupabaseConfigured) {
+      // Sync to workspace_settings
+      const { data: existingWorkspaceSettings, error: findWorkspaceError } = await supabase
+        .from('workspace_settings')
+        .select('*')
+        .eq('workspace_id', workspace.id)
+        .maybeSingle();
+
+      if (!findWorkspaceError && existingWorkspaceSettings) {
+        const mergedWorkspaceData = {
+          ...existingWorkspaceSettings.settings_blob,
+          ...updatedData
+        };
+        const { error } = await supabase
+          .from('workspace_settings')
+          .update({ settings_blob: mergedWorkspaceData })
+          .eq('workspace_id', workspace.id);
+        if (!error) {
+          notify("Logistics analytics synchronized.", "success");
+        } else {
+          console.warn("Supabase logistics sync failed on workspace_settings:", error);
+        }
+      } else {
+        const { error } = await supabase
+          .from('workspace_settings')
+          .insert({ workspace_id: workspace.id, settings_blob: updatedData });
+        if (!error) {
+          notify("Logistics analytics initialized.", "success");
+        } else {
+          console.warn("Supabase logistics init failed on workspace_settings:", error);
+        }
+      }
+    }
+  };
+
   const handleCreateTeam = async (name: string, pmId: string, devIds: string[]) => {
     if (profile?.role !== 'super_admin' || !workspace?.id) {
       notify("Unauthorized: Only super admins can create teams.", "error");
