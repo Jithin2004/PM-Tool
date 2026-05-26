@@ -38,6 +38,12 @@ import { buildVisibilityContext, filterVisibleTasks, filterVisibleProjects, getV
 
 import { hasCapability } from '../../core/auth/permissions';
 import { Project, Team, Profile, User, UserRole, Stats } from '../../types';
+import {
+  SIDEBAR_NAV,
+  normalizePath,
+  isRegisteredPath,
+  type SidebarGroup,
+} from '../../app/routeRegistry';
 
 interface ConfirmState {
   isOpen: boolean;
@@ -255,9 +261,67 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   };
 
   const navigateTo = (path: string) => {
-    window.history.pushState(null, '', path);
+    const target = normalizePath(path);
+    if (import.meta.env.DEV && !isRegisteredPath(target)) {
+      console.error(`[navigateTo] Unregistered path: ${path} (canonical: ${target})`);
+    }
+    window.history.pushState(null, '', target);
     window.dispatchEvent(new CustomEvent('popstate'));
   };
+
+  const SIDEBAR_GROUP_LABELS: Record<SidebarGroup, string> = {
+    core: 'Core',
+    intelligence: 'Intelligence',
+    operations: 'Operations',
+    system: 'System',
+  };
+
+  const SIDEBAR_ICONS: Record<string, React.ReactNode> = {
+    overview: <LayoutDashboard className="w-[15px] h-[15px] shrink-0" />,
+    projects: <Briefcase className="w-[15px] h-[15px] shrink-0" />,
+    board: <ListTodo className="w-[15px] h-[15px] shrink-0" />,
+    scheduling: <Route className="w-[15px] h-[15px] shrink-0" />,
+    analytics: <BarChart3 className="w-[15px] h-[15px] shrink-0" />,
+    decisions: <BrainCircuit className="w-[15px] h-[15px] shrink-0" />,
+    reports: <FileText className="w-[15px] h-[15px] shrink-0" />,
+    logistics: <Truck className="w-[15px] h-[15px] shrink-0" />,
+    teams: <Users className="w-[15px] h-[15px] shrink-0" />,
+    portfolio: <Building2 className="w-[15px] h-[15px] shrink-0" />,
+    audit: <Activity className="w-[15px] h-[15px] shrink-0" />,
+    settings: <Settings className="w-[15px] h-[15px] shrink-0" />,
+    integrations: <Link2 className="w-[15px] h-[15px] shrink-0" />,
+  };
+
+  const isSidebarItemActive = (path: string): boolean => {
+    const current = window.location.pathname;
+    if (path === '/overview') return current === '/overview' || current === '/';
+    if (path === '/workspace') return current === '/workspace';
+    if (path === '/execution') {
+      return current.startsWith('/execution')
+        && !current.includes('timeline')
+        && !current.includes('sprints')
+        && !current.includes('gantt');
+    }
+    if (path === '/execution/timeline') return current.includes('timeline');
+    if (path === '/resources') return current === '/resources' || current.startsWith('/resources/logistics');
+    if (path === '/control/settings') {
+      return current === '/control/settings' || current.startsWith('/control/settings/');
+    }
+    return current === path || current.startsWith(`${path}/`);
+  };
+
+  const visibleSidebarGroups = useMemo(() => {
+    const order: SidebarGroup[] = ['core', 'intelligence', 'operations', 'system'];
+    return order
+      .map(group => ({
+        group,
+        items: SIDEBAR_NAV.filter(
+          item => item.group === group
+            && (!item.capability || hasCapability(profile?.role, item.capability))
+        ),
+      }))
+      .filter(g => g.items.length > 0);
+  }, [profile?.role]);
 
   const systemSettings = useMemo(() => teams.find(t => t.name === 'SYSTEM_SETTINGS'), [teams]);
   const rawSystemData = useMemo(() => systemSettings?.data as any || {}, [systemSettings]);
@@ -477,7 +541,10 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const breadcrumb = useMemo(() => {
     const p = window.location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
     if (p.length === 0) return null;
-    const sectionLabels: Record<string, string> = { workspace: 'WORKSPACE', execution: 'EXECUTION', resources: 'RESOURCES', control: 'CONTROL' };
+    const sectionLabels: Record<string, string> = {
+      overview: 'OVERVIEW', workspace: 'WORKSPACE', execution: 'EXECUTION',
+      resources: 'RESOURCES', control: 'CONTROL', projects: 'PROJECTS',
+    };
     const pageLabels: Record<string, string> = {
       projects: 'PROJECTS', portfolio: 'PORTFOLIO', decisions: 'DECISION CENTER', knowledge: 'KNOWLEDGE HUB',
       board: 'BOARD', timeline: 'TIMELINE', gantt: 'GANTT', sprints: 'SPRINT CENTER',
@@ -520,7 +587,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         {
           title: "Logistics & Payroll Controls",
           description: "Use the 'Logistics' page in the Operations group to mark daily attendance, calculate deductions, and export payroll reports.",
-          actionBefore: () => navigateTo('/control/logistics')
+          actionBefore: () => navigateTo('/resources')
         },
         {
           title: "Task Board & Execution",
@@ -1477,198 +1544,38 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
             </div>
           </div>
 
-          {/* Sidebar Menu Groups ΓÇö Enterprise Navigation Architecture */}
-          <div className="flex-1 overflow-y-auto px-3 py-5 space-y-6" style={{scrollbarWidth: 'none'}}>
-
-            {/* ΓöÇΓöÇ CORE group ΓöÇΓöÇ */}
-            <div className="space-y-0.5">
-              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Core</p>
-              {hasCapability(profile?.role, 'view_projects') && (
-                <button
-                  onClick={() => navigateTo('/overview')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname === '/overview' || window.location.pathname === '/'
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <LayoutDashboard className="w-[15px] h-[15px] shrink-0" />
-                  Overview
-                </button>
-              )}
-              {hasCapability(profile?.role, 'view_projects') && (
-                <button
-                  onClick={() => navigateTo('/workspace')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname === '/workspace'
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <Briefcase className="w-[15px] h-[15px] shrink-0" />
-                  Projects
-                </button>
-              )}
-              {hasCapability(profile?.role, 'view_tasks') && (
-                <button
-                  onClick={() => navigateTo('/execution')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <ListTodo className="w-[15px] h-[15px] shrink-0" />
-                  Task Board
-                </button>
-              )}
-              {hasCapability(profile?.role, 'view_scheduling') && (
-                <button
-                  onClick={() => navigateTo('/execution/timeline')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.includes('timeline')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <Route className="w-[15px] h-[15px] shrink-0" />
-                  Scheduling
-                </button>
-              )}
-            </div>
-
-            {/* ΓöÇΓöÇ INTELLIGENCE group ΓöÇΓöÇ */}
-            <div className="space-y-0.5">
-              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Intelligence</p>
-              {hasCapability(profile?.role, 'view_analytics') && (
-                <button
-                  onClick={() => navigateTo('/control/analytics')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.includes('analytics')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <BarChart3 className="w-[15px] h-[15px] shrink-0" />
-                  Analytics
-                </button>
-              )}
-              {hasCapability(profile?.role, 'view_decision_center') && (
-                <button
-                  onClick={() => { setDashboardTab('intelligence'); navigateTo('/workspace/decisions'); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.includes('decisions')
-                      ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <BrainCircuit className="w-[15px] h-[15px] shrink-0" />
-                  Decision Center
-                </button>
-              )}
-              {hasCapability(profile?.role, 'view_reports') && (
-                <button
-                  onClick={() => navigateTo('/resources/work-logs')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.includes('work-logs')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <FileText className="w-[15px] h-[15px] shrink-0" />
-                  Reports
-                </button>
-              )}
-            </div>
-
-            {/* ΓöÇΓöÇ OPERATIONS group ΓöÇΓöÇ */}
-            <div className="space-y-0.5">
-              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Operations</p>
-              {hasCapability(profile?.role, 'manage_logistics') && (
-                <button
-                  onClick={() => navigateTo('/control/logistics')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.includes('logistics')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <Truck className="w-[15px] h-[15px] shrink-0" />
-                  Logistics
-                </button>
-              )}
-              {hasCapability(profile?.role, 'view_teams') && (
-                <button
-                  onClick={() => navigateTo('/resources/teams')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.includes('teams')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <Users className="w-[15px] h-[15px] shrink-0" />
-                  Team Roster
-                </button>
-              )}
-              {hasCapability(profile?.role, 'view_stakeholders') && (
-                <button
-                  onClick={() => navigateTo('/workspace/portfolio')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.includes('portfolio')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <Building2 className="w-[15px] h-[15px] shrink-0" />
-                  Project Sponsors
-                </button>
-              )}
-              {hasCapability(profile?.role, 'view_audit_log') && (
-                <button
-                  onClick={() => navigateTo('/control/audit')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.includes('audit')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <Activity className="w-[15px] h-[15px] shrink-0" />
-                  Audit Log
-                </button>
-              )}
-            </div>
-
-            {/* ΓöÇΓöÇ SYSTEM group ΓöÇΓöÇ */}
-            <div className="space-y-0.5">
-              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">System</p>
-              {hasCapability(profile?.role, 'manage_settings') && (
-                <button
-                  onClick={() => navigateTo('/control/settings')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname === '/control/settings' || window.location.pathname.startsWith('/control/settings/')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <Settings className="w-[15px] h-[15px] shrink-0" />
-                  Settings
-                </button>
-              )}
-              {hasCapability(profile?.role, 'manage_integrations') && (
-                <button
-                  onClick={() => navigateTo('/control/connections')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                    window.location.pathname.includes('connections')
-                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                  }`}
-                >
-                  <Link2 className="w-[15px] h-[15px] shrink-0" />
-                  Integrations
-                </button>
-              )}
-            </div>
-
+          {/* Sidebar — driven by routeRegistry (paths validated at navigateTo) */}
+          <div className="flex-1 overflow-y-auto px-3 py-5 space-y-6" style={{ scrollbarWidth: 'none' }}>
+            {visibleSidebarGroups.map(({ group, items }) => (
+              <div key={group} className="space-y-0.5">
+                <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">
+                  {SIDEBAR_GROUP_LABELS[group]}
+                </p>
+                {items.map(item => {
+                  const active = isSidebarItemActive(item.path);
+                  const isDecisions = item.id === 'decisions';
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        if (isDecisions) setDashboardTab('intelligence');
+                        navigateTo(item.path);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                        active
+                          ? isDecisions
+                            ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
+                            : 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                          : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                      }`}
+                    >
+                      {SIDEBAR_ICONS[item.id]}
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
 
           {/* Bottom utility strip ΓÇö Help + Profile */}
@@ -1757,15 +1664,15 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                     <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-wide px-3">Main</p>
                     <div className="space-y-1">
                       <button
-                        onClick={() => { setDashboardTab('dashboard'); navigateTo('/workspace'); setMobileSidebarOpen(false); }}
+                        onClick={() => { navigateTo('/overview'); setMobileSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                          dashboardTab === 'dashboard' && window.location.pathname === '/workspace'
+                          window.location.pathname === '/overview'
                             ? 'bg-primary-gradient text-text-primary shadow-md'
                             : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
                         }`}
                       >
                         <LayoutDashboard className="w-4 h-4" />
-                        Dashboard
+                        Overview
                       </button>
                       <button
                         onClick={() => { setDashboardTab('active'); navigateTo('/workspace'); setMobileSidebarOpen(false); }}

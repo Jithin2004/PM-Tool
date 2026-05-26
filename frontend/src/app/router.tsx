@@ -2,17 +2,24 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { hasCapability } from '../core/auth/permissions';
+import type { Capability } from '../core/auth/permissions';
+import type { UserRole } from '../types';
 import { AuthPage } from '../pages/auth/AuthPage';
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { AdminPanel } from '../pages/dashboard/AdminPanel';
 import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
-import { ProjectWorkspace } from '../pages/dashboard/ProjectWorkspace';
 import { WorkspaceSetupPage } from '../pages/onboarding/WorkspaceSetupPage';
 import { ProjectCreatePage } from '../pages/project/ProjectCreatePage';
 import { LandingPage } from '../landing/LandingPage';
 import { Login } from '../components/auth/Login';
 import { ProductKeyGate } from '../components/auth/ProductKeyGate';
 import { isProductKeyVerified } from '../lib/productKey';
+import {
+  normalizePath,
+  ROUTE_ACCESS,
+  parseProjectRoute,
+  isRegisteredPath,
+} from './routeRegistry';
 
 // ── Lazy-loaded route pages ──
 
@@ -48,7 +55,7 @@ const ProjectBoardPage = lazy(() => import('../pages/board/ProjectBoardPage'));
 const ProjectSprintPage = lazy(() => import('../pages/sprints/ProjectSprintPage'));
 const ProjectTimelinePage = lazy(() => import('../pages/timeline/ProjectTimelinePage'));
 
-// ── Loading fallback ──
+const DEFAULT_AUTH_REDIRECT = '/overview';
 
 function RouteFallback() {
   return (
@@ -57,23 +64,6 @@ function RouteFallback() {
     </div>
   );
 }
-
-// ── Route guard helper ──
-
-function routeWithGuard(
-  allowedRoles: string[],
-  profileRole: string | undefined,
-  page: React.ReactNode
-): React.ReactNode {
-  if (!allowedRoles.includes(profileRole || '')) {
-    window.history.replaceState(null, '', '/overview');
-    window.dispatchEvent(new CustomEvent('popstate'));
-    return null;
-  }
-  return page;
-}
-
-// ── Pathname hook ──
 
 function usePathname() {
   const [pathname, setPathname] = useState(window.location.pathname);
@@ -97,7 +87,26 @@ function usePathname() {
   return pathname;
 }
 
-// ── Route group wrapper ──
+function redirectTo(target: string): null {
+  window.history.replaceState(null, '', target);
+  window.dispatchEvent(new CustomEvent('popstate'));
+  return null;
+}
+
+function canAccess(
+  role: UserRole | undefined,
+  access: { kind: 'public' } | { kind: 'auth' } | { kind: 'capability'; capability: Capability } | { kind: 'roles'; roles: UserRole[] },
+): boolean {
+  if (access.kind === 'public' || access.kind === 'auth') return true;
+  if (access.kind === 'roles') return access.roles.includes(role as UserRole);
+  return hasCapability(role, access.capability);
+}
+
+function guardRoute(role: UserRole | undefined, path: string): boolean {
+  const access = ROUTE_ACCESS[path];
+  if (!access) return true;
+  return canAccess(role, access);
+}
 
 function RouteShell({ children }: { children: React.ReactNode }) {
   return (
@@ -108,11 +117,13 @@ function RouteShell({ children }: { children: React.ReactNode }) {
 }
 
 export function ResolveRouter() {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname = normalizePath(rawPathname);
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
-  const { profile, logout, loading: authLoading, profileResolved, profileHydrating } = useAuth();
+  const { profile, loading: authLoading, profileResolved, profileHydrating } = useAuth();
+  const role = profile?.role;
 
-  // ── Public routes (no auth, no product key required) ──
+  // ── Public routes ──
 
   if (pathname === '/') {
     return <LandingPage />;
@@ -136,9 +147,7 @@ export function ResolveRouter() {
   // ── Product key gate ──
 
   if (!isProductKeyVerified()) {
-    window.history.replaceState(null, '', '/');
-    window.dispatchEvent(new CustomEvent('popstate'));
-    return null;
+    return redirectTo('/');
   }
 
   if (workspaceLoading || authLoading || !profileResolved || profileHydrating) {
@@ -154,33 +163,144 @@ export function ResolveRouter() {
 
   if (!user) return <AuthPage />;
 
-  if (profile?.role === 'uninvited') {
-    window.history.replaceState(null, '', '/login?error=uninvited');
-    window.dispatchEvent(new CustomEvent('popstate'));
-    return null;
+  if (role === 'uninvited') {
+    return redirectTo('/login?error=uninvited');
   }
 
   if (!workspace) return <WorkspaceSetupPage />;
 
-  // ── Legacy redirects ──
+  // ── Alias redirects (canonicalize) ──
 
-  if (pathname === '/admin' || pathname === '/logistics' || pathname === '/pipeline' || pathname === '/projects/new') {
-    const target = pathname === '/admin' ? '/control' : pathname === '/logistics' ? '/resources' : pathname === '/pipeline' ? '/execution' : '/workspace';
-    window.history.replaceState(null, '', target);
-    window.dispatchEvent(new CustomEvent('popstate'));
-    return null;
+  const rawStripped = rawPathname.split('?')[0].replace(/\/+$/, '') || '/';
+  if (rawStripped !== pathname) {
+    return redirectTo(pathname);
   }
 
-  if (pathname === '/onboarding/workspace') return <WorkspaceSetupPage />;
+  // ── Legacy redirects ──
 
-  // ── WORKSPACE routes ──
+  if (rawPathname === '/projects/new' || pathname === '/projects/new') {
+    if (!guardRoute(role, '/projects/new')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><ProjectCreatePage /></RouteShell>;
+  }
+
+  if (pathname === '/onboarding/workspace') {
+    return <WorkspaceSetupPage />;
+  }
+
+  // ── OVERVIEW ──
 
   if (pathname === '/overview') {
     return <RouteShell><OverviewPage /></RouteShell>;
   }
-    const subRoute = segments[3]; // After /projects/:id/
 
-    if (subRoute === 'setup' && segments[4] === 'execution') {
+  // ── WORKSPACE ──
+
+  if (pathname === '/workspace') {
+    return <RouteShell><ProjectsPage /></RouteShell>;
+  }
+  if (pathname === '/workspace/portfolio') {
+    if (!guardRoute(role, '/workspace/portfolio')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><PortfolioPage /></RouteShell>;
+  }
+  if (pathname === '/workspace/knowledge') {
+    return <RouteShell><KnowledgePage /></RouteShell>;
+  }
+  if (pathname.startsWith('/workspace/knowledge/')) {
+    return <RouteShell><DocumentView /></RouteShell>;
+  }
+  if (pathname === '/workspace/decisions') {
+    if (!guardRoute(role, '/workspace/decisions')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><DecisionsPage /></RouteShell>;
+  }
+
+  // ── EXECUTION ──
+
+  if (pathname === '/execution' || pathname === '/execution/board') {
+    if (!guardRoute(role, '/execution')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><BoardPage /></RouteShell>;
+  }
+  if (pathname === '/execution/timeline') {
+    if (!guardRoute(role, '/execution/timeline')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><TimelinePage /></RouteShell>;
+  }
+  if (pathname === '/execution/gantt') {
+    if (!guardRoute(role, '/execution/gantt')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><GanttPage /></RouteShell>;
+  }
+  if (pathname === '/execution/sprints') {
+    if (!guardRoute(role, '/execution/sprints')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><SprintPage /></RouteShell>;
+  }
+
+  // ── RESOURCES ──
+
+  if (pathname === '/resources') {
+    if (!guardRoute(role, '/resources')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><LogisticsPanel /></RouteShell>;
+  }
+  if (pathname === '/resources/teams') {
+    if (!guardRoute(role, '/resources/teams')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><TeamsPage /></RouteShell>;
+  }
+  if (pathname === '/resources/capacity') {
+    if (!guardRoute(role, '/resources/capacity')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><CapacityPage /></RouteShell>;
+  }
+  if (pathname === '/resources/work-logs') {
+    if (!guardRoute(role, '/resources/work-logs')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><WorkLogsPage /></RouteShell>;
+  }
+
+  // ── CONTROL ──
+
+  if (pathname === '/control' || pathname === '/control/identity') {
+    if (!guardRoute(role, '/control')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><AdminPanel /></RouteShell>;
+  }
+  if (pathname === '/control/analytics') {
+    if (!guardRoute(role, '/control/analytics')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><AnalyticsPage /></RouteShell>;
+  }
+  if (pathname === '/control/audit') {
+    if (!guardRoute(role, '/control/audit')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><AuditPage /></RouteShell>;
+  }
+  if (pathname === '/control/automations' || pathname.startsWith('/control/automations/')) {
+    if (!guardRoute(role, '/control/automations')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><AutomationsPanel /></RouteShell>;
+  }
+  if (pathname === '/control/connections' || pathname.startsWith('/control/connections/')) {
+    if (!guardRoute(role, '/control/connections')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><ConnectionsPanel /></RouteShell>;
+  }
+  if (pathname === '/control/settings') {
+    if (!guardRoute(role, '/control/settings')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><SettingsPage /></RouteShell>;
+  }
+  if (pathname === '/control/settings/notifications') {
+    if (!guardRoute(role, '/control/settings/notifications')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><NotificationSettings /></RouteShell>;
+  }
+  if (pathname === '/control/settings/modes') {
+    if (!guardRoute(role, '/control/settings/modes')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><ModeSettings /></RouteShell>;
+  }
+  if (pathname === '/control/mission-control') {
+    if (!guardRoute(role, '/control/mission-control')) return redirectTo(DEFAULT_AUTH_REDIRECT);
+    return <RouteShell><MissionControlPage /></RouteShell>;
+  }
+
+  // ── PROJECT routes (/projects/:id/...) ──
+
+  const projectRoute = parseProjectRoute(pathname);
+  if (projectRoute?.projectId) {
+    const { subRoute, segments } = projectRoute;
+
+    if (!subRoute) {
+      return redirectTo(`/projects/${projectRoute.projectId}/board`);
+    }
+
+    if (subRoute === 'setup' && segments[3] === 'execution') {
       return <RouteShell><ExecutionSetupPage /></RouteShell>;
     }
     if (subRoute === 'backlog') {
@@ -195,8 +315,13 @@ export function ResolveRouter() {
     if (subRoute === 'timeline') {
       return <RouteShell><ProjectTimelinePage /></RouteShell>;
     }
+
+    return redirectTo(`/projects/${projectRoute.projectId}/board`);
   }
 
-  // ── Fallback ──
-  return <RouteShell><ProjectsPage /></RouteShell>;
+  // ── Fallback: unknown paths → overview (registered 404 behavior) ──
+  if (import.meta.env.DEV && !isRegisteredPath(pathname)) {
+    console.warn(`[ResolveRouter] Unregistered path, falling back to overview: ${rawPathname}`);
+  }
+  return <RouteShell><OverviewPage /></RouteShell>;
 }

@@ -166,6 +166,7 @@ function getSequenceSuggestions(): { id: string; label: string; group: string }[
 export { getTimeline, getTopCommandsWithTrend, getSequenceSuggestions, type TimelineEntry, type CommandTrend };
 
 const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode; roles?: string[] }[] = [
+  { label: 'Overview', path: '/overview', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
   { label: 'Workspace', path: '/workspace', icon: <FolderOpen className="w-3.5 h-3.5" /> },
   { label: 'Portfolio', path: '/workspace/portfolio', icon: <BarChart3 className="w-3.5 h-3.5" /> },
   { label: 'Knowledge Hub', path: '/workspace/knowledge', icon: <BookOpen className="w-3.5 h-3.5" /> },
