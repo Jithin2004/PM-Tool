@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   BarChart3, Activity, Users, Clock, Target, Plus, Search,
   ChevronRight, ChevronLeft, AlertTriangle, BrainCircuit,
@@ -947,7 +947,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               message={disclosure.nextUnlock.message}
               nextLevel={disclosure.nextUnlock.level}
               lockedCount={disclosure.lockedCount}
-              onShowAll={profile?.role === 'pm' ? handleShowAllFeatures : undefined}
+              onShowAll={hasCapability(profile?.role, 'manage_settings') ? handleShowAllFeatures : undefined}
             />
           )}
 
@@ -1067,7 +1067,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       message={disclosure.nextUnlock.message}
                       nextLevel={disclosure.nextUnlock.level}
                       lockedCount={disclosure.lockedCount}
-                      onShowAll={profile?.role === 'pm' ? handleShowAllFeatures : undefined}
+                      onShowAll={hasCapability(profile?.role, 'manage_settings') ? handleShowAllFeatures : undefined}
                     />
                   )}
                 </div>
