@@ -34,17 +34,10 @@ import { ProjectDetailsModal } from '../../components/project/ProjectDetailsModa
 import { TeamRosterModal } from '../../components/team/TeamRosterModal';
 import { UserProfileModal } from '../../components/user/UserProfileModal';
 import { calculateExpectedTime, calculateVariance, calculateHoursFromRange, getLocalDateString, getRelativeTime } from '../../utils/timeUtils';
-import { isWorkspaceOwner, requireWorkspaceOwner } from '../../utils/workspaceUtils';
 import { buildVisibilityContext, filterVisibleTasks, filterVisibleProjects, getVisibleProjectIds } from '../../utils/visibilityFilter';
 
-import { Project, Team, Profile, User, UserRole } from '../../types';
-
-interface Stats {
-  totalProjects: number;
-  deliveryConfidence: number;
-  teamBandwidth: number;
-  dailyFatigue: number;
-}
+import { hasCapability } from '../../core/auth/permissions';
+import { Project, Team, Profile, User, UserRole, Stats } from '../../types';
 
 interface ConfirmState {
   isOpen: boolean;
@@ -802,7 +795,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   };
 
   const handleUpdateRole = async (id: string, role: UserRole) => {
-    if (profile?.role !== 'super_admin') return;
+    guardCapability(profile?.role, 'platform_governance', 'updateRole');
 
     const targetUser = profiles.find(p => p.id === id);
     const targetName = targetUser?.full_name || targetUser?.email || "this user";
@@ -902,9 +895,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   };
 
   const handleSaveLogisticsData = async (updatedData: any) => {
-    if (!isWorkspaceOwner(profile?.id, workspace)) {
-      requireWorkspaceOwner(profile?.id, workspace, 'handleSaveLogisticsData');
-      notify("Only the workspace owner can modify logistics settings.", "error");
+    if (!hasCapability(profile?.role, 'manage_logistics')) {
+      notify("Unauthorized: Insufficient permissions to modify logistics.", "error");
       return;
     }
     // 1. Intercept attendance updates
@@ -1095,8 +1087,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   };
 
   const handleCreateTeam = async (name: string, pmId: string, devIds: string[]) => {
-    if (profile?.role !== 'super_admin' || !workspace?.id) {
-      notify("Unauthorized: Only super admins can create teams.", "error");
+    if (!hasCapability(profile?.role, 'manage_teams') || !workspace?.id) {
+      notify("Unauthorized: Insufficient permissions to create teams.", "error");
       return;
     }
 
@@ -1145,7 +1137,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   };
 
   const handleUpdateTeam = async (id: string, name: string, pmId: string, devIds: string[]) => {
-    if (profile?.role !== 'super_admin' || !workspace?.id) return;
+    if (!hasCapability(profile?.role, 'manage_teams') || !workspace?.id) return;
 
     const { data, error } = await supabase
       .from('teams')
@@ -1191,7 +1183,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   };
 
   const handleDeleteTeam = async (id: string) => {
-    if (profile?.role !== 'super_admin') return;
+    if (!hasCapability(profile?.role, 'manage_teams')) return;
 
     askConfirmation(
       "Archive Team",
@@ -1242,8 +1234,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       notify("Project designation is required.", "error");
       return;
     }
-    if (profile?.role === 'viewer') {
-      notify("Unauthorized: Viewers cannot create projects.", "error");
+    if (!hasCapability(profile?.role, 'manage_projects')) {
+      notify("Unauthorized: Insufficient permissions to create projects.", "error");
       return;
     }
     if (!workspace?.id) {
@@ -1491,164 +1483,190 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
             {/* ΓöÇΓöÇ CORE group ΓöÇΓöÇ */}
             <div className="space-y-0.5">
               <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Core</p>
-              <button
-                onClick={() => navigateTo('/overview')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname === '/overview' || window.location.pathname === '/'
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <LayoutDashboard className="w-[15px] h-[15px] shrink-0" />
-                Overview
-              </button>
-              <button
-                onClick={() => navigateTo('/workspace')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname === '/workspace'
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <Briefcase className="w-[15px] h-[15px] shrink-0" />
-                Projects
-              </button>
-              <button
-                onClick={() => navigateTo('/execution')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <ListTodo className="w-[15px] h-[15px] shrink-0" />
-                Task Board
-              </button>
-              <button
-                onClick={() => navigateTo('/execution/timeline')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.includes('timeline')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <Route className="w-[15px] h-[15px] shrink-0" />
-                Scheduling
-              </button>
+              {hasCapability(profile?.role, 'view_projects') && (
+                <button
+                  onClick={() => navigateTo('/overview')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname === '/overview' || window.location.pathname === '/'
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <LayoutDashboard className="w-[15px] h-[15px] shrink-0" />
+                  Overview
+                </button>
+              )}
+              {hasCapability(profile?.role, 'view_projects') && (
+                <button
+                  onClick={() => navigateTo('/workspace')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname === '/workspace'
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <Briefcase className="w-[15px] h-[15px] shrink-0" />
+                  Projects
+                </button>
+              )}
+              {hasCapability(profile?.role, 'view_tasks') && (
+                <button
+                  onClick={() => navigateTo('/execution')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <ListTodo className="w-[15px] h-[15px] shrink-0" />
+                  Task Board
+                </button>
+              )}
+              {hasCapability(profile?.role, 'view_scheduling') && (
+                <button
+                  onClick={() => navigateTo('/execution/timeline')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.includes('timeline')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <Route className="w-[15px] h-[15px] shrink-0" />
+                  Scheduling
+                </button>
+              )}
             </div>
 
             {/* ΓöÇΓöÇ INTELLIGENCE group ΓöÇΓöÇ */}
             <div className="space-y-0.5">
               <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Intelligence</p>
-              <button
-                onClick={() => navigateTo('/control/analytics')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.includes('analytics')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <BarChart3 className="w-[15px] h-[15px] shrink-0" />
-                Analytics
-              </button>
-              <button
-                onClick={() => { setDashboardTab('intelligence'); navigateTo('/workspace/decisions'); }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.includes('decisions')
-                    ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <BrainCircuit className="w-[15px] h-[15px] shrink-0" />
-                Decision Center
-              </button>
-              <button
-                onClick={() => navigateTo('/resources/work-logs')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.includes('work-logs')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <FileText className="w-[15px] h-[15px] shrink-0" />
-                Reports
-              </button>
+              {hasCapability(profile?.role, 'view_analytics') && (
+                <button
+                  onClick={() => navigateTo('/control/analytics')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.includes('analytics')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <BarChart3 className="w-[15px] h-[15px] shrink-0" />
+                  Analytics
+                </button>
+              )}
+              {hasCapability(profile?.role, 'view_decision_center') && (
+                <button
+                  onClick={() => { setDashboardTab('intelligence'); navigateTo('/workspace/decisions'); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.includes('decisions')
+                      ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <BrainCircuit className="w-[15px] h-[15px] shrink-0" />
+                  Decision Center
+                </button>
+              )}
+              {hasCapability(profile?.role, 'view_reports') && (
+                <button
+                  onClick={() => navigateTo('/resources/work-logs')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.includes('work-logs')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <FileText className="w-[15px] h-[15px] shrink-0" />
+                  Reports
+                </button>
+              )}
             </div>
 
             {/* ΓöÇΓöÇ OPERATIONS group ΓöÇΓöÇ */}
             <div className="space-y-0.5">
               <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Operations</p>
-              <button
-                onClick={() => navigateTo('/control/logistics')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.includes('logistics')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <Truck className="w-[15px] h-[15px] shrink-0" />
-                Logistics
-              </button>
-              <button
-                onClick={() => navigateTo('/resources/teams')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.includes('teams')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <Users className="w-[15px] h-[15px] shrink-0" />
-                Team Roster
-              </button>
-              <button
-                onClick={() => navigateTo('/workspace/portfolio')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.includes('portfolio')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <Building2 className="w-[15px] h-[15px] shrink-0" />
-                Project Sponsors
-              </button>
-              <button
-                onClick={() => navigateTo('/control/audit')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.includes('audit')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <Activity className="w-[15px] h-[15px] shrink-0" />
-                Audit Log
-              </button>
+              {hasCapability(profile?.role, 'manage_logistics') && (
+                <button
+                  onClick={() => navigateTo('/control/logistics')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.includes('logistics')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <Truck className="w-[15px] h-[15px] shrink-0" />
+                  Logistics
+                </button>
+              )}
+              {hasCapability(profile?.role, 'view_teams') && (
+                <button
+                  onClick={() => navigateTo('/resources/teams')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.includes('teams')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <Users className="w-[15px] h-[15px] shrink-0" />
+                  Team Roster
+                </button>
+              )}
+              {hasCapability(profile?.role, 'view_stakeholders') && (
+                <button
+                  onClick={() => navigateTo('/workspace/portfolio')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.includes('portfolio')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <Building2 className="w-[15px] h-[15px] shrink-0" />
+                  Project Sponsors
+                </button>
+              )}
+              {hasCapability(profile?.role, 'view_audit_log') && (
+                <button
+                  onClick={() => navigateTo('/control/audit')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.includes('audit')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <Activity className="w-[15px] h-[15px] shrink-0" />
+                  Audit Log
+                </button>
+              )}
             </div>
 
             {/* ΓöÇΓöÇ SYSTEM group ΓöÇΓöÇ */}
             <div className="space-y-0.5">
               <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">System</p>
-              <button
-                onClick={() => navigateTo('/control/settings')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname === '/control/settings' || window.location.pathname.startsWith('/control/settings/')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <Settings className="w-[15px] h-[15px] shrink-0" />
-                Settings
-              </button>
-              <button
-                onClick={() => navigateTo('/control/connections')}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  window.location.pathname.includes('connections')
-                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                }`}
-              >
-                <Link2 className="w-[15px] h-[15px] shrink-0" />
-                Integrations
-              </button>
+              {hasCapability(profile?.role, 'manage_settings') && (
+                <button
+                  onClick={() => navigateTo('/control/settings')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname === '/control/settings' || window.location.pathname.startsWith('/control/settings/')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <Settings className="w-[15px] h-[15px] shrink-0" />
+                  Settings
+                </button>
+              )}
+              {hasCapability(profile?.role, 'manage_integrations') && (
+                <button
+                  onClick={() => navigateTo('/control/connections')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                    window.location.pathname.includes('connections')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                      : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                  }`}
+                >
+                  <Link2 className="w-[15px] h-[15px] shrink-0" />
+                  Integrations
+                </button>
+              )}
             </div>
 
           </div>
@@ -1885,7 +1903,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
               </div>
 
               {/* New Project CTA */}
-              {profile && profile.role !== 'viewer' && (
+              {profile && hasCapability(profile.role, 'manage_projects') && (
                 <button
                   onClick={() => setIsAdding(true)}
                   className="flex items-center gap-1.5 text-[11px] font-medium text-text-primary h-7 px-3 rounded-md transition-all cursor-pointer shrink-0"
