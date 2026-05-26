@@ -898,8 +898,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] bg-[#0b0c12] border-r border-border-subtle z-30">
           {/* Sidebar Brand Logo */}
           <div className="flex items-center gap-3 h-16 px-5 border-b border-border-subtle shrink-0">
-            <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}>
-              <Layers className="w-3.5 h-3.5 text-text-primary" />
+            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0">
+              <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="font-semibold tracking-tight text-[13px] text-text-secondary">Resolve PM</h1>
@@ -1014,8 +1014,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               >
                 <div className="flex items-center justify-between h-16 px-6 border-b border-border shrink-0">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-primary-gradient rounded-lg flex items-center justify-center">
-                      <Layers className="w-4 h-4 text-text-primary" />
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                      <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
                     </div>
                     <div>
                       <h1 className="font-bold tracking-tight text-sm uppercase text-text-primary">Resolve PM</h1>
@@ -1104,9 +1104,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               >
                 <Menu className="w-4 h-4" />
               </button>
-              <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}>
-                <Layers className="w-3 h-3 text-text-primary" />
-              </div>
+              <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0">
+                  <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
+                </div>
             </div>
 
             {/* Top bar center: live breadcrumb / context label */}

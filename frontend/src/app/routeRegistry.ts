@@ -33,6 +33,7 @@ export const SIDEBAR_NAV: SidebarNavItem[] = [
   { id: 'teams', label: 'Team Roster', path: '/resources/teams', group: 'operations', capability: 'view_teams', disclosureTier: 'operational' },
   { id: 'portfolio', label: 'Project Sponsors', path: '/workspace/portfolio', group: 'operations', capability: 'view_stakeholders', disclosureTier: 'intelligence' },
   { id: 'audit', label: 'Audit Log', path: '/control/audit', group: 'operations', capability: 'view_audit_log', disclosureTier: 'platform' },
+  { id: 'identity', label: 'Admin & Identity', path: '/control/identity', group: 'system', capability: 'platform_governance', disclosureTier: 'platform' },
   { id: 'automations', label: 'Automations', path: '/control/automations', group: 'system', capability: 'manage_automations', disclosureTier: 'platform' },
   { id: 'mission-control', label: 'Mission Control', path: '/control/mission-control', group: 'system', capability: 'view_mission_control', disclosureTier: 'platform' },
   { id: 'settings', label: 'Settings', path: '/control/settings', group: 'system', capability: 'manage_settings', disclosureTier: 'operational' },

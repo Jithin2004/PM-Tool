@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(reconciliation.uninvitedProfile);
             setProfileResolved(true);
             setLoading(false);
-            return;
+            return reconciliation.uninvitedProfile;
           }
 
           if (reconciliation.userRow) {
@@ -170,14 +170,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(profileWithDesignation);
           lastSyncedUserIdRef.current = authUser.id;
           setProfileResolved(true);
+          return profileWithDesignation;
         } else {
           console.warn("[AuthContext syncProfile]: no user data returned, setting profile to null");
           setProfile(null);
           setProfileResolved(true);
+          return null;
         }
       } catch (err) {
         console.error("[AuthContext syncProfile CRITICAL ERROR]:", err);
         setProfileResolved(true);
+        return null;
       } finally {
         if (syncUserRef.current === authUser.id) {
           syncPromiseRef.current = null;
@@ -239,10 +242,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("[AuthContext initAuth getSession resolved]: session:", session ? "FOUND" : "NULL", "user:", session?.user?.email);
         setUser(session?.user || null);
         if (session?.user) {
-          await syncProfile(session.user);
+          const syncedProfile = await syncProfile(session.user);
           // After syncProfile completes, validate workspace context
-          if (profileRef.current) {
-            await validateUserWorkspace(session.user, profileRef.current);
+          if (syncedProfile) {
+            await validateUserWorkspace(session.user, syncedProfile);
           }
           console.log("[AuthContext] resolved: authenticated");
         } else {
@@ -302,9 +305,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Defer the syncProfile call to release the auth event lock and prevent deadlocks
             setTimeout(async () => {
               if (mounted) {
-                await syncProfile(session.user);
-                if (profileRef.current) {
-                  await validateUserWorkspace(session.user, profileRef.current);
+                const syncedProfile = await syncProfile(session.user);
+                if (syncedProfile) {
+                  await validateUserWorkspace(session.user, syncedProfile);
                 }
               }
             }, 0);
