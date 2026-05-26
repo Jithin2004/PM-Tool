@@ -154,13 +154,29 @@ export function ResolveRouter() {
     );
   }
 
+  useEffect(() => {
+    console.log("[ResolveRouter START] Current state:", {
+      pathname,
+      workspaceId: workspace?.id,
+      userId: user?.id,
+      role,
+      workspaceLoading,
+      authLoading,
+      profileResolved,
+      profileHydrating,
+      productKeyVerified: isProductKeyVerified()
+    });
+  }, [pathname, workspace, user, role, workspaceLoading, authLoading, profileResolved, profileHydrating]);
+
   if (pathname === '/login') {
+    console.log("[ResolveRouter] Routing to /login explicitly");
     return <Login />;
   }
 
   // ── Product key gate ──
 
   if (!isProductKeyVerified()) {
+    console.log("[ResolveRouter] Product key not verified, routing to /");
     return redirectTo('/');
   }
 

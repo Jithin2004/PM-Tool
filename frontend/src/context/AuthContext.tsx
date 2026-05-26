@@ -197,15 +197,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [needsWorkspaceSetup, setNeedsWorkspaceSetup] = useState(false);
 
   const validateUserWorkspace = useCallback(async (authUser: any, currentProfile: User | null) => {
-    if (!isSupabaseConfigured || !currentProfile) return;
+    console.log("[validateUserWorkspace START]:", { userId: authUser?.id, email: authUser?.email, currentProfile });
+    if (!isSupabaseConfigured || !currentProfile) {
+      console.log("[validateUserWorkspace SKIP]: not configured or no profile");
+      return;
+    }
     if (currentProfile.workspace_id) {
+      console.log("[validateUserWorkspace SUCCESS]: user already has workspace_id:", currentProfile.workspace_id);
       setNeedsWorkspaceSetup(false);
       return;
     }
 
+    console.log("[validateUserWorkspace] calling repairUserWorkspace...");
     const result = await repairUserWorkspace(authUser.id, authUser.email);
+    console.log("[validateUserWorkspace] repairUserWorkspace result:", result);
 
     if (result.repaired && result.workspaceId) {
+      console.log("[validateUserWorkspace] successfully repaired workspace!");
       await activityLogService.logWorkspaceRepaired(result.workspaceId, authUser.id, result.reason);
       const { data } = await supabase.from('users').select('*').eq('id', authUser.id).maybeSingle();
       if (data) {
@@ -213,6 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setNeedsWorkspaceSetup(false);
     } else if (result.reason === 'orphaned') {
+      console.warn("[validateUserWorkspace] user is ORPHANED. Redirecting to /login?error=uninvited");
       await activityLogService.logWorkspaceOrphanDetected(authUser.id, authUser.email);
       setNeedsWorkspaceSetup(false);
       window.dispatchEvent(new CustomEvent('notify-toast', {
@@ -220,6 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }));
       navigateTo('/login?error=uninvited', true);
     } else {
+      console.log("[validateUserWorkspace] needs_workspace_setup. Allowing access to setup page.");
       setNeedsWorkspaceSetup(true);
     }
   }, []);
