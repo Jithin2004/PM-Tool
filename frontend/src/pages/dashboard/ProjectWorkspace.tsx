@@ -11,8 +11,8 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { ProjectCard } from '../../components/project/ProjectCard';
 
 export function ProjectWorkspace() {
-  const { workspace, projects, user } = useWorkspace() as any;
-  const { tasks, profiles, activeTeams, setIsAdding, setSelectedProject } = useDashboard() as any;
+  const { workspace, projects = [], user } = useWorkspace() as any;
+  const { tasks = [], profiles = [], activeTeams = [], setIsAdding, setSelectedProject } = useDashboard() as any;
   const { profile } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
