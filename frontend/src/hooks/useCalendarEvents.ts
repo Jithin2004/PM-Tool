@@ -10,12 +10,19 @@ export function useCalendarEvents(workspaceId?: string) {
     if (!workspaceId || !isSupabaseConfigured) { setEvents([]); setLoading(false); return; }
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .order('start_date', { ascending: true });
-      if (!error && data) setEvents(data as CalendarEvent[]);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const url = new URL(`${import.meta.env.VITE_CALENDAR_API_URL}/events`);
+      url.searchParams.append('workspace_id', workspaceId);
+      url.searchParams.append('start_date', new Date(new Date().getFullYear() - 1, 0, 1).toISOString());
+      url.searchParams.append('end_date', new Date(new Date().getFullYear() + 2, 0, 1).toISOString());
+      
+      const res = await fetch(url.toString(), {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setEvents(data as CalendarEvent[]);
     } catch (e) {
       console.error('useCalendarEvents: fetch failed:', e);
     } finally {
@@ -103,16 +110,9 @@ export function useCalendarEvents(workspaceId?: string) {
 
   useEffect(() => {
     fetchEvents();
-    if (workspaceId && isSupabaseConfigured) {
-      const channel = createRealtimeChannel(`calendar-events-${workspaceId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events', filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
-          if (payload.eventType === 'INSERT') setEvents(prev => [payload.new as CalendarEvent, ...prev]);
-          else if (payload.eventType === 'UPDATE') setEvents(prev => prev.map(e => e.id === payload.new.id ? { ...e, ...payload.new } : e));
-          else if (payload.eventType === 'DELETE') setEvents(prev => prev.filter(e => e.id !== payload.old.id));
-        })
-        .subscribe();
-      return () => { supabase.removeChannel(channel); };
-    }
+    // Realtime replaced by backend polling if needed. For now, fetch on mount.
+    const interval = setInterval(fetchEvents, 60000); // refresh every minute
+    return () => clearInterval(interval);
   }, [fetchEvents, workspaceId]);
 
   return { events, loading, fetchEvents, getEventsInRange, getEffectiveCapacity };

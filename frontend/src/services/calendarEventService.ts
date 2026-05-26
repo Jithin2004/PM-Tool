@@ -141,223 +141,74 @@ export const calendarEventService = {
     event: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>,
     actorId?: string,
   ): Promise<{ event: CalendarEvent | null; created: boolean }> {
-    if (!isSupabaseConfigured) return { event: null, created: false };
-    
-    // Normalize provider keys
-    const sourceTable = event.source_table?.trim();
-    const sourceId = event.source_id?.trim();
-    
-    if (!sourceTable || !sourceId) {
-      const created = await this.createEvent(event, actorId);
-      return { event: created, created: !!created };
-    }
-
-    // 1. Reconciliation matching query & legacy-row restoration logic
-    // We order by deleted_at with nullsFirst to prioritize an active row.
-    // If no active row exists, we fallback to the newest deleted row.
-    const { data: existingRows, error: selectError } = await supabase
-      .from('calendar_events')
-      .select('*')
-      .eq('workspace_id', event.workspace_id)
-      .eq('source_table', sourceTable)
-      .eq('source_id', sourceId)
-      .order('deleted_at', { ascending: true, nullsFirst: true })
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (selectError) {
-      logServiceFailure('calendarEventService.upsertBySourceKey', event, selectError);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(`${import.meta.env.VITE_CALENDAR_API_URL}/events/upsert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(event)
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      return { event: data.event, created: data.created };
+    } catch (e) {
+      console.error('upsertBySourceKey error:', e);
       return { event: null, created: false };
     }
-
-    const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
-
-    const patch = {
-      event_type: event.event_type,
-      title: event.title,
-      start_date: event.start_date,
-      end_date: event.end_date,
-      capacity_impact: event.capacity_impact,
-      is_recurring: event.is_recurring ?? false,
-      recurrence_rule: event.recurrence_rule ?? null,
-      auto_generated: event.auto_generated ?? false,
-      timezone: event.timezone ?? 'UTC',
-      deleted_at: null,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (existing) {
-      // 2. PATCH vs INSERT branching
-      // Only patch if something actually changed to avoid DB writes on infinite sync loops
-      const hasChanges = 
-        existing.event_type !== patch.event_type ||
-        existing.title !== patch.title ||
-        existing.start_date !== patch.start_date ||
-        existing.end_date !== patch.end_date ||
-        existing.capacity_impact !== patch.capacity_impact ||
-        existing.is_recurring !== patch.is_recurring ||
-        existing.recurrence_rule !== patch.recurrence_rule ||
-        existing.deleted_at !== null;
-
-      if (!hasChanges) {
-        return { event: existing as CalendarEvent, created: false };
-      }
-
-      const { data: updated, error } = await supabase
-        .from('calendar_events')
-        .update(patch)
-        .eq('id', existing.id)
-        .select()
-        .single();
-
-      if (error) {
-        // If a unique constraint is hit during patch, another active row was spawned concurrently
-        if (error.code === '23505') {
-          return { event: existing as CalendarEvent, created: false };
-        }
-        logServiceFailure('calendarEventService.upsertBySourceKey', event, error);
-        return { event: null, created: false };
-      }
-
-      if (existing.deleted_at) {
-        await activityLogService.appendLog({
-          workspace_id: event.workspace_id,
-          actor_id: actorId,
-          action: 'calendar_event_updated',
-          metadata: { event_id: existing.id, restored: true, source_id: sourceId },
-        });
-      }
-
-      return { event: updated as CalendarEvent, created: false };
-    }
-
-    // Insert new row
-    const { data, error } = await supabase
-      .from('calendar_events')
-      .insert({ ...event, source_table: sourceTable, source_id: sourceId, ...patch })
-      .select()
-      .maybeSingle();
-
-    if (error) {
-      // 3. Partial unique index compatibility
-      // If we hit a unique constraint on insert, a concurrent process won the race
-      if (error.code === '23505') {
-        const { data: conflictRow } = await supabase
-          .from('calendar_events')
-          .select('*')
-          .eq('workspace_id', event.workspace_id)
-          .eq('source_table', sourceTable)
-          .eq('source_id', sourceId)
-          .is('deleted_at', null)
-          .limit(1)
-          .maybeSingle();
-          
-        if (conflictRow) {
-          return { event: conflictRow as CalendarEvent, created: false };
-        }
-      }
-      logServiceFailure('calendarEventService.upsertBySourceKey', event, error);
-      return { event: null, created: false };
-    }
-
-    if (!data) {
-      return { event: null, created: false };
-    }
-
-    const created = data as CalendarEvent;
-    await activityLogService.appendLog({
-      workspace_id: event.workspace_id,
-      actor_id: actorId,
-      action: 'calendar_event_created',
-      metadata: {
-        event_id: created.id,
-        event_type: event.event_type,
-        title: event.title,
-        source_table: sourceTable,
-        source_id: sourceId,
-      },
-    });
-    return { event: created, created: true };
   },
 
   async createEvent(
     event: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>,
     actorId?: string
   ): Promise<CalendarEvent | null> {
-    if (!isSupabaseConfigured) return null;
-
-    if (event.source_table && event.source_id) {
-      const { event: upserted } = await this.upsertBySourceKey(event, actorId);
-      return upserted;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(`${import.meta.env.VITE_CALENDAR_API_URL}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(event)
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return await res.json();
+    } catch (e) {
+      console.error('createEvent error:', e);
+      return null;
     }
-
-    const identityString = await sha256(
-      `${event.workspace_id}:${event.event_type}:${event.title}:${event.start_date}`,
-    );
-
-    const { data: existing } = await supabase
-      .from('calendar_events')
-      .select('id')
-      .eq('workspace_id', event.workspace_id)
-      .ilike('description', `%[ID:${identityString}]%`)
-      .is('deleted_at', null)
-      .maybeSingle();
-
-    if (existing) {
-      await this.updateEvent(existing.id, event, actorId);
-      return { ...event, id: existing.id } as CalendarEvent;
-    }
-
-    const eventToInsert = {
-      ...event,
-      description: event.description
-        ? `${event.description}\n\n[ID:${identityString}]`
-        : `[ID:${identityString}]`,
-    };
-
-    const { data, error } = await supabase
-      .from('calendar_events')
-      .insert(eventToInsert)
-      .select()
-      .single();
-
-    if (error) { logServiceFailure('calendarEventService.createEvent', event, error); return null; }
-    const created = data as CalendarEvent;
-    await activityLogService.appendLog({
-      workspace_id: event.workspace_id, actor_id: actorId,
-      action: 'calendar_event_created',
-      metadata: { event_id: created.id, event_type: event.event_type, title: event.title, start_date: event.start_date, end_date: event.end_date, capacity_impact: event.capacity_impact, is_recurring: !!event.is_recurring }
-    });
-    return created;
   },
 
   async updateEvent(id: string, updates: Partial<CalendarEvent>, actorId?: string): Promise<boolean> {
-    if (!isSupabaseConfigured) return false;
-    const { error } = await supabase
-      .from('calendar_events')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) { console.error('calendarEventService.updateEvent:', error); return false; }
-    if (updates.workspace_id) {
-      await activityLogService.appendLog({
-        workspace_id: updates.workspace_id, actor_id: actorId,
-        action: 'calendar_event_updated',
-        metadata: { event_id: id, updates: Object.keys(updates) }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(`${import.meta.env.VITE_CALENDAR_API_URL}/events/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(updates)
       });
+      if (!res.ok) throw new Error(await res.text());
+      return true;
+    } catch (e) {
+      console.error('updateEvent error:', e);
+      return false;
     }
-    return true;
   },
 
   async deleteEvent(id: string, workspaceId: string, actorId?: string): Promise<boolean> {
-    if (!isSupabaseConfigured) return false;
-    const { error } = await supabase.from('calendar_events').update({ deleted_at: new Date().toISOString() }).eq('id', id).is('deleted_at', null);
-    if (error) { console.error('calendarEventService.deleteEvent:', error); return false; }
-    await activityLogService.appendLog({
-      workspace_id: workspaceId, actor_id: actorId,
-      action: 'calendar_event_deleted',
-      metadata: { event_id: id }
-    });
-    return true;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(`${import.meta.env.VITE_CALENDAR_API_URL}/events/${id}`, {
+        method: 'DELETE',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return true;
+    } catch (e) {
+      console.error('deleteEvent error:', e);
+      return false;
+    }
   },
 
   async getEventsInRange(
@@ -366,20 +217,25 @@ export const calendarEventService = {
     endDate: string,
     eventType?: CalendarEventType
   ): Promise<CalendarEvent[]> {
-    if (!isSupabaseConfigured) return [];
-    let query = supabase
-      .from('calendar_events')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .is('deleted_at', null)
-      .lte('start_date', endDate)
-      .gte('end_date', startDate)
-      .order('start_date', { ascending: true });
-    if (eventType) query = query.eq('event_type', eventType);
-    const { data, error } = await query;
-    if (error) { console.error('calendarEventService.getEventsInRange:', error); return []; }
-    const events = (data || []) as CalendarEvent[];
-    return this.expandRecurringEventsInRange(events, startDate, endDate);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const url = new URL(`${import.meta.env.VITE_CALENDAR_API_URL}/events`);
+      url.searchParams.append('workspace_id', workspaceId);
+      url.searchParams.append('start_date', startDate);
+      url.searchParams.append('end_date', endDate);
+      if (eventType) url.searchParams.append('event_type', eventType);
+      
+      const res = await fetch(url.toString(), {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const events = await res.json() as CalendarEvent[];
+      return this.expandRecurringEventsInRange(events, startDate, endDate);
+    } catch (e) {
+      console.error('getEventsInRange error:', e);
+      return [];
+    }
   },
 
   async getEventsForUser(

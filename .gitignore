@@ -29,3 +29,7 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 *.swp
+
+# OAuth / Credentials
+client_secret_*.json
+*.apps.googleusercontent.com.json

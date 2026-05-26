@@ -125,6 +125,16 @@ export function CalendarIntelligencePanel() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={async () => {
+              const { data: { session } } = await supabase.auth.getSession();
+              const token = session?.access_token;
+              window.open(`${import.meta.env.VITE_CALENDAR_API_URL}/auth/google?token=${token}`, '_blank', 'width=600,height=700');
+            }}
+            className="px-4 py-2 bg-[#4285F4] hover:bg-[#3367D6] text-white rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
+          >
+            <CalendarDays className="w-4 h-4" /> Connect Google Calendar
+          </button>
           {canManageCalendar && (
             <button 
               onClick={() => setShowCreateForm(true)} 
