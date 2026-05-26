@@ -1552,9 +1552,9 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 Analytics
               </button>
               <button
-                onClick={() => { setDashboardTab('intelligence'); navigateTo('/workspace'); }}
+                onClick={() => { setDashboardTab('intelligence'); navigateTo('/workspace/decisions'); }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                  dashboardTab === 'intelligence' && window.location.pathname === '/workspace'
+                  window.location.pathname.includes('decisions')
                     ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
                     : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
                 }`}
@@ -1609,7 +1609,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 }`}
               >
                 <Building2 className="w-[15px] h-[15px] shrink-0" />
-                Stakeholders
+                Project Sponsors
               </button>
               <button
                 onClick={() => navigateTo('/control/audit')}

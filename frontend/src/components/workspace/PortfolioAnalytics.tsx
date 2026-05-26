@@ -217,7 +217,7 @@ export function PortfolioAnalytics() {
         <div className="space-y-6">
           <div className="border border-border bg-surface p-6">
             <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-6 pb-3 border-b border-border-subtle flex items-center gap-2">
-              <Users className="w-4 h-4 text-indigo-400" /> Stakeholder Directory
+              <Users className="w-4 h-4 text-indigo-400" /> Sponsor Directory
             </h3>
 
             <div className="space-y-4 max-h-[30rem] overflow-y-auto pr-1">

@@ -933,3 +933,40 @@ function AllocationView({ users, tasks }: any) {
     </div>
   );
 }
+
+function ListView({ tasks, projectMap, userMap, hasWriteAccess, onTransitionTask, onTaskClick }: any) {
+  return (
+    <div className="flex flex-col gap-2 h-full overflow-y-auto pr-2 scrollbar-thin">
+      <div className="grid grid-cols-12 gap-4 px-4 py-2 border-b border-border bg-surface-2 text-[10px] font-bold text-text-tertiary uppercase tracking-widest sticky top-0 z-10">
+        <div className="col-span-5">Task Name</div>
+        <div className="col-span-3">Project</div>
+        <div className="col-span-2">Assignee</div>
+        <div className="col-span-2">Status</div>
+      </div>
+      {tasks.length === 0 ? (
+        <div className="p-8 text-center text-text-quaternary text-xs font-mono uppercase">No tasks found</div>
+      ) : (
+        tasks.map((task: any) => {
+          const project = projectMap.get(task.project_id);
+          const assignee = task.assignee_id ? userMap.get(task.assignee_id) : null;
+          return (
+            <div 
+              key={task.id} 
+              onClick={() => onTaskClick(task)}
+              className="grid grid-cols-12 gap-4 px-4 py-3 border border-border-subtle bg-surface hover:bg-surface-3 transition-colors rounded-md cursor-pointer items-center"
+            >
+              <div className="col-span-5 text-[12px] font-medium text-text-primary truncate">{task.name}</div>
+              <div className="col-span-3 text-[11px] text-text-secondary truncate">{project?.name || 'No Project'}</div>
+              <div className="col-span-2 text-[11px] text-text-tertiary truncate">{assignee?.full_name || assignee?.email || 'Unassigned'}</div>
+              <div className="col-span-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${task.status === 'done' ? 'bg-signal-safe/10 text-signal-safe' : 'bg-surface-3 text-text-secondary'}`}>
+                  {task.status}
+                </span>
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
