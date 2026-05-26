@@ -142,20 +142,35 @@ export const calendarEventService = {
     actorId?: string,
   ): Promise<{ event: CalendarEvent | null; created: boolean }> {
     if (!isSupabaseConfigured) return { event: null, created: false };
-    if (!event.source_table || !event.source_id) {
+    
+    // Normalize provider keys
+    const sourceTable = event.source_table?.trim();
+    const sourceId = event.source_id?.trim();
+    
+    if (!sourceTable || !sourceId) {
       const created = await this.createEvent(event, actorId);
       return { event: created, created: !!created };
     }
 
-    const { data: existing } = await supabase
+    // 1. Reconciliation matching query & legacy-row restoration logic
+    // We order by deleted_at with nullsFirst to prioritize an active row.
+    // If no active row exists, we fallback to the newest deleted row.
+    const { data: existingRows, error: selectError } = await supabase
       .from('calendar_events')
       .select('*')
       .eq('workspace_id', event.workspace_id)
-      .eq('source_table', event.source_table)
-      .eq('source_id', event.source_id)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .eq('source_table', sourceTable)
+      .eq('source_id', sourceId)
+      .order('deleted_at', { ascending: true, nullsFirst: true })
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (selectError) {
+      logServiceFailure('calendarEventService.upsertBySourceKey', event, selectError);
+      return { event: null, created: false };
+    }
+
+    const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
 
     const patch = {
       event_type: event.event_type,
@@ -172,6 +187,22 @@ export const calendarEventService = {
     };
 
     if (existing) {
+      // 2. PATCH vs INSERT branching
+      // Only patch if something actually changed to avoid DB writes on infinite sync loops
+      const hasChanges = 
+        existing.event_type !== patch.event_type ||
+        existing.title !== patch.title ||
+        existing.start_date !== patch.start_date ||
+        existing.end_date !== patch.end_date ||
+        existing.capacity_impact !== patch.capacity_impact ||
+        existing.is_recurring !== patch.is_recurring ||
+        existing.recurrence_rule !== patch.recurrence_rule ||
+        existing.deleted_at !== null;
+
+      if (!hasChanges) {
+        return { event: existing as CalendarEvent, created: false };
+      }
+
       const { data: updated, error } = await supabase
         .from('calendar_events')
         .update(patch)
@@ -180,6 +211,10 @@ export const calendarEventService = {
         .single();
 
       if (error) {
+        // If a unique constraint is hit during patch, another active row was spawned concurrently
+        if (error.code === '23505') {
+          return { event: existing as CalendarEvent, created: false };
+        }
         logServiceFailure('calendarEventService.upsertBySourceKey', event, error);
         return { event: null, created: false };
       }
@@ -189,21 +224,43 @@ export const calendarEventService = {
           workspace_id: event.workspace_id,
           actor_id: actorId,
           action: 'calendar_event_updated',
-          metadata: { event_id: existing.id, restored: true, source_id: event.source_id },
+          metadata: { event_id: existing.id, restored: true, source_id: sourceId },
         });
       }
 
       return { event: updated as CalendarEvent, created: false };
     }
 
+    // Insert new row
     const { data, error } = await supabase
       .from('calendar_events')
-      .insert({ ...event, ...patch })
+      .insert({ ...event, source_table: sourceTable, source_id: sourceId, ...patch })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
+      // 3. Partial unique index compatibility
+      // If we hit a unique constraint on insert, a concurrent process won the race
+      if (error.code === '23505') {
+        const { data: conflictRow } = await supabase
+          .from('calendar_events')
+          .select('*')
+          .eq('workspace_id', event.workspace_id)
+          .eq('source_table', sourceTable)
+          .eq('source_id', sourceId)
+          .is('deleted_at', null)
+          .limit(1)
+          .maybeSingle();
+          
+        if (conflictRow) {
+          return { event: conflictRow as CalendarEvent, created: false };
+        }
+      }
       logServiceFailure('calendarEventService.upsertBySourceKey', event, error);
+      return { event: null, created: false };
+    }
+
+    if (!data) {
       return { event: null, created: false };
     }
 
@@ -216,8 +273,8 @@ export const calendarEventService = {
         event_id: created.id,
         event_type: event.event_type,
         title: event.title,
-        source_table: event.source_table,
-        source_id: event.source_id,
+        source_table: sourceTable,
+        source_id: sourceId,
       },
     });
     return { event: created, created: true };

@@ -75,7 +75,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const {
     raw,
     derived,
-    loading: operationalLoading,
+    loading,
     setProjects,
     refreshProjects,
     refreshAll,
@@ -281,7 +281,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   );
 
   const [isAdding, setIsAdding] = useState(false);
-  const loading = operationalLoading;
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isRosterOpen, setIsRosterOpen] = useState(false);

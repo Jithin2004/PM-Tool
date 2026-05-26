@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 import {
   fetchProjects,
   fetchWorkspaceProfiles,
@@ -16,19 +17,34 @@ export interface OperationalSnapshot {
   attendanceRows: AttendanceRow[];
   salaryRows: SalaryRow[];
   workspaceSettingsBlob: Record<string, unknown>;
+  serverMetrics?: {
+    deliveryConfidence: number;
+    executionPressure: number;
+    dailyFatigue: number;
+    riskForecast: number;
+  };
 }
 
 export async function refreshOperationalSnapshot(workspaceId: string): Promise<OperationalSnapshot> {
-  const [projects, profiles, teams, attendanceRows, salaryRows, workspaceSettingsBlob] = await Promise.all([
+  const [projects, profiles, teams, attendanceRows, salaryRows, workspaceSettingsBlob, serverMetricsResult] = await Promise.all([
     fetchProjects(workspaceId),
     fetchWorkspaceProfiles(workspaceId),
     fetchWorkspaceTeams(workspaceId),
     fetchWorkspaceAttendance(workspaceId),
     fetchWorkspaceSalaries(workspaceId),
     fetchWorkspaceSettingsBlob(workspaceId),
+    supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }),
   ]);
 
-  return { projects, profiles, teams, attendanceRows, salaryRows, workspaceSettingsBlob };
+  return { 
+    projects, 
+    profiles, 
+    teams, 
+    attendanceRows, 
+    salaryRows, 
+    workspaceSettingsBlob, 
+    serverMetrics: serverMetricsResult?.data || undefined 
+  };
 }
 
 export async function refreshOperationalPartial(
@@ -42,6 +58,7 @@ export async function refreshOperationalPartial(
     attendanceRows: () => fetchWorkspaceAttendance(workspaceId),
     salaryRows: () => fetchWorkspaceSalaries(workspaceId),
     workspaceSettingsBlob: () => fetchWorkspaceSettingsBlob(workspaceId),
+    serverMetrics: () => supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }).then(r => r.data),
   };
 
   const entries = await Promise.all(keys.map(async key => [key, await loaders[key]()]));

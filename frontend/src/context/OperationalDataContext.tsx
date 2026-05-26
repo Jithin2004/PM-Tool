@@ -64,6 +64,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const [attendanceRows, setAttendanceRows] = useState<OperationalRawState['attendanceRows']>([]);
   const [salaryRows, setSalaryRows] = useState<OperationalRawState['salaryRows']>([]);
   const [workspaceSettingsBlob, setWorkspaceSettingsBlob] = useState<Record<string, unknown>>({});
+  const [serverMetrics, setServerMetrics] = useState<{ deliveryConfidence: number; executionPressure: number; dailyFatigue: number; riskForecast: number; } | undefined>();
   const [loading, setLoading] = useState(true);
   const [dbNotifications, setDbNotifications] = useState<Record<string, unknown>[]>([]);
 
@@ -93,8 +94,9 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
         workspaceSettingsBlob,
         userId: profile?.id || '',
         userRole: profile?.role || 'viewer',
+        serverMetrics,
       }),
-    [projects, tasks, teams, profiles, attendanceRows, salaryRows, workspaceSettingsBlob, profile?.id, profile?.role],
+    [projects, tasks, teams, profiles, attendanceRows, salaryRows, workspaceSettingsBlob, profile?.id, profile?.role, serverMetrics],
   );
 
   const refreshAll = useCallback(async () => {
@@ -106,12 +108,14 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     setAttendanceRows(snapshot.attendanceRows);
     setSalaryRows(snapshot.salaryRows);
     setWorkspaceSettingsBlob(snapshot.workspaceSettingsBlob);
+    setServerMetrics(snapshot.serverMetrics);
   }, [workspace?.id]);
 
   const refreshProjects = useCallback(async () => {
     if (!workspace?.id) return;
-    const partial = await refreshOperationalPartial(workspace.id, ['projects']);
+    const partial = await refreshOperationalPartial(workspace.id, ['projects', 'serverMetrics']);
     if (partial.projects) setProjects(partial.projects);
+    if (partial.serverMetrics) setServerMetrics(partial.serverMetrics);
   }, [workspace?.id]);
 
   const fetchNotifications = useCallback(async () => {
