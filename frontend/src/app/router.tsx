@@ -179,13 +179,6 @@ export function ResolveRouter() {
     return <Login />;
   }
 
-  // ── Product key gate ──
-
-  if (!isProductKeyVerified()) {
-    console.log("[ResolveRouter] Product key not verified, routing to /");
-    return <Redirect to="/" />;
-  }
-
   if (workspaceLoading || authLoading || !profileResolved || profileHydrating) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] text-white">
@@ -195,6 +188,13 @@ export function ResolveRouter() {
         </div>
       </div>
     );
+  }
+
+  // ── Product key gate ──
+
+  if (!isProductKeyVerified() && !user) {
+    console.log("[ResolveRouter] Product key not verified, routing to /");
+    return <Redirect to="/" />;
   }
 
   if (!user) return <AuthPage />;

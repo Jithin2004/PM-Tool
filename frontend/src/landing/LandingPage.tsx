@@ -12,11 +12,11 @@ import { AIInsightsPreview } from './AIInsightsPreview';
 import { AccessGateway } from './AccessGateway';
 
 export function LandingPage() {
-  const verified = isProductKeyVerified();
+  const verified = isProductKeyVerified() || !!useAuth().user;
   const { user, profile, profileResolved, loading: authLoading } = useAuth();
   const { workspace, loading: workspaceLoading } = useWorkspace();
 
-  const authReady = verified && profileResolved && !authLoading;
+  const authReady = profileResolved && !authLoading;
   const hasSession = authReady && !!user && !!profile && profile.role !== 'uninvited';
 
   useEffect(() => {
