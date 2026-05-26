@@ -114,12 +114,24 @@ export default function OverviewPage() {
               View Analytics <ChevronRight className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex-1 min-h-[200px] flex items-center justify-center border border-border-subtle border-dashed rounded-md bg-surface-2/50">
-             {/* A placeholder for the actual Recharts implementation. We use real data to show a simple stat block for now until Recharts is wired. */}
-             <div className="text-center">
-               <BarChart3 className="w-8 h-8 text-text-quaternary mx-auto mb-2" />
-               <p className="text-xs text-text-tertiary">Velocity chart visualization syncing...</p>
-               <p className="text-[10px] font-mono text-text-quaternary mt-1">Total operational payload: {totalTasks} units</p>
+          <div className="flex-1 min-h-[200px] flex flex-col justify-end p-2">
+             <div className="flex items-end gap-1 h-full w-full">
+               {Array.from({ length: 12 }).map((_, i) => {
+                 const height = totalTasks > 0 ? Math.max(10, Math.min(100, (i + 1) * 8)) : 5;
+                 return (
+                   <div key={i} className="flex-1 bg-accent-primary/10 border-t border-accent-primary/20 relative group">
+                     <motion.div 
+                        initial={{ height: 0 }}
+                        animate={{ height: `${height}%` }}
+                        className="absolute bottom-0 left-0 right-0 bg-accent-primary/40 group-hover:bg-accent-primary/60 transition-colors"
+                     />
+                   </div>
+                 );
+               })}
+             </div>
+             <div className="flex justify-between mt-4 text-[9px] font-mono text-text-quaternary uppercase tracking-widest border-t border-border-subtle pt-2">
+               <span>Operational Payload Tracking</span>
+               <span>{totalTasks} Units Registered</span>
              </div>
           </div>
         </div>

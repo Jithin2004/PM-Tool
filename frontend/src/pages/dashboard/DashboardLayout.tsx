@@ -20,7 +20,6 @@ import { fetchNotifications, markAsRead as markNotifAsRead, sendNotification } f
 import { activityLogService } from '../../services/activityLogService';
 import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
 import { Login } from '../../components/auth/Login';
-import { Header } from '../../components/ui/Header';
 import CommandPalette from '../../components/command/CommandPalette';
 import CommandAnalytics from '../../components/command/CommandAnalytics';
 import { NotificationToast, Notification } from '../../components/ui/NotificationToast';
@@ -362,52 +361,37 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         {
           title: "Welcome, Commander!",
           description: "Step into your high-fidelity Resolve PM workspace. This guide will brief you on all administrative and scheduling tools at your disposal.",
-          actionBefore: () => navigateTo('/workspace')
+          actionBefore: () => navigateTo('/overview')
         },
         {
           title: "Tactical Navigation Console",
-          description: "In the Header, use the 'Admin Console' button to manage team structure, the 'Logistics Console' button to access payroll, and the 'Brain' button to restart this tour.",
-          actionBefore: () => navigateTo('/workspace')
+          description: "Use the Sidebar to access different operational layers. 'Operations' contains Logistics and Team Roster, while 'System' houses your global Settings.",
+          actionBefore: () => navigateTo('/overview')
         },
         {
           title: "AI-Powered Strategy Analytics",
-          description: "Click 'Analytics' or monitor stats at the top: Delivery Confidence (calculated from team load), daily Fatigue, and live AI Strategy Briefings.",
-          actionBefore: () => navigateTo('/workspace')
+          description: "Monitor 'Decision Center' for strategic recommendations or 'Analytics' for a deep dive into delivery velocity and team bandwidth.",
+          actionBefore: () => navigateTo('/workspace/decisions')
         },
         {
           title: "Project Workspace Grid",
-          description: "Your primary project workspace. Click the '+' button to add new projects. Switch between 'Active' and 'Completed' tabs. Click 'Details' on any card to view PERT estimates and enter audit logs.",
+          description: "Your primary project workspace. Click the 'New Project' button in the Top Bar to add initiatives. Click 'Details' on any card to view PERT estimates.",
           actionBefore: () => navigateTo('/workspace')
         },
         {
-          title: "Admin Console (Teams & Roles)",
-          description: "Here, click 'Configure Roles' to manage team titles. Click 'Create Team' to create a team, set their load limit, and assign developers.",
-          actionBefore: () => navigateTo('/control')
-        },
-        {
           title: "Logistics & Payroll Controls",
-          description: "Use the calendar to mark daily attendance. Change pay slabs under settings, calculate automated deductions, and click 'Export CSV' to download detailed payroll reports.",
-          actionBefore: () => navigateTo('/resources')
+          description: "Use the 'Logistics' page in the Operations group to mark daily attendance, calculate deductions, and export payroll reports.",
+          actionBefore: () => navigateTo('/control/logistics')
         },
         {
-          title: "Board",
-          description: "Explore the brand new premium, tactical Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
-          actionBefore: () => navigateTo('/execution')
-        },
-        {
-          title: "Visual Lenses & Task Lanes",
-          description: "Switch between 'Kanban' (Triage, In Flight, Validation) and 'Scrum' (Sprint Backlog, In Progress, Code Review, Merged) lenses instantly.",
-          actionBefore: () => navigateTo('/execution')
-        },
-        {
-          title: "Developer Activity Logs",
-          description: "Click on any task card to reveal the slide-out developer activity log drawer and inspect live historical records.",
+          title: "Task Board & Execution",
+          description: "Explore the premium, tactical Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
           actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Calibrated & Ready!",
-          description: "Use the Sun/Moon button next to the Help Tour button to switch themes. Your console is fully synced to Supabase. Enjoy allocation!",
-          actionBefore: () => navigateTo('/workspace')
+          description: "Your console is fully synced to the operational database. Use the Sun/Moon button in the Top Bar to switch themes anytime.",
+          actionBefore: () => navigateTo('/overview')
         }
       ];
     } else if (role === 'pm') {
@@ -418,44 +402,24 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           actionBefore: () => navigateTo('/workspace')
         },
         {
-          title: "PM Header Controls",
-          description: "Use the 'Logistics Console' button in the Header to access developers' attendance, and the glowing 'Brain' button to trigger this guide anytime.",
-          actionBefore: () => navigateTo('/workspace')
-        },
-        {
-          title: "Strategy Analytics",
-          description: "Track project counts, daily fatigue levels, and dynamic AI briefings to report overall delivery confidence to supervisors.",
-          actionBefore: () => navigateTo('/workspace')
+          title: "Tactical Control",
+          description: "Monitor team bandwidth and delivery confidence from the 'Decision Center'. Use 'Logistics' in the Sidebar to manage attendance.",
+          actionBefore: () => navigateTo('/workspace/decisions')
         },
         {
           title: "Project Management Grid",
-          description: "Click the '+' button to setup new project deadlines. Click 'Details' on any card to edit its proposed start, set priorities, and write change reason logs.",
+          description: "Click 'New Project' in the Top Bar to set deadlines. Click 'Details' on any card to edit its proposed start and write change logs.",
           actionBefore: () => navigateTo('/workspace')
         },
         {
-          title: "PM Logistics & Analytics",
-          description: "Click on the calendar dates to mark daily attendance. View net payout totals and click 'Export CSV' to generate reports for the ownership.",
-          actionBefore: () => navigateTo('/resources')
-        },
-        {
-          title: "Board",
-          description: "Track project task progression, visualize Kanban/Scrum lanes, and inspect live clock-synced ETAs.",
-          actionBefore: () => navigateTo('/execution')
-        },
-        {
-          title: "Visual Lenses & Task Lanes",
-          description: "Switch visual layouts between Kanban and Scrum on the fly to match your team's tactical coordination model.",
-          actionBefore: () => navigateTo('/execution')
-        },
-        {
-          title: "Developer Activity Logs",
-          description: "Open cards to monitor detailed, immutable logs showing developer status transitions and audits.",
+          title: "Execution Board",
+          description: "Track task progression, visualize Kanban/Scrum lanes, and inspect live clock-synced ETAs.",
           actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Calibrated & Ready!",
-          description: "Toggle themes with the Sun/Moon header button, coordinate with your assigned engineers, and keep timelines on target!",
-          actionBefore: () => navigateTo('/workspace')
+          description: "Keep timelines on target! Use the Top Bar utilities to switch themes or search across the platform.",
+          actionBefore: () => navigateTo('/overview')
         }
       ];
     } else {
@@ -464,42 +428,27 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         {
           title: "Welcome to Resolve PM!",
           description: "This workspace displays live engineering allocations, delivery schedules, and historical project logs in Read-Only mode.",
+          actionBefore: () => navigateTo('/overview')
+        },
+        {
+          title: "Strategy & Intelligence",
+          description: "Monitor project health and AI Strategy briefings right from the 'Decision Center'.",
+          actionBefore: () => navigateTo('/workspace/decisions')
+        },
+        {
+          title: "Project Grid",
+          description: "View active initiatives and their current status. Click 'Details' on cards to view PERT estimates and past audit logs.",
           actionBefore: () => navigateTo('/workspace')
         },
         {
-          title: "Viewing Header & Themes",
-          description: "Your session role is set to 'Viewer'. You can read stats, switch themes using the Sun/Moon button, or restart this guide using the 'Brain' button.",
-          actionBefore: () => navigateTo('/workspace')
-        },
-        {
-          title: "AI Analytics & Delivery Confidence",
-          description: "Monitor overall project stats, daily fatigue limits, and AI Strategy briefings right from the top dashboard analytics panel.",
-          actionBefore: () => navigateTo('/workspace')
-        },
-        {
-          title: "Project Grid & Search",
-          description: "Use the top Search bar to find projects. Toggle 'Active' or 'Completed' tabs to view archives. Click 'Details' on cards to view PERT estimates and past audit logs.",
-          actionBefore: () => navigateTo('/workspace')
-        },
-        {
-          title: "Board",
+          title: "Execution Board",
           description: "View real-time task progression lanes and live clock-synced ETAs in premium Read-Only mode.",
-          actionBefore: () => navigateTo('/execution')
-        },
-        {
-          title: "Visual Lenses & Task Lanes",
-          description: "Switch visual layouts between Kanban and Scrum lanes to inspect matching task distributions.",
-          actionBefore: () => navigateTo('/execution')
-        },
-        {
-          title: "Developer Activity Logs",
-          description: "Click on task cards to read historical compliance logs showing past status transitions.",
           actionBefore: () => navigateTo('/execution')
         },
         {
           title: "All Calibrated!",
           description: "You are fully up to date with live team activities. Keep track of project updates as developers coordinate tasks!",
-          actionBefore: () => navigateTo('/workspace')
+          actionBefore: () => navigateTo('/overview')
         }
       ];
     }
@@ -699,816 +648,6 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
   const activeTeams = useMemo(() => teams.filter(t => t.name !== 'SYSTEM_SETTINGS'), [teams]);
 
-  useEffect(() => {
-    const fetchWorkspaceSettings = async () => {
-      if (workspace?.id && isSupabaseConfigured) {
-        const { data, error } = await supabase
-          .from('workspace_settings')
-          .select('*')
-          .eq('workspace_id', workspace.id)
-          .maybeSingle();
-
-        if (!error && data) {
-          setWorkingTimeFrom(data.working_time_from);
-          setWorkingTimeTo(data.working_time_to);
-          setWorkspaceSettingsBlob(data.settings_blob || {});
-          return;
-        }
-      }
-      
-      // Fallback to legacy team.data
-      const settingsTeam = teams.find(t => t.name === 'SYSTEM_SETTINGS');
-      if (settingsTeam && settingsTeam.data) {
-        const settingsData = settingsTeam.data as any;
-        if (settingsData.workingTimeFrom) {
-          setWorkingTimeFrom(settingsData.workingTimeFrom);
-        } else if (typeof settingsData.workingHours === 'number') {
-          const hrs = settingsData.workingHours;
-          const endHour = Math.min(23, 9 + Math.floor(hrs));
-          const endMin = Math.round((hrs - Math.floor(hrs)) * 60);
-          setWorkingTimeFrom("09:00");
-          setWorkingTimeTo(`${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`);
-        }
-        if (settingsData.workingTimeTo) {
-          setWorkingTimeTo(settingsData.workingTimeTo);
-        }
-      }
-    };
-    
-    fetchWorkspaceSettings();
-  }, [teams, workspace?.id]);
-
-  const handleWorkingTimeChange = async (from: string, to: string) => {
-    if (!isWorkspaceOwner(profile?.id, workspace)) {
-      requireWorkspaceOwner(profile?.id, workspace, 'handleWorkingTimeChange');
-      notify("Only the workspace owner can update working hours.", "error");
-      return;
-    }
-    setWorkingTimeFrom(from);
-    setWorkingTimeTo(to);
-    
-    if (workspace?.id && isSupabaseConfigured) {
-      const { data: existing, error: findError } = await supabase
-        .from('workspace_settings')
-        .select('*')
-        .eq('workspace_id', workspace.id)
-        .maybeSingle();
-
-      if (!findError && existing) {
-        await supabase.from('workspace_settings').update({
-          working_time_from: from,
-          working_time_to: to,
-          working_hours: calculateHoursFromRange(from, to)
-        }).eq('workspace_id', workspace.id);
-      } else {
-        await supabase.from('workspace_settings').insert({
-          workspace_id: workspace.id,
-          working_time_from: from,
-          working_time_to: to,
-          working_hours: calculateHoursFromRange(from, to)
-        });
-      }
-    }
-  };
-
-  const handleSaveLogisticsData = async (updatedData: any) => {
-    if (!isWorkspaceOwner(profile?.id, workspace)) {
-      requireWorkspaceOwner(profile?.id, workspace, 'handleSaveLogisticsData');
-      notify("Only the workspace owner can modify logistics settings.", "error");
-      return;
-    }
-    // 1. Intercept attendance updates
-    if (updatedData.attendance) {
-      if (isSupabaseConfigured) {
-        try {
-          const oldAttendance = systemData.attendance || {};
-          const newAttendance = updatedData.attendance;
-
-          const promises: Promise<any>[] = [];
-          Object.keys(newAttendance).forEach(dateStr => {
-            const dayRecords = newAttendance[dateStr];
-            Object.keys(dayRecords).forEach(userId => {
-              const record = dayRecords[userId];
-              const oldRecord = oldAttendance[dateStr]?.[userId];
-              if (
-                !oldRecord ||
-                oldRecord.status !== record.status ||
-                oldRecord.leaveType !== record.leaveType ||
-                oldRecord.isPaidHalfDay !== record.isPaidHalfDay
-              ) {
-                // Changed record: upsert it!
-                promises.push((async () => {
-                  const { data: existing } = await supabase
-                    .from('attendance')
-                    .select('id')
-                    .eq('workspace_id', workspace.id)
-                    .eq('user_id', userId)
-                    .eq('date', dateStr)
-                    .maybeSingle();
-
-                  if (existing) {
-                    return supabase
-                      .from('attendance')
-                      .update({
-                        status: record.status,
-                        leave_type: record.leaveType || null,
-                        availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
-                      })
-                      .eq('id', existing.id);
-                  } else {
-                    return supabase
-                      .from('attendance')
-                      .insert({
-                        workspace_id: workspace.id,
-                        user_id: userId,
-                        date: dateStr,
-                        status: record.status,
-                        leave_type: record.leaveType || null,
-                        availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
-                      });
-                  }
-                })());
-              }
-            });
-          });
-
-          if (promises.length > 0) {
-            await Promise.all(promises);
-            await fetchAttendance();
-          }
-        } catch (e) {
-          console.error("Error saving attendance to dedicated table:", e);
-        }
-      }
-
-      // Save to local state immediately
-      const records: any[] = [];
-      Object.keys(updatedData.attendance).forEach(dateStr => {
-        const dayData = updatedData.attendance[dateStr];
-        Object.keys(dayData).forEach(userId => {
-          const record = dayData[userId];
-          records.push({
-            workspace_id: workspace.id,
-            user_id: userId,
-            date: dateStr,
-            status: record.status,
-            leave_type: record.leaveType || null,
-            is_paid_half_day: !!record.isPaidHalfDay,
-            availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
-          });
-        });
-      });
-      setAttendanceRows(records);
-      delete updatedData.attendance;
-    }
-
-    // 2. Intercept salaries updates
-    if (updatedData.salaries) {
-      if (isSupabaseConfigured) {
-        try {
-          const oldSalaries = systemData.salaries || {};
-          const newSalaries = updatedData.salaries;
-
-          const promises: Promise<any>[] = [];
-          Object.keys(newSalaries).forEach(userId => {
-            const salary = newSalaries[userId];
-            const oldSalary = oldSalaries[userId];
-            if (oldSalary !== salary) {
-              promises.push((async () => {
-                const { data: existing } = await supabase
-                  .from('salaries')
-                  .select('id')
-                  .eq('user_id', userId)
-                  .maybeSingle();
-
-                if (existing) {
-                  return supabase
-                    .from('salaries')
-                    .update({ base_salary: salary })
-                    .eq('id', existing.id);
-                } else {
-                  return supabase
-                    .from('salaries')
-                    .insert({ workspace_id: workspace.id, user_id: userId, base_salary: salary });
-                }
-              })());
-            }
-          });
-
-          if (promises.length > 0) {
-            await Promise.all(promises);
-            await fetchSalaries();
-          }
-        } catch (e) {
-          console.error("Error saving salaries to dedicated table:", e);
-        }
-      }
-
-      // Save to local state immediately
-      const records = Object.keys(updatedData.salaries).map(userId => ({
-        user_id: userId,
-        base_salary: Number(updatedData.salaries[userId]) || 3000
-      }));
-      setSalariesRows(records);
-      delete updatedData.salaries;
-    }
-
-    // Save remainder to localStorage immediately as a fast fallback
-    localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(updatedData));
-
-    // Update in-memory state immediately so responsiveness is instantaneous
-    setWorkspaceSettingsBlob((prev: any) => ({ ...prev, ...updatedData }));
-    
-    // Also update legacy fallback in memory
-    setTeams(prevTeams => {
-      const settingsTeam = prevTeams.find(t => t.name === 'SYSTEM_SETTINGS');
-      if (settingsTeam) {
-        return prevTeams.map(t => t.name === 'SYSTEM_SETTINGS' ? { ...t, data: { ...t.data, ...updatedData } } : t);
-      } else {
-        return [...prevTeams, { id: 'SYSTEM_SETTINGS', workspace_id: workspace?.id || '', name: 'SYSTEM_SETTINGS', data: updatedData, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }];
-      }
-    });
-
-    if (workspace?.id && isSupabaseConfigured) {
-      // Sync to workspace_settings
-      const { data: existingWorkspaceSettings, error: findWorkspaceError } = await supabase
-        .from('workspace_settings')
-        .select('*')
-        .eq('workspace_id', workspace.id)
-        .maybeSingle();
-
-      if (!findWorkspaceError && existingWorkspaceSettings) {
-        const mergedWorkspaceData = {
-          ...existingWorkspaceSettings.settings_blob,
-          ...updatedData
-        };
-        const { error } = await supabase
-          .from('workspace_settings')
-          .update({ settings_blob: mergedWorkspaceData })
-          .eq('workspace_id', workspace.id);
-        if (!error) {
-          notify("Logistics analytics synchronized.", "success");
-        } else {
-          console.warn("Supabase logistics sync failed on workspace_settings:", error);
-        }
-      } else {
-        const { error } = await supabase
-          .from('workspace_settings')
-          .insert({ workspace_id: workspace.id, settings_blob: updatedData });
-        if (!error) {
-          notify("Logistics analytics initialized.", "success");
-        } else {
-          console.warn("Supabase logistics init failed on workspace_settings:", error);
-        }
-      }
-    }
-  };
-
-
-  // fetchProfiles is now called globally on init to support ProjectCard lookups
-
-  const fetchProjects = async () => {
-    if (!workspace?.id) return;
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('workspace_id', workspace.id)
-      .order('created_at', { ascending: false });
-
-    if (!error && data) setProjects(data);
-  };
-
-  const invalidateAll = async () => {
-    await Promise.all([
-      fetchProjects(),
-      workspace?.id ? fetchProfiles() : Promise.resolve(),
-    ]);
-  };
-
-  const fetchProfiles = async () => {
-    if (!workspace?.id) return;
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('workspace_id', workspace.id)
-      .order('created_at', { ascending: true });
-
-    if (!error && data) {
-      setProfiles(data);
-    } else {
-      const { data: fallback, error: fallbackErr } = await supabase
-        .from('profiles')
-        .select('*');
-      if (!fallbackErr && fallback) setProfiles(fallback as any);
-    }
-  };
-
-  const fetchAttendance = async () => {
-    if (!isSupabaseConfigured || !workspace?.id) return;
-    try {
-      const { data, error } = await supabase
-        .from('attendance')
-        .select('*')
-        .eq('workspace_id', workspace.id);
-      if (!error && data) {
-        setAttendanceRows(data);
-      }
-    } catch (err) {
-      console.warn("Could not fetch from attendance table:", err);
-    }
-  };
-
-  const fetchSalaries = async () => {
-    if (!isSupabaseConfigured || !workspace?.id) return;
-    try {
-      const { data, error } = await supabase
-        .from('salaries')
-        .select('*')
-        .eq('workspace_id', workspace.id);
-      if (!error && data) {
-        setSalariesRows(data);
-      }
-    } catch (err) {
-      console.warn("Could not fetch from salaries table:", err);
-    }
-  };
-
-
-  const fetchTeams = async () => {
-    if (!workspace?.id) return;
-    const { data: teamsData, error: teamsError } = await supabase
-      .from('teams')
-      .select('*')
-      .eq('workspace_id', workspace.id)
-      .order('created_at', { ascending: false });
-
-    if (!teamsError && teamsData) {
-      // Fetch canonical team_members table
-      const { data: membersData, error: membersError } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('workspace_id', workspace.id);
-
-      const membersList = (!membersError && membersData) ? membersData : [];
-
-      // Reconstruct or auto-migrate team.data for UI components
-      const enrichedTeams = await Promise.all(teamsData.map(async (team) => {
-        if (team.name === 'SYSTEM_SETTINGS') {
-          if (team.data) {
-            localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(team.data));
-          }
-          return team;
-        }
-
-        const teamMembers = membersList.filter(m => m.team_id === team.id);
-        let pmId = teamMembers.find(m => m.member_role === 'pm')?.user_id;
-        let devIds = teamMembers.filter(m => m.member_role === 'developer').map(m => m.user_id);
-
-        // Auto-migration compatibility layer:
-        const parsedLegacyData = typeof team.data === 'string' ? JSON.parse(team.data) : team.data;
-        if (teamMembers.length === 0 && parsedLegacyData && (parsedLegacyData.pm_id || parsedLegacyData.developer_ids)) {
-          console.log(`Auto-migrating legacy team.data for team ${team.name} into canonical team_members table...`);
-          const inserts: any[] = [];
-          if (parsedLegacyData.pm_id) {
-            inserts.push({
-              workspace_id: workspace.id,
-              team_id: team.id,
-              user_id: parsedLegacyData.pm_id,
-              member_role: 'pm'
-            });
-            pmId = parsedLegacyData.pm_id;
-          }
-          if (parsedLegacyData.developer_ids && Array.isArray(parsedLegacyData.developer_ids)) {
-            parsedLegacyData.developer_ids.forEach((dId: string) => {
-              inserts.push({
-                workspace_id: workspace.id,
-                team_id: team.id,
-                user_id: dId,
-                member_role: 'developer'
-              });
-            });
-            devIds = parsedLegacyData.developer_ids;
-          }
-          if (inserts.length > 0) {
-            await supabase.from('team_members').insert(inserts);
-          }
-        }
-
-        return {
-          ...team,
-          data: {
-            pm_id: pmId || '',
-            developer_ids: devIds || []
-          }
-        };
-      }));
-
-      setTeams(enrichedTeams);
-    } else {
-      // Fallback: check localStorage for SYSTEM_SETTINGS
-      const localSettings = localStorage.getItem('SYSTEM_SETTINGS');
-      if (localSettings) {
-        const parsedSettings = JSON.parse(localSettings);
-        setTeams([{ id: 'SYSTEM_SETTINGS', workspace_id: workspace?.id || '', name: 'SYSTEM_SETTINGS', data: parsedSettings, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
-      }
-    }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    setProjects([]);
-    setTeams([]);
-    setProfiles([]);
-  };
-
-  const handleUpdateRole = async (id: string, role: UserRole) => {
-    if (profile?.role !== 'super_admin') return;
-
-    const targetUser = profiles.find(p => p.id === id);
-    const targetName = targetUser?.full_name || targetUser?.email || "this user";
-
-    askConfirmation(
-      "Confirm Role Change",
-      `Are you sure you want to change the role of ${targetName} to ${role.replace('_', ' ').toUpperCase()}?`,
-      async () => {
-        const success = await updateRole(id, role as any);
-
-        if (success) {
-          notify(`Role updated to ${role.replace('_', ' ').toUpperCase()} for ${targetName}`, "success");
-          fetchProfiles();
-        } else {
-          notify("Failed to update role.", "error");
-        }
-      }
-    );
-  };
-
-  const handleUpdateProjectMetadata = async (
-    id: string,
-    updates: Partial<Project>,
-    changeLog?: { changes: string; reason: string; authorName: string; authorRole: string }
-  ) => {
-    // Store change log directly in dedicated database table
-    if (changeLog && isSupabaseConfigured) {
-      try {
-        const { data: latestLog, error: latestError } = await supabase
-          .from('change_logs')
-          .select('hash')
-          .eq('project_id', id)
-          .order('timestamp', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const previousHash = (!latestError && latestLog?.hash) ? latestLog.hash : 'GENESIS_BLOCK';
-        const timestamp = new Date().toISOString();
-        const message = `${id}${timestamp}${changeLog.changes}${changeLog.reason}${changeLog.authorName}${changeLog.authorRole}${previousHash}`;
-        const newHash = await sha256(message);
-
-        await supabase.from('change_logs').insert({
-          project_id: id,
-          changes: changeLog.changes,
-          reason: changeLog.reason,
-          author_name: changeLog.authorName,
-          author_role: changeLog.authorRole,
-          timestamp: timestamp,
-          previous_hash: previousHash,
-          hash: newHash
-        });
-        console.log("Successfully saved change log in dedicated table.");
-      } catch (e) {
-        console.error("Failed to save change log in dedicated table:", e);
-      }
-    }
-
-    // Relieve team and snapshot history upon completion
-    if (updates.status === 'deployed') {
-      const project = projects.find(p => p.id === id);
-      const team = teams.find(t => t.id === (updates.team_id || project?.team_id));
-      if (team) {
-        const historyTag = `TEAM:${team.name}`;
-        const currentTags = updates.tags || project?.tags || [];
-        updates.tags = [...currentTags.filter(t => !t.startsWith('TEAM:')), historyTag, 'FINALIZED'];
-        (updates as any).team_id = null;
-      }
-    }
-
-    const { data, error } = await supabase
-      .from('projects')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (!error && data) {
-      setProjects(projects.map(p => p.id === id ? data : p));
-      notify("Project details saved.", "success");
-      fetchProjects();
-    } else {
-      console.error("Metadata update failed:", error);
-      notify(`Sync failed: ${error?.message || "Unknown error"}`, "error");
-    }
-  };
-
-
-  const handleUpdateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return;
-    const success = await updateProfile(updates);
-
-    if (success) {
-      notify("Identity parameters updated.", "success");
-    } else {
-      notify("Sync failed.", "error");
-    }
-  };
-
-  const handleCreateTeam = async (name: string, pmId: string, devIds: string[]) => {
-    if (profile?.role !== 'super_admin' || !workspace?.id) {
-      notify("Unauthorized: Only super admins can create teams.", "error");
-      return;
-    }
-
-    const newTeam = {
-      workspace_id: workspace.id,
-      name,
-      capacity_hours_per_week: 40 * devIds.length
-    };
-
-    const { data, error } = await supabase
-      .from('teams')
-      .insert(newTeam)
-      .select()
-      .single();
-
-    if (!error && data) {
-      const memberInserts: any[] = [];
-      if (pmId) {
-        memberInserts.push({
-          workspace_id: workspace.id,
-          team_id: data.id,
-          user_id: pmId,
-          member_role: 'pm'
-        });
-      }
-      devIds.forEach(devId => {
-        memberInserts.push({
-          workspace_id: workspace.id,
-          team_id: data.id,
-          user_id: devId,
-          member_role: 'developer'
-        });
-      });
-
-      if (memberInserts.length > 0) {
-        await supabase.from('team_members').insert(memberInserts);
-      }
-
-      notify("Team successfully initialized!", "success");
-      fetchTeams();
-      fetchProfiles();
-    } else {
-      console.error("Team creation failed:", error);
-      notify(`Team creation failed: ${error?.message || "Unknown error"}`, "error");
-    }
-  };
-
-  const handleUpdateTeam = async (id: string, name: string, pmId: string, devIds: string[]) => {
-    if (profile?.role !== 'super_admin' || !workspace?.id) return;
-
-    const { data, error } = await supabase
-      .from('teams')
-      .update({
-        name,
-        capacity_hours_per_week: 40 * devIds.length
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (!error && data) {
-      await supabase.from('team_members').delete().eq('team_id', id);
-
-      const memberInserts: any[] = [];
-      if (pmId) {
-        memberInserts.push({
-          workspace_id: workspace.id,
-          team_id: id,
-          user_id: pmId,
-          member_role: 'pm'
-        });
-      }
-      devIds.forEach(devId => {
-        memberInserts.push({
-          workspace_id: workspace.id,
-          team_id: id,
-          user_id: devId,
-          member_role: 'developer'
-        });
-      });
-
-      if (memberInserts.length > 0) {
-        await supabase.from('team_members').insert(memberInserts);
-      }
-
-      notify("Team configuration updated.", "success");
-      fetchTeams();
-    } else {
-      console.error("Team update failed:", error);
-      notify(`Team update failed: ${error?.message || "Unknown error"}`, "error");
-    }
-  };
-
-  const handleDeleteTeam = async (id: string) => {
-    if (profile?.role !== 'super_admin') return;
-
-    askConfirmation(
-      "Archive Team",
-      "Are you sure you want to archive this team? All project associations will be lost.",
-      async () => {
-        const { error } = await supabase
-          .from('teams')
-          .delete()
-          .eq('id', id);
-
-        if (!error) {
-          notify("Team archived successfully.", "success");
-          fetchTeams();
-        } else {
-          console.error("Team deletion failed:", error);
-          notify(`Team deletion failed: ${error.message}`, "error");
-        }
-      }
-    );
-  };
-
-  const handleDeleteProject = async (id: string, reason: string) => {
-    askConfirmation(
-      "Archive Project",
-      `Are you sure you want to archive this project? Reason: ${reason}`,
-      async () => {
-        const { error } = await supabase
-          .from('projects')
-          .delete()
-          .eq('id', id);
-
-        if (!error) {
-          setProjects(projects.filter(p => p.id !== id));
-          notify("Project archived successfully.", "success");
-          setSelectedProject(null);
-          fetchProjects();
-        } else {
-          console.error("Project archive failed:", error);
-          notify(`Deletion failed: ${error.message}`, "error");
-        }
-      }
-    );
-  };
-
-  const handleCreateProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) {
-      notify("Project designation is required.", "error");
-      return;
-    }
-    if (profile?.role === 'viewer') {
-      notify("Unauthorized: Viewers cannot create projects.", "error");
-      return;
-    }
-    if (!workspace?.id) {
-      notify("No active workspace selected.", "error");
-      return;
-    }
-
-    if (!proposedStartDate) {
-      notify("Proposed Start Date is required.", "error");
-      return;
-    }
-    if (!newClientDeadline) {
-      notify("Client Deadline is required.", "error");
-      return;
-    }
-    if (new Date(proposedStartDate) > new Date(newClientDeadline)) {
-      notify("Client Deadline cannot be before the Proposed Start Date.", "error");
-      return;
-    }
-
-    if (!pertBest || !pertLikely || !pertWorst) {
-      notify("PERT estimates (Best, Likely, and Worst) are mandatory.", "error");
-      return;
-    }
-
-    const bestNum = Number(pertBest);
-    const likelyNum = Number(pertLikely);
-    const worstNum = Number(pertWorst);
-
-    if (isNaN(bestNum) || bestNum <= 0 || isNaN(likelyNum) || likelyNum <= 0 || isNaN(worstNum) || worstNum <= 0) {
-      notify("PERT estimates must be positive numbers.", "error");
-      return;
-    }
-
-    if (bestNum > likelyNum || likelyNum > worstNum) {
-      notify("PERT bounds violation: Best Case ≤ Likely Case ≤ Worst Case.", "error");
-      return;
-    }
-
-    const newProject = {
-      workspace_id: workspace.id,
-      name: newName,
-      status: 'planning',
-      priority: newPriority,
-      execution_mode: newExecutionMode,
-      efficiency: 0.8,
-      pert_best: bestNum,
-      pert_likely: likelyNum,
-      pert_worst: worstNum,
-      proposed_start_date: proposedStartDate,
-      client_deadline: newClientDeadline,
-      team_id: newTeamId || null,
-      owner_id: user.id,
-      tags: ['NEW']
-    };
-
-    if (typeof window !== 'undefined') console.debug('[pipeline] createProject:start', { name: newName });
-
-    const { data, error } = await supabase
-      .from('projects')
-      .insert(newProject)
-      .select()
-      .single();
-
-    if (!error && data) {
-      if (typeof window !== 'undefined') console.debug('[pipeline] createProject:success', { id: data.id });
-
-      setProjects(prev => [data as import('../../types').Project, ...prev]);
-      setIsAdding(false);
-      setNewName('');
-      setPertBest('');
-      setPertLikely('');
-      setPertWorst('');
-      setProposedStartDate('');
-      setNewClientDeadline('');
-      setNewPriority('medium');
-      setNewTeamId('');
-      notify("Project created successfully.", "success");
-
-      if (typeof window !== 'undefined') console.debug('[pipeline] projectVisible:confirmed', { id: data.id, name: data.name });
-
-      // Immutable log (fire-and-forget, never blocks visibility)
-      activityLogService.appendLog({
-        workspace_id: workspace.id,
-        actor_id: user.id,
-        action: 'project_created',
-        metadata: { project_id: data.id, name: data.name, execution_mode: data.execution_mode }
-      }).catch(() => {});
-
-      // Open guided setup for execution mode
-      if (data?.execution_mode) {
-        window.dispatchEvent(new CustomEvent('start-project-setup', { detail: { projectId: data.id, executionMode: data.execution_mode } }));
-      }
-    } else {
-      console.error("[pipeline] createProject:error", error);
-      notify(`System Error: ${error?.message || "Failed to create project"}`, "error");
-    }
-  };
-
-  const updateExecutionMode = async (projectId: string, mode: import('../../types').ExecutionMode) => {
-    if (!workspace?.id || !isSupabaseConfigured) return;
-    const { error } = await supabase
-      .from('projects')
-      .update({ execution_mode: mode, updated_at: new Date().toISOString() })
-      .eq('id', projectId);
-    if (!error) {
-      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, execution_mode: mode } : p));
-      notify(`Project execution mode updated to ${mode}`, 'success');
-    } else {
-      notify(`Failed to update execution mode: ${error.message}`, 'error');
-    }
-  };
-
-  // Promote a task from Board into the Project creation form
-  const handlePromoteTaskToAsset = (taskData: { title: string; description: string; projectId: string }) => {
-    setNewName(taskData.title);
-    navigateTo('/workspace');
-    setIsAdding(true);
-    notify(`Task "${taskData.title}" elevated — fill in PERT estimates to register as a project.`, 'info');
-  };
-
-  const getSuggestedTeam = () => {
-    if (activeTeams.length === 0) return null;
-    const stats = activeTeams.map(t => {
-      const teamProjects = projects.filter(p => p.team_id === t.id && p.status !== 'deployed');
-      const load = teamProjects.reduce((acc, p) => acc + calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst), 0);
-      const eff = teamProjects.length > 0 ? teamProjects.reduce((acc, p) => acc + p.efficiency, 0) / teamProjects.length : 1;
-      return { id: t.id, name: t.name, load, eff };
-    });
-    return stats.sort((a, b) => a.load !== b.load ? a.load - b.load : b.eff - a.eff)[0];
-  };
-
-  const filteredProjects = projects.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTab = dashboardTab === 'active' ? p.status !== 'deployed' : p.status === 'deployed';
-    return matchesSearch && matchesTab;
-  });
-
   const calculateDynamicStats = (projList: Project[]) => {
     const activeProjects = projList.filter(p => p.status !== 'deployed');
     const activeWorkflows = activeProjects.filter(p => p.execution_mode !== 'SCRUM');
@@ -1516,7 +655,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     activeProjects.forEach(p => {
       const expected = calculateExpectedTime(p.pert_best, p.pert_likely, p.pert_worst);
       if (p.pert_worst > expected) {
-        totalDecayHours += (p.pert_worst - expected); // Removed *24 multiplier, PERT is already in hours
+        totalDecayHours += (p.pert_worst - expected);
       }
     });
 
@@ -1545,6 +684,163 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         />
         <p className="font-mono text-sm uppercase tracking-wide text-text-secondary">Initializing Core Engine...</p>
       </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  return (
+    <DashboardProvider value={{ 
+      projects: projectsWithAggregatedPERT, 
+      tasks: visibleTasks,
+      dependencies,
+      profiles, 
+      teams, 
+      sprints: [],
+      epics: [],
+      milestones: [],
+      approvals: [],
+      meetings: [],
+      userCustomRoles, 
+      customRoles, 
+      systemData,
+      stats, 
+      searchTerm, 
+      setSearchTerm, 
+      dashboardTab, 
+      setDashboardTab, 
+      isAdding, 
+      setIsAdding, 
+      handleCreateTeam, 
+      handleUpdateTeam, 
+      handleDeleteTeam, 
+      handleUpdateRole, 
+      handleSaveLogisticsData, 
+      handleUpdateProjectMetadata, 
+      handlePromoteTaskToAsset, 
+      askConfirmation, 
+      notify, 
+      fetchProjects,
+      invalidateAll,
+      addDependency,
+      removeDependency,
+      updateTaskDates,
+      updateTask,
+      notifications: dbNotifications,
+      markAsRead: handleMarkAsRead,
+      workingHoursPerDay,
+      tilesPerRow,
+      setIsRosterOpen,
+      setSelectedProject,
+      updateExecutionMode
+    }}>
+      <div className={`min-h-screen bg-bg font-sans text-text-primary selection:bg-accent-primary selection:text-text-primary transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}>
+        
+        {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] bg-[#0b0c12] border-r border-border-subtle z-30">
+          {/* Sidebar Brand Logo */}
+          <div className="flex items-center gap-3 h-16 px-5 border-b border-border-subtle shrink-0">
+            <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-primary-gradient">
+              <Layers className="w-3.5 h-3.5 text-text-primary" />
+            </div>
+            <div>
+              <h1 className="font-semibold tracking-tight text-[13px] text-text-secondary">Resolve PM</h1>
+              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-wide">Enterprise Platform</p>
+            </div>
+          </div>
+
+          {/* Sidebar Menu Groups — Enterprise Navigation Architecture */}
+          <div className="flex-1 overflow-y-auto px-3 py-5 space-y-6" style={{scrollbarWidth: 'none'}}>
+
+            {/* ── CORE group ── */}
+            <div className="space-y-0.5">
+              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Core</p>
+              <button
+                onClick={() => navigateTo('/overview')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname === '/overview' || window.location.pathname === '/'
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                }`}
+              >
+                <LayoutDashboard className="w-[15px] h-[15px] shrink-0" />
+                Overview
+              </button>
+              <button
+                onClick={() => navigateTo('/workspace')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname === '/workspace'
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                }`}
+              >
+                <Briefcase className="w-[15px] h-[15px] shrink-0" />
+                Projects
+              </button>
+              <button
+                onClick={() => navigateTo('/execution')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.startsWith('/execution') && !window.location.pathname.includes('timeline') && !window.location.pathname.includes('sprints') && !window.location.pathname.includes('gantt')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                }`}
+              >
+                <ListTodo className="w-[15px] h-[15px] shrink-0" />
+                Task Board
+              </button>
+              <button
+                onClick={() => navigateTo('/execution/timeline')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('timeline')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                }`}
+              >
+                <Route className="w-[15px] h-[15px] shrink-0" />
+                Scheduling
+              </button>
+            </div>
+
+            {/* ── INTELLIGENCE group ── */}
+            <div className="space-y-0.5">
+              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">Intelligence</p>
+              <button
+                onClick={() => navigateTo('/control/analytics')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('analytics')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                }`}
+              >
+                <BarChart3 className="w-[15px] h-[15px] shrink-0" />
+                Analytics
+              </button>
+              <button
+                onClick={() => navigateTo('/workspace/decisions')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname === '/workspace/decisions'
+                    ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                }`}
+              >
+                <BrainCircuit className="w-[15px] h-[15px] shrink-0" />
+                Decision Center
+              </button>
+              <button
+                onClick={() => navigateTo('/resources/work-logs')}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                  window.location.pathname.includes('work-logs')
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
+                    : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
+                }`}
+              >
+                <FileText className="w-[15px] h-[15px] shrink-0" />
+                Reports
+              </button>
+            </div>
+
     );
   }
 
@@ -1960,9 +1256,10 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
               >
                 <Menu className="w-4 h-4" />
               </button>
-              <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}>
-                <Layers className="w-3 h-3 text-text-primary" />
-              </div>
+            <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 bg-primary-gradient">
+              <Layers className="w-3 h-3 text-text-primary" />
+            </div>
+
             </div>
 
             {/* Top bar center: live breadcrumb / context label */}
@@ -2015,8 +1312,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
               {profile && profile.role !== 'viewer' && (
                 <button
                   onClick={() => setIsAdding(true)}
-                  className="flex items-center gap-1.5 text-[11px] font-medium text-text-primary h-7 px-3 rounded-md transition-all cursor-pointer shrink-0"
-                  style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}
+                  className="flex items-center gap-1.5 text-[11px] font-medium text-text-primary h-7 px-3 rounded-md transition-all cursor-pointer shrink-0 bg-primary-gradient"
                 >
                   <Plus className="w-3 h-3" />
                   <span className="hidden sm:inline">New Project</span>

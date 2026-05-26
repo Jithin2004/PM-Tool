@@ -301,9 +301,6 @@ export function CalendarIntelligencePanel() {
               </div>
             </div>
           )}
-        </div>
-      )}
-
       {tab === 'history' && (
         <div className="border border-border bg-surface p-6">
           <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide mb-4 flex items-center gap-2">
