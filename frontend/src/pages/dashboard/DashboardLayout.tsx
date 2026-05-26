@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   BarChart3, Activity, Users, Clock, Target, Plus, Search,
   ChevronRight, ChevronLeft, AlertTriangle, BrainCircuit,
@@ -1925,24 +1925,24 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           )}
 
           {/* Dynamic Page Routing Slot */}
-          <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-20">
+          <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-6">
             {children}
           </main>
 
-        </div>
-
-        {/* Status Footer */}
-        <footer className="fixed bottom-0 left-0 right-0 lg:left-[15.5rem] bg-[#0b0c12]/80 border-t border-border-subtle px-5 py-2 flex justify-between items-center pointer-events-none z-20 backdrop-blur-xl">
-          <div className="flex items-center gap-4 text-[9px] font-mono text-text-quaternary uppercase tracking-wide">
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 transition-opacity duration-300" />
-              <span>Connected</span>
+          {/* Status Footer */}
+          <footer className="bg-[#0b0c12] border-t border-border-subtle px-5 py-3 flex justify-between items-center pointer-events-none z-20 shrink-0">
+            <div className="flex items-center gap-4 text-[9px] font-mono text-text-quaternary uppercase tracking-wide">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 transition-opacity duration-300" />
+                <span>Connected</span>
+              </div>
+              <span className="hidden md:inline">AES-256-GCM</span>
+              <LiveClock />
             </div>
-            <span className="hidden md:inline">AES-256-GCM</span>
-            <LiveClock />
-          </div>
-          <span className="text-[9px] font-mono text-text-quaternary hidden md:block">&copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P</span>
-        </footer>
+            <span className="text-[9px] font-mono text-text-quaternary hidden md:block">&copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P</span>
+          </footer>
+
+        </div>
 
         {/* --- Global Overlay Dialogs --- */}
         
@@ -2227,26 +2227,6 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         )}
       </AnimatePresence>
 
-      {/* --- Footer / Sidebar Accent --- */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-bg border-t border-border-subtle px-4 sm:px-6 py-3 flex justify-between items-center pointer-events-none z-40">
-        <div className="flex items-center gap-3 sm:gap-4 text-[9px] sm:text-[11px] font-mono text-text-secondary uppercase tracking-wide">
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-signal-safe-bg transition-opacity duration-300"></div>
-            <span className="hidden sm:inline">SESSION_HEARTBEAT</span>
-            <span className="inline sm:hidden">LIVE</span>
-          </div>
-          <div className="hidden sm:block">ENCRYPTION: AES-256-GCM</div>
-          <LiveClock />
-          {/* --- Added Copyright Notice --- */}
-          <div className="text-text-quaternary border-l border-border pl-3 sm:pl-4 hidden md:block">
-            &copy; {new Date().getFullYear()} JITHIN M & SHAMIL T P
-          </div>
-        </div>
-        <div className="flex items-center gap-4 sm:gap-6">
-          <Settings className="w-3 h-3 text-text-secondary pointer-events-auto cursor-pointer hover:text-text-primary transition-colors" />
-          <Cpu className="w-3 h-3 text-text-secondary" />
-        </div>
-      </footer>
 
       {/* Onboarding Tour Overlay - Floating Panel in Bottom-Right Corner */}
       <AnimatePresence>

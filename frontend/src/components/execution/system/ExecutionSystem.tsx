@@ -24,7 +24,7 @@ import {
   Zap,
   Shield,
   TrendingUp,
-  Map,
+  Users,
   BarChart2
 } from 'lucide-react';
 import { useTasks } from '../../../hooks/useTasks';
