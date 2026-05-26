@@ -479,9 +479,20 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
 
 
-  // Expose profile modal trigger for header
+  // Expose profile modal trigger for header and listen for global toast notifications
   useEffect(() => {
     (window as any).openProfileModal = () => setIsProfileOpen(true);
+
+    const handleToast = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail) {
+        notify(detail.message, detail.type);
+      }
+    };
+    window.addEventListener('notify-toast', handleToast);
+    return () => {
+      window.removeEventListener('notify-toast', handleToast);
+    };
   }, []);
 
   // Notification and Confirmation State
@@ -494,9 +505,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     onConfirm: () => { }
   });
 
-  const notify = (message: string, type: Notification['type'] = 'info') => {
+  const notify = (message: any, type: Notification['type'] = 'info') => {
     const id = Math.random().toString(36).substring(7);
-    setNotifications(prev => [...prev, { id, message, type }]);
+    const msgString = typeof message === 'object' && message !== null
+      ? (message.message || JSON.stringify(message))
+      : String(message);
+    setNotifications(prev => [...prev, { id, message: msgString, type }]);
   };
 
   const removeNotification = (id: string) => {
