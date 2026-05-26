@@ -36,6 +36,7 @@ import { CompletionFeedbackModal } from '../../task/CompletionFeedbackModal';
 import { KANBAN_COLUMNS, SCRUM_COLUMNS } from '../../../constants/product';
 import { Task, Project, TaskStatus, CalendarEvent } from '../../../types';
 import { ExecutionHeader, ExecutionViewType } from './ExecutionHeader';
+import { hasCapability } from '../../../core/auth/permissions';
 
 interface ExecutionSystemProps {
   projects: Project[];
@@ -69,7 +70,7 @@ export function ExecutionSystem({
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
 
   const role = currentUserProfile?.role || 'viewer';
-  const hasWriteAccess = role === 'super_admin' || role === 'pm';
+  const hasWriteAccess = hasCapability(role, 'manage_tasks');
 
   const userMap = useMemo(() => {
     const map = new Map<string, any>();

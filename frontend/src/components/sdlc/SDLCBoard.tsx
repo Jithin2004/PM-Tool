@@ -5,6 +5,7 @@ import type { Task, User, Milestone, Approval, Meeting, Project } from '../../ty
 import { SDLC_PHASES } from '../../constants/product';
 import { TaskCard } from '../task/TaskCard';
 import { TaskCreateModal } from '../task/TaskCreateModal';
+import { hasCapability } from '../../core/auth/permissions';
 
 const PHASE_ICONS: Record<string, React.ReactNode> = {
   initiation: <Flag className="w-4 h-4" />,
@@ -34,7 +35,7 @@ interface SDLCBoardProps {
 export function SDLCBoard({ project, workspaceId, tasks, users, milestones, approvals, meetings, currentUserProfile, notify, onUpdateTaskStatus, onCreateTask }: SDLCBoardProps) {
   const [activePhase, setActivePhase] = useState<string | null>(null);
   const [isAddingTask, setIsAddingTask] = useState(false);
-  const hasWriteAccess = currentUserProfile?.role === 'super_admin' || currentUserProfile?.role === 'pm';
+  const hasWriteAccess = hasCapability(currentUserProfile?.role, 'manage_tasks');
 
   const projectTasks = useMemo(() => tasks.filter(t => t.project_id === project.id), [tasks, project.id]);
   const projectMilestones = useMemo(() => milestones.filter(m => m.project_id === project.id), [milestones, project.id]);

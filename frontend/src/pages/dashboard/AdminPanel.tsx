@@ -4,6 +4,8 @@ import { useDashboard } from '../../context/DashboardContext';
 import { AdminDashboard } from '../../components/admin/AdminDashboard';
 import { CalendarIntelligencePanel } from '../../components/admin/CalendarIntelligencePanel';
 
+import { hasCapability } from '../../core/auth/permissions';
+
 export function AdminPanel() {
   const { profile } = useAuth();
   const { 
@@ -18,9 +20,9 @@ export function AdminPanel() {
     handleDeleteTeam 
   } = useDashboard();
   const [tab, setTab] = useState<'identity' | 'calendar'>('identity');
-  const canViewCalendar = profile?.role === 'super_admin';
+  const canViewCalendar = hasCapability(profile?.role, 'view_decision_center');
 
-  if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
+  if (!hasCapability(profile?.role, 'platform_governance')) {
     return (
       <div className="flex-1 flex items-center justify-center text-text-tertiary font-mono text-sm uppercase">
         Unauthorized: Admin Access Required

@@ -28,6 +28,7 @@ export type Capability =
   // System & Governance
   | 'manage_settings'         // Modify workspace/project settings
   | 'manage_integrations'     // Configure external connections (Slack, GitHub, etc)
+  | 'manage_automations'      // Manage automation workflows
   | 'platform_governance'     // Global user management and role assignment
   | 'platform_security';      // Root security and infrastructure controls
 
@@ -53,6 +54,7 @@ const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
     'view_audit_log',
     'manage_settings',
     'manage_integrations',
+    'manage_automations',
     'platform_governance',
     'platform_security',
   ],
@@ -73,6 +75,7 @@ const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
     'view_audit_log',
     'manage_settings',
     'manage_integrations',
+    'manage_automations',
   ],
   developer: [
     'view_projects',

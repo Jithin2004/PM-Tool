@@ -5,6 +5,7 @@ import { List } from 'react-window';
 import { useTasks } from '../hooks/useTasks';
 import { TaskCard } from './task/TaskCard';
 import { TaskCreateModal } from './task/TaskCreateModal';
+import { hasCapability } from '../core/auth/permissions';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { KANBAN_COLUMNS } from '../constants/product';
 import { TaskStatus, Task, Project } from '../types';
@@ -42,7 +43,7 @@ export default function ExecutionBoard({
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
 
   const role = currentUserProfile?.role || 'viewer';
-  const hasWriteAccess = role === 'super_admin' || role === 'pm';
+  const hasWriteAccess = hasCapability(role, 'manage_tasks');
 
   const userMap = useMemo(() => {
     const map = new Map<string, any>();

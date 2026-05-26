@@ -12,6 +12,7 @@ import { TaskCreateModal } from '../task/TaskCreateModal';
 import { CompletionFeedbackModal } from '../task/CompletionFeedbackModal';
 import { SCRUM_COLUMNS } from '../../constants/product';
 import { activityLogService } from '../../services/activityLogService';
+import { hasCapability } from '../../core/auth/permissions';
 
 type ScrumTab = 'product-backlog' | 'sprint-planner' | 'sprint-backlog' | 'active-sprint' | 'sprint-review' | 'velocity-analytics' | 'definition-of-done';
 
@@ -50,7 +51,7 @@ export function SprintBoard({
   const [sprintVelocity, setSprintVelocity] = useState(0);
   const [selectedEpic, setSelectedEpic] = useState<string | null>(null);
 
-  const hasWriteAccess = currentUserProfile?.role === 'super_admin' || currentUserProfile?.role === 'pm';
+  const hasWriteAccess = hasCapability(currentUserProfile?.role, 'manage_tasks');
 
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
 

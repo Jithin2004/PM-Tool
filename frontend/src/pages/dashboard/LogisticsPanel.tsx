@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { LogisticsDashboard } from '../../components/admin/LogisticsDashboard';
 
+import { hasCapability } from '../../core/auth/permissions';
+
 export function LogisticsPanel() {
   const { profile } = useAuth();
   const { 
@@ -15,7 +17,7 @@ export function LogisticsPanel() {
     handleSaveLogisticsData 
   } = useDashboard();
 
-  if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
+  if (!hasCapability(profile?.role, 'manage_logistics')) {
     return (
       <div className="flex-1 flex items-center justify-center text-text-tertiary font-mono text-sm uppercase">
         Unauthorized: Admin Access Required
