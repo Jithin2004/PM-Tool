@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { logServiceFailure } from '../utils/supabaseError';
+import { sha256 } from '../utils/cryptoUtils';
 import type { CalendarEvent, CalendarEventType } from '../types';
 
 interface RecurrenceRule {
@@ -137,11 +138,35 @@ export const calendarEventService = {
     actorId?: string
   ): Promise<CalendarEvent | null> {
     if (!isSupabaseConfigured) return null;
+
+    // Idempotency check: use source_id or generate a hash
+    const identityString = event.source_id 
+      ? `${event.source_table || ''}:${event.source_id}`
+      : await sha256(`${event.workspace_id}:${event.event_type}:${event.title}:${event.start_date}`);
+
+    const { data: existing } = await supabase
+      .from('calendar_events')
+      .select('id')
+      .eq('workspace_id', event.workspace_id)
+      .or(`source_id.eq.${event.source_id || 'NONE'},description.ilike.%${identityString}%`)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (existing) {
+      return this.updateEvent(existing.id, event, actorId).then(() => ({ ...event, id: existing.id } as CalendarEvent));
+    }
+
+    const eventToInsert = {
+      ...event,
+      description: event.description ? `${event.description}\n\n[ID:${identityString}]` : `[ID:${identityString}]`
+    };
+
     const { data, error } = await supabase
       .from('calendar_events')
-      .insert(event)
+      .insert(eventToInsert)
       .select()
       .single();
+
     if (error) { logServiceFailure('calendarEventService.createEvent', event, error); return null; }
     const created = data as CalendarEvent;
     await activityLogService.appendLog({

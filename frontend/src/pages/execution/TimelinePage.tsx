@@ -1,21 +1,21 @@
 import React from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
-import { useTasks } from '../../hooks/useTasks';
-import { useWorkspace } from '../../context/WorkspaceContext';
-import { TimelineView } from '../../components/execution/TimelineView';
+import { ExecutionSystem } from '../../components/execution/system/ExecutionSystem';
 
 export default function TimelinePage() {
-  const { projects, profiles } = useDashboard();
-  const { workspace } = useWorkspace();
-  const { tasks, dependencies } = useTasks(workspace?.id);
+  const { profile } = useAuth();
+  const { projects, profiles, notify, fetchProjects } = useDashboard();
 
   return (
-    <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12">
-      <TimelineView
+    <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 h-screen flex flex-col">
+      <ExecutionSystem
         projects={projects}
-        tasks={tasks}
-        dependencies={dependencies}
-        profiles={profiles}
+        users={profiles}
+        currentUserProfile={profile}
+        notify={notify}
+        onRecalibrateAnalytics={() => fetchProjects()}
+        initialView="timeline"
       />
     </main>
   );

@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { fireEventWebhooks } from './webhookService';
 import { logServiceFailure } from '../utils/supabaseError';
+import { calendarEventService } from './calendarEventService';
 
 const SYNC_COOLDOWN_MS = 30000;
 const QUEUE_MAX_CONCURRENT = 2;
@@ -633,20 +634,23 @@ export async function syncGoogleCalendar(workspaceId: string, accessToken?: stri
     for (const event of events) {
       if (!event.start?.dateTime && !event.start?.date) continue;
       const extId = event.id;
-      const { data: existing } = await supabase
-        .from('calendar_events').select('id')
-        .eq('workspace_id', workspaceId).eq('source_id', extId).eq('source_table', 'google_calendar')
-        .maybeSingle();
-      if (existing) continue;
       const start = event.start.dateTime || event.start.date + 'T00:00:00Z';
       const end = event.end.dateTime || event.end.date + 'T23:59:59Z';
-      await supabase.from('calendar_events').insert({
-        workspace_id: workspaceId, title: event.summary || '(No title)', description: event.description || '',
-        start_date: start, end_date: end, event_type: 'meeting', source_id: extId,
+      
+      const created = await calendarEventService.createEvent({
+        workspace_id: workspaceId,
+        title: event.summary || '(No title)',
+        description: event.description || '',
+        start_date: start,
+        end_date: end,
+        event_type: 'meeting',
+        source_id: extId,
         source_table: 'google_calendar',
-        participants: event.attendees?.map((a: any) => a.email) || [], capacity_impact: 0,
+        participants: event.attendees?.map((a: any) => a.email) || [],
+        capacity_impact: 0,
       });
-      synced++;
+      
+      if (created) synced++;
     }
     await syncUpdateHealth(workspaceId, 'google_calendar', true, undefined, synced);
     return { success: true, message: `Synced ${synced} new events`, itemsSynced: synced };

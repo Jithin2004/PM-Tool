@@ -1,29 +1,21 @@
 import React from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
-import { useCalendarEvents } from '../../hooks/useCalendarEvents';
-import { useWorkspace } from '../../context/WorkspaceContext';
-import ExecutionGanttView from '../../components/execution/GanttView';
-import type { Milestone, Meeting, Epic } from '../../types';
+import { ExecutionSystem } from '../../components/execution/system/ExecutionSystem';
 
 export default function GanttPage() {
-  const { projects, milestones, meetings, epics } = useDashboard();
-  const { workspace } = useWorkspace();
-  const { events: calendarEvents } = useCalendarEvents(workspace?.id);
+  const { profile } = useAuth();
+  const { projects, profiles, notify, fetchProjects } = useDashboard();
 
   return (
-    <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12">
-      <div className="flex justify-between items-center mb-8 bg-[#090a0f]/40 border border-border p-4 rounded-lg backdrop-blur-md">
-        <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-text-primary">Gantt Workspace</h2>
-          <p className="text-[10px] font-mono text-text-tertiary uppercase">Critical path + delivery planning</p>
-        </div>
-      </div>
-      <ExecutionGanttView
-        milestones={milestones || []}
-        meetings={meetings || []}
+    <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 h-screen flex flex-col">
+      <ExecutionSystem
         projects={projects}
-        epics={epics || []}
-        calendarEvents={calendarEvents}
+        users={profiles}
+        currentUserProfile={profile}
+        notify={notify}
+        onRecalibrateAnalytics={() => fetchProjects()}
+        initialView="timeline"
       />
     </main>
   );

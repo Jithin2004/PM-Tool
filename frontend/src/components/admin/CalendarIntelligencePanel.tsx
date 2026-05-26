@@ -116,66 +116,92 @@ export function CalendarIntelligencePanel() {
     <div className="space-y-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-3xl font-medium tracking-tight mb-1">Organization Calendar Intelligence</h2>
-          <p className="text-sm text-text-secondary font-mono tracking-tighter">
-            {isSuperAdmin ? 'Manage holidays, company events, and calendar sync.' : 'View-only calendar.'}
+          <h2 className="text-2xl font-bold tracking-tight text-text-primary mb-1">Calendar Intelligence</h2>
+          <p className="text-[12px] text-text-tertiary font-medium">
+            {isSuperAdmin ? 'Orchestrate organization-wide holidays, company events, and synchronization logic.' : 'Regional and company event schedule visibility.'}
           </p>
         </div>
         <div className="flex items-center gap-3">
           {isSuperAdmin && (
-            <button onClick={() => setShowCreateForm(true)} className="border border-border bg-white/5 px-4 py-2 text-xs font-mono uppercase tracking-wider hover:bg-white/10 transition-colors flex items-center gap-2">
-              <Plus className="w-3.5 h-3.5" /> Add Event
+            <button 
+              onClick={() => setShowCreateForm(true)} 
+              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add Event
             </button>
           )}
-          <div className="flex items-center gap-1 border border-border">
-            <button onClick={() => setYear(y => y - 1)} className="p-2 hover:bg-white/5"><ChevronLeft className="w-4 h-4" /></button>
-            <span className="px-3 text-sm font-mono">{year}</span>
-            <button onClick={() => setYear(y => y + 1)} className="p-2 hover:bg-white/5"><ChevronRight className="w-4 h-4" /></button>
+          <div className="flex items-center bg-surface-2 border border-border rounded-lg p-1 shadow-sm">
+            <button onClick={() => setYear(y => y - 1)} className="p-1.5 hover:bg-surface-3 rounded-md transition-colors text-text-tertiary"><ChevronLeft className="w-4 h-4" /></button>
+            <span className="px-4 text-[13px] font-bold text-text-primary">{year}</span>
+            <button onClick={() => setYear(y => y + 1)} className="p-1.5 hover:bg-surface-3 rounded-md transition-colors text-text-tertiary"><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-border mb-6">
-        <button onClick={() => setTab('calendar')} className={`px-4 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${tab === 'calendar' ? 'border-b-2 border-white text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}>Calendar View</button>
-        <button onClick={() => setTab('history')} className={`px-4 py-2 text-xs font-mono uppercase tracking-wide transition-colors ${tab === 'history' ? 'border-b-2 border-white text-text-primary' : 'text-text-tertiary hover:text-text-secondary'}`}>Sync History</button>
+      <div className="flex gap-1 border-b border-border-subtle mb-8">
+        <button 
+          onClick={() => setTab('calendar')} 
+          className={`px-5 py-3 text-[12px] font-bold uppercase tracking-wider transition-all border-b-2 ${
+            tab === 'calendar' ? 'border-accent-primary text-text-primary bg-accent-primary/5' : 'border-transparent text-text-tertiary hover:text-text-secondary'
+          }`}
+        >
+          Calendar View
+        </button>
+        <button 
+          onClick={() => setTab('history')} 
+          className={`px-5 py-3 text-[12px] font-bold uppercase tracking-wider transition-all border-b-2 ${
+            tab === 'history' ? 'border-accent-primary text-text-primary bg-accent-primary/5' : 'border-transparent text-text-tertiary hover:text-text-secondary'
+          }`}
+        >
+          Sync History
+        </button>
       </div>
 
       {tab === 'calendar' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {calendarGrid.map((monthDays, mi) => (
-              <div key={mi} className="border border-border bg-surface p-3">
-                <h4 className="text-xs font-sans tracking-tight uppercase tracking-wider text-text-tertiary mb-2">{MONTHS[mi]} {year}</h4>
-                <div className="grid grid-cols-7 gap-0.5">
-                  {DAY_HEADERS.map(d => <div key={d} className="text-[8px] font-mono text-text-quaternary text-center py-1">{d}</div>)}
+              <div key={mi} className="bg-surface-2 border border-border rounded-xl p-4 shadow-sm hover:border-accent-primary/20 transition-all">
+                <h4 className="text-[12px] font-bold uppercase tracking-widest text-accent-primary mb-4">{MONTHS[mi]}</h4>
+                <div className="grid grid-cols-7 gap-1">
+                  {DAY_HEADERS.map(d => <div key={d} className="text-[10px] font-bold text-text-quaternary text-center py-1">{d}</div>)}
                   {monthDays.map((cell, ci) => (
-                    <div key={ci} className="aspect-square min-h-[28px] text-[9px] font-mono relative group">
+                    <div key={ci} className="aspect-square flex items-center justify-center text-[11px] font-bold relative group">
                       {cell && (
-                        <div className={`w-full h-full flex items-center justify-center ${cell.events.length > 0 ? 'bg-white/10 text-text-primary font-medium' : 'text-text-tertiary hover:bg-white/5'} rounded-sm`}>
+                        <div className={`w-full h-full flex items-center justify-center rounded-lg transition-all ${
+                          cell.events.length > 0 ? 'bg-accent-primary text-white shadow-sm' : 'text-text-tertiary hover:bg-surface-3 hover:text-text-primary'
+                        }`}>
                           {cell.day}
-                          {cell.events.length > 0 && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400" />}
                         </div>
                       )}
                       {cell && cell.events.length > 0 && (
-                        <div className="absolute z-20 bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block w-48 bg-[#1a1a1a] border border-border p-2 shadow-xl">
-                          {cell.events.map((ev: any) => {
-                            const isDeleted = !!ev.deleted_at;
-                            return (
-                              <div key={ev.id} className={`flex items-center gap-2 py-1 text-[10px] ${isDeleted ? 'opacity-40' : ''}`}>
-                                {ev.auto_generated ? <Globe className="w-3 h-3 shrink-0 text-cyan-400" /> : <Building2 className="w-3 h-3 shrink-0 text-signal-warning" />}
-                                <span className="truncate flex-1">{ev.title}</span>
-                                {isSuperAdmin && (
-                                  <button
-                                    onClick={() => handleToggle(ev.id, ev.deleted_at)}
-                                    disabled={togglingIds.has(ev.id)}
-                                    className={`text-[8px] font-mono uppercase px-1 py-0.5 border transition-colors ${isDeleted ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' : 'border-border text-text-tertiary hover:border-red-500/30 hover:text-signal-critical'}`}
-                                  >
-                                    {togglingIds.has(ev.id) ? '...' : isDeleted ? 'Enable' : 'Disable'}
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
+                        <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 bg-surface border border-border rounded-xl shadow-2xl p-3 overflow-hidden">
+                          <div className="max-h-48 overflow-y-auto scrollbar-thin space-y-2">
+                            {cell.events.map((ev: any) => {
+                              const isDeleted = !!ev.deleted_at;
+                              return (
+                                <div key={ev.id} className={`flex flex-col gap-1 p-2 rounded-lg ${isDeleted ? 'bg-bg/50 opacity-40' : 'bg-surface-2 border border-border-subtle'}`}>
+                                  <div className="flex items-center gap-2">
+                                    {ev.auto_generated ? <Globe className="w-3.5 h-3.5 text-accent-primary" /> : <Building2 className="w-3.5 h-3.5 text-signal-warning" />}
+                                    <span className="text-[11px] font-bold text-text-primary truncate">{ev.title}</span>
+                                  </div>
+                                  {isSuperAdmin && (
+                                    <button
+                                      onClick={() => handleToggle(ev.id, ev.deleted_at)}
+                                      disabled={togglingIds.has(ev.id)}
+                                      className={`mt-1 w-full py-1 text-[9px] font-bold uppercase tracking-wider rounded border transition-all ${
+                                        isDeleted 
+                                          ? 'border-signal-safe/30 text-signal-safe hover:bg-signal-safe/10' 
+                                          : 'border-signal-critical/30 text-signal-critical hover:bg-signal-critical/10'
+                                      }`}
+                                    >
+                                      {togglingIds.has(ev.id) ? 'Processing...' : isDeleted ? 'Re-enable Event' : 'Disable Event'}
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -185,24 +211,54 @@ export function CalendarIntelligencePanel() {
             ))}
           </div>
 
-          <div className="border border-border bg-surface p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide">Sync</h3>
-              <button onClick={handleSyncNow} disabled={syncing || !workspace?.settings?.country} className="bg-white text-black h-8 px-4 text-[10px] font-semibold hover:bg-neutral-200 transition-colors uppercase tracking-wide disabled:opacity-50 flex items-center gap-2">
-                <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Syncing...' : 'Sync Now'}
+          <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-accent-primary/10 flex items-center justify-center">
+                  <RefreshCw className={`w-4 h-4 text-accent-primary ${syncing ? 'animate-spin' : ''}`} />
+                </div>
+                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">Synchronization Engine</h3>
+              </div>
+              <button 
+                onClick={handleSyncNow} 
+                disabled={syncing || !workspace?.settings?.country} 
+                className="px-5 py-2 bg-white text-black rounded-lg text-[12px] font-bold hover:bg-neutral-200 transition-all uppercase tracking-widest disabled:opacity-50"
+              >
+                {syncing ? 'Syncing Pipeline...' : 'Force Global Sync'}
               </button>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-              <div><span className="text-text-tertiary">Country</span><p className="font-medium">{workspace?.settings?.country || 'Not set'}</p></div>
-              <div><span className="text-text-tertiary">State/Region</span><p className="font-medium">{workspace?.settings?.region || 'None'}</p></div>
-              <div><span className="text-text-tertiary">Imported</span><p className="font-medium">{events.filter(e => e.auto_generated && !e.deleted_at).length} holidays</p></div>
-              <div><span className="text-text-tertiary">Organization</span><p className="font-medium">{events.filter(e => !e.auto_generated && !e.deleted_at).length} events</p></div>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+              <div className="p-4 bg-surface rounded-lg border border-border-subtle">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-1">Target Country</span>
+                <p className="text-[13px] font-bold text-text-primary">{workspace?.settings?.country || 'Unconfigured'}</p>
+              </div>
+              <div className="p-4 bg-surface rounded-lg border border-border-subtle">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-1">Active Region</span>
+                <p className="text-[13px] font-bold text-text-primary">{workspace?.settings?.region || 'National'}</p>
+              </div>
+              <div className="p-4 bg-surface rounded-lg border border-border-subtle">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-1">Auto-Ingested</span>
+                <p className="text-[13px] font-bold text-signal-safe">{events.filter(e => e.auto_generated && !e.deleted_at).length} Events</p>
+              </div>
+              <div className="p-4 bg-surface rounded-lg border border-border-subtle">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-1">Operational Override</span>
+                <p className="text-[13px] font-bold text-signal-warning">{events.filter(e => !e.auto_generated && !e.deleted_at).length} Events</p>
+              </div>
             </div>
             {lastSyncResult && (
-              <div className={`mt-3 text-xs font-mono px-3 py-2 ${lastSyncResult.includes('failed') ? 'bg-signal-critical-bg text-red-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{lastSyncResult}</div>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }} 
+                animate={{ opacity: 1, y: 0 }}
+                className={`mt-6 p-4 rounded-lg text-[12px] font-bold border ${
+                  lastSyncResult.includes('failed') ? 'bg-signal-critical-bg border-signal-critical/20 text-signal-critical' : 'bg-signal-safe-bg border-signal-safe/20 text-signal-safe'
+                }`}
+              >
+                {lastSyncResult}
+              </motion.div>
             )}
           </div>
+        </div>
+      )}
 
           {showCreateForm && isSuperAdmin && (
             <div className="fixed inset-0 bg-bg backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCreateForm(false)}>
