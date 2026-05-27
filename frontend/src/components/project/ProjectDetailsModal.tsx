@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2, History, ShieldCheck, ShieldAlert, RefreshCw } from 'lucide-react';
 import { sha256 } from '../../utils/cryptoUtils';
@@ -32,8 +32,135 @@ export function ProjectDetailsModal({
   workingTimeFrom?: string,
   workingTimeTo?: string
 }) {
-  const { tasks } = useDashboard();
+  const { tasks, updateWorkspaceSettings, projectFrictionMetrics = {}, timelineShiftLedger = [], notify, workspaceSettingsBlob = {} } = useDashboard();
   const hasTasks = tasks.some(t => t.project_id === project.id);
+
+  const [activeTab, setActiveTab] = useState<'general' | 'friction'>('general');
+  const [deltaDays, setDeltaDays] = useState('5');
+  const [blockerCategory, setBlockerCategory] = useState('Client IT Team');
+  const [blockerOwnership, setBlockerOwnership] = useState('Client');
+  const [blockerReason, setBlockerReason] = useState('');
+
+  const currentMetric = projectFrictionMetrics[project.id] || {
+    currentState: 'active',
+    activeDays: 0,
+    passiveWaitDays: 0,
+    blockedDays: 0,
+    liabilityRatio: 0,
+  };
+
+  const [manActiveDays, setManActiveDays] = useState<string>('');
+  const [manPassiveDays, setManPassiveDays] = useState<string>('');
+  const [manBlockedDays, setManBlockedDays] = useState<string>('');
+
+  useEffect(() => {
+    if (projectFrictionMetrics[project.id]) {
+      setManActiveDays(projectFrictionMetrics[project.id].activeDays.toString());
+      setManPassiveDays(projectFrictionMetrics[project.id].passiveWaitDays.toString());
+      setManBlockedDays(projectFrictionMetrics[project.id].blockedDays.toString());
+    } else {
+      setManActiveDays('0');
+      setManPassiveDays('0');
+      setManBlockedDays('0');
+    }
+  }, [project.id, projectFrictionMetrics]);
+
+  const handleSaveManualDurations = async () => {
+    if (!updateWorkspaceSettings) return;
+    const projectDurations = { ...(workspaceSettingsBlob?.project_state_durations || {}) };
+    const currentRecord = projectDurations[project.id] || {
+      currentState: 'active',
+      activeDays: 0,
+      passiveWaitDays: 0,
+      blockedDays: 0,
+      lastStateChange: new Date().toISOString(),
+    };
+
+    projectDurations[project.id] = {
+      ...currentRecord,
+      activeDays: Number(manActiveDays) || 0,
+      passiveWaitDays: Number(manPassiveDays) || 0,
+      blockedDays: Number(manBlockedDays) || 0,
+    };
+
+    await updateWorkspaceSettings({
+      project_state_durations: projectDurations,
+    });
+    if (notify) notify("State durations adjusted.", "success");
+  };
+
+  const handleStateTransition = async (newState: 'active' | 'passive_wait' | 'blocked') => {
+    if (!updateWorkspaceSettings) return;
+
+    const projectDurations = { ...(workspaceSettingsBlob?.project_state_durations || {}) };
+    const currentRecord = projectDurations[project.id] || {
+      currentState: 'active',
+      activeDays: 0,
+      passiveWaitDays: 0,
+      blockedDays: 0,
+      lastStateChange: new Date().toISOString(),
+    };
+
+    const prevChangeTime = currentRecord.lastStateChange ? new Date(currentRecord.lastStateChange) : new Date();
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - prevChangeTime.getTime());
+    const diffDays = diffTime > 1000 ? Number((diffTime / (1000 * 60 * 60 * 24)).toFixed(3)) : 0.1;
+
+    const prevState = currentRecord.currentState || 'active';
+    let activeDays = currentRecord.activeDays || 0;
+    let passiveWaitDays = currentRecord.passiveWaitDays || 0;
+    let blockedDays = currentRecord.blockedDays || 0;
+
+    if (prevState === 'active') activeDays += diffDays;
+    else if (prevState === 'passive_wait') passiveWaitDays += diffDays;
+    else if (prevState === 'blocked') blockedDays += diffDays;
+
+    projectDurations[project.id] = {
+      currentState: newState,
+      activeDays: Number(activeDays.toFixed(3)),
+      passiveWaitDays: Number(passiveWaitDays.toFixed(3)),
+      blockedDays: Number(blockedDays.toFixed(3)),
+      lastStateChange: now.toISOString(),
+    };
+
+    await updateWorkspaceSettings({
+      project_state_durations: projectDurations,
+    });
+    
+    if (notify) notify(`Initiative state transitioned to: ${newState.toUpperCase()}`, "success");
+  };
+
+  const handleAddShiftEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!updateWorkspaceSettings) return;
+
+    const shiftAmount = Number(deltaDays);
+    if (isNaN(shiftAmount) || shiftAmount <= 0) return;
+
+    const newEvent = {
+      id: `shift-${Date.now()}`,
+      projectId: project.id,
+      projectName: project.name,
+      deltaDays: shiftAmount,
+      blockerCategory,
+      ownership: blockerOwnership,
+      timestamp: new Date().toISOString(),
+      reason: blockerReason,
+    };
+
+    const nextLedger = [...timelineShiftLedger, newEvent];
+
+    await updateWorkspaceSettings({
+      timeline_shift_ledger: nextLedger,
+    });
+
+    const newDrift = (project.delay_drift_days || 0) + shiftAmount;
+    await onUpdate(project.id, { delay_drift_days: newDrift });
+
+    setBlockerReason('');
+    
+    if (notify) notify(`Timeline shift of +${shiftAmount} days logged.`, "success");
+  };
 
   const [name, setName] = useState(project.name);
   const [status, setStatus] = useState(project.status);
@@ -516,197 +643,484 @@ export function ProjectDetailsModal({
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Project Designation</label>
-                <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-bg border border-border h-11 px-4 font-mono text-sm focus:border-white/40 outline-none" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+          {/* Tab bar */}
+          <div className="flex border-b border-border mb-6">
+            <button
+              type="button"
+              onClick={() => setActiveTab('general')}
+              className={`px-4 py-2 text-xs font-mono uppercase tracking-wider border-b-2 transition-all ${
+                activeTab === 'general' ? 'border-text-primary text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              Scope & PERT
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('friction')}
+              className={`px-4 py-2 text-xs font-mono uppercase tracking-wider border-b-2 transition-all ${
+                activeTab === 'friction' ? 'border-text-primary text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              Delivery Friction & Shifts
+            </button>
+          </div>
+
+          {activeTab === 'general' ? (
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Status</label>
-                  <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
-                    <option value="planning">PLANNING</option>
-                    <option value="in-progress">IN_PROGRESS</option>
-                    <option value="review">REVIEW</option>
-                    <option value="deployed">DEPLOYED</option>
+                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Project Designation</label>
+                  <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-bg border border-border h-11 px-4 font-mono text-sm focus:border-white/40 outline-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Status</label>
+                    <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                      <option value="planning">PLANNING</option>
+                      <option value="in-progress">IN_PROGRESS</option>
+                      <option value="review">REVIEW</option>
+                      <option value="deployed">DEPLOYED</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Priority</label>
+                    <select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                      <option value="low">LOW</option>
+                      <option value="medium">MEDIUM</option>
+                      <option value="high">HIGH</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Proposed Start</label>
+                    <input type="date" value={proposedStartDate} onChange={e => setProposedStartDate(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Client Deadline</label>
+                    <input type="date" value={clientDeadline} onChange={e => setClientDeadline(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Assign Team</label>
+                  <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                    <option value="">UNALLOCATED</option>
+                    {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Priority</label>
-                  <select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
-                    <option value="low">LOW</option>
-                    <option value="medium">MEDIUM</option>
-                    <option value="high">HIGH</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Proposed Start</label>
-                  <input type="date" value={proposedStartDate} onChange={e => setProposedStartDate(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Client Deadline</label>
-                  <input type="date" value={clientDeadline} onChange={e => setClientDeadline(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Assign Team</label>
-                <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
-                  <option value="">UNALLOCATED</option>
-                  {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
 
-              <div className="pt-4 border-t border-border flex items-center justify-between gap-4">
-                <button
-                  type="button"
-                  onClick={() => setShowLogs(true)}
-                  className="flex items-center gap-2 text-xs font-mono text-signal-info hover:text-blue-300 transition-colors uppercase tracking-wide whitespace-nowrap"
-                >
-                  <History className="w-4 h-4" /> View Logs
-                </button>
-
-                {!isDeleting ? (
+                <div className="pt-4 border-t border-border flex items-center justify-between gap-4">
                   <button
                     type="button"
-                    onClick={() => setIsDeleting(true)}
-                    className="flex items-center gap-2 text-xs font-mono text-signal-critical hover:text-signal-critical transition-colors uppercase tracking-wide whitespace-nowrap"
+                    onClick={() => setShowLogs(true)}
+                    className="flex items-center gap-2 text-xs font-mono text-signal-info hover:text-blue-300 transition-colors uppercase tracking-wide whitespace-nowrap"
                   >
-                    <Trash2 className="w-4 h-4" /> Archive
+                    <History className="w-4 h-4" /> View Logs
                   </button>
-                ) : (
-                  <div className="space-y-3">
-                    <label className="block text-[10px] uppercase font-mono text-signal-critical/80">Reason for Archiveing</label>
-                    <textarea
-                      required
-                      value={deleteReason}
-                      onChange={e => setDeleteReason(e.target.value)}
-                      className="w-full bg-bg border border-red-500/30 p-3 font-mono text-xs focus:border-red-500 outline-none min-h-[80px]"
-                      placeholder="Specify reason..."
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onDelete(project.id, deleteReason)}
-                        className="flex-1 bg-red-500 text-text-primary py-2 text-[10px] font-mono uppercase tracking-wide hover:bg-red-600 transition-colors"
-                      >
-                        Confirm Delete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsDeleting(false)}
-                        className="flex-1 border border-border text-text-secondary py-2 text-[10px] font-mono uppercase tracking-wide hover:bg-white/5 transition-colors"
-                      >
-                        Cancel
-                      </button>
+
+                  {!isDeleting ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsDeleting(true)}
+                      className="flex items-center gap-2 text-xs font-mono text-signal-critical hover:text-signal-critical transition-colors uppercase tracking-wide whitespace-nowrap"
+                    >
+                      <Trash2 className="w-4 h-4" /> Archive
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <label className="block text-[10px] uppercase font-mono text-signal-critical/80">Reason for Archiveing</label>
+                      <textarea
+                        required
+                        value={deleteReason}
+                        onChange={e => setDeleteReason(e.target.value)}
+                        className="w-full bg-bg border border-red-500/30 p-3 font-mono text-xs focus:border-red-500 outline-none min-h-[80px]"
+                        placeholder="Specify reason..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onDelete(project.id, deleteReason)}
+                          className="flex-1 bg-red-500 text-text-primary py-2 text-[10px] font-mono uppercase tracking-wide hover:bg-red-600 transition-colors"
+                        >
+                          Confirm Delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsDeleting(false)}
+                          className="flex-1 border border-border text-text-secondary py-2 text-[10px] font-mono uppercase tracking-wide hover:bg-white/5 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-6">
-              <div className="bg-white/5 border border-border p-6 rounded-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-12 h-12" /></div>
-                <h4 className="text-[10px] font-sans tracking-tight text-text-secondary uppercase tracking-wide mb-4">Predictive Outcome</h4>
+              <div className="space-y-6">
+                <div className="bg-white/5 border border-border p-6 rounded-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-12 h-12" /></div>
+                  <h4 className="text-[10px] font-sans tracking-tight text-text-secondary uppercase tracking-wide mb-4">Predictive Outcome</h4>
 
-                {hasAllData ? (
-                  <>
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-white/5 p-3">
-                        <p className="text-[10px] font-mono text-text-secondary uppercase mb-1">Total Real Hours</p>
-                        <p className="text-xl font-sans tracking-tight">{expectedRealHours.toFixed(1)}h</p>
+                  {hasAllData ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="bg-white/5 p-3">
+                          <p className="text-[10px] font-mono text-text-secondary uppercase mb-1">Total Real Hours</p>
+                          <p className="text-xl font-sans tracking-tight">{expectedRealHours.toFixed(1)}h</p>
+                        </div>
+                        <div className="bg-white/5 p-3">
+                          <p className="text-[10px] font-mono text-text-secondary uppercase mb-1">Working Days</p>
+                          <p className="text-xl font-sans tracking-tight">{calendarExpected}d</p>
+                        </div>
+                        <div className="bg-surface-3 p-3 border border-border">
+                          <p className="text-[10px] font-mono text-signal-info uppercase mb-1">Remaining ETA</p>
+                          <p className="text-xl font-sans tracking-tight text-signal-info">{etaRemainingDays.toFixed(1)}d</p>
+                        </div>
+                        <div className={`p-3 border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-signal-critical-bg border-red-500/20' : 'bg-signal-safe-bg border-border'}`}>
+                          <p className={`text-[10px] font-mono uppercase mb-1 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-signal-critical' : 'text-signal-safe'}`}>Variance</p>
+                          <p className={`text-xl font-mono ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-signal-critical' : 'text-signal-safe'}`}>
+                            {deadlineVariance !== null ? `${Math.abs(deadlineVariance)}d ${deadlineVariance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="bg-white/5 p-3">
-                        <p className="text-[10px] font-mono text-text-secondary uppercase mb-1">Working Days</p>
-                        <p className="text-xl font-sans tracking-tight">{calendarExpected}d</p>
+
+                      <div className="mb-6">
+                        <p className="text-[10px] font-mono text-text-secondary uppercase mb-2">Predicted End</p>
+                        <p className="text-lg font-sans tracking-tight text-text-primary">{etaCompletionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                       </div>
-                      <div className="bg-surface-3 p-3 border border-border">
-                        <p className="text-[10px] font-mono text-signal-info uppercase mb-1">Remaining ETA</p>
-                        <p className="text-xl font-sans tracking-tight text-signal-info">{etaRemainingDays.toFixed(1)}d</p>
-                      </div>
-                      <div className={`p-3 border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-signal-critical-bg border-red-500/20' : 'bg-signal-safe-bg border-border'}`}>
-                        <p className={`text-[10px] font-mono uppercase mb-1 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-signal-critical' : 'text-signal-safe'}`}>Variance</p>
-                        <p className={`text-xl font-mono ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-signal-critical' : 'text-signal-safe'}`}>
-                          {deadlineVariance !== null ? `${Math.abs(deadlineVariance)}d ${deadlineVariance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
-                        </p>
+                    </>
+                  ) : (
+                    <div className="bg-signal-warning-bg border border-yellow-500/20 p-4 mb-6 flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-signal-warning shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-mono text-signal-warning uppercase tracking-wide mb-1">Calculation Suspended</p>
+                        <p className="text-[10px] font-mono text-signal-warning/80 leading-relaxed">Please obtain and input all PERT estimates and timeline constraints to initiate the predictive outcome engine.</p>
                       </div>
                     </div>
+                  )}
 
-                    <div className="mb-6">
-                      <p className="text-[10px] font-mono text-text-secondary uppercase mb-2">Predicted End</p>
-                      <p className="text-lg font-sans tracking-tight text-text-primary">{etaCompletionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  {hasTasks && (
+                    <div className="bg-surface-3 border border-border p-3 mb-4">
+                      <p className="text-[9px] font-mono text-signal-info uppercase tracking-wide mb-0.5">Automated Aggregation</p>
+                      <p className="text-[10px] font-mono text-text-secondary leading-tight">
+                        PERT parameters are dynamically aggregated from task-level estimations. Manual override suspended.
+                      </p>
                     </div>
-                  </>
-                ) : (
-                  <div className="bg-signal-warning-bg border border-yellow-500/20 p-4 mb-6 flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-signal-warning shrink-0 mt-0.5" />
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2 mb-6">
                     <div>
-                      <p className="text-xs font-mono text-signal-warning uppercase tracking-wide mb-1">Calculation Suspended</p>
-                      <p className="text-[10px] font-mono text-signal-warning/80 leading-relaxed">Please obtain and input all PERT estimates and timeline constraints to initiate the predictive outcome engine.</p>
+                      <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">BEST (H)</p>
+                      <input 
+                        type="number" 
+                        step="0.1" 
+                        value={pBest} 
+                        onChange={e => setPBest(e.target.value)} 
+                        disabled={hasTasks}
+                        className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">LIKELY (H)</p>
+                      <input 
+                        type="number" 
+                        step="0.1" 
+                        value={pLikely} 
+                        onChange={e => setPLikely(e.target.value)} 
+                        disabled={hasTasks}
+                        className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">WORST (H)</p>
+                      <input 
+                        type="number" 
+                        step="0.1" 
+                        value={pWorst} 
+                        onChange={e => setPWorst(e.target.value)} 
+                        disabled={hasTasks}
+                        className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
+                      />
                     </div>
                   </div>
-                )}
 
-                {hasTasks && (
-                  <div className="bg-surface-3 border border-border p-3 mb-4">
-                    <p className="text-[9px] font-mono text-signal-info uppercase tracking-wide mb-0.5">Automated Aggregation</p>
-                    <p className="text-[10px] font-mono text-text-secondary leading-tight">
-                      PERT parameters are dynamically aggregated from task-level estimations. Manual override suspended.
-                    </p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                  <div>
-                    <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">BEST (H)</p>
-                    <input 
-                      type="number" 
-                      step="0.1" 
-                      value={pBest} 
-                      onChange={e => setPBest(e.target.value)} 
-                      disabled={hasTasks}
-                      className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
-                    />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">LIKELY (H)</p>
-                    <input 
-                      type="number" 
-                      step="0.1" 
-                      value={pLikely} 
-                      onChange={e => setPLikely(e.target.value)} 
-                      disabled={hasTasks}
-                      className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
-                    />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">WORST (H)</p>
-                    <input 
-                      type="number" 
-                      step="0.1" 
-                      value={pWorst} 
-                      onChange={e => setPWorst(e.target.value)} 
-                      disabled={hasTasks}
-                      className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
-                    />
+                  {hasAllData && (
+                    <div className="pt-4 border-t border-border-subtle">
+                      <div className="flex justify-between items-center"><span className="text-[11px] font-mono text-text-secondary uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-signal-warning/80">±{stdDev.toFixed(2)}σ</span></div>
+                      <p className="text-[10px] font-mono text-text-secondary mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
+                    </div>
+                  )}
+                </div>
+                <button type="submit" className="w-full bg-white text-black h-12 font-semibold uppercase tracking-wide text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
+                  Commit System Updates
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+              {/* Left Column: Delivery Friction Summary */}
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">Execution State Orchestration</h4>
+                  <p className="text-[11px] text-text-tertiary leading-relaxed mb-4">
+                    Transition the current delivery state to model passive latency and contractually relevant wait-state friction.
+                  </p>
+                  
+                  {/* Current State Indicator */}
+                  <div className="bg-white/5 border border-border p-4 rounded-sm mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-mono text-text-secondary uppercase">Current State</span>
+                      <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-sm font-bold ${
+                        currentMetric.currentState === 'active' ? 'bg-emerald-950/30 text-emerald-400 border border-emerald-500/20' :
+                        currentMetric.currentState === 'passive_wait' ? 'bg-amber-950/30 text-amber-400 border border-amber-500/20' :
+                        'bg-rose-950/30 text-rose-400 border border-rose-500/20'
+                      }`}>
+                        {currentMetric.currentState === 'active' ? 'Active Execution' :
+                         currentMetric.currentState === 'passive_wait' ? 'Passive Waiting' :
+                         'Blocked'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleStateTransition('active')}
+                        className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${
+                          currentMetric.currentState === 'active' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-white/5'
+                        }`}
+                      >
+                        Active
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStateTransition('passive_wait')}
+                        className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${
+                          currentMetric.currentState === 'passive_wait' ? 'bg-amber-950/40 text-amber-400 border-amber-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-white/5'
+                        }`}
+                      >
+                        Wait
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleStateTransition('blocked')}
+                        className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${
+                          currentMetric.currentState === 'blocked' ? 'bg-rose-950/40 text-rose-400 border-rose-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-white/5'
+                        }`}
+                      >
+                        Block
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {hasAllData && (
-                  <div className="pt-4 border-t border-border-subtle">
-                    <div className="flex justify-between items-center"><span className="text-[11px] font-mono text-text-secondary uppercase tracking-tighter">Variance calibration</span><span className="text-[10px] font-mono text-signal-warning/80">±{stdDev.toFixed(2)}σ</span></div>
-                    <p className="text-[10px] font-mono text-text-secondary mt-1 italic leading-tight">Parallel processing factor: {engineerCount} engineers.</p>
+                {/* State Duration Tracker & Manual Overrides */}
+                <div className="bg-white/5 border border-border p-4 rounded-sm">
+                  <h5 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">State Duration Calibration (Days)</h5>
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[10px] font-mono text-emerald-400 uppercase">Active (Engineering)</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={manActiveDays}
+                        onChange={e => setManActiveDays(e.target.value)}
+                        className="bg-bg border border-border text-right px-2 py-1 w-20 font-mono text-[10px] focus:border-white/40 outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[10px] font-mono text-amber-400 uppercase">Passive Waiting (Latency)</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={manPassiveDays}
+                        onChange={e => setManPassiveDays(e.target.value)}
+                        className="bg-bg border border-border text-right px-2 py-1 w-20 font-mono text-[10px] focus:border-white/40 outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[10px] font-mono text-rose-400 uppercase">Blocked (Failed State)</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={manBlockedDays}
+                        onChange={e => setManBlockedDays(e.target.value)}
+                        className="bg-bg border border-border text-right px-2 py-1 w-20 font-mono text-[10px] focus:border-white/40 outline-none"
+                      />
+                    </div>
                   </div>
-                )}
+                  <button
+                    type="button"
+                    onClick={handleSaveManualDurations}
+                    className="w-full bg-surface-3 hover:bg-surface-4 text-text-primary text-[10px] uppercase font-mono py-1.5 border border-border transition-all"
+                  >
+                    Calibrate Durations
+                  </button>
+                </div>
+
+                {/* Liability Ratio & Friction Visualizer */}
+                <div className="bg-white/5 border border-border p-4 rounded-sm">
+                  <h5 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">Liability Analysis</h5>
+                  
+                  {/* Visual Bar Split */}
+                  <div className="h-2 w-full bg-surface-3 rounded-full flex overflow-hidden mb-3">
+                    {Number(manActiveDays) > 0 && (
+                      <div
+                        style={{ width: `${(Number(manActiveDays) / (Number(manActiveDays) + Number(manPassiveDays) + Number(manBlockedDays) || 1)) * 100}%` }}
+                        className="bg-emerald-500 h-full"
+                        title="Active"
+                      />
+                    )}
+                    {Number(manPassiveDays) > 0 && (
+                      <div
+                        style={{ width: `${(Number(manPassiveDays) / (Number(manActiveDays) + Number(manPassiveDays) + Number(manBlockedDays) || 1)) * 100}%` }}
+                        className="bg-amber-500 h-full"
+                        title="Wait"
+                      />
+                    )}
+                    {Number(manBlockedDays) > 0 && (
+                      <div
+                        style={{ width: `${(Number(manBlockedDays) / (Number(manActiveDays) + Number(manPassiveDays) + Number(manBlockedDays) || 1)) * 100}%` }}
+                        className="bg-rose-500 h-full"
+                        title="Blocked"
+                      />
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-[9px] font-mono text-text-tertiary uppercase block">Liability Ratio</span>
+                      <span className="text-lg font-mono text-text-primary">{currentMetric.liabilityRatio}%</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-mono text-text-tertiary uppercase block">Total Duration</span>
+                      <span className="text-lg font-mono text-text-primary">
+                        {(Number(manActiveDays) + Number(manPassiveDays) + Number(manBlockedDays)).toFixed(1)}d
+                      </span>
+                    </div>
+                  </div>
+
+                  {currentMetric.liabilityRatio > 30 && (
+                    <div className="mt-3 p-2 bg-amber-950/20 border border-amber-500/10 text-[10px] font-mono text-amber-300">
+                      External blocker latency represents more than 30% of lifecycle duration, indicating high client liability.
+                    </div>
+                  )}
+                </div>
               </div>
-              <button type="submit" className="w-full bg-white text-black h-12 font-semibold uppercase tracking-wide text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
-                Commit System Updates
-              </button>
+
+              {/* Right Column: Timeline Shift Ledger & Logging */}
+              <div className="space-y-6 text-left">
+                <div>
+                  <h4 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">Timeline Shift Ledger</h4>
+                  
+                  {/* Ledger Audit Trail List */}
+                  <div className="bg-white/5 border border-border p-4 rounded-sm max-h-[160px] overflow-y-auto space-y-2.5 mb-4">
+                    {timelineShiftLedger.filter((e: any) => e.projectId === project.id).length === 0 ? (
+                      <p className="text-[10px] font-mono text-text-tertiary italic text-center py-4">
+                        No timeline shifts logged. Delivery path matches estimation baseline.
+                      </p>
+                    ) : (
+                      timelineShiftLedger
+                        .filter((e: any) => e.projectId === project.id)
+                        .map((event: any) => (
+                          <div key={event.id} className="border-b border-border-subtle pb-2 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="bg-rose-950/40 text-rose-400 border border-rose-500/15 px-1 py-0.5 rounded-sm text-[8px] font-mono font-bold">
+                                +{event.deltaDays} DAYS
+                              </span>
+                              <span className="text-[9px] font-mono text-text-tertiary">
+                                {new Date(event.timestamp).toLocaleDateString('en-GB')}
+                              </span>
+                            </div>
+                            <div className="flex gap-1.5 flex-wrap items-center mb-1 text-[8px] font-mono">
+                              <span className="text-text-secondary uppercase font-bold">{event.blockerCategory}</span>
+                              <span className="text-text-tertiary">·</span>
+                              <span className="text-text-secondary uppercase font-bold">Owner: {event.ownership}</span>
+                            </div>
+                            <p className="text-[10px] font-mono text-text-secondary leading-tight italic">
+                              "{event.reason}"
+                            </p>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Log Timeline Shift Form */}
+                <div className="bg-white/5 border border-border p-4 rounded-sm space-y-3">
+                  <h5 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide">Log Defensive Timeline Shift</h5>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] uppercase font-mono text-text-secondary mb-1">Delta Shift (Days)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={deltaDays}
+                        onChange={e => setDeltaDays(e.target.value)}
+                        className="w-full bg-bg border border-border h-8 px-2 font-mono text-xs focus:border-white/40 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] uppercase font-mono text-text-secondary mb-1">Ownership</label>
+                      <select
+                        value={blockerOwnership}
+                        onChange={e => setBlockerOwnership(e.target.value)}
+                        className="w-full bg-bg border border-border h-8 px-2 font-mono text-xs focus:border-white/40 outline-none"
+                      >
+                        <option value="Client">Client</option>
+                        <option value="Internal">Internal</option>
+                        <option value="Third-Party Vendor">Third-Party</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] uppercase font-mono text-text-secondary mb-1">Blocker Category</label>
+                    <select
+                      value={blockerCategory}
+                      onChange={e => setBlockerCategory(e.target.value)}
+                      className="w-full bg-bg border border-border h-8 px-2 font-mono text-xs focus:border-white/40 outline-none"
+                    >
+                      <option value="Client IT Team">Client IT Team</option>
+                      <option value="Infrastructure Readiness">Infrastructure Readiness</option>
+                      <option value="Client-owned approvals">Client-owned approvals</option>
+                      <option value="Data provisions">Data provisions</option>
+                      <option value="Environment mismatch">Environment mismatch</option>
+                      <option value="External Latency">External Latency</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] uppercase font-mono text-text-secondary mb-1">Attribution Reason & Notes</label>
+                    <textarea
+                      required
+                      value={blockerReason}
+                      onChange={e => setBlockerReason(e.target.value)}
+                      className="w-full bg-bg border border-border p-2 font-mono text-xs focus:border-white/40 outline-none min-h-[60px]"
+                      placeholder="Specify reasoning for defensive audit records..."
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const fakeForm = {
+                        preventDefault: () => {}
+                      } as any;
+                      handleAddShiftEvent(fakeForm);
+                    }}
+                    className="w-full bg-white text-black h-9 text-[10px] uppercase font-bold tracking-wide hover:bg-neutral-200 transition-all"
+                  >
+                    Commit Defensive Shift to Ledger
+                  </button>
+                </div>
+              </div>
             </div>
-          </form>
+          )}
         </div>
       </motion.div>
     </div>

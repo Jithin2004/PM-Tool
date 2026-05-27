@@ -36,6 +36,7 @@ interface OperationalDataContextValue {
   handleUpdateRole: (id: string, role: UserRole) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   fetchNotifications: () => Promise<void>;
+  updateWorkspaceSettings: (patch: Record<string, unknown>) => Promise<void>;
   taskActions: {
     addDependency: ReturnType<typeof useTasks>['addDependency'];
     removeDependency: ReturnType<typeof useTasks>['removeDependency'];
@@ -294,6 +295,45 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     [profile?.role],
   );
 
+  const updateWorkspaceSettings = useCallback(
+    async (patch: Record<string, unknown>) => {
+      if (!workspace?.id) return;
+
+      setWorkspaceSettingsBlob(prev => {
+        const next = { ...prev, ...patch };
+
+        if (isSupabaseConfigured) {
+          (async () => {
+            const { data: existing, error: findError } = await supabase
+              .from('workspace_settings')
+              .select('*')
+              .eq('workspace_id', workspace.id)
+              .maybeSingle();
+
+            if (!findError && existing) {
+              const merged = {
+                ...(existing.settings_blob as Record<string, unknown>),
+                ...patch,
+              };
+              await supabase
+                .from('workspace_settings')
+                .update({ settings_blob: merged })
+                .eq('workspace_id', workspace.id);
+            } else {
+              await supabase
+                .from('workspace_settings')
+                .insert({ workspace_id: workspace.id, settings_blob: patch });
+            }
+          })();
+        }
+
+        localStorage.setItem(`workspace_settings_${workspace.id}`, JSON.stringify(next));
+        return next;
+      });
+    },
+    [workspace?.id],
+  );
+
   const handleUpdateRoleLocal = useCallback(
     async (id: string, role: UserRole) => {
       await updateRole(id, role);
@@ -318,6 +358,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       handleUpdateRole: handleUpdateRoleLocal,
       markNotificationRead,
       fetchNotifications,
+      updateWorkspaceSettings,
       taskActions: { addDependency, removeDependency, updateTaskDates, updateTask },
     }),
     [
@@ -334,6 +375,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       handleUpdateRoleLocal,
       markNotificationRead,
       fetchNotifications,
+      updateWorkspaceSettings,
       addDependency,
       removeDependency,
       updateTaskDates,

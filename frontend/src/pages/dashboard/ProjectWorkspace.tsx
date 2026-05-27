@@ -13,7 +13,7 @@ import { hasCapability } from '../../core/auth/permissions';
 
 export function ProjectWorkspace() {
   const { workspace, projects = [], user } = useWorkspace() as any;
-  const { tasks = [], profiles = [], activeTeams = [], setIsAdding, setSelectedProject } = useDashboard() as any;
+  const { tasks = [], profiles = [], activeTeams = [], setIsAdding, setSelectedProject, stats } = useDashboard() as any;
   const { profile } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,9 +31,10 @@ export function ProjectWorkspace() {
   }, [activeProjects, tasks]);
 
   const deliveryConfidence = useMemo(() => {
+    if (stats?.deliveryConfidence !== undefined) return stats.deliveryConfidence;
     if (activeProjects.length === 0) return 100;
     return Math.max(0, 100 - Math.round((highRiskProjects.length / activeProjects.length) * 100));
-  }, [activeProjects, highRiskProjects]);
+  }, [activeProjects, highRiskProjects, stats?.deliveryConfidence]);
 
   const filteredProjects = useMemo(() => {
     let filtered = projects;

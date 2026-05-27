@@ -44,6 +44,7 @@ export function DashboardDataBridge({ children, ui }: DashboardDataBridgeProps) 
     handleUpdateRole,
     markNotificationRead,
     taskActions,
+    updateWorkspaceSettings,
   } = useOperationalData();
 
   const handleSaveLogistics = React.useCallback(async (data: any) => {
@@ -98,12 +99,17 @@ export function DashboardDataBridge({ children, ui }: DashboardDataBridgeProps) 
     createSprint: ui.createSprint,
     createMeeting: ui.createMeeting,
     updateExecutionMode: ui.updateExecutionMode,
+    updateWorkspaceSettings,
+    projectFrictionMetrics: derived.projectFrictionMetrics,
+    timelineShiftLedger: derived.timelineShiftLedger,
+    workspaceSettingsBlob: raw.workspaceSettingsBlob,
   }), [
     derived.projectsWithPert, derived.visibleTasks, derived.userCustomRoles, derived.customRoles, derived.systemData, derived.stats,
-    raw.dependencies, raw.profiles, raw.teams,
+    derived.projectFrictionMetrics, derived.timelineShiftLedger,
+    raw.dependencies, raw.profiles, raw.teams, raw.workspaceSettingsBlob,
     ui.searchTerm, ui.setSearchTerm, ui.dashboardTab, ui.setDashboardTab, ui.isAdding, ui.setIsAdding, ui.handleUpdateProjectMetadata, ui.handlePromoteTaskToAsset, ui.askConfirmation, ui.notify, ui.workingHoursPerDay, ui.tilesPerRow, ui.setIsRosterOpen, ui.setSelectedProject, ui.createSprint, ui.createMeeting, ui.updateExecutionMode,
     handleCreateTeam, handleUpdateTeam, handleDeleteTeam, handleUpdateRole, handleSaveLogistics,
-    refreshProjects, refreshAll, taskActions, dbNotifications, markNotificationRead
+    refreshProjects, refreshAll, taskActions, dbNotifications, markNotificationRead, updateWorkspaceSettings
   ]);
 
   return (
