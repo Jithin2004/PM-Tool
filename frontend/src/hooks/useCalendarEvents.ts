@@ -12,7 +12,13 @@ export function useCalendarEvents(workspaceId?: string) {
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const url = new URL(`${import.meta.env.VITE_CALENDAR_API_URL}/events`);
+      const calendarApiUrl = import.meta.env.VITE_CALENDAR_API_URL || '/api/calendar';
+      let url: URL;
+      if (calendarApiUrl.startsWith('http://') || calendarApiUrl.startsWith('https://')) {
+        url = new URL(`${calendarApiUrl}/events`);
+      } else {
+        url = new URL(`${calendarApiUrl}/events`, window.location.origin);
+      }
       url.searchParams.append('workspace_id', workspaceId);
       url.searchParams.append('start_date', new Date(new Date().getFullYear() - 1, 0, 1).toISOString());
       url.searchParams.append('end_date', new Date(new Date().getFullYear() + 2, 0, 1).toISOString());

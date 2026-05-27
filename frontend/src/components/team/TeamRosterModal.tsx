@@ -59,7 +59,7 @@ export function TeamRosterModal({
           setActiveSquadId(team.id);
           setRosterTab('analytics');
         }}
-        className={`p-4 cursor-pointer transition-all hover:bg-surface-3 flex flex-col gap-2 border-b border-border-subtle ${isActive ? 'bg-white/5 border-l-2 border-l-blue-500' : ''}`}
+        className={`p-4 cursor-pointer transition-all hover:bg-surface-3 flex flex-col gap-2 border-b border-border-subtle ${isActive ? 'bg-white/5 border-l-2 border-l-accent-primary' : ''}`}
       >
         <div className="flex justify-between items-start gap-2">
           <h4 className="text-sm font-semibold tracking-tight uppercase truncate">{team.name}</h4>
@@ -75,7 +75,7 @@ export function TeamRosterModal({
         {/* Progress indicator */}
         <div className="w-full bg-white/5 h-1">
           <div
-            className={`h-full ${metrics.loadPercentage > 100 ? 'bg-red-500' : 'bg-blue-500'}`}
+            className={`h-full ${metrics.loadPercentage > 100 ? 'bg-signal-critical' : 'bg-accent-primary'}`}
             style={{ width: `${Math.min(100, metrics.loadPercentage)}%` }}
           />
         </div>
@@ -368,7 +368,7 @@ export function TeamRosterModal({
                         setActiveSquadId(team.id);
                         setRosterTab('analytics');
                       }}
-                      className={`p-4 cursor-pointer transition-all hover:bg-surface-3 flex flex-col gap-2 ${isActive ? 'bg-white/5 border-l-2 border-l-blue-500' : ''}`}
+                      className={`p-4 cursor-pointer transition-all hover:bg-surface-3 flex flex-col gap-2 ${isActive ? 'bg-white/5 border-l-2 border-l-accent-primary' : ''}`}
                     >
                       <div className="flex justify-between items-start gap-2">
                         <h4 className="text-sm font-semibold tracking-tight uppercase truncate">{team.name}</h4>
@@ -384,7 +384,7 @@ export function TeamRosterModal({
                       {/* Progress indicator */}
                       <div className="w-full bg-white/5 h-1">
                         <div
-                          className={`h-full ${metrics.loadPercentage > 100 ? 'bg-red-500' : 'bg-blue-500'}`}
+                          className={`h-full ${metrics.loadPercentage > 100 ? 'bg-signal-critical' : 'bg-accent-primary'}`}
                           style={{ width: `${Math.min(100, metrics.loadPercentage)}%` }}
                         />
                       </div>
@@ -403,7 +403,7 @@ export function TeamRosterModal({
                 <div className="block md:hidden mb-2">
                   <button
                     onClick={() => setRosterTab('teams')}
-                    className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wide text-signal-info hover:text-blue-300 transition-colors"
+                    className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wide text-signal-info hover:text-accent-primary transition-colors"
                   >
                     â† Back to Team List
                   </button>
@@ -415,7 +415,7 @@ export function TeamRosterModal({
                     <h3 className="text-2xl font-bold uppercase tracking-tight mb-2">{selectedSquad.name}</h3>
                     <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-text-tertiary">
                       <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent-primary"></span>
                         <span>Lead PM: <strong className="text-signal-info">{activeSquadPM?.full_name || activeSquadPM?.email || 'Unallocated'}</strong></span>
                       </div>
                       <div>â€¢</div>
@@ -438,7 +438,7 @@ export function TeamRosterModal({
                       <p className="text-[10px] font-mono text-text-tertiary mt-1 uppercase">Capacity Utilization</p>
                     </div>
                     <div className="w-full bg-white/5 h-1.5">
-                      <div className={`h-full ${activeMetrics.loadPercentage > 100 ? 'bg-red-500' : 'bg-blue-400'}`} style={{ width: `${Math.min(100, activeMetrics.loadPercentage)}%` }} />
+                      <div className={`h-full ${activeMetrics.loadPercentage > 100 ? 'bg-signal-critical' : 'bg-accent-primary'}`} style={{ width: `${Math.min(100, activeMetrics.loadPercentage)}%` }} />
                     </div>
                   </div>
 
@@ -513,7 +513,7 @@ export function TeamRosterModal({
                             <div className="text-right shrink-0">
                               <p className="text-xs font-mono text-text-secondary font-bold">{expected.toFixed(1)} hrs</p>
                               <p className="text-[9px] font-mono text-text-tertiary uppercase">PERT projection</p>
-                              <p className="text-[8px] font-mono text-cyan-400/70 mt-0.5">{(expected / activeMetrics.engineerCount).toFixed(1)}h/engineer projected</p>
+                              <p className="text-[8px] font-mono text-text-secondary mt-0.5">{(expected / activeMetrics.engineerCount).toFixed(1)}h/engineer projected</p>
                             </div>
                           </div>
                         );
@@ -546,7 +546,7 @@ export function TeamRosterModal({
                           <div>
                             <h5 className="text-xs font-semibold text-text-secondary truncate max-w-[140px]">{activeSquadPM.full_name || 'Anonymous User'}</h5>
                             <p className="text-[9px] font-mono text-text-tertiary uppercase truncate max-w-[140px]">{activeSquadPM.email}</p>
-                            <span className="inline-block mt-1 text-[8px] font-mono bg-blue-400 text-black px-1.5 uppercase font-bold tracking-wide">SQUAD_LEAD</span>
+                            <span className="inline-block mt-1 text-[8px] font-mono bg-accent-primary text-black px-1.5 uppercase font-bold tracking-wide">SQUAD_LEAD</span>
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-text-quaternary group-hover:text-text-primary transition-colors" />

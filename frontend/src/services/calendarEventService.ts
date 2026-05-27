@@ -229,7 +229,12 @@ export const calendarEventService = {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const url = new URL(`${CALENDAR_API_BASE}/events`);
+      let url: URL;
+      if (CALENDAR_API_BASE.startsWith('http://') || CALENDAR_API_BASE.startsWith('https://')) {
+        url = new URL(`${CALENDAR_API_BASE}/events`);
+      } else {
+        url = new URL(`${CALENDAR_API_BASE}/events`, window.location.origin);
+      }
       url.searchParams.append('workspace_id', workspaceId);
       url.searchParams.append('start_date', startDate);
       url.searchParams.append('end_date', endDate);
