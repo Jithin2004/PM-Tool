@@ -46,7 +46,7 @@ function designationForRole(role: UserRole): string {
 function rowToProfile(row: Record<string, unknown>): User {
   const role = row.role as UserRole;
   return {
-    ...(row as User),
+    ...(row as unknown as User),
     auth_user_id: row.id as string,
     designation: designationForRole(role),
   };

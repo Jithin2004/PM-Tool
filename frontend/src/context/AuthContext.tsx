@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { User } from '../types';
+import { User, Member } from '../types';
 import { clearSession, flushNow } from '../services/commandUsageService';
 import { activityLogService } from '../services/activityLogService';
 import { repairUserWorkspace } from '../services/workspaceService';
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userRef = React.useRef(user);
   const profileRef = React.useRef(profile);
   const lastSyncedUserIdRef = React.useRef<string | null>(null);
-  const syncPromiseRef = React.useRef<Promise<void> | null>(null);
+  const syncPromiseRef = React.useRef<Promise<Member | null> | null>(null);
   const syncUserRef = React.useRef<string | null>(null);
   const safetyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 

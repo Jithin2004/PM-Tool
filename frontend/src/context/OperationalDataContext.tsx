@@ -19,13 +19,13 @@ import {
   loadWorkspaceNotifications,
   subscribeToWorkspaceNotifications,
 } from '../services/realtimeNotificationService';
-import type { Project, Profile, Team, UserRole } from '../types';
+import type { Project, Profile, Team, UserRole, Notification } from '../types';
 
 interface OperationalDataContextValue {
   raw: OperationalRawState;
   derived: OperationalDerivedState;
   loading: boolean;
-  dbNotifications: Record<string, unknown>[];
+  dbNotifications: Notification[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   refreshAll: () => Promise<void>;
   refreshProjects: () => Promise<void>;
@@ -69,7 +69,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const [workspaceSettingsBlob, setWorkspaceSettingsBlob] = useState<Record<string, unknown>>({});
   const [serverMetrics, setServerMetrics] = useState<{ deliveryConfidence: number; executionPressure: number; dailyFatigue: number; riskForecast: number; } | undefined>();
   const [loading, setLoading] = useState(true);
-  const [dbNotifications, setDbNotifications] = useState<Record<string, unknown>[]>([]);
+  const [dbNotifications, setDbNotifications] = useState<Notification[]>([]);
 
   const raw: OperationalRawState = useMemo(
     () => ({

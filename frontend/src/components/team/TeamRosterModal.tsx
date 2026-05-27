@@ -108,18 +108,18 @@ export function TeamRosterModal({
   const teamMemberProfileIds = useMemo(() => {
     const set = new Set<string>();
     for (const t of teams) {
-      const data = t.data;
-      if (data?.pm_id) set.add(data.pm_id);
-      if (data?.developer_ids) for (const id of data.developer_ids) set.add(id);
+      const data = t.data as Record<string, unknown> | undefined;
+      if (data?.pm_id) set.add(data.pm_id as string);
+      if (data?.developer_ids) for (const id of (data.developer_ids as string[])) set.add(id);
     }
     return set;
   }, [teams]);
 
   const getSquadLoadMetrics = (team: Team) => {
-    const parsedData = team.data;
-    const devIds = parsedData?.developer_ids || [];
+    const parsedData = team.data as Record<string, unknown> | undefined;
+    const devIds = (parsedData?.developer_ids as string[]) || [];
     const engineerCount = Math.max(1, devIds.length);
-    const pmId = parsedData?.pm_id;
+    const pmId = parsedData?.pm_id as string | undefined;
 
     const totalCapacityHours = 20 * (workingHoursPerDay * 0.8) * engineerCount;
 
@@ -172,8 +172,8 @@ export function TeamRosterModal({
 
       let matchesSearch = team.name.toLowerCase().includes(lowerQuery);
       if (!matchesSearch) {
-        const data = team.data;
-        const ids = [data?.pm_id, ...(data?.developer_ids || [])].filter(Boolean) as string[];
+        const data = team.data as Record<string, unknown> | undefined;
+        const ids = [data?.pm_id, ...((data?.developer_ids as string[]) || [])].filter(Boolean) as string[];
         for (const id of ids) {
           const p = profilesMap.get(id);
           if (p && (p.full_name || p.email || '').toLowerCase().includes(lowerQuery)) {
@@ -238,7 +238,8 @@ export function TeamRosterModal({
       if (p.status === 'deployed') continue;
       const team = teamsMap.get(p.team_id);
       if (!team) continue;
-      if (team.data?.pm_id === profile.id || team.data?.developer_ids?.includes(profile.id)) {
+      const teamData = team.data as Record<string, unknown> | undefined;
+      if ((teamData?.pm_id as string) === profile.id || (teamData?.developer_ids as string[] | undefined)?.includes(profile.id)) {
         userProjects.push(p);
       }
     }
@@ -255,7 +256,7 @@ export function TeamRosterModal({
   const selectedSquad = teamsMap.get(activeSquadId) || null;
   const activeMetrics = selectedSquad ? getCachedMetrics(selectedSquad.id) : null;
   const activeSquadPM = selectedSquad && activeMetrics ? profilesMap.get(activeMetrics.pmId) : null;
-  const activeSquadEngineers = selectedSquad ? (selectedSquad.data?.developer_ids || []).map((id: string) => profilesMap.get(id)).filter(Boolean) : [];
+  const activeSquadEngineers = selectedSquad ? ((selectedSquad.data as Record<string, unknown>)?.developer_ids as string[] || []).map((id: string) => profilesMap.get(id)).filter(Boolean) : [];
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">

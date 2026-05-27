@@ -192,8 +192,8 @@ export function AdminDashboard({
   const startEditing = (team: Team) => {
     setEditingTeamId(team.id);
     setNewTeamName(team.name);
-    setSelectedPm(team.data?.pm_id || '');
-    setSelectedDevs(team.data?.developer_ids || []);
+    setSelectedPm((team.data as Record<string, unknown>)?.pm_id as string || '');
+    setSelectedDevs((team.data as Record<string, unknown>)?.developer_ids as string[] || []);
 
     // Scroll to form
     const form = document.getElementById('team-form');
@@ -460,8 +460,8 @@ export function AdminDashboard({
                 </div>
               )}
               {teams.map(team => {
-                const pmId = team.data?.pm_id;
-                const devIds = team.data?.developer_ids || [];
+                const pmId = (team.data as Record<string, unknown>)?.pm_id as string | undefined;
+                const devIds = (team.data as Record<string, unknown>)?.developer_ids as string[] || [];
                 const pm = profiles.find(p => p.id === pmId);
                 const squadDevs = devIds.map((id: string) => profiles.find(p => p.id === id)).filter(Boolean);
                 return (

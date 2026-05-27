@@ -1,7 +1,9 @@
 import { supabase, createRealtimeChannel, isSupabaseConfigured } from '../lib/supabase';
 import { fetchNotifications } from './notificationService';
+import type { Notification } from '../types';
 
-export type NotificationRow = Record<string, unknown>;
+/** Row shape from the notifications table — aliased to the canonical Notification type. */
+export type NotificationRow = Notification;
 
 export async function loadWorkspaceNotifications(
   workspaceId: string,

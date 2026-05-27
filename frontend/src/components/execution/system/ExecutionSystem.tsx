@@ -150,7 +150,7 @@ export function ExecutionSystem({
   const tasksByGroup = useMemo(() => {
     const map = new Map<string, Task[]>();
     for (const t of filteredTasks) {
-      let key = t.status;
+      let key: string = t.status;
       if (groupBy === 'assignee') key = t.assignee_id || 'unassigned';
       if (groupBy === 'priority') key = t.priority || 'medium';
       if (groupBy === 'risk') key = t.risk || 'low';
@@ -321,6 +321,7 @@ export function ExecutionSystem({
             onClose={() => setIsAddingTask(false)}
             projects={projects}
             users={users}
+            defaultStatus="backlog"
             defaultProjectId={filterByProject || undefined}
             onSubmit={handleAddTask}
             notify={notify}

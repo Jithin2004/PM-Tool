@@ -177,8 +177,8 @@ export function ProjectDetailsModal({
   const hasAllData = pBest !== '' && pLikely !== '' && pWorst !== '' && proposedStartDate !== '' && clientDeadline !== '';
 
   const team = teams.find(t => t.id === teamId);
-  const parsedTeamData = team ? team.data : null;
-  const engineerCount = Math.max(1, parsedTeamData?.developer_ids?.length || 1);
+  const parsedTeamData = team ? (team.data as Record<string, unknown>) : null;
+  const engineerCount = Math.max(1, (parsedTeamData?.developer_ids as string[] | undefined)?.length || 1);
 
   const expectedRealHours = calculateExpectedTime(Number(pBest), Number(pLikely), Number(pWorst));
   const productiveHoursPerDay = workingHoursPerDay * 0.8;

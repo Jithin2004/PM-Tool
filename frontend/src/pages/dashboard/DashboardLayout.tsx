@@ -796,7 +796,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       if (frictionData) selectedFrictions.push("External Data Provisioning Delay");
       if (frictionSla) selectedFrictions.push("Third-Party SLA / Compliance Review");
 
-      const projectDurations = { ...(raw.workspaceSettingsBlob?.project_state_durations || {}) } as Record<string, any>;
+      const projectDurations = { ...(raw.workspaceSettingsBlob?.project_state_durations as Record<string, unknown> || {}) } as Record<string, any>;
       projectDurations[data.id] = {
         currentState: selectedFrictions.length > 0 ? 'passive_wait' : 'active',
         activeDays: 0,
@@ -1530,7 +1530,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             profiles={profiles}
             projects={projects}
             workingHoursPerDay={workingHoursPerDay}
-            attendanceRecords={systemData.attendance || {}}
+            attendanceRecords={systemData.attendance as Record<string, Record<string, { status: string; leaveType?: string; isPaidHalfDay?: boolean; }>> || {}}
             systemData={systemData}
             onClose={() => setIsRosterOpen(false)}
           />

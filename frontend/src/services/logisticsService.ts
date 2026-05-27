@@ -209,7 +209,7 @@ export async function saveLogisticsData(input: SaveLogisticsInput): Promise<Save
     const settingsTeam = prev.find(t => t.name === 'SYSTEM_SETTINGS');
     if (settingsTeam) {
       return prev.map(t =>
-        t.name === 'SYSTEM_SETTINGS' ? { ...t, data: { ...t.data, ...payload } } : t,
+        t.name === 'SYSTEM_SETTINGS' ? { ...t, data: { ...(t.data as Record<string, unknown>), ...payload } } : t,
       );
     }
     return [
