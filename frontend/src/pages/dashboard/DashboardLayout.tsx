@@ -81,6 +81,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     refreshAll,
     dbNotifications,
     updateWorkspaceSettings,
+    refreshAttendance,
+    refreshSalaries,
   } = useOperationalData();
 
   const attendanceRows = raw.attendanceRows;
@@ -583,7 +585,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             const { error } = await supabase.from('attendance').insert(toInsert);
             if (!error) {
               console.log(`Successfully migrated ${toInsert.length} attendance records.`);
-              await refreshAll();
+              await refreshAttendance();
             }
           } catch (e) {
             console.error("Attendance migration failed:", e);
@@ -606,7 +608,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             const { error } = await supabase.from('salaries').insert(toInsert);
             if (!error) {
               console.log(`Successfully migrated ${toInsert.length} salary records.`);
-              await refreshAll();
+              await refreshSalaries();
             }
           } catch (e) {
             console.error("Salary migration failed:", e);
@@ -618,7 +620,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     // Run migration after data has been loaded
     const delay = setTimeout(migrateData, 5000);
     return () => clearTimeout(delay);
-  }, [loading, rawSystemData, attendanceRows.length, salaryRows.length, workspace?.id, refreshAll]);
+  }, [loading, rawSystemData, attendanceRows.length, salaryRows.length, workspace?.id, refreshAttendance, refreshSalaries]);
 
   const handleLogout = async () => {
     await logout();
@@ -684,7 +686,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     if (!error && data) {
       setProjects(projects.map(p => p.id === id ? data : p));
       notify("Project details saved.", "success");
-      refreshProjects();
     } else {
       console.error("Metadata update failed:", error);
       notify(`Sync failed: ${error?.message || "Unknown error"}`, "error");
@@ -717,7 +718,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           setProjects(projects.filter(p => p.id !== id));
           notify("Project archived successfully.", "success");
           setSelectedProject(null);
-          refreshProjects();
         } else {
           console.error("Project archive failed:", error);
           notify(`Deletion failed: ${error.message}`, "error");

@@ -29,6 +29,8 @@ interface OperationalDataContextValue {
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   refreshAll: () => Promise<void>;
   refreshProjects: () => Promise<void>;
+  refreshAttendance: () => Promise<void>;
+  refreshSalaries: () => Promise<void>;
   handleSaveLogisticsData: (data: Record<string, unknown>) => Promise<'success' | 'unauthorized' | 'error'>;
   handleCreateTeam: (name: string, pmId: string, devIds: string[]) => Promise<void>;
   handleUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => Promise<void>;
@@ -117,6 +119,18 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     const partial = await refreshOperationalPartial(workspace.id, ['projects', 'serverMetrics']);
     if (partial.projects) setProjects(partial.projects);
     if (partial.serverMetrics) setServerMetrics(partial.serverMetrics);
+  }, [workspace?.id]);
+
+  const refreshAttendance = useCallback(async () => {
+    if (!workspace?.id) return;
+    const partial = await refreshOperationalPartial(workspace.id, ['attendanceRows']);
+    if (partial.attendanceRows) setAttendanceRows(partial.attendanceRows);
+  }, [workspace?.id]);
+
+  const refreshSalaries = useCallback(async () => {
+    if (!workspace?.id) return;
+    const partial = await refreshOperationalPartial(workspace.id, ['salaryRows']);
+    if (partial.salaryRows) setSalaryRows(partial.salaryRows);
   }, [workspace?.id]);
 
   const fetchNotifications = useCallback(async () => {
@@ -351,6 +365,8 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       setProjects,
       refreshAll,
       refreshProjects,
+      refreshAttendance,
+      refreshSalaries,
       handleSaveLogisticsData,
       handleCreateTeam,
       handleUpdateTeam,
@@ -368,6 +384,8 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       dbNotifications,
       refreshAll,
       refreshProjects,
+      refreshAttendance,
+      refreshSalaries,
       handleSaveLogisticsData,
       handleCreateTeam,
       handleUpdateTeam,
