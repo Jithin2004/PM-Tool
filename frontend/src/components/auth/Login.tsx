@@ -55,9 +55,16 @@ export function Login() {
 
         <div className="space-y-6">
           {error && (
-            <div className="flex items-start gap-3 border border-red-500/25 bg-signal-critical-bg p-4">
-              <AlertTriangle className="w-4 h-4 text-signal-critical shrink-0 mt-0.5" />
-              <p className="text-[12px] font-mono text-red-300 leading-relaxed">{error}</p>
+            <div className="flex flex-col gap-3 border border-red-500/25 bg-signal-critical-bg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-signal-critical shrink-0 mt-0.5" />
+                <p className="text-[12px] font-mono text-red-300 leading-relaxed">{error}</p>
+              </div>
+              {error.includes('uninvited') && (
+                <a href="/activate" className="mt-2 w-full bg-white text-black h-10 flex items-center justify-center gap-2 font-semibold uppercase tracking-wide text-xs hover:bg-neutral-200 transition-all active:scale-[0.98]">
+                  Activate Product Key
+                </a>
+              )}
             </div>
           )}
 
