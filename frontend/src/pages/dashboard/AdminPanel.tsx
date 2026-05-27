@@ -135,13 +135,13 @@ export function AdminPanel() {
       {tab === 'identity' && (
         <div className="space-y-8">
           {/* Identity Table */}
-          <div className="rounded-xl overflow-hidden shadow-2xl"
+          <div className="rounded-xl shadow-2xl"
             style={{ background: 'var(--pm-surface-low)', border: '1px solid rgba(70,69,84,0.3)' }}>
             <table className="w-full text-left border-collapse executive-table">
               <thead style={{ background: 'rgba(51,53,55,0.5)', borderBottom: '1px solid rgba(70,69,84,0.3)' }}>
                 <tr>
-                  {['Member', 'Role', 'Permissions', 'Settings'].map(h => (
-                    <th key={h} className="px-8 py-4">{h}</th>
+                  {['Member', 'Role', 'Permissions', 'Settings'].map((h, i, arr) => (
+                    <th key={h} className={`px-8 py-4 ${i === 0 ? 'rounded-tl-xl' : ''} ${i === arr.length - 1 ? 'rounded-tr-xl' : ''}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
