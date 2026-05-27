@@ -30,11 +30,7 @@ export function ProjectWorkspace() {
     });
   }, [activeProjects, tasks]);
 
-  const deliveryConfidence = useMemo(() => {
-    if (stats?.deliveryConfidence !== undefined) return stats.deliveryConfidence;
-    if (activeProjects.length === 0) return 100;
-    return Math.max(0, 100 - Math.round((highRiskProjects.length / activeProjects.length) * 100));
-  }, [activeProjects, highRiskProjects, stats?.deliveryConfidence]);
+  const deliveryConfidence = stats?.deliveryConfidence;
 
   const filteredProjects = useMemo(() => {
     let filtered = projects;
@@ -72,9 +68,13 @@ export function ProjectWorkspace() {
           <div className="hidden md:flex items-center gap-4 mr-4 bg-surface-2 px-4 py-2 rounded-lg border border-border">
             <div className="flex flex-col">
               <span className="text-[10px] font-medium text-text-tertiary uppercase tracking-wide">Confidence</span>
-              <span className={`text-sm font-semibold tracking-tight ${deliveryConfidence > 80 ? 'text-signal-safe' : deliveryConfidence > 50 ? 'text-signal-warning' : 'text-signal-critical'}`}>
-                {deliveryConfidence}%
-              </span>
+              {deliveryConfidence !== undefined ? (
+                <span className={`text-sm font-semibold tracking-tight ${deliveryConfidence > 80 ? 'text-signal-safe' : deliveryConfidence > 50 ? 'text-signal-warning' : 'text-signal-critical'}`}>
+                  {deliveryConfidence}%
+                </span>
+              ) : (
+                <span className="inline-block w-8 h-4 bg-white/10 animate-pulse rounded mt-0.5" />
+              )}
             </div>
             <div className="w-px h-6 bg-border-subtle"></div>
             <div className="flex flex-col">

@@ -2,12 +2,14 @@ import React, { useMemo, useEffect, useRef } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../context/AuthContext';
+import { useDashboard } from '../../context/DashboardContext';
 import { Icon } from '../../components/ui/Icon';
 
 export default function OverviewPage() {
   const { workspace, projects } = useWorkspace() as any;
   const { tasks } = useTasks(workspace?.id) as any;
   const { profile } = useAuth();
+  const { stats } = useDashboard();
   const clockRef = useRef<HTMLSpanElement>(null);
 
   // ── Metrics ──────────────────────────────────────────────────
@@ -18,7 +20,7 @@ export default function OverviewPage() {
   const totalTasks             = tasks?.length || 0;
   const completionRate         = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
   const highRiskTasks          = tasks?.filter((t: any) => t.risk === 'high').length || 0;
-  const deliveryConfidence     = totalTasks > 0 ? Math.max(0, 100 - Math.round((highRiskTasks / totalTasks) * 100)) : 100;
+  const deliveryConfidence     = stats?.deliveryConfidence;
   const riskStatus             = highRiskTasks > 5 ? 'Elevated' : highRiskTasks > 0 ? 'Moderate' : 'Healthy';
 
   // ── Velocity chart data ───────────────────────────────────────
@@ -98,10 +100,14 @@ export default function OverviewPage() {
     },
     {
       label: 'Delivery Confidence',
-      value: `${deliveryConfidence}%`,
+      value: deliveryConfidence !== undefined ? `${deliveryConfidence}%` : (
+        <span className="inline-block w-16 h-8 bg-white/10 animate-pulse rounded" />
+      ),
       sub: 'PERT-weighted estimate',
       icon: 'trending_up',
-      color: deliveryConfidence >= 80 ? '#34d399' : deliveryConfidence >= 60 ? 'var(--pm-tertiary)' : 'var(--pm-error)',
+      color: deliveryConfidence !== undefined
+        ? (deliveryConfidence >= 80 ? '#34d399' : deliveryConfidence >= 60 ? 'var(--pm-tertiary)' : 'var(--pm-error)')
+        : 'var(--pm-primary)',
     },
   ];
 
@@ -213,7 +219,7 @@ export default function OverviewPage() {
               <span className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)' }}>VELOCITY INDEX</span>
             </div>
             <span className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-primary)' }}>
-              {deliveryConfidence}% CONFIDENCE BAND
+              {deliveryConfidence !== undefined ? `${deliveryConfidence}% CONFIDENCE BAND` : 'CONFIDENCE BAND'}
             </span>
           </div>
         </div>
@@ -371,7 +377,15 @@ export default function OverviewPage() {
           { label: 'Portfolio Velocity', value: `${completedTasks.length * 8}`, unit: 'pts/sprint', trend: '+12%', trendUp: true },
           { label: 'Resource Burn', value: '68%', unit: 'nominal', trend: 'Stable', trendUp: true },
           { label: 'Risk Index', value: riskStatus, unit: '', trend: highRiskTasks === 0 ? 'Clear' : `${highRiskTasks} flagged`, trendUp: highRiskTasks === 0 },
-          { label: 'Execution Health', value: `${deliveryConfidence}%`, unit: 'confidence', trend: completionRate > 50 ? 'On Track' : 'Review', trendUp: completionRate > 50 },
+          {
+            label: 'Execution Health',
+            value: deliveryConfidence !== undefined ? `${deliveryConfidence}%` : (
+              <span className="inline-block w-8 h-5 bg-white/10 animate-pulse rounded" />
+            ),
+            unit: 'confidence',
+            trend: completionRate > 50 ? 'On Track' : 'Review',
+            trendUp: completionRate > 50
+          },
         ].map((item, i) => (
           <div key={i} className="glass-panel rounded-lg p-4 flex flex-col gap-2">
             <span className="font-mono-pm text-[9px] uppercase tracking-widest"
