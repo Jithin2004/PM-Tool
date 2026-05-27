@@ -34,23 +34,23 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-bg flex items-center justify-center p-6 relative overflow-hidden font-geist">
       {/* Grid Overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-20"
-        style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }}>
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }}>
       </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-surface border border-border p-10 relative z-10"
+        className="w-full max-w-md pm-card p-10 relative z-10"
       >
         <div className="flex flex-col items-center text-center mb-10">
-          <div className="w-16 h-16 bg-white flex items-center justify-center rounded-sm mb-6">
-            <Activity className="text-black w-8 h-8" />
+          <div className="w-16 h-16 bg-white/5 border border-border flex items-center justify-center rounded-xl mb-6 p-2 shadow-sm">
+            <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-4xl font-medium tracking-tight mb-2">RESOLVE PM</h1>
-          <p className="text-[10px] font-mono text-text-secondary uppercase tracking-[0.3em]">Precision Engineering Control</p>
+          <h1 className="text-3xl font-semibold tracking-tight mb-2" style={{ color: 'var(--pm-on-surface)' }}>RESOLVE PM</h1>
+          <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--pm-primary)' }}>Enterprise Workspace</p>
         </div>
 
         <div className="space-y-6">
@@ -68,33 +68,23 @@ export function Login() {
             </div>
           )}
 
-          <div className="bg-white/5 border border-border p-6 text-xs font-mono text-text-secondary leading-relaxed">
-            <p className="mb-4">SYSTEM_ACCESS_PROTOCOL: v6.0.1</p>
-            <p>Authorized personnel only. By entering, you consent to predictive bias modeling and historical data aggregation.</p>
+          <div className="rounded-xl border p-6 text-center text-sm leading-relaxed" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface-variant)' }}>
+            <p className="mb-3 font-medium" style={{ color: 'var(--pm-on-surface)' }}>Welcome to Resolve PM</p>
+            <p>Sign in to access your workspace, manage projects, and collaborate with your team.</p>
           </div>
 
           <button
             onClick={handleGoogleLogin}
-            className="w-full bg-white text-black h-14 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs hover:bg-neutral-200 transition-all active:scale-[0.98]"
+            className="w-full rounded-xl h-12 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
+            style={{ background: 'var(--pm-primary)', color: 'white' }}
             id="google-login-btn"
           >
             <Zap className="w-4 h-4" />
-            Initialize Google Auth
+            Sign In with Google
           </button>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-border-subtle flex justify-center gap-6">
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-text-secondary">
-            <div className="w-1 h-1 rounded-full bg-white/20"></div>
-            AES_256
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-text-secondary">
-            <div className="w-1 h-1 rounded-full bg-white/20"></div>
-            ENCLAVE_ACTIVE
-          </div>
-        </div>
-
-        <a href="/" className="block text-center mt-6 text-[10px] font-mono text-text-quaternary hover:text-text-quaternary transition-colors">
+        <a href="/" className="block text-center mt-10 text-xs transition-colors hover:underline" style={{ color: 'var(--pm-on-surface-variant)' }}>
           Back to Landing
         </a>
       </motion.div>

@@ -189,32 +189,34 @@ export function CalendarIntelligencePanel() {
                         </div>
                       )}
                       {cell && cell.events.length > 0 && (
-                        <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 bg-surface border border-border rounded-xl shadow-2xl p-3 overflow-hidden">
-                          <div className="max-h-48 overflow-y-auto scrollbar-thin space-y-2">
-                            {cell.events.map((ev: any) => {
-                              const isDeleted = !!ev.deleted_at;
-                              return (
-                                <div key={ev.id} className={`flex flex-col gap-1 p-2 rounded-lg ${isDeleted ? 'bg-bg/50 opacity-40' : 'bg-surface-2 border border-border-subtle'}`}>
-                                  <div className="flex items-center gap-2">
-                                    {ev.auto_generated ? <Globe className="w-3.5 h-3.5 text-accent-primary" /> : <Building2 className="w-3.5 h-3.5 text-signal-warning" />}
-                                    <span className="text-[11px] font-bold text-text-primary truncate">{ev.title}</span>
+                        <div className="absolute z-30 bottom-full left-1/2 -translate-x-1/2 pb-2 hidden group-hover:block w-56">
+                          <div className="bg-surface border border-border rounded-xl shadow-2xl p-3 overflow-hidden">
+                            <div className="max-h-48 overflow-y-auto scrollbar-thin space-y-2">
+                              {cell.events.map((ev: any) => {
+                                const isDeleted = !!ev.deleted_at;
+                                return (
+                                  <div key={ev.id} className={`flex flex-col gap-1 p-2 rounded-lg ${isDeleted ? 'bg-bg/50 opacity-40' : 'bg-surface-2 border border-border-subtle'}`}>
+                                    <div className="flex items-center gap-2">
+                                      {ev.auto_generated ? <Globe className="w-3.5 h-3.5 text-accent-primary" /> : <Building2 className="w-3.5 h-3.5 text-signal-warning" />}
+                                      <span className="text-[11px] font-bold text-text-primary truncate">{ev.title}</span>
+                                    </div>
+                                    {canManageCalendar && (
+                                      <button
+                                        onClick={() => handleToggle(ev.id, ev.deleted_at)}
+                                        disabled={togglingIds.has(ev.id)}
+                                        className={`mt-1 w-full py-1 text-[9px] font-bold uppercase tracking-wider rounded border transition-all ${
+                                          isDeleted 
+                                            ? 'border-signal-safe/30 text-signal-safe hover:bg-signal-safe/10' 
+                                            : 'border-signal-critical/30 text-signal-critical hover:bg-signal-critical/10'
+                                        }`}
+                                      >
+                                        {togglingIds.has(ev.id) ? 'Processing...' : isDeleted ? 'Re-enable Event' : 'Disable Event'}
+                                      </button>
+                                    )}
                                   </div>
-                                  {canManageCalendar && (
-                                    <button
-                                      onClick={() => handleToggle(ev.id, ev.deleted_at)}
-                                      disabled={togglingIds.has(ev.id)}
-                                      className={`mt-1 w-full py-1 text-[9px] font-bold uppercase tracking-wider rounded border transition-all ${
-                                        isDeleted 
-                                          ? 'border-signal-safe/30 text-signal-safe hover:bg-signal-safe/10' 
-                                          : 'border-signal-critical/30 text-signal-critical hover:bg-signal-critical/10'
-                                      }`}
-                                    >
-                                      {togglingIds.has(ev.id) ? 'Processing...' : isDeleted ? 'Re-enable Event' : 'Disable Event'}
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -296,13 +298,17 @@ export function CalendarIntelligencePanel() {
                       <input type="date" value={newEvent.end_date} onChange={e => setNewEvent(prev => ({ ...prev, end_date: e.target.value }))} className="w-full h-10 bg-bg border border-border px-3 text-xs font-mono text-text-primary outline-none focus:border-white/40" />
                     </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Capacity Impact</label>
-                    <select value={newEvent.capacity_impact} onChange={e => setNewEvent(prev => ({ ...prev, capacity_impact: Number(e.target.value) }))} className="w-full h-10 bg-bg border border-border px-3 text-xs font-mono text-text-primary outline-none focus:border-white/40">
-                      <option value={1}>Full day (no capacity)</option>
-                      <option value={0.5}>Half day (50% capacity)</option>
-                      <option value={0}>No impact (informational)</option>
-                    </select>
+                  <div className="flex items-center gap-2 py-2">
+                    <input 
+                      type="checkbox" 
+                      id="isLeave" 
+                      checked={newEvent.capacity_impact === 1}
+                      onChange={e => setNewEvent(prev => ({ ...prev, capacity_impact: e.target.checked ? 1 : 0 }))}
+                      className="w-4 h-4 rounded border-border bg-bg text-accent-primary focus:ring-accent-primary"
+                    />
+                    <label htmlFor="isLeave" className="text-xs font-mono text-text-primary cursor-pointer">
+                      Mark as non-working day (Leave/Off)
+                    </label>
                   </div>
                   <div>
                     <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Description</label>
