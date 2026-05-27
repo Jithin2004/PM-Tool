@@ -26,9 +26,10 @@ export default function OverviewPage() {
 
   // ── Velocity chart data ───────────────────────────────────────
   const velocityPoints = useMemo(() => {
-    let base = totalTasks > 0 ? [30, 45, 38, 60, 52, 75, 68, 85, 72, 90, 78, 95] : [10, 15, 12, 18, 14, 20, 16, 22, 18, 25, 20, 28];
+    let base = totalTasks > 0 ? [30, 45, 38, 60, 52, 75, 68, 85, 72, 90, 78, 95, 96, 92, 98] : [10, 15, 12, 18, 14, 20, 16, 22, 18, 25, 20, 28, 29, 31, 35];
     if (velocityPeriod === '7D') base = base.slice(-7);
-    else if (velocityPeriod === '90D') base = [...base, ...base.slice(0, 8)]; // Just to make it look different
+    else if (velocityPeriod === '30D') base = [...base, ...base.slice(0, 15)]; // Just to make it look different and have 30 items
+    // If '15D', it uses the default 15 items base
     return base.map(v => Math.min(100, v + Math.random() * 5));
   }, [totalTasks, velocityPeriod]);
 
@@ -181,7 +182,7 @@ export default function OverviewPage() {
               </p>
             </div>
             <div className="flex gap-2">
-              {['7D', '30D', '90D'].map((p) => (
+              {['7D', '15D', '30D'].map((p) => (
                 <button key={p} 
                   onClick={() => setVelocityPeriod(p)}
                   className="px-3 py-1 rounded font-mono-pm text-xs transition-all"
