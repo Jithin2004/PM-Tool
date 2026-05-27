@@ -51,7 +51,29 @@ export function AdminPanel() {
   } = useDashboard();
 
   const [tab, setTab] = useState<AdminTab>('identity');
+  const [activeGearPopover, setActiveGearPopover] = useState<string | null>(null);
+
   const canViewCalendar = hasCapability(profile?.role, 'view_decision_center');
+
+  const customRoles: string[] = systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'];
+  const userCustomRoles: Record<string, string> = systemData.userCustomRoles || {};
+
+  const handleAssignCustomRoleLocal = async (userId: string, roleName: string) => {
+    const userProfile = profiles.find(p => p.id === userId);
+    const targetName = userProfile?.full_name || userProfile?.email || "this user";
+
+    askConfirmation("Confirm Designation Change", `Confirm action: Change designation of ${targetName} to '${roleName}'?`, async () => {
+      const updatedUserRoles = {
+        ...userCustomRoles,
+        [userId]: roleName
+      };
+      await handleSaveLogisticsData({
+        ...systemData,
+        userCustomRoles: updatedUserRoles
+      });
+      setActiveGearPopover(null);
+    }, "Change");
+  };
 
   if (!hasCapability(profile?.role, 'platform_governance')) {
     return (
@@ -60,7 +82,7 @@ export function AdminPanel() {
         <Icon name="lock" size={40} style={{ opacity: 0.3 }} />
         <div className="text-center">
           <p className="font-mono-pm text-[11px] uppercase tracking-widest mb-1" style={{ color: 'var(--pm-error)' }}>
-            CLEARANCE DENIED
+            ACCESS DENIED
           </p>
           <p className="text-sm">Admin governance privileges required to access this console.</p>
         </div>
@@ -72,8 +94,8 @@ export function AdminPanel() {
   const activeProfiles = profiles || [];
 
   const tabs: { id: AdminTab; label: string; icon: string }[] = [
-    { id: 'identity', label: 'Identity Registry', icon: 'groups' },
-    { id: 'teams', label: 'Operational Units', icon: 'hub' },
+    { id: 'identity', label: 'Workspace Access', icon: 'groups' },
+    { id: 'teams', label: 'Delivery Units', icon: 'hub' },
     ...(canViewCalendar ? [{ id: 'calendar' as AdminTab, label: 'Calendar Intelligence', icon: 'calendar_month' }] : []),
   ];
 
@@ -83,14 +105,14 @@ export function AdminPanel() {
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Internal Identity Console</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Access &amp; Identity</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Management of core operational entities and access matrices.
+            Manage workspace members, roles, and unit allocation.
           </p>
         </div>
         <span className="font-mono-pm text-[10px] uppercase tracking-[0.2em] px-3 py-1 rounded"
           style={{ background: 'rgba(192,193,255,0.05)', border: '1px solid rgba(192,193,255,0.1)', color: 'var(--pm-primary)' }}>
-          {activeProfiles.length} ACTIVE ENTITIES
+          {activeProfiles.length} ACTIVE MEMBERS
         </span>
       </div>
 
@@ -109,7 +131,7 @@ export function AdminPanel() {
         ))}
       </div>
 
-      {/* ── Identity Registry Tab ───────────────────────────────── */}
+      {/* ── Workspace Access Tab ───────────────────────────────── */}
       {tab === 'identity' && (
         <div className="space-y-8">
           {/* Identity Table */}
@@ -118,7 +140,7 @@ export function AdminPanel() {
             <table className="w-full text-left border-collapse executive-table">
               <thead style={{ background: 'rgba(51,53,55,0.5)', borderBottom: '1px solid rgba(70,69,84,0.3)' }}>
                 <tr>
-                  {['Entity Identity', 'Clearance Level', 'Access Range', 'Controls'].map(h => (
+                  {['Member', 'Role', 'Permissions', 'Settings'].map(h => (
                     <th key={h} className="px-8 py-4">{h}</th>
                   ))}
                 </tr>
@@ -130,7 +152,7 @@ export function AdminPanel() {
                   const initials = getInitials(p.full_name || p.email || '');
                   return (
                     <tr key={p.id} style={{ borderBottom: '1px solid rgba(70,69,84,0.1)' }}>
-                      {/* Entity Identity */}
+                      {/* Member */}
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm"
@@ -148,14 +170,14 @@ export function AdminPanel() {
                           </div>
                         </div>
                       </td>
-                      {/* Clearance Level */}
+                      {/* Role */}
                       <td className="px-8 py-5">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider"
                           style={{ background: `${roleColor}12`, color: roleColor, border: `1px solid ${roleColor}25` }}>
                           {getRoleLabel(p.role)}
                         </span>
                       </td>
-                      {/* Access Range bar */}
+                      {/* Permissions bar */}
                       <td className="px-8 py-5">
                         <div className="w-40 space-y-1.5">
                           <div className="h-1.5 w-full rounded-full overflow-hidden"
@@ -165,20 +187,62 @@ export function AdminPanel() {
                           </div>
                           <span className="font-mono-pm text-[9px] uppercase tracking-widest"
                             style={{ color: roleColor, opacity: 0.8 }}>
-                            {accessPct === 100 ? 'Full Spectrum Access' : accessPct >= 60 ? 'Tactical Clearance' : 'Limited Access'}
+                            {accessPct === 100 ? 'Full Access' : accessPct >= 60 ? 'Admin Access' : 'Standard Access'}
                           </span>
                         </div>
                       </td>
                       {/* Controls */}
-                      <td className="px-8 py-5">
+                      <td className="px-8 py-5 relative">
                         <button className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
-                          style={{ color: 'var(--pm-on-surface-variant)' }}
-                          onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-primary)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
-                          onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
-                          onClick={() => document.getElementById('admin-dashboard-view')?.scrollIntoView({ behavior: 'smooth' })}
+                          style={{ 
+                            color: activeGearPopover === p.id ? 'var(--pm-primary)' : 'var(--pm-on-surface-variant)', 
+                            background: activeGearPopover === p.id ? 'rgba(192,193,255,0.1)' : '' 
+                          }}
+                          onMouseEnter={e => { if (activeGearPopover !== p.id) { (e.currentTarget as any).style.color = 'var(--pm-primary)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; } }}
+                          onMouseLeave={e => { if (activeGearPopover !== p.id) { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; } }}
+                          onClick={() => setActiveGearPopover(activeGearPopover === p.id ? null : p.id)}
                           title="Manage identity">
                           <Icon name="settings_suggest" size={18} />
                         </button>
+
+                        {activeGearPopover === p.id && (
+                          <div className="absolute right-12 top-12 w-64 rounded-xl shadow-2xl z-50 p-5 flex flex-col gap-5"
+                            style={{ background: 'var(--pm-surface-high)', border: '1px solid rgba(70,69,84,0.3)' }}>
+                            {hasCapability(profile?.role, 'platform_governance') && p.role !== 'super_admin' && (
+                              <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-mono-pm uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Access Role</label>
+                                <select
+                                  value={p.role}
+                                  onChange={(e) => { handleUpdateRole(p.id, e.target.value as any); setActiveGearPopover(null); }}
+                                  className="border text-[11px] font-mono-pm px-3 py-2.5 rounded outline-none w-full"
+                                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                                >
+                                  <option value="viewer">Viewer</option>
+                                  <option value="developer">Developer</option>
+                                  <option value="manager">Project Manager</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                              </div>
+                            )}
+                            {p.role !== 'super_admin' ? (
+                              <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-mono-pm uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Designation</label>
+                                <select
+                                  value={userCustomRoles[p.id] || 'Viewer'}
+                                  onChange={(e) => handleAssignCustomRoleLocal(p.id, e.target.value)}
+                                  className="border text-[11px] font-mono-pm px-3 py-2.5 rounded outline-none w-full"
+                                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                                >
+                                  {customRoles.map(r => (
+                                    <option key={r} value={r}>{r}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] font-mono-pm uppercase italic text-center" style={{ color: 'var(--pm-on-surface-variant)' }}>System Administrator</span>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -192,7 +256,7 @@ export function AdminPanel() {
             <h2 className="text-base font-semibold flex items-center gap-2 mb-5"
               style={{ color: 'var(--pm-on-surface)' }}>
               <Icon name="terminal" size={20} style={{ color: 'var(--pm-primary)' }} />
-              Control &amp; Capabilities Center
+              Workspace Configuration
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {/* Create Team */}
@@ -205,13 +269,13 @@ export function AdminPanel() {
                   style={{ background: 'rgba(192,193,255,0.08)', border: '1px solid rgba(192,193,255,0.15)' }}>
                   <Icon name="group_add" size={24} style={{ color: 'var(--pm-primary)' }} />
                 </div>
-                <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>Create Team</h3>
+                <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>Delivery Unit Initialization</h3>
                 <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                  Initialize new operational units with specific scope of work and resource allocation protocol.
+                  Create and configure new delivery units and assign team members.
                 </p>
                 <div className="flex items-center gap-2 font-mono-pm text-[11px] uppercase tracking-[0.2em]"
                   style={{ color: 'var(--pm-primary)' }}>
-                  <span>Execute Protocol</span>
+                  <span>Create Unit</span>
                   <Icon name="arrow_forward" size={14} className="group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -226,23 +290,23 @@ export function AdminPanel() {
                   style={{ background: 'rgba(195,198,213,0.08)', border: '1px solid rgba(195,198,213,0.15)' }}>
                   <Icon name="admin_panel_settings" size={24} style={{ color: 'var(--pm-secondary)' }} />
                 </div>
-                <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>Designations</h3>
+                <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>Designation Registry</h3>
                 <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                  Configure custom access roles, multi-tier permission matrices, and security clearances.
+                  Manage custom roles and professional designations across the workspace.
                 </p>
                 <div className="flex items-center gap-2 font-mono-pm text-[11px] uppercase tracking-[0.2em]"
                   style={{ color: 'var(--pm-secondary)' }}>
-                  <span>Access Matrix</span>
+                  <span>Manage Designations</span>
                   <Icon name="arrow_forward" size={14} className="group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
 
-              {/* Network Telemetry */}
+              {/* System Overview */}
               <div className="glass-panel p-7 rounded-xl flex flex-col">
                 <div className="flex justify-between items-center mb-6">
                   <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em]"
                     style={{ color: 'var(--pm-on-surface-variant)' }}>
-                    Network Telemetry
+                    System Overview
                   </span>
                   <span className="font-mono-pm text-[9px] px-2 py-0.5 rounded font-bold"
                     style={{ background: 'rgba(255,183,131,0.1)', color: 'var(--pm-tertiary)', border: '1px solid rgba(255,183,131,0.2)' }}>
@@ -253,7 +317,7 @@ export function AdminPanel() {
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs font-medium uppercase tracking-wider"
                       style={{ color: 'var(--pm-on-surface-variant)' }}>
-                      Active Entities
+                      Active Members
                     </span>
                     <span className="font-mono-pm text-xl font-bold"
                       style={{ color: 'var(--pm-primary)' }}>
@@ -274,7 +338,7 @@ export function AdminPanel() {
                     style={{ boxShadow: '0 0 6px rgba(52,211,153,0.5)' }} />
                   <p className="font-mono-pm text-[9px] uppercase tracking-widest"
                     style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>
-                    All systems operational
+                    Systems operational
                   </p>
                 </div>
               </div>
@@ -300,7 +364,7 @@ export function AdminPanel() {
         </div>
       )}
 
-      {/* ── Operational Units Tab ───────────────────────────────── */}
+      {/* ── Delivery Units Tab ───────────────────────────────── */}
       {tab === 'teams' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -312,12 +376,12 @@ export function AdminPanel() {
                     <Icon name="hub" size={20} />
                   </div>
                   <span className="font-mono-pm text-[9px] font-bold uppercase tracking-widest pm-badge-success">
-                    Active
+                    ACTIVE
                   </span>
                 </div>
                 <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>{team.name}</h3>
                 <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                  {team.description || 'Operational unit within the system.'}
+                  {team.description || 'Delivery unit within the workspace.'}
                 </p>
                 <div className="flex justify-between items-center">
                   <div className="flex -space-x-2">
@@ -353,7 +417,7 @@ export function AdminPanel() {
               <Icon name="add_circle" size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
               <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em] font-bold"
                 style={{ color: 'var(--pm-on-surface-variant)' }}>
-                Register Unit
+                Create Unit
               </span>
             </button>
           </div>
