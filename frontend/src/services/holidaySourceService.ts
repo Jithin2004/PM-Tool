@@ -120,12 +120,10 @@ class HolidaySourceService {
     let imported = 0;
     let skipped = 0;
     try {
-      const { data: existingRows } = await supabase
-        .from('calendar_events')
-        .select('id, source_id, source_table, title, start_date, deleted_at')
-        .eq('workspace_id', workspaceId)
-        .eq('auto_generated', true)
-        .in('event_type', ['holiday', 'festival', 'regional']);
+      const startDate = `${currentYear}-01-01T00:00:00Z`;
+      const endDate = `${currentYear + 2}-01-01T00:00:00Z`;
+      const allEvents = await calendarEventService.getEventsInRange(workspaceId, startDate, endDate);
+      const existingRows = allEvents.filter((e: any) => e.auto_generated && ['holiday', 'festival', 'regional'].includes(e.event_type));
 
       const index = indexExistingHolidayEvents(existingRows || []);
       const seenIncoming = new Set<string>();
@@ -141,16 +139,22 @@ class HolidaySourceService {
         const existing = findExistingHolidayRecord(index, provider.name, h);
         if (existing) {
           if (existing.legacy) {
-            await supabase
-              .from('calendar_events')
-              .update({
-                source_table: HOLIDAY_PROVIDER_SOURCE_TABLE,
-                source_id: sourceId,
-                deleted_at: null,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', existing.id);
-            index.bySourceId.set(sourceId, { id: existing.id, deleted_at: null });
+            await calendarEventService.upsertBySourceKey({
+              workspace_id: workspaceId,
+              event_type: h.type === 'festival' ? 'festival' : h.type === 'regional' ? 'regional' : 'holiday',
+              title: h.name,
+              start_date: `${h.date}T00:00:00Z`,
+              end_date: `${h.date}T23:59:59Z`,
+              capacity_impact: 1,
+              is_recurring: true,
+              recurrence_rule: 'FREQ=YEARLY',
+              auto_generated: true,
+              source_table: HOLIDAY_PROVIDER_SOURCE_TABLE,
+              source_id: sourceId,
+              timezone: 'UTC',
+            }, actorId);
+            imported++;
+            continue;
           } else if (existing.deleted_at) {
             await calendarEventService.upsertBySourceKey(
               {
@@ -225,20 +229,14 @@ class HolidaySourceService {
       const { data: { user } } = await supabase.auth.getUser();
       console.log('[appendLog telemetry]:', { workspaceId, provider, year, authUid: user?.id });
 
-      const { data: lastLog } = await supabase
-        .from('calendar_sync_logs')
-        .select('hash')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const logs = await calendarEventService.getSyncLogs(workspaceId, 1, year);
+      const lastLog = logs && logs.length > 0 ? logs[0] : null;
+      
+      const previousHash = lastLog?.hash || '0000000000000000000000000000000000000000000000000000000000000000';
+      const rawString = `${workspaceId}:${provider}:${year}:${found}:${imported}:${status}:${previousHash}`;
+      const hash = await sha256(rawString);
 
-      const previousHash = lastLog?.hash || 'GENESIS_BLOCK';
-      const timestamp = new Date().toISOString();
-      const message = `${workspaceId}${provider}${country}${region || ''}${year}${found}${imported}${status}${timestamp}${previousHash}`;
-      const hash = await sha256(message);
-
-      const { error } = await supabase.from('calendar_sync_logs').insert({
+      await calendarEventService.appendSyncLog({
         workspace_id: workspaceId,
         provider,
         country,
@@ -251,14 +249,6 @@ class HolidaySourceService {
         previous_hash: previousHash,
         hash
       });
-
-      if (error) {
-        if (error.code === '42501') {
-          // Gracefully degrade if RLS prevents telemetry insert
-          return;
-        }
-        console.warn('Failed to write sync log:', error);
-      }
     } catch (err) {
       console.warn('Failed to append sync log:', err);
     }
