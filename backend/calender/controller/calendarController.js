@@ -1,6 +1,7 @@
 const { google } = require('googleapis');
 const UserIntegration = require('../models/UserIntegration');
 const CalendarEvent = require('../models/CalendarEvent');
+const CalendarSyncLog = require('../models/CalendarSyncLog');
 
 const client_id = process.env.GOOGLE_CLIENT_ID;
 const client_secret = process.env.GOOGLE_CLIENT_SECRET;
@@ -272,5 +273,32 @@ exports.upsertBySourceKey = async (req, res) => {
     } catch (error) {
         console.error('upsertBySourceKey Error:', error);
         res.status(500).json({ error: 'Failed to upsert event' });
+    }
+};
+
+exports.getSyncLogs = async (req, res) => {
+    try {
+        const { workspace_id, limit, year } = req.query;
+        if (!workspace_id) return res.status(400).json({ error: "Missing workspace_id" });
+        const query = { workspace_id };
+        if (year) query.year = parseInt(year, 10);
+        const logs = await CalendarSyncLog.find(query).sort({ created_at: -1 }).limit(parseInt(limit, 10) || 20);
+        res.json(logs);
+    } catch (error) {
+        console.error('getSyncLogs Error:', error);
+        res.status(500).json({ error: 'Failed to fetch sync logs' });
+    }
+};
+
+exports.appendSyncLog = async (req, res) => {
+    try {
+        const { workspace_id } = req.body;
+        if (!workspace_id) return res.status(400).json({ error: "Missing workspace_id" });
+        const log = new CalendarSyncLog(req.body);
+        await log.save();
+        res.json(log);
+    } catch (error) {
+        console.error('appendSyncLog Error:', error);
+        res.status(500).json({ error: 'Failed to append sync log' });
     }
 };

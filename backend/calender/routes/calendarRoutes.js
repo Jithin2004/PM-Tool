@@ -14,4 +14,7 @@ router.post('/events', calendarController.createEvent);
 router.put('/events/:id', calendarController.updateEvent);
 router.delete('/events/:id', calendarController.deleteEvent);
 
+router.get('/sync_logs', calendarController.getSyncLogs);
+router.post('/sync_logs', calendarController.appendSyncLog);
+
 module.exports = router;
