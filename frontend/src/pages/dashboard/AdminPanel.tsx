@@ -51,7 +51,29 @@ export function AdminPanel() {
   } = useDashboard();
 
   const [tab, setTab] = useState<AdminTab>('identity');
+  const [activeGearPopover, setActiveGearPopover] = useState<string | null>(null);
+
   const canViewCalendar = hasCapability(profile?.role, 'view_decision_center');
+
+  const customRoles: string[] = systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'];
+  const userCustomRoles: Record<string, string> = systemData.userCustomRoles || {};
+
+  const handleAssignCustomRoleLocal = async (userId: string, roleName: string) => {
+    const userProfile = profiles.find(p => p.id === userId);
+    const targetName = userProfile?.full_name || userProfile?.email || "this user";
+
+    askConfirmation("Confirm Designation Change", `Confirm action: Change designation of ${targetName} to '${roleName}'?`, async () => {
+      const updatedUserRoles = {
+        ...userCustomRoles,
+        [userId]: roleName
+      };
+      await handleSaveLogisticsData({
+        ...systemData,
+        userCustomRoles: updatedUserRoles
+      });
+      setActiveGearPopover(null);
+    }, "Change");
+  };
 
   if (!hasCapability(profile?.role, 'platform_governance')) {
     return (
@@ -170,15 +192,57 @@ export function AdminPanel() {
                         </div>
                       </td>
                       {/* Controls */}
-                      <td className="px-8 py-5">
+                      <td className="px-8 py-5 relative">
                         <button className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
-                          style={{ color: 'var(--pm-on-surface-variant)' }}
-                          onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-primary)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
-                          onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
-                          onClick={() => document.getElementById('admin-dashboard-view')?.scrollIntoView({ behavior: 'smooth' })}
+                          style={{ 
+                            color: activeGearPopover === p.id ? 'var(--pm-primary)' : 'var(--pm-on-surface-variant)', 
+                            background: activeGearPopover === p.id ? 'rgba(192,193,255,0.1)' : '' 
+                          }}
+                          onMouseEnter={e => { if (activeGearPopover !== p.id) { (e.currentTarget as any).style.color = 'var(--pm-primary)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; } }}
+                          onMouseLeave={e => { if (activeGearPopover !== p.id) { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; } }}
+                          onClick={() => setActiveGearPopover(activeGearPopover === p.id ? null : p.id)}
                           title="Manage identity">
                           <Icon name="settings_suggest" size={18} />
                         </button>
+
+                        {activeGearPopover === p.id && (
+                          <div className="absolute right-12 top-12 w-64 rounded-xl shadow-2xl z-50 p-5 flex flex-col gap-5"
+                            style={{ background: 'var(--pm-surface-high)', border: '1px solid rgba(70,69,84,0.3)' }}>
+                            {hasCapability(profile?.role, 'platform_governance') && p.role !== 'super_admin' && (
+                              <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-mono-pm uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Access Role</label>
+                                <select
+                                  value={p.role}
+                                  onChange={(e) => { handleUpdateRole(p.id, e.target.value as any); setActiveGearPopover(null); }}
+                                  className="border text-[11px] font-mono-pm px-3 py-2.5 rounded outline-none w-full"
+                                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                                >
+                                  <option value="viewer">Viewer</option>
+                                  <option value="developer">Developer</option>
+                                  <option value="manager">Project Manager</option>
+                                  <option value="admin">Admin</option>
+                                </select>
+                              </div>
+                            )}
+                            {p.role !== 'super_admin' ? (
+                              <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-mono-pm uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Designation</label>
+                                <select
+                                  value={userCustomRoles[p.id] || 'Viewer'}
+                                  onChange={(e) => handleAssignCustomRoleLocal(p.id, e.target.value)}
+                                  className="border text-[11px] font-mono-pm px-3 py-2.5 rounded outline-none w-full"
+                                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                                >
+                                  {customRoles.map(r => (
+                                    <option key={r} value={r}>{r}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] font-mono-pm uppercase italic text-center" style={{ color: 'var(--pm-on-surface-variant)' }}>Immutable Root Identity</span>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
