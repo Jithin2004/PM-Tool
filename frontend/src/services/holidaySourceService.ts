@@ -229,14 +229,21 @@ class HolidaySourceService {
       const { data: { user } } = await supabase.auth.getUser();
       console.log('[appendLog telemetry]:', { workspaceId, provider, year, authUid: user?.id });
 
-      const logs = await calendarEventService.getSyncLogs(workspaceId, 1, year);
+      const { data: logs } = await supabase
+        .from('calendar_sync_logs')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .eq('year', year)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
       const lastLog = logs && logs.length > 0 ? logs[0] : null;
       
       const previousHash = lastLog?.hash || '0000000000000000000000000000000000000000000000000000000000000000';
       const rawString = `${workspaceId}:${provider}:${year}:${found}:${imported}:${status}:${previousHash}`;
       const hash = await sha256(rawString);
 
-      await calendarEventService.appendSyncLog({
+      await supabase.from('calendar_sync_logs').insert({
         workspace_id: workspaceId,
         provider,
         country,
