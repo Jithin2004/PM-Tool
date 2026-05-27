@@ -2,6 +2,7 @@ require('dotenv').config()
 const express = require('express')
 const connectDB = require('./config/db')
 const calendarRoutes = require('./routes/calendarRoutes')
+const licenseRoute = require('./routes/licenseRoute')
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -15,6 +16,8 @@ app.get('/',(req,res)=>{
         message:'welcome to pm-tool calendar server'
     })
 })
+
+app.use("/", licenseRoute)
 
 app.get('/test',(req,res)=>{
     res.status(200).json({
