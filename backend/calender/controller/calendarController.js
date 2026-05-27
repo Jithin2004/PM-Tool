@@ -92,7 +92,7 @@ exports.getEventsInRange = async (req, res) => {
         let allEvents = localEvents.map(e => {
             const ev = e.toJSON();
             // ensure id is string
-            ev.id = ev.id || ev._id.toString();
+            ev.id = ev.id || (e._id ? e._id.toString() : '');
             return ev;
         });
 
@@ -161,7 +161,7 @@ exports.createEvent = async (req, res) => {
         const event = new CalendarEvent({ ...req.body, google_event_id: googleEventId });
         await event.save();
         const responseEvent = event.toJSON();
-        responseEvent.id = responseEvent._id.toString();
+        // id is populated by Mongoose virtuals
         res.json(responseEvent);
     } catch (error) {
         console.error('createEvent Error:', error);
@@ -195,7 +195,7 @@ exports.updateEvent = async (req, res) => {
         }
 
         const responseEvent = updated.toJSON();
-        responseEvent.id = responseEvent._id.toString();
+        // id is populated by Mongoose virtuals
         res.json(responseEvent);
     } catch (error) {
         console.error('updateEvent Error:', error);
@@ -224,7 +224,7 @@ exports.deleteEvent = async (req, res) => {
         }
 
         const responseEvent = existing.toJSON();
-        responseEvent.id = responseEvent._id.toString();
+        // id is populated by Mongoose virtuals
         res.json(responseEvent);
     } catch (error) {
         console.error('deleteEvent Error:', error);
@@ -244,7 +244,7 @@ exports.upsertBySourceKey = async (req, res) => {
         if (existing) {
             const updated = await CalendarEvent.findByIdAndUpdate(existing._id, { ...req.body, deleted_at: null, updated_at: new Date() }, { new: true });
             const responseEvent = updated.toJSON();
-            responseEvent.id = responseEvent._id.toString();
+            // id is populated by Mongoose virtuals
             return res.json({ event: responseEvent, created: false });
         } else {
             let googleEventId = null;
@@ -266,7 +266,7 @@ exports.upsertBySourceKey = async (req, res) => {
             const event = new CalendarEvent({ ...req.body, google_event_id: googleEventId });
             await event.save();
             const responseEvent = event.toJSON();
-            responseEvent.id = responseEvent._id.toString();
+            // id is populated by Mongoose virtuals
             return res.json({ event: responseEvent, created: true });
         }
     } catch (error) {
