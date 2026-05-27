@@ -143,6 +143,20 @@ export function ResolveRouter() {
     pathname,
   ]);
 
+  useEffect(() => {
+    console.log("[ResolveRouter START] Current state:", {
+      pathname,
+      workspaceId: workspace?.id,
+      userId: user?.id,
+      role,
+      workspaceLoading,
+      authLoading,
+      profileResolved,
+      profileHydrating,
+      productKeyVerified: isProductKeyVerified()
+    });
+  }, [pathname, workspace, user, role, workspaceLoading, authLoading, profileResolved, profileHydrating]);
+
   // ── Public routes ──
 
   if (pathname === '/') {
@@ -159,20 +173,6 @@ export function ResolveRouter() {
       />
     );
   }
-
-  useEffect(() => {
-    console.log("[ResolveRouter START] Current state:", {
-      pathname,
-      workspaceId: workspace?.id,
-      userId: user?.id,
-      role,
-      workspaceLoading,
-      authLoading,
-      profileResolved,
-      profileHydrating,
-      productKeyVerified: isProductKeyVerified()
-    });
-  }, [pathname, workspace, user, role, workspaceLoading, authLoading, profileResolved, profileHydrating]);
 
   if (pathname === '/login') {
     console.log("[ResolveRouter] Routing to /login explicitly");

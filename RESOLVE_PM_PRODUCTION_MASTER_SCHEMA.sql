@@ -192,6 +192,8 @@ CREATE TABLE tasks (
   -- Analytics
   confidence            integer,
   delay_drift_days      integer     DEFAULT 0,
+  -- Soft delete
+  deleted_at            timestamptz,
   created_at            timestamptz NOT NULL DEFAULT now(),
   updated_at            timestamptz NOT NULL DEFAULT now()
 );
