@@ -4,6 +4,15 @@ import { logServiceFailure } from '../utils/supabaseError';
 import { sha256 } from '../utils/cryptoUtils';
 import type { CalendarEvent, CalendarEventType } from '../types';
 
+/**
+ * Resolved base URL for the calendar backend API.
+ * Falls back to VITE_API_URL/api/calendar so the URL never silently
+ * becomes the string "undefined/events/..." when the env var is missing.
+ */
+const CALENDAR_API_BASE =
+  import.meta.env.VITE_CALENDAR_API_URL ||
+  `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/calendar`;
+
 interface RecurrenceRule {
   freq: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
   byday?: string[];
@@ -144,7 +153,7 @@ export const calendarEventService = {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const res = await fetch(`${import.meta.env.VITE_CALENDAR_API_URL}/events/upsert`, {
+      const res = await fetch(`${CALENDAR_API_BASE}/events/upsert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(event)
@@ -165,7 +174,7 @@ export const calendarEventService = {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const res = await fetch(`${import.meta.env.VITE_CALENDAR_API_URL}/events`, {
+      const res = await fetch(`${CALENDAR_API_BASE}/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(event)
@@ -182,7 +191,7 @@ export const calendarEventService = {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const res = await fetch(`${import.meta.env.VITE_CALENDAR_API_URL}/events/${id}`, {
+      const res = await fetch(`${CALENDAR_API_BASE}/events/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(updates)
@@ -199,7 +208,7 @@ export const calendarEventService = {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const res = await fetch(`${import.meta.env.VITE_CALENDAR_API_URL}/events/${id}`, {
+      const res = await fetch(`${CALENDAR_API_BASE}/events/${id}`, {
         method: 'DELETE',
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
       });
@@ -220,7 +229,12 @@ export const calendarEventService = {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const url = new URL(`${import.meta.env.VITE_CALENDAR_API_URL}/events`);
+      let url: URL;
+      if (CALENDAR_API_BASE.startsWith('http://') || CALENDAR_API_BASE.startsWith('https://')) {
+        url = new URL(`${CALENDAR_API_BASE}/events`);
+      } else {
+        url = new URL(`${CALENDAR_API_BASE}/events`, window.location.origin);
+      }
       url.searchParams.append('workspace_id', workspaceId);
       url.searchParams.append('start_date', startDate);
       url.searchParams.append('end_date', endDate);

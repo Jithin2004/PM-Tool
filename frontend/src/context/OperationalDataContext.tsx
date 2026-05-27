@@ -19,16 +19,18 @@ import {
   loadWorkspaceNotifications,
   subscribeToWorkspaceNotifications,
 } from '../services/realtimeNotificationService';
-import type { Project, Profile, Team, UserRole } from '../types';
+import type { Project, Profile, Team, UserRole, Notification } from '../types';
 
 interface OperationalDataContextValue {
   raw: OperationalRawState;
   derived: OperationalDerivedState;
   loading: boolean;
-  dbNotifications: Record<string, unknown>[];
+  dbNotifications: Notification[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   refreshAll: () => Promise<void>;
   refreshProjects: () => Promise<void>;
+  refreshAttendance: () => Promise<void>;
+  refreshSalaries: () => Promise<void>;
   handleSaveLogisticsData: (data: Record<string, unknown>) => Promise<'success' | 'unauthorized' | 'error'>;
   handleCreateTeam: (name: string, pmId: string, devIds: string[]) => Promise<void>;
   handleUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => Promise<void>;
@@ -36,6 +38,7 @@ interface OperationalDataContextValue {
   handleUpdateRole: (id: string, role: UserRole) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   fetchNotifications: () => Promise<void>;
+  updateWorkspaceSettings: (patch: Record<string, unknown>) => Promise<void>;
   taskActions: {
     addDependency: ReturnType<typeof useTasks>['addDependency'];
     removeDependency: ReturnType<typeof useTasks>['removeDependency'];
@@ -66,7 +69,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const [workspaceSettingsBlob, setWorkspaceSettingsBlob] = useState<Record<string, unknown>>({});
   const [serverMetrics, setServerMetrics] = useState<{ deliveryConfidence: number; executionPressure: number; dailyFatigue: number; riskForecast: number; } | undefined>();
   const [loading, setLoading] = useState(true);
-  const [dbNotifications, setDbNotifications] = useState<Record<string, unknown>[]>([]);
+  const [dbNotifications, setDbNotifications] = useState<Notification[]>([]);
 
   const raw: OperationalRawState = useMemo(
     () => ({
@@ -116,6 +119,18 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     const partial = await refreshOperationalPartial(workspace.id, ['projects', 'serverMetrics']);
     if (partial.projects) setProjects(partial.projects);
     if (partial.serverMetrics) setServerMetrics(partial.serverMetrics);
+  }, [workspace?.id]);
+
+  const refreshAttendance = useCallback(async () => {
+    if (!workspace?.id) return;
+    const partial = await refreshOperationalPartial(workspace.id, ['attendanceRows']);
+    if (partial.attendanceRows) setAttendanceRows(partial.attendanceRows);
+  }, [workspace?.id]);
+
+  const refreshSalaries = useCallback(async () => {
+    if (!workspace?.id) return;
+    const partial = await refreshOperationalPartial(workspace.id, ['salaryRows']);
+    if (partial.salaryRows) setSalaryRows(partial.salaryRows);
   }, [workspace?.id]);
 
   const fetchNotifications = useCallback(async () => {
@@ -294,6 +309,45 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     [profile?.role],
   );
 
+  const updateWorkspaceSettings = useCallback(
+    async (patch: Record<string, unknown>) => {
+      if (!workspace?.id) return;
+
+      setWorkspaceSettingsBlob(prev => {
+        const next = { ...prev, ...patch };
+
+        if (isSupabaseConfigured) {
+          (async () => {
+            const { data: existing, error: findError } = await supabase
+              .from('workspace_settings')
+              .select('*')
+              .eq('workspace_id', workspace.id)
+              .maybeSingle();
+
+            if (!findError && existing) {
+              const merged = {
+                ...(existing.settings_blob as Record<string, unknown>),
+                ...patch,
+              };
+              await supabase
+                .from('workspace_settings')
+                .update({ settings_blob: merged })
+                .eq('workspace_id', workspace.id);
+            } else {
+              await supabase
+                .from('workspace_settings')
+                .insert({ workspace_id: workspace.id, settings_blob: patch });
+            }
+          })();
+        }
+
+        localStorage.setItem(`workspace_settings_${workspace.id}`, JSON.stringify(next));
+        return next;
+      });
+    },
+    [workspace?.id],
+  );
+
   const handleUpdateRoleLocal = useCallback(
     async (id: string, role: UserRole) => {
       await updateRole(id, role);
@@ -311,6 +365,8 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       setProjects,
       refreshAll,
       refreshProjects,
+      refreshAttendance,
+      refreshSalaries,
       handleSaveLogisticsData,
       handleCreateTeam,
       handleUpdateTeam,
@@ -318,6 +374,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       handleUpdateRole: handleUpdateRoleLocal,
       markNotificationRead,
       fetchNotifications,
+      updateWorkspaceSettings,
       taskActions: { addDependency, removeDependency, updateTaskDates, updateTask },
     }),
     [
@@ -327,6 +384,8 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       dbNotifications,
       refreshAll,
       refreshProjects,
+      refreshAttendance,
+      refreshSalaries,
       handleSaveLogisticsData,
       handleCreateTeam,
       handleUpdateTeam,
@@ -334,6 +393,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       handleUpdateRoleLocal,
       markNotificationRead,
       fetchNotifications,
+      updateWorkspaceSettings,
       addDependency,
       removeDependency,
       updateTaskDates,

@@ -111,9 +111,19 @@ export function addWorkingHours(start: Date, hours: number, window: WorkWindow):
 
   const workStartMin = timeToMinutes(window.workStart);
   const workEndMin = timeToMinutes(window.workEnd);
+
+  // Guard against invalid, empty, or overlapping work hours
+  if (isNaN(workStartMin) || isNaN(workEndMin) || workEndMin <= workStartMin) {
+    return new Date(start.getTime() + remaining * 3600000);
+  }
+
   const grossDayMin = workEndMin - workStartMin;
   const lunchMin = Math.max(0, window.lunchDuration);
   const netDayMin = grossDayMin - lunchMin;
+
+  if (netDayMin <= 0) {
+    return new Date(start.getTime() + remaining * 3600000);
+  }
 
   const startMin = result.getHours() * 60 + result.getMinutes();
 
@@ -124,7 +134,14 @@ export function addWorkingHours(start: Date, hours: number, window: WorkWindow):
     result.setHours(Math.floor(workStartMin / 60), workStartMin % 60, 0, 0);
   }
 
+  let loopCount = 0;
   while (remaining > 0) {
+    loopCount++;
+    if (loopCount > 2000) {
+      // Loop safety limit (approx. 5 years) to prevent browser freeze
+      return new Date(result.getTime() + remaining * 3600000);
+    }
+
     const dailyCap = getDailyCapacity(result, window);
     if (dailyCap <= 0) {
       result.setDate(result.getDate() + 1);
@@ -165,11 +182,17 @@ export function findNextWorkingSlot(
 ): Date | null {
   const result = new Date(from);
   const workStartMin = timeToMinutes(window.workStart);
+  const workEndMin = timeToMinutes(window.workEnd);
+
+  if (isNaN(workStartMin) || isNaN(workEndMin) || workEndMin <= workStartMin) {
+    return from;
+  }
+
   const fromMin = result.getHours() * 60 + result.getMinutes();
 
   if (fromMin < workStartMin) {
     result.setHours(Math.floor(workStartMin / 60), workStartMin % 60, 0, 0);
-  } else if (fromMin >= timeToMinutes(window.workEnd)) {
+  } else if (fromMin >= workEndMin) {
     result.setDate(result.getDate() + 1);
     result.setHours(Math.floor(workStartMin / 60), workStartMin % 60, 0, 0);
   }

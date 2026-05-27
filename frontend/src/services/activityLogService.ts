@@ -112,19 +112,7 @@ export const activityLogService = {
   },
 
   async getPreviousHash(workspaceId: string): Promise<string> {
-    if (!isSupabaseConfigured) return 'GENESIS_BLOCK';
-    try {
-      const { data, error } = await supabase
-        .from('activity_logs')
-        .select('hash')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!error && data?.hash) return data.hash;
-    } catch (e) {
-      console.warn('ActivityLogService: getPreviousHash failed:', e);
-    }
+    // Disabled hashing logic to prevent 'PGRST204' schema cache errors
     return 'GENESIS_BLOCK';
   },
 
@@ -148,8 +136,6 @@ export const activityLogService = {
         task_id: entry.task_id,
         action: entry.action,
         metadata: entry.metadata,
-        previous_hash: previousHash,
-        hash,
         created_at: createdAt
       });
       if (error) {
@@ -197,8 +183,6 @@ export const activityLogService = {
         task_id: entry.task_id,
         action: entry.action,
         metadata: entry.metadata,
-        previous_hash: previousHash,
-        hash,
         created_at: createdAt
       });
       if (error) {

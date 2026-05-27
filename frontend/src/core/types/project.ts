@@ -40,8 +40,11 @@ export interface Project {
   confidence?: number;
   risk?: RiskLevel;
   delay_drift_days: number;
+  /** @deprecated Removed in parent-only containerization paradigm. */
   pert_best?: number;
+  /** @deprecated Removed in parent-only containerization paradigm. */
   pert_likely?: number;
+  /** @deprecated Removed in parent-only containerization paradigm. */
   pert_worst?: number;
   efficiency?: number;
   /** Canonical contractual delivery date (DB: client_deadline). */
@@ -50,4 +53,10 @@ export interface Project {
   tags?: string[];
   created_at: string;
   updated_at: string;
+  audit_header?: {
+    created_by: string;
+    system_integrity_hash: string;
+    is_locked: boolean;
+    system_signature: string;
+  };
 }

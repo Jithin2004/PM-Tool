@@ -2,6 +2,8 @@ require('dotenv').config()
 const express = require('express')
 const connectDB = require('./config/db')
 
+const calendarRoutes = require('./routes/calendarRoutes')
+
 const app = express()
 const PORT = process.env.PORT || 5000
 
@@ -17,6 +19,7 @@ app.get('/',(req,res)=>{
 
 const licenseRoute = require('./routes/licenseRoute')
 app.use("/",licenseRoute)
+app.use('/api/calendar', calendarRoutes);
 
 app.get('/test',(req,res)=>{
     res.status(200).json({

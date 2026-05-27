@@ -85,7 +85,7 @@ export function TaskCreateModal({
         className="bg-bg border border-border p-6 rounded-sm w-full max-w-md relative overflow-hidden"
       >
         {/* Visual neon light accent */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-purple-600" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-primary to-accent-secondary" />
         
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-primary flex items-center gap-1.5">
@@ -181,7 +181,7 @@ export function TaskCreateModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-text-primary text-[9px] font-medium uppercase tracking-wide transition-colors shadow-sm disabled:opacity-50"
+              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white text-[9px] font-medium uppercase tracking-wide transition-colors shadow-sm disabled:opacity-50"
             >
               {isSubmitting ? 'Processing...' : mode === 'epic' ? 'Create Epic' : mode === 'story' ? 'Create Story' : 'Create Task'}
             </button>

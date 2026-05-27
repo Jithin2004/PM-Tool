@@ -58,7 +58,7 @@ export async function refreshOperationalPartial(
     attendanceRows: () => fetchWorkspaceAttendance(workspaceId),
     salaryRows: () => fetchWorkspaceSalaries(workspaceId),
     workspaceSettingsBlob: () => fetchWorkspaceSettingsBlob(workspaceId),
-    serverMetrics: () => supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }).then(r => r.data),
+    serverMetrics: () => Promise.resolve(supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }).then(r => r.data)),
   };
 
   const entries = await Promise.all(keys.map(async key => [key, await loaders[key]()]));

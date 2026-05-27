@@ -293,9 +293,9 @@ export default function ExecutionBoard({
           };
 
           return (
-            <div key={col.id} className="bg-surface-3 border border-border-subtle rounded-sm p-3 flex flex-col min-h-[350px] transition-all">
+            <div key={col.id} className="bg-[#1A1D21] border border-border-subtle rounded-xl p-4 flex flex-col min-h-[400px] max-h-[800px] transition-all shadow-sm">
               <div className="flex justify-between items-center mb-3 pb-2 border-b border-border-subtle">
-                <span className="text-[10px] font-mono uppercase tracking-wide text-text-secondary font-semibold flex items-center gap-1.5">
+                <span className="text-[13px] font-mono uppercase tracking-wider text-text-primary flex items-center gap-1.5">
                   <span className={`w-1.5 h-1.5 rounded-full ${col.color.replace('border', 'bg').replace('/20', '')}`} />
                   {col.title}
                 </span>

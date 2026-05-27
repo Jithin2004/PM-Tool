@@ -57,7 +57,7 @@ export function KanbanBootstrap({ projectId, workspaceId, onComplete, onSkip }: 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 pb-4 border-b border-border">
-        <Columns className="w-5 h-5 text-cyan-400" />
+        <Columns className="w-5 h-5 text-accent-primary" />
         <div>
           <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-secondary">Workflow Stages</h3>
           <p className="text-[10px] text-text-quaternary mt-0.5">Customize your board columns and WIP limits</p>
@@ -104,7 +104,7 @@ export function KanbanBootstrap({ projectId, workspaceId, onComplete, onSkip }: 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-cyan-600 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-cyan-500 transition-all rounded-sm disabled:opacity-50"
+          className="px-4 py-2 bg-accent-primary text-white text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm disabled:opacity-50 cursor-pointer"
         >
           {saving ? 'Saving...' : 'Apply & Continue'}
         </button>

@@ -47,6 +47,10 @@ interface DashboardContextType {
   createSprint?: (sprint: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   createMeeting?: (meeting: Omit<Meeting, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateExecutionMode?: (projectId: string, mode: ExecutionMode) => Promise<void>;
+  updateWorkspaceSettings?: (patch: Record<string, unknown>) => Promise<void>;
+  projectFrictionMetrics?: Record<string, any>;
+  timelineShiftLedger?: any[];
+  workspaceSettingsBlob?: Record<string, any>;
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null);

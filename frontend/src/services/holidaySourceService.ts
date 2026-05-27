@@ -252,7 +252,13 @@ class HolidaySourceService {
         hash
       });
 
-      if (error) console.warn('Failed to write sync log:', error);
+      if (error) {
+        if (error.code === '42501') {
+          // Gracefully degrade if RLS prevents telemetry insert
+          return;
+        }
+        console.warn('Failed to write sync log:', error);
+      }
     } catch (err) {
       console.warn('Failed to append sync log:', err);
     }

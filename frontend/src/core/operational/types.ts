@@ -30,6 +30,35 @@ export interface SalaryRow {
   base_salary: number;
 }
 
+export interface ProjectFrictionMetric {
+  projectId: string;
+  currentState: 'active' | 'passive_wait' | 'blocked';
+  activeDays: number;
+  passiveWaitDays: number;
+  blockedDays: number;
+  liabilityRatio: number;
+}
+
+export interface GlobalFrictionSummary {
+  globalLiabilityRatio: number;
+  totalShiftCount: number;
+  totalShiftDays: number;
+  activeExecutionProjects: number;
+  passiveWaitingProjects: number;
+  blockedProjects: number;
+}
+
+export interface TimelineShiftEvent {
+  id: string;
+  projectId: string;
+  projectName: string;
+  deltaDays: number;
+  blockerCategory: string;
+  ownership: string;
+  timestamp: string;
+  reason: string;
+}
+
 /** Derived intelligence — recomputable from raw state; never persisted as source of truth. */
 export interface OperationalDerivedState {
   projectsWithPert: Project[];
@@ -45,4 +74,8 @@ export interface OperationalDerivedState {
   userCustomRoles: Record<string, string>;
   customRoles: string[];
   activeTeams: Team[];
+  projectFrictionMetrics: Record<string, ProjectFrictionMetric>;
+  globalFrictionSummary: GlobalFrictionSummary;
+  timelineShiftLedger: TimelineShiftEvent[];
 }
+

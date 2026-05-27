@@ -80,6 +80,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     refreshProjects,
     refreshAll,
     dbNotifications,
+    updateWorkspaceSettings,
+    refreshAttendance,
+    refreshSalaries,
   } = useOperationalData();
 
   const attendanceRows = raw.attendanceRows;
@@ -311,25 +314,42 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   }, [commandPaletteOpen]);
 
   const breadcrumb = useMemo(() => {
-    const p = window.location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
-    if (p.length === 0) return null;
+    const p = routePath.replace(/\/+$/, '').split('/').filter(Boolean);
+    if (p.length === 0) return { section: 'OVERVIEW', page: '' };
+
+    let section = p[0];
+    let page = p.length > 1 ? p.slice(1).join(' / ') : '';
+    
     const sectionLabels: Record<string, string> = {
-      overview: 'OVERVIEW', workspace: 'WORKSPACE', execution: 'EXECUTION',
-      resources: 'RESOURCES', control: 'CONTROL', projects: 'PROJECTS',
+      workspace: 'WORKSPACE',
+      execution: 'EXECUTION',
+      resources: 'RESOURCES',
+      control: 'SYSTEM CONTROL'
     };
+    
     const pageLabels: Record<string, string> = {
-      projects: 'PROJECTS', portfolio: 'PORTFOLIO', decisions: 'DECISION CENTER', knowledge: 'KNOWLEDGE HUB',
-      board: 'BOARD', timeline: 'TIMELINE', gantt: 'GANTT', sprints: 'SPRINT CENTER',
-      teams: 'TEAMS', logistics: 'LOGISTICS', capacity: 'CAPACITY', 'work-logs': 'WORK LOGS',
-      admin: 'ADMIN', audit: 'AUDIT', analytics: 'ANALYTICS', settings: 'SETTINGS',
-      automations: 'AUTOMATIONS', connections: 'CONNECTIONS',
-      notifications: 'NOTIFICATIONS', modes: 'MODES',
+      'portfolio': 'PORTFOLIO',
+      'knowledge': 'KNOWLEDGE',
+      'decisions': 'DECISIONS',
+      'board': 'BOARD',
+      'timeline': 'TIMELINE',
+      'gantt': 'GANTT',
+      'sprints': 'SPRINTS',
+      'teams': 'TEAMS',
+      'capacity': 'CAPACITY',
+      'work-logs': 'WORK LOGS',
+      'identity': 'IDENTITY',
+      'analytics': 'ANALYTICS',
+      'audit': 'AUDIT LOG',
+      'automations': 'AUTOMATIONS',
+      'connections': 'INTEGRATIONS'
     };
-    const section = sectionLabels[p[0]];
-    const page = p[1] ? pageLabels[p[1]] : null;
-    if (!section) return null;
-    return { section, page };
-  }, []);
+
+    return {
+      section: sectionLabels[section] || section.toUpperCase(),
+      page: pageLabels[p[p.length - 1]] || page.toUpperCase()
+    };
+  }, [routePath]);
 
   const tourSteps = useMemo(() => {
     const role = profile?.role || 'viewer';
@@ -441,7 +461,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     };
   }, [tourSteps]);
 
-  // Listen for project setup guide trigger Ã¢â‚¬â€ redirect to execution initialization
+  // Listen for project setup guide trigger — redirect to execution initialization
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -532,14 +552,14 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   // Form State
   const [newName, setNewName] = useState('');
-  const [pertBest, setPertBest] = useState<string>('');
-  const [pertLikely, setPertLikely] = useState<string>('');
-  const [pertWorst, setPertWorst] = useState<string>('');
   const [proposedStartDate, setProposedStartDate] = useState<string>(getLocalDateString());
   const [newClientDeadline, setNewClientDeadline] = useState<string>('');
   const [newPriority, setNewPriority] = useState<string>('medium');
   const [newTeamId, setNewTeamId] = useState<string>('');
   const [newExecutionMode, setNewExecutionMode] = useState<string>('KANBAN');
+  const [frictionInfra, setFrictionInfra] = useState(false);
+  const [frictionData, setFrictionData] = useState(false);
+  const [frictionSla, setFrictionSla] = useState(false);
 
   useEffect(() => {
     if (window.location.hash && window.location.hash.includes('access_token')) {
@@ -579,7 +599,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             const { error } = await supabase.from('attendance').insert(toInsert);
             if (!error) {
               console.log(`Successfully migrated ${toInsert.length} attendance records.`);
-              await refreshAll();
+              await refreshAttendance();
             }
           } catch (e) {
             console.error("Attendance migration failed:", e);
@@ -602,7 +622,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             const { error } = await supabase.from('salaries').insert(toInsert);
             if (!error) {
               console.log(`Successfully migrated ${toInsert.length} salary records.`);
-              await refreshAll();
+              await refreshSalaries();
             }
           } catch (e) {
             console.error("Salary migration failed:", e);
@@ -614,7 +634,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     // Run migration after data has been loaded
     const delay = setTimeout(migrateData, 5000);
     return () => clearTimeout(delay);
-  }, [loading, rawSystemData, attendanceRows.length, salaryRows.length, workspace?.id, refreshAll]);
+  }, [loading, rawSystemData, attendanceRows.length, salaryRows.length, workspace?.id, refreshAttendance, refreshSalaries]);
 
   const handleLogout = async () => {
     await logout();
@@ -680,7 +700,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     if (!error && data) {
       setProjects(projects.map(p => p.id === id ? data : p));
       notify("Project details saved.", "success");
-      refreshProjects();
     } else {
       console.error("Metadata update failed:", error);
       notify(`Sync failed: ${error?.message || "Unknown error"}`, "error");
@@ -713,7 +732,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           setProjects(projects.filter(p => p.id !== id));
           notify("Project archived successfully.", "success");
           setSelectedProject(null);
-          refreshProjects();
         } else {
           console.error("Project archive failed:", error);
           notify(`Deletion failed: ${error.message}`, "error");
@@ -751,23 +769,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       return;
     }
 
-    if (!pertBest || !pertLikely || !pertWorst) {
-      notify("PERT estimates (Best, Likely, and Worst) are mandatory.", "error");
-      return;
-    }
-
-    const bestNum = Number(pertBest);
-    const likelyNum = Number(pertLikely);
-    const worstNum = Number(pertWorst);
-
-    if (isNaN(bestNum) || bestNum <= 0 || isNaN(likelyNum) || likelyNum <= 0 || isNaN(worstNum) || worstNum <= 0) {
-      notify("PERT estimates must be positive numbers.", "error");
-      return;
-    }
-
-    if (bestNum > likelyNum || likelyNum > worstNum) {
-      notify("PERT bounds violation: Best Case Î“Ã«Ã± Likely Case Î“Ã«Ã± Worst Case.", "error");
-      return;
+    const inputString = `${newName}-${proposedStartDate}-${newClientDeadline}-${user.id}`;
+    let integrityHash = '';
+    try {
+      integrityHash = sha256 ? await sha256(inputString) : `hash_${Date.now()}`;
+    } catch {
+      integrityHash = `hash_${Date.now()}`;
     }
 
     const newProject = {
@@ -777,14 +784,17 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       priority: newPriority,
       execution_mode: newExecutionMode,
       efficiency: 0.8,
-      pert_best: bestNum,
-      pert_likely: likelyNum,
-      pert_worst: worstNum,
       proposed_start_date: proposedStartDate,
       client_deadline: newClientDeadline,
       team_id: newTeamId || null,
       owner_id: user.id,
-      tags: ['NEW']
+      tags: ['NEW'],
+      audit_header: {
+        created_by: user.id,
+        system_integrity_hash: integrityHash,
+        is_locked: true,
+        system_signature: "GEN_SIG_V1"
+      }
     };
 
     if (typeof window !== 'undefined') console.debug('[pipeline] createProject:start', { name: newName });
@@ -798,16 +808,35 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     if (!error && data) {
       if (typeof window !== 'undefined') console.debug('[pipeline] createProject:success', { id: data.id });
 
+      const selectedFrictions: string[] = [];
+      if (frictionInfra) selectedFrictions.push("Client Infrastructure Access Lag");
+      if (frictionData) selectedFrictions.push("External Data Provisioning Delay");
+      if (frictionSla) selectedFrictions.push("Third-Party SLA / Compliance Review");
+
+      const projectDurations = { ...(raw.workspaceSettingsBlob?.project_state_durations as Record<string, unknown> || {}) } as Record<string, any>;
+      projectDurations[data.id] = {
+        currentState: selectedFrictions.length > 0 ? 'passive_wait' : 'active',
+        activeDays: 0,
+        passiveWaitDays: 0,
+        blockedDays: 0,
+        lastStateChange: new Date().toISOString(),
+        frictions: selectedFrictions,
+      };
+
+      await updateWorkspaceSettings({
+        project_state_durations: projectDurations,
+      });
+
       setProjects(prev => [data as import('../../types').Project, ...prev]);
       setIsAdding(false);
       setNewName('');
-      setPertBest('');
-      setPertLikely('');
-      setPertWorst('');
       setProposedStartDate('');
       setNewClientDeadline('');
       setNewPriority('medium');
       setNewTeamId('');
+      setFrictionInfra(false);
+      setFrictionData(false);
+      setFrictionSla(false);
       notify("Project created successfully.", "success");
 
       if (typeof window !== 'undefined') console.debug('[pipeline] projectVisible:confirmed', { id: data.id, name: data.name });
@@ -871,16 +900,24 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-4">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-2 border-border border-t-white rounded-full"
-        />
-        <p className="font-mono text-sm uppercase tracking-wide text-text-secondary">Initializing Core Engine...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-5 font-geist"
+        style={{ background: 'var(--pm-bg)' }}>
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full border-2 border-t-transparent animate-spin"
+            style={{ borderColor: 'rgba(192,193,255,0.15)', borderTopColor: 'var(--pm-primary)' }} />
+        </div>
+        <div className="text-center space-y-1">
+          <p className="font-mono-pm text-[11px] uppercase tracking-[0.3em]" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
+            Initializing Core Engine
+          </p>
+          <p className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
+            Loading workspace data...
+          </p>
+        </div>
       </div>
     );
   }
+
 
   if (!user) {
     return <Login />;
@@ -906,26 +943,30 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         updateExecutionMode,
       }}
     >
-      <div className={`min-h-screen bg-bg font-sans text-text-primary selection:bg-accent-primary selection:text-text-primary transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}>
+      <div className={`min-h-screen font-geist selection:bg-accent-primary selection:text-text-primary transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}
+        style={{ background: 'var(--pm-bg)', color: 'var(--pm-on-surface)' }}>
         
         {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
-        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] bg-[#0b0c12] border-r border-border-subtle z-30">
-          {/* Sidebar Brand Logo */}
-          <div className="flex items-center gap-3 h-16 px-5 border-b border-border-subtle shrink-0">
-            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0">
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] border-r z-30"
+          style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+          {/* Sidebar Brand */}
+          <div className="flex items-center gap-3 h-16 px-5 border-b shrink-0"
+            style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
               <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="font-semibold tracking-tight text-[13px] text-text-secondary">Resolve PM</h1>
-              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-wide">Enterprise Platform</p>
+              <h1 className="font-semibold tracking-tight text-[13px] font-geist" style={{ color: 'var(--pm-primary)' }}>Resolve PM</h1>
+              <p className="text-[9px] font-mono-pm uppercase tracking-[0.15em]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Enterprise Orchestration</p>
             </div>
           </div>
 
-          {/* Sidebar â€” driven by routeRegistry (paths validated at navigateTo) */}
-          <div className="flex-1 overflow-y-auto px-3 py-5 space-y-6" style={{ scrollbarWidth: 'none' }}>
+          {/* Nav — driven by routeRegistry */}
+          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 pm-scrollbar">
             {visibleSidebarGroups.map(({ group, items }) => (
               <div key={group} className="space-y-0.5">
-                <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">
+                <p className="text-[9px] font-mono-pm uppercase tracking-[0.2em] px-3 mb-2"
+                  style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
                   {SIDEBAR_GROUP_LABELS[group]}
                 </p>
                 {items.map(item => {
@@ -938,13 +979,17 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                         if (isDecisions) setDashboardTab('intelligence');
                         navigateTo(item.path);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                        active
-                          ? isDecisions
-                            ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
-                            : 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                          : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                      }`}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[12px] font-medium transition-all duration-150"
+                      style={active ? {
+                        background: 'rgba(67,70,83,0.5)',
+                        color: 'var(--pm-primary)',
+                        borderLeft: '3px solid var(--pm-primary)',
+                        paddingLeft: '9px',
+                      } : {
+                        color: 'var(--pm-on-surface-variant)',
+                      }}
+                      onMouseEnter={e => { if (!active) { (e.currentTarget as any).style.background = 'rgba(51,53,55,0.4)'; (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; } }}
+                      onMouseLeave={e => { if (!active) { (e.currentTarget as any).style.background = ''; (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; } }}
                     >
                       {SIDEBAR_ICONS[item.id]}
                       {item.label}
@@ -964,39 +1009,48 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             />
           )}
 
-          {/* Bottom utility strip Î“Ã‡Ã¶ Help + Profile */}
-          <div className="shrink-0 border-t border-border-subtle">
+          {/* Bottom utility strip */}
+          <div className="shrink-0 border-t" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
             <button
               onClick={() => (window as any).startOnboardingTour?.()}
-              className="w-full flex items-center gap-2.5 px-5 py-2.5 text-text-quaternary hover:text-text-quaternary transition-colors text-[11px]"
+              className="w-full flex items-center gap-2.5 px-5 py-2.5 transition-colors text-[11px] font-geist"
+              style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}
+              onMouseEnter={e => { (e.currentTarget as any).style.opacity = '1'; }}
+              onMouseLeave={e => { (e.currentTarget as any).style.opacity = '0.5'; }}
             >
               <HelpCircle className="w-3.5 h-3.5 shrink-0" />
               Help & Documentation
             </button>
 
             {/* User identity strip */}
-            <div className="flex items-center gap-3 px-4 py-3 border-t border-border-subtle">
+            <div className="flex items-center gap-3 px-4 py-3 border-t" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
               <div
                 onClick={() => setIsProfileOpen(true)}
-                className="w-8 h-8 rounded-full bg-white/5 border border-border-subtle flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-indigo-400/40 transition-colors"
+                className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden shrink-0 cursor-pointer transition-all"
+                style={{ background: 'rgba(192,193,255,0.08)', border: '1px solid rgba(192,193,255,0.2)' }}
               >
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : profile?.full_name ? (
-                  <span className="text-[10px] font-bold text-text-secondary">{profile.full_name.substring(0, 2).toUpperCase()}</span>
+                  <span className="text-[10px] font-bold" style={{ color: 'var(--pm-primary)' }}>{profile.full_name.substring(0, 2).toUpperCase()}</span>
                 ) : (
-                  <Users className="w-3.5 h-3.5 text-text-quaternary" />
+                  <Users className="w-3.5 h-3.5" style={{ color: 'var(--pm-primary)' }} />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-text-secondary truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
-                <p className="text-[9px] text-text-quaternary truncate capitalize font-mono">
+                <p className="text-[12px] font-medium truncate font-geist" style={{ color: 'var(--pm-on-surface)' }}>
+                  {profile?.full_name || user.email?.split('@')[0]}
+                </p>
+                <p className="text-[9px] truncate capitalize font-mono-pm" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
                   {(profile && userCustomRoles[profile.id]) || profile?.role?.replace('_', ' ') || 'Viewer'}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-text-quaternary hover:text-rose-400/70 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer"
+                className="p-1.5 rounded-md transition-colors cursor-pointer"
+                style={{ color: 'var(--pm-on-surface-variant)' }}
+                onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-error)'; (e.currentTarget as any).style.background = 'rgba(255,180,171,0.08)'; }}
+                onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
                 title="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -1106,10 +1160,11 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <div className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen">
+        <div className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen" style={{ background: 'var(--pm-bg)' }}>
           
-          {/* Top Bar Î“Ã‡Ã¶ utility layer only, no greeting content */}
-          <header className="h-12 flex items-center justify-between px-5 border-b border-border-subtle bg-[#0b0c12]/90 sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200">
+          {/* Top Bar — utility layer, breadcrumb, operational status */}
+          <header className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200"
+            style={{ background: 'rgba(12,14,16,0.92)', borderColor: 'rgba(70,69,84,0.3)' }}>
             {/* Mobile menu toggle */}
             <div className="flex items-center gap-3 lg:hidden">
               <button
@@ -1124,12 +1179,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </div>
 
             {/* Top bar center: live breadcrumb / context label */}
-            <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-text-quaternary">
-              <Radar className="w-3 h-3" />
-              <span className="uppercase tracking-wide">Resolve PM</span>
-              <span className="text-text-quaternary">/</span>
-              <span className="text-text-quaternary">{breadcrumb?.section || 'Command Center'}</span>
-              {breadcrumb?.page && <><span className="text-text-quaternary">/</span><span className="text-text-tertiary">{breadcrumb.page}</span></>}
+            <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono-pm">
+              <span className="w-1.5 h-1.5 rounded-full operational-pulse" style={{ background: 'var(--pm-primary)' }} />
+              <span className="uppercase tracking-[0.15em]" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>Resolve PM</span>
+              <span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }}>/</span>
+              <span className="uppercase" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>{breadcrumb?.section || 'Command Center'}</span>
+              {breadcrumb?.page && <><span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }}>/</span><span style={{ color: 'var(--pm-on-surface)' }}>{breadcrumb.page}</span></>}
             </div>
 
             {/* Top bar right: compact utilities */}
@@ -1173,8 +1228,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               {profile && hasCapability(profile.role, 'manage_projects') && (
                 <button
                   onClick={() => setIsAdding(true)}
-                  className="flex items-center gap-1.5 text-[11px] font-medium text-text-primary h-7 px-3 rounded-md transition-all cursor-pointer shrink-0"
-                  style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}
+                  className="flex items-center gap-1.5 text-[11px] font-medium h-7 px-3 rounded-md transition-all cursor-pointer shrink-0 active:scale-95"
+                  style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)', fontFamily: 'Geist, sans-serif' }}
                 >
                   <Plus className="w-3 h-3" />
                   <span className="hidden sm:inline">New Project</span>
@@ -1183,21 +1238,22 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Context Header Î“Ã‡Ã¶ Welcome + operational context, sits clearly below topbar */}
+          {/* Context Header — Welcome + operational context */}
           {window.location.pathname === '/workspace' && (
-            <div className="px-6 pt-7 pb-5 border-b border-border-subtle">
+            <div className="px-6 pt-7 pb-5 border-b" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[10px] font-mono text-text-quaternary uppercase tracking-wide mb-1">Command Center</p>
-                  <h2 className="text-[22px] font-semibold text-text-secondary tracking-tight leading-none">
+                  <p className="font-mono-pm text-[9px] uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Command Center</p>
+                  <h2 className="text-[22px] font-semibold tracking-tight leading-none font-geist" style={{ color: 'var(--pm-on-surface)' }}>
                     {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}'s Workspace
                   </h2>
-                  <p className="text-[12px] text-text-quaternary mt-1.5">
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} â”¬â•– {dbNotifications.filter(n => !n.read_at).length > 0 ? `${dbNotifications.filter(n => !n.read_at).length} unread notification${dbNotifications.filter(n => !n.read_at).length > 1 ? 's' : ''}` : 'All systems operational'}
+                  <p className="font-mono-pm text-[11px] mt-1.5" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · {dbNotifications.filter(n => !n.read_at).length > 0 ? `${dbNotifications.filter(n => !n.read_at).length} unread notification${dbNotifications.filter(n => !n.read_at).length > 1 ? 's' : ''}` : 'All systems operational'}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 text-[9px] font-mono text-text-quaternary uppercase tracking-wide">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 transition-opacity duration-300" />
+                <div className="flex items-center gap-1.5 font-mono-pm text-[9px] uppercase tracking-[0.2em]"
+                  style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
+                  <div className="w-1.5 h-1.5 rounded-full operational-pulse" style={{ background: 'var(--pm-primary)' }} />
                   Live
                 </div>
               </div>
@@ -1313,47 +1369,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary tracking-tighter mb-2">PERT: BEST (H) *</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0.1"
-                      required
-                      value={pertBest}
-                      onChange={e => setPertBest(e.target.value)}
-                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary tracking-tighter mb-2">PERT: LIKELY (H) *</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0.1"
-                      required
-                      value={pertLikely}
-                      onChange={e => setPertLikely(e.target.value)}
-                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary tracking-tighter mb-2">PERT: WORST (H) *</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0.1"
-                      required
-                      value={pertWorst}
-                      onChange={e => setPertWorst(e.target.value)}
-                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
+
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1432,22 +1448,57 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   </div>
                 </div>
 
+                {/* Anticipated Operational Friction Section */}
+                <div className="space-y-3 p-4 bg-white/5 border border-border rounded-sm">
+                  <span className="block text-[10px] uppercase font-mono text-text-secondary tracking-wide">Anticipated Operational Friction</span>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-xs font-mono text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={frictionInfra}
+                        onChange={e => setFrictionInfra(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-white cursor-pointer"
+                      />
+                      <span>Client Infrastructure Access Lag</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-mono text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={frictionData}
+                        onChange={e => setFrictionData(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-white cursor-pointer"
+                      />
+                      <span>External Data Provisioning Delay</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-mono text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={frictionSla}
+                        onChange={e => setFrictionSla(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-white cursor-pointer"
+                      />
+                      <span>Third-Party SLA / Compliance Review</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="bg-white/5 border border-border p-4">
                   <div className="flex justify-between items-center text-[10px] uppercase font-mono mb-2">
                     <span className="text-text-secondary">Statistical Estimate</span>
                     <span className="text-text-secondary">
-                      {calculateExpectedTime(Number(pertBest), Number(pertLikely), Number(pertWorst)).toFixed(2)} HOURS
+                      DYNAMIC σ
                     </span>
                   </div>
-                  <div className="w-full bg-white/5 h-1">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: '65%' }}
-                      className="h-full bg-white/40"
-                    />
-                  </div>
-                  <p className="text-[11px] font-mono text-text-secondary mt-2 italic">
-                    Confidence interval adjusted for â”¬â–’{Math.sqrt(calculateVariance(Number(pertBest), Number(pertWorst))).toFixed(2)}â•§Ã¢.
+                  <p className="text-[11px] font-mono text-text-secondary mt-1 leading-relaxed">
+                    Project timeline dynamically managed by downstream task intervals and verified external friction metrics.
+                  </p>
+                  <p className="text-[11px] font-mono text-text-secondary mt-2 italic leading-relaxed">
+                    Target deadline (±σ) is contractually bound to downstream task execution blocks and external client liabilities.
+                    {(frictionInfra || frictionData || frictionSla) && (
+                      <span className="block mt-1 text-signal-warning text-[10px] uppercase font-bold">
+                        Warning: Timeline is bound to active external wait-states.
+                      </span>
+                    )}
                   </p>
                 </div>
 
@@ -1496,7 +1547,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             profiles={profiles}
             projects={projects}
             workingHoursPerDay={workingHoursPerDay}
-            attendanceRecords={systemData.attendance || {}}
+            attendanceRecords={systemData.attendance as Record<string, Record<string, { status: string; leaveType?: string; isPaidHalfDay?: boolean; }>> || {}}
             systemData={systemData}
             onClose={() => setIsRosterOpen(false)}
           />
@@ -1533,7 +1584,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className="text-[9px] font-mono uppercase tracking-wide text-signal-info bg-surface-3 px-2 py-0.5 rounded-sm">
-                    Interactive briefing â”œÃ³Î“Ã©Â¼â”¬Ã³ Step {guideStep + 1} of {tourSteps.length}
+                    Interactive briefing — Step {guideStep + 1} of {tourSteps.length}
                   </span>
                   <h3 className="text-base font-bold tracking-tight text-text-primary mt-1.5">
                     {tourSteps[guideStep]?.title}

@@ -1,13 +1,9 @@
 /**
  * Workspace-level analytics — pure derivations from operational raw state.
+ * All metric calculations are centralised inside derivedMetrics.ts.
  */
 export {
-  computeOperationalStats,
-  computeDeliveryConfidence,
-  computeExecutionPressure,
-  computeRiskForecast,
   computeTeamBandwidth,
-  aggregateProjectPert,
   computeOperationalDerived,
 } from '../core/operational/derivedMetrics';
 
