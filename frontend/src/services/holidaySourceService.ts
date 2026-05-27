@@ -332,18 +332,10 @@ class HolidaySourceService {
   async toggleHoliday(eventId: string, workspaceId: string, enabled: boolean): Promise<boolean> {
     try {
       if (enabled) {
-        await supabase.from('calendar_events')
-          .update({ deleted_at: null })
-          .eq('id', eventId)
-          .eq('workspace_id', workspaceId);
+        return await calendarEventService.updateEvent(eventId, { deleted_at: null });
       } else {
-        await supabase.from('calendar_events')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', eventId)
-          .eq('workspace_id', workspaceId)
-          .is('deleted_at', null);
+        return await calendarEventService.updateEvent(eventId, { deleted_at: new Date().toISOString() });
       }
-      return true;
     } catch (err) {
       console.warn('Failed to toggle holiday:', err);
       return false;
