@@ -533,6 +533,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   // Form State
   const [newName, setNewName] = useState('');
+  const [pertBest, setPertBest] = useState<string>('');
+  const [pertLikely, setPertLikely] = useState<string>('');
+  const [pertWorst, setPertWorst] = useState<string>('');
   const [proposedStartDate, setProposedStartDate] = useState<string>(getLocalDateString());
   const [newClientDeadline, setNewClientDeadline] = useState<string>('');
   const [newPriority, setNewPriority] = useState<string>('medium');
@@ -752,6 +755,25 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       return;
     }
 
+    if (!pertBest || !pertLikely || !pertWorst) {
+      notify("PERT estimates (Best, Likely, and Worst) are mandatory.", "error");
+      return;
+    }
+
+    const bestNum = Number(pertBest);
+    const likelyNum = Number(pertLikely);
+    const worstNum = Number(pertWorst);
+
+    if (isNaN(bestNum) || bestNum <= 0 || isNaN(likelyNum) || likelyNum <= 0 || isNaN(worstNum) || worstNum <= 0) {
+      notify("PERT estimates must be positive numbers.", "error");
+      return;
+    }
+
+    if (bestNum > likelyNum || likelyNum > worstNum) {
+      notify("PERT bounds violation: Best Case <= Likely Case <= Worst Case.", "error");
+      return;
+    }
+
     const newProject = {
       workspace_id: workspace.id,
       name: newName,
@@ -759,9 +781,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       priority: newPriority,
       execution_mode: newExecutionMode,
       efficiency: 0.8,
-      pert_best: 0,
-      pert_likely: 0,
-      pert_worst: 0,
+      pert_best: bestNum,
+      pert_likely: likelyNum,
+      pert_worst: worstNum,
       proposed_start_date: proposedStartDate,
       client_deadline: newClientDeadline,
       team_id: newTeamId || null,
@@ -802,6 +824,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       setProjects(prev => [data as import('../../types').Project, ...prev]);
       setIsAdding(false);
       setNewName('');
+      setPertBest('');
+      setPertLikely('');
+      setPertWorst('');
       setProposedStartDate('');
       setNewClientDeadline('');
       setNewPriority('medium');
@@ -1341,6 +1366,48 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   />
                 </div>
 
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary tracking-tighter mb-2">PERT: BEST (H) *</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      required
+                      value={pertBest}
+                      onChange={e => setPertBest(e.target.value)}
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary tracking-tighter mb-2">PERT: LIKELY (H) *</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      required
+                      value={pertLikely}
+                      onChange={e => setPertLikely(e.target.value)}
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-mono text-text-secondary tracking-tighter mb-2">PERT: WORST (H) *</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      required
+                      value={pertWorst}
+                      onChange={e => setPertWorst(e.target.value)}
+                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Execution Mode</label>
@@ -1456,18 +1523,18 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   <div className="flex justify-between items-center text-[10px] uppercase font-mono mb-2">
                     <span className="text-text-secondary">Statistical Estimate</span>
                     <span className="text-text-secondary">
-                      0.00 HOURS
+                      {calculateExpectedTime(Number(pertBest), Number(pertLikely), Number(pertWorst)).toFixed(2)} HOURS
                     </span>
                   </div>
                   <div className="w-full bg-white/5 h-1">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: 0 }}
+                      animate={{ width: '65%' }}
                       className="h-full bg-white/40"
                     />
                   </div>
                   <p className="text-[11px] font-mono text-text-secondary mt-2 italic leading-relaxed">
-                    Estimates and confidence intervals (±σ) will populate dynamically as micro-tasks are compiled into this workspace.
+                    Confidence interval adjusted for ±{Math.sqrt(calculateVariance(Number(pertBest), Number(pertWorst))).toFixed(2)}σ.
                     {(frictionInfra || frictionData || frictionSla) && (
                       <span className="block mt-1 text-signal-warning text-[10px] uppercase font-bold">
                         Warning: Timeline is bound to active external wait-states.
