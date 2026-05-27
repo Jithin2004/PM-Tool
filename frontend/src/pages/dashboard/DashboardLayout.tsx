@@ -80,6 +80,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     refreshProjects,
     refreshAll,
     dbNotifications,
+    updateWorkspaceSettings,
   } = useOperationalData();
 
   const attendanceRows = raw.attendanceRows;
@@ -441,7 +442,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     };
   }, [tourSteps]);
 
-  // Listen for project setup guide trigger Ã¢â‚¬â€ redirect to execution initialization
+  // Listen for project setup guide trigger — redirect to execution initialization
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -540,6 +541,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const [newPriority, setNewPriority] = useState<string>('medium');
   const [newTeamId, setNewTeamId] = useState<string>('');
   const [newExecutionMode, setNewExecutionMode] = useState<string>('KANBAN');
+  const [frictionInfra, setFrictionInfra] = useState(false);
+  const [frictionData, setFrictionData] = useState(false);
+  const [frictionSla, setFrictionSla] = useState(false);
 
   useEffect(() => {
     if (window.location.hash && window.location.hash.includes('access_token')) {
@@ -798,6 +802,25 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     if (!error && data) {
       if (typeof window !== 'undefined') console.debug('[pipeline] createProject:success', { id: data.id });
 
+      const selectedFrictions: string[] = [];
+      if (frictionInfra) selectedFrictions.push("Client Infrastructure Access Lag");
+      if (frictionData) selectedFrictions.push("External Data Provisioning Delay");
+      if (frictionSla) selectedFrictions.push("Third-Party SLA / Compliance Review");
+
+      const projectDurations = { ...(raw.workspaceSettingsBlob?.project_state_durations || {}) } as Record<string, any>;
+      projectDurations[data.id] = {
+        currentState: selectedFrictions.length > 0 ? 'passive_wait' : 'active',
+        activeDays: 0,
+        passiveWaitDays: 0,
+        blockedDays: 0,
+        lastStateChange: new Date().toISOString(),
+        frictions: selectedFrictions,
+      };
+
+      await updateWorkspaceSettings({
+        project_state_durations: projectDurations,
+      });
+
       setProjects(prev => [data as import('../../types').Project, ...prev]);
       setIsAdding(false);
       setNewName('');
@@ -808,6 +831,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       setNewClientDeadline('');
       setNewPriority('medium');
       setNewTeamId('');
+      setFrictionInfra(false);
+      setFrictionData(false);
+      setFrictionSla(false);
       notify("Project created successfully.", "success");
 
       if (typeof window !== 'undefined') console.debug('[pipeline] projectVisible:confirmed', { id: data.id, name: data.name });
@@ -1459,6 +1485,40 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   </div>
                 </div>
 
+                {/* Anticipated Operational Friction Section */}
+                <div className="space-y-3 p-4 bg-white/5 border border-border rounded-sm">
+                  <span className="block text-[10px] uppercase font-mono text-text-secondary tracking-wide">Anticipated Operational Friction</span>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-xs font-mono text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={frictionInfra}
+                        onChange={e => setFrictionInfra(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-white cursor-pointer"
+                      />
+                      <span>Client Infrastructure Access Lag</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-mono text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={frictionData}
+                        onChange={e => setFrictionData(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-white cursor-pointer"
+                      />
+                      <span>External Data Provisioning Delay</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-mono text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={frictionSla}
+                        onChange={e => setFrictionSla(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-white cursor-pointer"
+                      />
+                      <span>Third-Party SLA / Compliance Review</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="bg-white/5 border border-border p-4">
                   <div className="flex justify-between items-center text-[10px] uppercase font-mono mb-2">
                     <span className="text-text-secondary">Statistical Estimate</span>
@@ -1473,8 +1533,13 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       className="h-full bg-white/40"
                     />
                   </div>
-                  <p className="text-[11px] font-mono text-text-secondary mt-2 italic">
-                    Confidence interval adjusted for â”¬â–’{Math.sqrt(calculateVariance(Number(pertBest), Number(pertWorst))).toFixed(2)}â•§Ã¢.
+                  <p className="text-[11px] font-mono text-text-secondary mt-2 italic leading-relaxed">
+                    Confidence interval adjusted for ±{Math.sqrt(calculateVariance(Number(pertBest), Number(pertWorst))).toFixed(2)}σ.
+                    {(frictionInfra || frictionData || frictionSla) && (
+                      <span className="block mt-1 text-signal-warning text-[10px] uppercase font-bold">
+                        Warning: Timeline is bound to active external wait-states.
+                      </span>
+                    )}
                   </p>
                 </div>
 
@@ -1560,7 +1625,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className="text-[9px] font-mono uppercase tracking-wide text-signal-info bg-surface-3 px-2 py-0.5 rounded-sm">
-                    Interactive briefing â”œÃ³Î“Ã©Â¼â”¬Ã³ Step {guideStep + 1} of {tourSteps.length}
+                    Interactive briefing — Step {guideStep + 1} of {tourSteps.length}
                   </span>
                   <h3 className="text-base font-bold tracking-tight text-text-primary mt-1.5">
                     {tourSteps[guideStep]?.title}
