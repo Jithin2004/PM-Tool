@@ -229,10 +229,10 @@ export function AdminDashboard({
         <div className="mb-6 flex flex-col">
           <h2 className="text-xl font-semibold tracking-tight mb-1 flex items-center gap-2">
             <Terminal size={22} style={{ color: 'var(--pm-primary)' }} />
-            {canGovernPlatform ? 'Control & Capabilities Center' : 'Active Team Roster'}
+            {canGovernPlatform ? 'Workspace Configuration' : 'Active Delivery Units'}
           </h2>
           <p className="text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            {canGovernPlatform ? 'Form cross-functional teams, allocate resources, and manage corporate designations.' : 'View current operational team formations and allocation hierarchies.'}
+            {canGovernPlatform ? 'Initialize new delivery units, manage resource allocation, and configure roles.' : 'View active delivery units and current member allocation.'}
           </p>
         </div>
 
@@ -243,11 +243,11 @@ export function AdminDashboard({
               <div>
                 <h3 className="font-semibold mb-6 flex items-center gap-2">
                   <Zap size={18} style={{ color: 'var(--pm-primary)' }} />
-                  {editingTeamId ? 'Update Team' : 'Create Team'}
+                  {editingTeamId ? 'Update Unit' : 'Create Unit'}
                 </h3>
                 <form onSubmit={handleCreateTeam} className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Team Name</label>
+                    <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Unit Name</label>
                     <input
                       required
                       type="text"
@@ -260,7 +260,7 @@ export function AdminDashboard({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Project Manager (PM)</label>
+                    <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Unit Lead</label>
                     <select
                       required
                       value={selectedPm}
@@ -276,7 +276,7 @@ export function AdminDashboard({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Engineers</label>
+                    <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Team Members</label>
                     <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
                       {availableDevs.map(dev => (
                         <label key={dev.id} className="flex items-center gap-2 text-xs font-mono-pm cursor-pointer hover:bg-white/5 p-1.5 rounded transition-colors" style={{ color: 'var(--pm-on-surface-variant)' }}>
@@ -292,7 +292,7 @@ export function AdminDashboard({
                           <span>{dev.full_name || dev.email}</span>
                         </label>
                       ))}
-                      {availableDevs.length === 0 && <p className="text-[10px] italic p-1" style={{ color: 'var(--pm-on-surface-variant)' }}>No unassigned engineers detected.</p>}
+                      {availableDevs.length === 0 && <p className="text-[10px] italic p-1" style={{ color: 'var(--pm-on-surface-variant)' }}>No unassigned members available.</p>}
                     </div>
                   </div>
 
@@ -304,7 +304,7 @@ export function AdminDashboard({
                       onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.15)'; }}
                       onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
                     >
-                      {editingTeamId ? 'Update Team' : 'Execute Creation'}
+                      {editingTeamId ? 'Update Unit' : 'Create Unit'}
                     </button>
                     {editingTeamId && (
                       <button
@@ -330,7 +330,7 @@ export function AdminDashboard({
               <div>
                 <h3 className="font-semibold mb-6 flex items-center gap-2">
                   <Shield size={18} style={{ color: 'var(--pm-secondary)' }} />
-                  Custom Designations
+                  Designation Registry
                 </h3>
                 <form onSubmit={handleAddCustomRole} className="space-y-4 mb-6">
                   <div>
@@ -388,13 +388,13 @@ export function AdminDashboard({
           <div className={`pm-card overflow-hidden flex flex-col ${canGovernPlatform ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
             <h3 className="font-semibold p-6 border-b flex items-center gap-2" style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}>
               <Users size={18} style={{ color: 'var(--pm-tertiary)' }} />
-              Active Teams
+              Active Delivery Units
             </h3>
             <div className="overflow-y-auto p-6 space-y-4 flex-1 max-h-[400px]">
               {teams.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-10 opacity-50">
                   <Users className="w-8 h-8 mb-3" style={{ color: 'var(--pm-on-surface-variant)' }} />
-                  <p className="text-xs font-mono-pm uppercase" style={{ color: 'var(--pm-on-surface-variant)' }}>No teams created.</p>
+                  <p className="text-xs font-mono-pm uppercase" style={{ color: 'var(--pm-on-surface-variant)' }}>No units created.</p>
                 </div>
               )}
               {teams.map(team => {
@@ -420,7 +420,7 @@ export function AdminDashboard({
                               style={{ color: 'var(--pm-on-surface-variant)', background: 'var(--pm-surface-high)' }}
                               onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-primary)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
                               onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
-                              title="Edit Team"
+                              title="Edit Unit"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
@@ -430,7 +430,7 @@ export function AdminDashboard({
                               style={{ color: 'var(--pm-on-surface-variant)', background: 'var(--pm-surface-high)' }}
                               onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-error)'; (e.currentTarget as any).style.background = 'rgba(255,100,100,0.1)'; }}
                               onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
-                              title="Delete Team"
+                              title="Delete Unit"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -440,11 +440,11 @@ export function AdminDashboard({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
                       <div>
-                        <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Lead (PM)</p>
+                        <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Unit Lead</p>
                         <p className="text-[11px] font-mono-pm flex items-center gap-1.5" style={{ color: 'var(--pm-tertiary)' }}>{pm?.full_name || pm?.email || 'Unknown'}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Engineers ({squadDevs.length})</p>
+                        <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Team Members ({squadDevs.length})</p>
                         <div className="space-y-1">
                           {squadDevs.length === 0 && <p className="text-[10px] font-mono-pm italic" style={{ color: 'var(--pm-on-surface-variant)' }}>None assigned</p>}
                           {squadDevs.map(d => (
@@ -466,7 +466,7 @@ export function AdminDashboard({
               <div>
                 <h3 className="font-semibold mb-6 flex items-center gap-2">
                   <Lock size={18} style={{ color: 'var(--pm-primary)' }} />
-                  Invite Organization Member
+                  Invite Workspace Member
                 </h3>
                 <form onSubmit={handleSendInvitation} className="space-y-4">
                   {inviteError && (
@@ -508,7 +508,7 @@ export function AdminDashboard({
                     onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.15)'; }}
                     onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
                   >
-                    {inviting ? 'Inviting...' : 'Execute Invitation'}
+                    {inviting ? 'Inviting...' : 'Send Invitation'}
                   </button>
                 </form>
               </div>
