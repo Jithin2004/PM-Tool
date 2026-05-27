@@ -253,7 +253,7 @@ export function WorkspaceSetupPage() {
                     <button
                       key={type}
                       onClick={() => setSettings(prev => ({ ...prev, businessType: type as BusinessType }))}
-                      className={`border px-4 py-3 text-left text-sm transition-colors ${settings.businessType === type ? 'border-white bg-white text-black' : 'border-border bg-white/5 text-text-secondary hover:border-white/25'}`}
+                      className={`border px-4 py-3 text-left text-sm transition-colors ${settings.businessType === type ? 'border-accent-primary bg-accent-primary/10 text-text-primary' : 'border-border bg-white/5 text-text-secondary hover:border-white/25'}`}
                     >
                       {type}
                     </button>
@@ -302,7 +302,7 @@ export function WorkspaceSetupPage() {
                           workflowRules: { ceremonies: tpl.ceremonies, teamStructure: tpl.teamStructure }
                         }));
                       }}
-                      className={`w-full text-left border p-4 transition-all ${isSelected ? 'border-cyan-400 bg-cyan-950/20' : 'border-border bg-white/5 hover:border-white/25'}`}
+                      className={`w-full text-left border p-4 transition-all ${isSelected ? 'border-accent-primary bg-accent-primary/5' : 'border-border bg-white/5 hover:border-white/25'}`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -322,12 +322,12 @@ export function WorkspaceSetupPage() {
                           {tpl.ceremonies.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">
                               {tpl.ceremonies.map(c => (
-                                <span key={c} className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 text-cyan-300/70">{c}</span>
+                                <span key={c} className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 text-accent-secondary/70">{c}</span>
                               ))}
                             </div>
                           )}
                         </div>
-                        {isSelected && <BadgeCheck className="w-5 h-5 text-cyan-400 shrink-0 mt-1" />}
+                        {isSelected && <BadgeCheck className="w-5 h-5 text-accent-primary shrink-0 mt-1" />}
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {tpl.badges.map(b => (
@@ -405,7 +405,7 @@ export function WorkspaceSetupPage() {
                       <button
                         key={day.value}
                         onClick={() => toggleWorkday(day.value)}
-                        className={`h-10 border text-sm ${active ? 'border-white bg-white text-black' : 'border-border bg-white/5 text-text-secondary'}`}
+                        className={`h-10 border text-sm ${active ? 'border-accent-primary bg-accent-primary/10 text-text-primary' : 'border-border bg-white/5 text-text-secondary'}`}
                       >
                         {day.label}
                       </button>
@@ -471,9 +471,10 @@ export function WorkspaceSetupPage() {
                               if (next.has(dateStr)) next.delete(dateStr);
                               else next.add(dateStr);
                               return next;
+                              //
                             });
                           }}
-                          className="accent-white"
+                          className="accent-accent-primary"
                         />
                         <div className="flex-1 min-w-0">
                           <span className="font-medium">{h.name}</span>
@@ -539,7 +540,7 @@ export function WorkspaceSetupPage() {
                   placeholder="teammate@company.com"
                   className="h-12 flex-1 border border-border bg-bg px-4 text-text-primary outline-none focus:border-white/40"
                 />
-                <button onClick={addInvite} className="flex h-12 w-12 items-center justify-center border border-border bg-white text-black">
+                <button onClick={addInvite} className="flex h-12 w-12 items-center justify-center border border-accent-primary bg-accent-primary hover:bg-accent-primary/90 text-white transition-colors cursor-pointer">
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
@@ -568,7 +569,7 @@ export function WorkspaceSetupPage() {
               </p>
               {selectedTemplate && (
                 <div className="mt-4 border border-border bg-white/5 p-3 text-sm">
-                  <span className="text-xs font-mono uppercase tracking-wider text-cyan-400">Template</span>
+                  <span className="text-xs font-mono uppercase tracking-wider text-accent-primary">Template</span>
                   <p className="mt-1 font-semibold">{selectedTemplate.name}</p>
                   <p className="text-xs text-text-tertiary mt-0.5">{selectedTemplate.executionMode} · {selectedTemplate.lanes} lanes · {selectedTemplate.teamStructure}</p>
                 </div>
@@ -580,7 +581,7 @@ export function WorkspaceSetupPage() {
             <button
               disabled={step === 1 || saving}
               onClick={() => setStep(prev => Math.max(1, prev - 1))}
-              className="border border-border px-4 py-2 text-sm text-text-secondary disabled:opacity-40"
+              className="border border-border px-4 py-2 text-sm text-text-secondary disabled:opacity-40 cursor-pointer"
             >
               Back
             </button>
@@ -592,26 +593,26 @@ export function WorkspaceSetupPage() {
                   if (step === 4 && !settings.country) return;
                   setStep(prev => prev + 1);
                 }}
-                className={`bg-white px-4 py-2 text-sm font-medium text-black ${step === 2 && !selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''} ${step === 4 && !settings.country ? 'opacity-40 cursor-not-allowed' : ''}`}
+                className={`bg-accent-primary hover:bg-accent-primary/90 px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer ${step === 2 && !selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''} ${step === 4 && !settings.country ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 {step === 4 ? 'Skip Preview' : 'Next'}
               </button>
             )}
 
             {step === 5 && (
-              <button disabled={saving} onClick={saveWorkspace} className="bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50">
+              <button disabled={saving} onClick={saveWorkspace} className="bg-accent-primary hover:bg-accent-primary/90 px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer disabled:opacity-50">
                 {saving ? 'Saving...' : 'Save Workspace'}
               </button>
             )}
 
             {step === 6 && (
-              <button onClick={() => setStep(7)} className="bg-white px-4 py-2 text-sm font-medium text-black">
+              <button onClick={() => setStep(7)} className="bg-accent-primary hover:bg-accent-primary/90 px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer">
                 {invites.length > 0 ? 'Continue' : 'Skip'}
               </button>
             )}
 
             {step === 7 && (
-              <button onClick={() => navigate('/')} className="bg-white px-4 py-2 text-sm font-medium text-black">
+              <button onClick={() => navigate('/')} className="bg-accent-primary hover:bg-accent-primary/90 px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer">
                 Go to Dashboard
               </button>
             )}
@@ -630,10 +631,10 @@ export function WorkspaceSetupPage() {
           </dl>
           {selectedTemplate && (
             <div className="mt-6 border-t border-border pt-5">
-              <p className="text-xs font-mono uppercase tracking-[0.2em] text-cyan-400">Workflow Template</p>
+              <p className="text-xs font-mono uppercase tracking-[0.2em] text-accent-primary">Workflow Template</p>
               <div className="mt-3 space-y-2 text-sm text-text-secondary">
                 <div className="flex justify-between"><dt>Template</dt><dd className="text-text-primary font-medium">{selectedTemplate.name}</dd></div>
-                <div className="flex justify-between"><dt>Execution Mode</dt><dd className="text-cyan-300 font-mono text-xs">{selectedTemplate.executionMode}</dd></div>
+                <div className="flex justify-between"><dt>Execution Mode</dt><dd className="text-accent-secondary font-mono text-xs">{selectedTemplate.executionMode}</dd></div>
                 <div className="flex justify-between"><dt>Default Lanes</dt><dd>{selectedTemplate.lanes}</dd></div>
                 <div className="flex justify-between items-start"><dt>Team</dt><dd className="text-right text-xs">{selectedTemplate.teamStructure}</dd></div>
               </div>

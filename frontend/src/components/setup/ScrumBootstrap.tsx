@@ -321,7 +321,7 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-purple-600 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-purple-500 transition-all rounded-sm disabled:opacity-50 shadow-sm"
+          className="px-4 py-2 bg-accent-primary text-white text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm disabled:opacity-50 shadow-sm cursor-pointer"
         >
           {saving ? 'Saving...' : hasAnyContent ? 'Save & Continue' : 'Skip — Go to Backlog'}
         </button>
