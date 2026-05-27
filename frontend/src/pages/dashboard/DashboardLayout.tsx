@@ -871,16 +871,24 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg flex flex-col items-center justify-center gap-4">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-2 border-border border-t-white rounded-full"
-        />
-        <p className="font-mono text-sm uppercase tracking-wide text-text-secondary">Initializing Core Engine...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-5 font-geist"
+        style={{ background: 'var(--pm-bg)' }}>
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full border-2 border-t-transparent animate-spin"
+            style={{ borderColor: 'rgba(192,193,255,0.15)', borderTopColor: 'var(--pm-primary)' }} />
+        </div>
+        <div className="text-center space-y-1">
+          <p className="font-mono-pm text-[11px] uppercase tracking-[0.3em]" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
+            Initializing Core Engine
+          </p>
+          <p className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
+            Loading workspace data...
+          </p>
+        </div>
       </div>
     );
   }
+
 
   if (!user) {
     return <Login />;
@@ -906,26 +914,30 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         updateExecutionMode,
       }}
     >
-      <div className={`min-h-screen bg-bg font-sans text-text-primary selection:bg-accent-primary selection:text-text-primary transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}>
+      <div className={`min-h-screen font-geist selection:bg-accent-primary selection:text-text-primary transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}
+        style={{ background: 'var(--pm-bg)', color: 'var(--pm-on-surface)' }}>
         
         {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
-        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] bg-[#0b0c12] border-r border-border-subtle z-30">
-          {/* Sidebar Brand Logo */}
-          <div className="flex items-center gap-3 h-16 px-5 border-b border-border-subtle shrink-0">
-            <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0">
+        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] border-r z-30"
+          style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+          {/* Sidebar Brand */}
+          <div className="flex items-center gap-3 h-16 px-5 border-b shrink-0"
+            style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
               <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="font-semibold tracking-tight text-[13px] text-text-secondary">Resolve PM</h1>
-              <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-wide">Enterprise Platform</p>
+              <h1 className="font-semibold tracking-tight text-[13px] font-geist" style={{ color: 'var(--pm-primary)' }}>Resolve PM</h1>
+              <p className="text-[9px] font-mono-pm uppercase tracking-[0.15em]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Enterprise Orchestration</p>
             </div>
           </div>
 
-          {/* Sidebar â€” driven by routeRegistry (paths validated at navigateTo) */}
-          <div className="flex-1 overflow-y-auto px-3 py-5 space-y-6" style={{ scrollbarWidth: 'none' }}>
+          {/* Nav — driven by routeRegistry */}
+          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 pm-scrollbar">
             {visibleSidebarGroups.map(({ group, items }) => (
               <div key={group} className="space-y-0.5">
-                <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-[0.15em] px-3 mb-2">
+                <p className="text-[9px] font-mono-pm uppercase tracking-[0.2em] px-3 mb-2"
+                  style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
                   {SIDEBAR_GROUP_LABELS[group]}
                 </p>
                 {items.map(item => {
@@ -938,13 +950,17 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                         if (isDecisions) setDashboardTab('intelligence');
                         navigateTo(item.path);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                        active
-                          ? isDecisions
-                            ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20'
-                            : 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/20'
-                          : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-3'
-                      }`}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[12px] font-medium transition-all duration-150"
+                      style={active ? {
+                        background: 'rgba(67,70,83,0.5)',
+                        color: 'var(--pm-primary)',
+                        borderLeft: '3px solid var(--pm-primary)',
+                        paddingLeft: '9px',
+                      } : {
+                        color: 'var(--pm-on-surface-variant)',
+                      }}
+                      onMouseEnter={e => { if (!active) { (e.currentTarget as any).style.background = 'rgba(51,53,55,0.4)'; (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; } }}
+                      onMouseLeave={e => { if (!active) { (e.currentTarget as any).style.background = ''; (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; } }}
                     >
                       {SIDEBAR_ICONS[item.id]}
                       {item.label}
@@ -964,39 +980,48 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             />
           )}
 
-          {/* Bottom utility strip Î“Ã‡Ã¶ Help + Profile */}
-          <div className="shrink-0 border-t border-border-subtle">
+          {/* Bottom utility strip */}
+          <div className="shrink-0 border-t" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
             <button
               onClick={() => (window as any).startOnboardingTour?.()}
-              className="w-full flex items-center gap-2.5 px-5 py-2.5 text-text-quaternary hover:text-text-quaternary transition-colors text-[11px]"
+              className="w-full flex items-center gap-2.5 px-5 py-2.5 transition-colors text-[11px] font-geist"
+              style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}
+              onMouseEnter={e => { (e.currentTarget as any).style.opacity = '1'; }}
+              onMouseLeave={e => { (e.currentTarget as any).style.opacity = '0.5'; }}
             >
               <HelpCircle className="w-3.5 h-3.5 shrink-0" />
               Help & Documentation
             </button>
 
             {/* User identity strip */}
-            <div className="flex items-center gap-3 px-4 py-3 border-t border-border-subtle">
+            <div className="flex items-center gap-3 px-4 py-3 border-t" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
               <div
                 onClick={() => setIsProfileOpen(true)}
-                className="w-8 h-8 rounded-full bg-white/5 border border-border-subtle flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-indigo-400/40 transition-colors"
+                className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden shrink-0 cursor-pointer transition-all"
+                style={{ background: 'rgba(192,193,255,0.08)', border: '1px solid rgba(192,193,255,0.2)' }}
               >
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : profile?.full_name ? (
-                  <span className="text-[10px] font-bold text-text-secondary">{profile.full_name.substring(0, 2).toUpperCase()}</span>
+                  <span className="text-[10px] font-bold" style={{ color: 'var(--pm-primary)' }}>{profile.full_name.substring(0, 2).toUpperCase()}</span>
                 ) : (
-                  <Users className="w-3.5 h-3.5 text-text-quaternary" />
+                  <Users className="w-3.5 h-3.5" style={{ color: 'var(--pm-primary)' }} />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-text-secondary truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
-                <p className="text-[9px] text-text-quaternary truncate capitalize font-mono">
+                <p className="text-[12px] font-medium truncate font-geist" style={{ color: 'var(--pm-on-surface)' }}>
+                  {profile?.full_name || user.email?.split('@')[0]}
+                </p>
+                <p className="text-[9px] truncate capitalize font-mono-pm" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
                   {(profile && userCustomRoles[profile.id]) || profile?.role?.replace('_', ' ') || 'Viewer'}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-text-quaternary hover:text-rose-400/70 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer"
+                className="p-1.5 rounded-md transition-colors cursor-pointer"
+                style={{ color: 'var(--pm-on-surface-variant)' }}
+                onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-error)'; (e.currentTarget as any).style.background = 'rgba(255,180,171,0.08)'; }}
+                onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
                 title="Sign Out"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -1106,10 +1131,11 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <div className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen">
+        <div className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen" style={{ background: 'var(--pm-bg)' }}>
           
-          {/* Top Bar Î“Ã‡Ã¶ utility layer only, no greeting content */}
-          <header className="h-12 flex items-center justify-between px-5 border-b border-border-subtle bg-[#0b0c12]/90 sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200">
+          {/* Top Bar — utility layer, breadcrumb, operational status */}
+          <header className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200"
+            style={{ background: 'rgba(12,14,16,0.92)', borderColor: 'rgba(70,69,84,0.3)' }}>
             {/* Mobile menu toggle */}
             <div className="flex items-center gap-3 lg:hidden">
               <button
@@ -1124,12 +1150,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </div>
 
             {/* Top bar center: live breadcrumb / context label */}
-            <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-text-quaternary">
-              <Radar className="w-3 h-3" />
-              <span className="uppercase tracking-wide">Resolve PM</span>
-              <span className="text-text-quaternary">/</span>
-              <span className="text-text-quaternary">{breadcrumb?.section || 'Command Center'}</span>
-              {breadcrumb?.page && <><span className="text-text-quaternary">/</span><span className="text-text-tertiary">{breadcrumb.page}</span></>}
+            <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono-pm">
+              <span className="w-1.5 h-1.5 rounded-full operational-pulse" style={{ background: 'var(--pm-primary)' }} />
+              <span className="uppercase tracking-[0.15em]" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>Resolve PM</span>
+              <span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }}>/</span>
+              <span className="uppercase" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>{breadcrumb?.section || 'Command Center'}</span>
+              {breadcrumb?.page && <><span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }}>/</span><span style={{ color: 'var(--pm-on-surface)' }}>{breadcrumb.page}</span></>}
             </div>
 
             {/* Top bar right: compact utilities */}
@@ -1173,8 +1199,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               {profile && hasCapability(profile.role, 'manage_projects') && (
                 <button
                   onClick={() => setIsAdding(true)}
-                  className="flex items-center gap-1.5 text-[11px] font-medium text-text-primary h-7 px-3 rounded-md transition-all cursor-pointer shrink-0"
-                  style={{background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'}}
+                  className="flex items-center gap-1.5 text-[11px] font-medium h-7 px-3 rounded-md transition-all cursor-pointer shrink-0 active:scale-95"
+                  style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)', fontFamily: 'Geist, sans-serif' }}
                 >
                   <Plus className="w-3 h-3" />
                   <span className="hidden sm:inline">New Project</span>
@@ -1183,21 +1209,22 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Context Header Î“Ã‡Ã¶ Welcome + operational context, sits clearly below topbar */}
+          {/* Context Header — Welcome + operational context */}
           {window.location.pathname === '/workspace' && (
-            <div className="px-6 pt-7 pb-5 border-b border-border-subtle">
+            <div className="px-6 pt-7 pb-5 border-b" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[10px] font-mono text-text-quaternary uppercase tracking-wide mb-1">Command Center</p>
-                  <h2 className="text-[22px] font-semibold text-text-secondary tracking-tight leading-none">
+                  <p className="font-mono-pm text-[9px] uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Command Center</p>
+                  <h2 className="text-[22px] font-semibold tracking-tight leading-none font-geist" style={{ color: 'var(--pm-on-surface)' }}>
                     {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}'s Workspace
                   </h2>
-                  <p className="text-[12px] text-text-quaternary mt-1.5">
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} â”¬â•– {dbNotifications.filter(n => !n.read_at).length > 0 ? `${dbNotifications.filter(n => !n.read_at).length} unread notification${dbNotifications.filter(n => !n.read_at).length > 1 ? 's' : ''}` : 'All systems operational'}
+                  <p className="font-mono-pm text-[11px] mt-1.5" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · {dbNotifications.filter(n => !n.read_at).length > 0 ? `${dbNotifications.filter(n => !n.read_at).length} unread notification${dbNotifications.filter(n => !n.read_at).length > 1 ? 's' : ''}` : 'All systems operational'}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 text-[9px] font-mono text-text-quaternary uppercase tracking-wide">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 transition-opacity duration-300" />
+                <div className="flex items-center gap-1.5 font-mono-pm text-[9px] uppercase tracking-[0.2em]"
+                  style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
+                  <div className="w-1.5 h-1.5 rounded-full operational-pulse" style={{ background: 'var(--pm-primary)' }} />
                   Live
                 </div>
               </div>

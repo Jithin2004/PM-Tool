@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Resolve PM | Executive Command Console</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=JetBrains+Mono:wght@100..800&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <style>
+        body {
+            background-color: #121416;
+            color: #e2e2e5;
+            -webkit-font-smoothing: antialiased;
+            font-family: 'Geist', sans-serif;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .glass-panel {
+            background: rgba(30, 32, 34, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .operational-pulse {
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .executive-table tr:hover {
+            background: rgba(192, 193, 255, 0.03);
+        }
+
+        .sidebar-active {
+            background: rgba(67, 70, 83, 0.4);
+            border-left: 3px solid #c0c1ff;
+            color: #c0c1ff;
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdcc5",
+                        "on-primary": "#1000a9",
+                        "outline": "#908fa0",
+                        "surface-container-low": "#1a1c1e",
+                        "surface": "#121416",
+                        "on-secondary": "#2c303c",
+                        "inverse-surface": "#e2e2e5",
+                        "on-error": "#690005",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "on-background": "#e2e2e5",
+                        "on-tertiary-fixed-variant": "#703700",
+                        "inverse-primary": "#494bd6",
+                        "error-container": "#93000a",
+                        "secondary-fixed-dim": "#c3c6d5",
+                        "on-tertiary": "#4f2500",
+                        "surface-container": "#1e2022",
+                        "surface-bright": "#37393b",
+                        "surface-container-lowest": "#0c0e10",
+                        "on-primary-fixed": "#07006c",
+                        "inverse-on-surface": "#2f3133",
+                        "error": "#ffb4ab",
+                        "surface-dim": "#121416",
+                        "outline-variant": "#464554",
+                        "on-surface": "#e2e2e5",
+                        "on-secondary-container": "#b1b4c3",
+                        "secondary-fixed": "#dfe2f1",
+                        "tertiary": "#ffb783",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "background": "#121416",
+                        "primary-container": "#8083ff",
+                        "tertiary-fixed-dim": "#ffb783",
+                        "secondary-container": "#434653",
+                        "on-surface-variant": "#c7c4d7",
+                        "primary-fixed": "#e1e0ff",
+                        "surface-container-highest": "#333537",
+                        "surface-container-high": "#282a2c",
+                        "on-tertiary-container": "#452000",
+                        "on-tertiary-fixed": "#301400",
+                        "surface-variant": "#333537",
+                        "on-primary-container": "#0d0096",
+                        "tertiary-container": "#d97721",
+                        "surface-tint": "#c0c1ff",
+                        "on-secondary-fixed-variant": "#434653",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-fixed": "#171b26",
+                        "secondary": "#c3c6d5",
+                        "primary": "#c0c1ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "stack-gap-sm": "8px",
+                        "grid-columns": "12",
+                        "stack-gap-md": "16px",
+                        "grid-gutter": "24px",
+                        "container-padding": "32px",
+                        "stack-gap-lg": "24px"
+                    },
+                    "fontFamily": {
+                        "mono-label": ["JetBrains Mono"],
+                        "display-lg": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "body-md": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "body-lg": ["Geist"],
+                        "mono-data": ["JetBrains Mono"],
+                        "headline-sm": ["Geist"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="font-body-md text-body-md overflow-x-hidden">
+    <!-- Fixed Sidebar -->
+    <aside
+        class="fixed left-0 top-0 h-full w-[280px] bg-surface-container-lowest border-r border-outline-variant flex flex-col p-4 z-50">
+        <div class="mb-10 px-4">
+            <h1 class="font-display-lg text-headline-md font-bold text-primary tracking-tight">Resolve PM</h1>
+            <p class="text-on-surface-variant font-mono-label text-[10px] tracking-widest uppercase opacity-70">
+                Executive Command</p>
+        </div>
+        <nav class="flex-1 space-y-1">
+            <div
+                class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-all duration-200 cursor-pointer group">
+                <span
+                    class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">dashboard</span>
+                <span class="font-medium">Overview</span>
+            </div>
+            <div
+                class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-all duration-200 cursor-pointer group">
+                <span
+                    class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">inventory_2</span>
+                <span class="font-medium">Projects</span>
+            </div>
+            <div
+                class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-all duration-200 cursor-pointer group">
+                <span
+                    class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">assignment</span>
+                <span class="font-medium">Task Board</span>
+            </div>
+            <div
+                class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-all duration-200 cursor-pointer group">
+                <span
+                    class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">calendar_today</span>
+                <span class="font-medium">Scheduling</span>
+            </div>
+            <div
+                class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-all duration-200 cursor-pointer group">
+                <span
+                    class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">analytics</span>
+                <span class="font-medium">Analytics</span>
+            </div>
+            <div
+                class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-all duration-200 cursor-pointer group">
+                <span
+                    class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">balance</span>
+                <span class="font-medium">Decision Center</span>
+            </div>
+            <div
+                class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-variant rounded-lg transition-all duration-200 cursor-pointer group">
+                <span
+                    class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">local_shipping</span>
+                <span class="font-medium">Logistics</span>
+            </div>
+            <div class="flex items-center gap-3 sidebar-active rounded-lg px-4 py-3 cursor-default">
+                <span class="material-symbols-outlined text-[20px]">groups</span>
+                <span class="font-medium">Team Registry</span>
+            </div>
+        </nav>
+        <div class="mt-auto space-y-4 pt-6 border-t border-outline-variant/30">
+            <button
+                class="w-full bg-primary text-on-primary font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/10">
+                <span class="material-symbols-outlined text-[20px]">add</span>
+                <span>New Initiative</span>
+            </button>
+            <div class="space-y-1">
+                <div
+                    class="flex items-center gap-3 text-on-surface-variant px-4 py-2.5 hover:bg-surface-variant rounded-lg transition-all duration-200 cursor-pointer group">
+                    <span class="material-symbols-outlined text-[20px]">help</span>
+                    <span class="font-medium">Support</span>
+                </div>
+                <div
+                    class="flex items-center gap-3 text-on-surface-variant px-4 py-2.5 hover:bg-surface-variant rounded-lg transition-all duration-200 cursor-pointer group">
+                    <span class="material-symbols-outlined text-[20px]">settings</span>
+                    <span class="font-medium">Settings</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+    <!-- Main Content -->
+    <main class="ml-[280px] min-h-screen flex flex-col relative pb-16">
+        <!-- Header -->
+        <header
+            class="bg-surface-container-low border-b border-outline-variant/30 flex justify-between items-center w-full px-container-padding h-16 sticky top-0 z-40">
+            <div class="flex items-center gap-4">
+                <h2 class="font-headline-sm text-on-surface font-semibold tracking-tight">Internal Identity Console</h2>
+                <span
+                    class="bg-primary-container text-on-primary-container px-2.5 py-0.5 rounded text-[10px] font-mono-label tracking-widest uppercase border border-primary/20">Super
+                    Admin Mode</span>
+            </div>
+            <div class="flex items-center gap-stack-gap-md">
+                <div
+                    class="flex items-center gap-3 px-4 py-1.5 bg-surface-container-highest rounded-full border border-outline-variant/30">
+                    <span class="material-symbols-outlined text-tertiary text-sm operational-pulse"
+                        style="font-variation-settings: 'FILL' 1;">circle</span>
+                    <span class="font-mono-label text-[11px] text-on-surface-variant tracking-wider">NETWORK STATUS:
+                        OPERATIONAL</span>
+                </div>
+                <div class="flex gap-2 border-l border-outline-variant/30 pl-4">
+                    <button
+                        class="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors relative">
+                        <span class="material-symbols-outlined text-[20px]">notifications</span>
+                        <span
+                            class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-surface-container-low"></span>
+                    </button>
+                    <button
+                        class="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">apps</span>
+                    </button>
+                    <div
+                        class="w-9 h-9 rounded-full overflow-hidden border border-primary/30 p-0.5 ml-2 cursor-pointer hover:scale-105 transition-transform">
+                        <img alt="User profile" class="w-full h-full rounded-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCh-JhZ_Yz1PRsxKs1zAU3_tMQ2eLdv3_JtH_QDFP7V7yZ6SrECwEyPtQFGxIofDmeN1Y1sPJbUoTkiBYG5YlrCdDl9JGESX1K4hx6Su_wYkvQU1cnoy8vnG_2RVHOtb00VIxf1eG83DZEr6yYB0hQH4Tb9V9TIkSs2PtEtR7gCgqTOYazIQAFykE_Cu85JaXohLMGqLAC2b2wbQXhDbB9sE3pRagqpEAxzieRUR4c-xbUQR_PQ9lOt0xc28-EFTH-ZU9gON3AaErs" />
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div class="p-container-padding space-y-stack-gap-lg">
+            <!-- Identity Registry -->
+            <section class="space-y-4">
+                <div class="flex justify-between items-end px-1">
+                    <div>
+                        <h3 class="font-headline-md text-on-surface font-semibold">Identity Registry</h3>
+                        <p class="text-on-surface-variant text-sm mt-1">Management of core operational entities and
+                            access matrices.</p>
+                    </div>
+                    <span
+                        class="font-mono-label text-primary text-[11px] tracking-[0.2em] bg-primary/5 px-3 py-1 rounded border border-primary/10">8
+                        ACTIVE ENTITIES DETECTED</span>
+                </div>
+                <div
+                    class="bg-surface-container-low border border-outline-variant/30 rounded-xl overflow-hidden shadow-2xl">
+                    <table class="w-full text-left border-collapse executive-table">
+                        <thead class="bg-surface-container-highest/50 border-b border-outline-variant/30">
+                            <tr>
+                                <th
+                                    class="px-8 py-4 font-mono-label text-on-surface-variant text-[10px] uppercase tracking-[0.2em]">
+                                    Entity Identity</th>
+                                <th
+                                    class="px-8 py-4 font-mono-label text-on-surface-variant text-[10px] uppercase tracking-[0.2em]">
+                                    Clearance Level</th>
+                                <th
+                                    class="px-8 py-4 font-mono-label text-on-surface-variant text-[10px] uppercase tracking-[0.2em]">
+                                    Last Authentication</th>
+                                <th
+                                    class="px-8 py-4 font-mono-label text-on-surface-variant text-[10px] uppercase tracking-[0.2em]">
+                                    Access Range</th>
+                                <th
+                                    class="px-8 py-4 font-mono-label text-on-surface-variant text-[10px] uppercase tracking-[0.2em]">
+                                    Controls</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-outline-variant/10">
+                            <tr>
+                                <td class="px-8 py-5">
+                                    <div class="flex items-center gap-4">
+                                        <div
+                                            class="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                                            JM</div>
+                                        <div>
+                                            <div class="font-medium text-on-surface">Jithin M</div>
+                                            <div
+                                                class="text-[12px] font-mono-data text-on-surface-variant opacity-60 uppercase">
+                                                j.m@resolve-pm.io</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">Super
+                                        Admin</span>
+                                </td>
+                                <td
+                                    class="px-8 py-5 font-mono-data text-[13px] text-on-surface-variant tracking-tighter">
+                                    2024.05.21 14:02:44</td>
+                                <td class="px-8 py-5">
+                                    <div class="w-40 space-y-1.5">
+                                        <div class="h-1.5 w-full bg-outline-variant/20 rounded-full overflow-hidden">
+                                            <div
+                                                class="h-full bg-primary w-full shadow-[0_0_8px_rgba(192,193,255,0.4)]">
+                                            </div>
+                                        </div>
+                                        <span
+                                            class="text-[9px] font-mono-label text-primary uppercase tracking-widest opacity-80">Full
+                                            Spectrum Access</span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
+                                        <span class="material-symbols-outlined text-[18px]">settings_suggest</span>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-8 py-5">
+                                    <div class="flex items-center gap-4">
+                                        <div
+                                            class="w-10 h-10 rounded-lg bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary font-bold text-sm">
+                                            ST</div>
+                                        <div>
+                                            <div class="font-medium text-on-surface">Shamil TP</div>
+                                            <div
+                                                class="text-[12px] font-mono-data text-on-surface-variant opacity-60 uppercase">
+                                                s.tp@resolve-pm.io</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-secondary/10 text-secondary border border-secondary/20 uppercase tracking-wider">PM</span>
+                                </td>
+                                <td
+                                    class="px-8 py-5 font-mono-data text-[13px] text-on-surface-variant tracking-tighter">
+                                    2024.05.21 13:45:12</td>
+                                <td class="px-8 py-5">
+                                    <div class="w-40 space-y-1.5">
+                                        <div class="h-1.5 w-full bg-outline-variant/20 rounded-full overflow-hidden">
+                                            <div class="h-full bg-secondary w-[75%]"></div>
+                                        </div>
+                                        <span
+                                            class="text-[9px] font-mono-label text-on-surface-variant uppercase tracking-widest opacity-80">Tactical
+                                            Clearance</span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <button
+                                        class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-all">
+                                        <span class="material-symbols-outlined text-[18px]">settings_suggest</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <!-- Control & Capabilities Center -->
+            <section class="grid grid-cols-12 gap-grid-gutter">
+                <div class="col-span-12">
+                    <h3 class="font-headline-sm text-on-surface font-semibold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">terminal</span>
+                        Control &amp; Capabilities Center
+                    </h3>
+                </div>
+                <!-- Create Team -->
+                <div
+                    class="col-span-4 bg-surface-container-low p-7 rounded-xl border border-outline-variant/30 hover:border-primary/40 transition-all cursor-pointer group relative overflow-hidden">
+                    <div
+                        class="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all">
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform shadow-inner">
+                        <span class="material-symbols-outlined text-primary text-2xl">group_add</span>
+                    </div>
+                    <h4 class="font-headline-sm text-on-surface mb-3">Create Team</h4>
+                    <p class="text-body-sm text-on-surface-variant leading-relaxed mb-8">Initialize new operational
+                        units with specific scope of work and resource allocation protocol.</p>
+                    <div class="flex items-center text-primary font-bold gap-2 text-xs uppercase tracking-[0.2em]">
+                        <span>Execute Protocol</span>
+                        <span
+                            class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </div>
+                <!-- Designations -->
+                <div
+                    class="col-span-4 bg-surface-container-low p-7 rounded-xl border border-outline-variant/30 hover:border-secondary/40 transition-all cursor-pointer group relative overflow-hidden">
+                    <div
+                        class="absolute -right-4 -top-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl group-hover:bg-secondary/10 transition-all">
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-secondary/10 rounded-xl border border-secondary/20 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform shadow-inner">
+                        <span class="material-symbols-outlined text-secondary text-2xl">admin_panel_settings</span>
+                    </div>
+                    <h4 class="font-headline-sm text-on-surface mb-3">Designations</h4>
+                    <p class="text-body-sm text-on-surface-variant leading-relaxed mb-8">Configure custom access roles,
+                        multi-tier permission matrices, and deep security clearances.</p>
+                    <div class="flex items-center text-secondary font-bold gap-2 text-xs uppercase tracking-[0.2em]">
+                        <span>Access Matrix</span>
+                        <span
+                            class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </div>
+                <!-- Live Telemetry -->
+                <div class="col-span-4 glass-panel p-7 rounded-xl flex flex-col">
+                    <div class="flex justify-between items-center mb-8">
+                        <h4 class="font-mono-label text-[10px] text-on-surface-variant tracking-[0.3em] uppercase">
+                            Network Telemetry</h4>
+                        <span
+                            class="bg-tertiary/10 text-tertiary px-2 py-0.5 rounded text-[9px] font-mono-label border border-tertiary/20 font-bold">LIVE
+                            STREAM</span>
+                    </div>
+                    <div class="flex-1 flex flex-col justify-center gap-5">
+                        <div class="flex items-baseline justify-between">
+                            <span
+                                class="text-on-surface-variant text-xs font-medium uppercase tracking-wider">Authentication
+                                Latency</span>
+                            <span class="font-mono-data text-primary text-xl font-bold">12<span
+                                    class="text-xs font-normal opacity-60">ms</span></span>
+                        </div>
+                        <div class="h-16 flex items-end gap-[3px]">
+                            <div
+                                class="flex-1 bg-primary/10 h-[30%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair">
+                            </div>
+                            <div
+                                class="flex-1 bg-primary/20 h-[45%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair">
+                            </div>
+                            <div
+                                class="flex-1 bg-primary/40 h-[75%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair">
+                            </div>
+                            <div
+                                class="flex-1 bg-primary/15 h-[40%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair">
+                            </div>
+                            <div
+                                class="flex-1 bg-primary/60 h-[65%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair shadow-[0_0_12px_rgba(192,193,255,0.2)]">
+                            </div>
+                            <div
+                                class="flex-1 bg-primary/80 h-[100%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair shadow-[0_0_15px_rgba(192,193,255,0.3)]">
+                            </div>
+                            <div
+                                class="flex-1 bg-primary/25 h-[25%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair">
+                            </div>
+                            <div
+                                class="flex-1 bg-primary/10 h-[50%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair">
+                            </div>
+                            <div
+                                class="flex-1 bg-primary/30 h-[80%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair">
+                            </div>
+                            <div
+                                class="flex-1 bg-primary/15 h-[35%] rounded-t-sm group hover:bg-primary/30 transition-all cursor-crosshair">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-outline-variant/20 flex items-center gap-2">
+                        <span
+                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                        <p
+                            class="text-[9px] font-mono-label text-on-surface-variant uppercase tracking-widest opacity-60">
+                            Pulse verified by Admin.jm // 14:22:01 UTC</p>
+                    </div>
+                </div>
+            </section>
+            <!-- Active Collaborative Units -->
+            <section class="space-y-5">
+                <h3 class="font-headline-sm text-on-surface font-semibold">Active Collaborative Units</h3>
+                <div class="grid grid-cols-4 gap-grid-gutter">
+                    <div
+                        class="bg-surface-container-low border border-outline-variant/30 rounded-xl p-6 hover:bg-surface-container-high transition-all group">
+                        <div class="flex justify-between items-start mb-6">
+                            <div
+                                class="w-10 h-10 bg-surface-container-highest rounded-lg border border-outline-variant/30 flex items-center justify-center text-primary shadow-lg">
+                                <span class="material-symbols-outlined">hub</span>
+                            </div>
+                            <span
+                                class="bg-emerald-500/5 text-emerald-400 px-2 py-0.5 rounded text-[9px] font-mono-label border border-emerald-500/20 uppercase font-bold tracking-widest">Active
+                                Sync</span>
+                        </div>
+                        <h5 class="font-headline-sm text-[16px] mb-2">Strategic Logistics</h5>
+                        <p class="text-body-sm text-on-surface-variant line-clamp-2 mb-6 leading-relaxed">Supply chain
+                            orchestration unit and regional data processing.</p>
+                        <div class="flex justify-between items-center">
+                            <div class="flex -space-x-2">
+                                <img alt="Team member"
+                                    class="w-7 h-7 rounded-full border-2 border-surface-container-low ring-1 ring-outline-variant/20"
+                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvjSvF8YcItZHDVFBapBRtBcwbKXw8H87VbXP6qEAHUYxUHNObFADzQBMgc3KaRwjQURQtISNAQuKJxubhfMfgRjYd99jwUKGSuTirurAq7ReEIeWaz5Sz5f0tPrrFsuPaNKUETixPHnQB6LoqZqAbNn-Qi5HcxWbji_JOu40MR_R4H1w6WbQkWWHyzdv1Ri3BPqI6a_p28r26-IrDS0Y4cg_KQ98AIq5jnElHQKcgSaIzAVJUefqtrioQECvt7cG0r8bJZc5jVXk" />
+                                <img alt="Team member"
+                                    class="w-7 h-7 rounded-full border-2 border-surface-container-low ring-1 ring-outline-variant/20"
+                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_7rOg1KUpbkCPzloSp9hpKrAOjEohPghe1Hqp2gGLgrkb6AMX3WiQr1L9SlhZt-BlakEV_TroIEZhyni4SBhhsDrf6P0u7CaMCh8BQ4zSDml__Zj41BBZVf3C0cbuEna5vnbb8J0Hxx-BfDjJCR_D0iMk1abrp_06nRQJgOC8I82NHYrR93R4joyACFxzdIvE96HSgtXlVdsBw8-KyP8l5k5CHxregeoz1Ff7Eno1eh0lNQQJQL57ii9wAWL1Ze2advz1LMaYtvY" />
+                                <div
+                                    class="w-7 h-7 rounded-full bg-surface-container-highest border-2 border-surface-container-low flex items-center justify-center text-[9px] font-bold ring-1 ring-outline-variant/20">
+                                    +4</div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant/40 group-hover:text-primary transition-colors text-[20px]">open_in_new</span>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-surface-container-low border border-outline-variant/30 rounded-xl p-6 hover:bg-surface-container-high transition-all group">
+                        <div class="flex justify-between items-start mb-6">
+                            <div
+                                class="w-10 h-10 bg-surface-container-highest rounded-lg border border-outline-variant/30 flex items-center justify-center text-secondary shadow-lg">
+                                <span class="material-symbols-outlined">architecture</span>
+                            </div>
+                            <span
+                                class="bg-on-surface-variant/5 text-on-surface-variant px-2 py-0.5 rounded text-[9px] font-mono-label border border-outline-variant/20 uppercase font-bold tracking-widest">Standby</span>
+                        </div>
+                        <h5 class="font-headline-sm text-[16px] mb-2">Infrastructure Ops</h5>
+                        <p class="text-body-sm text-on-surface-variant line-clamp-2 mb-6 leading-relaxed">Facility
+                            management and enterprise-scale site data acquisition.</p>
+                        <div class="flex justify-between items-center">
+                            <div class="flex -space-x-2">
+                                <img alt="Team member"
+                                    class="w-7 h-7 rounded-full border-2 border-surface-container-low ring-1 ring-outline-variant/20"
+                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6hKu6GWmMJ6scyANbTbQZTpcvMUScFSsEqfY9hNv1z95wTlhW2gLK-d4rK4Q3mPN39P5OmuP08IRgOrO-I0u99Ev8Nub9qjOdXrUM6YjScriG2_wX3oQCMjvgB9f-tsXSa60jhhhkVwy03Mp3FAP5XwqZW3UKbakOj-sVhiNIsw17hWJIb0cq2Sq9VDvrqRwfGac_P5XQl7oE_Yb6_SHH6GjRHDsXuqAKpvrm-Yj884Gc5HFD7D2KJEDVlfVbMzG8yBR43xfBMn8" />
+                                <div
+                                    class="w-7 h-7 rounded-full bg-surface-container-highest border-2 border-surface-container-low flex items-center justify-center text-[9px] font-bold ring-1 ring-outline-variant/20">
+                                    +12</div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant/40 group-hover:text-primary transition-colors text-[20px]">open_in_new</span>
+                        </div>
+                    </div>
+                    <div
+                        class="border-2 border-dashed border-outline-variant/30 rounded-xl p-6 flex flex-col items-center justify-center text-on-surface-variant hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all cursor-pointer group shadow-sm">
+                        <div
+                            class="w-12 h-12 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-3xl">add_circle</span>
+                        </div>
+                        <span class="font-mono-label text-[10px] uppercase tracking-[0.3em] font-bold">Register
+                            Unit</span>
+                    </div>
+                    <div class="relative rounded-xl overflow-hidden group border border-outline-variant/30">
+                        <img alt="System Visualization"
+                            class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAflS8MGjMYh1dPH4TBvIaGOljOXgqi6RUHxD-WShmp8zKSe63QX4gOw-JZ94rJ4Bp0YStYjM3EVGWdpEhhKStQlk26NKfTqbkDbTR7yIoW4vRmrGa1KJZUjxrC1pGUrWwdxL6tdwPZ8rh0O6e24QXT9yQ-xvJlV6bJi8JI_8UHgk9Le_9P3czh65dM31cRlguuwS_S8r-3TwQgROir_vGva4wGdJWt5jlD7MeLDJN3Z8x6UJlcEQOf1GdotcYt6ACTF1h8CJwaMMo" />
+                        <div
+                            class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-transparent to-transparent opacity-80">
+                        </div>
+                        <div class="absolute bottom-4 left-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-1 h-1 rounded-full bg-primary animate-ping"></span>
+                                <span
+                                    class="text-[9px] font-mono-label text-primary font-bold uppercase tracking-widest">Ref:
+                                    Image_11 // Secure_Node</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Action & Management Section -->
+            <section class="grid grid-cols-12 gap-grid-gutter pt-8 border-t border-outline-variant/30">
+                <!-- Invite Members -->
+                <div class="col-span-7 space-y-6">
+                    <div>
+                        <h3 class="font-headline-sm text-on-surface font-semibold">Invite Organization Member</h3>
+                        <p class="text-body-sm text-on-surface-variant">Extend secure operational access to verified
+                            internal entities.</p>
+                    </div>
+                    <div class="bg-surface-container-low p-8 rounded-xl border border-outline-variant/30 shadow-lg">
+                        <div class="space-y-6">
+                            <div class="space-y-2">
+                                <label
+                                    class="font-mono-label text-[10px] text-on-surface-variant uppercase tracking-[0.2em] px-1 font-bold">Target
+                                    Communication Channel (Email)</label>
+                                <input
+                                    class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-5 py-3.5 text-on-surface placeholder:text-on-surface-variant/20 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all font-body-md shadow-inner"
+                                    placeholder="identity@resolve-pm.io" type="email" />
+                            </div>
+                            <div class="grid grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label
+                                        class="font-mono-label text-[10px] text-on-surface-variant uppercase tracking-[0.2em] px-1 font-bold">Initial
+                                        Designation</label>
+                                    <div class="relative">
+                                        <select
+                                            class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-5 py-3.5 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer shadow-inner">
+                                            <option>Project Manager</option>
+                                            <option>Lead Analyst</option>
+                                            <option>Security Officer</option>
+                                            <option>External Contractor</option>
+                                        </select>
+                                        <span
+                                            class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label
+                                        class="font-mono-label text-[10px] text-on-surface-variant uppercase tracking-[0.2em] px-1 font-bold">Access
+                                        Expiry</label>
+                                    <div class="relative">
+                                        <select
+                                            class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg px-5 py-3.5 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer shadow-inner">
+                                            <option>Permanent (Standard)</option>
+                                            <option>90 Days (Quarterly)</option>
+                                            <option>30 Days (Project)</option>
+                                            <option>24 Hours (Temp)</option>
+                                        </select>
+                                        <span
+                                            class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">schedule</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                class="w-full bg-surface-container-highest text-on-surface border border-outline-variant/50 py-4 rounded-lg font-bold uppercase tracking-widest text-[11px] hover:bg-primary hover:text-on-primary hover:border-transparent transition-all active:scale-[0.99] shadow-md">
+                                Dispatch Security Invitation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Pending Clearances -->
+                <div class="col-span-5 space-y-6">
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <h3 class="font-headline-sm text-on-surface font-semibold">Pending Clearances</h3>
+                            <p class="text-body-sm text-on-surface-variant">Invitations awaiting verification.</p>
+                        </div>
+                        <span
+                            class="font-mono-label text-tertiary text-[10px] font-bold tracking-widest bg-tertiary/5 px-2 py-1 rounded">3
+                            AWAITING ACTION</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div
+                            class="bg-surface-container-low border border-outline-variant/30 rounded-xl p-5 flex items-center justify-between group hover:border-primary/30 transition-all shadow-sm">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-10 h-10 bg-outline-variant/10 rounded-full flex items-center justify-center border border-outline-variant/20">
+                                    <span
+                                        class="material-symbols-outlined text-on-surface-variant text-[20px]">person_pin</span>
+                                </div>
+                                <div>
+                                    <div class="text-on-surface font-medium">alicia.ross@intel.io</div>
+                                    <div
+                                        class="text-[10px] font-mono-label text-on-surface-variant uppercase tracking-wider mt-0.5">
+                                        Invited 2h ago • Lead Analyst</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                    title="Resend Invite">
+                                    <span class="material-symbols-outlined text-[18px]">send</span>
+                                </button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 rounded-lg transition-colors"
+                                    title="Revoke Clearance">
+                                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div
+                            class="bg-surface-container-low border border-outline-variant/30 rounded-xl p-5 flex items-center justify-between group hover:border-primary/30 transition-all opacity-60 grayscale-[0.5] shadow-sm">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-10 h-10 bg-outline-variant/10 rounded-full flex items-center justify-center border border-outline-variant/20">
+                                    <span
+                                        class="material-symbols-outlined text-on-surface-variant text-[20px]">person_pin</span>
+                                </div>
+                                <div>
+                                    <div class="text-on-surface font-medium">marcus.v@intel.io</div>
+                                    <div
+                                        class="text-[10px] font-mono-label text-on-surface-variant uppercase tracking-wider mt-0.5">
+                                        Invited 1d ago • PM</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]">send</span>
+                                </button>
+                                <button
+                                    class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 rounded-lg transition-colors">
+                                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <!-- Sticky Executive Footer -->
+        <footer
+            class="fixed bottom-0 right-0 w-[calc(100%-280px)] px-container-padding py-2.5 flex justify-between items-center z-40 bg-surface-container-lowest/90 backdrop-blur-md border-t border-outline-variant/30 font-mono-label text-[10px] text-secondary tracking-widest font-bold">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <span class="opacity-50">SYSTEM_CLOCK:</span>
+                    <span class="text-primary" id="system-clock">14:22:01</span>
+                    <span class="opacity-50 uppercase">UTC</span>
+                </div>
+                <div class="h-3 w-px bg-outline-variant/30"></div>
+                <div class="flex items-center gap-3">
+                    <span class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                        <span class="uppercase">Node_Operational</span>
+                    </span>
+                    <span class="text-on-surface-variant/40">//</span>
+                    <span class="flex items-center gap-2 text-primary">
+                        <span class="material-symbols-outlined text-[14px]">verified_user</span>
+                        <span>AES-256-GCM_ENCRYPTED</span>
+                    </span>
+                </div>
+            </div>
+            <div class="text-on-surface-variant/40 flex items-center gap-4">
+                <span class="uppercase">© 2024 Resolve PM // Exec_Cons_v4.2</span>
+                <div
+                    class="flex items-center gap-2 px-3 py-1 bg-surface-container-high rounded border border-outline-variant/20">
+                    <span class="material-symbols-outlined text-[14px] text-tertiary">database</span>
+                    <span>DB_ID: ALPHA_9</span>
+                </div>
+            </div>
+        </footer>
+    </main>
+    <script>
+        // Real-time System Clock
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getUTCHours()).padStart(2, '0');
+            const m = String(now.getUTCMinutes()).padStart(2, '0');
+            const s = String(now.getUTCSeconds()).padStart(2, '0');
+            const clockEl = document.getElementById('system-clock');
+            if (clockEl) clockEl.textContent = `${h}:${m}:${s}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Telemetry Interaction Simulation
+        document.querySelectorAll('.col-span-4').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+    </script>
+</body>
+
+</html>

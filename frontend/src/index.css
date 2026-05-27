@@ -1,5 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
+
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -303,3 +304,205 @@ body {
   color: #94a3b8 !important;
 }
 
+/* ================================================================
+   RESOLVE PM — EXECUTIVE DARK DESIGN SYSTEM v2
+   Material Design 3 × Enterprise Command Aesthetic
+   ================================================================ */
+
+/* ── PM Color Tokens ─────────────────────────────────────────── */
+:root {
+  /* Surface hierarchy */
+  --pm-bg:                    #121416;
+  --pm-surface-lowest:        #0c0e10;
+  --pm-surface-low:           #1a1c1e;
+  --pm-surface:               #1e2022;
+  --pm-surface-high:          #282a2c;
+  --pm-surface-highest:       #333537;
+  --pm-surface-bright:        #37393b;
+  --pm-surface-variant:       #333537;
+
+  /* On-surface text */
+  --pm-on-surface:            #e2e2e5;
+  --pm-on-surface-variant:    #c7c4d7;
+
+  /* Primary (periwinkle) */
+  --pm-primary:               #c0c1ff;
+  --pm-primary-container:     #8083ff;
+  --pm-on-primary:            #1000a9;
+  --pm-on-primary-container:  #0d0096;
+  --pm-primary-fixed:         #e1e0ff;
+  --pm-primary-fixed-dim:     #c0c1ff;
+
+  /* Secondary (slate) */
+  --pm-secondary:             #c3c6d5;
+  --pm-secondary-container:   #434653;
+  --pm-on-secondary:          #2c303c;
+  --pm-on-secondary-container:#b1b4c3;
+
+  /* Tertiary (amber/orange) */
+  --pm-tertiary:              #ffb783;
+  --pm-tertiary-container:    #d97721;
+  --pm-on-tertiary:           #4f2500;
+
+  /* Error */
+  --pm-error:                 #ffb4ab;
+  --pm-error-container:       #93000a;
+  --pm-on-error-container:    #ffdad6;
+
+  /* Outline */
+  --pm-outline:               #908fa0;
+  --pm-outline-variant:       #464554;
+
+  /* Inverse */
+  --pm-inverse-surface:       #e2e2e5;
+  --pm-inverse-on-surface:    #2f3133;
+  --pm-inverse-primary:       #494bd6;
+}
+
+/* ── PM Font Utilities ──────────────────────────────────────── */
+.font-geist        { font-family: 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif; }
+.font-mono-pm      { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+/* ── Material Symbols Config ────────────────────────────────── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+  user-select: none;
+}
+.material-symbols-filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ── Glass Panel ─────────────────────────────────────────────── */
+.glass-panel {
+  background: rgba(30, 32, 34, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Operational Pulse ───────────────────────────────────────── */
+.operational-pulse {
+  animation: pm-pulse 2s infinite ease-in-out;
+}
+@keyframes pm-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
+/* ── Executive Table ─────────────────────────────────────────── */
+.executive-table tr:hover {
+  background: rgba(192, 193, 255, 0.03);
+}
+.executive-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--pm-on-surface-variant);
+}
+
+/* ── Sidebar Active State ────────────────────────────────────── */
+.sidebar-active {
+  background: rgba(67, 70, 83, 0.5) !important;
+  border-left: 3px solid var(--pm-primary) !important;
+  color: var(--pm-primary) !important;
+}
+
+/* ── Task Card ───────────────────────────────────────────────── */
+.task-card {
+  transition: border-top-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.task-card:hover {
+  border-top: 1px solid rgba(192, 193, 255, 0.4) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+/* ── Status Dot ──────────────────────────────────────────────── */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ── PM Custom Scrollbar ─────────────────────────────────────── */
+.pm-scrollbar::-webkit-scrollbar       { width: 6px; height: 6px; }
+.pm-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.pm-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--pm-surface-highest);
+  border-radius: 10px;
+}
+.pm-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--pm-outline-variant);
+}
+
+/* ── SVG Pulse Line Animation ────────────────────────────────── */
+.pulse-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: pm-dash 3s linear forwards;
+}
+@keyframes pm-dash {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ── PM Card ─────────────────────────────────────────────────── */
+.pm-card {
+  background: var(--pm-surface-low);
+  border: 1px solid rgba(70, 69, 84, 0.3);
+  border-radius: 0.75rem;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.pm-card:hover {
+  background: var(--pm-surface-high);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  transform: translateY(-3px);
+}
+
+/* ── PM Badge Variants ───────────────────────────────────────── */
+.pm-badge-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(192, 193, 255, 0.1);
+  color: var(--pm-primary);
+  border: 1px solid rgba(192, 193, 255, 0.2);
+}
+.pm-badge-tertiary {
+  background: rgba(255, 183, 131, 0.1);
+  color: var(--pm-tertiary);
+  border: 1px solid rgba(255, 183, 131, 0.2);
+}
+.pm-badge-error {
+  background: rgba(255, 180, 171, 0.1);
+  color: var(--pm-error);
+  border: 1px solid rgba(255, 180, 171, 0.2);
+}
+.pm-badge-success {
+  background: rgba(16, 185, 129, 0.08);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* ── PM Footer ───────────────────────────────────────────────── */
+.pm-footer {
+  background: var(--pm-surface-lowest);
+  border-top: 1px solid rgba(70, 69, 84, 0.3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--pm-secondary);
+}

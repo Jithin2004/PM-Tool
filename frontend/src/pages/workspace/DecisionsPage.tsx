@@ -1,2 +1,202 @@
-import { DecisionCenterPanel } from '../../components/decisions/DecisionCenterPanel';
-export default function DecisionsPage() { return <DecisionCenterPanel />; }
+import React, { useMemo } from 'react';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { useTasks } from '../../hooks/useTasks';
+import { Icon } from '../../components/ui/Icon';
+
+const DECISION_LOG = [
+  { title: 'Project Scope Freeze', desc: 'No further feature additions for current milestone. Resolution 2209-A enforced.', time: 'Today 08:24 UTC', active: true },
+  { title: 'Budget Reallocation', desc: '+15% capacity allocated to infrastructure testing phase.', time: 'Yesterday', active: false },
+  { title: 'Sprint Recalibration', desc: 'Sprint velocity target adjusted based on PERT confidence analysis.', time: '2 days ago', active: false },
+  { title: 'Risk Threshold Update', desc: 'High-risk task alert threshold lowered from 5 to 3 items.', time: '3 days ago', active: false },
+];
+
+export default function DecisionsPage() {
+  const { workspace, projects } = useWorkspace() as any;
+  const { tasks } = useTasks(workspace?.id) as any;
+
+  const insights = useMemo(() => {
+    const highRisk = (tasks || []).filter((t: any) => t.risk === 'high' && t.status !== 'done');
+    const blocked  = (tasks || []).filter((t: any) => t.status === 'blocked');
+    const total    = (tasks || []).length;
+    const done     = (tasks || []).filter((t: any) => t.status === 'done').length;
+    const velocity = total > 0 ? Math.round((done / total) * 100) : 0;
+    return { highRisk, blocked, velocity, total, done };
+  }, [tasks]);
+
+  return (
+    <div className="flex flex-col gap-8 pb-16 font-geist" style={{ color: 'var(--pm-on-surface)' }}>
+
+      {/* Header */}
+      <div className="flex items-end justify-between px-1 pt-2">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Analytics &amp; Decision Center</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            Executive intelligence, scenario modeling, and strategic decision log.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full"
+          style={{ background: 'rgba(192,193,255,0.08)', border: '1px solid rgba(192,193,255,0.2)' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] operational-pulse" />
+          <span className="font-mono-pm text-[10px] uppercase tracking-widest" style={{ color: 'var(--pm-primary)' }}>
+            Operational
+          </span>
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        {/* Velocity Trend */}
+        <div className="glass-panel rounded-xl p-6 lg:col-span-8 flex flex-col min-h-72">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-base font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Velocity Trends</h2>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                System-wide throughput and delivery cadence
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {['7D', '30D'].map((p, i) => (
+                <span key={p} className="px-2 py-1 rounded font-mono-pm text-[11px]"
+                  style={i === 0
+                    ? { background: 'var(--pm-surface-highest)', color: 'var(--pm-on-surface)' }
+                    : { color: 'var(--pm-on-surface-variant)', border: '1px solid var(--pm-outline-variant)' }}>
+                  {p}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="flex-1 relative">
+            <svg className="w-full h-full" viewBox="0 0 800 200" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="decGrad" x1="0%" x2="0%" y1="0%" y2="100%">
+                  <stop offset="0%" style={{ stopColor: '#c0c1ff', stopOpacity: 0.2 }} />
+                  <stop offset="100%" style={{ stopColor: '#c0c1ff', stopOpacity: 0 }} />
+                </linearGradient>
+              </defs>
+              {[50, 100, 150].map(y => (
+                <line key={y} x1="0" x2="800" y1={y} y2={y} stroke="rgba(70,69,84,0.25)" strokeWidth="1" />
+              ))}
+              <path className="pulse-line"
+                d="M0,150 Q50,140 100,160 T200,120 T300,130 T400,80 T500,100 T600,60 T700,70 L800,40"
+                fill="none" stroke="#c0c1ff" strokeWidth="2.5" strokeLinecap="round" />
+              <path
+                d="M0,150 Q50,140 100,160 T200,120 T300,130 T400,80 T500,100 T600,60 T700,70 L800,40 V200 H0 Z"
+                fill="url(#decGrad)" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Strategic Intelligence */}
+        <div className="lg:col-span-4 rounded-xl p-6 flex flex-col"
+          style={{ background: 'rgba(192,193,255,0.05)', border: '1px solid rgba(192,193,255,0.15)' }}>
+          <div className="flex items-center gap-2 mb-5">
+            <Icon name="auto_awesome" size={20} style={{ color: 'var(--pm-primary)' }} />
+            <h2 className="text-base font-semibold" style={{ color: 'var(--pm-primary)' }}>Strategic Intelligence</h2>
+          </div>
+          <div className="space-y-3 flex-1">
+            {[
+              {
+                label: 'Risk Forecast', color: 'var(--pm-primary)',
+                text: insights.highRisk.length > 0
+                  ? `${insights.highRisk.length} high-risk tasks detected. Slippage probability: ${Math.min(95, insights.highRisk.length * 15)}%.`
+                  : 'All initiatives within acceptable risk parameters.',
+              },
+              {
+                label: 'Resource Alert', color: 'var(--pm-tertiary)',
+                text: insights.blocked.length > 0
+                  ? `${insights.blocked.length} tasks currently blocked. Review dependencies.`
+                  : 'No resource saturation detected. Capacity nominal.',
+              },
+              {
+                label: 'Optimization Path', color: 'var(--pm-secondary)',
+                text: `Current velocity at ${insights.velocity}%. ${insights.velocity < 60 ? 'Sprint scope reduction recommended.' : 'Maintain current cadence.'}`,
+              },
+            ].map((item, i) => (
+              <div key={i} className="p-3 rounded-lg"
+                style={{ background: 'var(--pm-surface)', border: '1px solid rgba(70,69,84,0.3)' }}>
+                <span className="font-mono-pm text-[9px] uppercase tracking-widest block mb-1.5 font-bold"
+                  style={{ color: item.color }}>
+                  {item.label}
+                </span>
+                <p className="text-[13px] leading-relaxed" style={{ color: 'var(--pm-on-surface)' }}>
+                  {item.text}
+                </p>
+              </div>
+            ))}
+          </div>
+          <button className="mt-4 w-full py-2.5 rounded-lg font-mono-pm text-[11px] uppercase tracking-widest transition-all"
+            style={{ background: 'var(--pm-surface-high)', border: '1px solid rgba(70,69,84,0.5)', color: 'var(--pm-on-surface-variant)' }}>
+            Execute Scenario Modeling
+          </button>
+        </div>
+      </div>
+
+      {/* Workload Heatmap + Decision Log */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        {/* Workload Heatmap */}
+        <div className="glass-panel rounded-xl p-6 lg:col-span-7">
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-base font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Workload Distribution</h2>
+            <span className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)' }}>
+              Live Cluster Telemetry
+            </span>
+          </div>
+          <div className="grid grid-cols-7 gap-2">
+            {Array.from({ length: 35 }).map((_, i) => {
+              const op = Math.random();
+              return (
+                <div key={i} className="h-10 rounded-sm transition-all cursor-crosshair hover:scale-105"
+                  style={{ background: 'var(--pm-primary)', opacity: op > 0.8 ? 0.9 : op > 0.4 ? 0.5 : 0.1 }} />
+              );
+            })}
+          </div>
+          <div className="mt-4 flex justify-between items-center">
+            <div className="flex gap-4">
+              {[['Idle', 0.1], ['Optimal', 0.5], ['Saturated', 0.9]].map(([label, op]) => (
+                <div key={String(label)} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm" style={{ background: 'var(--pm-primary)', opacity: Number(op) }} />
+                  <span className="font-mono-pm text-[10px] uppercase" style={{ color: 'var(--pm-on-surface-variant)' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            <span className="font-mono-pm text-[12px]" style={{ color: 'var(--pm-on-surface-variant)' }}>
+              Cluster Health: {Math.max(70, 100 - insights.highRisk.length * 3)}%
+            </span>
+          </div>
+        </div>
+
+        {/* Decision Log */}
+        <div className="glass-panel rounded-xl p-6 lg:col-span-5 flex flex-col">
+          <h2 className="text-base font-semibold mb-5" style={{ color: 'var(--pm-on-surface)' }}>
+            Audit Trail &amp; Decisions
+          </h2>
+          <div className="space-y-4 overflow-y-auto pm-scrollbar flex-1 pr-1">
+            {DECISION_LOG.map((item, i) => (
+              <div key={i} className="flex gap-4 items-start pl-4 relative"
+                style={{ borderLeft: '1px solid rgba(70,69,84,0.3)' }}>
+                <div className="absolute -left-[4.5px] top-1.5 w-2 h-2 rounded-full"
+                  style={{
+                    background: item.active ? 'var(--pm-primary)' : 'var(--pm-outline-variant)',
+                    boxShadow: item.active ? '0 0 8px rgba(192,193,255,0.6)' : 'none',
+                  }} />
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{item.title}</span>
+                    <span className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)' }}>{item.time}</span>
+                  </div>
+                  <p className="text-[13px] mt-1 leading-relaxed" style={{ color: 'var(--pm-on-surface-variant)' }}>{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="mt-4 font-mono-pm text-[10px] uppercase tracking-widest transition-opacity hover:opacity-100"
+            style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
+            View full decision log →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
