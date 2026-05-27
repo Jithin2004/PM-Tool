@@ -60,6 +60,10 @@ export function ExecutionSystem({
   const { events: calendarEvents } = useCalendarEvents(workspace?.id);
   
   const [activeView, setActiveView] = useState<ExecutionViewType>(initialView);
+
+  React.useEffect(() => {
+    setActiveView(initialView);
+  }, [initialView]);
   const [density, setDensity] = useState<'comfortable' | 'compact' | 'executive'>('comfortable');
   const [filterByProject, setFilterByProject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

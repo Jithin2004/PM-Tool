@@ -3,12 +3,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useTasks } from '../../hooks/useTasks';
 import { Icon } from '../../components/ui/Icon';
 
-const DECISION_LOG = [
-  { title: 'Project Scope Freeze', desc: 'No further feature additions for current milestone. Resolution 2209-A enforced.', time: 'Today 08:24 UTC', active: true },
-  { title: 'Budget Reallocation', desc: '+15% capacity allocated to infrastructure testing phase.', time: 'Yesterday', active: false },
-  { title: 'Sprint Recalibration', desc: 'Sprint velocity target adjusted based on PERT confidence analysis.', time: '2 days ago', active: false },
-  { title: 'Risk Threshold Update', desc: 'High-risk task alert threshold lowered from 5 to 3 items.', time: '3 days ago', active: false },
-];
+
 
 export default function DecisionsPage() {
   const { workspace, projects } = useWorkspace() as any;
@@ -21,6 +16,32 @@ export default function DecisionsPage() {
     const done     = (tasks || []).filter((t: any) => t.status === 'done').length;
     const velocity = total > 0 ? Math.round((done / total) * 100) : 0;
     return { highRisk, blocked, velocity, total, done };
+  }, [tasks]);
+
+  const decisionLog = useMemo(() => {
+    if (!tasks || tasks.length === 0) return [];
+    return [...tasks]
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .slice(0, 8)
+      .map((t: any, i) => ({
+        title: `Task: ${t.name}`,
+        desc: `Status updated to ${t.status?.toUpperCase()}. Priority: ${t.priority}, Risk: ${t.risk}.`,
+        time: new Date(t.updated_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        active: i === 0,
+      }));
+  }, [tasks]);
+
+  const heatmapData = useMemo(() => {
+    const data = Array(35).fill(0.1); // baseline
+    if (tasks) {
+      tasks.forEach((t: any) => {
+        if (!t.id) return;
+        const idx = (t.id.charCodeAt(0) + t.id.charCodeAt(t.id.length - 1)) % 35;
+        data[idx] += 0.3;
+      });
+    }
+    const max = Math.max(...data, 1);
+    return data.map(d => Math.min(1, d / max));
   }, [tasks]);
 
   return (
@@ -144,8 +165,7 @@ export default function DecisionsPage() {
             </span>
           </div>
           <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: 35 }).map((_, i) => {
-              const op = Math.random();
+            {heatmapData.map((op, i) => {
               return (
                 <div key={i} className="h-10 rounded-sm transition-all cursor-crosshair hover:scale-105"
                   style={{ background: 'var(--pm-primary)', opacity: op > 0.8 ? 0.9 : op > 0.4 ? 0.5 : 0.1 }} />
@@ -173,7 +193,7 @@ export default function DecisionsPage() {
             Audit Trail &amp; Decisions
           </h2>
           <div className="space-y-4 overflow-y-auto pm-scrollbar flex-1 pr-1">
-            {DECISION_LOG.map((item, i) => (
+            {decisionLog.length > 0 ? decisionLog.map((item, i) => (
               <div key={i} className="flex gap-4 items-start pl-4 relative"
                 style={{ borderLeft: '1px solid rgba(70,69,84,0.3)' }}>
                 <div className="absolute -left-[4.5px] top-1.5 w-2 h-2 rounded-full"
@@ -189,7 +209,11 @@ export default function DecisionsPage() {
                   <p className="text-[13px] mt-1 leading-relaxed" style={{ color: 'var(--pm-on-surface-variant)' }}>{item.desc}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-sm text-center py-6" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                No recent decisions logged.
+              </p>
+            )}
           </div>
           <button className="mt-4 font-mono-pm text-[10px] uppercase tracking-widest transition-opacity hover:opacity-100"
             style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>

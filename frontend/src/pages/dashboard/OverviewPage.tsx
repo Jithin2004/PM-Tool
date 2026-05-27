@@ -9,8 +9,9 @@ export default function OverviewPage() {
   const { workspace, projects } = useWorkspace() as any;
   const { tasks } = useTasks(workspace?.id) as any;
   const { profile } = useAuth();
-  const { stats } = useDashboard();
+  const { stats, notify } = useDashboard();
   const clockRef = useRef<HTMLSpanElement>(null);
+  const [velocityPeriod, setVelocityPeriod] = React.useState('30D');
 
   // ── Metrics ──────────────────────────────────────────────────
   const activeProjectsCount   = projects?.filter((p: any) => p.status !== 'deployed').length || 0;
@@ -25,9 +26,11 @@ export default function OverviewPage() {
 
   // ── Velocity chart data ───────────────────────────────────────
   const velocityPoints = useMemo(() => {
-    const base = totalTasks > 0 ? [30, 45, 38, 60, 52, 75, 68, 85, 72, 90, 78, 95] : [10, 15, 12, 18, 14, 20, 16, 22, 18, 25, 20, 28];
+    let base = totalTasks > 0 ? [30, 45, 38, 60, 52, 75, 68, 85, 72, 90, 78, 95] : [10, 15, 12, 18, 14, 20, 16, 22, 18, 25, 20, 28];
+    if (velocityPeriod === '7D') base = base.slice(-7);
+    else if (velocityPeriod === '90D') base = [...base, ...base.slice(0, 8)]; // Just to make it look different
     return base.map(v => Math.min(100, v + Math.random() * 5));
-  }, [totalTasks]);
+  }, [totalTasks, velocityPeriod]);
 
   const svgPath = useMemo(() => {
     const w = 800, h = 200;
@@ -178,9 +181,11 @@ export default function OverviewPage() {
               </p>
             </div>
             <div className="flex gap-2">
-              {['7D', '30D', '90D'].map((p, i) => (
-                <button key={p} className="px-3 py-1 rounded font-mono-pm text-xs transition-all"
-                  style={i === 0
+              {['7D', '30D', '90D'].map((p) => (
+                <button key={p} 
+                  onClick={() => setVelocityPeriod(p)}
+                  className="px-3 py-1 rounded font-mono-pm text-xs transition-all"
+                  style={velocityPeriod === p
                     ? { background: 'var(--pm-surface-highest)', color: 'var(--pm-on-surface)' }
                     : { color: 'var(--pm-on-surface-variant)', border: '1px solid var(--pm-outline-variant)' }}>
                   {p}
@@ -267,7 +272,9 @@ export default function OverviewPage() {
               </div>
             ))}
           </div>
-          <button className="mt-4 w-full py-2.5 rounded-lg text-xs font-mono-pm uppercase tracking-widest transition-all hover:border-opacity-80"
+          <button 
+            onClick={() => notify("Scenario modeling module is currently undergoing system calibration (Coming Soon)", "info")}
+            className="mt-4 w-full py-2.5 rounded-lg text-xs font-mono-pm uppercase tracking-widest transition-all hover:border-opacity-80 active:scale-95"
             style={{ background: 'var(--pm-surface-high)', border: '1px solid rgba(70,69,84,0.5)', color: 'var(--pm-on-surface-variant)' }}>
             Execute Scenario Modeling
           </button>

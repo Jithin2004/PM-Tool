@@ -290,9 +290,9 @@ export default function PortfolioPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
         {[
           { label: 'Portfolio Velocity', value: `${stats.velocity}`, unit: 'pts', trend: '+12%', up: true },
-          { label: 'Resource Burn', value: '68%', unit: 'nominal', trend: 'Stable', up: true },
+          { label: 'Resource Burn', value: `${Math.min(100, Math.round((stats.active / (stats.total || 1)) * 100))}%`, unit: 'active capacity', trend: 'Nominal', up: true },
           { label: 'Risk Index', value: stats.blockers > 0 ? 'Elevated' : 'Low', unit: '', trend: `${stats.blockers} blockers`, up: stats.blockers === 0 },
-          { label: 'Budget Expended', value: '35%', unit: '/ $12M', trend: 'Within bounds', up: true },
+          { label: 'Delivery Rate', value: `${stats.total > 0 ? Math.round((stats.deployed / stats.total) * 100) : 0}%`, unit: 'completed', trend: 'Steady', up: true },
         ].map((item, i) => (
           <div key={i} className="glass-panel p-4 rounded-lg flex flex-col gap-2">
             <span className="font-mono-pm text-[9px] uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>

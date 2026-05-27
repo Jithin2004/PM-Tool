@@ -314,25 +314,42 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   }, [commandPaletteOpen]);
 
   const breadcrumb = useMemo(() => {
-    const p = window.location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
-    if (p.length === 0) return null;
+    const p = routePath.replace(/\/+$/, '').split('/').filter(Boolean);
+    if (p.length === 0) return { section: 'OVERVIEW', page: '' };
+
+    let section = p[0];
+    let page = p.length > 1 ? p.slice(1).join(' / ') : '';
+    
     const sectionLabels: Record<string, string> = {
-      overview: 'OVERVIEW', workspace: 'WORKSPACE', execution: 'EXECUTION',
-      resources: 'RESOURCES', control: 'CONTROL', projects: 'PROJECTS',
+      workspace: 'WORKSPACE',
+      execution: 'EXECUTION',
+      resources: 'RESOURCES',
+      control: 'SYSTEM CONTROL'
     };
+    
     const pageLabels: Record<string, string> = {
-      projects: 'PROJECTS', portfolio: 'PORTFOLIO', decisions: 'DECISION CENTER', knowledge: 'KNOWLEDGE HUB',
-      board: 'BOARD', timeline: 'TIMELINE', gantt: 'GANTT', sprints: 'SPRINT CENTER',
-      teams: 'TEAMS', logistics: 'LOGISTICS', capacity: 'CAPACITY', 'work-logs': 'WORK LOGS',
-      admin: 'ADMIN', audit: 'AUDIT', analytics: 'ANALYTICS', settings: 'SETTINGS',
-      automations: 'AUTOMATIONS', connections: 'CONNECTIONS',
-      notifications: 'NOTIFICATIONS', modes: 'MODES',
+      'portfolio': 'PORTFOLIO',
+      'knowledge': 'KNOWLEDGE',
+      'decisions': 'DECISIONS',
+      'board': 'BOARD',
+      'timeline': 'TIMELINE',
+      'gantt': 'GANTT',
+      'sprints': 'SPRINTS',
+      'teams': 'TEAMS',
+      'capacity': 'CAPACITY',
+      'work-logs': 'WORK LOGS',
+      'identity': 'IDENTITY',
+      'analytics': 'ANALYTICS',
+      'audit': 'AUDIT LOG',
+      'automations': 'AUTOMATIONS',
+      'connections': 'INTEGRATIONS'
     };
-    const section = sectionLabels[p[0]];
-    const page = p[1] ? pageLabels[p[1]] : null;
-    if (!section) return null;
-    return { section, page };
-  }, []);
+
+    return {
+      section: sectionLabels[section] || section.toUpperCase(),
+      page: pageLabels[p[p.length - 1]] || page.toUpperCase()
+    };
+  }, [routePath]);
 
   const tourSteps = useMemo(() => {
     const role = profile?.role || 'viewer';

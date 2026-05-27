@@ -175,6 +175,7 @@ export function AdminPanel() {
                           style={{ color: 'var(--pm-on-surface-variant)' }}
                           onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-primary)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
                           onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
+                          onClick={() => document.getElementById('admin-dashboard-view')?.scrollIntoView({ behavior: 'smooth' })}
                           title="Manage identity">
                           <Icon name="settings_suggest" size={18} />
                         </button>
@@ -195,7 +196,9 @@ export function AdminPanel() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {/* Create Team */}
-              <div className="pm-card p-7 group relative overflow-hidden cursor-pointer">
+              <div 
+                className="pm-card p-7 group relative overflow-hidden cursor-pointer"
+                onClick={() => document.getElementById('admin-dashboard-view')?.scrollIntoView({ behavior: 'smooth' })}>
                 <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all"
                   style={{ background: 'rgba(192,193,255,0.08)' }} />
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-transform group-hover:scale-105"
@@ -214,7 +217,9 @@ export function AdminPanel() {
               </div>
 
               {/* Designations */}
-              <div className="pm-card p-7 group relative overflow-hidden cursor-pointer">
+              <div 
+                className="pm-card p-7 group relative overflow-hidden cursor-pointer"
+                onClick={() => document.getElementById('admin-dashboard-view')?.scrollIntoView({ behavior: 'smooth' })}>
                 <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all"
                   style={{ background: 'rgba(195,198,213,0.05)' }} />
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-transform group-hover:scale-105"
@@ -277,7 +282,7 @@ export function AdminPanel() {
           </div>
 
           {/* Full AdminDashboard for advanced controls */}
-          <div className="rounded-xl overflow-hidden"
+          <div id="admin-dashboard-view" className="rounded-xl overflow-hidden"
             style={{ border: '1px solid rgba(70,69,84,0.3)' }}>
             <AdminDashboard
               profiles={activeProfiles}
@@ -340,7 +345,11 @@ export function AdminPanel() {
             <button className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all"
               style={{ border: '2px dashed rgba(70,69,84,0.4)' }}
               onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(192,193,255,0.4)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.03)'; }}
-              onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = ''; }}>
+              onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = ''; }}
+              onClick={() => {
+                setTab('identity');
+                setTimeout(() => document.getElementById('admin-dashboard-view')?.scrollIntoView({ behavior: 'smooth' }), 100);
+              }}>
               <Icon name="add_circle" size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
               <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em] font-bold"
                 style={{ color: 'var(--pm-on-surface-variant)' }}>
