@@ -6,7 +6,7 @@ import type { CalendarEvent, CalendarEventType } from '../types';
 
 /**
  * Resolved base URL for the calendar backend API.
- * Falls back to VITE_API_URL/api/calendar so the URL never silently
+ * Falls back to http://localhost:5001/api/calendar so the URL never silently
  * becomes the string "undefined/events/..." when the env var is missing.
  */
 const CALENDAR_API_BASE =
