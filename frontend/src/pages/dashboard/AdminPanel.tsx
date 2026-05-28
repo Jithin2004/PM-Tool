@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { CalendarIntelligencePanel } from '../../components/admin/CalendarIntelligencePanel';
 import { hasCapability } from '../../core/auth/permissions';
 import { Icon } from '../../components/ui/Icon';
+import { supabase } from '../../lib/supabase';
 
 type AdminTab = 'identity' | 'calendar' | 'teams';
 
@@ -52,7 +54,142 @@ export function AdminPanel() {
   const [tab, setTab] = useState<AdminTab>('identity');
   const [activeGearPopover, setActiveGearPopover] = useState<string | null>(null);
 
+  const { workspace, user: currentUserProfile } = useWorkspace();
+  const canGovernPlatform = hasCapability(profile?.role, 'platform_governance');
   const canViewCalendar = hasCapability(profile?.role, 'view_decision_center');
+
+  // Invitation state
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'pm' | 'developer' | 'viewer'>('developer');
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
+  // Team creation state
+  const [newTeamName, setNewTeamName] = useState('');
+  const [selectedPm, setSelectedPm] = useState('');
+  const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [showTeamForm, setShowTeamForm] = useState(false);
+
+  const pms = profiles.filter(p => p.role === 'pm' || p.role === 'super_admin');
+  const devs = profiles.filter(p => p.role === 'developer' || p.role === 'viewer');
+  const assignedDevIds = new Set(
+    teams
+      .filter(t => t.id !== editingTeamId)
+      .flatMap(t => {
+        const d = typeof t.data === 'string' ? JSON.parse(t.data) : t.data;
+        return d?.developer_ids || [];
+      })
+  );
+  const availableDevs = devs.filter(d => !assignedDevIds.has(d.id));
+
+  const fetchInvitations = async () => {
+    if (!canGovernPlatform) return;
+    const { data, error } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('status', 'pending');
+    if (!error && data) {
+      setInvitations(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvitations();
+  }, [canGovernPlatform]);
+
+  const handleSendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email) return;
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setInviteError("Invalid email format.");
+      return;
+    }
+
+    setInviting(true);
+    setInviteError(null);
+
+    try {
+      if (!workspace?.id) throw new Error("Could not locate active workspace.");
+      if (!currentUserProfile?.id) throw new Error("No active user profile.");
+
+      const { error: insertError } = await supabase
+        .from('invitations')
+        .insert({
+          email,
+          workspace_id: workspace.id,
+          role: inviteRole,
+          status: 'pending',
+          invited_by: currentUserProfile.id,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        });
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          throw new Error("This email is already invited.");
+        }
+        throw insertError;
+      }
+
+      setInviteEmail('');
+      fetchInvitations();
+    } catch (err: any) {
+      setInviteError(err?.message || "Failed to send invitation.");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (id: string) => {
+    askConfirmation("Revoke Invitation", "Are you sure you want to revoke this invitation? The user will no longer be allowed to join.", async () => {
+      const { error } = await supabase
+        .from('invitations')
+        .delete()
+        .eq('id', id);
+      if (!error) {
+        fetchInvitations();
+      }
+    }, "Revoke");
+  };
+
+  const handleCreateTeamSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTeamName || !selectedPm) return;
+
+    if (editingTeamId) {
+      handleUpdateTeam(editingTeamId, newTeamName, selectedPm, selectedDevs);
+      setEditingTeamId(null);
+    } else {
+      handleCreateTeam(newTeamName, selectedPm, selectedDevs);
+    }
+
+    setNewTeamName('');
+    setSelectedPm('');
+    setSelectedDevs([]);
+  };
+
+  const startEditingTeam = (team: any) => {
+    setEditingTeamId(team.id);
+    setNewTeamName(team.name);
+    setSelectedPm((team.data as Record<string, unknown>)?.pm_id as string || '');
+    setSelectedDevs((team.data as Record<string, unknown>)?.developer_ids as string[] || []);
+
+    const form = document.getElementById('team-form');
+    if (form) form.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const cancelEditingTeam = () => {
+    setEditingTeamId(null);
+    setNewTeamName('');
+    setSelectedPm('');
+    setSelectedDevs([]);
+    setShowTeamForm(false);
+  };
 
   const customRoles: string[] = systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'];
   const userCustomRoles: Record<string, string> = systemData.userCustomRoles || {};
@@ -283,24 +420,25 @@ export function AdminPanel() {
               Workspace Configuration
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {/* Create Team */}
+              {/* Invite Member */}
               <div 
-                className="pm-card p-7 group relative overflow-hidden"
+                className="pm-card p-7 group relative overflow-hidden cursor-pointer"
+                onClick={() => setShowInviteForm(!showInviteForm)}
               >
                 <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all"
                   style={{ background: 'rgba(192,193,255,0.08)' }} />
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-transform group-hover:scale-105"
                   style={{ background: 'rgba(192,193,255,0.08)', border: '1px solid rgba(192,193,255,0.15)' }}>
-                  <Icon name="group_add" size={24} style={{ color: 'var(--pm-primary)' }} />
+                  <Icon name="person_add" size={24} style={{ color: 'var(--pm-primary)' }} />
                 </div>
-                <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>Delivery Unit Initialization</h3>
+                <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>Workspace Invitations</h3>
                 <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                  Create and configure new delivery units and assign team members.
+                  Invite new members to the workspace and manage pending invitations.
                 </p>
                 <div className="flex items-center gap-2 font-mono-pm text-[11px] uppercase tracking-[0.2em]"
                   style={{ color: 'var(--pm-primary)' }}>
-                  <span>Create Unit</span>
-                  <Icon name="arrow_forward" size={14} className="group-hover:translate-x-1 transition-transform" />
+                  <span>{showInviteForm ? 'Close Form' : 'Open Form'}</span>
+                  <Icon name="arrow_forward" size={14} className={`transition-transform ${showInviteForm ? 'rotate-90' : 'group-hover:translate-x-1'}`} />
                 </div>
               </div>
 
@@ -367,6 +505,92 @@ export function AdminPanel() {
                 </div>
               </div>
             </div>
+            
+            {showInviteForm && canGovernPlatform && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+                <div className="pm-card p-6">
+                  <h3 className="font-semibold mb-6 flex items-center gap-2">
+                    <Icon name="lock" size={18} style={{ color: 'var(--pm-primary)' }} />
+                    Send Invitation
+                  </h3>
+                  <form onSubmit={handleSendInvitation} className="space-y-4">
+                    {inviteError && (
+                      <div className="border p-3 text-xs rounded-lg" style={{ borderColor: 'rgba(255,100,100,0.3)', background: 'rgba(255,100,100,0.05)', color: 'var(--pm-error)' }}>
+                        {inviteError}
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Member Email</label>
+                      <input
+                        required
+                        type="email"
+                        value={inviteEmail}
+                        onChange={e => setInviteEmail(e.target.value)}
+                        className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
+                        style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                        placeholder="teammate@company.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assigned Role</label>
+                      <select
+                        required
+                        value={inviteRole}
+                        onChange={e => setInviteRole(e.target.value as any)}
+                        className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
+                        style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                      >
+                        <option value="developer">Developer</option>
+                        <option value="pm">Project Manager</option>
+                        <option value="viewer">Viewer</option>
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={inviting}
+                      className="w-full rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
+                      style={{ background: 'rgba(192,193,255,0.1)', color: 'var(--pm-primary)', border: '1px solid rgba(192,193,255,0.2)' }}
+                      onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.15)'; }}
+                      onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
+                    >
+                      {inviting ? 'Inviting...' : 'Send Invitation'}
+                    </button>
+                  </form>
+                </div>
+                
+                <div className="pm-card p-6">
+                  <h3 className="font-semibold mb-6 flex items-center gap-2">
+                    <Icon name="group" size={18} style={{ color: 'var(--pm-tertiary)' }} />
+                    Pending Invitations
+                  </h3>
+                  <div className="divide-y rounded-lg border max-h-[220px] overflow-y-auto p-4" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+                    {invitations.map(inv => (
+                      <div key={inv.id} className="flex justify-between items-center py-3 hover:bg-white/5 transition-colors rounded px-2">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-mono-pm" style={{ color: 'var(--pm-on-surface-variant)' }}>{inv.email}</span>
+                          <span className="text-[9px] font-mono-pm uppercase tracking-widest mt-1" style={{ color: 'var(--pm-primary)' }}>Role: {inv.role}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeInvitation(inv.id)}
+                          className="text-[9px] font-mono-pm uppercase tracking-widest px-3 py-1.5 rounded transition-all"
+                          style={{ border: '1px solid rgba(255,100,100,0.3)', color: 'var(--pm-error)', background: 'rgba(255,100,100,0.05)' }}
+                          onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,100,100,0.1)'; }}
+                          onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,100,100,0.05)'; }}
+                        >
+                          Revoke
+                        </button>
+                      </div>
+                    ))}
+                    {invitations.length === 0 && (
+                      <div className="text-center py-8 text-[11px] font-mono-pm italic" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                        No pending invitations.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
 
@@ -416,19 +640,104 @@ export function AdminPanel() {
 
             {/* Add team slot */}
             <button className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all"
-              style={{ border: '2px dashed rgba(70,69,84,0.4)' }}
+              style={{ border: '2px dashed rgba(70,69,84,0.4)', background: showTeamForm ? 'rgba(192,193,255,0.05)' : '' }}
               onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(192,193,255,0.4)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.03)'; }}
-              onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = ''; }}
+              onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = showTeamForm ? 'rgba(192,193,255,0.05)' : ''; }}
               onClick={() => {
-                setTab('identity');
+                setShowTeamForm(!showTeamForm);
+                if (!showTeamForm) setEditingTeamId(null);
               }}>
-              <Icon name="add_circle" size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
+              <Icon name={showTeamForm ? "remove_circle" : "add_circle"} size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
               <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em] font-bold"
                 style={{ color: 'var(--pm-on-surface-variant)' }}>
-                Create Unit
+                {showTeamForm ? 'Close Form' : 'Create Unit'}
               </span>
             </button>
           </div>
+
+          {(showTeamForm || editingTeamId) && (
+            <div className="pm-card p-6 mt-5" id="team-form">
+              <h3 className="font-semibold mb-6 flex items-center gap-2">
+                <Icon name="offline_bolt" size={18} style={{ color: 'var(--pm-primary)' }} />
+                {editingTeamId ? 'Update Delivery Unit' : 'Initialize Delivery Unit'}
+              </h3>
+              <form onSubmit={handleCreateTeamSubmit} className="space-y-4 max-w-xl">
+                <div>
+                  <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Unit Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={newTeamName}
+                    onChange={e => setNewTeamName(e.target.value)}
+                    className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
+                    style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                    placeholder="E.g. SQUAD_DELTA"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Unit Lead</label>
+                  <select
+                    required
+                    value={selectedPm}
+                    onChange={e => setSelectedPm(e.target.value)}
+                    className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
+                    style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                  >
+                    <option value="" disabled>Select Unit Lead</option>
+                    {pms.map(pm => (
+                      <option key={pm.id} value={pm.id}>{pm.full_name || pm.email}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Team Members</label>
+                  <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+                    {availableDevs.map(dev => (
+                      <label key={dev.id} className="flex items-center gap-2 text-xs font-mono-pm cursor-pointer hover:bg-white/5 p-1.5 rounded transition-colors" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                        <input
+                          type="checkbox"
+                          className="accent-[var(--pm-primary)]"
+                          checked={selectedDevs.includes(dev.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedDevs([...selectedDevs, dev.id]);
+                            else setSelectedDevs(selectedDevs.filter(id => id !== dev.id));
+                          }}
+                        />
+                        <span>{dev.full_name || dev.email}</span>
+                      </label>
+                    ))}
+                    {availableDevs.length === 0 && <p className="text-[10px] italic p-1" style={{ color: 'var(--pm-on-surface-variant)' }}>No unassigned members available.</p>}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all"
+                    style={{ background: 'rgba(192,193,255,0.1)', color: 'var(--pm-primary)', border: '1px solid rgba(192,193,255,0.2)' }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.15)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
+                  >
+                    {editingTeamId ? 'Update Unit' : 'Create Unit'}
+                  </button>
+                  {editingTeamId && (
+                    <button
+                      type="button"
+                      onClick={cancelEditingTeam}
+                      className="flex-1 rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all"
+                      style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface-variant)', border: '1px solid rgba(70,69,84,0.3)' }}
+                      onMouseEnter={e => { (e.currentTarget as any).style.background = 'var(--pm-surface-highest)'; }}
+                      onMouseLeave={e => { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       )}
 

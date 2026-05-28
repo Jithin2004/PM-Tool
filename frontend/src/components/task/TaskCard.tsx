@@ -59,6 +59,23 @@ export function TaskCard({
   const isCompact = density === 'compact';
   const isExecutive = density === 'executive';
 
+  // Real-time telemetry calculations
+  const elapsedHours = (Date.now() - new Date(task.created_at).getTime()) / (1000 * 60 * 60);
+  const isOverdue = task.estimated_hours > 0 && elapsedHours > task.estimated_hours;
+  const isStalled = isOverdue || (blockedByTasks && blockedByTasks.length > 0) || task.status === 'review';
+  const computedDrift = Math.max(task.delay_drift_days || 0, isOverdue ? (elapsedHours - task.estimated_hours) / 24 : 0);
+  const isDrifting = isStalled || computedDrift > 0.1;
+
+  // Systemic liability resolution
+  let liabilityTag = null;
+  if (task.status === 'review') {
+    liabilityTag = 'Liability: Compliance Review';
+  } else if (blockedByTasks && blockedByTasks.length > 0) {
+    liabilityTag = 'Liability: External Dependency';
+  } else if (task.name.toLowerCase().includes('client') || task.name.toLowerCase().includes('server setup')) {
+    liabilityTag = 'Liability: External Client';
+  }
+
   return (
     <motion.div
       layoutId={`task-card-${task.id}`}
@@ -105,12 +122,23 @@ export function TaskCard({
           }`}>
             {task.name}
           </h4>
-          {task.estimated_hours > 0 && !isCompact && (
-            <span className="text-[10px] font-medium text-text-tertiary whitespace-nowrap">
-              {task.estimated_hours}h
-            </span>
-          )}
         </div>
+
+        {/* Dynamic Timeline Tracking Row */}
+        {task.estimated_hours > 0 && !isCompact && (
+          <div className="w-full mt-1 mb-1">
+            <div className="flex justify-between text-[9px] font-mono-pm uppercase tracking-widest text-text-tertiary mb-1">
+              <span>Elapsed: {elapsedHours.toFixed(1)}h</span>
+              <span>Allotted: {task.estimated_hours.toFixed(1)}h</span>
+            </div>
+            <div className="w-full h-1 bg-surface-3 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all ${isOverdue ? 'bg-signal-critical' : 'bg-accent-secondary'}`} 
+                style={{ width: `${Math.min(100, (elapsedHours / task.estimated_hours) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Description */}
         {!isCompact && task.description && (
@@ -132,6 +160,12 @@ export function TaskCard({
             <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-signal-critical-bg border border-signal-critical/20 text-signal-critical">
               <Link2 className="w-2.5 h-2.5" />
               Blocked
+            </span>
+          )}
+
+          {isDrifting && task.status !== 'done' && (
+            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-surface-3 border border-border text-text-secondary shadow-sm">
+              Drift: σ ±{computedDrift.toFixed(1)} Days
             </span>
           )}
 
@@ -228,6 +262,15 @@ export function TaskCard({
             )}
           </div>
         </div>
+        
+        {/* Systemic Liability Label */}
+        {liabilityTag && task.status !== 'done' && !isCompact && (
+          <div className="mt-2 pt-2 border-t border-border-subtle">
+            <span className="text-[9px] font-mono-pm uppercase tracking-widest text-text-tertiary bg-surface-3/50 px-2 py-1 rounded border border-border-subtle inline-block">
+              {liabilityTag}
+            </span>
+          </div>
+        )}
       </div>
     </motion.div>
   );

@@ -45,6 +45,7 @@ import {
   isRegisteredPath,
   type SidebarGroup,
 } from '../../app/routeRegistry';
+import { GuidedTour, TourStep } from '../../components/onboarding/GuidedTour';
 
 interface ConfirmState {
   isOpen: boolean;
@@ -351,44 +352,45 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     };
   }, [routePath]);
 
-  const tourSteps = useMemo(() => {
+  const tourSteps: TourStep[] = useMemo(() => {
     const role = profile?.role || 'viewer';
 
     if (hasCapability(role, 'platform_governance')) {
       return [
         {
-          title: "Welcome, Commander!",
+          title: "Initialize Delivery Unit",
           description: "Step into your high-fidelity Resolve PM workspace. This guide will brief you on all administrative and scheduling tools at your disposal.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/overview')
         },
         {
           title: "Tactical Navigation Console",
           description: "Use the Sidebar to access different operational layers. 'Operations' contains Logistics and Team Roster, while 'System' houses your global Settings.",
+          targetSelector: "#tour-sidebar",
           actionBefore: () => navigateTo('/overview')
         },
         {
           title: "AI-Powered Strategy Analytics",
           description: "Monitor 'Decision Center' for strategic recommendations or 'Analytics' for a deep dive into delivery velocity and team bandwidth.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace/decisions')
         },
         {
           title: "Project Workspace Grid",
           description: "Your primary project workspace. Click the 'New Project' button in the Top Bar to add initiatives. Click 'Details' on any card to view PERT estimates.",
+          targetSelector: "#tour-topbar",
           actionBefore: () => navigateTo('/workspace')
-        },
-        {
-          title: "Logistics & Payroll Controls",
-          description: "Use the 'Logistics' page in the Operations group to mark daily attendance, calculate deductions, and export payroll reports.",
-          actionBefore: () => navigateTo('/resources')
         },
         {
           title: "Task Board & Execution",
           description: "Explore the premium, tactical Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Calibrated & Ready!",
           description: "Your console is fully synced to the operational database. Use the Sun/Moon button in the Top Bar to switch themes anytime.",
+          targetSelector: "#tour-topbar",
           actionBefore: () => navigateTo('/overview')
         }
       ];
@@ -397,55 +399,64 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         {
           title: "Welcome, Project Manager!",
           description: "Step into your allocation workspace. This guide will brief you on how to coordinate teams and track client deadlines.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Tactical Control",
-          description: "Monitor team bandwidth and delivery confidence from the 'Decision Center'. Use 'Logistics' in the Sidebar to manage attendance.",
+          description: "Monitor team bandwidth and delivery confidence from the 'Decision Center'.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace/decisions')
         },
         {
           title: "Project Management Grid",
-          description: "Click 'New Project' in the Top Bar to set deadlines. Click 'Details' on any card to edit its proposed start and write change logs.",
+          description: "Click 'New Project' in the Top Bar to set deadlines. Click 'Details' on any card to edit its proposed start.",
+          targetSelector: "#tour-topbar",
           actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Execution Board",
           description: "Track task progression, visualize Kanban/Scrum lanes, and inspect live clock-synced ETAs.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/execution')
         },
         {
           title: "Calibrated & Ready!",
           description: "Keep timelines on target! Use the Top Bar utilities to switch themes or search across the platform.",
+          targetSelector: "#tour-topbar",
           actionBefore: () => navigateTo('/overview')
         }
       ];
     } else {
-      // Viewer or general engineer
       return [
         {
-          title: "Welcome to Resolve PM!",
+          title: "Entity Identity Initialized",
           description: "This workspace displays live engineering allocations, delivery schedules, and historical project logs in Read-Only mode.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/overview')
         },
         {
           title: "Strategy & Intelligence",
           description: "Monitor project health and AI Strategy briefings right from the 'Decision Center'.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace/decisions')
         },
         {
           title: "Project Grid",
           description: "View active initiatives and their current status. Click 'Details' on cards to view PERT estimates and past audit logs.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace')
         },
         {
           title: "Execution Board",
           description: "View real-time task progression lanes and live clock-synced ETAs in premium Read-Only mode.",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/execution')
         },
         {
           title: "All Calibrated!",
           description: "You are fully up to date with live team activities. Keep track of project updates as developers coordinate tasks!",
+          targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/overview')
         }
       ];
@@ -947,7 +958,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         style={{ background: 'var(--pm-bg)', color: 'var(--pm-on-surface)' }}>
         
         {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
-        <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] border-r z-30"
+        <aside id="tour-sidebar" className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] border-r z-30"
           style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
           {/* Sidebar Brand */}
           <div className="flex items-center gap-3 h-16 px-5 border-b shrink-0"
@@ -1160,10 +1171,10 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <div className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen" style={{ background: 'var(--pm-bg)' }}>
+        <div id="tour-main-content" className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen" style={{ background: 'var(--pm-bg)' }}>
           
           {/* Top Bar — utility layer, breadcrumb, operational status */}
-          <header className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200"
+          <header id="tour-topbar" className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200"
             style={{ background: 'rgba(12,14,16,0.92)', borderColor: 'rgba(70,69,84,0.3)' }}>
             {/* Mobile menu toggle */}
             <div className="flex items-center gap-3 lg:hidden">
@@ -1566,82 +1577,26 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       </AnimatePresence>
 
 
-      {/* Onboarding Tour Overlay - Floating Panel in Bottom-Right Corner */}
-      <AnimatePresence>
-        {showGuide && (
-          <div className="fixed bottom-6 right-6 z-[9999] p-4 max-w-sm w-[90vw] pointer-events-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: "spring", duration: 0.5 }}
-              className="w-full bg-[#0e0e0e]/95 border border-border rounded-lg p-5 shadow-[0_10px_50px_rgba(59,130,246,0.35)] relative overflow-hidden backdrop-blur-md"
-            >
-              {/* Core accent gradient bar */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
-
-              {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <span className="text-[9px] font-mono uppercase tracking-wide text-signal-info bg-surface-3 px-2 py-0.5 rounded-sm">
-                    Interactive briefing — Step {guideStep + 1} of {tourSteps.length}
-                  </span>
-                  <h3 className="text-base font-bold tracking-tight text-text-primary mt-1.5">
-                    {tourSteps[guideStep]?.title}
-                  </h3>
-                </div>
-                <button
-                  onClick={() => {
-                    dismissGuide();
-                    setShowFeedbackGate(true);
-                  }}
-                  className="text-text-quaternary hover:text-text-primary transition-colors cursor-pointer text-[10px] font-mono uppercase tracking-wider bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded"
-                >
-                  Skip
-                </button>
-              </div>
-
-              {/* Body Description */}
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans mb-5">
-                {tourSteps[guideStep]?.description}
-              </p>
-
-              {/* Navigation Controls */}
-              <div className="flex justify-between items-center pt-3 border-t border-border">
-                <button
-                  disabled={guideStep === 0}
-                  onClick={() => {
-                    const prevStep = guideStep - 1;
-                    setGuideStep(prevStep);
-                    tourSteps[prevStep]?.actionBefore?.();
-                  }}
-                  className={`px-3 py-1.5 border border-border text-[10px] font-mono uppercase tracking-wider hover:bg-white/5 transition-all rounded-sm flex items-center gap-1 cursor-pointer ${guideStep === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
-                >
-                  <ChevronLeft className="w-3 h-3" />
-                  Back
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (guideStep < tourSteps.length - 1) {
-                      const nextStep = guideStep + 1;
-                      setGuideStep(nextStep);
-                      tourSteps[nextStep]?.actionBefore?.();
-                    } else {
-                      dismissGuide();
-                      setShowFeedbackGate(true);
-                    }
-                  }}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-text-primary text-[10px] font-mono uppercase tracking-wider transition-all rounded-sm flex items-center gap-1 shadow-sm cursor-pointer"
-                >
-                  {guideStep === tourSteps.length - 1 ? 'Finish' : 'Next'}
-                  <ChevronRight className="w-3 h-3 transition-opacity duration-300" />
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Onboarding Tour Overlay - Spotlight Modal */}
+      <GuidedTour
+        steps={tourSteps}
+        currentStepIndex={guideStep}
+        isOpen={showGuide}
+        onClose={() => {
+          dismissGuide();
+          setShowFeedbackGate(true);
+        }}
+        onNext={() => {
+          const nextStep = guideStep + 1;
+          setGuideStep(nextStep);
+          tourSteps[nextStep]?.actionBefore?.();
+        }}
+        onPrev={() => {
+          const prevStep = guideStep - 1;
+          setGuideStep(prevStep);
+          tourSteps[prevStep]?.actionBefore?.();
+        }}
+      />
 
       {/* Project Setup Guide */}
       <AnimatePresence>
