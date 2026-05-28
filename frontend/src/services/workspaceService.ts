@@ -44,6 +44,8 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
   let country = '';
   let region = '';
   let city = '';
+  let companyName = '';
+  let logoUrl = '';
   let shutdowns: WorkspaceSettings['shutdowns'] = [];
 
   const rawBusinessType = row.business_type || 'Software';
@@ -56,6 +58,8 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
       country = parsed.country || '';
       region = parsed.region || '';
       city = parsed.city || '';
+      companyName = parsed.companyName || '';
+      logoUrl = parsed.logoUrl || '';
       shutdowns = parsed.shutdowns || [];
     } catch (err) {
       // Fallback
@@ -98,6 +102,8 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
       country,
       region,
       city,
+      companyName,
+      logoUrl,
       shutdowns
     }
   };
@@ -110,6 +116,8 @@ export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
     country: settings.country || '',
     region: settings.region || '',
     city: settings.city || '',
+    companyName: settings.companyName || '',
+    logoUrl: settings.logoUrl || '',
     shutdowns: settings.shutdowns || []
   };
 
