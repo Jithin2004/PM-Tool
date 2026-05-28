@@ -7,10 +7,10 @@ import { Icon } from '../../components/ui/Icon';
 import { supabase } from '../../lib/supabase';
 
 export default function OverviewPage() {
-  const { workspace, projects } = useWorkspace() as any;
+  const { workspace } = useWorkspace() as any;
   const { tasks } = useTasks(workspace?.id) as any;
   const { profile } = useAuth();
-  const { stats, notify } = useDashboard();
+  const { stats, notify, projects } = useDashboard();
   const clockRef = useRef<HTMLSpanElement>(null);
   const [velocityPeriod, setVelocityPeriod] = useState('30D');
   const [userMap, setUserMap] = useState<Record<string, { full_name: string; avatar_url?: string }>>({});

@@ -212,7 +212,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const SIDEBAR_GROUP_LABELS: Record<SidebarGroup, string> = {
     core: 'Core',
     intelligence: 'Intelligence',
-    operations: 'Operations',
+    resources: 'Resources',
     system: 'System',
   };
 

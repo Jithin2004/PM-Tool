@@ -299,7 +299,7 @@ export function WorkspaceSetupPage() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-xs text-text-tertiary leading-relaxed mb-4">
+              <p className="text-xs text-[var(--pm-on-surface-variant)] leading-relaxed mb-4">
                 Select a baseline workflow architecture optimized for <strong>{settings.businessType}</strong>. This instantiates your primary kanban/scrum execution structures.
               </p>
               <div className="grid gap-3.5 max-h-[440px] overflow-y-auto pr-1 scrollbar-thin">
@@ -318,21 +318,21 @@ export function WorkspaceSetupPage() {
                           workflowRules: { ceremonies: tpl.ceremonies, teamStructure: tpl.teamStructure }
                         }));
                       }}
-                      className={`w-full text-left border rounded-2xl p-5 transition-all shadow-sm hover:shadow-premium ${isSelected ? 'border-accent-primary bg-accent-primary/5' : 'bg-surface-lowest hover:border-white/20'}`}
+                      className={`w-full text-left border rounded-2xl p-5 transition-all shadow-sm hover:shadow-premium ${isSelected ? '!border-[var(--pm-primary)] bg-[var(--pm-primary)]/5' : 'bg-[var(--pm-surface-low)] hover:border-white/20'}`}
                       style={{ borderColor: isSelected ? '' : 'rgba(70,69,84,0.2)' }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h4 className="text-sm font-semibold tracking-tight text-text-primary">{tpl.name}</h4>
-                          <p className="mt-1.5 text-xs text-text-tertiary leading-relaxed">{tpl.description}</p>
+                          <h4 className="text-sm font-semibold tracking-tight text-[var(--pm-on-surface)]">{tpl.name}</h4>
+                          <p className="mt-1.5 text-xs text-[var(--pm-on-surface-variant)] leading-relaxed">{tpl.description}</p>
                           <div className="mt-4 flex flex-wrap gap-2">
-                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider border px-2 py-0.5 text-text-secondary bg-surface-2" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider border px-2 py-0.5 text-[var(--pm-on-surface-variant)] bg-[var(--pm-surface-lowest)]" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
                               <Layers className="w-3 h-3" />{tpl.lanes} lanes
                             </span>
-                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider border px-2 py-0.5 text-text-secondary bg-surface-2" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider border px-2 py-0.5 text-[var(--pm-on-surface-variant)] bg-[var(--pm-surface-lowest)]" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
                               <GitBranch className="w-3 h-3" />{tpl.executionMode}
                             </span>
-                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider border px-2 py-0.5 text-text-secondary bg-surface-2" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider border px-2 py-0.5 text-[var(--pm-on-surface-variant)] bg-[var(--pm-surface-lowest)]" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
                               <Users className="w-3 h-3" />{tpl.teamStructure}
                             </span>
                           </div>
@@ -344,7 +344,7 @@ export function WorkspaceSetupPage() {
                             </div>
                           )}
                         </div>
-                        {isSelected && <BadgeCheck className="w-5 h-5 text-accent-primary shrink-0 mt-0.5" />}
+                        {isSelected && <BadgeCheck className="w-5 h-5 text-[var(--pm-primary)] shrink-0 mt-0.5" />}
                       </div>
                     </button>
                   );
@@ -355,31 +355,31 @@ export function WorkspaceSetupPage() {
 
           {step === 3 && (
             <div className="grid gap-5 sm:grid-cols-2">
-              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                 Shift Commencement
-                <input type="time" value={settings.workStart} onChange={event => setSettings(prev => ({ ...prev, workStart: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
+                <input type="time" value={settings.workStart} onChange={event => setSettings(prev => ({ ...prev, workStart: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
               </label>
-              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                 Shift Conclusion
-                <input type="time" value={settings.workEnd} onChange={event => setSettings(prev => ({ ...prev, workEnd: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
+                <input type="time" value={settings.workEnd} onChange={event => setSettings(prev => ({ ...prev, workEnd: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
               </label>
-              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                 Break Duration (Min)
-                <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
+                <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
               </label>
-              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                 Timezone Calibration
-                <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
+                <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
               </label>
               {(() => {
                 const countryData = getCountryByCode(settings.country || '');
                 return countryData && countryData.states.length > 0 ? (
-                  <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+                  <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                     State/Region
                     <select
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
-                      className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary outline-none focus:border-accent-primary/60 transition-all font-sans"
+                      className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] outline-none focus:!border-[var(--pm-primary)]/60 transition-all font-sans"
                       style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                     >
                       <option value="">Select state/region</option>
@@ -389,30 +389,30 @@ export function WorkspaceSetupPage() {
                     </select>
                   </label>
                 ) : (
-                  <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+                  <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                     State/Region
                     <input
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
                       placeholder="Optional"
-                      className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans"
+                      className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans"
                       style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                     />
                   </label>
                 );
               })()}
-              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                 City / Municipality
                 <input
                   value={settings.city || ''}
                   onChange={event => setSettings(prev => ({ ...prev, city: event.target.value }))}
                   placeholder="Optional"
-                  className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans"
+                  className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans"
                   style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                 />
               </label>
               <div className="sm:col-span-2">
-                <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest text-text-secondary">Working Days Checklist</label>
+                <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">Working Days Checklist</label>
                 <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
                   {WORKDAYS.map(day => {
                     const active = settings.workingDays.includes(day.value);
@@ -420,7 +420,7 @@ export function WorkspaceSetupPage() {
                       <button
                         key={day.value}
                         onClick={() => toggleWorkday(day.value)}
-                        className={`h-10 border rounded-lg text-xs transition-all font-mono-pm ${active ? 'border-accent-primary bg-accent-primary/10 text-text-primary shadow-sm' : 'bg-surface-lowest text-text-secondary hover:border-white/20'}`}
+                        className={`h-10 border rounded-lg text-xs transition-all font-mono-pm ${active ? '!border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 text-[var(--pm-on-surface)] shadow-sm' : 'bg-[var(--pm-surface-low)] text-[var(--pm-on-surface-variant)] hover:border-white/20'}`}
                         style={{ borderColor: active ? '' : 'rgba(70,69,84,0.2)' }}
                       >
                         {day.label}
@@ -431,11 +431,11 @@ export function WorkspaceSetupPage() {
               </div>
               {settings.workingDays.includes(6) && (
                 <div className="sm:col-span-2">
-                  <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest text-text-secondary">Saturday Coverage Pattern</label>
+                  <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">Saturday Coverage Pattern</label>
                   <select
                     value={settings.saturdayRule || 'all'}
                     onChange={event => setSettings(prev => ({ ...prev, saturdayRule: event.target.value as any }))}
-                    className="h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans"
+                    className="h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans"
                     style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                   >
                     <option value="all">All Saturdays Working</option>
@@ -451,28 +451,28 @@ export function WorkspaceSetupPage() {
 
           {step === 4 && (
             <div className="space-y-5">
-              <p className="text-xs text-text-tertiary leading-relaxed mb-4">
+              <p className="text-xs text-[var(--pm-on-surface-variant)] leading-relaxed mb-4">
                 Verify recognized national holidays for <strong>{settings.country}{settings.region ? ` / ${settings.region}` : ''}</strong>. 
                 De-select any events that do not apply to your operating cycles.
               </p>
 
               {previewLoading && (
-                <div className="flex items-center gap-3 py-12 text-xs font-mono-pm text-text-tertiary justify-center">
+                <div className="flex items-center gap-3 py-12 text-xs font-mono-pm text-[var(--pm-on-surface-variant)] justify-center">
                   <div className="h-4 w-4 animate-spin rounded-full border border-white/30 border-t-white" />
                   Calibrating holiday registries...
                 </div>
               )}
 
               {!previewLoading && previewHolidays.length === 0 && settings.country && (
-                <div className="border border-dashed rounded-xl bg-surface-lowest p-8 text-center text-xs text-text-tertiary" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40 text-text-secondary" />
-                  <p className="font-semibold text-text-secondary">No Regional Holidays Located</p>
+                <div className="border border-dashed rounded-xl bg-[var(--pm-surface-low)] p-8 text-center text-xs text-[var(--pm-on-surface-variant)]" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40 text-[var(--pm-on-surface-variant)]" />
+                  <p className="font-semibold text-[var(--pm-on-surface-variant)]">No Regional Holidays Located</p>
                   <p className="mt-1 text-text-quaternary">Holiday import is empty for this country code.</p>
                 </div>
               )}
 
               {!previewLoading && previewHolidays.length > 0 && (
-                <div className="divide-y rounded-xl border max-h-[380px] overflow-y-auto bg-surface-lowest p-2 scrollbar-thin" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                <div className="divide-y rounded-xl border max-h-[380px] overflow-y-auto bg-[var(--pm-surface-low)] p-2 scrollbar-thin" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
                   {previewHolidays.map(h => {
                     const dateStr = h.date;
                     const isIgnored = ignoredHolidayDates.has(dateStr);
@@ -492,8 +492,8 @@ export function WorkspaceSetupPage() {
                           className="accent-accent-primary h-4 w-4 rounded"
                         />
                         <div className="flex-1 min-w-0">
-                          <span className="font-medium text-text-primary">{h.name}</span>
-                          <span className="ml-2 font-mono text-[10px] text-text-tertiary">{dateStr}</span>
+                          <span className="font-medium text-[var(--pm-on-surface)]">{h.name}</span>
+                          <span className="ml-2 font-mono text-[10px] text-[var(--pm-on-surface-variant)]">{dateStr}</span>
                         </div>
                         <span className={`text-[8px] font-mono-pm uppercase px-2 py-0.5 border rounded-sm ${h.type === 'public' ? 'border-amber-500/20 text-amber-300 bg-signal-warning-bg' : h.type === 'festival' ? 'border-purple-500/20 text-purple-300 bg-surface-3' : 'border-blue-500/20 text-blue-300 bg-surface-3'}`}>
                           {h.type}
@@ -505,14 +505,14 @@ export function WorkspaceSetupPage() {
               )}
 
               {!settings.country && (
-                <div className="border border-dashed rounded-xl bg-surface-lowest p-8 text-center text-xs text-text-tertiary" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40 text-text-secondary" />
+                <div className="border border-dashed rounded-xl bg-[var(--pm-surface-low)] p-8 text-center text-xs text-[var(--pm-on-surface-variant)]" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40 text-[var(--pm-on-surface-variant)]" />
                   <p>A country selection in Phase 1 is required to ingest holidays.</p>
                 </div>
               )}
 
               {previewHolidays.length > 0 && (
-                <p className="text-[10px] font-mono-pm uppercase text-text-tertiary mt-2">
+                <p className="text-[10px] font-mono-pm uppercase text-[var(--pm-on-surface-variant)] mt-2">
                   {previewHolidays.length - ignoredHolidayDates.size} of {previewHolidays.length} holidays set for import.
                 </p>
               )}
@@ -521,7 +521,7 @@ export function WorkspaceSetupPage() {
 
           {step === 5 && (
             <div className="space-y-5">
-              <label className="block text-xs uppercase font-mono-pm tracking-widest text-text-secondary mb-1">
+              <label className="block text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)] mb-1">
                 Friction / Productivity Factor (Modifier)
                 <input
                   type="number"
@@ -530,24 +530,24 @@ export function WorkspaceSetupPage() {
                   step={0.05}
                   value={settings.productivityFactor}
                   onChange={event => setSettings(prev => ({ ...prev, productivityFactor: Number(event.target.value) || 0.8 }))}
-                  className="mt-2.5 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans"
+                  className="mt-2.5 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans"
                   style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                 />
               </label>
 
               <div className="space-y-3.5">
-                <label className="flex items-center justify-between border rounded-xl p-4.5 transition-all bg-surface-lowest" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                <label className="flex items-center justify-between border rounded-xl p-4.5 transition-all bg-[var(--pm-surface-low)]" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
                   <div>
-                    <span className="block text-xs uppercase font-mono-pm tracking-widest text-text-primary">Attendance Tracker</span>
-                    <span className="block text-[10px] text-text-tertiary mt-0.5">Automated logging of developer online sessions</span>
+                    <span className="block text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface)]">Attendance Tracker</span>
+                    <span className="block text-[10px] text-[var(--pm-on-surface-variant)] mt-0.5">Automated logging of developer online sessions</span>
                   </div>
                   <input type="checkbox" className="accent-accent-primary h-4.5 w-4.5 cursor-pointer" checked={settings.attendanceEnabled} onChange={event => setSettings(prev => ({ ...prev, attendanceEnabled: event.target.checked }))} />
                 </label>
 
-                <label className="flex items-center justify-between border rounded-xl p-4.5 transition-all bg-surface-lowest" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                <label className="flex items-center justify-between border rounded-xl p-4.5 transition-all bg-[var(--pm-surface-low)]" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
                   <div>
-                    <span className="block text-xs uppercase font-mono-pm tracking-widest text-text-primary">Payroll Ledger</span>
-                    <span className="block text-[10px] text-text-tertiary mt-0.5">Integrate salary calculations and financial telemetry</span>
+                    <span className="block text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface)]">Payroll Ledger</span>
+                    <span className="block text-[10px] text-[var(--pm-on-surface-variant)] mt-0.5">Integrate salary calculations and financial telemetry</span>
                   </div>
                   <input type="checkbox" className="accent-accent-primary h-4.5 w-4.5 cursor-pointer" checked={settings.payrollEnabled} onChange={event => setSettings(prev => ({ ...prev, payrollEnabled: event.target.checked }))} />
                 </label>
@@ -563,7 +563,7 @@ export function WorkspaceSetupPage() {
                   value={inviteEmail}
                   onChange={event => setInviteEmail(event.target.value)}
                   placeholder="teammate@company.com"
-                  className="h-11 flex-1 border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary outline-none focus:border-accent-primary/60 transition-all font-sans"
+                  className="h-11 flex-1 border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] outline-none focus:!border-[var(--pm-primary)]/60 transition-all font-sans"
                   style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                 />
                 <button onClick={addInvite} className="flex h-11 w-11 items-center justify-center rounded-lg bg-text-primary hover:bg-neutral-200 text-bg transition-colors cursor-pointer shadow-sm">
@@ -572,34 +572,34 @@ export function WorkspaceSetupPage() {
               </div>
               <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
                 {invites.map(email => (
-                  <div key={email} className="flex items-center justify-between border rounded-lg bg-surface-lowest px-4.5 py-3 text-xs font-mono-pm" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                  <div key={email} className="flex items-center justify-between border rounded-lg bg-[var(--pm-surface-low)] px-4.5 py-3 text-xs font-mono-pm" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
                     <span>{email}</span>
-                    <button onClick={() => removeInvite(email)} disabled={saving} className="text-text-tertiary hover:text-signal-critical transition-colors">
+                    <button onClick={() => removeInvite(email)} disabled={saving} className="text-[var(--pm-on-surface-variant)] hover:text-signal-critical transition-colors">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
-                {invites.length === 0 && <p className="text-xs text-text-tertiary italic p-1">No invites added yet. You can invite team members later.</p>}
+                {invites.length === 0 && <p className="text-xs text-[var(--pm-on-surface-variant)] italic p-1">No invites added yet. You can invite team members later.</p>}
               </div>
             </div>
           )}
 
           {step === 7 && (
-            <div className="border rounded-xl bg-surface-lowest p-8 text-center space-y-4" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+            <div className="border rounded-xl bg-[var(--pm-surface-low)] p-8 text-center space-y-4" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
                 <Check className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold tracking-tight text-text-primary">Workspace Foundations Instantiated</h3>
-                <p className="mt-2 text-xs text-text-tertiary leading-relaxed">
+                <h3 className="text-lg font-semibold tracking-tight text-[var(--pm-on-surface)]">Workspace Foundations Instantiated</h3>
+                <p className="mt-2 text-xs text-[var(--pm-on-surface-variant)] leading-relaxed">
                   Your team orchestration parameters are now saved. You can initialize delivery units, track sprints, and govern tasks.
                 </p>
               </div>
               {selectedTemplate && (
-                <div className="mt-4 border rounded-xl bg-surface-2 p-4 text-left space-y-1.5" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
-                  <span className="text-[9px] font-mono-pm uppercase tracking-widest text-accent-primary">Workflow Architecture</span>
-                  <p className="text-xs font-semibold text-text-primary">{selectedTemplate.name}</p>
-                  <p className="text-[10px] font-mono text-text-tertiary">{selectedTemplate.executionMode} · {selectedTemplate.lanes} Lanes · {selectedTemplate.teamStructure}</p>
+                <div className="mt-4 border rounded-xl bg-[var(--pm-surface-lowest)] p-4 text-left space-y-1.5" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                  <span className="text-[9px] font-mono-pm uppercase tracking-widest text-[var(--pm-primary)]">Workflow Architecture</span>
+                  <p className="text-xs font-semibold text-[var(--pm-on-surface)]">{selectedTemplate.name}</p>
+                  <p className="text-[10px] font-mono text-[var(--pm-on-surface-variant)]">{selectedTemplate.executionMode} · {selectedTemplate.lanes} Lanes · {selectedTemplate.teamStructure}</p>
                 </div>
               )}
             </div>
@@ -610,7 +610,7 @@ export function WorkspaceSetupPage() {
             <button
               disabled={step === 1 || saving}
               onClick={() => setStep(prev => Math.max(1, prev - 1))}
-              className="border rounded-lg px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest transition-all text-text-secondary disabled:opacity-40 cursor-pointer"
+              className="border rounded-lg px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest transition-all text-[var(--pm-on-surface-variant)] disabled:opacity-40 cursor-pointer"
               style={{ borderColor: 'rgba(70,69,84,0.3)' }}
             >
               Back
