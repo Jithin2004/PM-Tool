@@ -8,7 +8,7 @@ const client_secret = process.env.GOOGLE_CLIENT_SECRET;
 const redirectUri = process.env.REDIRECT_URI || 'http://localhost:5001/api/calendar/oauth2callback';
 const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirectUri);
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar'];
+const SCOPES = ['https://www.googleapis.com/auth/calendar.app.created'];
 
 exports.googleAuth = async (req, res) => {
     const authUrl = oAuth2Client.generateAuthUrl({
@@ -30,12 +30,24 @@ exports.googleAuthCallback = async (req, res) => {
         const { tokens } = await oAuth2Client.getToken(code);
         oAuth2Client.setCredentials(tokens);
 
+        let integration = await UserIntegration.findOne({ userId });
+        let googleCalendarId = integration ? integration.googleCalendarId : null;
+
+        if (!googleCalendarId) {
+            const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
+            const newCal = await calendar.calendars.insert({
+                requestBody: { summary: 'PM-Tool Schedule' }
+            });
+            googleCalendarId = newCal.data.id;
+        }
+
         await UserIntegration.findOneAndUpdate(
             { userId },
             {
                 googleAccessToken: tokens.access_token,
                 googleRefreshToken: tokens.refresh_token,
-                googleTokenExpiry: tokens.expiry_date
+                googleTokenExpiry: tokens.expiry_date,
+                googleCalendarId
             },
             { upsert: true, new: true }
         );
@@ -57,9 +69,9 @@ exports.googleAuthCallback = async (req, res) => {
 };
 
 const getOAuthClientForUser = async (userId) => {
-    if (!userId) return null;
+    if (!userId) return { client: null, googleCalendarId: null };
     const integration = await UserIntegration.findOne({ userId });
-    if (!integration || !integration.googleRefreshToken) return null;
+    if (!integration || !integration.googleRefreshToken || !integration.googleCalendarId) return { client: null, googleCalendarId: null };
 
     const client = new google.auth.OAuth2(client_id, client_secret, redirectUri);
     client.setCredentials({
@@ -77,7 +89,7 @@ const getOAuthClientForUser = async (userId) => {
         await integration.save();
     });
 
-    return client;
+    return { client, googleCalendarId: integration.googleCalendarId };
 };
 
 exports.getEventsInRange = async (req, res) => {
@@ -97,11 +109,11 @@ exports.getEventsInRange = async (req, res) => {
             return ev;
         });
 
-        const client = await getOAuthClientForUser(req.user.id);
-        if (client) {
+        const { client, googleCalendarId } = await getOAuthClientForUser(req.user.id);
+        if (client && googleCalendarId) {
             const calendar = google.calendar({ version: 'v3', auth: client });
             const googleEvents = await calendar.events.list({
-                calendarId: 'primary',
+                calendarId: googleCalendarId,
                 timeMin: start_date ? new Date(start_date).toISOString() : new Date().toISOString(),
                 timeMax: end_date ? new Date(end_date).toISOString() : undefined,
                 singleEvents: true,
@@ -142,13 +154,13 @@ exports.getEventsInRange = async (req, res) => {
 
 exports.createEvent = async (req, res) => {
     try {
-        const client = await getOAuthClientForUser(req.user.id);
+        const { client, googleCalendarId } = await getOAuthClientForUser(req.user.id);
         let googleEventId = null;
 
-        if (client && req.body.start_date && req.body.end_date) {
+        if (client && googleCalendarId && req.body.start_date && req.body.end_date) {
             const calendar = google.calendar({ version: 'v3', auth: client });
             const gEvent = await calendar.events.insert({
-                calendarId: 'primary',
+                calendarId: googleCalendarId,
                 requestBody: {
                     summary: req.body.title,
                     description: req.body.description,
@@ -179,11 +191,11 @@ exports.updateEvent = async (req, res) => {
         const updated = await CalendarEvent.findByIdAndUpdate(id, { ...req.body, updated_at: new Date() }, { new: true });
 
         if (updated.google_event_id) {
-            const client = await getOAuthClientForUser(req.user.id);
-            if (client) {
+            const { client, googleCalendarId } = await getOAuthClientForUser(req.user.id);
+            if (client && googleCalendarId) {
                 const calendar = google.calendar({ version: 'v3', auth: client });
                 await calendar.events.update({
-                    calendarId: 'primary',
+                    calendarId: googleCalendarId,
                     eventId: updated.google_event_id,
                     requestBody: {
                         summary: updated.title,
@@ -214,11 +226,11 @@ exports.deleteEvent = async (req, res) => {
         await existing.save();
 
         if (existing.google_event_id) {
-            const client = await getOAuthClientForUser(req.user.id);
-            if (client) {
+            const { client, googleCalendarId } = await getOAuthClientForUser(req.user.id);
+            if (client && googleCalendarId) {
                 const calendar = google.calendar({ version: 'v3', auth: client });
                 await calendar.events.delete({
-                    calendarId: 'primary',
+                    calendarId: googleCalendarId,
                     eventId: existing.google_event_id
                 }).catch(e => console.error("Google delete error:", e));
             }
@@ -249,11 +261,11 @@ exports.upsertBySourceKey = async (req, res) => {
             return res.json({ event: responseEvent, created: false });
         } else {
             let googleEventId = null;
-            const client = await getOAuthClientForUser(req.user.id);
-            if (client && req.body.start_date && req.body.end_date) {
+            const { client, googleCalendarId } = await getOAuthClientForUser(req.user.id);
+            if (client && googleCalendarId && req.body.start_date && req.body.end_date) {
                 const calendar = google.calendar({ version: 'v3', auth: client });
                 const gEvent = await calendar.events.insert({
-                    calendarId: 'primary',
+                    calendarId: googleCalendarId,
                     requestBody: {
                         summary: req.body.title,
                         description: req.body.description,
