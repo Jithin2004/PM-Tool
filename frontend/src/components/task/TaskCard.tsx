@@ -21,14 +21,14 @@ interface TaskCardProps {
   density?: 'comfortable' | 'compact' | 'executive';
 }
 
-export function TaskCard({ 
-  task, 
-  project, 
-  hasWriteAccess, 
-  columns, 
-  onTransitionTask, 
+export function TaskCard({
+  task,
+  project,
+  hasWriteAccess,
+  columns,
+  onTransitionTask,
   onEditTask,
-  onPromoteToAsset, 
+  onPromoteToAsset,
   onClick,
   assigneeProfile,
   assigneeLoading,
@@ -81,9 +81,8 @@ export function TaskCard({
   return (
     <motion.div
       onClick={() => onClick(task)}
-      className={`group relative shrink-0 w-full pm-card task-card overflow-hidden cursor-pointer ${
-        isCompact ? 'p-2' : isExecutive ? 'p-5' : 'p-3.5'
-      }`}
+      className={`group relative shrink-0 w-full pm-card task-card overflow-hidden cursor-pointer ${isCompact ? 'p-2' : isExecutive ? 'p-5' : 'p-3.5'
+        }`}
     >
       {/* Risk indicator side bar */}
       {task.risk && task.risk !== 'low' && (
@@ -118,9 +117,8 @@ export function TaskCard({
 
         {/* Title */}
         <div className="flex justify-between items-start gap-2">
-          <h4 className={`font-semibold leading-snug transition-colors ${
-            isCompact ? 'text-[11px]' : isExecutive ? 'text-[13px]' : 'text-[12px]'
-          }`} style={{ color: 'var(--pm-on-surface)' }}>
+          <h4 className={`font-semibold leading-snug transition-colors ${isCompact ? 'text-[11px]' : isExecutive ? 'text-[13px]' : 'text-[12px]'
+            }`} style={{ color: 'var(--pm-on-surface)' }}>
             {task.name}
           </h4>
         </div>
@@ -133,8 +131,8 @@ export function TaskCard({
               <span>Allotted: {task.estimated_hours.toFixed(1)}h</span>
             </div>
             <div className="w-full h-1 bg-surface-3 rounded-full overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all ${isOverdue ? 'bg-signal-critical' : 'bg-accent-secondary'}`} 
+              <div
+                className={`h-full rounded-full transition-all ${isOverdue ? 'bg-signal-critical' : 'bg-accent-secondary'}`}
                 style={{ width: `${Math.min(100, (elapsedHours / task.estimated_hours) * 100)}%` }}
               />
             </div>
@@ -156,7 +154,7 @@ export function TaskCard({
               {task.risk}
             </span>
           )}
-          
+
           {task.status !== 'done' && liabilityTag && (
             <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-signal-critical-bg border border-signal-critical/20 text-signal-critical">
               <Shield className="w-2.5 h-2.5" />
@@ -215,14 +213,14 @@ export function TaskCard({
                 {countdown.text.replace('ETA: ', '')}
               </div>
             )}
-            
+
             {hasWriteAccess && (
               <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1 bg-surface-2 rounded border border-border p-0.5 shadow-sm">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onEditTask) {
-                       onEditTask(task);
+                      onEditTask(task);
                     }
                   }}
                   className="p-1 hover:bg-surface-3 rounded transition-colors text-text-tertiary hover:text-accent-primary"
@@ -263,7 +261,7 @@ export function TaskCard({
             )}
           </div>
         </div>
-        
+
         {/* Systemic Liability Label */}
         {liabilityTag && task.status !== 'done' && !isCompact && (
           <div className="mt-2 pt-2 border-t border-border-subtle">

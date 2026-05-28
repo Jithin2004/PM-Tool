@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useTasks } from '../../../hooks/useTasks';
 import { useWorkspace } from '../../../context/WorkspaceContext';
+import { useOperationalData } from '../../../context/OperationalDataContext';
 import { useCalendarEvents } from '../../../hooks/useCalendarEvents';
 import { TaskCard } from '../../task/TaskCard';
 import { TaskCreateModal } from '../../task/TaskCreateModal';
@@ -57,6 +58,7 @@ export function ExecutionSystem({
   initialView = 'board'
 }: ExecutionSystemProps) {
   const { workspace } = useWorkspace();
+  const { raw: { teams } } = useOperationalData();
   const { tasks, dependencies, loading, addTask, updateTask, updateTaskStatus } = useTasks(workspace?.id);
   const { events: calendarEvents } = useCalendarEvents(workspace?.id);
   
@@ -228,6 +230,18 @@ export function ExecutionSystem({
   };
 
   const handleAddTask = async (taskData: any) => {
+    // Ensure user is part of a team
+    const isUserInAnyTeam = teams.some(t => {
+      const d = t.data as any;
+      if (!d) return false;
+      return d.pm_id === currentUserProfile?.id || (Array.isArray(d.developer_ids) && d.developer_ids.includes(currentUserProfile?.id));
+    });
+
+    if (!isUserInAnyTeam && currentUserProfile?.role !== 'super_admin') {
+      notify("Access Denied: You must form or join a team before creating tasks.", "error");
+      return;
+    }
+
     if (!hasWriteAccess) {
       notify("Access Denied: Viewers cannot create tasks.", "error");
       return;

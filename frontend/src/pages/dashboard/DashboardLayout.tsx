@@ -773,6 +773,19 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Ensure user is part of a team
+    const isUserInAnyTeam = teams.some(t => {
+      const d = t.data as any;
+      if (!d) return false;
+      return d.pm_id === user.id || (Array.isArray(d.developer_ids) && d.developer_ids.includes(user.id));
+    });
+
+    if (!isUserInAnyTeam && profile?.role !== 'super_admin') {
+      notify("Access Denied: You must form or join a team before creating a project.", "error");
+      return;
+    }
+
     if (!newName.trim()) {
       notify("Project designation is required.", "error");
       return;
