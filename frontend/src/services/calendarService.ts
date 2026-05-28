@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = (import.meta as any).env.VITE_CALENDAR_API_URL || 'http://localhost:5001';
 const CALENDAR_API_URL = `${API_BASE_URL}/api/calendar`;
 
 export interface CalendarEvent {

@@ -1,7 +1,7 @@
 // ── Product Key Verification ──
 
 const STORAGE_KEY = 'resolve-product-license';
-const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = (import.meta as any).env.VITE_PRODUCT_KEY_API_URL || 'http://localhost:5000';
 const VERIFY_URL = `${API_BASE_URL}/activate`;
 const TIMEOUT_MS = 10_000;
 
