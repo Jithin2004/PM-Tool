@@ -65,6 +65,25 @@ export function ExecutionSystem({
   React.useEffect(() => {
     setActiveView(initialView);
   }, [initialView]);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get('task');
+    if (taskId && tasks.length > 0) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setEditingTask(task);
+        // Clear the query parameter so it doesn't reopen on reload
+        const newUrl = window.location.pathname;
+        window.history.replaceState(null, '', newUrl);
+      }
+    }
+  }, [tasks]);
+
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setEditingTask(task);
+  };
   const [density, setDensity] = useState<'comfortable' | 'compact' | 'executive'>('comfortable');
   const [filterByProject, setFilterByProject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -262,7 +281,7 @@ export function ExecutionSystem({
             hasWriteAccess={hasWriteAccess}
             blockedByMap={blockedByMap}
             onTransitionTask={handleTransitionTask}
-            onTaskClick={setSelectedTask}
+            onTaskClick={handleTaskClick}
             density={density}
           />
         )}
@@ -274,7 +293,7 @@ export function ExecutionSystem({
             userMap={userMap}
             hasWriteAccess={hasWriteAccess}
             onTransitionTask={handleTransitionTask}
-            onTaskClick={setSelectedTask}
+            onTaskClick={handleTaskClick}
           />
         )}
 
@@ -286,7 +305,7 @@ export function ExecutionSystem({
             hasWriteAccess={hasWriteAccess}
             onTransitionTask={handleTransitionTask}
             onEditTask={setEditingTask}
-            onTaskClick={setSelectedTask}
+            onTaskClick={handleTaskClick}
             notify={notify}
           />
         )}

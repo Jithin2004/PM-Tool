@@ -410,7 +410,36 @@ export default function CommandPalette(props: Props) {
           label: `${t.label}`,
           description: `${t.count}x this week · ${t.trend >= 0 ? '↑' : '↓'} ${Math.abs(t.trend)}%`,
           icon: <Cpu className="w-3.5 h-3.5 text-orange-400" />,
-          onSelect: () => { logCmd('most_used', t.label); },
+          onSelect: () => {
+            const [type, label] = t.id.split(':');
+            logCmd('most_used', t.label);
+            if (type === 'navigation') {
+              const nav = NAV_ITEMS.find(n => n.label === label);
+              if (nav) onNavigate(nav.path);
+              onClose();
+            } else if (type === 'project_open') {
+              const p = projects.find(proj => proj.name === label);
+              if (p) {
+                setSelectedProject?.(p);
+                onNavigate(`/projects/${p.id}/board`);
+              }
+              onClose();
+            } else if (type === 'task_open') {
+              const task = tasks.find(tsk => tsk.name === label);
+              if (task) onNavigate(`/execution?task=${task.id}`);
+              onClose();
+            } else if (type === 'action') {
+              const action = ACTION_ITEMS.find(a => a.label === label);
+              if (action) action.onSelect(props);
+              onClose();
+            } else if (type === 'ai') {
+              const ai = AI_ITEMS.find(a => a.label === label);
+              if (ai) ai.onSelect(props);
+              onClose();
+            } else {
+              onClose();
+            }
+          },
         }));
       }
     }
@@ -431,7 +460,36 @@ export default function CommandPalette(props: Props) {
         if (!r) return;
         if (recent.indexOf(r) < 3) return; // skip if already in recent top 3
         seen.add(id);
-        suggested.push({ ...r, group: 'SUGGESTED' });
+
+        const boundOnSelect = () => {
+          const [prefix, val] = r.id.split(':');
+          if (prefix === 'nav') {
+            onNavigate(val);
+            onClose();
+          } else if (prefix === 'proj') {
+            const p = projects.find(proj => proj.id === val);
+            if (p) {
+              setSelectedProject?.(p);
+              onNavigate(`/projects/${p.id}/board`);
+            }
+            onClose();
+          } else if (prefix === 'task') {
+            onNavigate(`/execution?task=${val}`);
+            onClose();
+          } else if (prefix === 'action') {
+            const action = ACTION_ITEMS.find(a => a.label === val);
+            if (action) action.onSelect(props);
+            onClose();
+          } else if (prefix === 'ai') {
+            const ai = AI_ITEMS.find(a => a.label === val);
+            if (ai) ai.onSelect(props);
+            onClose();
+          } else {
+            onClose();
+          }
+        };
+
+        suggested.push({ ...r, group: 'SUGGESTED', onSelect: boundOnSelect });
       });
 
       // Then add any items frequently used with current context
@@ -455,7 +513,36 @@ export default function CommandPalette(props: Props) {
               id: `predict:${s.id}`, group: 'SUGGESTED', label: s.label,
               description: 'Workflow prediction',
               icon: <Zap className="w-3.5 h-3.5 text-signal-warning" />,
-              onSelect: () => { logCmd('predict', s.label); },
+              onSelect: () => {
+                logCmd('predict', s.label);
+                const [type, label] = s.id.split(':');
+                if (type === 'navigation') {
+                  const nav = NAV_ITEMS.find(n => n.label === label);
+                  if (nav) onNavigate(nav.path);
+                  onClose();
+                } else if (type === 'project_open') {
+                  const p = projects.find(proj => proj.name === label);
+                  if (p) {
+                    setSelectedProject?.(p);
+                    onNavigate(`/projects/${p.id}/board`);
+                  }
+                  onClose();
+                } else if (type === 'task_open') {
+                  const task = tasks.find(tsk => tsk.name === label);
+                  if (task) onNavigate(`/execution?task=${task.id}`);
+                  onClose();
+                } else if (type === 'action') {
+                  const action = ACTION_ITEMS.find(a => a.label === label);
+                  if (action) action.onSelect(props);
+                  onClose();
+                } else if (type === 'ai') {
+                  const ai = AI_ITEMS.find(a => a.label === label);
+                  if (ai) ai.onSelect(props);
+                  onClose();
+                } else {
+                  onClose();
+                }
+              },
             });
           });
         }
@@ -467,7 +554,41 @@ export default function CommandPalette(props: Props) {
       const recent = getRecent();
       if (recent.length > 0) {
         out.push({ id: '_recent_header', group: 'RECENT', label: 'RECENT', onSelect: () => {} });
-        out.push(...recent.map(r => ({ ...r, group: 'RECENT' })));
+        recent.forEach(r => {
+          const boundOnSelect = () => {
+            const [prefix, val] = r.id.split(':');
+            if (prefix === 'nav') {
+              onNavigate(val);
+              onClose();
+            } else if (prefix === 'proj') {
+              const p = projects.find(proj => proj.id === val);
+              if (p) {
+                setSelectedProject?.(p);
+                onNavigate(`/projects/${p.id}/board`);
+              }
+              onClose();
+            } else if (prefix === 'task') {
+              onNavigate(`/execution?task=${val}`);
+              onClose();
+            } else if (prefix === 'action') {
+              const action = ACTION_ITEMS.find(a => a.label === val);
+              if (action) action.onSelect(props);
+              onClose();
+            } else if (prefix === 'ai') {
+              const ai = AI_ITEMS.find(a => a.label === val);
+              if (ai) ai.onSelect(props);
+              onClose();
+            } else {
+              onClose();
+            }
+          };
+
+          out.push({
+            ...r,
+            group: 'RECENT',
+            onSelect: boundOnSelect
+          });
+        });
       }
     }
 
@@ -496,7 +617,7 @@ export default function CommandPalette(props: Props) {
           description: `${p.execution_mode} · ${p.status}${p.efficiency ? ` · ${p.efficiency}%` : ''}`,
           icon: <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />,
           metadata: { project_id: p.id, status: p.status, execution_mode: p.execution_mode },
-          onSelect: () => { addRecent({ id: `proj:${p.id}`, group: 'PROJECTS', label: p.name, icon: <BarChart3 className="w-3.5 h-3.5" />, onSelect: () => {} }); logCmd('project_open', p.name, { project_id: p.id }); setSelectedProject?.(p); onClose(); },
+          onSelect: () => { addRecent({ id: `proj:${p.id}`, group: 'PROJECTS', label: p.name, icon: <BarChart3 className="w-3.5 h-3.5" />, onSelect: () => {} }); logCmd('project_open', p.name, { project_id: p.id }); setSelectedProject?.(p); onNavigate(`/projects/${p.id}/board`); onClose(); },
         }));
       }
     }
@@ -511,7 +632,7 @@ export default function CommandPalette(props: Props) {
           description: `${t.status} · ${t.priority}`,
           icon: <Check className="w-3.5 h-3.5 text-signal-warning" />,
           metadata: { task_id: t.id, status: t.status, priority: t.priority },
-          onSelect: () => { addRecent({ id: `task:${t.id}`, group: 'TASKS', label: t.name, icon: <Check className="w-3.5 h-3.5" />, onSelect: () => {} }); logCmd('task_open', t.name, { task_id: t.id }); onNavigate('/execution'); onClose(); },
+          onSelect: () => { addRecent({ id: `task:${t.id}`, group: 'TASKS', label: t.name, icon: <Check className="w-3.5 h-3.5" />, onSelect: () => {} }); logCmd('task_open', t.name, { task_id: t.id }); onNavigate(`/execution?task=${t.id}`); onClose(); },
         }));
       }
     }
