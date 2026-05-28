@@ -13,6 +13,32 @@ export function LandingPage() {
   const hasSession = authReady && !!user && !!profile && profile.role !== 'uninvited';
 
   const [systemSpeed, setSystemSpeed] = useState('98.4');
+  const [activeSection, setActiveSection] = useState('');
+
+  // Scroll Spy for Nav
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ['how-it-works', 'analytics', 'trust'];
+      const scrollPosition = window.scrollY + 120; // offset for header + margin
+
+      for (const section of sections) {
+        const element = document.getElementById(section);
+        if (element) {
+          const { offsetTop, offsetHeight } = element;
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(section);
+            return;
+          }
+        }
+      }
+      if (window.scrollY < 300) {
+         setActiveSection('');
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     if (!hasSession) return;
@@ -62,6 +88,7 @@ export function LandingPage() {
   return (
     <div className="font-body-md text-body-md overflow-x-hidden min-h-screen bg-[#121416] text-[#e2e2e5]">
       <style>{`
+        html { scroll-behavior: smooth; }
         .glass-panel {
             background: rgba(45, 46, 50, 0.4);
             backdrop-filter: blur(12px);
@@ -98,14 +125,14 @@ export function LandingPage() {
       `}</style>
 
       {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding h-16 bg-surface border-b border-white/5 shadow-sm">
+      <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding h-16 bg-surface/80 backdrop-blur-md border-b border-white/5 shadow-sm">
         <div className="flex items-center gap-stack-gap-lg">
           <span className="font-headline-md text-headline-md font-bold text-on-surface">Resolve PM</span>
           <div className="hidden md:flex items-center gap-stack-gap-md ml-8">
-            <a className="text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md transition-colors" href="#">Product</a>
-            <a className="text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md" href="#">How it Works</a>
-            <a className="text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md" href="#">Analytics</a>
-            <a className="text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md" href="#">Trust</a>
+            <a className={`transition-colors font-body-md text-body-md ${activeSection === '' ? 'text-primary font-bold border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} href="#">Product</a>
+            <a className={`transition-colors font-body-md text-body-md ${activeSection === 'how-it-works' ? 'text-primary font-bold border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} href="#how-it-works">How it Works</a>
+            <a className={`transition-colors font-body-md text-body-md ${activeSection === 'analytics' ? 'text-primary font-bold border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} href="#analytics">Analytics</a>
+            <a className={`transition-colors font-body-md text-body-md ${activeSection === 'trust' ? 'text-primary font-bold border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} href="#trust">Trust</a>
           </div>
         </div>
         <div className="flex items-center gap-stack-gap-md">
@@ -170,120 +197,103 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Feature Section: Execution Tracking */}
-        <section className="bg-surface-container-lowest py-32 border-y border-white/5">
+        {/* Section 1: How It Works */}
+        <section id="how-it-works" className="bg-surface-container-lowest py-32 border-y border-white/5 scroll-mt-16">
           <div className="max-w-7xl mx-auto px-container-padding">
-            <div className="mb-16">
-              <h2 className="font-display-lg text-display-lg text-on-surface mb-4">Real-Time Project Visibility</h2>
-              <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">High-precision tracking for important projects. Distinguish between internal progress and outside delays with a clear, permanent history.</p>
+            <div className="mb-24 md:mb-32">
+              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">Execution Orchestration</h2>
+              <p className="font-body-lg text-lg text-on-surface-variant max-w-3xl leading-relaxed">
+                Enterprise delivery isn't delayed by incomplete tasks—it's delayed by client dependencies, approvals, infrastructure readiness, and wait states. Resolve PM coordinates the entire deployment flow.
+              </p>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-grid-gutter">
-              {/* Smart Search */}
-              <div className="lg:col-span-8 glass-panel rounded-xl p-8 flex flex-col gap-8">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="font-headline-sm text-headline-sm text-on-surface">Smart Search</h3>
-                    <p className="text-body-sm text-on-surface-variant">Instantly find status updates and blockers across all projects.</p>
-                  </div>
-                  <div className="flex items-center gap-2 px-2 py-1 rounded bg-primary/10 border border-primary/20">
-                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                    <span className="font-mono-label text-[10px] text-primary">LIVE VIEW</span>
-                  </div>
-                </div>
-                <div className="relative mb-6">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                    <span className="material-symbols-outlined text-primary text-xl">search</span>
-                  </div>
-                  <div className="w-full bg-surface-container-highest border border-outline-variant rounded-lg py-4 pl-12 pr-4 font-mono-data text-on-surface flex items-center min-h-[58px]">
-                    <span className="typing-container" id="typing-text"></span>
-                  </div>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                    <kbd className="bg-surface px-1.5 py-0.5 rounded border border-outline-variant text-[10px] font-mono-label text-on-surface-variant">CMD</kbd>
-                    <kbd className="bg-surface px-1.5 py-0.5 rounded border border-outline-variant text-[10px] font-mono-label text-on-surface-variant">K</kbd>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="stagger-item stagger-delay-1 flex items-center justify-between p-4 bg-surface-container-low rounded-lg border border-white/5 hover:border-primary/30 transition-all cursor-default group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded flex items-center justify-center bg-primary/10 text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                        <span className="material-symbols-outlined">account_tree</span>
-                      </div>
-                      <div>
-                        <div className="font-body-md text-on-surface">Project Delta: Core Updates</div>
-                        <div className="font-mono-label text-[10px] text-on-surface-variant uppercase">Active Development</div>
-                      </div>
+            
+            <div className="relative">
+              {/* Vertical line connecting nodes */}
+              <div className="absolute left-[27px] top-4 bottom-4 w-[2px] bg-white/5 hidden md:block"></div>
+              
+              <div className="space-y-16 md:space-y-24">
+                {/* Step 1 & 2 */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 relative">
+                  <div className="md:col-span-5 flex gap-6">
+                    <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-surface-container-highest border border-white/10 flex items-center justify-center text-on-surface font-mono-label shadow-lg">01</div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-on-surface mb-3">Onboard & Configure</h3>
+                      <p className="text-on-surface-variant leading-relaxed text-sm">Map your entire initiative structure before execution begins. Define the critical path, infrastructure requirements, and expected operational blocks.</p>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <div className="font-mono-data text-primary text-sm">74% Complete</div>
-                        <div className="h-1 w-24 bg-white/5 rounded-full mt-1">
-                          <div className="h-full bg-primary rounded-full" style={{ width: '74%' }}></div>
+                  </div>
+                  <div className="md:col-span-7">
+                    <div className="glass-panel p-6 rounded-xl border border-white/5">
+                      <div className="h-4 w-1/4 bg-white/10 rounded mb-6"></div>
+                      <div className="space-y-3">
+                        <div className="h-8 w-full bg-surface-container-low border border-white/5 rounded flex items-center px-4 gap-3">
+                          <span className="material-symbols-outlined text-[14px] text-primary">check_circle</span>
+                          <span className="h-2 w-1/3 bg-white/10 rounded"></span>
+                        </div>
+                        <div className="h-8 w-full bg-surface-container-low border border-white/5 rounded flex items-center px-4 gap-3">
+                          <span className="material-symbols-outlined text-[14px] text-white/20">radio_button_unchecked</span>
+                          <span className="h-2 w-1/2 bg-white/10 rounded"></span>
+                        </div>
+                        <div className="h-8 w-3/4 bg-surface-container-low border border-white/5 rounded flex items-center px-4 gap-3">
+                          <span className="material-symbols-outlined text-[14px] text-white/20">radio_button_unchecked</span>
+                          <span className="h-2 w-1/4 bg-white/10 rounded"></span>
                         </div>
                       </div>
-                      <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
-                    </div>
-                  </div>
-                  <div className="stagger-item stagger-delay-2 flex items-center justify-between p-4 bg-surface-container-low rounded-lg border border-white/5 hover:border-primary/30 transition-all cursor-default group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded flex items-center justify-center bg-tertiary/10 text-tertiary">
-                        <span className="material-symbols-outlined">history_toggle_off</span>
-                      </div>
-                      <div>
-                        <div className="font-body-md text-on-surface">Schedule Change Noted</div>
-                        <div className="font-mono-label text-[10px] text-on-surface-variant uppercase tracking-wider">Source: Partner Update</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="px-2 py-0.5 rounded bg-surface border border-outline-variant text-[10px] font-mono-label text-primary uppercase">Record Updated</span>
-                      <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
-                    </div>
-                  </div>
-                  <div className="stagger-item stagger-delay-3 flex items-center justify-between p-4 bg-surface-container-low rounded-lg border border-white/5 hover:border-primary/30 transition-all cursor-default group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded flex items-center justify-center bg-error/10 text-error">
-                        <span className="material-symbols-outlined">warning</span>
-                      </div>
-                      <div>
-                        <div className="font-body-md text-on-surface">Mark Thompson</div>
-                        <div className="font-mono-label text-[10px] text-on-surface-variant">Team Lead</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="px-2 py-0.5 rounded bg-error/10 border border-error/20 text-[10px] font-mono-label text-error uppercase">Action Required</span>
-                      <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Timeline Ledger */}
-              <div className="lg:col-span-4 flex flex-col gap-6">
-                <div className="glass-panel rounded-xl p-6 border border-white/5 h-full">
-                  <div className="flex items-center gap-2 mb-6 text-on-surface">
-                    <span className="material-symbols-outlined">receipt_long</span>
-                    <h3 className="font-headline-sm text-headline-sm">Activity Log</h3>
+                {/* Step 3 */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 relative">
+                  <div className="md:col-span-5 flex gap-6">
+                    <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-mono-label shadow-[0_0_15px_rgba(99,102,241,0.15)]">02</div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-on-surface mb-3">Coordinate Dependencies</h3>
+                      <p className="text-on-surface-variant leading-relaxed text-sm">Identify external wait states early. Link cross-team deliverables and client approvals to your primary timeline to prevent unexpected delivery blocks.</p>
+                    </div>
                   </div>
-                  <div className="space-y-4">
-                    <div className="p-4 rounded border hover-translate-x bg-surface-container-high border-l-4 border-l-[#EF4444] border-white/5">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-mono-label text-[10px] text-on-surface-variant">REF: TX-9921</span>
-                        <span className="font-mono-data text-mono-data text-[#EF4444] font-bold">-5.5d</span>
+                  <div className="md:col-span-7">
+                    <div className="glass-panel p-6 rounded-xl flex flex-col gap-4 border border-white/5">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 h-12 bg-surface-container-high rounded border border-white/5 flex items-center px-4">
+                          <span className="w-2 h-2 rounded-full bg-primary/50 mr-3"></span>
+                          <span className="text-xs font-mono text-on-surface-variant">Core API</span>
+                        </div>
+                        <span className="material-symbols-outlined text-white/20">arrow_forward</span>
+                        <div className="flex-1 h-12 bg-surface-container-high rounded border border-primary/20 flex items-center px-4 relative overflow-hidden">
+                          <div className="absolute inset-0 bg-primary/5 pointer-events-none"></div>
+                          <span className="w-2 h-2 rounded-full bg-primary animate-pulse mr-3"></span>
+                          <span className="text-xs font-mono text-primary">Client Auth Gateway</span>
+                        </div>
                       </div>
-                      <p className="font-body-sm text-[12px] text-on-surface leading-snug">Partner server downtime causing integration delay.</p>
-                      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-[9px] text-on-surface-variant uppercase">Critical Delay</span>
-                        <span className="text-[9px] text-error bg-error/10 px-1 py-0.5 rounded">OPEN</span>
+                      <div className="px-4 py-2 border-l-2 border-error/50 bg-error/5 text-[10px] font-mono text-error/80 uppercase tracking-wider rounded-r">
+                        DEPENDENCY BLOCKED: AWAITING COMPLIANCE REVIEW
                       </div>
                     </div>
-                    <div className="p-4 rounded border hover-translate-x bg-surface-container-low border-l-4 border-l-[#22C55E] border-white/5">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-mono-label text-[10px] text-on-surface-variant">REF: TX-9918</span>
-                        <span className="font-mono-data text-mono-data text-[#22C55E] font-bold">+1.2d</span>
+                  </div>
+                </div>
+
+                {/* Step 4 & 5 */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 relative">
+                  <div className="md:col-span-5 flex gap-6">
+                    <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-surface-container-highest border border-white/10 flex items-center justify-center text-on-surface font-mono-label shadow-lg">03</div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-on-surface mb-3">Track & Monitor Health</h3>
+                      <p className="text-on-surface-variant leading-relaxed text-sm">Real-time visibility into operational drift. Automatically distinguish between internal progress and external blockers with an immutable timeline ledger.</p>
+                    </div>
+                  </div>
+                  <div className="md:col-span-7">
+                    <div className="glass-panel p-6 rounded-xl border border-white/5 border-l-4 border-l-primary/50">
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">Drift Detected</span>
+                        <span className="text-[10px] text-error font-mono bg-error/10 border border-error/20 px-2 py-1 rounded">+2.4 Days</span>
                       </div>
-                      <p className="font-body-sm text-[12px] text-on-surface-variant">Testing process automated ahead of schedule.</p>
-                      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between">
-                        <span className="text-[9px] text-on-surface-variant uppercase">Gain</span>
-                        <span className="text-[9px] text-primary bg-primary/10 px-1 py-0.5 rounded uppercase">Verified</span>
+                      <div className="h-2 w-full bg-white/5 rounded overflow-hidden flex">
+                        <div className="h-full bg-primary/40 w-[60%]"></div>
+                        <div className="h-full bg-error/40 w-[15%]"></div>
+                      </div>
+                      <div className="mt-4 flex justify-between text-[10px] font-mono text-on-surface-variant">
+                        <span>Expected: 12th Aug</span>
+                        <span>Forecast: 15th Aug</span>
                       </div>
                     </div>
                   </div>
@@ -293,49 +303,143 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Value Prop Columns */}
+        {/* Section 2: Analytics */}
+        <section id="analytics" className="py-32 scroll-mt-16 bg-[#121416]">
+          <div className="max-w-7xl mx-auto px-container-padding">
+            <div className="mb-24 text-center md:text-left">
+              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">Wait-State Intelligence</h2>
+              <p className="font-body-lg text-lg text-on-surface-variant max-w-3xl leading-relaxed md:mx-0 mx-auto">
+                Stop looking at generic dashboard widgets. Resolve PM analytics focus on delivery confidence, dependency congestion, and the exact percentage of time your project spends blocked by outside factors.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Block 1 */}
+              <div className="glass-panel rounded-2xl p-8 md:p-12 border border-white/5 hover:border-primary/20 transition-colors">
+                <div className="flex justify-between items-start mb-12">
+                  <h3 className="text-lg font-medium text-on-surface">Execution Pressure</h3>
+                  <span className="material-symbols-outlined text-primary">monitoring</span>
+                </div>
+                <div className="space-y-8">
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-on-surface-variant font-mono text-[11px] uppercase">Internal Work</span>
+                      <span className="text-on-surface font-mono text-xs">32%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary/60 w-[32%] rounded-full"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-on-surface-variant font-mono text-[11px] uppercase">Blocked / Waiting</span>
+                      <span className="text-error font-mono font-medium text-xs">68%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-error/60 w-[68%] rounded-full"></div>
+                    </div>
+                    <p className="mt-6 text-sm text-on-surface-variant/80 leading-relaxed border-t border-white/5 pt-6">
+                      Project has spent the majority of its lifecycle waiting on external infrastructure provisioning and client compliance reviews.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Block 2 */}
+              <div className="glass-panel rounded-2xl p-8 md:p-12 border border-white/5 hover:border-primary/20 transition-colors flex flex-col">
+                <div className="flex justify-between items-start mb-12">
+                  <h3 className="text-lg font-medium text-on-surface">Release Confidence</h3>
+                  <span className="material-symbols-outlined text-primary">tune</span>
+                </div>
+                <div className="flex items-end gap-2 h-32 mt-auto mb-6">
+                  <div className="w-1/6 bg-white/5 rounded-t-sm h-[40%] hover:bg-white/10 transition-colors"></div>
+                  <div className="w-1/6 bg-white/5 rounded-t-sm h-[60%] hover:bg-white/10 transition-colors"></div>
+                  <div className="w-1/6 bg-white/5 rounded-t-sm h-[45%] hover:bg-white/10 transition-colors"></div>
+                  <div className="w-1/6 bg-white/5 rounded-t-sm h-[80%] hover:bg-white/10 transition-colors"></div>
+                  <div className="w-1/6 bg-primary/20 rounded-t-sm h-[95%] border-t border-primary/50 relative">
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface text-primary text-[10px] px-2 py-1 rounded border border-primary/20 font-mono tracking-wider">Q3</div>
+                  </div>
+                  <div className="w-1/6 bg-white/5 rounded-t-sm h-[30%] hover:bg-white/10 transition-colors"></div>
+                </div>
+                <p className="text-sm text-on-surface-variant/80 leading-relaxed border-t border-white/5 pt-6 mt-auto">
+                  Deterministic forecasting based on historical wait states predicts a 95% probability of on-time delivery for the Q3 release window.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 3: Trust */}
+        <section id="trust" className="bg-surface-container-lowest py-32 border-y border-white/5 scroll-mt-16">
+          <div className="max-w-7xl mx-auto px-container-padding">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+              <div>
+                <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">Predictable Execution</h2>
+                <div className="space-y-6 text-lg text-on-surface-variant leading-relaxed">
+                  <p>
+                    Resolve PM is engineered for operational seriousness. We replace fragmented spreadsheets and chaotic chat threads with deterministic workflows and structured synchronization.
+                  </p>
+                  <p>
+                    Every state change, block, and approval is written to a permanent audit ledger, ensuring absolute operational clarity and accountability across massive organizations.
+                  </p>
+                  <ul className="space-y-4 mt-8 pt-4 border-t border-white/5">
+                    <li className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-primary text-sm">lock</span>
+                      <span className="text-sm font-mono text-on-surface">Capability-driven governance</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-primary text-sm">visibility</span>
+                      <span className="text-sm font-mono text-on-surface">Total audit visibility</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-primary text-sm">account_tree</span>
+                      <span className="text-sm font-mono text-on-surface">Scalable coordination</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="glass-panel p-6 rounded-2xl border border-white/5 shadow-2xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
+                
+                {/* Mock Ledger */}
+                <div className="space-y-1 relative z-10">
+                  <div className="grid grid-cols-4 gap-4 px-4 py-3 border-b border-white/10 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider mb-2">
+                    <span>Timestamp</span>
+                    <span>Actor</span>
+                    <span>Action</span>
+                    <span>Status</span>
+                  </div>
+                  
+                  {[
+                    { t: '10:42:05Z', a: 'SYS_SYNC', act: 'CAL_UPDATE', s: 'SUCCESS' },
+                    { t: '09:15:22Z', a: 'USR_4091', act: 'STATE_CHANGE', s: 'VERIFIED' },
+                    { t: '08:02:11Z', a: 'USR_2288', act: 'DEPEND_ADD', s: 'VERIFIED' },
+                    { t: '07:45:00Z', a: 'SYS_AUDIT', act: 'LEDGER_SEAL', s: 'LOCKED' },
+                  ].map((row, i) => (
+                    <div key={i} className="grid grid-cols-4 gap-4 px-4 py-3 bg-white/[0.02] rounded hover:bg-white/[0.04] transition-colors text-xs font-mono text-on-surface">
+                      <span className="text-on-surface-variant/60 text-[10px]">{row.t}</span>
+                      <span className="text-primary/80 text-[10px]">{row.a}</span>
+                      <span className="text-[10px]">{row.act}</span>
+                      <span className={`text-[10px] ${row.s === 'LOCKED' ? 'text-on-surface-variant' : 'text-green-400/80'}`}>{row.s}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
         <section className="max-w-7xl mx-auto px-container-padding py-32">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-grid-gutter">
-            <div className="flex flex-col gap-stack-gap-md p-8 bg-surface-container-low rounded-xl border border-white/5 hover:bg-surface-container transition-colors group">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-[28px]">verified_user</span>
-              </div>
-              <h3 className="font-headline-sm text-headline-sm text-on-surface">Verified History</h3>
-              <p className="font-body-md text-body-md text-on-surface-variant">
-                Our permanent record system ensures that project timelines can't be changed after the fact. Every update is tracked, creating a single source of truth for your leadership team.
-              </p>
-            </div>
-            <div className="flex flex-col gap-stack-gap-md p-8 bg-surface-container-low rounded-xl border border-white/5 hover:bg-surface-container transition-colors group">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-[28px]">speed</span>
-              </div>
-              <h3 className="font-headline-sm text-headline-sm text-on-surface">Fast Performance</h3>
-              <p className="font-body-md text-body-md text-on-surface-variant">
-                Built for speed, our interface handles global projects without slowing down. Get instant updates on your most complex workstreams without the typical enterprise lag.
-              </p>
-            </div>
-            <div className="flex flex-col gap-stack-gap-md p-8 bg-surface-container-low rounded-xl border border-white/5 hover:bg-surface-container transition-colors group">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined text-[28px]">assignment_turned_in</span>
-              </div>
-              <h3 className="font-headline-sm text-headline-sm text-on-surface">Clear Accountability</h3>
-              <p className="font-body-md text-body-md text-on-surface-variant">
-                Stop the guessing games. Automatically identify when outside factors affect your deadlines, protecting your team's reputation and focusing on solutions rather than blame.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Trust Section */}
-        <section className="max-w-7xl mx-auto px-container-padding pb-32">
-          <div className="glass-panel p-12 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-stack-gap-lg">
+          <div className="glass-panel p-12 rounded-2xl border border-white/5 flex flex-col md:flex-row items-center justify-between gap-stack-gap-lg">
             <div className="flex-1 text-center md:text-left">
-              <h2 className="font-headline-md text-headline-md text-on-surface mb-2">Ready for better project visibility?</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant">Work with our team to set up your custom project tracking environment.</p>
+              <h2 className="font-headline-md text-3xl text-on-surface mb-2 tracking-tight">Ready for better project visibility?</h2>
+              <p className="font-body-md text-lg text-on-surface-variant">Work with our team to set up your custom project tracking environment.</p>
             </div>
-            <div className="flex flex-col items-center gap-stack-gap-md">
-              <a href="/activate" className="px-8 py-3 rounded bg-primary text-on-primary font-headline-sm text-headline-sm font-semibold hover:opacity-90">Start Setup</a>
-              <a className="text-body-sm text-on-surface-variant hover:text-primary transition-colors underline decoration-dotted" href="/login">Already have an invite? Login</a>
+            <div className="flex flex-col items-center gap-stack-gap-md shrink-0">
+              <a href="/activate" className="px-8 py-3 rounded bg-primary text-on-primary font-headline-sm text-sm font-semibold hover:opacity-90 tracking-wide transition-opacity shadow-[0_0_15px_rgba(99,102,241,0.15)]">Start Setup</a>
+              <a className="text-xs font-mono text-on-surface-variant hover:text-primary transition-colors underline decoration-dotted" href="/login">Already have an invite? Login</a>
             </div>
           </div>
         </section>
