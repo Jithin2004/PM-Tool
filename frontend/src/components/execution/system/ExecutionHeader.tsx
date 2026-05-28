@@ -28,6 +28,7 @@ interface ExecutionHeaderProps {
   groupBy: string;
   onGroupByChange: (group: any) => void;
   canAddTask?: boolean;
+  users?: any[];
 }
 
 export function ExecutionHeader({
@@ -42,6 +43,7 @@ export function ExecutionHeader({
   groupBy,
   onGroupByChange,
   canAddTask = true,
+  users = [],
 }: ExecutionHeaderProps) {
   const views: { id: ExecutionViewType; label: string; icon: React.ReactNode }[] = [
     { id: 'board', label: 'Board', icon: <LayoutGrid className="w-4 h-4" /> },
@@ -148,14 +150,20 @@ export function ExecutionHeader({
 
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="w-6 h-6 rounded-full border-2 border-bg bg-surface-3 flex items-center justify-center text-[10px] font-bold text-text-tertiary shadow-sm">
-                U{i}
+            {users.slice(0, 5).map((u, i) => (
+              <div key={u.id || i} title={u.full_name || u.email} className="w-6 h-6 rounded-full border-2 border-bg bg-surface-3 flex items-center justify-center text-[10px] font-bold text-text-tertiary shadow-sm overflow-hidden" style={{ zIndex: 5 - i }}>
+                {u.avatar_url ? (
+                  <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover" />
+                ) : (
+                  (u.full_name || u.email || 'U')[0].toUpperCase()
+                )}
               </div>
             ))}
-            <div className="w-6 h-6 rounded-full border-2 border-bg bg-surface-2 flex items-center justify-center text-[10px] font-bold text-text-tertiary shadow-sm">
-              +5
-            </div>
+            {users.length > 5 && (
+              <div className="w-6 h-6 rounded-full border-2 border-bg bg-surface-2 flex items-center justify-center text-[10px] font-bold text-text-tertiary shadow-sm" style={{ zIndex: 0 }}>
+                +{users.length - 5}
+              </div>
+            )}
           </div>
         </div>
       </div>

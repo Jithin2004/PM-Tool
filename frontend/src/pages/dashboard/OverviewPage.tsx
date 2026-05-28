@@ -275,7 +275,7 @@ export default function OverviewPage() {
               ))}
             </svg>
             {/* Y axis labels */}
-            <div className="absolute left-0 inset-y-0 flex flex-col justify-between pointer-events-none pb-[20%]">
+            <div className="absolute left-0 flex flex-col justify-between pointer-events-none" style={{ top: '15%', bottom: '5%' }}>
               {['100%', '75%', '50%', '25%', '0%'].map((l, i) => (
                 <span key={l} className="font-mono-pm text-[9px]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
                   {i === 0 ? Math.round(svgPath.maxVal) : Math.round(svgPath.maxVal * (1 - i * 0.25))}

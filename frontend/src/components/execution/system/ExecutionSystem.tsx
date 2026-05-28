@@ -281,6 +281,7 @@ export function ExecutionSystem({
         groupBy={groupBy}
         onGroupByChange={setGroupBy}
         canAddTask={hasWriteAccess}
+        users={users}
       />
 
       {/* Intelligence Banner */}

@@ -7,7 +7,7 @@ import {
   Calculator, TrendingDown, Banknote, Download, Menu, X,
   Sun, Moon, Layers, ListOrdered, Kanban, Play,
   Briefcase, ListTodo, FileText, Link2, Bell, HelpCircle, LayoutDashboard,
-  Truck, Route, GitBranch, Building2, Radar
+  Truck, Route, GitBranch, Building2, Radar, Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
@@ -228,6 +228,10 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     teams: <Users className="w-[15px] h-[15px] shrink-0" />,
     portfolio: <Building2 className="w-[15px] h-[15px] shrink-0" />,
     audit: <Activity className="w-[15px] h-[15px] shrink-0" />,
+    identity: <Shield className="w-[15px] h-[15px] shrink-0" />,
+    automations: <Zap className="w-[15px] h-[15px] shrink-0" />,
+    'mission-control': <Radar className="w-[15px] h-[15px] shrink-0" />,
+    'work-logs': <Clock className="w-[15px] h-[15px] shrink-0" />,
     settings: <Settings className="w-[15px] h-[15px] shrink-0" />,
     integrations: <Link2 className="w-[15px] h-[15px] shrink-0" />,
   };
@@ -308,6 +312,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'dashboard' | 'active' | 'completed' | 'intelligence'>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [projectSetupGuide, setProjectSetupGuide] = useState<{ projectId: string; executionMode: string; step: number } | null>(null);
   const [showFeedbackGate, setShowFeedbackGate] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
@@ -990,44 +995,61 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         style={{ background: 'var(--pm-bg)', color: 'var(--pm-on-surface)' }}>
         
         {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
-        <aside id="tour-sidebar" className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-[15.5rem] border-r z-30"
+        <aside id="tour-sidebar" className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 ${isSidebarCollapsed ? 'lg:w-[4.5rem]' : 'lg:w-[15.5rem]'} border-r z-30 transition-all duration-300`}
           style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
           {/* Sidebar Brand */}
-          <div className="flex items-center gap-3 h-16 px-5 border-b shrink-0"
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} h-16 px-4 border-b shrink-0`}
             style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-              <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+                <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
+              </div>
+              {!isSidebarCollapsed && (
+                <div className="whitespace-nowrap flex-1">
+                  <h1 className="font-semibold tracking-tight text-[13px] font-geist" style={{ color: 'var(--pm-primary)' }}>Resolve PM</h1>
+                  <p className="text-[9px] font-mono-pm uppercase tracking-[0.15em]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Enterprise Orchestration</p>
+                </div>
+              )}
             </div>
-            <div>
-              <h1 className="font-semibold tracking-tight text-[13px] font-geist" style={{ color: 'var(--pm-primary)' }}>Resolve PM</h1>
-              <p className="text-[9px] font-mono-pm uppercase tracking-[0.15em]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Enterprise Orchestration</p>
-            </div>
+            {!isSidebarCollapsed && (
+              <button onClick={() => setIsSidebarCollapsed(true)} className="p-1 rounded hover:bg-white/5 text-text-tertiary hover:text-text-primary transition-colors">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
           </div>
+          {isSidebarCollapsed && (
+            <button onClick={() => setIsSidebarCollapsed(false)} className="mx-auto mt-2 p-1 rounded hover:bg-white/5 text-text-tertiary hover:text-text-primary transition-colors">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Nav — driven by routeRegistry */}
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 pm-scrollbar">
             {visibleSidebarGroups.map(({ group, items }) => (
               <div key={group} className="space-y-0.5">
-                <p className="text-[9px] font-mono-pm uppercase tracking-[0.2em] px-3 mb-2"
-                  style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
-                  {SIDEBAR_GROUP_LABELS[group]}
-                </p>
+                {!isSidebarCollapsed && (
+                  <p className="text-[9px] font-mono-pm uppercase tracking-[0.2em] px-3 mb-2 whitespace-nowrap"
+                    style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
+                    {SIDEBAR_GROUP_LABELS[group]}
+                  </p>
+                )}
                 {items.map(item => {
                   const active = isSidebarItemActive(item.path);
                   const isDecisions = item.id === 'decisions';
                   return (
                     <button
                       key={item.id}
+                      title={isSidebarCollapsed ? item.label : undefined}
                       onClick={() => {
                         if (isDecisions) setDashboardTab('intelligence');
                         navigateTo(item.path);
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[12px] font-medium transition-all duration-150"
+                      className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-lg text-[12px] font-medium transition-all duration-150`}
                       style={active ? {
                         background: 'rgba(67,70,83,0.5)',
                         color: 'var(--pm-primary)',
-                        borderLeft: '3px solid var(--pm-primary)',
-                        paddingLeft: '9px',
+                        borderLeft: isSidebarCollapsed ? '' : '3px solid var(--pm-primary)',
+                        paddingLeft: isSidebarCollapsed ? '' : '9px',
                       } : {
                         color: 'var(--pm-on-surface-variant)',
                       }}
@@ -1035,7 +1057,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       onMouseLeave={e => { if (!active) { (e.currentTarget as any).style.background = ''; (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; } }}
                     >
                       {SIDEBAR_ICONS[item.id]}
-                      {item.label}
+                      {!isSidebarCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
                     </button>
                   );
                 })}
@@ -1056,17 +1078,18 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           <div className="shrink-0 border-t" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
             <button
               onClick={() => (window as any).startOnboardingTour?.()}
-              className="w-full flex items-center gap-2.5 px-5 py-2.5 transition-colors text-[11px] font-geist"
+              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-5'} py-2.5 transition-colors text-[11px] font-geist`}
               style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}
               onMouseEnter={e => { (e.currentTarget as any).style.opacity = '1'; }}
               onMouseLeave={e => { (e.currentTarget as any).style.opacity = '0.5'; }}
+              title={isSidebarCollapsed ? 'Help & Documentation' : undefined}
             >
               <HelpCircle className="w-3.5 h-3.5 shrink-0" />
-              Help & Documentation
+              {!isSidebarCollapsed && 'Help & Documentation'}
             </button>
 
             {/* User identity strip */}
-            <div className="flex items-center gap-3 px-4 py-3 border-t" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+            <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center flex-col gap-2' : 'gap-3'} px-4 py-3 border-t`} style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
               <div
                 onClick={() => setIsProfileOpen(true)}
                 className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden shrink-0 cursor-pointer transition-all"
@@ -1080,14 +1103,16 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   <Users className="w-3.5 h-3.5" style={{ color: 'var(--pm-primary)' }} />
                 )}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium truncate font-geist" style={{ color: 'var(--pm-on-surface)' }}>
-                  {profile?.full_name || user.email?.split('@')[0]}
-                </p>
-                <p className="text-[9px] truncate capitalize font-mono-pm" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
-                  {(profile && userCustomRoles[profile.id]) || profile?.role?.replace('_', ' ') || 'Viewer'}
-                </p>
-              </div>
+              {!isSidebarCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-medium truncate font-geist" style={{ color: 'var(--pm-on-surface)' }}>
+                    {profile?.full_name || user.email?.split('@')[0]}
+                  </p>
+                  <p className="text-[9px] truncate capitalize font-mono-pm" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
+                    {(profile && userCustomRoles[profile.id]) || profile?.role?.replace('_', ' ') || 'Viewer'}
+                  </p>
+                </div>
+              )}
               <button
                 onClick={handleLogout}
                 className="p-1.5 rounded-md transition-colors cursor-pointer"
