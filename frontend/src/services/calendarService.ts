@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 
-const RAW_URL = (import.meta as any).env.VITE_CALENDAR_API_URL || 'http://localhost:5001';
-const API_BASE_URL = RAW_URL.endsWith('/api/calendar') ? RAW_URL.replace('/api/calendar', '') : RAW_URL.replace(/\/$/, '');
+const RAW_URL = ((import.meta as any).env.VITE_CALENDAR_API_URL || 'http://localhost:5001').replace(/\/$/, '');
+const API_BASE_URL = RAW_URL.endsWith('/api/calendar') ? RAW_URL.replace('/api/calendar', '') : RAW_URL;
 const CALENDAR_API_URL = `${API_BASE_URL}/api/calendar`;
 
 export interface CalendarEvent {
@@ -44,7 +44,17 @@ const getHeaders = () => {
 
 export const calendarService = {
   getAuthUrl(): string {
-    return `${CALENDAR_API_URL}/auth/google`;
+    let token = '';
+    try {
+      const supabaseSessionStr = localStorage.getItem('sb-' + ((import.meta as any).env.VITE_SUPABASE_URL ? new URL((import.meta as any).env.VITE_SUPABASE_URL).hostname.split('.')[0] : '') + '-auth-token');
+      if (supabaseSessionStr) {
+        const session = JSON.parse(supabaseSessionStr);
+        token = session?.access_token || '';
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+    return `${CALENDAR_API_URL}/auth/google${token ? `?token=${token}` : ''}`;
   },
 
   async getEvents(workspaceId: string, startDate: string, endDate: string): Promise<CalendarEvent[]> {
