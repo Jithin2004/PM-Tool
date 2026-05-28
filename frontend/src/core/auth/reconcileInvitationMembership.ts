@@ -165,7 +165,7 @@ async function upsertSuperAdmin(
       id: input.authUserId,
       email: input.email,
       workspace_id: null,
-      role: 'super_admin',
+      role: 'pending-workspace-setup',
       full_name: input.fullName,
       avatar_url: input.avatarUrl ?? null,
       availability_factor: 1,
