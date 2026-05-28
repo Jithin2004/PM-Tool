@@ -360,7 +360,7 @@ export function AdminDashboard({
 
                 <div>
                   <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-3" style={{ color: 'var(--pm-on-surface-variant)' }}>Active Designations</label>
-                  <div className="divide-y rounded-lg border max-h-40 overflow-y-auto p-2" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', divideColor: 'rgba(70,69,84,0.3)' }}>
+                  <div className="divide-y rounded-lg border max-h-40 overflow-y-auto p-2" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
                     {customRoles.map(role => (
                       <div key={role} className="flex justify-between items-center py-2.5 px-2 hover:bg-white/5 transition-colors rounded">
                         <span className="text-xs font-mono-pm" style={{ color: 'var(--pm-on-surface-variant)' }}>{role}</span>
@@ -519,7 +519,7 @@ export function AdminDashboard({
                   <Users size={18} style={{ color: 'var(--pm-tertiary)' }} />
                   Pending Invitations
                 </h3>
-                <div className="divide-y rounded-lg border max-h-[220px] overflow-y-auto p-4" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', divideColor: 'rgba(70,69,84,0.3)' }}>
+                <div className="divide-y rounded-lg border max-h-[220px] overflow-y-auto p-4" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
                   {invitations.map(inv => (
                     <div key={inv.id} className="flex justify-between items-center py-3 hover:bg-white/5 transition-colors rounded px-2">
                       <div className="flex flex-col">

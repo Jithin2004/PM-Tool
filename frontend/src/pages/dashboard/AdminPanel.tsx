@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
-import { AdminDashboard } from '../../components/admin/AdminDashboard';
 import { CalendarIntelligencePanel } from '../../components/admin/CalendarIntelligencePanel';
 import { hasCapability } from '../../core/auth/permissions';
 import { Icon } from '../../components/ui/Icon';
@@ -219,8 +218,8 @@ export function AdminPanel() {
                                 >
                                   <option value="viewer">Viewer</option>
                                   <option value="developer">Developer</option>
-                                  <option value="manager">Project Manager</option>
-                                  <option value="admin">Admin</option>
+                                  <option value="pm">Project Manager</option>
+                                  <option value="super_admin">Super Admin</option>
                                 </select>
                               </div>
                             )}
@@ -286,8 +285,8 @@ export function AdminPanel() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {/* Create Team */}
               <div 
-                className="pm-card p-7 group relative overflow-hidden cursor-pointer"
-                onClick={() => document.getElementById('admin-dashboard-view')?.scrollIntoView({ behavior: 'smooth' })}>
+                className="pm-card p-7 group relative overflow-hidden"
+              >
                 <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all"
                   style={{ background: 'rgba(192,193,255,0.08)' }} />
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-transform group-hover:scale-105"
@@ -307,8 +306,8 @@ export function AdminPanel() {
 
               {/* Designations */}
               <div 
-                className="pm-card p-7 group relative overflow-hidden cursor-pointer"
-                onClick={() => document.getElementById('admin-dashboard-view')?.scrollIntoView({ behavior: 'smooth' })}>
+                className="pm-card p-7 group relative overflow-hidden"
+              >
                 <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all"
                   style={{ background: 'rgba(195,198,213,0.05)' }} />
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-transform group-hover:scale-105"
@@ -370,22 +369,7 @@ export function AdminPanel() {
             </div>
           </div>
 
-          {/* Full AdminDashboard for advanced controls */}
-          <div id="admin-dashboard-view" className="rounded-xl overflow-hidden"
-            style={{ border: '1px solid rgba(70,69,84,0.3)' }}>
-            <AdminDashboard
-              profiles={activeProfiles}
-              teams={activeTeams}
-              currentUserRole={profile?.role}
-              systemData={systemData}
-              onSaveSystemData={handleSaveLogisticsData}
-              askConfirmation={askConfirmation}
-              onUpdateRole={handleUpdateRole}
-              onCreateTeam={handleCreateTeam}
-              onUpdateTeam={handleUpdateTeam}
-              onDeleteTeam={handleDeleteTeam}
-            />
-          </div>
+
         </div>
       )}
 
@@ -437,7 +421,6 @@ export function AdminPanel() {
               onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = ''; }}
               onClick={() => {
                 setTab('identity');
-                setTimeout(() => document.getElementById('admin-dashboard-view')?.scrollIntoView({ behavior: 'smooth' }), 100);
               }}>
               <Icon name="add_circle" size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
               <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em] font-bold"
