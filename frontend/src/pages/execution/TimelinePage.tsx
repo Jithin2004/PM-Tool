@@ -1,22 +1,12 @@
 import React from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useDashboard } from '../../context/DashboardContext';
-import { ExecutionSystem } from '../../components/execution/system/ExecutionSystem';
+import { CalendarView } from '../../components/calendar/CalendarView';
 
 export default function TimelinePage() {
-  const { profile } = useAuth();
-  const { projects, profiles, notify, fetchProjects } = useDashboard();
-
   return (
-    <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 h-screen flex flex-col">
-      <ExecutionSystem
-        projects={projects}
-        users={profiles}
-        currentUserProfile={profile}
-        notify={notify}
-        onRecalibrateAnalytics={() => fetchProjects()}
-        initialView="timeline"
-      />
+    <main className="max-w-[1600px] mx-auto h-screen flex flex-col p-4 sm:p-8">
+      <div className="flex-1 rounded-2xl overflow-hidden border border-outline-variant shadow-lg bg-surface">
+        <CalendarView />
+      </div>
     </main>
   );
 }
