@@ -28,7 +28,7 @@ export const SIDEBAR_NAV: SidebarNavItem[] = [
   { id: 'scheduling', label: 'Scheduling', path: '/execution/timeline', group: 'core', capability: 'view_scheduling', disclosureTier: 'operational' },
   { id: 'analytics', label: 'Analytics', path: '/control/analytics', group: 'intelligence', capability: 'view_analytics', disclosureTier: 'intelligence' },
   { id: 'decisions', label: 'Decision Center', path: '/workspace/decisions', group: 'intelligence', capability: 'view_decision_center', disclosureTier: 'intelligence' },
-  { id: 'reports', label: 'Reports', path: '/resources/work-logs', group: 'intelligence', capability: 'view_reports', disclosureTier: 'intelligence' },
+  { id: 'work-logs', label: 'Work Logs', path: '/resources/work-logs', group: 'operations', capability: 'view_reports', disclosureTier: 'operational' },
   { id: 'logistics', label: 'Logistics', path: '/resources', group: 'operations', capability: 'manage_logistics', disclosureTier: 'operational' },
   { id: 'teams', label: 'Team Roster', path: '/resources/teams', group: 'operations', capability: 'view_teams', disclosureTier: 'operational' },
   { id: 'portfolio', label: 'Project Sponsors', path: '/workspace/portfolio', group: 'operations', capability: 'view_stakeholders', disclosureTier: 'intelligence' },

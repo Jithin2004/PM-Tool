@@ -21,37 +21,51 @@ import { normalizePath, parseProjectRoute, isRegisteredPath } from './routeRegis
 
 // ── Lazy-loaded route pages ──
 
-const OverviewPage = lazy(() => import('../pages/dashboard/OverviewPage'));
-const ProjectsPage = lazy(() => import('../pages/workspace/ProjectsPage'));
-const PortfolioPage = lazy(() => import('../pages/workspace/PortfolioPage'));
-const KnowledgePage = lazy(() => import('../pages/workspace/KnowledgePage'));
-const DecisionsPage = lazy(() => import('../pages/workspace/DecisionsPage'));
+const withRetry = (componentImport: () => Promise<any>) => {
+  return lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error: any) {
+      console.warn('Failed to load dynamic import:', error);
+      if (error?.message?.includes('Failed to fetch dynamically imported module')) {
+        window.location.reload();
+      }
+      return { default: () => <RouteFallback /> };
+    }
+  });
+};
 
-const BoardPage = lazy(() => import('../pages/execution/BoardPage'));
-const TimelinePage = lazy(() => import('../pages/execution/TimelinePage'));
-const GanttPage = lazy(() => import('../pages/execution/GanttPage'));
-const SprintPage = lazy(() => import('../pages/execution/SprintPage'));
+const OverviewPage = withRetry(() => import('../pages/dashboard/OverviewPage'));
+const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
+const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage'));
+const KnowledgePage = withRetry(() => import('../pages/workspace/KnowledgePage'));
+const DecisionsPage = withRetry(() => import('../pages/workspace/DecisionsPage'));
 
-const TeamsPage = lazy(() => import('../pages/resources/TeamsPage'));
-const CapacityPage = lazy(() => import('../pages/resources/CapacityPage'));
-const WorkLogsPage = lazy(() => import('../pages/resources/WorkLogsPage'));
+const BoardPage = withRetry(() => import('../pages/execution/BoardPage'));
+const TimelinePage = withRetry(() => import('../pages/execution/TimelinePage'));
+const GanttPage = withRetry(() => import('../pages/execution/GanttPage'));
+const SprintPage = withRetry(() => import('../pages/execution/SprintPage'));
 
-const AnalyticsPage = lazy(() => import('../pages/control/AnalyticsPage'));
-const AuditPage = lazy(() => import('../pages/control/AuditPage'));
-const SettingsPage = lazy(() => import('../pages/control/SettingsPage'));
+const TeamsPage = withRetry(() => import('../pages/resources/TeamsPage'));
+const CapacityPage = withRetry(() => import('../pages/resources/CapacityPage'));
+const WorkLogsPage = withRetry(() => import('../pages/resources/WorkLogsPage'));
 
-const DocumentView = lazy(() => import('../pages/dashboard/DocumentView'));
-const AutomationsPanel = lazy(() => import('../pages/dashboard/AutomationsPanel'));
-const ConnectionsPanel = lazy(() => import('../pages/dashboard/ConnectionsPanel'));
-const NotificationSettings = lazy(() => import('../pages/dashboard/NotificationSettings'));
-const ModeSettings = lazy(() => import('../pages/dashboard/ModeSettings'));
-const MissionControlPage = lazy(() => import('../pages/mission-control/MissionControlPage'));
+const AnalyticsPage = withRetry(() => import('../pages/control/AnalyticsPage'));
+const AuditPage = withRetry(() => import('../pages/control/AuditPage'));
+const SettingsPage = withRetry(() => import('../pages/control/SettingsPage'));
 
-const ExecutionSetupPage = lazy(() => import('../pages/setup/ExecutionSetupPage'));
-const BacklogPage = lazy(() => import('../pages/backlog/BacklogPage'));
-const ProjectBoardPage = lazy(() => import('../pages/board/ProjectBoardPage'));
-const ProjectSprintPage = lazy(() => import('../pages/sprints/ProjectSprintPage'));
-const ProjectTimelinePage = lazy(() => import('../pages/timeline/ProjectTimelinePage'));
+const DocumentView = withRetry(() => import('../pages/dashboard/DocumentView'));
+const AutomationsPanel = withRetry(() => import('../pages/dashboard/AutomationsPanel'));
+const ConnectionsPanel = withRetry(() => import('../pages/dashboard/ConnectionsPanel'));
+const NotificationSettings = withRetry(() => import('../pages/dashboard/NotificationSettings'));
+const ModeSettings = withRetry(() => import('../pages/dashboard/ModeSettings'));
+const MissionControlPage = withRetry(() => import('../pages/mission-control/MissionControlPage'));
+
+const ExecutionSetupPage = withRetry(() => import('../pages/setup/ExecutionSetupPage'));
+const BacklogPage = withRetry(() => import('../pages/backlog/BacklogPage'));
+const ProjectBoardPage = withRetry(() => import('../pages/board/ProjectBoardPage'));
+const ProjectSprintPage = withRetry(() => import('../pages/sprints/ProjectSprintPage'));
+const ProjectTimelinePage = withRetry(() => import('../pages/timeline/ProjectTimelinePage'));
 
 const DEFAULT_AUTH_REDIRECT = '/overview';
 
@@ -145,6 +159,7 @@ export function ResolveRouter() {
   ]);
 
   useEffect(() => {
+    /* 
     console.log("[ResolveRouter START] Current state:", {
       pathname,
       workspaceId: workspace?.id,
@@ -156,6 +171,7 @@ export function ResolveRouter() {
       profileHydrating,
       productKeyVerified: isProductKeyVerified()
     });
+    */
   }, [pathname, workspace, user, role, workspaceLoading, authLoading, profileResolved, profileHydrating]);
 
   // ── Public routes ──

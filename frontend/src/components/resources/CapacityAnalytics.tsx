@@ -37,55 +37,61 @@ export function CapacityAnalytics() {
   }, [profiles, tasks, teams]);
 
   return (
-    <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-8">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-8 font-geist" style={{ color: 'var(--pm-on-surface)' }}>
       <div>
-        <h2 className="text-3xl font-medium tracking-tight mb-1">Capacity Analytics</h2>
-        <p className="text-sm text-text-secondary font-mono tracking-tighter">Allocation, utilization, and capacity forecasting</p>
+        <h2 className="text-2xl font-semibold tracking-tight mb-1" style={{ color: 'var(--pm-on-surface)' }}>Capacity Analytics</h2>
+        <p className="text-sm tracking-tight" style={{ color: 'var(--pm-on-surface-variant)' }}>Allocation, utilization, and capacity forecasting</p>
       </div>
 
       {capacityData.overloaded.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 border border-red-500/30 bg-signal-critical-bg text-red-300 text-xs font-mono">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border text-xs font-mono-pm uppercase tracking-widest"
+             style={{ borderColor: 'rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.05)', color: 'var(--pm-error)' }}>
           <AlertTriangle className="w-4 h-4 shrink-0" />
           {capacityData.overloaded.length} team member{capacityData.overloaded.length > 1 ? 's' : ''} exceed{capacityData.overloaded.length === 1 ? 's' : ''} 100% capacity
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="border border-border bg-surface p-5">
-          <p className="text-[10px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Total Capacity</p>
-          <p className="text-2xl font-sans tracking-tight text-signal-info font-bold">{capacityData.totalCapacity}h</p>
+        <div className="glass-panel rounded-xl p-5">
+          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Total Capacity</p>
+          <p className="text-2xl font-bold tracking-tight" style={{ color: '#3b82f6' }}>{capacityData.totalCapacity}h</p>
         </div>
-        <div className="border border-border bg-surface p-5">
-          <p className="text-[10px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Assigned Hours</p>
-          <p className="text-2xl font-sans tracking-tight text-cyan-400 font-bold">{capacityData.totalAssigned}h</p>
+        <div className="glass-panel rounded-xl p-5">
+          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Assigned Hours</p>
+          <p className="text-2xl font-bold tracking-tight" style={{ color: 'var(--pm-tertiary)' }}>{capacityData.totalAssigned}h</p>
         </div>
-        <div className="border border-border bg-surface p-5">
-          <p className="text-[10px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Utilization</p>
-          <p className={`text-2xl font-mono font-bold ${capacityData.utilization > 80 ? 'text-signal-critical' : capacityData.utilization > 50 ? 'text-signal-warning' : 'text-signal-safe'}`}>{capacityData.utilization}%</p>
+        <div className="glass-panel rounded-xl p-5">
+          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Utilization</p>
+          <p className="text-2xl font-mono-pm tracking-widest font-bold"
+             style={{ color: capacityData.utilization > 80 ? 'var(--pm-error)' : capacityData.utilization > 50 ? 'var(--pm-warning)' : 'var(--pm-primary)' }}>
+            {capacityData.utilization}%
+          </p>
         </div>
-        <div className="border border-border bg-surface p-5">
-          <p className="text-[10px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Forecast</p>
-          <p className="text-2xl font-sans tracking-tight text-accent-secondary font-bold">{capacityData.forecast}%</p>
+        <div className="glass-panel rounded-xl p-5">
+          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Forecast</p>
+          <p className="text-2xl font-bold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>{capacityData.forecast}%</p>
         </div>
       </div>
 
-      <div className="border border-border bg-surface p-6">
-        <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4 flex items-center gap-2"><BarChart3 className="w-4 h-4 text-signal-info" /> Team Allocation</h3>
+      <div className="glass-panel rounded-xl p-6">
+        <h3 className="text-sm font-semibold tracking-tight mb-4 flex items-center gap-2" style={{ color: 'var(--pm-on-surface)' }}>
+          <BarChart3 className="w-4 h-4" style={{ color: 'var(--pm-on-surface-variant)' }} /> Team Allocation
+        </h3>
         <div className="space-y-6">
           {capacityData.byTeam.map((team: any) => (
             <div key={team.name}>
-              <p className="text-[10px] font-mono uppercase text-text-tertiary mb-3">{team.name}</p>
+              <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-3" style={{ color: 'var(--pm-on-surface-variant)' }}>{team.name}</p>
               <div className="space-y-3">
                 {team.members.map((m: any) => {
                   const pct = Math.min(100, Math.round((m.hours / m.capacity) * 100));
-                  const barColor = pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-yellow-500' : 'bg-green-500';
+                  const barColor = pct > 80 ? 'var(--pm-error)' : pct > 50 ? 'var(--pm-warning)' : 'var(--pm-primary)';
                   return (
                     <div key={m.name} className="flex items-center gap-3">
-                      <span className="text-[10px] font-mono text-text-secondary w-32 truncate">{m.name}</span>
-                      <div className="flex-1 h-4 bg-white/5 rounded-sm overflow-hidden relative">
-                        <div className={`h-full ${barColor} rounded-sm transition-all`} style={{ width: `${pct}%` }} />
+                      <span className="text-[11px] font-medium w-32 truncate" style={{ color: 'var(--pm-on-surface)' }}>{m.name}</span>
+                      <div className="flex-1 h-2 rounded-full overflow-hidden relative" style={{ background: 'var(--pm-surface-high)' }}>
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: barColor }} />
                       </div>
-                      <span className="text-[10px] font-mono text-text-tertiary w-24 text-right">{m.hours}h / {m.capacity}h</span>
+                      <span className="text-[10px] font-mono-pm uppercase tracking-widest w-24 text-right" style={{ color: 'var(--pm-on-surface-variant)' }}>{m.hours}h / {m.capacity}h</span>
                     </div>
                   );
                 })}
@@ -96,23 +102,29 @@ export function CapacityAnalytics() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="border border-border bg-surface p-5">
-          <p className="text-[10px] font-mono uppercase text-text-tertiary mb-2 flex items-center gap-2"><TrendingUp className="w-3 h-3 text-signal-safe" /> Under-utilized (&lt;50%)</p>
-          <p className="text-lg font-sans tracking-tight text-signal-safe font-bold">{profiles.filter((p: any) => {
+        <div className="glass-panel rounded-xl p-5">
+          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            <TrendingUp className="w-3 h-3" style={{ color: 'var(--pm-primary)' }} /> Under-utilized (&lt;50%)
+          </p>
+          <p className="text-lg font-bold tracking-tight" style={{ color: 'var(--pm-primary)' }}>{profiles.filter((p: any) => {
             const hrs = tasks.filter((t: any) => t.assignee_id === p.id && t.status !== 'done').reduce((s: number, t: any) => s + (t.estimated_hours || 0), 0);
             return hrs > 0 && hrs < 80;
           }).length} members</p>
         </div>
-        <div className="border border-border bg-surface p-5">
-          <p className="text-[10px] font-mono uppercase text-text-tertiary mb-2 flex items-center gap-2"><Target className="w-3 h-3 text-signal-warning" /> At capacity (50-80%)</p>
-          <p className="text-lg font-sans tracking-tight text-signal-warning font-bold">{profiles.filter((p: any) => {
+        <div className="glass-panel rounded-xl p-5">
+          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            <Target className="w-3 h-3" style={{ color: 'var(--pm-warning)' }} /> At capacity (50-80%)
+          </p>
+          <p className="text-lg font-bold tracking-tight" style={{ color: 'var(--pm-warning)' }}>{profiles.filter((p: any) => {
             const hrs = tasks.filter((t: any) => t.assignee_id === p.id && t.status !== 'done').reduce((s: number, t: any) => s + (t.estimated_hours || 0), 0);
             return hrs >= 80 && hrs <= 130;
           }).length} members</p>
         </div>
-        <div className="border border-border bg-surface p-5">
-          <p className="text-[10px] font-mono uppercase text-text-tertiary mb-2 flex items-center gap-2"><AlertTriangle className="w-3 h-3 text-signal-critical" /> Overloaded (&gt;80%)</p>
-          <p className="text-lg font-sans tracking-tight text-signal-critical font-bold">{capacityData.overloaded.length} members</p>
+        <div className="glass-panel rounded-xl p-5">
+          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            <AlertTriangle className="w-3 h-3" style={{ color: 'var(--pm-error)' }} /> Overloaded (&gt;80%)
+          </p>
+          <p className="text-lg font-bold tracking-tight" style={{ color: 'var(--pm-error)' }}>{capacityData.overloaded.length} members</p>
         </div>
       </div>
     </div>

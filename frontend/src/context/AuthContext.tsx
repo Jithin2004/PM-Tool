@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     syncUserRef.current = authUser.id;
 
     const promise = (async () => {
-      console.log("[AuthContext syncProfile START]: user email:", authUser.email, "id:", authUser.id);
+      // console.log("[AuthContext syncProfile START]: user email:", authUser.email, "id:", authUser.id);
 
       try {
         const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
@@ -167,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (data) {
           const profileWithDesignation = rowToProfile(data as Record<string, unknown>);
-          console.log("[AuthContext syncProfile success]: profile set with designation:", profileWithDesignation.designation);
+          // console.log("[AuthContext syncProfile success]: profile set with designation:", profileWithDesignation.designation);
           setProfile(profileWithDesignation);
           lastSyncedUserIdRef.current = authUser.id;
           setProfileResolved(true);
@@ -198,13 +198,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [needsWorkspaceSetup, setNeedsWorkspaceSetup] = useState(false);
 
   const validateUserWorkspace = useCallback(async (authUser: any, currentProfile: User | null) => {
-    console.log("[validateUserWorkspace START]:", { userId: authUser?.id, email: authUser?.email, currentProfile });
+    // console.log("[validateUserWorkspace START]:", { userId: authUser?.id, email: authUser?.email, currentProfile });
     if (!isSupabaseConfigured || !currentProfile) {
       console.log("[validateUserWorkspace SKIP]: not configured or no profile");
       return;
     }
     if (currentProfile.workspace_id) {
-      console.log("[validateUserWorkspace SUCCESS]: user already has workspace_id:", currentProfile.workspace_id);
+      // console.log("[validateUserWorkspace SUCCESS]: user already has workspace_id:", currentProfile.workspace_id);
       setNeedsWorkspaceSetup(false);
       return;
     }
@@ -250,7 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!mounted) return;
         
-        console.log("[AuthContext initAuth getSession resolved]: session:", session ? "FOUND" : "NULL", "user:", session?.user?.email);
+        // console.log("[AuthContext initAuth getSession resolved]: session:", session ? "FOUND" : "NULL", "user:", session?.user?.email);
         setUser(session?.user || null);
         if (session?.user) {
           const syncedProfile = await syncProfile(session.user);
@@ -294,9 +294,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }, 15000);
 
-    console.log("[AuthContext subscribing to onAuthStateChange]");
+    // console.log("[AuthContext subscribing to onAuthStateChange]");
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[AuthContext onAuthStateChange TRIGGERED]: event:", event, "session user:", session?.user?.email);
+      // console.log("[AuthContext onAuthStateChange TRIGGERED]: event:", event, "session user:", session?.user?.email);
       if (!mounted) return;
       
       if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {

@@ -79,7 +79,7 @@ export function TaskCard({
   return (
     <motion.div
       onClick={() => onClick(task)}
-      className={`group relative bg-surface-2 border border-border hover:border-accent-primary/30 transition-all rounded-lg overflow-hidden cursor-pointer shadow-sm hover:shadow-premium ${
+      className={`group relative shrink-0 pm-card task-card overflow-hidden cursor-pointer ${
         isCompact ? 'p-2' : isExecutive ? 'p-5' : 'p-3.5'
       }`}
     >
@@ -116,9 +116,9 @@ export function TaskCard({
 
         {/* Title */}
         <div className="flex justify-between items-start gap-2">
-          <h4 className={`font-semibold text-text-primary leading-snug group-hover:text-accent-primary transition-colors ${
+          <h4 className={`font-semibold leading-snug transition-colors ${
             isCompact ? 'text-[11px]' : isExecutive ? 'text-[13px]' : 'text-[12px]'
-          }`}>
+          }`} style={{ color: 'var(--pm-on-surface)' }}>
             {task.name}
           </h4>
         </div>
@@ -141,7 +141,7 @@ export function TaskCard({
 
         {/* Description */}
         {!isCompact && task.description && (
-          <p className="text-[11px] text-text-secondary leading-relaxed line-clamp-2">
+          <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
             {task.description}
           </p>
         )}
@@ -163,13 +163,13 @@ export function TaskCard({
           )}
 
           {isDrifting && task.status !== 'done' && (
-            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-surface-3 border border-border text-text-secondary shadow-sm">
+            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded shadow-sm" style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface-variant)', border: '1px solid var(--pm-outline-variant)' }}>
               Drift: σ ±{computedDrift.toFixed(1)} Days
             </span>
           )}
 
           {task.story_points && (
-            <span className="text-[10px] font-medium text-text-tertiary bg-surface-3 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface-variant)' }}>
               {task.story_points} SP
             </span>
           )}

@@ -645,7 +645,7 @@ function TimelineView({ tasks, projects, dependencies }: any) {
           <div className="sticky top-0 z-20 flex bg-surface/90 backdrop-blur-md border-b border-border">
             <div className="w-64 shrink-0 p-3 border-r border-border text-[10px] font-bold text-text-tertiary uppercase tracking-widest bg-surface/50">Execution Entity</div>
             <div className="flex">
-              {Array.from({ length: daysCount }).map((_, i) => {
+              {zoom === 'days' ? Array.from({ length: daysCount }).map((_, i) => {
                 const date = new Date(start);
                 date.setDate(date.getDate() + i);
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -660,6 +660,18 @@ function TimelineView({ tasks, projects, dependencies }: any) {
                   >
                     {date.getDate()}
                     <div className="text-[8px] font-medium mt-0.5 opacity-60">{date.toLocaleString('default', { weekday: 'short' })}</div>
+                  </div>
+                );
+              }) : Array.from({ length: Math.ceil(daysCount / 7) }).map((_, i) => {
+                const date = new Date(start);
+                date.setDate(date.getDate() + i * 7);
+                return (
+                  <div 
+                    key={i} 
+                    className="w-32 shrink-0 p-3 border-r border-border-subtle text-[10px] text-center font-bold text-text-tertiary transition-colors"
+                  >
+                    Week {i + 1}
+                    <div className="text-[8px] font-medium mt-0.5 opacity-60">{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
                   </div>
                 );
               })}
@@ -707,8 +719,8 @@ function TimelineView({ tasks, projects, dependencies }: any) {
                               'bg-accent-primary/10 border-accent-primary/20 text-accent-primary'
                             }`}
                             style={{ 
-                              left: `${(offsetDays - 2) * 48}px`, 
-                              width: '144px',
+                              left: zoom === 'days' ? `${(offsetDays - 2) * 48}px` : `${((offsetDays - 2) / 7) * 128}px`, 
+                              width: zoom === 'days' ? '144px' : '64px',
                               transformOrigin: 'left'
                             }}
                           >
@@ -733,8 +745,8 @@ function TimelineView({ tasks, projects, dependencies }: any) {
                             <div 
                               className="absolute h-[1px] bg-signal-critical/30 dashed" 
                               style={{ 
-                                left: `${(offsetDays - 5) * 48}px`, 
-                                width: '144px',
+                                left: zoom === 'days' ? `${(offsetDays - 5) * 48}px` : `${((offsetDays - 5) / 7) * 128}px`, 
+                                width: zoom === 'days' ? '144px' : '64px',
                                 top: '50%'
                               }} 
                             />

@@ -1,9 +1,10 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { Icon } from '../../components/ui/Icon';
+import { supabase } from '../../lib/supabase';
 
 export default function OverviewPage() {
   const { workspace, projects } = useWorkspace() as any;
@@ -11,7 +12,8 @@ export default function OverviewPage() {
   const { profile } = useAuth();
   const { stats, notify } = useDashboard();
   const clockRef = useRef<HTMLSpanElement>(null);
-  const [velocityPeriod, setVelocityPeriod] = React.useState('30D');
+  const [velocityPeriod, setVelocityPeriod] = useState('30D');
+  const [userMap, setUserMap] = useState<Record<string, { full_name: string; avatar_url?: string }>>({});
 
   // ── Metrics ──────────────────────────────────────────────────
   const activeProjectsCount   = projects?.filter((p: any) => p.status !== 'deployed').length || 0;
@@ -26,36 +28,85 @@ export default function OverviewPage() {
 
   // ── Velocity chart data ───────────────────────────────────────
   const velocityPoints = useMemo(() => {
-    let base = totalTasks > 0 ? [30, 45, 38, 60, 52, 75, 68, 85, 72, 90, 78, 95, 96, 92, 98] : [10, 15, 12, 18, 14, 20, 16, 22, 18, 25, 20, 28, 29, 31, 35];
-    if (velocityPeriod === '7D') base = base.slice(-7);
-    else if (velocityPeriod === '30D') base = [...base, ...base.slice(0, 15)]; // Just to make it look different and have 30 items
-    // If '15D', it uses the default 15 items base
-    return base.map((v, idx) => Math.min(100, v + (idx % 3) * 1.5));
-  }, [totalTasks, velocityPeriod]);
+    const days = velocityPeriod === '7D' ? 7 : velocityPeriod === '15D' ? 15 : 30;
+    const points: number[] = Array(days).fill(0);
+    
+    if (completedTasks && completedTasks.length > 0) {
+      const now = new Date();
+      now.setHours(23, 59, 59, 999);
+      
+      completedTasks.forEach((t: any) => {
+        const dateStr = t.updated_at || t.created_at;
+        if (!dateStr) return;
+        const d = new Date(dateStr);
+        const diffTime = now.getTime() - d.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays >= 0 && diffDays < days) {
+          points[days - 1 - diffDays] += (t.estimated_hours || 1);
+        }
+      });
+    }
+    
+    const maxVal = Math.max(10, ...points);
+    return { points, maxVal };
+  }, [completedTasks, velocityPeriod]);
 
   const svgPath = useMemo(() => {
     const w = 800, h = 200;
-    const pts = velocityPoints.map((v, i) => ({
-      x: (i / (velocityPoints.length - 1)) * w,
-      y: h - (v / 100) * h,
+    const { points, maxVal } = velocityPoints;
+    
+    const pts = points.map((v, i) => ({
+      x: (i / Math.max(1, points.length - 1)) * w,
+      y: h - (v / maxVal) * (h * 0.8), // leave 20% padding at top
     }));
-    const d = pts.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(' ');
-    return { line: d, fill: `${d} V${h} H0 Z`, pts };
+    
+    let d = `M${pts[0].x},${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      const p0 = pts[i - 1];
+      const p1 = pts[i];
+      const cx1 = p0.x + (p1.x - p0.x) / 3;
+      const cy1 = p0.y;
+      const cx2 = p1.x - (p1.x - p0.x) / 3;
+      const cy2 = p1.y;
+      d += ` C${cx1},${cy1} ${cx2},${cy2} ${p1.x},${p1.y}`;
+    }
+    
+    return { line: d, fill: `${d} V${h} H0 Z`, pts, maxVal };
   }, [velocityPoints]);
 
   // ── Recent activity ───────────────────────────────────────────
+  useEffect(() => {
+    if (!workspace?.id) return;
+    supabase.from('users')
+      .select('id, full_name, avatar_url')
+      .eq('workspace_id', workspace.id)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, { full_name: string; avatar_url?: string }> = {};
+          data.forEach(u => map[u.id] = { full_name: u.full_name, avatar_url: u.avatar_url });
+          setUserMap(map);
+        }
+      });
+  }, [workspace?.id]);
+
   const recentActivity = useMemo(() => {
     return [...(tasks || [])]
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .sort((a, b) => new Date(b.updated_at || b.created_at || Date.now()).getTime() - new Date(a.updated_at || a.created_at || Date.now()).getTime())
       .slice(0, 5)
-      .map((t: any) => ({
-        id: `task-${t.id}`,
-        title: t.name,
-        time: new Date(t.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-        status: t.status,
-        risk: t.risk,
-      }));
-  }, [tasks]);
+      .map((t: any) => {
+        const actorId = t.updated_by || t.created_by || t.assignee_id || t.assigneeId;
+        const actor = actorId ? userMap[actorId] : null;
+        return {
+          id: `task-${t.id}`,
+          title: t.name,
+          time: new Date(t.updated_at || t.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+          status: t.status,
+          risk: t.risk,
+          actorName: actor?.full_name || 'System',
+        };
+      });
+  }, [tasks, userMap]);
 
   const upcomingDeadlines = useMemo(() =>
     [...(projects || [])]
@@ -224,9 +275,11 @@ export default function OverviewPage() {
               ))}
             </svg>
             {/* Y axis labels */}
-            <div className="absolute left-0 inset-y-0 flex flex-col justify-between pointer-events-none">
-              {['100%', '75%', '50%', '25%', '0%'].map(l => (
-                <span key={l} className="font-mono-pm text-[9px]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>{l}</span>
+            <div className="absolute left-0 inset-y-0 flex flex-col justify-between pointer-events-none pb-[20%]">
+              {['100%', '75%', '50%', '25%', '0%'].map((l, i) => (
+                <span key={l} className="font-mono-pm text-[9px]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
+                  {i === 0 ? Math.round(svgPath.maxVal) : Math.round(svgPath.maxVal * (1 - i * 0.25))}
+                </span>
               ))}
             </div>
           </div>
@@ -319,6 +372,10 @@ export default function OverviewPage() {
                     <span className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)' }}>{ev.time} UTC</span>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                      by <span className="font-semibold text-[11px]" style={{ color: 'var(--pm-on-surface)' }}>{ev.actorName.split(' ')[0]}</span>
+                    </span>
+                    <span className="w-1 h-1 rounded-full bg-white/20" />
                     <span className="font-mono-pm text-[10px] uppercase"
                       style={{ color: ev.status === 'done' ? '#34d399' : ev.status === 'in_progress' ? 'var(--pm-primary)' : 'var(--pm-on-surface-variant)' }}>
                       {ev.status?.replace('_', ' ')}
@@ -335,7 +392,12 @@ export default function OverviewPage() {
               </p>
             )}
           </div>
-          <button className="mt-4 font-mono-pm text-[10px] uppercase tracking-widest transition-colors hover:opacity-100"
+          <button 
+            onClick={() => {
+              window.history.pushState(null, '', '/workspace/decisions');
+              window.dispatchEvent(new Event('popstate'));
+            }}
+            className="mt-4 font-mono-pm text-[10px] uppercase tracking-widest transition-colors hover:opacity-100"
             style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
             View full decision log →
           </button>

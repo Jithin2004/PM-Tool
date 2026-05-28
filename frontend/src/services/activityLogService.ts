@@ -112,8 +112,21 @@ export const activityLogService = {
   },
 
   async getPreviousHash(workspaceId: string): Promise<string> {
-    // Disabled hashing logic to prevent 'PGRST204' schema cache errors
-    return 'GENESIS_BLOCK';
+    if (!isSupabaseConfigured) return 'GENESIS_BLOCK';
+    try {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('hash')
+        .eq('workspace_id', workspaceId)
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+        
+      if (error || !data) return 'GENESIS_BLOCK';
+      return data.hash || 'GENESIS_BLOCK';
+    } catch (e) {
+      return 'GENESIS_BLOCK';
+    }
   },
 
   async computeHash(entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash'>, previousHash: string, createdAt?: string): Promise<string> {
@@ -277,6 +290,11 @@ export const activityLogService = {
 
       // Non-genesis hash mismatch = real corruption
       if (log.previous_hash !== currentPrevHash) {
+        if (log.previous_hash === 'GENESIS_BLOCK') {
+           // Soft reset due to the disabled hashing period
+           currentPrevHash = log.hash!;
+           continue;
+        }
         if (!broken) { broken = true; firstBad = i; }
         continue;
       }
@@ -325,6 +343,10 @@ export const activityLogService = {
         continue;
       }
       if (log.previous_hash !== currentPrevHash) {
+        if (log.previous_hash === 'GENESIS_BLOCK') {
+          currentPrevHash = log.hash!;
+          continue;
+        }
         return { valid: false, brokenIndex: i, severity: 'critical', reason: `Hash mismatch at index ${i}` };
       }
       const recomputed = await this.computeHash(log, log.previous_hash!);

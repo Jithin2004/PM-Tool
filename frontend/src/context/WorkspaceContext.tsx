@@ -69,7 +69,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [profile?.workspace_id]);
 
   useEffect(() => {
-    console.log("[WorkspaceContext useEffect TRIGGERED]: authLoading:", authLoading, "profile:", profile ? profile.email : "null");
+    // console.log("[WorkspaceContext useEffect TRIGGERED]: authLoading:", authLoading, "profile:", profile ? profile.email : "null");
     if (authLoading) {
       setLoading(true);
       return;
@@ -91,7 +91,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Align active user with profile identity
-    console.log("[WorkspaceContext]: setting user to profile:", profile.email);
+    // console.log("[WorkspaceContext]: setting user to profile:", profile.email);
     setUser(profile as any);
 
     if (!profile.workspace_id) {
@@ -101,13 +101,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    console.log("[WorkspaceContext]: profile workspace_id found:", profile.workspace_id, "loading workspace row...");
+    // console.log("[WorkspaceContext]: profile workspace_id found:", profile.workspace_id, "loading workspace row...");
     setLoading(true);
     let active = true;
 
     const loadWorkspace = async () => {
       try {
-        console.log("[WorkspaceContext loadWorkspace querying workspaces table for id]:", profile.workspace_id);
+        // console.log("[WorkspaceContext loadWorkspace querying workspaces table for id]:", profile.workspace_id);
         const { data: workspaceRow, error: workspaceError } = await supabase
           .from('workspaces')
           .select('*')

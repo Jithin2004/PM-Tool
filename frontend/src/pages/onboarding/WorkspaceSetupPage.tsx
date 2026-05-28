@@ -221,13 +221,13 @@ export function WorkspaceSetupPage() {
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
         {/* Main Form Section */}
         <section 
-          className="border rounded-2xl bg-surface-2 p-8 shadow-premium animate-in fade-in slide-in-from-bottom-3 duration-300"
-          style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+          className="glass-panel rounded-2xl p-8 shadow-premium animate-in fade-in slide-in-from-bottom-3 duration-300 font-geist"
+          style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
         >
           <div className="mb-8 flex items-center justify-between border-b pb-5" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
             <div>
-              <p className="text-[10px] font-mono-pm uppercase tracking-[0.25em] text-text-tertiary">Initialization Phase {step} of 7</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">
+              <p className="text-[10px] font-mono-pm uppercase tracking-[0.25em]" style={{ color: 'var(--pm-on-surface-variant)' }}>Initialization Phase {step} of 7</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
                 {step <= 5 ? 'Configure Workspace Environment' : step === 6 ? 'Assemble Unit Members' : 'Workspace Foundations Complete'}
               </h2>
             </div>
@@ -242,29 +242,33 @@ export function WorkspaceSetupPage() {
 
           {step === 1 && (
             <div className="space-y-6">
-              <label className="block text-xs uppercase font-mono-pm tracking-widest text-text-secondary mb-1">
+              <label className="block text-xs uppercase font-mono-pm tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
                 Workspace Designation
                 <input
                   value={workspaceName}
                   onChange={event => setWorkspaceName(event.target.value)}
-                  className="mt-2.5 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary outline-none focus:border-accent-primary/60 transition-all font-sans"
-                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                  className="mt-2.5 h-11 w-full border rounded-lg px-4 text-sm outline-none transition-all font-sans focus:border-[var(--pm-primary)]"
+                  style={{ borderColor: 'rgba(70,69,84,0.3)', background: 'var(--pm-surface-low)', color: 'var(--pm-on-surface)' }}
                   placeholder="e.g. ALPHA_PM_WORKSPACE"
                 />
               </label>
 
               <div>
-                <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest text-text-secondary">Operational Domain</label>
+                <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Operational Domain</label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {BUSINESS_TYPES.map(type => (
                     <button
                       key={type}
                       onClick={() => setSettings(prev => ({ ...prev, businessType: type as BusinessType }))}
-                      className={`border rounded-xl px-4 py-3.5 text-left text-xs transition-all font-sans ${settings.businessType === type ? 'border-accent-primary bg-accent-primary/10 text-text-primary shadow-sm' : 'bg-surface-lowest text-text-secondary hover:border-white/20'}`}
-                      style={{ borderColor: settings.businessType === type ? '' : 'rgba(70,69,84,0.2)' }}
+                      className={`border rounded-xl px-4 py-3.5 text-left text-xs transition-all font-sans`}
+                      style={{ 
+                        borderColor: settings.businessType === type ? 'var(--pm-primary)' : 'rgba(70,69,84,0.2)',
+                        background: settings.businessType === type ? 'rgba(192, 193, 255, 0.1)' : 'var(--pm-surface-lowest)',
+                        color: settings.businessType === type ? 'var(--pm-primary)' : 'var(--pm-on-surface)'
+                      }}
                     >
                       <div className="flex items-center gap-2">
-                        <span className={`w-1.5 h-1.5 rounded-full ${settings.businessType === type ? 'bg-accent-primary' : 'bg-text-tertiary'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${settings.businessType === type ? 'bg-[var(--pm-primary)]' : 'bg-[var(--pm-on-surface-variant)]'}`} />
                         <span className="font-semibold">{type}</span>
                       </div>
                     </button>
@@ -272,7 +276,7 @@ export function WorkspaceSetupPage() {
                 </div>
               </div>
 
-              <label className="block text-xs uppercase font-mono-pm tracking-widest text-text-secondary mb-1">
+              <label className="block text-xs uppercase font-mono-pm tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
                 Regional Jurisdiction <span className="text-signal-critical">*</span>
                 <select
                   value={settings.country || ''}
@@ -281,8 +285,8 @@ export function WorkspaceSetupPage() {
                     setIgnoredHolidayDates(new Set());
                     setPreviewHolidays([]);
                   }}
-                  className="mt-2.5 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary outline-none focus:border-accent-primary/60 transition-all font-sans"
-                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                  className="mt-2.5 h-11 w-full border rounded-lg px-4 text-sm outline-none transition-all font-sans focus:border-[var(--pm-primary)]"
+                  style={{ borderColor: 'rgba(70,69,84,0.3)', background: 'var(--pm-surface-low)', color: 'var(--pm-on-surface)' }}
                 >
                   <option value="">Select country</option>
                   {COUNTRIES.map(c => (
@@ -620,7 +624,8 @@ export function WorkspaceSetupPage() {
                   setStep(prev => prev + 1);
                 }}
                 disabled={(step === 2 && !selectedTemplate) || (step === 4 && !settings.country)}
-                className="rounded-lg bg-text-primary text-bg hover:bg-neutral-200 transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md disabled:opacity-50"
+                className="rounded-lg transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md disabled:opacity-50"
+                style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}
               >
                 {step === 4 ? 'Skip Preview' : 'Next'}
               </button>
@@ -630,7 +635,8 @@ export function WorkspaceSetupPage() {
               <button 
                 disabled={saving} 
                 onClick={saveWorkspace} 
-                className="rounded-lg bg-text-primary text-bg hover:bg-neutral-200 transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md disabled:opacity-50"
+                className="rounded-lg transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md disabled:opacity-50"
+                style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}
               >
                 {saving ? 'Saving...' : 'Save Workspace'}
               </button>
@@ -639,7 +645,8 @@ export function WorkspaceSetupPage() {
             {step === 6 && (
               <button 
                 onClick={() => setStep(7)} 
-                className="rounded-lg bg-text-primary text-bg hover:bg-neutral-200 transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md"
+                className="rounded-lg transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md"
+                style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}
               >
                 {invites.length > 0 ? 'Continue' : 'Skip'}
               </button>
@@ -648,7 +655,8 @@ export function WorkspaceSetupPage() {
             {step === 7 && (
               <button 
                 onClick={() => navigate('/')} 
-                className="rounded-lg bg-text-primary text-bg hover:bg-neutral-200 transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md"
+                className="rounded-lg transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md"
+                style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}
               >
                 Go to Dashboard
               </button>
@@ -656,36 +664,35 @@ export function WorkspaceSetupPage() {
           </div>
         </section>
 
-        {/* Prediction Preview Sidebar */}
         <aside 
-          className="border rounded-2xl bg-surface-2 p-8 shadow-premium h-fit space-y-6"
-          style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+          className="glass-panel rounded-2xl p-8 shadow-premium h-fit space-y-6 font-geist"
+          style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
         >
           <div>
-            <p className="text-[10px] font-mono-pm uppercase tracking-[0.25em] text-text-tertiary">Operational Forecaster</p>
-            <h3 className="mt-2.5 text-sm font-semibold tracking-tight text-text-primary uppercase">Estimated Capacity ETA</h3>
+            <p className="text-[10px] font-mono-pm uppercase tracking-[0.25em]" style={{ color: 'var(--pm-on-surface-variant)' }}>Operational Forecaster</p>
+            <h3 className="mt-2.5 text-sm font-semibold tracking-tight uppercase" style={{ color: 'var(--pm-on-surface)' }}>Estimated Capacity ETA</h3>
           </div>
           
-          <div className="bg-surface-lowest border rounded-xl p-5 space-y-1 text-center" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
-            <span className="block text-[9px] font-mono-pm uppercase text-text-tertiary">40h Initiative Completion</span>
-            <span className="block mt-1 text-2xl font-bold tracking-tight text-accent-secondary">{preview.predictedCompletion.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          <div className="border rounded-xl p-5 space-y-1 text-center" style={{ borderColor: 'rgba(70,69,84,0.2)', background: 'var(--pm-surface-low)' }}>
+            <span className="block text-[9px] font-mono-pm uppercase" style={{ color: 'var(--pm-on-surface-variant)' }}>40h Initiative Completion</span>
+            <span className="block mt-1 text-2xl font-bold tracking-tight" style={{ color: 'var(--pm-tertiary)' }}>{preview.predictedCompletion.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
           </div>
 
-          <dl className="space-y-3.5 text-xs text-text-secondary border-t pt-4" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
-            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Daily Allotment</dt><dd className="font-semibold text-text-primary">{preview.dailyCapacityHours}h</dd></div>
-            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Ingested Risk</dt><dd className="capitalize font-semibold text-text-primary">{preview.risk}</dd></div>
-            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Confidence Factor</dt><dd className="font-semibold text-text-primary">{preview.confidence}%</dd></div>
-            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Workspace Designation</dt><dd className="truncate max-w-[150px] font-semibold text-text-primary">{workspaceName || 'ALPHA_DEFAULT'}</dd></div>
+          <dl className="space-y-3.5 text-xs border-t pt-4" style={{ borderColor: 'rgba(70,69,84,0.15)', color: 'var(--pm-on-surface-variant)' }}>
+            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Daily Allotment</dt><dd className="font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{preview.dailyCapacityHours}h</dd></div>
+            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Ingested Risk</dt><dd className="capitalize font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{preview.risk}</dd></div>
+            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Confidence Factor</dt><dd className="font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{preview.confidence}%</dd></div>
+            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Workspace Designation</dt><dd className="truncate max-w-[150px] font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{workspaceName || 'ALPHA_DEFAULT'}</dd></div>
           </dl>
 
           {selectedTemplate && (
             <div className="border-t pt-5 space-y-3.5" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
-              <p className="text-[9px] font-mono-pm uppercase tracking-[0.2em] text-accent-primary">Workflow Registry</p>
-              <div className="space-y-3 text-xs text-text-secondary">
-                <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Base Template</dt><dd className="text-text-primary font-semibold">{selectedTemplate.name}</dd></div>
-                <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Execution Mode</dt><dd className="text-accent-secondary font-mono text-[10px]">{selectedTemplate.executionMode}</dd></div>
-                <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Telemetry Columns</dt><dd className="font-semibold text-text-primary">{selectedTemplate.lanes} Lanes</dd></div>
-                <div className="flex justify-between items-start"><dt className="font-mono-pm uppercase text-[9px] shrink-0">Team Structure</dt><dd className="text-right text-[11px] text-text-primary font-semibold truncate max-w-[165px]">{selectedTemplate.teamStructure}</dd></div>
+              <p className="text-[9px] font-mono-pm uppercase tracking-[0.2em]" style={{ color: 'var(--pm-primary)' }}>Workflow Registry</p>
+              <div className="space-y-3 text-xs" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Base Template</dt><dd className="font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{selectedTemplate.name}</dd></div>
+                <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Execution Mode</dt><dd className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-tertiary)' }}>{selectedTemplate.executionMode}</dd></div>
+                <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Telemetry Columns</dt><dd className="font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{selectedTemplate.lanes} Lanes</dd></div>
+                <div className="flex justify-between items-start"><dt className="font-mono-pm uppercase text-[9px] shrink-0">Team Structure</dt><dd className="text-right text-[11px] font-semibold truncate max-w-[165px]" style={{ color: 'var(--pm-on-surface)' }}>{selectedTemplate.teamStructure}</dd></div>
               </div>
             </div>
           )}

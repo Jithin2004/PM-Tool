@@ -198,9 +198,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   }, [showGuide]);
 
   const navigateTo = (path: string) => {
-    const target = normalizePath(path);
-    if (import.meta.env.DEV && !isRegisteredPath(target)) {
-      console.error(`[navigateTo] Unregistered path: ${path} (canonical: ${target})`);
+    const queryIdx = path.indexOf('?');
+    const queryPart = queryIdx >= 0 ? path.substring(queryIdx) : '';
+    const normalized = normalizePath(path);
+    const target = normalized + queryPart;
+    if (import.meta.env.DEV && !isRegisteredPath(normalized)) {
+      console.error(`[navigateTo] Unregistered path: ${path} (canonical: ${normalized})`);
     }
     window.history.pushState(null, '', target);
     window.dispatchEvent(new CustomEvent('popstate'));
