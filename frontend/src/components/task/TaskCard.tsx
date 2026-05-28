@@ -78,7 +78,6 @@ export function TaskCard({
 
   return (
     <motion.div
-      layoutId={`task-card-${task.id}`}
       onClick={() => onClick(task)}
       className={`group relative bg-surface-2 border border-border hover:border-accent-primary/30 transition-all rounded-lg overflow-hidden cursor-pointer shadow-sm hover:shadow-premium ${
         isCompact ? 'p-2' : isExecutive ? 'p-5' : 'p-3.5'

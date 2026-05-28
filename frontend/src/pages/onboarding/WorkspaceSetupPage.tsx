@@ -217,52 +217,63 @@ export function WorkspaceSetupPage() {
   };
 
   return (
-    <ResolveLayout eyebrow="Workspace Setup">
-      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-        <section className="border border-border bg-surface-3 p-6">
-          <div className="mb-6 flex items-center justify-between">
+    <ResolveLayout eyebrow="Workspace Initialization">
+      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+        {/* Main Form Section */}
+        <section 
+          className="border rounded-2xl bg-surface-2 p-8 shadow-premium animate-in fade-in slide-in-from-bottom-3 duration-300"
+          style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+        >
+          <div className="mb-8 flex items-center justify-between border-b pb-5" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
             <div>
-              <p className="text-xs font-mono uppercase tracking-[0.2em] text-text-tertiary">Step {step} of 7</p>
-              <h2 className="mt-2 text-2xl font-semibold">
-                {step <= 5 ? 'Set up your workspace' : step === 6 ? 'Invite your team' : 'Create your first project'}
+              <p className="text-[10px] font-mono-pm uppercase tracking-[0.25em] text-text-tertiary">Initialization Phase {step} of 7</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">
+                {step <= 5 ? 'Configure Workspace Environment' : step === 6 ? 'Assemble Unit Members' : 'Workspace Foundations Complete'}
               </h2>
             </div>
           </div>
 
           {(localError || error) && (
-            <div className="mb-5 border border-red-500/30 bg-signal-critical-bg p-3 text-sm text-red-200">
-              {localError || error}
+            <div className="mb-6 border border-red-500/20 bg-signal-critical-bg/30 p-4 text-xs font-mono-pm text-red-200 rounded-lg flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+              <span>{localError || error}</span>
             </div>
           )}
 
           {step === 1 && (
             <div className="space-y-6">
-              <label className="block text-sm font-medium">
-                Workspace Name
+              <label className="block text-xs uppercase font-mono-pm tracking-widest text-text-secondary mb-1">
+                Workspace Designation
                 <input
                   value={workspaceName}
                   onChange={event => setWorkspaceName(event.target.value)}
-                  className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none focus:border-white/40"
+                  className="mt-2.5 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary outline-none focus:border-accent-primary/60 transition-all font-sans"
+                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                  placeholder="e.g. ALPHA_PM_WORKSPACE"
                 />
               </label>
 
               <div>
-                <label className="mb-3 block text-sm font-medium">Business Type</label>
+                <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest text-text-secondary">Operational Domain</label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {BUSINESS_TYPES.map(type => (
                     <button
                       key={type}
                       onClick={() => setSettings(prev => ({ ...prev, businessType: type as BusinessType }))}
-                      className={`border px-4 py-3 text-left text-sm transition-colors ${settings.businessType === type ? 'border-accent-primary bg-accent-primary/10 text-text-primary' : 'border-border bg-white/5 text-text-secondary hover:border-white/25'}`}
+                      className={`border rounded-xl px-4 py-3.5 text-left text-xs transition-all font-sans ${settings.businessType === type ? 'border-accent-primary bg-accent-primary/10 text-text-primary shadow-sm' : 'bg-surface-lowest text-text-secondary hover:border-white/20'}`}
+                      style={{ borderColor: settings.businessType === type ? '' : 'rgba(70,69,84,0.2)' }}
                     >
-                      {type}
+                      <div className="flex items-center gap-2">
+                        <span className={`w-1.5 h-1.5 rounded-full ${settings.businessType === type ? 'bg-accent-primary' : 'bg-text-tertiary'}`} />
+                        <span className="font-semibold">{type}</span>
+                      </div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <label className="block text-sm font-medium">
-                Country <span className="text-signal-critical">*</span>
+              <label className="block text-xs uppercase font-mono-pm tracking-widest text-text-secondary mb-1">
+                Regional Jurisdiction <span className="text-signal-critical">*</span>
                 <select
                   value={settings.country || ''}
                   onChange={event => {
@@ -270,7 +281,8 @@ export function WorkspaceSetupPage() {
                     setIgnoredHolidayDates(new Set());
                     setPreviewHolidays([]);
                   }}
-                  className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none focus:border-white/40"
+                  className="mt-2.5 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary outline-none focus:border-accent-primary/60 transition-all font-sans"
+                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                 >
                   <option value="">Select country</option>
                   {COUNTRIES.map(c => (
@@ -283,10 +295,10 @@ export function WorkspaceSetupPage() {
 
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-sm text-text-secondary">
-                Choose a workflow template for <strong>{settings.businessType}</strong>. This sets up your first board with the appropriate structure.
+              <p className="text-xs text-text-tertiary leading-relaxed mb-4">
+                Select a baseline workflow architecture optimized for <strong>{settings.businessType}</strong>. This instantiates your primary kanban/scrum execution structures.
               </p>
-              <div className="grid gap-3 max-h-[420px] overflow-y-auto pr-1">
+              <div className="grid gap-3.5 max-h-[440px] overflow-y-auto pr-1 scrollbar-thin">
                 {templateOptions.map(tpl => {
                   const isSelected = selectedTemplate?.id === tpl.id;
                   return (
@@ -302,37 +314,33 @@ export function WorkspaceSetupPage() {
                           workflowRules: { ceremonies: tpl.ceremonies, teamStructure: tpl.teamStructure }
                         }));
                       }}
-                      className={`w-full text-left border p-4 transition-all ${isSelected ? 'border-accent-primary bg-accent-primary/5' : 'border-border bg-white/5 hover:border-white/25'}`}
+                      className={`w-full text-left border rounded-2xl p-5 transition-all shadow-sm hover:shadow-premium ${isSelected ? 'border-accent-primary bg-accent-primary/5' : 'bg-surface-lowest hover:border-white/20'}`}
+                      style={{ borderColor: isSelected ? '' : 'rgba(70,69,84,0.2)' }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h4 className="text-base font-semibold">{tpl.name}</h4>
-                          <p className="mt-1 text-xs text-text-tertiary leading-relaxed">{tpl.description}</p>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-border px-2 py-0.5 text-text-secondary">
+                          <h4 className="text-sm font-semibold tracking-tight text-text-primary">{tpl.name}</h4>
+                          <p className="mt-1.5 text-xs text-text-tertiary leading-relaxed">{tpl.description}</p>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider border px-2 py-0.5 text-text-secondary bg-surface-2" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
                               <Layers className="w-3 h-3" />{tpl.lanes} lanes
                             </span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-border px-2 py-0.5 text-text-secondary">
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider border px-2 py-0.5 text-text-secondary bg-surface-2" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
                               <GitBranch className="w-3 h-3" />{tpl.executionMode}
                             </span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider border border-border px-2 py-0.5 text-text-secondary">
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider border px-2 py-0.5 text-text-secondary bg-surface-2" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
                               <Users className="w-3 h-3" />{tpl.teamStructure}
                             </span>
                           </div>
                           {tpl.ceremonies.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
+                            <div className="mt-2.5 flex flex-wrap gap-1">
                               {tpl.ceremonies.map(c => (
-                                <span key={c} className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 text-accent-secondary/70">{c}</span>
+                                <span key={c} className="text-[8px] font-mono bg-white/5 px-2 py-0.5 rounded text-accent-secondary/70">{c}</span>
                               ))}
                             </div>
                           )}
                         </div>
-                        {isSelected && <BadgeCheck className="w-5 h-5 text-accent-primary shrink-0 mt-1" />}
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {tpl.badges.map(b => (
-                          <span key={b} className="text-[9px] font-mono uppercase tracking-wider bg-white/10 px-2 py-0.5 text-text-tertiary">{b}</span>
-                        ))}
+                        {isSelected && <BadgeCheck className="w-5 h-5 text-accent-primary shrink-0 mt-0.5" />}
                       </div>
                     </button>
                   );
@@ -342,32 +350,33 @@ export function WorkspaceSetupPage() {
           )}
 
           {step === 3 && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-medium">
-                Work Start
-                <input type="time" value={settings.workStart} onChange={event => setSettings(prev => ({ ...prev, workStart: event.target.value }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+                Shift Commencement
+                <input type="time" value={settings.workStart} onChange={event => setSettings(prev => ({ ...prev, workStart: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
               </label>
-              <label className="text-sm font-medium">
-                Work End
-                <input type="time" value={settings.workEnd} onChange={event => setSettings(prev => ({ ...prev, workEnd: event.target.value }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+                Shift Conclusion
+                <input type="time" value={settings.workEnd} onChange={event => setSettings(prev => ({ ...prev, workEnd: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
               </label>
-              <label className="text-sm font-medium">
-                Lunch Duration
-                <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+                Break Duration (Min)
+                <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
               </label>
-              <label className="text-sm font-medium">
-                Timezone
-                <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary" />
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+                Timezone Calibration
+                <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
               </label>
               {(() => {
                 const countryData = getCountryByCode(settings.country || '');
                 return countryData && countryData.states.length > 0 ? (
-                  <label className="text-sm font-medium">
+                  <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
                     State/Region
                     <select
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
-                      className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none focus:border-white/40"
+                      className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary outline-none focus:border-accent-primary/60 transition-all font-sans"
+                      style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                     >
                       <option value="">Select state/region</option>
                       {countryData.states.map(s => (
@@ -376,28 +385,30 @@ export function WorkspaceSetupPage() {
                     </select>
                   </label>
                 ) : (
-                  <label className="text-sm font-medium">
+                  <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
                     State/Region
                     <input
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
                       placeholder="Optional"
-                      className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none"
+                      className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans"
+                      style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                     />
                   </label>
                 );
               })()}
-              <label className="text-sm font-medium">
-                City
+              <label className="text-xs uppercase font-mono-pm tracking-widest text-text-secondary">
+                City / Municipality
                 <input
                   value={settings.city || ''}
                   onChange={event => setSettings(prev => ({ ...prev, city: event.target.value }))}
                   placeholder="Optional"
-                  className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary outline-none"
+                  className="mt-2 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans"
+                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                 />
               </label>
               <div className="sm:col-span-2">
-                <label className="mb-3 block text-sm font-medium">Workdays</label>
+                <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest text-text-secondary">Working Days Checklist</label>
                 <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
                   {WORKDAYS.map(day => {
                     const active = settings.workingDays.includes(day.value);
@@ -405,7 +416,8 @@ export function WorkspaceSetupPage() {
                       <button
                         key={day.value}
                         onClick={() => toggleWorkday(day.value)}
-                        className={`h-10 border text-sm ${active ? 'border-accent-primary bg-accent-primary/10 text-text-primary' : 'border-border bg-white/5 text-text-secondary'}`}
+                        className={`h-10 border rounded-lg text-xs transition-all font-mono-pm ${active ? 'border-accent-primary bg-accent-primary/10 text-text-primary shadow-sm' : 'bg-surface-lowest text-text-secondary hover:border-white/20'}`}
+                        style={{ borderColor: active ? '' : 'rgba(70,69,84,0.2)' }}
                       >
                         {day.label}
                       </button>
@@ -415,11 +427,12 @@ export function WorkspaceSetupPage() {
               </div>
               {settings.workingDays.includes(6) && (
                 <div className="sm:col-span-2">
-                  <label className="mb-3 block text-sm font-medium">Saturday Working Pattern</label>
+                  <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest text-text-secondary">Saturday Coverage Pattern</label>
                   <select
                     value={settings.saturdayRule || 'all'}
                     onChange={event => setSettings(prev => ({ ...prev, saturdayRule: event.target.value as any }))}
-                    className="h-12 w-full border border-border bg-bg px-4 text-text-primary focus:border-white/40 outline-none"
+                    className="h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans"
+                    style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                   >
                     <option value="all">All Saturdays Working</option>
                     <option value="off">All Saturdays Off</option>
@@ -429,39 +442,38 @@ export function WorkspaceSetupPage() {
                   </select>
                 </div>
               )}
-
             </div>
           )}
 
           {step === 4 && (
             <div className="space-y-5">
-              <p className="text-sm text-text-secondary">
-                Review holidays detected for <strong>{settings.country}{settings.region ? ` / ${settings.region}` : ''}</strong>.
-                Uncheck any holidays that do not apply to your workspace. They can be re-enabled later from Settings.
+              <p className="text-xs text-text-tertiary leading-relaxed mb-4">
+                Verify recognized national holidays for <strong>{settings.country}{settings.region ? ` / ${settings.region}` : ''}</strong>. 
+                De-select any events that do not apply to your operating cycles.
               </p>
 
               {previewLoading && (
-                <div className="flex items-center gap-3 py-8 text-sm text-text-tertiary">
+                <div className="flex items-center gap-3 py-12 text-xs font-mono-pm text-text-tertiary justify-center">
                   <div className="h-4 w-4 animate-spin rounded-full border border-white/30 border-t-white" />
-                  Loading holidays...
+                  Calibrating holiday registries...
                 </div>
               )}
 
               {!previewLoading && previewHolidays.length === 0 && settings.country && (
-                <div className="border border-border bg-white/5 p-6 text-center text-sm text-text-tertiary">
-                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40" />
-                  <p>No holidays found for {settings.country}{settings.region ? ` / ${settings.region}` : ''}.</p>
-                  <p className="mt-1 text-xs text-text-quaternary">Holiday coverage is limited to countries with registered providers.</p>
+                <div className="border border-dashed rounded-xl bg-surface-lowest p-8 text-center text-xs text-text-tertiary" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40 text-text-secondary" />
+                  <p className="font-semibold text-text-secondary">No Regional Holidays Located</p>
+                  <p className="mt-1 text-text-quaternary">Holiday import is empty for this country code.</p>
                 </div>
               )}
 
               {!previewLoading && previewHolidays.length > 0 && (
-                <div className="divide-y divide-white/5 border border-border max-h-[360px] overflow-y-auto">
+                <div className="divide-y rounded-xl border max-h-[380px] overflow-y-auto bg-surface-lowest p-2 scrollbar-thin" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
                   {previewHolidays.map(h => {
                     const dateStr = h.date;
                     const isIgnored = ignoredHolidayDates.has(dateStr);
                     return (
-                      <label key={dateStr} className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors cursor-pointer hover:bg-surface-3 ${isIgnored ? 'opacity-40' : ''}`}>
+                      <label key={dateStr} className={`flex items-center gap-3 px-4 py-3 text-xs transition-colors cursor-pointer hover:bg-surface-3 ${isIgnored ? 'opacity-40' : ''}`}>
                         <input
                           type="checkbox"
                           checked={!isIgnored}
@@ -471,16 +483,15 @@ export function WorkspaceSetupPage() {
                               if (next.has(dateStr)) next.delete(dateStr);
                               else next.add(dateStr);
                               return next;
-                              //
                             });
                           }}
-                          className="accent-accent-primary"
+                          className="accent-accent-primary h-4 w-4 rounded"
                         />
                         <div className="flex-1 min-w-0">
-                          <span className="font-medium">{h.name}</span>
-                          <span className="ml-2 text-xs text-text-tertiary">{dateStr}</span>
+                          <span className="font-medium text-text-primary">{h.name}</span>
+                          <span className="ml-2 font-mono text-[10px] text-text-tertiary">{dateStr}</span>
                         </div>
-                        <span className={`text-[10px] font-mono uppercase px-2 py-0.5 border ${h.type === 'public' ? 'border-border text-signal-warning bg-signal-warning-bg' : h.type === 'festival' ? 'border-border text-accent-secondary bg-surface-3' : 'border-border text-signal-info bg-surface-3'}`}>
+                        <span className={`text-[8px] font-mono-pm uppercase px-2 py-0.5 border rounded-sm ${h.type === 'public' ? 'border-amber-500/20 text-amber-300 bg-signal-warning-bg' : h.type === 'festival' ? 'border-purple-500/20 text-purple-300 bg-surface-3' : 'border-blue-500/20 text-blue-300 bg-surface-3'}`}>
                           {h.type}
                         </span>
                       </label>
@@ -490,25 +501,24 @@ export function WorkspaceSetupPage() {
               )}
 
               {!settings.country && (
-                <div className="border border-border bg-white/5 p-6 text-center text-sm text-text-tertiary">
-                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40" />
-                  <p>Select a country in step 1 to preview applicable holidays.</p>
+                <div className="border border-dashed rounded-xl bg-surface-lowest p-8 text-center text-xs text-text-tertiary" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                  <CalendarDays className="mx-auto mb-3 h-8 w-8 opacity-40 text-text-secondary" />
+                  <p>A country selection in Phase 1 is required to ingest holidays.</p>
                 </div>
               )}
 
               {previewHolidays.length > 0 && (
-                <p className="text-xs text-text-quaternary">
-                  {previewHolidays.length - ignoredHolidayDates.size} of {previewHolidays.length} holidays will be imported.
-                  Ignored holidays can be re-enabled later from the Calendar Intelligence panel.
+                <p className="text-[10px] font-mono-pm uppercase text-text-tertiary mt-2">
+                  {previewHolidays.length - ignoredHolidayDates.size} of {previewHolidays.length} holidays set for import.
                 </p>
               )}
             </div>
           )}
 
           {step === 5 && (
-            <div className="space-y-4">
-              <label className="block text-sm font-medium">
-                Productivity Factor
+            <div className="space-y-5">
+              <label className="block text-xs uppercase font-mono-pm tracking-widest text-text-secondary mb-1">
+                Friction / Productivity Factor (Modifier)
                 <input
                   type="number"
                   min={0.1}
@@ -516,17 +526,28 @@ export function WorkspaceSetupPage() {
                   step={0.05}
                   value={settings.productivityFactor}
                   onChange={event => setSettings(prev => ({ ...prev, productivityFactor: Number(event.target.value) || 0.8 }))}
-                  className="mt-2 h-12 w-full border border-border bg-bg px-4 text-text-primary"
+                  className="mt-2.5 h-11 w-full border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary focus:border-accent-primary/60 outline-none transition-all font-sans"
+                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                 />
               </label>
-              <label className="flex items-center justify-between border border-border bg-white/5 p-4">
-                Attendance Enabled
-                <input type="checkbox" checked={settings.attendanceEnabled} onChange={event => setSettings(prev => ({ ...prev, attendanceEnabled: event.target.checked }))} />
-              </label>
-              <label className="flex items-center justify-between border border-border bg-white/5 p-4">
-                Payroll Enabled
-                <input type="checkbox" checked={settings.payrollEnabled} onChange={event => setSettings(prev => ({ ...prev, payrollEnabled: event.target.checked }))} />
-              </label>
+
+              <div className="space-y-3.5">
+                <label className="flex items-center justify-between border rounded-xl p-4.5 transition-all bg-surface-lowest" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                  <div>
+                    <span className="block text-xs uppercase font-mono-pm tracking-widest text-text-primary">Attendance Tracker</span>
+                    <span className="block text-[10px] text-text-tertiary mt-0.5">Automated logging of developer online sessions</span>
+                  </div>
+                  <input type="checkbox" className="accent-accent-primary h-4.5 w-4.5 cursor-pointer" checked={settings.attendanceEnabled} onChange={event => setSettings(prev => ({ ...prev, attendanceEnabled: event.target.checked }))} />
+                </label>
+
+                <label className="flex items-center justify-between border rounded-xl p-4.5 transition-all bg-surface-lowest" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                  <div>
+                    <span className="block text-xs uppercase font-mono-pm tracking-widest text-text-primary">Payroll Ledger</span>
+                    <span className="block text-[10px] text-text-tertiary mt-0.5">Integrate salary calculations and financial telemetry</span>
+                  </div>
+                  <input type="checkbox" className="accent-accent-primary h-4.5 w-4.5 cursor-pointer" checked={settings.payrollEnabled} onChange={event => setSettings(prev => ({ ...prev, payrollEnabled: event.target.checked }))} />
+                </label>
+              </div>
             </div>
           )}
 
@@ -538,50 +559,55 @@ export function WorkspaceSetupPage() {
                   value={inviteEmail}
                   onChange={event => setInviteEmail(event.target.value)}
                   placeholder="teammate@company.com"
-                  className="h-12 flex-1 border border-border bg-bg px-4 text-text-primary outline-none focus:border-white/40"
+                  className="h-11 flex-1 border rounded-lg bg-surface-lowest px-4 text-sm text-text-primary outline-none focus:border-accent-primary/60 transition-all font-sans"
+                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                 />
-                <button onClick={addInvite} className="flex h-12 w-12 items-center justify-center border border-accent-primary bg-accent-primary hover:bg-accent-primary/90 text-white transition-colors cursor-pointer">
-                  <Plus className="h-4 w-4" />
+                <button onClick={addInvite} className="flex h-11 w-11 items-center justify-center rounded-lg bg-text-primary hover:bg-neutral-200 text-bg transition-colors cursor-pointer shadow-sm">
+                  <Plus className="h-4.5 w-4.5" />
                 </button>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
                 {invites.map(email => (
-                  <div key={email} className="flex items-center justify-between border border-border bg-white/5 px-4 py-3 text-sm">
-                    {email}
-                    <button onClick={() => removeInvite(email)} disabled={saving}>
-                      <X className="h-4 w-4 text-text-tertiary" />
+                  <div key={email} className="flex items-center justify-between border rounded-lg bg-surface-lowest px-4.5 py-3 text-xs font-mono-pm" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                    <span>{email}</span>
+                    <button onClick={() => removeInvite(email)} disabled={saving} className="text-text-tertiary hover:text-signal-critical transition-colors">
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
-                {invites.length === 0 && <p className="text-sm text-text-tertiary">No invites added. You can skip this for now.</p>}
+                {invites.length === 0 && <p className="text-xs text-text-tertiary italic p-1">No invites added yet. You can invite team members later.</p>}
               </div>
             </div>
           )}
 
           {step === 7 && (
-            <div className="border border-border bg-bg p-6">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center bg-emerald-500/15 text-emerald-300">
+            <div className="border rounded-xl bg-surface-lowest p-8 text-center space-y-4" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
                 <Check className="h-5 w-5" />
               </div>
-              <h3 className="text-xl font-semibold">Workspace foundation is ready</h3>
-              <p className="mt-3 text-sm leading-6 text-text-tertiary">
-                Your workspace is ready. You can now build projects, delegate tasks, track timelines, and sync offline in real-time.
-              </p>
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight text-text-primary">Workspace Foundations Instantiated</h3>
+                <p className="mt-2 text-xs text-text-tertiary leading-relaxed">
+                  Your team orchestration parameters are now saved. You can initialize delivery units, track sprints, and govern tasks.
+                </p>
+              </div>
               {selectedTemplate && (
-                <div className="mt-4 border border-border bg-white/5 p-3 text-sm">
-                  <span className="text-xs font-mono uppercase tracking-wider text-accent-primary">Template</span>
-                  <p className="mt-1 font-semibold">{selectedTemplate.name}</p>
-                  <p className="text-xs text-text-tertiary mt-0.5">{selectedTemplate.executionMode} · {selectedTemplate.lanes} lanes · {selectedTemplate.teamStructure}</p>
+                <div className="mt-4 border rounded-xl bg-surface-2 p-4 text-left space-y-1.5" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                  <span className="text-[9px] font-mono-pm uppercase tracking-widest text-accent-primary">Workflow Architecture</span>
+                  <p className="text-xs font-semibold text-text-primary">{selectedTemplate.name}</p>
+                  <p className="text-[10px] font-mono text-text-tertiary">{selectedTemplate.executionMode} · {selectedTemplate.lanes} Lanes · {selectedTemplate.teamStructure}</p>
                 </div>
               )}
             </div>
           )}
 
-          <div className="mt-8 flex justify-between">
+          {/* Navigation Controls */}
+          <div className="mt-8 flex justify-between border-t pt-5" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
             <button
               disabled={step === 1 || saving}
               onClick={() => setStep(prev => Math.max(1, prev - 1))}
-              className="border border-border px-4 py-2 text-sm text-text-secondary disabled:opacity-40 cursor-pointer"
+              className="border rounded-lg px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest transition-all text-text-secondary disabled:opacity-40 cursor-pointer"
+              style={{ borderColor: 'rgba(70,69,84,0.3)' }}
             >
               Back
             </button>
@@ -593,50 +619,73 @@ export function WorkspaceSetupPage() {
                   if (step === 4 && !settings.country) return;
                   setStep(prev => prev + 1);
                 }}
-                className={`bg-accent-primary hover:bg-accent-primary/90 px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer ${step === 2 && !selectedTemplate ? 'opacity-40 cursor-not-allowed' : ''} ${step === 4 && !settings.country ? 'opacity-40 cursor-not-allowed' : ''}`}
+                disabled={(step === 2 && !selectedTemplate) || (step === 4 && !settings.country)}
+                className="rounded-lg bg-text-primary text-bg hover:bg-neutral-200 transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md disabled:opacity-50"
               >
                 {step === 4 ? 'Skip Preview' : 'Next'}
               </button>
             )}
 
             {step === 5 && (
-              <button disabled={saving} onClick={saveWorkspace} className="bg-accent-primary hover:bg-accent-primary/90 px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer disabled:opacity-50">
+              <button 
+                disabled={saving} 
+                onClick={saveWorkspace} 
+                className="rounded-lg bg-text-primary text-bg hover:bg-neutral-200 transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md disabled:opacity-50"
+              >
                 {saving ? 'Saving...' : 'Save Workspace'}
               </button>
             )}
 
             {step === 6 && (
-              <button onClick={() => setStep(7)} className="bg-accent-primary hover:bg-accent-primary/90 px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer">
+              <button 
+                onClick={() => setStep(7)} 
+                className="rounded-lg bg-text-primary text-bg hover:bg-neutral-200 transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md"
+              >
                 {invites.length > 0 ? 'Continue' : 'Skip'}
               </button>
             )}
 
             {step === 7 && (
-              <button onClick={() => navigate('/')} className="bg-accent-primary hover:bg-accent-primary/90 px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer">
+              <button 
+                onClick={() => navigate('/')} 
+                className="rounded-lg bg-text-primary text-bg hover:bg-neutral-200 transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md"
+              >
                 Go to Dashboard
               </button>
             )}
           </div>
         </section>
 
-        <aside className="border border-border bg-surface-3 p-6">
-          <p className="text-xs font-mono uppercase tracking-[0.2em] text-text-tertiary">Prediction Preview</p>
-          <h3 className="mt-3 text-lg font-semibold">A 40 hour project finishes around</h3>
-          <p className="mt-4 text-3xl font-semibold">{preview.predictedCompletion.toLocaleDateString()}</p>
-          <dl className="mt-6 space-y-3 text-sm text-text-secondary">
-            <div className="flex justify-between"><dt>Daily capacity</dt><dd>{preview.dailyCapacityHours}h</dd></div>
-            <div className="flex justify-between"><dt>Confidence</dt><dd>{preview.confidence}%</dd></div>
-            <div className="flex justify-between"><dt>Risk</dt><dd className="capitalize">{preview.risk}</dd></div>
-            <div className="flex justify-between"><dt>Workspace</dt><dd>{workspaceName || 'Untitled'}</dd></div>
+        {/* Prediction Preview Sidebar */}
+        <aside 
+          className="border rounded-2xl bg-surface-2 p-8 shadow-premium h-fit space-y-6"
+          style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+        >
+          <div>
+            <p className="text-[10px] font-mono-pm uppercase tracking-[0.25em] text-text-tertiary">Operational Forecaster</p>
+            <h3 className="mt-2.5 text-sm font-semibold tracking-tight text-text-primary uppercase">Estimated Capacity ETA</h3>
+          </div>
+          
+          <div className="bg-surface-lowest border rounded-xl p-5 space-y-1 text-center" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+            <span className="block text-[9px] font-mono-pm uppercase text-text-tertiary">40h Initiative Completion</span>
+            <span className="block mt-1 text-2xl font-bold tracking-tight text-accent-secondary">{preview.predictedCompletion.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          </div>
+
+          <dl className="space-y-3.5 text-xs text-text-secondary border-t pt-4" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
+            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Daily Allotment</dt><dd className="font-semibold text-text-primary">{preview.dailyCapacityHours}h</dd></div>
+            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Ingested Risk</dt><dd className="capitalize font-semibold text-text-primary">{preview.risk}</dd></div>
+            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Confidence Factor</dt><dd className="font-semibold text-text-primary">{preview.confidence}%</dd></div>
+            <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Workspace Designation</dt><dd className="truncate max-w-[150px] font-semibold text-text-primary">{workspaceName || 'ALPHA_DEFAULT'}</dd></div>
           </dl>
+
           {selectedTemplate && (
-            <div className="mt-6 border-t border-border pt-5">
-              <p className="text-xs font-mono uppercase tracking-[0.2em] text-accent-primary">Workflow Template</p>
-              <div className="mt-3 space-y-2 text-sm text-text-secondary">
-                <div className="flex justify-between"><dt>Template</dt><dd className="text-text-primary font-medium">{selectedTemplate.name}</dd></div>
-                <div className="flex justify-between"><dt>Execution Mode</dt><dd className="text-accent-secondary font-mono text-xs">{selectedTemplate.executionMode}</dd></div>
-                <div className="flex justify-between"><dt>Default Lanes</dt><dd>{selectedTemplate.lanes}</dd></div>
-                <div className="flex justify-between items-start"><dt>Team</dt><dd className="text-right text-xs">{selectedTemplate.teamStructure}</dd></div>
+            <div className="border-t pt-5 space-y-3.5" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
+              <p className="text-[9px] font-mono-pm uppercase tracking-[0.2em] text-accent-primary">Workflow Registry</p>
+              <div className="space-y-3 text-xs text-text-secondary">
+                <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Base Template</dt><dd className="text-text-primary font-semibold">{selectedTemplate.name}</dd></div>
+                <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Execution Mode</dt><dd className="text-accent-secondary font-mono text-[10px]">{selectedTemplate.executionMode}</dd></div>
+                <div className="flex justify-between"><dt className="font-mono-pm uppercase text-[9px]">Telemetry Columns</dt><dd className="font-semibold text-text-primary">{selectedTemplate.lanes} Lanes</dd></div>
+                <div className="flex justify-between items-start"><dt className="font-mono-pm uppercase text-[9px] shrink-0">Team Structure</dt><dd className="text-right text-[11px] text-text-primary font-semibold truncate max-w-[165px]">{selectedTemplate.teamStructure}</dd></div>
               </div>
             </div>
           )}

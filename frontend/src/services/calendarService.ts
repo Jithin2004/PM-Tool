@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:5000';
 const CALENDAR_API_URL = `${API_BASE_URL}/api/calendar`;
 
@@ -21,12 +23,9 @@ export interface UpsertParams {
 }
 
 const getHeaders = () => {
-  // Try to find the token in localStorage if user is authenticated
   let token = '';
   try {
-    const raw = localStorage.getItem('sb-resolve-pm-token'); // fallback check if stored manually or auth
-    // Note: the backend uses 'auth' middleware which might expect a Bearer token
-    // If supabase session has a token, we might need to get it from there.
+    const raw = localStorage.getItem('sb-resolve-pm-token');
     const supabaseSessionStr = localStorage.getItem('sb-' + ((import.meta as any).env.VITE_SUPABASE_URL ? new URL((import.meta as any).env.VITE_SUPABASE_URL).hostname.split('.')[0] : '') + '-auth-token');
     if (supabaseSessionStr) {
       const session = JSON.parse(supabaseSessionStr);
@@ -48,63 +47,207 @@ export const calendarService = {
   },
 
   async getEvents(workspaceId: string, startDate: string, endDate: string): Promise<CalendarEvent[]> {
-    const res = await fetch(`${CALENDAR_API_URL}/events?workspace_id=${encodeURIComponent(workspaceId)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`, {
-      headers: getHeaders()
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Failed to fetch events: ${res.statusText}`);
+    try {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .gte('start_date', startDate)
+        .lte('end_date', endDate)
+        .is('deleted_at', null);
+
+      if (error) throw error;
+
+      return (data || []).map(row => ({
+        id: row.id,
+        summary: row.title || row.summary || 'Meeting',
+        description: row.description || '',
+        start: row.start_date,
+        end: row.end_date,
+        sourceType: row.event_type || 'meeting',
+        sourceKey: row.id
+      }));
+    } catch (e) {
+      console.warn('[calendarService] getEvents fallback to REST API', e);
+      const res = await fetch(`${CALENDAR_API_URL}/events?workspace_id=${encodeURIComponent(workspaceId)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`, {
+        headers: getHeaders()
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to fetch events: ${res.statusText}`);
+      }
+      return res.json();
     }
-    return res.json();
   },
 
-  async createEvent(event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
-    const res = await fetch(`${CALENDAR_API_URL}/events`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(event)
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Failed to create event: ${res.statusText}`);
+  async createEvent(event: Omit<CalendarEvent, 'id'> & { workspace_id?: string; event_type?: string }): Promise<CalendarEvent> {
+    try {
+      const dbRow = {
+        workspace_id: event.workspace_id,
+        title: event.summary,
+        description: event.description,
+        start_date: event.start,
+        end_date: event.end,
+        event_type: event.event_type || 'meeting',
+        auto_generated: false
+      };
+
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .insert(dbRow)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id,
+        summary: data.title,
+        description: data.description || '',
+        start: data.start_date,
+        end: data.end_date,
+        sourceType: data.event_type,
+        sourceKey: data.id
+      };
+    } catch (e) {
+      console.warn('[calendarService] createEvent fallback to REST API', e);
+      const res = await fetch(`${CALENDAR_API_URL}/events`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(event)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to create event: ${res.statusText}`);
+      }
+      return res.json();
     }
-    return res.json();
   },
 
   async updateEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent> {
-    const res = await fetch(`${CALENDAR_API_URL}/events/${id}`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify(event)
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Failed to update event: ${res.statusText}`);
+    try {
+      const dbRow: Record<string, any> = {};
+      if (event.summary !== undefined) dbRow.title = event.summary;
+      if (event.description !== undefined) dbRow.description = event.description;
+      if (event.start !== undefined) dbRow.start_date = event.start;
+      if (event.end !== undefined) dbRow.end_date = event.end;
+
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .update(dbRow)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id,
+        summary: data.title,
+        description: data.description || '',
+        start: data.start_date,
+        end: data.end_date,
+        sourceType: data.event_type,
+        sourceKey: data.id
+      };
+    } catch (e) {
+      console.warn('[calendarService] updateEvent fallback to REST API', e);
+      const res = await fetch(`${CALENDAR_API_URL}/events/${id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(event)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to update event: ${res.statusText}`);
+      }
+      return res.json();
     }
-    return res.json();
   },
 
   async deleteEvent(id: string): Promise<void> {
-    const res = await fetch(`${CALENDAR_API_URL}/events/${id}`, {
-      method: 'DELETE',
-      headers: getHeaders()
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Failed to delete event: ${res.statusText}`);
+    try {
+      const { error } = await supabase
+        .from('calendar_events')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (e) {
+      console.warn('[calendarService] deleteEvent fallback to REST API', e);
+      const res = await fetch(`${CALENDAR_API_URL}/events/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to delete event: ${res.statusText}`);
+      }
     }
   },
 
-  async upsertEvent(params: UpsertParams): Promise<CalendarEvent> {
-    const res = await fetch(`${CALENDAR_API_URL}/events/upsert`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(params)
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Failed to upsert event: ${res.statusText}`);
+  async upsertEvent(params: UpsertParams & { workspace_id?: string }): Promise<CalendarEvent> {
+    try {
+      const dbRow = {
+        workspace_id: params.workspace_id,
+        title: params.summary,
+        description: params.description,
+        start_date: params.start,
+        end_date: params.end,
+        event_type: params.sourceType,
+        auto_generated: false
+      };
+
+      // Query if exists
+      const { data: existing } = await supabase
+        .from('calendar_events')
+        .select('id')
+        .eq('workspace_id', params.workspace_id)
+        .eq('title', params.summary)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      let data;
+      if (existing?.id) {
+        const { data: updated, error } = await supabase
+          .from('calendar_events')
+          .update(dbRow)
+          .eq('id', existing.id)
+          .select()
+          .single();
+        if (error) throw error;
+        data = updated;
+      } else {
+        const { data: inserted, error } = await supabase
+          .from('calendar_events')
+          .insert(dbRow)
+          .select()
+          .single();
+        if (error) throw error;
+        data = inserted;
+      }
+
+      return {
+        id: data.id,
+        summary: data.title,
+        description: data.description || '',
+        start: data.start_date,
+        end: data.end_date,
+        sourceType: data.event_type,
+        sourceKey: data.id
+      };
+    } catch (e) {
+      console.warn('[calendarService] upsertEvent fallback to REST API', e);
+      const res = await fetch(`${CALENDAR_API_URL}/events/upsert`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(params)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to upsert event: ${res.statusText}`);
+      }
+      return res.json();
     }
-    return res.json();
   }
 };

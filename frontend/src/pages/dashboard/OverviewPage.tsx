@@ -30,7 +30,7 @@ export default function OverviewPage() {
     if (velocityPeriod === '7D') base = base.slice(-7);
     else if (velocityPeriod === '30D') base = [...base, ...base.slice(0, 15)]; // Just to make it look different and have 30 items
     // If '15D', it uses the default 15 items base
-    return base.map(v => Math.min(100, v + Math.random() * 5));
+    return base.map((v, idx) => Math.min(100, v + (idx % 3) * 1.5));
   }, [totalTasks, velocityPeriod]);
 
   const svgPath = useMemo(() => {
@@ -39,8 +39,8 @@ export default function OverviewPage() {
       x: (i / (velocityPoints.length - 1)) * w,
       y: h - (v / 100) * h,
     }));
-    const d = pts.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `T${p.x},${p.y}`)).join(' ');
-    return { line: d, fill: `${d} V${h} H0 Z` };
+    const d = pts.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `L${p.x},${p.y}`)).join(' ');
+    return { line: d, fill: `${d} V${h} H0 Z`, pts };
   }, [velocityPoints]);
 
   // ── Recent activity ───────────────────────────────────────────
@@ -206,10 +206,22 @@ export default function OverviewPage() {
               {/* Grid lines */}
               {[0.25, 0.5, 0.75].map((f, i) => (
                 <line key={i} x1="0" x2="800" y1={200 * f} y2={200 * f}
-                  stroke="rgba(70,69,84,0.3)" strokeWidth="1" />
+                  stroke="rgba(70,69,84,0.15)" strokeWidth="1" />
               ))}
               <path className="pulse-line" d={svgPath.line} fill="none" stroke="#c0c1ff" strokeWidth="2.5" strokeLinecap="round" />
               <path d={svgPath.fill} fill="url(#velGrad)" />
+              {/* Vertex Nodes */}
+              {svgPath.pts.map((p, i) => (
+                <circle
+                  key={i}
+                  cx={p.x}
+                  cy={p.y}
+                  r="3.5"
+                  fill="#c0c1ff"
+                  stroke="var(--pm-bg)"
+                  strokeWidth="1.5"
+                />
+              ))}
             </svg>
             {/* Y axis labels */}
             <div className="absolute left-0 inset-y-0 flex flex-col justify-between pointer-events-none">

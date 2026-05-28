@@ -12,8 +12,8 @@ import { ProjectCard } from '../../components/project/ProjectCard';
 import { hasCapability } from '../../core/auth/permissions';
 
 export function ProjectWorkspace() {
-  const { workspace, projects = [], user } = useWorkspace() as any;
-  const { tasks = [], profiles = [], activeTeams = [], setIsAdding, setSelectedProject, stats } = useDashboard() as any;
+  const { workspace, user } = useWorkspace() as any;
+  const { projects = [], tasks = [], profiles = [], activeTeams = [], setIsAdding, setSelectedProject, stats } = useDashboard() as any;
   const { profile } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');

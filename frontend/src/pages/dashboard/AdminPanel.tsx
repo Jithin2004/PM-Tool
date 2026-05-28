@@ -49,6 +49,8 @@ export function AdminPanel() {
     handleCreateTeam,
     handleUpdateTeam,
     handleDeleteTeam,
+    notify,
+    invalidateAll,
   } = useDashboard();
 
   const [tab, setTab] = useState<AdminTab>('identity');
@@ -73,6 +75,8 @@ export function AdminPanel() {
 
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [showTeamForm, setShowTeamForm] = useState(false);
+  const [showDesignations, setShowDesignations] = useState(false);
+  const [newCustomDesignation, setNewCustomDesignation] = useState('');
 
   const pms = profiles.filter(p => p.role === 'pm' || p.role === 'super_admin');
   const devs = profiles.filter(p => p.role === 'developer' || p.role === 'viewer');
@@ -342,65 +346,72 @@ export function AdminPanel() {
                         </button>
 
                         {activeGearPopover === p.id && (
-                          <div className="absolute right-12 top-12 w-64 rounded-xl shadow-2xl z-50 p-5 flex flex-col gap-5"
+                          <div className="absolute right-12 top-12 w-64 rounded-xl shadow-2xl z-50 p-5 flex flex-col gap-4"
                             style={{ background: 'var(--pm-surface-high)', border: '1px solid rgba(70,69,84,0.3)' }}>
-                            {hasCapability(profile?.role, 'platform_governance') && p.role !== 'super_admin' && (
-                              <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-mono-pm uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Access Role</label>
-                                <select
-                                  value={p.role}
-                                  onChange={(e) => { handleUpdateRole(p.id, e.target.value as any); setActiveGearPopover(null); }}
-                                  className="border text-[11px] font-mono-pm px-3 py-2.5 rounded outline-none w-full"
-                                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                                >
-                                  <option value="viewer">Viewer</option>
-                                  <option value="developer">Developer</option>
-                                  <option value="pm">Project Manager</option>
-                                  <option value="super_admin">Super Admin</option>
-                                </select>
-                              </div>
-                            )}
+                            <div className="text-[10px] font-mono-pm uppercase tracking-widest text-center border-b pb-2" style={{ borderColor: 'rgba(70,69,84,0.1)', color: 'var(--pm-on-surface-variant)' }}>
+                              Security &amp; Governance
+                            </div>
+                            
                             {p.role !== 'super_admin' ? (
-                              <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-mono-pm uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Designation</label>
-                                <select
-                                  value={userCustomRoles[p.id] || 'Viewer'}
-                                  onChange={(e) => handleAssignCustomRoleLocal(p.id, e.target.value)}
-                                  className="border text-[11px] font-mono-pm px-3 py-2.5 rounded outline-none w-full"
-                                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                                >
-                                  {customRoles.map(r => (
-                                    <option key={r} value={r}>{r}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] font-mono-pm uppercase italic text-center" style={{ color: 'var(--pm-on-surface-variant)' }}>System Administrator</span>
-                            )}
-                            {hasCapability(profile?.role, 'platform_governance') && p.role !== 'super_admin' && (
-                              <div className="pt-2 mt-2" style={{ borderTop: '1px solid rgba(70,69,84,0.3)' }}>
+                              <>
+                                {/* Enable / Disable Account Button */}
                                 <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveGearPopover(null);
+                                    const isDisabled = p.role === 'uninvited';
+                                    const actionText = isDisabled ? "Enable" : "Disable";
+                                    askConfirmation(
+                                      `${actionText} Account`,
+                                      `Are you sure you want to ${actionText.toLowerCase()} access for ${p.full_name || p.email}?`,
+                                      async () => {
+                                        const targetRole = isDisabled ? 'developer' : 'uninvited';
+                                        await handleUpdateRole(p.id, targetRole);
+                                        notify(`Account for ${p.full_name || p.email} has been ${isDisabled ? 'enabled' : 'disabled'}.`, "success");
+                                      },
+                                      actionText
+                                    );
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-[11px] font-mono-pm uppercase tracking-widest transition-all"
+                                  style={{
+                                    background: p.role === 'uninvited' ? 'rgba(52,211,153,0.1)' : 'rgba(245,158,11,0.1)',
+                                    color: p.role === 'uninvited' ? 'var(--pm-primary)' : 'var(--pm-secondary)',
+                                    border: p.role === 'uninvited' ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(245,158,11,0.2)'
+                                  }}
+                                >
+                                  <Icon name={p.role === 'uninvited' ? "person" : "block"} size={14} />
+                                  {p.role === 'uninvited' ? 'Enable Account' : 'Disable Account'}
+                                </button>
+
+                                {/* Remove Person Button */}
+                                <button
+                                  type="button"
                                   onClick={() => {
                                     setActiveGearPopover(null);
                                     askConfirmation(
-                                      "Remove Member",
-                                      `Are you sure you want to remove ${p.full_name || p.email} from the workspace? This action cannot be undone.`,
-                                      () => {
-                                        // TODO: Implement actual member removal logic here
-                                        console.log("Remove member:", p.id);
+                                      "Remove Person",
+                                      `Are you sure you want to delete ${p.full_name || p.email} entirely from the database? This action is irreversible.`,
+                                      async () => {
+                                        const { error } = await supabase.from('users').delete().eq('id', p.id);
+                                        if (!error) {
+                                          notify("Member removed entirely from database.", "success");
+                                          invalidateAll();
+                                        } else {
+                                          notify(`Failed to remove member: ${error.message}`, "error");
+                                        }
                                       },
                                       "Remove"
                                     );
                                   }}
-                                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-[11px] font-mono-pm uppercase tracking-widest transition-all"
+                                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-[11px] font-mono-pm uppercase tracking-widest transition-all"
                                   style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--pm-error)', border: '1px solid rgba(239,68,68,0.2)' }}
-                                  onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.2)'; }}
-                                  onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.1)'; }}
                                 >
                                   <Icon name="person_remove" size={14} />
                                   Remove Person
                                 </button>
-                              </div>
+                              </>
+                            ) : (
+                              <span className="text-[10px] font-mono-pm uppercase italic text-center text-text-tertiary">Super Admin Protected</span>
                             )}
                           </div>
                         )}
@@ -444,12 +455,18 @@ export function AdminPanel() {
 
               {/* Designations */}
               <div 
-                className="pm-card p-7 group relative overflow-hidden"
+                className="pm-card p-7 group relative overflow-hidden cursor-pointer"
+                onClick={() => {
+                  setShowDesignations(!showDesignations);
+                  if (!showDesignations) {
+                    setShowInviteForm(false);
+                  }
+                }}
               >
                 <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all"
-                  style={{ background: 'rgba(195,198,213,0.05)' }} />
+                  style={{ background: 'rgba(192,193,255,0.05)' }} />
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-transform group-hover:scale-105"
-                  style={{ background: 'rgba(195,198,213,0.08)', border: '1px solid rgba(195,198,213,0.15)' }}>
+                  style={{ background: 'rgba(192,193,255,0.08)', border: '1px solid rgba(192,193,255,0.15)' }}>
                   <Icon name="admin_panel_settings" size={24} style={{ color: 'var(--pm-secondary)' }} />
                 </div>
                 <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>Designation Registry</h3>
@@ -458,8 +475,8 @@ export function AdminPanel() {
                 </p>
                 <div className="flex items-center gap-2 font-mono-pm text-[11px] uppercase tracking-[0.2em]"
                   style={{ color: 'var(--pm-secondary)' }}>
-                  <span>Manage Designations</span>
-                  <Icon name="arrow_forward" size={14} className="group-hover:translate-x-1 transition-transform" />
+                  <span>{showDesignations ? 'Close Registry' : 'Manage Designations'}</span>
+                  <Icon name="arrow_forward" size={14} className={`transition-transform ${showDesignations ? 'rotate-90' : 'group-hover:translate-x-1'}`} />
                 </div>
               </div>
 
@@ -591,6 +608,130 @@ export function AdminPanel() {
                 </div>
               </div>
             )}
+
+            {showDesignations && (
+              <div className="pm-card p-6 mt-5 space-y-6">
+                <div className="flex justify-between items-center border-b pb-4" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                  <div>
+                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                      <Icon name="admin_panel_settings" size={22} style={{ color: 'var(--pm-secondary)' }} />
+                      Designation Registry
+                    </h3>
+                    <p className="text-xs text-text-tertiary mt-1">Configure professional designations and map workspace roles.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column: Create Custom Designation Form */}
+                  <div className="lg:col-span-1 border-r pr-6 space-y-4" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                    <h4 className="font-mono-pm text-[11px] uppercase tracking-widest text-text-secondary">Register Custom Designation</h4>
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        const name = newCustomDesignation.trim();
+                        if (!name) return;
+                        if (customRoles.includes(name)) {
+                          notify("Designation already exists.", "warning");
+                          return;
+                        }
+                        const updated = [...customRoles, name];
+                        await handleSaveLogisticsData({
+                          ...systemData,
+                          customRoles: updated
+                        });
+                        setNewCustomDesignation('');
+                        notify(`Designation '${name}' added to workspace registry.`, "success");
+                      }}
+                      className="space-y-4"
+                    >
+                      <div>
+                        <label className="block text-[9px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Designation Label</label>
+                        <input
+                          required
+                          type="text"
+                          value={newCustomDesignation}
+                          onChange={e => setNewCustomDesignation(e.target.value)}
+                          className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none focus:border-white/40 transition-all text-text-primary bg-bg"
+                          style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                          placeholder="e.g. Lead QA Engineer"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="w-full rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all"
+                        style={{ background: 'rgba(192,193,255,0.1)', color: 'var(--pm-primary)', border: '1px solid rgba(192,193,255,0.2)' }}
+                      >
+                        Add Designation
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Right Columns: Registry Assignment Table */}
+                  <div className="lg:col-span-2 space-y-4">
+                    <h4 className="font-mono-pm text-[11px] uppercase tracking-widest text-text-secondary">Active Assignments</h4>
+                    <div className="overflow-x-auto border rounded-lg" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b" style={{ background: 'rgba(51,53,55,0.5)', borderColor: 'rgba(70,69,84,0.3)' }}>
+                            <th className="px-4 py-3 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Member</th>
+                            <th className="px-4 py-3 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Access Role</th>
+                            <th className="px-4 py-3 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Designation</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y" style={{ borderColor: 'rgba(70,69,84,0.1)' }}>
+                          {activeProfiles.filter(p => p.role !== 'uninvited').map((p: any) => (
+                            <tr key={p.id} className="hover:bg-white/5 transition-colors">
+                              <td className="px-4 py-3">
+                                <div className="font-medium text-xs text-text-primary">{p.full_name || 'Unknown'}</div>
+                                <div className="text-[10px] font-mono text-text-tertiary mt-0.5">{p.email}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                {p.role === 'super_admin' ? (
+                                  <span className="text-[10px] font-mono uppercase text-accent-primary">Super Admin</span>
+                                ) : (
+                                  <select
+                                    value={p.role}
+                                    onChange={(e) => {
+                                      const roleVal = e.target.value;
+                                      askConfirmation("Change Access Role", `Confirm action: Change access role of ${p.full_name || p.email} to '${roleVal}'?`, async () => {
+                                        await handleUpdateRole(p.id, roleVal as any);
+                                        notify("Access role updated successfully.", "success");
+                                      });
+                                    }}
+                                    className="border text-[11px] font-mono-pm px-2 py-1 rounded outline-none bg-bg"
+                                    style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                                  >
+                                    <option value="viewer">Viewer</option>
+                                    <option value="developer">Developer</option>
+                                    <option value="pm">Project Manager</option>
+                                  </select>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                {p.role === 'super_admin' ? (
+                                  <span className="text-[10px] font-mono uppercase text-text-tertiary">System Administrator</span>
+                                ) : (
+                                  <select
+                                    value={userCustomRoles[p.id] || 'Viewer'}
+                                    onChange={(e) => handleAssignCustomRoleLocal(p.id, e.target.value)}
+                                    className="border text-[11px] font-mono-pm px-2 py-1 rounded outline-none bg-bg"
+                                    style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                                  >
+                                    {customRoles.map(r => (
+                                      <option key={r} value={r}>{r}</option>
+                                    ))}
+                                  </select>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
 
@@ -634,6 +775,45 @@ export function AdminPanel() {
                   <Icon name="open_in_new" size={18}
                     className="transition-colors group-hover:text-primary"
                     style={{ color: 'rgba(199,196,215,0.3)' }} />
+                </div>
+
+                {/* Governance buttons */}
+                <div className="flex gap-2 mt-4 pt-4 border-t" style={{ borderColor: 'rgba(70,69,84,0.1)' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      startEditingTeam(team);
+                      setShowTeamForm(true);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
+                    style={{ background: 'rgba(192,193,255,0.05)', border: '1px solid rgba(192,193,255,0.1)', color: 'var(--pm-primary)' }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.05)'; }}
+                  >
+                    <Icon name="edit" size={12} />
+                    Edit Unit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      askConfirmation(
+                        "Delete Delivery Unit",
+                        `Are you sure you want to delete the delivery unit "${team.name}"? This action cannot be undone.`,
+                        async () => {
+                          await handleDeleteTeam(team.id);
+                          notify("Delivery unit deleted successfully.", "success");
+                        },
+                        "Delete"
+                      );
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
+                    style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', color: 'var(--pm-error)' }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.1)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.05)'; }}
+                  >
+                    <Icon name="delete" size={12} />
+                    Delete Unit
+                  </button>
                 </div>
               </div>
             ))}
