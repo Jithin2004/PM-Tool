@@ -385,7 +385,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           title: "Task Board & Execution",
           description: "Explore the premium, tactical Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/execution')
+          actionBefore: () => navigateTo('/execution/board')
         },
         {
           title: "Calibrated & Ready!",
@@ -418,7 +418,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           title: "Execution Board",
           description: "Track task progression, visualize Kanban/Scrum lanes, and inspect live clock-synced ETAs.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/execution')
+          actionBefore: () => navigateTo('/execution/board')
         },
         {
           title: "Calibrated & Ready!",
@@ -451,7 +451,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           title: "Execution Board",
           description: "View real-time task progression lanes and live clock-synced ETAs in premium Read-Only mode.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/execution')
+          actionBefore: () => navigateTo('/execution/board')
         },
         {
           title: "All Calibrated!",

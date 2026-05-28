@@ -39,7 +39,19 @@ export function GuidedTour({
       if (step?.targetSelector) {
         const el = document.querySelector(step.targetSelector);
         if (el) {
-          setTargetRect(el.getBoundingClientRect());
+          const rect = el.getBoundingClientRect();
+          setTargetRect(prev => {
+            if (!prev) return rect;
+            if (
+              Math.abs(prev.top - rect.top) < 1 &&
+              Math.abs(prev.left - rect.left) < 1 &&
+              Math.abs(prev.width - rect.width) < 1 &&
+              Math.abs(prev.height - rect.height) < 1
+            ) {
+              return prev;
+            }
+            return rect;
+          });
         } else {
           setTargetRect(null);
         }
