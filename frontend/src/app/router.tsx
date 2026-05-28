@@ -16,6 +16,8 @@ import { ProjectCreatePage } from '../pages/project/ProjectCreatePage';
 import { LandingPage } from '../landing/LandingPage';
 import { PrivacyPage } from '../landing/PrivacyPage';
 import { TermsPage } from '../landing/TermsPage';
+import { CompliancePage } from '../landing/CompliancePage';
+import { SecurityPage } from '../landing/SecurityPage';
 import { Login } from '../components/auth/Login';
 import { ProductKeyGate } from '../components/auth/ProductKeyGate';
 import { isProductKeyVerified } from '../lib/productKey';
@@ -188,6 +190,14 @@ export function ResolveRouter() {
 
   if (pathname === '/terms') {
     return <TermsPage />;
+  }
+
+  if (pathname === '/compliance') {
+    return <CompliancePage />;
+  }
+
+  if (pathname === '/security') {
+    return <SecurityPage />;
   }
 
   if (pathname === '/activate') {

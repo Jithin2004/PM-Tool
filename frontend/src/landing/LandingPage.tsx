@@ -355,8 +355,8 @@ export function LandingPage() {
           {/* These are the active links Google will check */}
           <a href="/privacy" className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all">Privacy</a>
           <a href="/terms" className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all">Terms</a>
-          <span className="font-body-sm text-body-sm text-on-surface-variant opacity-40 cursor-not-allowed">Compliance</span>
-          <span className="font-body-sm text-body-sm text-on-surface-variant opacity-40 cursor-not-allowed">Security</span>
+          <a href="/compliance" className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all">Compliance</a>
+          <a href="/security" className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all">Security</a>
         </div>
       </footer>
     </div>
