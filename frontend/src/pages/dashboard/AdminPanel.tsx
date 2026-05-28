@@ -354,6 +354,41 @@ export function AdminPanel() {
                             
                             {p.role !== 'super_admin' ? (
                               <>
+                                {/* Role Calibration */}
+                                <div className="mb-4 space-y-3 border-b pb-4" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                                  <div>
+                                    <label className="block text-[9px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Access Role</label>
+                                    <select
+                                      value={p.role}
+                                      onChange={(e) => {
+                                        const roleVal = e.target.value;
+                                        askConfirmation("Change Access Role", `Confirm action: Change access role of ${p.full_name || p.email} to '${roleVal}'?`, async () => {
+                                          await handleUpdateRole(p.id, roleVal as any);
+                                          notify("Access role updated successfully.", "success");
+                                        });
+                                      }}
+                                      className="w-full border rounded text-[11px] font-mono-pm px-2 py-1.5 outline-none bg-bg"
+                                      style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)', background: 'var(--pm-surface-lowest)' }}
+                                    >
+                                      <option value="viewer">Viewer</option>
+                                      <option value="developer">Developer</option>
+                                      <option value="pm">Project Manager</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[9px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Designation</label>
+                                    <select
+                                      value={userCustomRoles[p.id] || 'Viewer'}
+                                      onChange={(e) => handleAssignCustomRoleLocal(p.id, e.target.value)}
+                                      className="w-full border rounded text-[11px] font-mono-pm px-2 py-1.5 outline-none bg-bg"
+                                      style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)', background: 'var(--pm-surface-lowest)' }}
+                                    >
+                                      {customRoles.map(r => (
+                                        <option key={r} value={r}>{r}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
                                 {/* Enable / Disable Account Button */}
                                 <button
                                   type="button"
@@ -666,67 +701,15 @@ export function AdminPanel() {
                     </form>
                   </div>
 
-                  {/* Right Columns: Registry Assignment Table */}
+                  {/* Registry Assignments have been migrated to the workspace identity gear menu */}
                   <div className="lg:col-span-2 space-y-4">
-                    <h4 className="font-mono-pm text-[11px] uppercase tracking-widest text-text-secondary">Active Assignments</h4>
-                    <div className="overflow-x-auto border rounded-lg" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="border-b" style={{ background: 'rgba(51,53,55,0.5)', borderColor: 'rgba(70,69,84,0.3)' }}>
-                            <th className="px-4 py-3 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Member</th>
-                            <th className="px-4 py-3 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Access Role</th>
-                            <th className="px-4 py-3 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Designation</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y" style={{ borderColor: 'rgba(70,69,84,0.1)' }}>
-                          {activeProfiles.filter(p => p.role !== 'uninvited').map((p: any) => (
-                            <tr key={p.id} className="hover:bg-white/5 transition-colors">
-                              <td className="px-4 py-3">
-                                <div className="font-medium text-xs text-text-primary">{p.full_name || 'Unknown'}</div>
-                                <div className="text-[10px] font-mono text-text-tertiary mt-0.5">{p.email}</div>
-                              </td>
-                              <td className="px-4 py-3">
-                                {p.role === 'super_admin' ? (
-                                  <span className="text-[10px] font-mono uppercase text-accent-primary">Super Admin</span>
-                                ) : (
-                                  <select
-                                    value={p.role}
-                                    onChange={(e) => {
-                                      const roleVal = e.target.value;
-                                      askConfirmation("Change Access Role", `Confirm action: Change access role of ${p.full_name || p.email} to '${roleVal}'?`, async () => {
-                                        await handleUpdateRole(p.id, roleVal as any);
-                                        notify("Access role updated successfully.", "success");
-                                      });
-                                    }}
-                                    className="border text-[11px] font-mono-pm px-2 py-1 rounded outline-none bg-bg"
-                                    style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                                  >
-                                    <option value="viewer">Viewer</option>
-                                    <option value="developer">Developer</option>
-                                    <option value="pm">Project Manager</option>
-                                  </select>
-                                )}
-                              </td>
-                              <td className="px-4 py-3">
-                                {p.role === 'super_admin' ? (
-                                  <span className="text-[10px] font-mono uppercase text-text-tertiary">System Administrator</span>
-                                ) : (
-                                  <select
-                                    value={userCustomRoles[p.id] || 'Viewer'}
-                                    onChange={(e) => handleAssignCustomRoleLocal(p.id, e.target.value)}
-                                    className="border text-[11px] font-mono-pm px-2 py-1 rounded outline-none bg-bg"
-                                    style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                                  >
-                                    {customRoles.map(r => (
-                                      <option key={r} value={r}>{r}</option>
-                                    ))}
-                                  </select>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <h4 className="font-mono-pm text-[11px] uppercase tracking-widest text-text-secondary">Assignments Migrated</h4>
+                    <div className="p-6 border rounded-lg flex flex-col items-center justify-center text-center" style={{ borderColor: 'rgba(70,69,84,0.3)', background: 'var(--pm-surface-lowest)' }}>
+                      <Icon name="info" size={24} style={{ color: 'var(--pm-on-surface-variant)' }} className="mb-3" />
+                      <p className="text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>Role Assignments Relocated</p>
+                      <p className="text-xs" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                        You can now change member access roles and custom designations directly from the gear icon in the Workspace Access table.
+                      </p>
                     </div>
                   </div>
                 </div>

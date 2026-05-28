@@ -251,7 +251,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   };
 
   const visibleSidebarGroups = useMemo(() => {
-    const order: SidebarGroup[] = ['core', 'intelligence', 'operations', 'system'];
+    const order: SidebarGroup[] = ['core', 'intelligence', 'resources', 'system'];
     return order
       .map(group => ({
         group,

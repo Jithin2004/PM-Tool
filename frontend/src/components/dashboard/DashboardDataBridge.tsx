@@ -113,7 +113,7 @@ export function DashboardDataBridge({ children, ui }: DashboardDataBridgeProps) 
   const { addDependency, removeDependency, updateTaskDates, updateTask } = taskActions;
 
   const providerValue = React.useMemo(() => ({
-    projects: derived.projectsWithPert,
+    projects: derived.visibleProjects,
     tasks: derived.visibleTasks,
     dependencies: raw.dependencies,
     profiles: raw.profiles,

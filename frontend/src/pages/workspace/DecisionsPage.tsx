@@ -1,11 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useTasks } from '../../hooks/useTasks';
 import { Icon } from '../../components/ui/Icon';
-
-
-
-export default function DecisionsPage() {
+import { supabase } from '../../lib/supabase';export default function DecisionsPage() {
   const { workspace } = useWorkspace() as any;
   const { tasks } = useTasks(workspace?.id) as any;
   const [velocityPeriod, setVelocityPeriod] = useState('30D');
@@ -19,18 +16,41 @@ export default function DecisionsPage() {
     return { highRisk, blocked, velocity, total, done };
   }, [tasks]);
 
-  const decisionLog = useMemo(() => {
-    if (!tasks || tasks.length === 0) return [];
-    return [...tasks]
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-      .slice(0, 8)
-      .map((t: any, i) => ({
-        title: `Task: ${t.name}`,
-        desc: `Status updated to ${t.status?.toUpperCase()}. Priority: ${t.priority}, Risk: ${t.risk}.`,
-        time: new Date(t.updated_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        active: i === 0,
-      }));
+  const [logs, setLogs] = useState<any[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    async function fetchLogs() {
+      if (!tasks || tasks.length === 0) return;
+      
+      const taskIds = tasks.map((t: any) => t.id);
+      
+      const { data, error } = await supabase
+        .from('task_history_logs')
+        .select('*')
+        .in('task_id', taskIds)
+        .order('timestamp', { ascending: false })
+        .limit(100);
+        
+      if (data && !error) {
+         setLogs(data);
+      }
+    }
+    fetchLogs();
   }, [tasks]);
+
+  const decisionLog = useMemo(() => {
+    if (!logs || logs.length === 0) return [];
+    return logs.map((log: any, i: number) => {
+      const taskName = tasks.find((t: any) => t.id === log.task_id)?.name || 'Unknown Task';
+      return {
+        title: `Task: ${taskName}`,
+        desc: `${log.author_name} (${log.author_role}) changed ${log.field_name} from '${log.old_value || 'None'}' to '${log.new_value || 'None'}'.`,
+        time: new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        active: i === 0,
+      };
+    });
+  }, [logs, tasks]);
 
   const heatmapData = useMemo(() => {
     const data = Array(35).fill(0.1); // baseline
@@ -260,7 +280,7 @@ export default function DecisionsPage() {
             Audit Trail &amp; Decisions
           </h2>
           <div className="space-y-4 overflow-y-auto pm-scrollbar flex-1 pr-1">
-            {decisionLog.length > 0 ? decisionLog.map((item, i) => (
+            {decisionLog.length > 0 ? decisionLog.slice(0, 8).map((item, i) => (
               <div key={i} className="flex gap-4 items-start pl-4 relative"
                 style={{ borderLeft: '1px solid rgba(70,69,84,0.3)' }}>
                 <div className="absolute -left-[4.5px] top-1.5 w-2 h-2 rounded-full"
@@ -282,12 +302,45 @@ export default function DecisionsPage() {
               </p>
             )}
           </div>
-          <button className="mt-4 font-mono-pm text-[10px] uppercase tracking-widest transition-opacity hover:opacity-100"
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="mt-4 font-mono-pm text-[10px] uppercase tracking-widest transition-opacity hover:opacity-100"
             style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
             View full decision log →
           </button>
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="rounded-xl w-full max-w-3xl max-h-[80vh] flex flex-col" style={{ background: 'var(--pm-surface-high)', border: '1px solid rgba(70,69,84,0.5)' }}>
+            <div className="p-5 border-b flex justify-between items-center" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Full Decision Log</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-text-tertiary hover:text-text-primary">
+                <Icon name="close" size={24} />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto pm-scrollbar flex-1 space-y-4">
+              {decisionLog.map((item, i) => (
+                <div key={i} className="flex gap-4 items-start pl-4 relative" style={{ borderLeft: '1px solid rgba(70,69,84,0.3)' }}>
+                  <div className="absolute -left-[4.5px] top-1.5 w-2 h-2 rounded-full"
+                    style={{
+                      background: item.active ? 'var(--pm-primary)' : 'var(--pm-outline-variant)',
+                      boxShadow: item.active ? '0 0 8px rgba(192,193,255,0.6)' : 'none',
+                    }} />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{item.title}</span>
+                      <span className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)' }}>{item.time}</span>
+                    </div>
+                    <p className="text-[13px] mt-1 leading-relaxed" style={{ color: 'var(--pm-on-surface-variant)' }}>{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

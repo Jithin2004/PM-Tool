@@ -204,6 +204,13 @@ export function ExecutionSystem({
       notify("Access Denied: Only release managers can move task lanes.", "error");
       return;
     }
+    
+    // Mutation Guard
+    const task = tasks.find(t => t.id === taskId);
+    if (role === 'developer' && task?.assignee_id !== currentUserProfile?.id) {
+       notify("Access Denied: You can only modify tasks assigned to you.", "error");
+       return;
+    }
     if (targetStatus === 'done') {
       const task = tasks.find(t => t.id === taskId);
       if (task) {
@@ -223,6 +230,10 @@ export function ExecutionSystem({
   const handleAddTask = async (taskData: any) => {
     if (!hasWriteAccess) {
       notify("Access Denied: Viewers cannot create tasks.", "error");
+      return;
+    }
+    if (role === 'developer' && taskData.assignee_id !== currentUserProfile?.id) {
+      notify("Access Denied: Developers can only assign tasks to themselves.", "error");
       return;
     }
     const result = await addTask(taskData);

@@ -158,14 +158,20 @@ async function bootstrapFirstOrganizationUser(
 
 async function upsertSuperAdmin(
   input: ReconcileInvitationInput,
-): Promise<Record<string, unknown> | null> {
+): Promise<{ userRow: Record<string, unknown> | null; workspaceId: string | null; role: UserRole }> {
+  // Check if a workspace already exists
+  const { data: ws } = await supabase.from('workspaces').select('id').limit(1).maybeSingle();
+  
+  const targetWorkspaceId = ws ? ws.id : null;
+  const targetRole = ws ? 'super_admin' : 'pending-workspace-setup';
+
   const { data, error } = await supabase
     .from('users')
     .upsert({
       id: input.authUserId,
       email: input.email,
-      workspace_id: null,
-      role: 'pending-workspace-setup',
+      workspace_id: targetWorkspaceId,
+      role: targetRole,
       full_name: input.fullName,
       avatar_url: input.avatarUrl ?? null,
       availability_factor: 1,
@@ -175,10 +181,10 @@ async function upsertSuperAdmin(
 
   if (error) {
     console.error('[reconcileInvitationMembership] super_admin upsert failed:', error);
-    return null;
+    return { userRow: null, workspaceId: null, role: 'uninvited' };
   }
 
-  return data as Record<string, unknown>;
+  return { userRow: data as Record<string, unknown>, workspaceId: targetWorkspaceId, role: targetRole as UserRole };
 }
 
 /**
@@ -203,15 +209,15 @@ export async function reconcileInvitationMembership(
   }
 
   if (isProductKeyVerified()) {
-    const userRow = await upsertSuperAdmin(input);
+    const { userRow, workspaceId, role } = await upsertSuperAdmin(input);
     if (!userRow) {
       return { outcome: 'error', userRow: null, workspaceId: null, role: null, error: 'super_admin_bootstrap_failed' };
     }
     return {
       outcome: 'product_key_override',
       userRow,
-      workspaceId: null,
-      role: 'super_admin',
+      workspaceId,
+      role,
     };
   }
 
@@ -330,7 +336,23 @@ export async function reconcileWorkspaceMembership(
   }
 
   if (isProductKeyVerified()) {
-    console.log("[reconcileWorkspaceMembership] user has verified product key. Granting needs_workspace_setup.");
+    console.log("[reconcileWorkspaceMembership] user has verified product key.");
+    const { data: ws } = await supabase.from('workspaces').select('id').limit(1).maybeSingle();
+    if (ws) {
+      const { error: upsertError } = await supabase.from('users').upsert(
+        {
+          id: authUserId,
+          workspace_id: ws.id,
+          email: email || '',
+          role: 'super_admin',
+          availability_factor: 1,
+        },
+        { onConflict: 'id' },
+      );
+      if (!upsertError) {
+        return { repaired: true, workspaceId: ws.id, reason: 'product_key_override' };
+      }
+    }
     return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
   }
 

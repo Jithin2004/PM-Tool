@@ -60,18 +60,20 @@ export function TaskCard({
   const isExecutive = density === 'executive';
 
   // Real-time telemetry calculations
-  const elapsedHours = (Date.now() - new Date(task.created_at).getTime()) / (1000 * 60 * 60);
-  const isOverdue = task.estimated_hours > 0 && elapsedHours > task.estimated_hours;
+  const elapsedDays = (Date.now() - new Date(task.created_at).getTime()) / (1000 * 60 * 60 * 24);
+  const estimatedDays = (task.estimated_hours || 0) / 8;
+  const drift = elapsedDays - estimatedDays;
+  const isOverdue = task.estimated_hours > 0 && drift > 0;
   const isStalled = isOverdue || (blockedByTasks && blockedByTasks.length > 0) || task.status === 'review';
-  const computedDrift = Math.max(task.delay_drift_days || 0, isOverdue ? (elapsedHours - task.estimated_hours) / 24 : 0);
-  const isDrifting = isStalled || computedDrift > 0.1;
+  const elapsedHours = elapsedDays * 24;
 
   // Systemic liability resolution
   let liabilityTag = null;
-  if (task.status === 'review') {
+  const taskStatusString = task.status as string;
+  if (taskStatusString === 'blocked' || taskStatusString === 'passive_wait') {
+    liabilityTag = 'Liability: External Client';
+  } else if (taskStatusString === 'review') {
     liabilityTag = 'Liability: Compliance Review';
-  } else if (blockedByTasks && blockedByTasks.length > 0) {
-    liabilityTag = 'Liability: External Dependency';
   } else if (task.name.toLowerCase().includes('client') || task.name.toLowerCase().includes('server setup')) {
     liabilityTag = 'Liability: External Client';
   }
@@ -155,16 +157,16 @@ export function TaskCard({
             </span>
           )}
           
-          {task.status !== 'done' && blockedByTasks && blockedByTasks.length > 0 && (
+          {task.status !== 'done' && liabilityTag && (
             <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-signal-critical-bg border border-signal-critical/20 text-signal-critical">
-              <Link2 className="w-2.5 h-2.5" />
-              Blocked
+              <Shield className="w-2.5 h-2.5" />
+              {liabilityTag}
             </span>
           )}
 
-          {isDrifting && task.status !== 'done' && (
-            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded shadow-sm" style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface-variant)', border: '1px solid var(--pm-outline-variant)' }}>
-              Drift: σ ±{computedDrift.toFixed(1)} Days
+          {drift > 0 && task.status !== 'done' && (
+            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded shadow-sm bg-signal-warning-bg text-signal-warning border border-signal-warning/20">
+              +{drift.toFixed(1)} Days Drift (±σ)
             </span>
           )}
 
