@@ -174,14 +174,28 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   // Onboarding Tour state
   const [showGuide, setShowGuide] = useState(() => {
+    if (sessionStorage.getItem('resolve-pm-tour-active') === 'true') {
+      return true;
+    }
     return localStorage.getItem('resolve-pm-onboarded') !== 'true';
   });
-  const [guideStep, setGuideStep] = useState(0);
+  const [guideStep, setGuideStep] = useState(() => {
+    const saved = sessionStorage.getItem('resolve-pm-tour-step');
+    return saved ? parseInt(saved, 10) : 0;
+  });
 
   const dismissGuide = () => {
     localStorage.setItem('resolve-pm-onboarded', 'true');
+    sessionStorage.removeItem('resolve-pm-tour-active');
+    sessionStorage.removeItem('resolve-pm-tour-step');
     setShowGuide(false);
   };
+
+  useEffect(() => {
+    if (showGuide) {
+      sessionStorage.setItem('resolve-pm-tour-active', 'true');
+    }
+  }, [showGuide]);
 
   const navigateTo = (path: string) => {
     const target = normalizePath(path);
@@ -466,6 +480,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   // Expose tour launcher globally
   useEffect(() => {
     (window as any).startOnboardingTour = () => {
+      sessionStorage.setItem('resolve-pm-tour-active', 'true');
+      sessionStorage.setItem('resolve-pm-tour-step', '0');
       setGuideStep(0);
       setShowGuide(true);
       navigateTo('/workspace');
@@ -1588,11 +1604,13 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         }}
         onNext={() => {
           const nextStep = guideStep + 1;
+          sessionStorage.setItem('resolve-pm-tour-step', nextStep.toString());
           setGuideStep(nextStep);
           tourSteps[nextStep]?.actionBefore?.();
         }}
         onPrev={() => {
           const prevStep = guideStep - 1;
+          sessionStorage.setItem('resolve-pm-tour-step', prevStep.toString());
           setGuideStep(prevStep);
           tourSteps[prevStep]?.actionBefore?.();
         }}
