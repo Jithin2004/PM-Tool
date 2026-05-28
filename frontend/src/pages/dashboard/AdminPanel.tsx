@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import type { UserRole } from '../../types';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { CalendarIntelligencePanel } from '../../components/admin/CalendarIntelligencePanel';
@@ -14,9 +15,10 @@ function getInitials(name: string) {
 }
 
 function getRoleColor(role: string) {
-  if (role === 'super_admin' || role === 'admin') return 'var(--pm-primary)';
-  if (role === 'manager') return 'var(--pm-secondary)';
-  if (role === 'viewer') return 'var(--pm-on-surface-variant)';
+  const r = role as UserRole;
+  if (hasCapability(r, 'platform_governance')) return 'var(--pm-primary)';
+  if (hasCapability(r, 'manage_projects')) return 'var(--pm-secondary)';
+  if (hasCapability(r, 'view_stakeholders') && !hasCapability(r, 'manage_tasks')) return 'var(--pm-on-surface-variant)';
   return 'var(--pm-tertiary)';
 }
 
@@ -82,8 +84,8 @@ export function AdminPanel() {
   const [showDesignations, setShowDesignations] = useState(false);
   const [newCustomDesignation, setNewCustomDesignation] = useState('');
 
-  const pms = profiles.filter(p => p.role === 'pm' || p.role === 'super_admin');
-  const devs = profiles.filter(p => p.role === 'developer' || p.role === 'viewer');
+  const pms = profiles.filter(p => hasCapability(p.role as UserRole, 'manage_projects'));
+  const devs = profiles.filter(p => !hasCapability(p.role as UserRole, 'manage_projects'));
   const assignedDevIds = new Set(
     teams
       .filter(t => t.id !== editingTeamId)
@@ -446,7 +448,7 @@ export function AdminPanel() {
                                   type="button"
                                   onClick={() => {
                                     setActiveGearPopover(null);
-                                    const isDisabled = p.role === 'uninvited';
+                                    const isDisabled = !hasCapability(p.role as UserRole, 'view_projects');
                                     const actionText = isDisabled ? "Enable" : "Disable";
                                     askConfirmation(
                                       `${actionText} Account`,
@@ -461,13 +463,13 @@ export function AdminPanel() {
                                   }}
                                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-[11px] font-mono-pm uppercase tracking-widest transition-all"
                                   style={{
-                                    background: p.role === 'uninvited' ? 'rgba(52,211,153,0.1)' : 'rgba(245,158,11,0.1)',
-                                    color: p.role === 'uninvited' ? 'var(--pm-primary)' : 'var(--pm-secondary)',
-                                    border: p.role === 'uninvited' ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(245,158,11,0.2)'
+                                    background: !hasCapability(p.role as UserRole, 'view_projects') ? 'rgba(52,211,153,0.1)' : 'rgba(245,158,11,0.1)',
+                                    color: !hasCapability(p.role as UserRole, 'view_projects') ? 'var(--pm-primary)' : 'var(--pm-secondary)',
+                                    border: !hasCapability(p.role as UserRole, 'view_projects') ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(245,158,11,0.2)'
                                   }}
                                 >
-                                  <Icon name={p.role === 'uninvited' ? "person" : "block"} size={14} />
-                                  {p.role === 'uninvited' ? 'Enable Account' : 'Disable Account'}
+                                  <Icon name={!hasCapability(p.role as UserRole, 'view_projects') ? "person" : "block"} size={14} />
+                                  {!hasCapability(p.role as UserRole, 'view_projects') ? 'Enable Account' : 'Disable Account'}
                                 </button>
 
                                 {/* Remove Person Button */}

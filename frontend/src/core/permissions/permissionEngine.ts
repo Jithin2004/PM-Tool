@@ -1,6 +1,6 @@
-import type { Task, Project, Epic, Sprint, Comment, FileAsset, ActivityLog } from '../../types';
+import type { Task, Project, Epic, Sprint, Comment, FileAsset, ActivityLog, TaskDependency } from '../../types';
 import { hasCapability, isOperationalReadOnly as isReadOnlyRole } from '../auth/permissions';
-import type { PermissionContext, EntityVisibility } from './types';
+import type { PermissionContext, EntityVisibility, ExecutionOwnershipType } from './types';
 
 function hasPlatformGovernance(ctx: PermissionContext): boolean {
   return hasCapability(ctx.role, 'platform_governance');
@@ -10,6 +10,109 @@ function isProjectOwner(projectId: string, ctx: PermissionContext): boolean {
   return ctx.ownerProjectIds.has(projectId);
 }
 
+export function resolveExecutionOwnerships(
+  task: Task,
+  ctx: PermissionContext,
+): ExecutionOwnershipType[] {
+  const roles: ExecutionOwnershipType[] = [];
+
+  // 1. TaskAssignee
+  if (task.assignee_id === ctx.userId) {
+    roles.push('TaskAssignee');
+  }
+
+  // 2. ProjectOwner / ExecutionLead
+  if (ctx.ownerProjectIds.has(task.project_id)) {
+    roles.push('ProjectOwner');
+    roles.push('ExecutionLead');
+  }
+
+  // 3. BlockerOwner
+  if (ctx.blockers) {
+    const isBlockerOwner = ctx.blockers.some(
+      b => b.task_id === task.id && b.owner_id === ctx.userId && !b.resolved
+    );
+    if (isBlockerOwner) {
+      roles.push('BlockerOwner');
+    }
+  }
+
+  // 4. DependencyOwner
+  if (ctx.dependencies && ctx.tasks) {
+    const myAssignedTaskIds = new Set(
+      ctx.tasks.filter(t => t.assignee_id === ctx.userId).map(t => t.id)
+    );
+    const isDepOwner = ctx.dependencies.some(d => {
+      if (d.task_id === task.id && myAssignedTaskIds.has(d.depends_on_task_id)) return true;
+      if (d.depends_on_task_id === task.id && myAssignedTaskIds.has(d.task_id)) return true;
+      return false;
+    });
+    if (isDepOwner) {
+      roles.push('DependencyOwner');
+    }
+  }
+
+  // 5. Reviewer
+  if (ctx.workspaceSettingsBlob) {
+    const reviewers = ctx.workspaceSettingsBlob.task_reviewers?.[task.id] || [];
+    if (reviewers.includes(ctx.userId)) {
+      roles.push('Reviewer');
+    }
+  }
+
+  // 6. Stakeholder
+  if (ctx.workspaceSettingsBlob) {
+    const stakeholders = ctx.workspaceSettingsBlob.project_stakeholders?.[task.project_id] || [];
+    if (stakeholders.includes(ctx.userId)) {
+      roles.push('Stakeholder');
+    }
+  }
+
+  // 7. Watcher
+  if (ctx.workspaceSettingsBlob) {
+    const watchers = ctx.workspaceSettingsBlob.task_watchers?.[task.id] || [];
+    if (watchers.includes(ctx.userId)) {
+      roles.push('Watcher');
+    }
+  }
+
+  return roles;
+}
+
+export function getDependencyChain(
+  userId: string,
+  tasks: Task[],
+  dependencies: TaskDependency[],
+): Set<string> {
+  const assignedTaskIds = new Set(tasks.filter(t => t.assignee_id === userId).map(t => t.id));
+  const chainIds = new Set<string>();
+
+  const findUpstream = (taskId: string) => {
+    if (chainIds.has(taskId)) return;
+    chainIds.add(taskId);
+    const parents = dependencies
+      .filter(d => d.task_id === taskId)
+      .map(d => d.depends_on_task_id);
+    parents.forEach(p => findUpstream(p));
+  };
+
+  const findDownstream = (taskId: string) => {
+    if (chainIds.has(taskId)) return;
+    chainIds.add(taskId);
+    const children = dependencies
+      .filter(d => d.depends_on_task_id === taskId)
+      .map(d => d.task_id);
+    children.forEach(c => findDownstream(c));
+  };
+
+  assignedTaskIds.forEach(id => {
+    findUpstream(id);
+    findDownstream(id);
+  });
+
+  return chainIds;
+}
+
 export function canViewTask(
   task: Task,
   ctx: PermissionContext,
@@ -17,12 +120,68 @@ export function canViewTask(
   if (hasPlatformGovernance(ctx)) {
     return { visible: true, reason: 'role' };
   }
-  if (task.assignee_id === ctx.userId) {
+
+  // PMs have full visibility in projects they manage
+  if (hasCapability(ctx.role, 'manage_projects') && ctx.ownerProjectIds.has(task.project_id)) {
     return { visible: true, reason: 'direct' };
   }
-  if (isProjectOwner(task.project_id, ctx)) {
+
+  const ownerships = resolveExecutionOwnerships(task, ctx);
+
+  // Sensitive & Management-only check:
+  // If the task name/description/priority contains sensitive markers, developers have NO ACCESS
+  // unless they are ProjectOwner/ExecutionLead or directly assigned.
+  const isSensitive = 
+    task.name?.toLowerCase().includes('[sensitive]') || 
+    task.description?.toLowerCase().includes('[sensitive]') ||
+    task.name?.toLowerCase().includes('[management]') ||
+    task.description?.toLowerCase().includes('[management]');
+
+  if (isSensitive) {
+    const isDirectlyAllowed = ownerships.includes('TaskAssignee') || ownerships.includes('ProjectOwner') || ownerships.includes('ExecutionLead');
+    if (!isDirectlyAllowed) {
+      return { visible: false, reason: 'denied' };
+    }
+  }
+
+  // Developers have FULL ACCESS to assigned tasks
+  if (ownerships.includes('TaskAssignee')) {
     return { visible: true, reason: 'direct' };
   }
+
+  // ProjectOwners and ExecutionLeads have full view access
+  if (ownerships.includes('ProjectOwner') || ownerships.includes('ExecutionLead')) {
+    return { visible: true, reason: 'direct' };
+  }
+
+  // Reviewers, Stakeholders, Watchers have inherited/role-based view access
+  if (
+    ownerships.includes('Reviewer') ||
+    ownerships.includes('Stakeholder') ||
+    ownerships.includes('Watcher')
+  ) {
+    return { visible: true, reason: 'inherited' };
+  }
+
+  // Developer visibility restrictions:
+  if (hasCapability(ctx.role, 'manage_tasks') && !hasCapability(ctx.role, 'manage_projects')) {
+    // Check if task is in the dependency chain (upstream/downstream) of their assigned tasks
+    if (ctx.tasks && ctx.dependencies) {
+      const chain = getDependencyChain(ctx.userId, ctx.tasks, ctx.dependencies);
+      if (chain.has(task.id)) {
+        return { visible: true, reason: 'inherited' }; // LIMITED VISIBILITY
+      }
+    }
+
+    // Check if it's a neighboring dependency task or blocker-related task
+    if (ownerships.includes('DependencyOwner') || ownerships.includes('BlockerOwner')) {
+      return { visible: true, reason: 'inherited' }; // LIMITED VISIBILITY
+    }
+
+    // NO ACCESS to unrelated tasks/streams
+    return { visible: false, reason: 'denied' };
+  }
+
   if (hasCapability(ctx.role, 'view_tasks') && isReadOnlyRole(ctx.role)) {
     return { visible: true, reason: 'direct' };
   }
@@ -39,12 +198,29 @@ export function canEditTask(
   if (hasPlatformGovernance(ctx)) {
     return { visible: true, reason: 'role' };
   }
-  if (hasCapability(ctx.role, 'manage_projects') && isProjectOwner(task.project_id, ctx)) {
+
+  const ownerships = resolveExecutionOwnerships(task, ctx);
+
+  if (
+    (hasCapability(ctx.role, 'manage_projects') && ctx.ownerProjectIds.has(task.project_id)) ||
+    ownerships.includes('ProjectOwner') ||
+    ownerships.includes('ExecutionLead')
+  ) {
     return { visible: true, reason: 'direct' };
   }
-  if (task.assignee_id === ctx.userId) {
+
+  // Developers can ONLY edit their assigned tasks
+  if (hasCapability(ctx.role, 'manage_tasks') && !hasCapability(ctx.role, 'manage_projects')) {
+    if (ownerships.includes('TaskAssignee')) {
+      return { visible: true, reason: 'direct' };
+    }
+    return { visible: false, reason: 'denied' };
+  }
+
+  if (ownerships.includes('TaskAssignee')) {
     return { visible: true, reason: 'direct' };
   }
+
   return { visible: false, reason: 'denied' };
 }
 
@@ -55,7 +231,7 @@ export function canViewProject(
   if (hasPlatformGovernance(ctx)) {
     return { visible: true, reason: 'role' };
   }
-  if (ctx.role === 'developer') {
+  if (hasCapability(ctx.role, 'manage_tasks') && !hasCapability(ctx.role, 'manage_projects')) {
     if (ctx.assignedTeamProjectIds.has(project.id)) {
       return { visible: true, reason: 'direct' };
     }
@@ -217,7 +393,7 @@ export function filterProjectsByVisibility(
 ): Project[] {
   if (hasPlatformGovernance(ctx)) return projects;
   
-  if (ctx.role === 'developer') {
+  if (hasCapability(ctx.role, 'manage_tasks') && !hasCapability(ctx.role, 'manage_projects')) {
     return projects.filter(p => 
       ctx.assignedTeamProjectIds.has(p.id) || 
       (visibleTaskProjectIds && visibleTaskProjectIds.has(p.id))

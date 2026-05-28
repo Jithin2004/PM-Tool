@@ -4,6 +4,7 @@ import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
 import { hasCapability } from '../../core/auth/permissions';
+import { useOperationalDerived } from '../../context/OperationalDataContext';
 
 type ViewMode = 'grid' | 'list' | 'timeline';
 type StatusFilter = 'all' | 'active' | 'deployed' | 'planning';
@@ -28,6 +29,7 @@ export default function PortfolioPage() {
   const { workspace, projects } = useWorkspace() as any;
   const { tasks } = useTasks(workspace?.id) as any;
   const { profile } = useAuth();
+  const { projectFrictionMetrics } = useOperationalDerived();
 
   const [view, setView] = useState<ViewMode>('grid');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -120,12 +122,22 @@ export default function PortfolioPage() {
             const meta = getStatusMeta(project.status);
             const projectTasks = (tasks || []).filter((t: any) => t.project_id === project.id);
             const doneTasks = projectTasks.filter((t: any) => t.status === 'done').length;
-            const confidence = projectTasks.length > 0 ? Math.round((doneTasks / projectTasks.length) * 100) : 0;
+            const doneRatio = projectTasks.length > 0 ? (doneTasks / projectTasks.length) : 0;
+            
+            // Advanced Execution Intelligence retrieval
+            const frictionMetric = projectFrictionMetrics?.[project.id] || {
+              waitTimeRatio: 0,
+              adjustedConfidence: projectTasks.length > 0 ? Math.round((doneTasks / projectTasks.length) * 100) : 0,
+              operationalContinuity: 95,
+              liabilityRatio: 0
+            };
+
+            const confidence = frictionMetric.adjustedConfidence;
             const blockers = projectTasks.filter((t: any) => t.risk === 'high' && t.status !== 'done').length;
             const confColor = confidence >= 80 ? '#34d399' : confidence >= 50 ? 'var(--pm-primary)' : 'var(--pm-error)';
 
             return (
-              <div key={project.id} className="pm-card flex flex-col gap-4 p-6 cursor-pointer group">
+              <div key={project.id} className="pm-card flex flex-col gap-4 p-6 cursor-pointer group hover:-translate-y-0.5 transition-transform">
                 {/* Top row */}
                 <div className="flex items-start justify-between">
                   <div>
@@ -149,26 +161,40 @@ export default function PortfolioPage() {
                   {project.description || 'No description provided.'}
                 </p>
 
+                {/* Stacked Progress Bar: Active Delivery vs Wait-Time vs Blocked */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between font-mono-pm text-[9px]" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                    <span>DELIVERY RATIO</span>
+                    <span className="text-slate-300">WAIT: {frictionMetric.waitTimeRatio}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full overflow-hidden flex bg-slate-950">
+                    <div className="h-full rounded-l transition-all duration-500" style={{ width: `${Math.round(doneRatio * 100)}%`, background: '#34d399' }} />
+                    <div className="h-full transition-all duration-500" style={{ width: `${Math.min(100 - Math.round(doneRatio * 100), frictionMetric.waitTimeRatio)}%`, background: '#ff9800' }} />
+                    <div className="h-full rounded-r bg-red-500/20" style={{ flex: 1 }} />
+                  </div>
+                  <div className="flex items-center justify-between text-[9px] font-mono-pm opacity-60">
+                    <span className="text-emerald-400">● EXEC: {Math.round(doneRatio * 100)}%</span>
+                    <span className="text-amber-500">● WAIT: {frictionMetric.waitTimeRatio}%</span>
+                    <span className="text-red-400">● BLK: {Math.max(0, 100 - Math.round(doneRatio * 100) - frictionMetric.waitTimeRatio)}%</span>
+                  </div>
+                </div>
+
                 {/* Confidence + sprint */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 mt-1">
                   <div>
-                    <span className="font-mono-pm text-[9px] uppercase tracking-widest block mb-1.5"
-                      style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>CONFIDENCE</span>
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 flex-1 rounded-full overflow-hidden"
-                        style={{ background: 'var(--pm-surface-highest)' }}>
-                        <div className="h-full rounded-full transition-all"
-                          style={{ width: `${confidence}%`, background: confColor }} />
-                      </div>
-                      <span className="font-mono-pm text-sm font-medium" style={{ color: confColor }}>{confidence}%</span>
+                    <span className="font-mono-pm text-[9px] uppercase tracking-widest block mb-1"
+                      style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>CALIBRATED COGNITION</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono-pm text-base font-semibold" style={{ color: confColor }}>{confidence}%</span>
+                      <span className="text-[10px] text-slate-500">CONFIDENCE</span>
                     </div>
                   </div>
                   <div>
-                    <span className="font-mono-pm text-[9px] uppercase tracking-widest block mb-1.5"
-                      style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>TASKS</span>
+                    <span className="font-mono-pm text-[9px] uppercase tracking-widest block mb-1"
+                      style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>STABILITY</span>
                     <div className="flex items-center gap-1">
-                      <Icon name="sprint" size={14} style={{ color: 'var(--pm-primary)' }} />
-                      <span className="font-mono-pm text-sm">{doneTasks}/{projectTasks.length}</span>
+                      <span className="font-mono-pm text-base font-semibold text-indigo-300">{frictionMetric.operationalContinuity}/100</span>
+                      <span className="text-[10px] text-slate-500">CONTINUITY</span>
                     </div>
                   </div>
                 </div>

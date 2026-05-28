@@ -39,6 +39,7 @@ import { KANBAN_COLUMNS, SCRUM_COLUMNS } from '../../../constants/product';
 import { Task, Project, TaskStatus, CalendarEvent } from '../../../types';
 import { ExecutionHeader, ExecutionViewType } from './ExecutionHeader';
 import { hasCapability } from '../../../core/auth/permissions';
+import { buildVisibilityContext, filterVisibleTasks } from '../../../utils/visibilityFilter';
 
 interface ExecutionSystemProps {
   projects: Project[];
@@ -58,8 +59,27 @@ export function ExecutionSystem({
   initialView = 'board'
 }: ExecutionSystemProps) {
   const { workspace } = useWorkspace();
-  const { raw: { teams } } = useOperationalData();
+  const { raw: { teams, workspaceSettingsBlob }, updateWorkspaceSettings } = useOperationalData();
   const { tasks, dependencies, loading, addTask, updateTask, updateTaskStatus } = useTasks(workspace?.id);
+
+  const visibilityContext = useMemo(() => {
+    if (!currentUserProfile) return null;
+    return buildVisibilityContext(
+      currentUserProfile.id,
+      currentUserProfile.role,
+      projects,
+      teams,
+      tasks,
+      dependencies,
+      workspaceSettingsBlob
+    );
+  }, [currentUserProfile, projects, teams, tasks, dependencies, workspaceSettingsBlob]);
+
+  const visibleTasks = useMemo(() => {
+    if (!visibilityContext) return [];
+    return filterVisibleTasks(tasks, visibilityContext);
+  }, [tasks, visibilityContext]);
+
   const { events: calendarEvents } = useCalendarEvents(workspace?.id);
   
   const [activeView, setActiveView] = useState<ExecutionViewType>(initialView);
@@ -84,7 +104,7 @@ export function ExecutionSystem({
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
-    if (hasWriteAccess) {
+    if (canUserModifyTask(task)) {
       setEditingTask(task);
     } else {
       notify("Viewer Mode: You can view task details in the drawer, but modifications are restricted.", "info");
@@ -103,6 +123,16 @@ export function ExecutionSystem({
   const role = currentUserProfile?.role || 'viewer';
   const hasWriteAccess = hasCapability(role, 'manage_tasks');
 
+  const canUserModifyTask = (task: Task) => {
+    if (!hasCapability(role, 'manage_tasks')) return false;
+    if (hasCapability(role, 'platform_governance')) return true;
+    if (hasCapability(role, 'manage_projects')) {
+      return projectMap.get(task.project_id)?.owner_id === currentUserProfile?.id;
+    }
+    // Lacks manage_projects (Developer) -> can only edit assigned tasks
+    return task.assignee_id === currentUserProfile?.id;
+  };
+
   const userMap = useMemo(() => {
     const map = new Map<string, any>();
     users.forEach(u => map.set(u.id, u));
@@ -116,12 +146,12 @@ export function ExecutionSystem({
   }, [projects]);
 
   const filteredTasks = useMemo(() => {
-    return tasks.filter(t => {
+    return visibleTasks.filter(t => {
       if (filterByProject && t.project_id !== filterByProject) return false;
       if (searchQuery && !t.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [tasks, filterByProject, searchQuery]);
+  }, [visibleTasks, filterByProject, searchQuery]);
 
   // Execution Intelligence logic
   const executionIntel = useMemo(() => {
@@ -180,17 +210,42 @@ export function ExecutionSystem({
 
   const tasksByGroup = useMemo(() => {
     const map = new Map<string, Task[]>();
+    const taskSubStates = workspaceSettingsBlob?.task_substates || {};
+    
     for (const t of filteredTasks) {
       let key: string = t.status;
-      if (groupBy === 'assignee') key = t.assignee_id || 'unassigned';
-      if (groupBy === 'priority') key = t.priority || 'medium';
-      if (groupBy === 'risk') key = t.risk || 'low';
+      if (groupBy === 'status') {
+        const sub = taskSubStates[t.id];
+        if (t.status === 'done') {
+          key = 'done';
+        } else if (!sub) {
+          key = t.status === 'in_progress' ? 'ACTIVE' : t.status === 'review' ? 'COORDINATION' : 'ACTIVE';
+        } else {
+          if (['EXECUTING', 'DEPLOYING', 'TESTING', 'VALIDATING'].includes(sub)) {
+            key = 'ACTIVE';
+          } else if (['WAITING_FOR_CLIENT', 'WAITING_FOR_DATA', 'WAITING_FOR_INFRASTRUCTURE', 'WAITING_FOR_APPROVAL'].includes(sub)) {
+            key = 'WAITING';
+          } else if (['BLOCKED_DEPENDENCY', 'BLOCKED_INFRASTRUCTURE', 'BLOCKED_ACCESS'].includes(sub)) {
+            key = 'BLOCKED';
+          } else if (['CLIENT_VERIFICATION', 'RELEASE_WINDOW_PENDING', 'INTERNAL_REVIEW'].includes(sub)) {
+            key = 'COORDINATION';
+          } else {
+            key = 'ACTIVE';
+          }
+        }
+      } else if (groupBy === 'assignee') {
+        key = t.assignee_id || 'unassigned';
+      } else if (groupBy === 'priority') {
+        key = t.priority || 'medium';
+      } else if (groupBy === 'risk') {
+        key = t.risk || 'low';
+      }
       
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(t);
     }
     return map;
-  }, [filteredTasks, groupBy]);
+  }, [filteredTasks, groupBy, workspaceSettingsBlob?.task_substates]);
 
   const blockedByMap = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -202,15 +257,10 @@ export function ExecutionSystem({
   }, [dependencies]);
 
   const handleTransitionTask = async (taskId: string, targetStatus: TaskStatus) => {
-    if (!hasWriteAccess) {
-      notify("Access Denied: Only release managers can move task lanes.", "error");
-      return;
-    }
-    
     // Mutation Guard
     const task = tasks.find(t => t.id === taskId);
-    if (role === 'developer' && task?.assignee_id !== currentUserProfile?.id) {
-       notify("Access Denied: You can only modify tasks assigned to you.", "error");
+    if (!task || !canUserModifyTask(task)) {
+       notify("Access Denied: You do not have permission to modify this task.", "error");
        return;
     }
     if (targetStatus === 'done') {
@@ -229,6 +279,36 @@ export function ExecutionSystem({
     }
   };
 
+  const handleUpdateSubstate = async (taskId: string, substate: string) => {
+    // Mutation Guard
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || !canUserModifyTask(task)) {
+       notify("Access Denied: You do not have permission to modify this task.", "error");
+       return;
+    }
+
+    const updatedSubStates = {
+      ...(workspaceSettingsBlob?.task_substates || {}),
+      [taskId]: substate
+    };
+    
+    const { mapToTaskStatus } = await import('../../../core/execution/executionBrain');
+    const legacyStatus = mapToTaskStatus(substate as any);
+    
+    try {
+      if (updateTask) {
+        await updateTask(taskId, { status: legacyStatus });
+      }
+      if (updateWorkspaceSettings) {
+        await updateWorkspaceSettings({ task_substates: updatedSubStates });
+      }
+      notify(`Execution flow state updated to ${substate}.`, "success");
+      onRecalibrateAnalytics();
+    } catch (error) {
+      notify("Failed to transition execution sub-state.", "error");
+    }
+  };
+
   const handleAddTask = async (taskData: any) => {
     // Ensure user is part of a team
     const isUserInAnyTeam = teams.some(t => {
@@ -237,7 +317,7 @@ export function ExecutionSystem({
       return d.pm_id === currentUserProfile?.id || (Array.isArray(d.developer_ids) && d.developer_ids.includes(currentUserProfile?.id));
     });
 
-    if (!isUserInAnyTeam && currentUserProfile?.role !== 'super_admin') {
+    if (!isUserInAnyTeam && !hasCapability(role, 'platform_governance')) {
       notify("Access Denied: You must form or join a team before creating tasks.", "error");
       return;
     }
@@ -246,7 +326,16 @@ export function ExecutionSystem({
       notify("Access Denied: Viewers cannot create tasks.", "error");
       return;
     }
-    if (role === 'developer' && taskData.assignee_id !== currentUserProfile?.id) {
+    const isPM = hasCapability(role, 'manage_projects') && !hasCapability(role, 'platform_governance');
+    const isDeveloper = hasCapability(role, 'manage_tasks') && !hasCapability(role, 'manage_projects');
+    if (isPM) {
+      const project = projectMap.get(taskData.project_id);
+      if (project && project.owner_id !== currentUserProfile?.id) {
+        notify("Access Denied: You can only create tasks in projects you manage.", "error");
+        return;
+      }
+    }
+    if (isDeveloper && taskData.assignee_id !== currentUserProfile?.id) {
       notify("Access Denied: Developers can only assign tasks to themselves.", "error");
       return;
     }
@@ -313,11 +402,14 @@ export function ExecutionSystem({
             groupBy={groupBy}
             projectMap={projectMap}
             userMap={userMap}
-            hasWriteAccess={hasWriteAccess}
+            hasWriteAccess={canUserModifyTask}
             blockedByMap={blockedByMap}
             onTransitionTask={handleTransitionTask}
             onTaskClick={handleTaskClick}
             density={density}
+            taskSubstates={workspaceSettingsBlob?.task_substates || {}}
+            blockers={workspaceSettingsBlob?.execution_blockers || []}
+            onUpdateSubstate={handleUpdateSubstate}
           />
         )}
 
@@ -326,7 +418,7 @@ export function ExecutionSystem({
             tasks={filteredTasks}
             projectMap={projectMap}
             userMap={userMap}
-            hasWriteAccess={hasWriteAccess}
+            hasWriteAccess={canUserModifyTask}
             onTransitionTask={handleTransitionTask}
             onTaskClick={handleTaskClick}
           />
@@ -337,11 +429,14 @@ export function ExecutionSystem({
             tasks={filteredTasks}
             projects={projects}
             userMap={userMap}
-            hasWriteAccess={hasWriteAccess}
+            hasWriteAccess={canUserModifyTask}
             onTransitionTask={handleTransitionTask}
             onEditTask={setEditingTask}
             onTaskClick={handleTaskClick}
             notify={notify}
+            taskSubstates={workspaceSettingsBlob?.task_substates || {}}
+            blockers={workspaceSettingsBlob?.execution_blockers || []}
+            onUpdateSubstate={handleUpdateSubstate}
           />
         )}
 
@@ -437,12 +532,21 @@ function BoardView({
   onTransitionTask, 
   onEditTask,
   onTaskClick,
-  density
+  density,
+  taskSubstates,
+  blockers,
+  onUpdateSubstate
 }: any) {
   // Determine columns based on groupBy
   let columns: any[] = [];
   if (groupBy === 'status') {
-    columns = KANBAN_COLUMNS;
+    columns = [
+      { id: 'BLOCKED', title: 'Blocked Flow', color: 'bg-rose-500' },
+      { id: 'WAITING', title: 'Waiting Flow', color: 'bg-amber-500' },
+      { id: 'ACTIVE', title: 'Active Flow', color: 'bg-indigo-500' },
+      { id: 'COORDINATION', title: 'Coordination Flow', color: 'bg-teal-500' },
+      { id: 'done', title: 'Completed', color: 'bg-emerald-500' }
+    ];
   } else if (groupBy === 'priority') {
     columns = [
       { id: 'high', title: 'High Priority', color: 'bg-signal-critical' },
@@ -494,14 +598,17 @@ function BoardView({
                     key={task.id}
                     task={task}
                     project={projectMap.get(task.project_id)}
-                    hasWriteAccess={hasWriteAccess}
-                    columns={KANBAN_COLUMNS}
+                    hasWriteAccess={typeof hasWriteAccess === 'function' ? hasWriteAccess(task) : hasWriteAccess}
+                    columns={columns}
                     onTransitionTask={onTransitionTask}
                     onEditTask={onEditTask}
                     onClick={onTaskClick}
                     assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
                     blockedByTasks={blockedByMap.get(task.id)}
                     density={density}
+                    substate={taskSubstates[task.id]}
+                    blockers={blockers}
+                    onUpdateSubstate={onUpdateSubstate}
                   />
                 ))
               )}
@@ -513,7 +620,19 @@ function BoardView({
   );
 }
 
-function SprintView({ tasks, projects, userMap, hasWriteAccess, onTransitionTask, onEditTask, onTaskClick, notify }: any) {
+function SprintView({ 
+  tasks, 
+  projects, 
+  userMap, 
+  hasWriteAccess, 
+  onTransitionTask, 
+  onEditTask, 
+  onTaskClick, 
+  notify,
+  taskSubstates,
+  blockers,
+  onUpdateSubstate
+}: any) {
   // Simple Sprint view implementation
   const sprintTasks = tasks.filter((t: any) => t.sprint_id || t.status !== 'done');
   
@@ -596,12 +715,15 @@ function SprintView({ tasks, projects, userMap, hasWriteAccess, onTransitionTask
                     key={task.id}
                     task={task}
                     project={projects.find((p: any) => p.id === task.project_id)}
-                    hasWriteAccess={hasWriteAccess}
+                    hasWriteAccess={typeof hasWriteAccess === 'function' ? hasWriteAccess(task) : hasWriteAccess}
                     columns={SCRUM_COLUMNS}
                     onTransitionTask={onTransitionTask}
                     onEditTask={onEditTask}
                     onClick={onTaskClick}
                     assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
+                    substate={taskSubstates[task.id]}
+                    blockers={blockers}
+                    onUpdateSubstate={onUpdateSubstate}
                   />
                 ))}
               </div>

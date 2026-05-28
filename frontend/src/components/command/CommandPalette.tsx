@@ -6,6 +6,7 @@ import { canAccessRoute, hasCapability, type Capability } from '../../core/auth/
 import { isRouteDisclosed, type DisclosureLevel } from '../../core/dashboard/progressiveDisclosure';
 import { activityLogService } from '../../services/activityLogService';
 import { recordUsage, getSessionId } from '../../services/commandUsageService';
+import { CANONICAL_ROUTES, renderRouteIcon } from '../../app/routeRegistry';
 
 interface CmdResult {
   id: string;
@@ -169,27 +170,19 @@ function getSequenceSuggestions(): { id: string; label: string; group: string }[
 
 export { getTimeline, getTopCommandsWithTrend, getSequenceSuggestions, type TimelineEntry, type CommandTrend };
 
-const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode }[] = [
-  { label: 'Overview', path: '/overview', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-  { label: 'Workspace', path: '/workspace', icon: <FolderOpen className="w-3.5 h-3.5" /> },
-  { label: 'Portfolio', path: '/workspace/portfolio', icon: <BarChart3 className="w-3.5 h-3.5" /> },
-  { label: 'Knowledge Hub', path: '/workspace/knowledge', icon: <BookOpen className="w-3.5 h-3.5" /> },
-  { label: 'Decision Center', path: '/workspace/decisions', icon: <BrainCircuit className="w-3.5 h-3.5" /> },
-  { label: 'Execution Board', path: '/execution', icon: <LayoutDashboard className="w-3.5 h-3.5" /> },
-  { label: 'Timeline Engine', path: '/execution/timeline', icon: <Activity className="w-3.5 h-3.5" /> },
-  { label: 'Gantt Workspace', path: '/execution/gantt', icon: <GitBranch className="w-3.5 h-3.5" /> },
-  { label: 'Sprint Center', path: '/execution/sprints', icon: <GitFork className="w-3.5 h-3.5" /> },
-  { label: 'Teams', path: '/resources/teams', icon: <Users className="w-3.5 h-3.5" /> },
-  { label: 'Logistics', path: '/resources', icon: <Target className="w-3.5 h-3.5" /> },
-  { label: 'Capacity', path: '/resources/capacity', icon: <BarChart3 className="w-3.5 h-3.5" /> },
-  { label: 'Work Logs', path: '/resources/work-logs', icon: <Clock className="w-3.5 h-3.5" /> },
-  { label: 'Admin', path: '/control', icon: <Shield className="w-3.5 h-3.5" /> },
-  { label: 'Audit', path: '/control/audit', icon: <FileText className="w-3.5 h-3.5" /> },
-  { label: 'Analytics', path: '/control/analytics', icon: <ChartArea className="w-3.5 h-3.5" /> },
-  { label: 'Automations', path: '/control/automations', icon: <Zap className="w-3.5 h-3.5" /> },
-  { label: 'Connections', path: '/control/connections', icon: <Link2 className="w-3.5 h-3.5" /> },
-  { label: 'Settings', path: '/control/settings', icon: <SettingsIcon className="w-3.5 h-3.5" /> },
-];
+const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode }[] = CANONICAL_ROUTES
+  .filter(r => 
+    !r.isPublic && 
+    r.id !== 'onboarding' && 
+    r.id !== 'project-new' && 
+    r.id !== 'control-root' && 
+    !r.id.startsWith('settings-')
+  )
+  .map(r => ({
+    label: r.label,
+    path: r.path,
+    icon: renderRouteIcon(r.iconName, "w-3.5 h-3.5")
+  }));
 
 const ACTION_ITEMS: { label: string; icon: React.ReactNode; capability: Capability; onSelect: (props: Props) => void }[] = [
   { label: 'Create Project', icon: <PlusCircle className="w-3.5 h-3.5" />, capability: 'manage_projects', onSelect: (p) => p.setIsAdding?.(true) },

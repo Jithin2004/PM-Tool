@@ -99,7 +99,7 @@ export function LogisticsDashboard({
     const dispatchRate = completedTasks.length > 0 ? Number((completedTasks.length / Math.max(1, tasks.length) * 100).toFixed(1)) : 76.5;
 
     // Route Congestion: average in-progress tasks per active developer
-    const devs = profiles.filter(p => p.role === 'developer');
+    const devs = profiles.filter(p => hasCapability(p.role as UserRole, 'manage_tasks') && !hasCapability(p.role as UserRole, 'manage_projects'));
     const congestion = devs.length > 0 ? Number((inProgressTasks.length / devs.length).toFixed(1)) : 0;
     
     // Escalation Index: high priority active tasks
@@ -128,9 +128,8 @@ export function LogisticsDashboard({
       });
   }, [tasks, projects, routingTaskSearch]);
 
-  // Execution Nodes
   const executionNodes = useMemo(() => {
-    const devs = profiles.filter(p => p.role === 'developer' || p.role === 'pm');
+    const devs = profiles.filter(p => hasCapability(p.role as UserRole, 'manage_tasks'));
     return devs.map(dev => {
       const devTasks = tasks.filter(t => t.assignee_id === dev.id && t.status !== 'done');
       const loadHours = devTasks.reduce((acc, t) => acc + (Number(t.estimated_hours) || 0), 0);

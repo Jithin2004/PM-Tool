@@ -19,6 +19,9 @@ interface TaskCardProps {
   blockedByTasks?: string[];
   dependencyConfidence?: number;
   density?: 'comfortable' | 'compact' | 'executive';
+  substate?: string;
+  blockers?: any[];
+  onUpdateSubstate?: (taskId: string, substate: string) => void;
 }
 
 export function TaskCard({
@@ -34,7 +37,10 @@ export function TaskCard({
   assigneeLoading,
   blockedByTasks,
   dependencyConfidence,
-  density = 'comfortable'
+  density = 'comfortable',
+  substate,
+  blockers,
+  onUpdateSubstate
 }: TaskCardProps) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -78,6 +84,12 @@ export function TaskCard({
     liabilityTag = 'Liability: External Client';
   }
 
+  // Active Blocker Tracking
+  const activeBlocker = blockers?.find(b => b.task_id === task.id && !b.resolved);
+  const blockerDurationDays = activeBlocker 
+    ? (Date.now() - new Date(activeBlocker.created_at).getTime()) / (1000 * 60 * 60 * 24) 
+    : 0;
+
   return (
     <motion.div
       onClick={() => onClick(task)}
@@ -106,7 +118,12 @@ export function TaskCard({
                 </>
               )}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              {substate && (
+                <span className="bg-slate-800/80 text-indigo-300 border border-slate-700/60 text-[8px] font-semibold font-mono-pm px-1 py-0.5 rounded uppercase leading-none">
+                  {substate.replace(/_/g, ' ')}
+                </span>
+              )}
               {task.priority && (
                 <div className={`w-1.5 h-1.5 rounded-full ${priorityColors[task.priority] || 'bg-text-tertiary'}`} title={`Priority: ${task.priority}`} />
               )}
@@ -152,6 +169,20 @@ export function TaskCard({
             <span className={`flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded border ${riskColors[task.risk] || riskColors.low}`}>
               <AlertTriangle className="w-2.5 h-2.5" />
               {task.risk}
+            </span>
+          )}
+
+          {substate && ['WAITING_FOR_CLIENT', 'WAITING_FOR_DATA', 'WAITING_FOR_INFRASTRUCTURE', 'WAITING_FOR_APPROVAL', 'BLOCKED_DEPENDENCY', 'BLOCKED_INFRASTRUCTURE', 'BLOCKED_ACCESS'].includes(substate) && (
+            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400">
+              <AlertTriangle className="w-2.5 h-2.5 text-rose-400" />
+              Friction: {substate.replace('WAITING_FOR_', '').replace('BLOCKED_', '').replace(/_/g, ' ')}
+            </span>
+          )}
+
+          {activeBlocker && (
+            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-rose-950/60 border border-rose-500/30 text-rose-400 font-mono-pm">
+              <Clock className="w-2.5 h-2.5 text-rose-400 animate-pulse" />
+              Blocked {blockerDurationDays.toFixed(1)}d
             </span>
           )}
 
@@ -261,6 +292,42 @@ export function TaskCard({
             )}
           </div>
         </div>
+
+        {/* Sub-state Transition dropdown */}
+        {hasWriteAccess && onUpdateSubstate && task.status !== 'done' && !isCompact && (
+          <div className="mt-2 pt-2 border-t border-border-subtle/40 flex items-center justify-between gap-2">
+            <span className="text-[9px] font-mono-pm uppercase tracking-widest text-text-tertiary">Flow Gate</span>
+            <select
+              value={substate || 'EXECUTING'}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => onUpdateSubstate(task.id, e.target.value)}
+              className="bg-slate-900 border border-slate-700/60 text-slate-300 text-[10px] font-mono-pm px-2 py-1 rounded cursor-pointer max-w-[150px] uppercase leading-tight hover:border-indigo-500/50 focus:border-indigo-500 transition-colors"
+            >
+              <optgroup label="ACTIVE" className="bg-slate-950">
+                <option value="EXECUTING">EXECUTING</option>
+                <option value="DEPLOYING">DEPLOYING</option>
+                <option value="TESTING">TESTING</option>
+                <option value="VALIDATING">VALIDATING</option>
+              </optgroup>
+              <optgroup label="WAITING" className="bg-slate-950">
+                <option value="WAITING_FOR_CLIENT">WAITING CLIENT</option>
+                <option value="WAITING_FOR_DATA">WAITING DATA</option>
+                <option value="WAITING_FOR_INFRASTRUCTURE">WAITING INFRA</option>
+                <option value="WAITING_FOR_APPROVAL">WAITING APPROVAL</option>
+              </optgroup>
+              <optgroup label="BLOCKED" className="bg-slate-950">
+                <option value="BLOCKED_DEPENDENCY">BLOCKED DEP</option>
+                <option value="BLOCKED_INFRASTRUCTURE">BLOCKED INFRA</option>
+                <option value="BLOCKED_ACCESS">BLOCKED ACCESS</option>
+              </optgroup>
+              <optgroup label="COORDINATION" className="bg-slate-950">
+                <option value="CLIENT_VERIFICATION">CLIENT VERIF</option>
+                <option value="RELEASE_WINDOW_PENDING">RELEASE PENDING</option>
+                <option value="INTERNAL_REVIEW">INTERNAL REVIEW</option>
+              </optgroup>
+            </select>
+          </div>
+        )}
 
         {/* Systemic Liability Label */}
         {liabilityTag && task.status !== 'done' && !isCompact && (

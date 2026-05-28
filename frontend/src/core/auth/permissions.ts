@@ -99,50 +99,25 @@ const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
   'pending-workspace-setup': [],
 };
 
-/** Route path → required capability (after normalizePath). */
-export const ROUTE_CAPABILITY_MAP: Record<string, Capability | 'auth'> = {
-  '/overview': 'auth',
-  '/workspace': 'view_projects',
-  '/workspace/portfolio': 'view_stakeholders',
-  '/workspace/knowledge': 'view_projects',
-  '/workspace/decisions': 'view_decision_center',
-  '/execution': 'view_tasks',
-  '/execution/board': 'view_tasks',
-  '/execution/timeline': 'view_scheduling',
-  '/execution/gantt': 'view_scheduling',
-  '/execution/sprints': 'view_scheduling',
-  '/resources': 'manage_logistics',
-  '/resources/teams': 'view_teams',
-  '/resources/capacity': 'view_reports',
-  '/resources/work-logs': 'view_reports',
-  '/control': 'platform_governance',
-  '/control/identity': 'platform_governance',
-  '/control/analytics': 'view_analytics',
-  '/control/audit': 'view_audit_log',
-  '/control/automations': 'manage_automations',
-  '/control/connections': 'manage_integrations',
-  '/control/settings': 'manage_settings',
-  '/control/settings/notifications': 'manage_settings',
-  '/control/settings/modes': 'manage_settings',
-  '/control/mission-control': 'view_mission_control',
-  '/projects/new': 'manage_projects',
-};
+import { ROUTE_CAPABILITY_MAP } from '../../app/routeRegistry';
+
 
 export function hasCapability(role: UserRole | undefined, capability: Capability): boolean {
   if (!role) return false;
   return ROLE_CAPABILITIES[role]?.includes(capability) ?? false;
 }
 
+export function isOperationalReadOnly(role: UserRole | undefined): boolean {
+  if (!role) return true;
+  return hasCapability(role, 'view_projects') && !hasCapability(role, 'manage_tasks') && !hasCapability(role, 'manage_projects');
+}
+
 export function hasAnyCapability(role: UserRole | undefined, capabilities: Capability[]): boolean {
   return capabilities.some(c => hasCapability(role, c));
 }
 
-export function isOperationalReadOnly(role: UserRole | undefined): boolean {
-  return role === 'viewer';
-}
-
 export function canWriteOperationally(role: UserRole | undefined): boolean {
-  if (!role || role === 'uninvited' || role === 'pending-workspace-setup') return false;
+  if (!role || !hasCapability(role, 'view_projects')) return false;
   return !isOperationalReadOnly(role);
 }
 
@@ -152,7 +127,7 @@ export function getCapabilities(role: UserRole | undefined): Capability[] {
 }
 
 export function canAccessRoute(role: UserRole | undefined, pathname: string): boolean {
-  if (!role || role === 'uninvited' || role === 'pending-workspace-setup') return false;
+  if (!role || !hasCapability(role, 'view_projects')) return false;
 
   const path = normalizePath(pathname);
   const required = ROUTE_CAPABILITY_MAP[path];

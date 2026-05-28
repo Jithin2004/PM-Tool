@@ -7,7 +7,7 @@ import {
   Calculator, TrendingDown, Banknote, Download, Menu, X,
   Sun, Moon, Layers, ListOrdered, Kanban, Play,
   Briefcase, ListTodo, FileText, Link2, Bell, HelpCircle, LayoutDashboard,
-  Truck, Route, GitBranch, Building2, Radar, Shield
+  Truck, Route, GitBranch, Building2, Radar, Shield, BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
@@ -44,6 +44,7 @@ import {
   normalizePath,
   isRegisteredPath,
   type SidebarGroup,
+  renderRouteIcon,
 } from '../../app/routeRegistry';
 import { GuidedTour, TourStep } from '../../components/onboarding/GuidedTour';
 
@@ -216,38 +217,18 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     system: 'System',
   };
 
-  const SIDEBAR_ICONS: Record<string, React.ReactNode> = {
-    overview: <LayoutDashboard className="w-[15px] h-[15px] shrink-0" />,
-    projects: <Briefcase className="w-[15px] h-[15px] shrink-0" />,
-    board: <ListTodo className="w-[15px] h-[15px] shrink-0" />,
-    scheduling: <Route className="w-[15px] h-[15px] shrink-0" />,
-    analytics: <BarChart3 className="w-[15px] h-[15px] shrink-0" />,
-    decisions: <BrainCircuit className="w-[15px] h-[15px] shrink-0" />,
-    reports: <FileText className="w-[15px] h-[15px] shrink-0" />,
-    logistics: <Truck className="w-[15px] h-[15px] shrink-0" />,
-    teams: <Users className="w-[15px] h-[15px] shrink-0" />,
-    portfolio: <Building2 className="w-[15px] h-[15px] shrink-0" />,
-    audit: <Activity className="w-[15px] h-[15px] shrink-0" />,
-    identity: <Shield className="w-[15px] h-[15px] shrink-0" />,
-    automations: <Zap className="w-[15px] h-[15px] shrink-0" />,
-    'mission-control': <Radar className="w-[15px] h-[15px] shrink-0" />,
-    'work-logs': <Clock className="w-[15px] h-[15px] shrink-0" />,
-    settings: <Settings className="w-[15px] h-[15px] shrink-0" />,
-    integrations: <Link2 className="w-[15px] h-[15px] shrink-0" />,
-  };
+
 
   const isSidebarItemActive = (path: string): boolean => {
     const current = window.location.pathname;
     if (path === '/overview') return current === '/overview' || current === '/';
-    if (path === '/workspace') return current === '/workspace';
+    if (path === '/workspace') return current === '/workspace' || current.startsWith('/projects/');
     if (path === '/execution') {
-      return current.startsWith('/execution')
-        && !current.includes('timeline')
-        && !current.includes('sprints')
-        && !current.includes('gantt');
+      return current.startsWith('/execution') && !current.includes('timeline');
     }
     if (path === '/execution/timeline') return current.includes('timeline');
     if (path === '/resources') return current === '/resources' || current.startsWith('/resources/logistics');
+    if (path === '/control/identity') return current === '/control/identity' || current === '/control';
     if (path === '/control/settings') {
       return current === '/control/settings' || current.startsWith('/control/settings/');
     }
@@ -255,17 +236,64 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   };
 
   const visibleSidebarGroups = useMemo(() => {
+    const isDev = hasCapability(profile?.role, 'manage_tasks') && !hasCapability(profile?.role, 'manage_projects');
+    if (isDev) {
+      return [
+        {
+          group: 'core' as SidebarGroup,
+          items: [
+            { id: 'overview', label: 'Execution Workspace', path: '/overview', group: 'core' as SidebarGroup, disclosureTier: 'essential', iconName: 'LayoutDashboard' },
+            { id: 'board', label: 'My Tasks Board', path: '/execution', group: 'core' as SidebarGroup, disclosureTier: 'essential', iconName: 'ListTodo' },
+          ]
+        }
+      ];
+    }
+
+    const isView = hasCapability(profile?.role, 'view_stakeholders') && !hasCapability(profile?.role, 'manage_tasks');
+    if (isView) {
+      return [
+        {
+          group: 'core' as SidebarGroup,
+          items: [
+            { id: 'portfolio', label: 'Portfolio Analytics', path: '/workspace/portfolio', group: 'core' as SidebarGroup, disclosureTier: 'essential', iconName: 'Building2' },
+            { id: 'decisions', label: 'Decision Center', path: '/workspace/decisions', group: 'intelligence' as SidebarGroup, disclosureTier: 'intelligence', iconName: 'BrainCircuit' },
+          ]
+        }
+      ];
+    }
+
+    // Admins & PMs get full capability-filtered dashboard
     const order: SidebarGroup[] = ['core', 'intelligence', 'resources', 'system'];
     return order
-      .map(group => ({
-        group,
-        items: SIDEBAR_NAV.filter(
+      .map(group => {
+        let items = SIDEBAR_NAV.filter(
           item =>
             item.group === group
             && (!item.capability || hasCapability(profile?.role, item.capability))
             && disclosure.isNavVisible(item),
-        ),
-      }))
+        );
+
+        // Advanced Enterprise Orchestration UX Title Adjustments
+        const isSuperAdmin = hasCapability(profile?.role, 'platform_governance');
+        const isPM = hasCapability(profile?.role, 'manage_projects') && !hasCapability(profile?.role, 'platform_governance');
+        if (isSuperAdmin) {
+          items = items.map(item => {
+            if (item.id === 'overview') return { ...item, label: 'Strategic Telemetry' };
+            if (item.id === 'projects') return { ...item, label: 'Org Orchestration' };
+            if (item.id === 'mission-control') return { ...item, label: 'Operational Health' };
+            return item;
+          });
+        } else if (isPM) {
+          items = items.map(item => {
+            if (item.id === 'overview') return { ...item, label: 'Delivery Center' };
+            if (item.id === 'projects') return { ...item, label: 'Initiative Coordinator' };
+            if (item.id === 'board') return { ...item, label: 'Execution Flow' };
+            return item;
+          });
+        }
+
+        return { group, items };
+      })
       .filter(g => g.items.length > 0);
   }, [profile?.role, disclosure]);
 
@@ -277,8 +305,39 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     return () => window.removeEventListener('popstate', syncRoute);
   }, []);
 
+  // Strict route guards for Phase 5 UX role alignment
+  useEffect(() => {
+    if (loading || !profile?.role) return;
+
+    const isDev = hasCapability(profile.role, 'manage_tasks') && !hasCapability(profile.role, 'manage_projects');
+    const isView = hasCapability(profile.role, 'view_stakeholders') && !hasCapability(profile.role, 'manage_tasks');
+    if (isDev) {
+      const allowed = ['/overview', '/execution', '/execution/board', '/login'];
+      if (!allowed.includes(routePath)) {
+        navigateTo('/overview');
+        window.dispatchEvent(
+          new CustomEvent('notify-toast', {
+            detail: { message: 'Developer role is restricted to the Execution Workspace and Board.', type: 'warning' },
+          }),
+        );
+      }
+    } else if (isView) {
+      const allowed = ['/workspace/portfolio', '/workspace/decisions', '/login'];
+      if (!allowed.includes(routePath)) {
+        navigateTo('/workspace/portfolio');
+        window.dispatchEvent(
+          new CustomEvent('notify-toast', {
+            detail: { message: 'Stakeholders have read-only visibility to Portfolio Analytics.', type: 'warning' },
+          }),
+        );
+      }
+    }
+  }, [profile?.role, loading, routePath]);
+
   useEffect(() => {
     if (!disclosure.active || loading) return;
+    const isDevOrView = (hasCapability(profile?.role, 'manage_tasks') && !hasCapability(profile?.role, 'manage_projects')) || (hasCapability(profile?.role, 'view_stakeholders') && !hasCapability(profile?.role, 'manage_tasks'));
+    if (isDevOrView) return; // Bypass progressive unlock for developers & stakeholders
     if (routePath === '/overview' || routePath === '/') return;
     if (disclosure.isRouteVisible(routePath)) return;
 
@@ -292,7 +351,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       }),
     );
     navigateTo('/overview');
-  }, [disclosure.active, disclosure.level, loading, routePath]);
+  }, [disclosure.active, disclosure.level, loading, routePath, profile?.role]);
 
   const handleShowAllFeatures = () => {
     if (!workspace?.id) return;
@@ -1059,7 +1118,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       onMouseEnter={e => { if (!active) { (e.currentTarget as any).style.background = 'rgba(51,53,55,0.4)'; (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; } }}
                       onMouseLeave={e => { if (!active) { (e.currentTarget as any).style.background = ''; (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; } }}
                     >
-                      {SIDEBAR_ICONS[item.id]}
+                      {renderRouteIcon(item.iconName)}
                       {!isSidebarCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
                     </button>
                   );
@@ -1192,7 +1251,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                                   : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
                               }`}
                             >
-                              {SIDEBAR_ICONS[item.id]}
+                              {renderRouteIcon(item.iconName)}
                               {item.label}
                             </button>
                           );

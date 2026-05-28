@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Terminal } from 'lucide-react';
 import { Project, Task, TaskStatus } from '../../types';
+import { hasCapability } from '../../core/auth/permissions';
 
 interface TaskEditModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export function TaskEditModal({
 
   if (!isOpen) return null;
 
-  const isDeveloper = currentUserProfile?.role === 'developer';
+  const isDeveloper = !hasCapability(currentUserProfile?.role, 'manage_projects');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

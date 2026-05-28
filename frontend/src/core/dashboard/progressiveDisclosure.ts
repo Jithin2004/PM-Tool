@@ -2,6 +2,7 @@ import { normalizePath } from '../../app/routePaths';
 import type { DisclosureTier, SidebarNavItem } from '../../app/routeRegistry';
 import { SIDEBAR_NAV } from '../../app/routeRegistry';
 import type { UserRole } from '../../types';
+import { hasCapability, isOperationalReadOnly as isReadOnlyRole } from '../auth/permissions';
 
 export type { DisclosureTier } from '../../app/routeRegistry';
 
@@ -78,11 +79,11 @@ export function buildDisclosureMaturity(input: {
 
 /** Roles that bypass progressive limits (full surface when permitted by RBAC). */
 export function bypassesProgressiveDisclosure(role: UserRole | undefined): boolean {
-  return role === 'super_admin';
+  return hasCapability(role, 'platform_governance');
 }
 
 export function shouldApplyProgressiveDisclosure(role: UserRole | undefined): boolean {
-  if (!role || role === 'uninvited' || role === 'pending-workspace-setup') return false;
+  if (!role || !hasCapability(role, 'view_projects')) return false;
   return !bypassesProgressiveDisclosure(role);
 }
 
@@ -93,13 +94,13 @@ export function resolveDisclosureLevel(
   if (!shouldApplyProgressiveDisclosure(role)) return 3;
   if (maturity.forceFull) return 3;
 
-  if (role === 'developer') {
+  if (hasCapability(role, 'manage_tasks') && !hasCapability(role, 'manage_projects')) {
     if (maturity.taskCount >= 5 || maturity.projectCount >= 2) return 2;
     if (maturity.taskCount >= 1 || maturity.projectCount >= 1) return 1;
     return 0;
   }
 
-  if (role === 'viewer') {
+  if (isReadOnlyRole(role)) {
     if (maturity.tourCompleted || maturity.daysSinceProfile >= 2) return 2;
     if (maturity.projectCount >= 1) return 1;
     return 0;

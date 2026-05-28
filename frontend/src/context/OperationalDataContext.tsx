@@ -97,9 +97,10 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
         workspaceSettingsBlob,
         userId: profile?.id || '',
         userRole: profile?.role || 'viewer',
+        dependencies,
         serverMetrics,
       }),
-    [projects, tasks, teams, profiles, attendanceRows, salaryRows, workspaceSettingsBlob, profile?.id, profile?.role, serverMetrics],
+    [projects, tasks, dependencies, teams, profiles, attendanceRows, salaryRows, workspaceSettingsBlob, profile?.id, profile?.role, serverMetrics],
   );
 
   const refreshAll = useCallback(async () => {

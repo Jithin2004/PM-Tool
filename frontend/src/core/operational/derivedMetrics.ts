@@ -1,4 +1,4 @@
-import type { Project, Task, Team, Stats } from '../../types';
+import type { Project, Task, Team, Stats, TaskDependency } from '../../types';
 import { calculateExpectedTime } from '../../utils/timeUtils';
 import { buildVisibilityContext, filterVisibleProjects, filterVisibleTasks, getVisibleProjectIds } from '../../utils/visibilityFilter';
 import type { UserRole } from '../../types';
@@ -23,6 +23,7 @@ export interface ComputeDerivedInput {
   workspaceSettingsBlob: Record<string, unknown>;
   userId: string;
   userRole: UserRole;
+  dependencies?: TaskDependency[];
   serverMetrics?: {
     deliveryConfidence: number;
     executionPressure: number;
@@ -43,10 +44,14 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
     const pTasks = input.tasks.filter(t => t.project_id === p.id && t.status !== 'done');
     let remainingHours = 0;
     pTasks.forEach(t => {
-       remainingHours += t.estimated_hours || 8; 
+      remainingHours += calculateExpectedTime(
+        t.pert_best || t.estimated_hours || 0,
+        t.pert_likely || t.estimated_hours || 0,
+        t.pert_worst || t.estimated_hours || 0,
+      );
     });
     
-    if (remainingHours === 0) {
+    if (remainingHours <= 0) {
       if (p.client_deadline) {
         return { ...p, predicted_completion: p.client_deadline };
       }
@@ -66,6 +71,9 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
     input.userRole,
     input.projects,
     input.teams,
+    input.tasks,
+    input.dependencies,
+    input.workspaceSettingsBlob,
   );
 
   const visibleTasks = filterVisibleTasks(input.tasks, visibilityContext);
@@ -106,6 +114,21 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
   let passiveWaitingProjectsCount = 0;
   let blockedProjectsCount = 0;
 
+  let sumWaitTimeRatio = 0;
+  let sumAdjustedConfidence = 0;
+  let sumOperationalContinuity = 0;
+
+  const sumFrictionCategories = {
+    blockerRecurrence: 0,
+    dependencyInstability: 0,
+    clientResponsiveness: 0,
+    coordinationOverhead: 0,
+    infrastructureReliability: 0,
+  };
+
+  const taskSubstates = input.workspaceSettingsBlob?.task_substates || {};
+  const globalBlockers = input.workspaceSettingsBlob?.execution_blockers || [];
+
   input.projects.forEach(project => {
     const duration = stateDurations[project.id] || {
       currentState: 'active',
@@ -119,16 +142,58 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
     const passiveWaitDays = duration.passiveWaitDays || 0;
     const blockedDays = duration.blockedDays || 0;
 
+    const totalDays = activeDays + passiveWaitDays + blockedDays;
+    const liabilityRatio = totalDays > 0 
+      ? Number(((passiveWaitDays + blockedDays) / totalDays * 100).toFixed(1))
+      : 0;
+
     if (project.status !== 'deployed' && project.status !== 'done' && project.status !== 'archived') {
       if (currentState === 'active') activeExecutionProjectsCount++;
       else if (currentState === 'passive_wait') passiveWaitingProjectsCount++;
       else if (currentState === 'blocked') blockedProjectsCount++;
     }
 
-    const totalDays = activeDays + passiveWaitDays + blockedDays;
-    const liabilityRatio = totalDays > 0 
-      ? Number(((passiveWaitDays + blockedDays) / totalDays * 100).toFixed(1))
-      : 0;
+    // Advanced Execution Intelligence modeling
+    const projectTasks = input.tasks.filter(t => t.project_id === project.id);
+    const projectBlockers = globalBlockers.filter((b: any) => b.task_id && projectTasks.some((t: any) => t.id === b.task_id));
+
+    // Wait-Time ratio calculation
+    const waitCount = projectTasks.filter(t => 
+      ['WAITING_FOR_CLIENT', 'WAITING_FOR_DATA', 'WAITING_FOR_INFRASTRUCTURE', 'WAITING_FOR_APPROVAL', 
+       'BLOCKED_DEPENDENCY', 'BLOCKED_INFRASTRUCTURE', 'BLOCKED_ACCESS'].includes(taskSubstates[t.id])
+    ).length;
+    const substateRatio = projectTasks.length > 0 ? (waitCount / projectTasks.length) * 100 : 0;
+    const waitTimeRatio = Math.round(Math.max(liabilityRatio, substateRatio));
+
+    // Blocker recurrence score (1-100)
+    const blockerRecurrence = Math.min(100, projectBlockers.length * 15 + (projectBlockers.filter((b: any) => b.history && b.history.length > 1).length * 20));
+
+    // Dependency instability score (1-100)
+    const projectDepsCount = (input.dependencies || []).filter(d => projectTasks.some(t => t.id === d.task_id)).length;
+    const dependencyInstability = Math.min(100, projectDepsCount * 25);
+
+    // Client responsiveness score (1-100)
+    const clientWaitCount = projectTasks.filter(t => ['WAITING_FOR_CLIENT', 'CLIENT_VERIFICATION'].includes(taskSubstates[t.id])).length;
+    const clientResponsiveness = Math.min(100, clientWaitCount * 30 + (passiveWaitDays > 3 ? 40 : 0));
+
+    // Coordination overhead score (1-100)
+    const coordWaitCount = projectTasks.filter(t => ['INTERNAL_REVIEW', 'WAITING_FOR_APPROVAL', 'RELEASE_WINDOW_PENDING'].includes(taskSubstates[t.id])).length;
+    const coordinationOverhead = Math.min(100, coordWaitCount * 25);
+
+    // Infrastructure reliability score (1-100)
+    const infraWaitCount = projectTasks.filter(t => ['WAITING_FOR_INFRASTRUCTURE', 'BLOCKED_INFRASTRUCTURE', 'BLOCKED_ACCESS'].includes(taskSubstates[t.id])).length;
+    const infrastructureReliability = Math.min(100, infraWaitCount * 35);
+
+    // Operational continuity score (1-100)
+    const activeBlockersCount = projectBlockers.filter((b: any) => !b.resolved).length;
+    const operationalContinuity = Math.max(10, 100 - (activeBlockersCount * 20 + waitTimeRatio * 0.4));
+
+    // Friction-adjusted delivery confidence
+    const doneTasksCount = projectTasks.filter(t => t.status === 'done').length;
+    const doneRatio = projectTasks.length > 0 ? (doneTasksCount / projectTasks.length) : 0;
+    const baseConfidence = 80 + (doneRatio * 20);
+    const frictionPenalty = (waitTimeRatio * 0.3) + (activeBlockersCount * 10) + (dependencyInstability * 0.1);
+    const adjustedConfidence = Math.max(5, Math.min(99, Math.round(baseConfidence - frictionPenalty)));
 
     projectFrictionMetrics[project.id] = {
       projectId: project.id,
@@ -137,12 +202,32 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
       passiveWaitDays,
       blockedDays,
       liabilityRatio,
+      waitTimeRatio,
+      adjustedConfidence,
+      operationalContinuity,
+      frictionCategories: {
+        blockerRecurrence,
+        dependencyInstability,
+        clientResponsiveness,
+        coordinationOverhead,
+        infrastructureReliability,
+      }
     };
 
     if (project.status !== 'deployed' && project.status !== 'done' && project.status !== 'archived') {
       if (totalDays > 0) {
         totalFrictionImpact += (passiveWaitDays + blockedDays) / totalDays;
       }
+      sumWaitTimeRatio += waitTimeRatio;
+      sumAdjustedConfidence += adjustedConfidence;
+      sumOperationalContinuity += operationalContinuity;
+
+      sumFrictionCategories.blockerRecurrence += blockerRecurrence;
+      sumFrictionCategories.dependencyInstability += dependencyInstability;
+      sumFrictionCategories.clientResponsiveness += clientResponsiveness;
+      sumFrictionCategories.coordinationOverhead += coordinationOverhead;
+      sumFrictionCategories.infrastructureReliability += infrastructureReliability;
+
       activeProjectCount++;
     }
   });
@@ -158,6 +243,18 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
     ? Number((avgFrictionImpact * 100).toFixed(1))
     : 0;
 
+  const avgWaitTimeRatio = activeProjectCount > 0 ? Math.round(sumWaitTimeRatio / activeProjectCount) : 0;
+  const avgAdjustedConfidence = activeProjectCount > 0 ? Math.round(sumAdjustedConfidence / activeProjectCount) : 85;
+  const avgOperationalContinuity = activeProjectCount > 0 ? Math.round(sumOperationalContinuity / activeProjectCount) : 95;
+
+  const globalFrictionCategories = {
+    blockerRecurrence: activeProjectCount > 0 ? Math.round(sumFrictionCategories.blockerRecurrence / activeProjectCount) : 0,
+    dependencyInstability: activeProjectCount > 0 ? Math.round(sumFrictionCategories.dependencyInstability / activeProjectCount) : 0,
+    clientResponsiveness: activeProjectCount > 0 ? Math.round(sumFrictionCategories.clientResponsiveness / activeProjectCount) : 0,
+    coordinationOverhead: activeProjectCount > 0 ? Math.round(sumFrictionCategories.coordinationOverhead / activeProjectCount) : 0,
+    infrastructureReliability: activeProjectCount > 0 ? Math.round(sumFrictionCategories.infrastructureReliability / activeProjectCount) : 0,
+  };
+
   const globalFrictionSummary = {
     globalLiabilityRatio,
     totalShiftCount: timelineShiftLedger.length,
@@ -165,13 +262,14 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
     activeExecutionProjects: activeExecutionProjectsCount,
     passiveWaitingProjects: passiveWaitingProjectsCount,
     blockedProjects: blockedProjectsCount,
+    avgWaitTimeRatio,
+    avgAdjustedConfidence,
+    avgOperationalContinuity,
+    globalFrictionCategories,
   };
 
   // Friction-Adjusted Forecasting: Incorporate wait-state duration latency into delivery confidence
-  const baseConfidence = input.serverMetrics?.deliveryConfidence ?? 85;
-  // Reduce confidence based on the global liability ratio (friction penalty of up to 30 points)
-  const frictionPenalty = (globalLiabilityRatio / 100) * 30;
-  const deliveryConfidence = Math.max(0, Math.min(100, Math.round(baseConfidence - frictionPenalty)));
+  const deliveryConfidence = avgAdjustedConfidence;
 
   const stats: Stats = {
     totalProjects: activeWorkflows.length,

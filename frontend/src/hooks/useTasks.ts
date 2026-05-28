@@ -8,6 +8,7 @@ import { fireEventWebhooks } from '../services/webhookService';
 import { evaluateTriggers } from '../services/automationEngine';
 import { useAuth } from '../context/AuthContext';
 import { sha256 } from '../utils/cryptoUtils';
+import { hasCapability } from '../core/auth/permissions';
 
 
 // Recursive utility function for DFS-based circular dependency detection
@@ -75,7 +76,7 @@ export function useTasks(workspaceId?: string) {
       
       const authorId = user.id;
       const authorName = profile?.full_name || user.email?.split('@')[0] || 'Unknown';
-      const authorRole = profile?.role === 'super_admin' ? 'Super Admin' : profile?.role === 'pm' ? 'Project Manager' : 'Developer';
+      const authorRole = hasCapability(profile?.role, 'platform_governance') ? 'Super Admin' : hasCapability(profile?.role, 'manage_projects') ? 'Project Manager' : 'Developer';
       
       const message = `${taskId}${timestamp}${authorName}${authorRole}${fieldName}${oldValue ?? ''}${newValue ?? ''}${previousHash}`;
       const newHash = await sha256(message);

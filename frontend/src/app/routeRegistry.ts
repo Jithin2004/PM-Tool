@@ -1,12 +1,25 @@
+import React from 'react';
 import type { Capability } from '../core/auth/permissions';
-import { normalizePath } from './routePaths';
-
-export { normalizePath, ROUTE_ALIASES } from './routePaths';
+import {
+  LayoutDashboard, Briefcase, BookOpen, ListTodo, Route,
+  BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
+  Activity, Shield, Zap, Radar, Settings, Link2, FileText,
+  Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork
+} from 'lucide-react';
 
 export type SidebarGroup = 'core' | 'intelligence' | 'resources' | 'system';
-
-/** Progressive disclosure surface tier (simple → enterprise). */
 export type DisclosureTier = 'essential' | 'operational' | 'intelligence' | 'platform';
+
+export interface AppRoute {
+  id: string;
+  path: string;
+  label: string;
+  iconName: string;
+  capability?: Capability;
+  group?: SidebarGroup;
+  disclosureTier: DisclosureTier;
+  isPublic?: boolean;
+}
 
 export interface SidebarNavItem {
   id: string;
@@ -14,64 +27,74 @@ export interface SidebarNavItem {
   path: string;
   group: SidebarGroup;
   capability?: Capability;
-  /** Progressive disclosure tier — defaults to essential when omitted. */
   disclosureTier: DisclosureTier;
+  iconName: string;
 }
 
-/**
- * Canonical sidebar targets — every path MUST exist in EXACT_APP_PATHS or PROJECT_SUBROUTES.
- */
-export const SIDEBAR_NAV: SidebarNavItem[] = [
-  { id: 'overview', label: 'Overview', path: '/overview', group: 'core', capability: 'view_projects', disclosureTier: 'essential' },
-  { id: 'projects', label: 'Projects', path: '/workspace', group: 'core', capability: 'view_projects', disclosureTier: 'essential' },
-  { id: 'board', label: 'Tasks', path: '/execution', group: 'core', capability: 'view_tasks', disclosureTier: 'essential' },
-  { id: 'scheduling', label: 'Scheduling', path: '/execution/timeline', group: 'core', capability: 'view_scheduling', disclosureTier: 'operational' },
-  { id: 'analytics', label: 'Analytics', path: '/control/analytics', group: 'intelligence', capability: 'view_analytics', disclosureTier: 'intelligence' },
-  { id: 'decisions', label: 'Decision Center', path: '/workspace/decisions', group: 'intelligence', capability: 'view_decision_center', disclosureTier: 'intelligence' },
-  { id: 'work-logs', label: 'Work Logs', path: '/resources/work-logs', group: 'resources', capability: 'view_reports', disclosureTier: 'operational' },
-  { id: 'logistics', label: 'Logistics', path: '/resources', group: 'resources', capability: 'manage_logistics', disclosureTier: 'operational' },
-  { id: 'teams', label: 'Team Roster', path: '/resources/teams', group: 'resources', capability: 'view_teams', disclosureTier: 'operational' },
-  { id: 'portfolio', label: 'Project Sponsors', path: '/workspace/portfolio', group: 'resources', capability: 'view_stakeholders', disclosureTier: 'intelligence' },
-  { id: 'audit', label: 'Audit Log', path: '/control/audit', group: 'resources', capability: 'view_audit_log', disclosureTier: 'platform' },
-  { id: 'identity', label: 'Admin & Identity', path: '/control/identity', group: 'system', capability: 'platform_governance', disclosureTier: 'platform' },
-  { id: 'automations', label: 'Automations', path: '/control/automations', group: 'system', capability: 'manage_automations', disclosureTier: 'platform' },
-  { id: 'mission-control', label: 'Mission Control', path: '/control/mission-control', group: 'system', capability: 'view_mission_control', disclosureTier: 'platform' },
-  { id: 'settings', label: 'Settings', path: '/control/settings', group: 'system', capability: 'manage_settings', disclosureTier: 'operational' },
-  { id: 'integrations', label: 'Integrations', path: '/control/connections', group: 'system', capability: 'manage_integrations', disclosureTier: 'platform' },
+// Canonical routes registry
+export const CANONICAL_ROUTES: AppRoute[] = [
+  // Core routes
+  { id: 'overview', path: '/overview', label: 'Overview', iconName: 'LayoutDashboard', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'projects', path: '/workspace', label: 'Projects', iconName: 'Briefcase', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'knowledge', path: '/workspace/knowledge', label: 'Knowledge Hub', iconName: 'BookOpen', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'board', path: '/execution', label: 'Tasks', iconName: 'ListTodo', capability: 'view_tasks', group: 'core', disclosureTier: 'essential' },
+  { id: 'scheduling', path: '/execution/timeline', label: 'Scheduling', iconName: 'Route', capability: 'view_scheduling', group: 'core', disclosureTier: 'operational' },
+  
+  // Intelligence routes
+  { id: 'analytics', path: '/control/analytics', label: 'Analytics', iconName: 'BarChart3', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
+  { id: 'decisions', path: '/workspace/decisions', label: 'Decision Center', iconName: 'BrainCircuit', capability: 'view_decision_center', group: 'intelligence', disclosureTier: 'intelligence' },
+  
+  // Resources routes
+  { id: 'work-logs', path: '/resources/work-logs', label: 'Work Logs', iconName: 'Clock', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
+  { id: 'logistics', path: '/resources', label: 'Logistics', iconName: 'Truck', capability: 'manage_logistics', group: 'resources', disclosureTier: 'operational' },
+  { id: 'teams', path: '/resources/teams', label: 'Team Roster', iconName: 'Users', capability: 'view_teams', group: 'resources', disclosureTier: 'operational' },
+  { id: 'capacity', path: '/resources/capacity', label: 'Capacity Forecast', iconName: 'BarChart3', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
+  { id: 'portfolio', path: '/workspace/portfolio', label: 'Project Sponsors', iconName: 'Building2', capability: 'view_stakeholders', group: 'resources', disclosureTier: 'intelligence' },
+  { id: 'audit', path: '/control/audit', label: 'Audit Log', iconName: 'Activity', capability: 'view_audit_log', group: 'resources', disclosureTier: 'platform' },
+  
+  // System routes
+  { id: 'identity', path: '/control/identity', label: 'Admin & Identity', iconName: 'Shield', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
+  { id: 'automations', path: '/control/automations', label: 'Automations', iconName: 'Zap', capability: 'manage_automations', group: 'system', disclosureTier: 'platform' },
+  { id: 'mission-control', path: '/control/mission-control', label: 'Mission Control', iconName: 'Radar', capability: 'view_mission_control', group: 'system', disclosureTier: 'platform' },
+  { id: 'settings', path: '/control/settings', label: 'Settings', iconName: 'Settings', capability: 'manage_settings', group: 'system', disclosureTier: 'operational' },
+  { id: 'integrations', path: '/control/connections', label: 'Integrations', iconName: 'Link2', capability: 'manage_integrations', group: 'system', disclosureTier: 'platform' },
+
+  // Non-sidebar / helper routes
+  { id: 'landing', path: '/', label: 'Home', iconName: 'LayoutDashboard', isPublic: true, disclosureTier: 'essential' },
+  { id: 'privacy', path: '/privacy', label: 'Privacy Policy', iconName: 'FileText', isPublic: true, disclosureTier: 'essential' },
+  { id: 'terms', path: '/terms', label: 'Terms of Service', iconName: 'FileText', isPublic: true, disclosureTier: 'essential' },
+  { id: 'compliance', path: '/compliance', label: 'Compliance', iconName: 'FileText', isPublic: true, disclosureTier: 'essential' },
+  { id: 'security', path: '/security', label: 'Security', iconName: 'FileText', isPublic: true, disclosureTier: 'essential' },
+  { id: 'activate', path: '/activate', label: 'Activate', iconName: 'Key', isPublic: true, disclosureTier: 'essential' },
+  { id: 'login', path: '/login', label: 'Login', iconName: 'Lock', isPublic: true, disclosureTier: 'essential' },
+  { id: 'onboarding', path: '/onboarding/workspace', label: 'Workspace Setup', iconName: 'Building2', disclosureTier: 'essential' },
+  { id: 'project-new', path: '/projects/new', label: 'Create Project', iconName: 'PlusCircle', capability: 'manage_projects', disclosureTier: 'essential' },
+  { id: 'control-root', path: '/control', label: 'Control', iconName: 'Shield', capability: 'platform_governance', disclosureTier: 'platform' },
+  { id: 'settings-notifications', path: '/control/settings/notifications', label: 'Notification Settings', iconName: 'Bell', capability: 'manage_settings', disclosureTier: 'operational' },
+  { id: 'settings-modes', path: '/control/settings/modes', label: 'Mode Settings', iconName: 'Sliders', capability: 'manage_settings', disclosureTier: 'operational' },
+  { id: 'execution-board', path: '/execution/board', label: 'Execution Board', iconName: 'ListTodo', capability: 'view_tasks', disclosureTier: 'essential' },
+  { id: 'execution-gantt', path: '/execution/gantt', label: 'Gantt Workspace', iconName: 'GitBranch', capability: 'view_scheduling', disclosureTier: 'operational' },
+  { id: 'execution-sprints', path: '/execution/sprints', label: 'Sprint Center', iconName: 'GitFork', capability: 'view_scheduling', disclosureTier: 'operational' },
 ];
 
-/** Exact paths handled by ResolveRouter (excluding dynamic /projects/:id/*) */
-export const EXACT_APP_PATHS = new Set([
-  '/',
-  '/activate',
-  '/login',
-  '/onboarding/workspace',
-  '/overview',
-  '/workspace',
-  '/workspace/portfolio',
-  '/workspace/knowledge',
-  '/workspace/decisions',
-  '/execution',
-  '/execution/board',
-  '/execution/timeline',
-  '/execution/gantt',
-  '/execution/sprints',
-  '/resources',
-  '/resources/teams',
-  '/resources/capacity',
-  '/resources/work-logs',
-  '/control',
-  '/control/identity',
-  '/control/analytics',
-  '/control/audit',
-  '/control/automations',
-  '/control/connections',
-  '/control/settings',
-  '/control/settings/notifications',
-  '/control/settings/modes',
-  '/control/mission-control',
-  '/projects/new',
-]);
+export const EXACT_APP_PATHS = new Set(CANONICAL_ROUTES.map(r => r.path));
+
+export const SIDEBAR_NAV: SidebarNavItem[] = CANONICAL_ROUTES
+  .filter(r => r.group !== undefined)
+  .map(r => ({
+    id: r.id,
+    label: r.label,
+    path: r.path,
+    group: r.group!,
+    capability: r.capability,
+    disclosureTier: r.disclosureTier,
+    iconName: r.iconName
+  }));
+
+export const ROUTE_CAPABILITY_MAP: Record<string, Capability | 'auth'> = CANONICAL_ROUTES.reduce((map, r) => {
+  map[r.path] = r.capability || 'auth';
+  return map;
+}, {} as Record<string, Capability | 'auth'>);
 
 export const PROJECT_SUBROUTES = new Set([
   'setup',
@@ -80,6 +103,21 @@ export const PROJECT_SUBROUTES = new Set([
   'sprints',
   'timeline',
 ]);
+
+const ICON_MAP: Record<string, React.ComponentType<any>> = {
+  LayoutDashboard, Briefcase, BookOpen, ListTodo, Route,
+  BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
+  Activity, Shield, Zap, Radar, Settings, Link2, FileText,
+  Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork
+};
+
+export function renderRouteIcon(name: string, className = "w-[15px] h-[15px] shrink-0"): React.ReactNode {
+  const IconComponent = ICON_MAP[name];
+  if (!IconComponent) return null;
+  return React.createElement(IconComponent, { className });
+}
+
+export { normalizePath, ROUTE_ALIASES } from './routePaths';
 
 export function parseProjectRoute(pathname: string): {
   projectId: string;

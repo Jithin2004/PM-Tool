@@ -37,6 +37,16 @@ export interface ProjectFrictionMetric {
   passiveWaitDays: number;
   blockedDays: number;
   liabilityRatio: number;
+  waitTimeRatio: number; // Percentage of total active duration spent waiting (e.g. 72)
+  adjustedConfidence: number; // Friction-adjusted delivery confidence (e.g. 85)
+  operationalContinuity: number; // Stability score based on context switches (1-100)
+  frictionCategories: {
+    blockerRecurrence: number;
+    dependencyInstability: number;
+    clientResponsiveness: number;
+    coordinationOverhead: number;
+    infrastructureReliability: number;
+  };
 }
 
 export interface GlobalFrictionSummary {
@@ -46,6 +56,16 @@ export interface GlobalFrictionSummary {
   activeExecutionProjects: number;
   passiveWaitingProjects: number;
   blockedProjects: number;
+  avgWaitTimeRatio: number;
+  avgAdjustedConfidence: number;
+  avgOperationalContinuity: number;
+  globalFrictionCategories: {
+    blockerRecurrence: number;
+    dependencyInstability: number;
+    clientResponsiveness: number;
+    coordinationOverhead: number;
+    infrastructureReliability: number;
+  };
 }
 
 export interface TimelineShiftEvent {

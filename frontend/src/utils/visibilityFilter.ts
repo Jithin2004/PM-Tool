@@ -1,9 +1,6 @@
-// Delegates to the canonical permission engine (single authority).
-// This file exists for backward compatibility — all new code should
-// import directly from core/permissions/.
-
-import { Task, Project, UserRole, Team } from '../types';
+import { Task, Project, UserRole, Team, TaskDependency, ExecutionBlocker } from '../types';
 import { buildPermissionContext, PermissionContext } from '../core/permissions/types';
+import { hasCapability } from '../core/auth/permissions';
 import {
   filterTasksByVisibility,
   filterProjectsByVisibility,
@@ -17,13 +14,16 @@ export function buildVisibilityContext(
   role: UserRole,
   projects: Project[],
   teams: Team[] = [],
+  tasks?: Task[],
+  dependencies?: TaskDependency[],
+  workspaceSettingsBlob?: Record<string, any>,
 ): PermissionContext {
   const ownerProjectIds = projects
     .filter(p => p.owner_id === userId)
     .map(p => p.id);
     
   let assignedTeamProjectIds: string[] = [];
-  if (role === 'developer') {
+  if (hasCapability(role, 'manage_tasks') && !hasCapability(role, 'manage_projects')) {
     const userTeamIds = teams.filter(t => {
       const data = t.data as any;
       if (!data) return false;
@@ -36,7 +36,18 @@ export function buildVisibilityContext(
       .map(p => p.id);
   }
 
-  return buildPermissionContext(userId, role, ownerProjectIds, assignedTeamProjectIds);
+  const blockers: ExecutionBlocker[] = workspaceSettingsBlob?.execution_blockers || [];
+
+  return buildPermissionContext(
+    userId,
+    role,
+    ownerProjectIds,
+    assignedTeamProjectIds,
+    tasks,
+    dependencies,
+    blockers,
+    workspaceSettingsBlob,
+  );
 }
 
 export function isTaskVisibleToUser(
