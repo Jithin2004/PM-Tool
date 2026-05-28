@@ -11,6 +11,7 @@ interface TaskEditModalProps {
   users: any[];
   onSubmit: (taskId: string, updates: Partial<Task>) => Promise<void>;
   notify: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  currentUserProfile?: any;
 }
 
 export function TaskEditModal({
@@ -20,7 +21,8 @@ export function TaskEditModal({
   projects,
   users,
   onSubmit,
-  notify
+  notify,
+  currentUserProfile
 }: TaskEditModalProps) {
   const [name, setName] = useState(task.name);
   const [description, setDescription] = useState(task.description || '');
@@ -40,6 +42,8 @@ export function TaskEditModal({
   }, [isOpen, task]);
 
   if (!isOpen) return null;
+
+  const isDeveloper = currentUserProfile?.role === 'developer';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,10 +100,11 @@ export function TaskEditModal({
             <input
               type="text"
               required
+              disabled={isDeveloper}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Implement Authentication"
-              className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors"
+              className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
           </div>
 
@@ -107,9 +112,10 @@ export function TaskEditModal({
             <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">Target Project *</label>
             <select
               required
+              disabled={isDeveloper}
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-              className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors"
+              className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <option value="">-- SELECT PROJECT --</option>
               {projects.map(p => (
@@ -122,10 +128,11 @@ export function TaskEditModal({
             <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">Description</label>
             <textarea
               value={description}
+              disabled={isDeveloper}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Technical specs, links, etc."
               rows={3}
-              className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors resize-none"
+              className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors resize-none ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
           </div>
 
@@ -145,8 +152,9 @@ export function TaskEditModal({
               <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">Assignee</label>
               <select
                 value={assigneeId}
+                disabled={isDeveloper}
                 onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors"
+                className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <option value="">Unassigned</option>
                 {users.map(u => (

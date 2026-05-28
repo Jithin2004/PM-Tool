@@ -94,7 +94,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const email = authUser.email;
         const fullName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email?.split('@')[0] || 'User';
 
-        console.log("[AuthContext syncProfile querying users table...]");
         // 1. Primary Query: Canonical users table
         let { data, error } = await supabase
           .from('users')
@@ -102,7 +101,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', authUser.id)
           .maybeSingle();
 
-        console.log("[AuthContext syncProfile query complete]: error:", error, "data:", data);
         if (error && error.code !== 'PGRST116') {
           console.error("Error fetching from users table:", error);
         }
@@ -112,7 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const delays = [250, 500, 1000, 2000];
           for (let i = 0; i < delays.length; i++) {
             await new Promise(r => setTimeout(r, delays[i]));
-            console.log(`[AuthContext] hydrating profile retry ${i + 1}/${delays.length}`);
             const retry = await supabase
               .from('users')
               .select('*')
@@ -139,10 +136,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             avatarUrl: googleAvatar,
           });
 
-          if (import.meta.env.DEV) {
-            console.log('[AuthContext] reconcileInvitationMembership:', reconciliation.outcome);
-          }
-
           if (reconciliation.outcome === 'uninvited' && reconciliation.uninvitedProfile) {
             setProfile(reconciliation.uninvitedProfile);
             setProfileResolved(true);
@@ -167,19 +160,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (data) {
           const profileWithDesignation = rowToProfile(data as Record<string, unknown>);
-          // console.log("[AuthContext syncProfile success]: profile set with designation:", profileWithDesignation.designation);
           setProfile(profileWithDesignation);
           lastSyncedUserIdRef.current = authUser.id;
           setProfileResolved(true);
           return profileWithDesignation;
         } else {
-          console.warn("[AuthContext syncProfile]: no user data returned, setting profile to null");
           setProfile(null);
           setProfileResolved(true);
           return null;
         }
       } catch (err) {
-        console.error("[AuthContext syncProfile CRITICAL ERROR]:", err);
         setProfileResolved(true);
         return null;
       } finally {
@@ -198,23 +188,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [needsWorkspaceSetup, setNeedsWorkspaceSetup] = useState(false);
 
   const validateUserWorkspace = useCallback(async (authUser: any, currentProfile: User | null) => {
-    // console.log("[validateUserWorkspace START]:", { userId: authUser?.id, email: authUser?.email, currentProfile });
     if (!isSupabaseConfigured || !currentProfile) {
-      console.log("[validateUserWorkspace SKIP]: not configured or no profile");
       return;
     }
     if (currentProfile.workspace_id) {
-      // console.log("[validateUserWorkspace SUCCESS]: user already has workspace_id:", currentProfile.workspace_id);
       setNeedsWorkspaceSetup(false);
       return;
     }
 
-    console.log("[validateUserWorkspace] calling repairUserWorkspace...");
     const result = await repairUserWorkspace(authUser.id, authUser.email);
-    console.log("[validateUserWorkspace] repairUserWorkspace result:", result);
 
     if (result.repaired && result.workspaceId) {
-      console.log("[validateUserWorkspace] successfully repaired workspace!");
       await activityLogService.logWorkspaceRepaired(result.workspaceId, authUser.id, result.reason);
       const { data } = await supabase.from('users').select('*').eq('id', authUser.id).maybeSingle();
       if (data) {
@@ -222,7 +206,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setNeedsWorkspaceSetup(false);
     } else if (result.reason === 'orphaned') {
-      console.warn("[validateUserWorkspace] user is ORPHANED. Redirecting to /login?error=uninvited");
       await activityLogService.logWorkspaceOrphanDetected(authUser.id, authUser.email);
       setNeedsWorkspaceSetup(false);
       window.dispatchEvent(new CustomEvent('notify-toast', {
@@ -230,7 +213,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }));
       navigateTo('/login?error=uninvited', true);
     } else {
-      console.log("[validateUserWorkspace] needs_workspace_setup. Allowing access to setup page.");
       setNeedsWorkspaceSetup(true);
     }
   }, []);
@@ -246,11 +228,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initAuth = async () => {
       try {
-        console.log("[AuthContext initAuth START]");
         const { data: { session } } = await supabase.auth.getSession();
         if (!mounted) return;
         
-        // console.log("[AuthContext initAuth getSession resolved]: session:", session ? "FOUND" : "NULL", "user:", session?.user?.email);
         setUser(session?.user || null);
         if (session?.user) {
           const syncedProfile = await syncProfile(session.user);
@@ -258,23 +238,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (syncedProfile) {
             await validateUserWorkspace(session.user, syncedProfile);
           }
-          console.log("[AuthContext] resolved: authenticated");
         } else {
           setProfile(null);
           setProfileResolved(true);
-          console.log("[AuthContext] resolved: anonymous");
         }
       } catch (err) {
-        console.error("[AuthContext initAuth CRITICAL ERROR]:", err);
         setProfile(null);
         setProfileResolved(true);
-        console.log("[AuthContext] resolved: anonymous (error fallback)");
       } finally {
         if (safetyTimeoutRef.current) {
           clearTimeout(safetyTimeoutRef.current);
           safetyTimeoutRef.current = null;
         }
-        console.log("[AuthContext initAuth FINISHED] setting loading to false");
         loadingRef.current = false;
         setLoading(false);
       }
@@ -332,15 +307,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const authListener = data.subscription;
 
+    // Real-time listener for profile/role updates
+    let userSubscription: any = null;
+    
+    // We set up the real-time listener inside a wrapper to handle dynamic user changes
+    const setupRealtimeUser = (userId: string) => {
+      if (userSubscription) userSubscription.unsubscribe();
+      
+      userSubscription = supabase.channel(`public:users:id=eq.${userId}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${userId}`
+        }, async (payload) => {
+          // console.log("[AuthContext real-time] User profile updated:", payload.new);
+          if (mounted && payload.new) {
+             const updatedProfile = await syncProfile({ id: userId, email: payload.new.email } as any);
+             if (updatedProfile) {
+                // Check if they lost workspace access
+                if (!updatedProfile.workspace_id && profileRef.current?.workspace_id) {
+                    handleSessionExpiry('workspace_revoked').catch(() => {});
+                }
+             }
+          }
+        })
+        .subscribe();
+    };
+
+    // Set up the listener if we already have a user from initial load
+    setTimeout(() => {
+       if (userRef.current) {
+          setupRealtimeUser(userRef.current.id);
+       }
+    }, 1000);
+
     return () => {
       mounted = false;
       if (authListener) authListener.unsubscribe();
+      if (userSubscription) userSubscription.unsubscribe();
       if (safetyTimeoutRef.current) {
         clearTimeout(safetyTimeoutRef.current);
         safetyTimeoutRef.current = null;
       }
     };
-  }, [syncProfile]);
+  }, [syncProfile, handleSessionExpiry]);
 
   const handleSessionExpiry = useCallback(async (reason: string) => {
     // Bug 7 fix: Guard against re-entry (logout() calls this, then signOut()

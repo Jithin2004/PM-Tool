@@ -35,12 +35,37 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
   const activeTeams = input.teams.filter(t => t.name !== 'SYSTEM_SETTINGS');
   
   // PERT is now handled mathematically and automatically on the backend via Postgres triggers
-  const projectsWithPert = input.projects;
+  // Fallback frontend predicted_completion calculation for portfolio forecasting if backend hasn't populated it
+  const projectsWithPert = input.projects.map(p => {
+    if (p.predicted_completion) return p;
+    
+    // Naive frontend forecast: Start from today, add sum of remaining task estimated hours / 8 days
+    const pTasks = input.tasks.filter(t => t.project_id === p.id && t.status !== 'done');
+    let remainingHours = 0;
+    pTasks.forEach(t => {
+       remainingHours += t.estimated_hours || 8; 
+    });
+    
+    if (remainingHours === 0) {
+      if (p.client_deadline) {
+        return { ...p, predicted_completion: p.client_deadline };
+      }
+      return p;
+    }
+    
+    // Convert remaining hours to business days (assume 8 hr/day, 1 person)
+    const extraDays = Math.ceil(remainingHours / 8);
+    const forecastDate = new Date();
+    forecastDate.setDate(forecastDate.getDate() + extraDays);
+    
+    return { ...p, predicted_completion: forecastDate.toISOString() };
+  });
 
   const visibilityContext = buildVisibilityContext(
     input.userId,
     input.userRole,
     input.projects,
+    input.teams,
   );
 
   const visibleTasks = filterVisibleTasks(input.tasks, visibilityContext);

@@ -101,13 +101,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // console.log("[WorkspaceContext]: profile workspace_id found:", profile.workspace_id, "loading workspace row...");
     setLoading(true);
     let active = true;
 
     const loadWorkspace = async () => {
       try {
-        // console.log("[WorkspaceContext loadWorkspace querying workspaces table for id]:", profile.workspace_id);
         const { data: workspaceRow, error: workspaceError } = await supabase
           .from('workspaces')
           .select('*')
@@ -115,17 +113,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (!active) {
-          console.log("[WorkspaceContext loadWorkspace]: not active, ignoring query result");
           return;
         }
 
-        console.log("[WorkspaceContext loadWorkspace completed]: error:", workspaceError, "row:", workspaceRow);
         if (workspaceError) throw workspaceError;
         if (workspaceRow) {
           const parsed = rowToWorkspace(workspaceRow as any);
           setWorkspace(prev => {
             if (prev && prev.id !== workspaceRow.id) {
-              console.log('Workspace switch detected. Unsubscribing stale channels.');
               supabase.removeAllChannels();
             }
             return parsed;

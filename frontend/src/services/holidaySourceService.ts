@@ -227,7 +227,7 @@ class HolidaySourceService {
   private async appendLog(workspaceId: string, provider: string, country: string, region: string | undefined, year: number, found: number, imported: number, status: string, errorMessage?: string) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('[appendLog telemetry]:', { workspaceId, provider, year, authUid: user?.id });
+      // Telemetry log silenced in production
 
       const { data: logs } = await supabase
         .from('calendar_sync_logs')

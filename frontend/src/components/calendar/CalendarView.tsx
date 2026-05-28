@@ -12,7 +12,7 @@ interface EventFormData {
 }
 
 export function CalendarView() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { workspace } = useWorkspace();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -147,13 +147,15 @@ export function CalendarView() {
           >
             Connect Google Calendar
           </button>
-          <button
-            onClick={() => handleOpenModal()}
-            className="px-4 py-2 bg-primary hover:bg-primary/90 text-on-primary rounded text-sm font-medium flex items-center gap-2 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            New Event
-          </button>
+          {profile?.role !== 'developer' && (
+            <button
+              onClick={() => handleOpenModal()}
+              className="px-4 py-2 bg-primary hover:bg-primary/90 text-on-primary rounded text-sm font-medium flex items-center gap-2 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New Event
+            </button>
+          )}
         </div>
       </div>
 
@@ -172,12 +174,14 @@ export function CalendarView() {
           <div className="flex flex-col items-center justify-center h-60 text-on-surface-variant">
             <CalendarIcon className="w-12 h-12 opacity-20 mb-4" />
             <p>No events found for the upcoming period.</p>
-            <button
-              onClick={() => handleOpenModal()}
-              className="mt-4 px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded transition-colors"
-            >
-              Create your first event
-            </button>
+            {profile?.role !== 'developer' && (
+              <button
+                onClick={() => handleOpenModal()}
+                className="mt-4 px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded transition-colors"
+              >
+                Create your first event
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -190,20 +194,22 @@ export function CalendarView() {
                     <h3 className="font-semibold text-on-surface truncate pr-2" title={event.summary}>
                       {event.summary || '(No title)'}
                     </h3>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => handleOpenModal(event)}
-                        className="p-1 hover:bg-surface-container rounded text-on-surface-variant"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(event.id)}
-                        className="p-1 hover:bg-error/10 hover:text-error rounded text-on-surface-variant"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    {profile?.role !== 'developer' && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleOpenModal(event)}
+                          className="p-1 hover:bg-surface-container rounded text-on-surface-variant"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(event.id)}
+                          className="p-1 hover:bg-error/10 hover:text-error rounded text-on-surface-variant"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="text-xs text-on-surface-variant mb-3 flex flex-col gap-1">

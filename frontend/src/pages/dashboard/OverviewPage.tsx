@@ -58,7 +58,7 @@ export default function OverviewPage() {
     
     const pts = points.map((v, i) => ({
       x: (i / Math.max(1, points.length - 1)) * w,
-      y: h - (v / maxVal) * (h * 0.8), // leave 20% padding at top
+      y: h * 0.95 - (v / maxVal) * (h * 0.8), // leave 20% padding at top, 5% at bottom
     }));
     
     let d = `M${pts[0].x},${pts[0].y}`;

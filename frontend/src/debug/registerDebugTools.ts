@@ -34,5 +34,5 @@ export async function registerDebugTools(): Promise<void> {
     lastStressRunState: () => stress.lastStressRunState(),
   };
 
-  console.log('[resolveDebug registered]', Object.keys(window.resolveDebug));
+  // Debug tools registered silently
 }

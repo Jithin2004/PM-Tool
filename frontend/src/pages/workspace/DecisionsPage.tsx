@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useTasks } from '../../hooks/useTasks';
 import { Icon } from '../../components/ui/Icon';
@@ -6,8 +6,9 @@ import { Icon } from '../../components/ui/Icon';
 
 
 export default function DecisionsPage() {
-  const { workspace, projects } = useWorkspace() as any;
+  const { workspace } = useWorkspace() as any;
   const { tasks } = useTasks(workspace?.id) as any;
+  const [velocityPeriod, setVelocityPeriod] = useState('30D');
 
   const insights = useMemo(() => {
     const highRisk = (tasks || []).filter((t: any) => t.risk === 'high' && t.status !== 'done');
@@ -44,6 +45,55 @@ export default function DecisionsPage() {
     return data.map(d => Math.min(1, d / max));
   }, [tasks]);
 
+  const velocityPoints = useMemo(() => {
+    const days = velocityPeriod === '7D' ? 7 : velocityPeriod === '15D' ? 15 : 30;
+    const points: number[] = Array(days).fill(0);
+    const completedTasks = (tasks || []).filter((t: any) => t.status === 'done');
+    
+    if (completedTasks && completedTasks.length > 0) {
+      const now = new Date();
+      now.setHours(23, 59, 59, 999);
+      
+      completedTasks.forEach((t: any) => {
+        const dateStr = t.updated_at || t.created_at;
+        if (!dateStr) return;
+        const d = new Date(dateStr);
+        const diffTime = now.getTime() - d.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays >= 0 && diffDays < days) {
+          points[days - 1 - diffDays] += (t.estimated_hours || 1);
+        }
+      });
+    }
+    
+    const maxVal = Math.max(10, ...points);
+    return { points, maxVal };
+  }, [tasks, velocityPeriod]);
+
+  const svgPath = useMemo(() => {
+    const w = 800, h = 200;
+    const { points, maxVal } = velocityPoints;
+    
+    const pts = points.map((v, i) => ({
+      x: (i / Math.max(1, points.length - 1)) * w,
+      y: h * 0.95 - (v / maxVal) * (h * 0.8), // leave 20% padding at top, 5% at bottom
+    }));
+    
+    let d = `M${pts[0].x},${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      const p0 = pts[i - 1];
+      const p1 = pts[i];
+      const cx1 = p0.x + (p1.x - p0.x) / 3;
+      const cy1 = p0.y;
+      const cx2 = p1.x - (p1.x - p0.x) / 3;
+      const cy2 = p1.y;
+      d += ` C${cx1},${cy1} ${cx2},${cy2} ${p1.x},${p1.y}`;
+    }
+    
+    return { line: d, fill: `${d} V${h} H0 Z`, pts, maxVal };
+  }, [velocityPoints]);
+
   return (
     <div className="flex flex-col gap-8 pb-16 font-geist" style={{ color: 'var(--pm-on-surface)' }}>
 
@@ -77,13 +127,15 @@ export default function DecisionsPage() {
               </p>
             </div>
             <div className="flex gap-2">
-              {['7D', '30D'].map((p, i) => (
-                <span key={p} className="px-2 py-1 rounded font-mono-pm text-[11px]"
-                  style={i === 0
+              {['7D', '15D', '30D'].map((p) => (
+                <button key={p} 
+                  onClick={() => setVelocityPeriod(p)}
+                  className="px-2 py-1 rounded font-mono-pm text-[11px] transition-all"
+                  style={velocityPeriod === p
                     ? { background: 'var(--pm-surface-highest)', color: 'var(--pm-on-surface)' }
                     : { color: 'var(--pm-on-surface-variant)', border: '1px solid var(--pm-outline-variant)' }}>
                   {p}
-                </span>
+                </button>
               ))}
             </div>
           </div>
@@ -95,16 +147,31 @@ export default function DecisionsPage() {
                   <stop offset="100%" style={{ stopColor: '#c0c1ff', stopOpacity: 0 }} />
                 </linearGradient>
               </defs>
-              {[50, 100, 150].map(y => (
-                <line key={y} x1="0" x2="800" y1={y} y2={y} stroke="rgba(70,69,84,0.25)" strokeWidth="1" />
+              {[0.25, 0.5, 0.75].map((f, i) => (
+                <line key={i} x1="0" x2="800" y1={200 * f} y2={200 * f}
+                  stroke="rgba(70,69,84,0.15)" strokeWidth="1" />
               ))}
-              <path className="pulse-line"
-                d="M0,150 Q50,140 100,160 T200,120 T300,130 T400,80 T500,100 T600,60 T700,70 L800,40"
-                fill="none" stroke="#c0c1ff" strokeWidth="2.5" strokeLinecap="round" />
-              <path
-                d="M0,150 Q50,140 100,160 T200,120 T300,130 T400,80 T500,100 T600,60 T700,70 L800,40 V200 H0 Z"
-                fill="url(#decGrad)" />
+              <path className="pulse-line" d={svgPath.line} fill="none" stroke="#c0c1ff" strokeWidth="2.5" strokeLinecap="round" />
+              <path d={svgPath.fill} fill="url(#decGrad)" />
+              {svgPath.pts.map((p, i) => (
+                <circle
+                  key={i}
+                  cx={p.x}
+                  cy={p.y}
+                  r="3.5"
+                  fill="#c0c1ff"
+                  stroke="var(--pm-bg)"
+                  strokeWidth="1.5"
+                />
+              ))}
             </svg>
+            <div className="absolute left-0 inset-y-0 flex flex-col justify-between pointer-events-none pb-[20%]">
+              {['100%', '75%', '50%', '25%', '0%'].map((l, i) => (
+                <span key={l} className="font-mono-pm text-[9px]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
+                  {i === 0 ? Math.round(svgPath.maxVal) : Math.round(svgPath.maxVal * (1 - i * 0.25))}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -79,7 +79,7 @@ export function TaskCard({
   return (
     <motion.div
       onClick={() => onClick(task)}
-      className={`group relative shrink-0 pm-card task-card overflow-hidden cursor-pointer ${
+      className={`group relative shrink-0 w-full pm-card task-card overflow-hidden cursor-pointer ${
         isCompact ? 'p-2' : isExecutive ? 'p-5' : 'p-3.5'
       }`}
     >

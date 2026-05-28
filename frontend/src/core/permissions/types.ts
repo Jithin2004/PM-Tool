@@ -4,6 +4,7 @@ export interface PermissionContext {
   userId: string;
   role: UserRole;
   ownerProjectIds: Set<string>;
+  assignedTeamProjectIds: Set<string>;
 }
 
 export interface EntityVisibility {
@@ -47,10 +48,12 @@ export function buildPermissionContext(
   userId: string,
   role: UserRole,
   ownerProjectIds: string[],
+  assignedTeamProjectIds: string[] = [],
 ): PermissionContext {
   return {
     userId,
     role,
     ownerProjectIds: new Set(ownerProjectIds),
+    assignedTeamProjectIds: new Set(assignedTeamProjectIds),
   };
 }

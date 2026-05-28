@@ -82,7 +82,11 @@ export function ExecutionSystem({
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
-    setEditingTask(task);
+    if (hasWriteAccess) {
+      setEditingTask(task);
+    } else {
+      notify("Viewer Mode: You can view task details in the drawer, but modifications are restricted.", "info");
+    }
   };
   const [density, setDensity] = useState<'comfortable' | 'compact' | 'executive'>('comfortable');
   const [filterByProject, setFilterByProject] = useState<string | null>(null);

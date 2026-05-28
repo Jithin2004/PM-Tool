@@ -55,6 +55,12 @@ export function canViewProject(
   if (hasPlatformGovernance(ctx)) {
     return { visible: true, reason: 'role' };
   }
+  if (ctx.role === 'developer') {
+    if (ctx.assignedTeamProjectIds.has(project.id)) {
+      return { visible: true, reason: 'direct' };
+    }
+    return { visible: false, reason: 'denied' };
+  }
   if (!hasCapability(ctx.role, 'view_projects')) {
     return { visible: false, reason: 'denied' };
   }
@@ -210,9 +216,18 @@ export function filterProjectsByVisibility(
   visibleTaskProjectIds?: Set<string>,
 ): Project[] {
   if (hasPlatformGovernance(ctx)) return projects;
+  
+  if (ctx.role === 'developer') {
+    return projects.filter(p => 
+      ctx.assignedTeamProjectIds.has(p.id) || 
+      (visibleTaskProjectIds && visibleTaskProjectIds.has(p.id))
+    );
+  }
+
   if (hasCapability(ctx.role, 'manage_projects')) {
     return projects.filter(p => ctx.ownerProjectIds.has(p.id));
   }
+  
   const own = projects.filter(p => ctx.ownerProjectIds.has(p.id));
   if (visibleTaskProjectIds) {
     const fromTasks = projects.filter(p => visibleTaskProjectIds.has(p.id));

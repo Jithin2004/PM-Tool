@@ -2,7 +2,7 @@
 // This file exists for backward compatibility — all new code should
 // import directly from core/permissions/.
 
-import { Task, Project, UserRole } from '../types';
+import { Task, Project, UserRole, Team } from '../types';
 import { buildPermissionContext, PermissionContext } from '../core/permissions/types';
 import {
   filterTasksByVisibility,
@@ -16,11 +16,27 @@ export function buildVisibilityContext(
   userId: string,
   role: UserRole,
   projects: Project[],
+  teams: Team[] = [],
 ): PermissionContext {
   const ownerProjectIds = projects
     .filter(p => p.owner_id === userId)
     .map(p => p.id);
-  return buildPermissionContext(userId, role, ownerProjectIds);
+    
+  let assignedTeamProjectIds: string[] = [];
+  if (role === 'developer') {
+    const userTeamIds = teams.filter(t => {
+      const data = t.data as any;
+      if (!data) return false;
+      const devIds = data.developer_ids || [];
+      return Array.isArray(devIds) && devIds.includes(userId);
+    }).map(t => t.id);
+    
+    assignedTeamProjectIds = projects
+      .filter(p => p.team_id && userTeamIds.includes(p.team_id))
+      .map(p => p.id);
+  }
+
+  return buildPermissionContext(userId, role, ownerProjectIds, assignedTeamProjectIds);
 }
 
 export function isTaskVisibleToUser(
