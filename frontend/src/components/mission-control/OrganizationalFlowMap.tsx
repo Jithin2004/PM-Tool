@@ -26,11 +26,11 @@ export function OrganizationalFlowMap({ presences, signals, feed }: Organization
 
   return (
     <div className="space-y-2">
-      <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">execution flow</div>
+      <div className="text-[10px] text-text-secondary uppercase tracking-wider font-semibold">execution flow</div>
 
       {activePresences.length > 0 && (
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-300" />
+        <div className="flex items-center gap-1.5 text-[10px] text-text-tertiary">
+          <span className="w-1.5 h-1.5 rounded-full bg-signal-safe" />
           {activePresences.length} active contributor{activePresences.length !== 1 ? 's' : ''}
         </div>
       )}
@@ -42,11 +42,11 @@ export function OrganizationalFlowMap({ presences, signals, feed }: Organization
 
           return (
             <div key={item.action} className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-500 w-20 shrink-0 capitalize">{item.action}</span>
-              <div className="flex-1 h-3 bg-gray-50 rounded-sm overflow-hidden">
-                <div className="h-full bg-indigo-100 rounded-sm" style={{ width: `${pct}%` }} />
+              <span className="text-[10px] text-text-tertiary w-20 shrink-0 capitalize">{item.action}</span>
+              <div className="flex-1 h-3 bg-white/5 rounded-sm overflow-hidden">
+                <div className="h-full bg-accent-primary rounded-sm opacity-60" style={{ width: `${pct}%` }} />
               </div>
-              <span className="text-[10px] font-mono text-gray-500 w-4 text-right">{item.count}</span>
+              <span className="text-[10px] font-mono-pm text-text-tertiary w-4 text-right">{item.count}</span>
             </div>
           );
         })}

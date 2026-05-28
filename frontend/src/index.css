@@ -607,3 +607,45 @@ body {
   font-size: 11px;
   color: var(--pm-secondary);
 }
+
+.light {
+  /* PM Color Tokens (Light Mode Overrides) */
+  --pm-bg:                    #f6f8fb;
+  --pm-surface-lowest:        #ffffff;
+  --pm-surface-low:           #f8fafc;
+  --pm-surface:               #f1f5f9;
+  --pm-surface-high:          #e2e8f0;
+  --pm-surface-highest:       #cbd5e1;
+  --pm-surface-bright:        #ffffff;
+  --pm-surface-variant:       #e2e8f0;
+
+  --pm-on-surface:            #1e293b;
+  --pm-on-surface-variant:    #475569;
+
+  --pm-primary:               #4f46e5;
+  --pm-primary-container:     #e0e7ff;
+  --pm-on-primary:            #ffffff;
+  --pm-on-primary-container:  #312e81;
+  --pm-primary-fixed:         #4f46e5;
+  --pm-primary-fixed-dim:     #4338ca;
+
+  --pm-secondary:             #64748b;
+  --pm-secondary-container:   #f1f5f9;
+  --pm-on-secondary:          #f8fafc;
+  --pm-on-secondary-container:#334155;
+
+  --pm-tertiary:              #ea580c;
+  --pm-tertiary-container:    #ffedd5;
+  --pm-on-tertiary:           #ffffff;
+
+  --pm-error:                 #dc2626;
+  --pm-error-container:       #fee2e2;
+  --pm-on-error-container:    #991b1b;
+
+  --pm-outline:               #cbd5e1;
+  --pm-outline-variant:       #e2e8f0;
+
+  --pm-inverse-surface:       #1e293b;
+  --pm-inverse-on-surface:    #f8fafc;
+  --pm-inverse-primary:       #818cf8;
+}

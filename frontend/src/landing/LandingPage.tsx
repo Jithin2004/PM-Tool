@@ -44,7 +44,7 @@ export function LandingPage() {
         }, 3000);
       }
     }
-    
+
     timeoutId = setTimeout(type, 100);
     return () => clearTimeout(timeoutId);
   }, []);
@@ -342,7 +342,7 @@ export function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-stack-gap-lg px-container-padding flex flex-col md:flex-row justify-between items-center bg-surface-container-lowest border-t border-white/5">
+      <footer className="w-full py-stack-gap-lg px-container-padding flex flex-col md:flex-row justify-between items-center border-t border-white/5">
         <div className="flex flex-col items-center md:items-start gap-2 mb-6 md:mb-0">
           <span className="font-headline-sm text-headline-sm font-semibold text-on-surface">Resolve PM</span>
           <p className="font-body-sm text-body-sm text-on-surface-variant opacity-60">© 2026 Resolve PM. All rights reserved. Registered Enterprise Systems.</p>
@@ -350,11 +350,13 @@ export function LandingPage() {
             <span className="font-mono-label text-[10px] text-primary/60 uppercase">Secure Verification Active</span>
           </div>
         </div>
+
         <div className="flex flex-wrap justify-center gap-6">
-          <a className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all duration-200" href="#">Privacy</a>
-          <a className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all duration-200" href="#">Terms</a>
-          <a className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all duration-200" href="#">Compliance</a>
-          <a className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all duration-200" href="#">Security</a>
+          {/* These are the active links Google will check */}
+          <a href="/privacy" className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all">Privacy</a>
+          <a href="/terms" className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface underline transition-all">Terms</a>
+          <span className="font-body-sm text-body-sm text-on-surface-variant opacity-40 cursor-not-allowed">Compliance</span>
+          <span className="font-body-sm text-body-sm text-on-surface-variant opacity-40 cursor-not-allowed">Security</span>
         </div>
       </footer>
     </div>

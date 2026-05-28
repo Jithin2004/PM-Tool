@@ -7,11 +7,11 @@ interface DependencyRiskPanelProps {
 }
 
 const PREDICTION_TYPE_COLORS: Record<string, string> = {
-  dependency_escalation: 'border-l-amber-400',
-  overload: 'border-l-red-300',
-  sprint_instability: 'border-l-amber-500',
-  delay_risk: 'border-l-orange-300',
-  blocker_risk: 'border-l-red-400',
+  dependency_escalation: 'border-l-signal-warning',
+  overload: 'border-l-signal-critical',
+  sprint_instability: 'border-l-signal-warning',
+  delay_risk: 'border-l-accent-secondary',
+  blocker_risk: 'border-l-signal-critical',
 };
 
 export function DependencyRiskPanel({ predictions, insights }: DependencyRiskPanelProps) {
@@ -48,19 +48,19 @@ export function DependencyRiskPanel({ predictions, insights }: DependencyRiskPan
 
   return (
     <div className="space-y-2">
-      <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">dependency risk</div>
+      <div className="text-[10px] text-text-secondary uppercase tracking-wider font-semibold">dependency risk</div>
 
       {items.map(item => {
         const borderColor = item.type === 'prediction'
-          ? PREDICTION_TYPE_COLORS[item.subtype] || 'border-l-gray-300'
-          : 'border-l-blue-300';
+          ? PREDICTION_TYPE_COLORS[item.subtype] || 'border-l-border'
+          : 'border-l-accent-primary';
 
         return (
           <div key={item.id} className={`pl-2 border-l-2 ${borderColor} py-0.5`}>
-            <p className="text-[10px] font-medium text-gray-700">{item.title}</p>
-            <p className="text-[9px] text-gray-500">{item.description}</p>
+            <p className="text-[10px] font-medium text-text-primary">{item.title}</p>
+            <p className="text-[9px] text-text-tertiary">{item.description}</p>
             {item.probability !== null && (
-              <span className="text-[9px] font-mono text-gray-400">
+              <span className="text-[9px] font-mono-pm text-text-secondary">
                 {Math.round(item.probability * 100)}% confidence
               </span>
             )}

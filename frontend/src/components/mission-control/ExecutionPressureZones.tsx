@@ -14,15 +14,15 @@ export function ExecutionPressureZones({ bottlenecks, hotspots, vitality }: Exec
 
   return (
     <div className="space-y-2">
-      <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">pressure zones</div>
+      <div className="text-[10px] text-text-secondary uppercase tracking-wider font-semibold">pressure zones</div>
 
       {vitality.stability < 50 && (
-        <div className="px-2 py-1.5 bg-amber-50 border border-border rounded">
+        <div className="px-2 py-1.5 bg-signal-warning/10 border border-signal-warning/20 rounded">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-medium text-amber-700">stability</span>
-            <span className="text-[10px] font-mono text-amber-600">{vitality.stability}</span>
+            <span className="text-[10px] font-medium text-signal-warning">stability</span>
+            <span className="text-[10px] font-mono-pm text-signal-warning">{vitality.stability}</span>
           </div>
-          <p className="text-[9px] text-amber-600 mt-0.5">
+          <p className="text-[9px] text-signal-warning mt-0.5">
             {vitality.stability < 30 ? 'Elevated blocker or reassignment activity' : 'Moderate stability pressure'}
           </p>
         </div>
@@ -33,15 +33,15 @@ export function ExecutionPressureZones({ bottlenecks, hotspots, vitality }: Exec
           key={b.id}
           className={`px-2 py-1.5 rounded border ${
             b.severity === 'critical'
-              ? 'bg-red-50 border-red-100'
-              : 'bg-amber-50 border-border'
+              ? 'bg-signal-critical/10 border-signal-critical/20'
+              : 'bg-signal-warning/10 border-signal-warning/20'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-medium text-gray-700">{b.title}</span>
-            <span className="text-[10px] font-mono text-gray-500">{b.impact}</span>
+            <span className="text-[10px] font-medium text-text-primary">{b.title}</span>
+            <span className="text-[10px] font-mono-pm text-text-tertiary">{b.impact}</span>
           </div>
-          <p className="text-[9px] text-gray-500 mt-0.5">{b.description}</p>
+          <p className="text-[9px] text-text-tertiary mt-0.5">{b.description}</p>
         </div>
       ))}
     </div>

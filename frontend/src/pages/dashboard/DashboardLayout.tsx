@@ -552,6 +552,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   // Notification and Confirmation State
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     title: '',
@@ -1232,7 +1233,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           
           {/* Top Bar — utility layer, breadcrumb, operational status */}
           <header id="tour-topbar" className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200"
-            style={{ background: 'rgba(12,14,16,0.92)', borderColor: 'rgba(70,69,84,0.3)' }}>
+            style={{ background: 'color-mix(in srgb, var(--pm-bg) 92%, transparent)', borderColor: 'var(--pm-outline-variant)' }}>
             {/* Mobile menu toggle */}
             <div className="flex items-center gap-3 lg:hidden">
               <button
@@ -1280,6 +1281,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               {/* Notifications */}
               <div className="relative shrink-0">
                 <button
+                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                   className="p-1.5 border border-border-subtle bg-surface-3 hover:bg-surface-3 rounded-md text-text-quaternary hover:text-text-tertiary transition-all relative cursor-pointer"
                   title="Notifications"
                 >
@@ -1290,6 +1292,54 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     </span>
                   )}
                 </button>
+                <AnimatePresence>
+                  {isNotificationsOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 mt-2 w-80 bg-surface-2 border border-border shadow-2xl rounded-lg overflow-hidden z-50 flex flex-col max-h-[400px]"
+                      >
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-3">
+                          <h3 className="text-xs font-semibold text-text-primary tracking-wide">Notifications</h3>
+                          {dbNotifications.filter(n => !n.read_at).length > 0 && (
+                            <span className="text-[10px] font-mono-pm text-text-tertiary uppercase cursor-pointer hover:text-text-primary transition-colors">
+                              Mark all read
+                            </span>
+                          )}
+                        </div>
+                        <div className="overflow-y-auto flex-1 p-2 space-y-1">
+                          {dbNotifications.length === 0 ? (
+                            <div className="px-4 py-8 text-center text-text-tertiary">
+                              <Bell className="w-6 h-6 mx-auto mb-2 opacity-20" />
+                              <p className="text-[11px]">All caught up</p>
+                            </div>
+                          ) : (
+                            dbNotifications.map(notification => (
+                              <div key={notification.id} className={`p-3 rounded-md transition-colors ${notification.read_at ? 'opacity-60' : 'bg-white/5 hover:bg-white/10'}`}>
+                                <div className="flex items-start gap-3">
+                                  <div className="mt-0.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-accent-primary" />
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] text-text-primary font-medium leading-snug">{notification.title}</p>
+                                    <p className="text-[10px] text-text-secondary mt-0.5 line-clamp-2">{notification.body}</p>
+                                    <p className="text-[9px] text-text-tertiary font-mono-pm mt-1.5">
+                                      {new Date(notification.created_at).toLocaleString()}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* New Project CTA */}
@@ -1308,7 +1358,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
           {/* Context Header — Welcome + operational context */}
           {window.location.pathname === '/workspace' && (
-            <div className="px-6 pt-7 pb-5 border-b" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+            <div className="px-6 pt-7 pb-5 border-b" style={{ borderColor: 'var(--pm-outline-variant)' }}>
               <div className="flex items-end justify-between">
                 <div>
                   <p className="font-mono-pm text-[9px] uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Command Center</p>

@@ -14,6 +14,8 @@ import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
 import { WorkspaceSetupPage } from '../pages/onboarding/WorkspaceSetupPage';
 import { ProjectCreatePage } from '../pages/project/ProjectCreatePage';
 import { LandingPage } from '../landing/LandingPage';
+import { PrivacyPage } from '../landing/PrivacyPage';
+import { TermsPage } from '../landing/TermsPage';
 import { Login } from '../components/auth/Login';
 import { ProductKeyGate } from '../components/auth/ProductKeyGate';
 import { isProductKeyVerified } from '../lib/productKey';
@@ -178,6 +180,14 @@ export function ResolveRouter() {
 
   if (pathname === '/') {
     return <LandingPage />;
+  }
+
+  if (pathname === '/privacy') {
+    return <PrivacyPage />;
+  }
+
+  if (pathname === '/terms') {
+    return <TermsPage />;
   }
 
   if (pathname === '/activate') {
