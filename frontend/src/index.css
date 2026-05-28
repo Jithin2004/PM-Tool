@@ -259,30 +259,38 @@ body {
    Slate Light Premium Theme Token Overrides
    ========================================== */
 .light {
-  background-color: #f6f8fb !important;
-  color: #1f2937 !important;
+  background-color: var(--bg) !important;
+  color: var(--text-primary) !important;
 
-  /* Design token variables — light theme */
-  --bg: #f6f8fb;
+  /* Design token variables — Premium Slate Light Theme */
+  --bg: #f1f5f9; /* Slate 100 - brightish but not plain white */
   --surface: #ffffff;
-  --border: #e2e8f0;
-  --text-primary: #1f2937;
-  --text-secondary: #64748b;
-  --text-tertiary: #94a3b8;
-  --text-quaternary: #cbd5e1;
-  --signal-critical: #ef4444;
-  --signal-warning: #f59e0b;
-  --signal-safe: #10b981;
-  --signal-info: #3b82f6;
-  --accent-primary: #6366f1;
-  --accent-secondary: #8b5cf6;
-  --signal-critical-bg: rgba(239, 68, 68, 0.06);
-  --signal-warning-bg: rgba(245, 158, 11, 0.06);
-  --signal-safe-bg: rgba(16, 185, 129, 0.06);
-  --signal-info-bg: rgba(59, 130, 246, 0.06);
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0px 8px 24px rgba(15, 23, 42, 0.06);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.1);
+  --surface-2: #f8fafc; /* Slate 50 for cards */
+  --surface-3: #e2e8f0; /* Slate 200 for elevated/inputs */
+  
+  --border: #cbd5e1; /* Slate 300 */
+  --border-subtle: #e2e8f0; /* Slate 200 */
+  
+  --text-primary: #0f172a; /* Slate 900 */
+  --text-secondary: #475569; /* Slate 600 */
+  --text-tertiary: #64748b; /* Slate 500 */
+  --text-quaternary: #94a3b8; /* Slate 400 */
+  
+  --signal-critical: #e11d48; /* Rose 600 */
+  --signal-warning: #d97706; /* Amber 600 */
+  --signal-safe: #059669; /* Emerald 600 */
+  --signal-info: #2563eb; /* Blue 600 */
+  --accent-primary: #4f46e5; /* Indigo 600 */
+  --accent-secondary: #7c3aed; /* Violet 600 */
+  
+  --signal-critical-bg: rgba(225, 29, 72, 0.08);
+  --signal-warning-bg: rgba(217, 119, 6, 0.08);
+  --signal-safe-bg: rgba(5, 150, 105, 0.08);
+  --signal-info-bg: rgba(37, 99, 235, 0.08);
+  
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
 }
 
 .light ::-webkit-scrollbar-thumb {
@@ -609,8 +617,8 @@ body {
 }
 
 .light {
-  /* PM Color Tokens (Light Mode Overrides) */
-  --pm-bg:                    #f6f8fb;
+  /* PM Color Tokens (Light Mode Overrides - Slate/Indigo) */
+  --pm-bg:                    #f1f5f9;
   --pm-surface-lowest:        #ffffff;
   --pm-surface-low:           #f8fafc;
   --pm-surface:               #f1f5f9;
@@ -619,7 +627,7 @@ body {
   --pm-surface-bright:        #ffffff;
   --pm-surface-variant:       #e2e8f0;
 
-  --pm-on-surface:            #1e293b;
+  --pm-on-surface:            #0f172a;
   --pm-on-surface-variant:    #475569;
 
   --pm-primary:               #4f46e5;
@@ -629,10 +637,10 @@ body {
   --pm-primary-fixed:         #4f46e5;
   --pm-primary-fixed-dim:     #4338ca;
 
-  --pm-secondary:             #64748b;
+  --pm-secondary:             #475569;
   --pm-secondary-container:   #f1f5f9;
-  --pm-on-secondary:          #f8fafc;
-  --pm-on-secondary-container:#334155;
+  --pm-on-secondary:          #0f172a;
+  --pm-on-secondary-container:#1e293b;
 
   --pm-tertiary:              #ea580c;
   --pm-tertiary-container:    #ffedd5;
@@ -645,7 +653,7 @@ body {
   --pm-outline:               #cbd5e1;
   --pm-outline-variant:       #e2e8f0;
 
-  --pm-inverse-surface:       #1e293b;
+  --pm-inverse-surface:       #0f172a;
   --pm-inverse-on-surface:    #f8fafc;
   --pm-inverse-primary:       #818cf8;
 }
