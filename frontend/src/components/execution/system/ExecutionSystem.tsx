@@ -57,7 +57,7 @@ export function ExecutionSystem({
   initialView = 'board'
 }: ExecutionSystemProps) {
   const { workspace } = useWorkspace();
-  const { tasks, dependencies, loading, addTask, updateTaskStatus } = useTasks(workspace?.id);
+  const { tasks, dependencies, loading, addTask, updateTask, updateTaskStatus } = useTasks(workspace?.id);
   const { events: calendarEvents } = useCalendarEvents(workspace?.id);
   
   const [activeView, setActiveView] = useState<ExecutionViewType>(initialView);
@@ -71,6 +71,7 @@ export function ExecutionSystem({
   const [groupBy, setGroupBy] = useState<'status' | 'assignee' | 'priority' | 'risk'>('status');
   
   const [isAddingTask, setIsAddingTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
 
