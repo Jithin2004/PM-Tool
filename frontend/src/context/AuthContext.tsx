@@ -356,10 +356,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
     supabase.removeAllChannels();
     captureRedirectFromLocation();
+    if (window.location.pathname === '/login') {
+      return; // Do not show session expired toast or redirect if intentionally signed out on the login page
+    }
+
     window.dispatchEvent(new CustomEvent('notify-toast', {
       detail: { message: `Session ${reason}. Redirecting...`, type: 'error' },
     }));
-    if (window.location.pathname !== '/') {
+    if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
       navigateTo('/', true);
     }
   }, []);
