@@ -3,6 +3,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
+import { hasCapability } from '../../core/auth/permissions';
 
 type ViewMode = 'grid' | 'list' | 'timeline';
 type StatusFilter = 'all' | 'active' | 'deployed' | 'planning';
@@ -61,11 +62,13 @@ export default function PortfolioPage() {
             {stats.active} active initiatives across {stats.total} total projects
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all active:scale-95"
-          style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}>
-          <Icon name="add" size={18} />
-          New Initiative
-        </button>
+        {hasCapability(profile?.role, 'manage_projects') && (
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all active:scale-95"
+            style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}>
+            <Icon name="add" size={18} />
+            New Initiative
+          </button>
+        )}
       </div>
 
       {/* ── View Controls + Filter Bar ──────────────────────────── */}

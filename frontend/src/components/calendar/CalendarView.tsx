@@ -147,7 +147,7 @@ export function CalendarView() {
           >
             Connect Google Calendar
           </button>
-          {profile?.role !== 'developer' && (
+          {profile?.role !== 'developer' && profile?.role !== 'viewer' && (
             <button
               onClick={() => handleOpenModal()}
               className="px-4 py-2 bg-primary hover:bg-primary/90 text-on-primary rounded text-sm font-medium flex items-center gap-2 transition-colors"
@@ -174,7 +174,7 @@ export function CalendarView() {
           <div className="flex flex-col items-center justify-center h-60 text-on-surface-variant">
             <CalendarIcon className="w-12 h-12 opacity-20 mb-4" />
             <p>No events found for the upcoming period.</p>
-            {profile?.role !== 'developer' && (
+            {profile?.role !== 'developer' && profile?.role !== 'viewer' && (
               <button
                 onClick={() => handleOpenModal()}
                 className="mt-4 px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded transition-colors"
@@ -194,7 +194,7 @@ export function CalendarView() {
                     <h3 className="font-semibold text-on-surface truncate pr-2" title={event.summary}>
                       {event.summary || '(No title)'}
                     </h3>
-                    {profile?.role !== 'developer' && (
+                    {profile?.role !== 'developer' && profile?.role !== 'viewer' && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handleOpenModal(event)}

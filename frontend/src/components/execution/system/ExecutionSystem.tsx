@@ -221,6 +221,10 @@ export function ExecutionSystem({
   };
 
   const handleAddTask = async (taskData: any) => {
+    if (!hasWriteAccess) {
+      notify("Access Denied: Viewers cannot create tasks.", "error");
+      return;
+    }
     const result = await addTask(taskData);
     if (result) {
       notify("Task created successfully", "success");
@@ -251,6 +255,7 @@ export function ExecutionSystem({
         onSearchChange={setSearchQuery}
         groupBy={groupBy}
         onGroupByChange={setGroupBy}
+        canAddTask={hasWriteAccess}
       />
 
       {/* Intelligence Banner */}

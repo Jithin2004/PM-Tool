@@ -27,6 +27,7 @@ interface ExecutionHeaderProps {
   onSearchChange: (query: string) => void;
   groupBy: string;
   onGroupByChange: (group: any) => void;
+  canAddTask?: boolean;
 }
 
 export function ExecutionHeader({
@@ -39,7 +40,8 @@ export function ExecutionHeader({
   executionMode,
   onSearchChange,
   groupBy,
-  onGroupByChange
+  onGroupByChange,
+  canAddTask = true,
 }: ExecutionHeaderProps) {
   const views: { id: ExecutionViewType; label: string; icon: React.ReactNode }[] = [
     { id: 'board', label: 'Board', icon: <LayoutGrid className="w-4 h-4" /> },
@@ -86,13 +88,15 @@ export function ExecutionHeader({
 
           <div className="h-6 w-[1px] bg-border mx-1" />
 
-          <button
-            onClick={onAddTask}
-            className="flex items-center gap-1.5 px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white rounded-lg text-[13px] font-semibold shadow-sm transition-all active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            Add Task
-          </button>
+          {canAddTask && (
+            <button
+              onClick={onAddTask}
+              className="flex items-center gap-1.5 px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white rounded-lg text-[13px] font-semibold shadow-sm transition-all active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              Add Task
+            </button>
+          )}
           
           <button
             onClick={onOpenSettings}
