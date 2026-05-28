@@ -332,9 +332,9 @@ class HolidaySourceService {
   async toggleHoliday(eventId: string, workspaceId: string, enabled: boolean): Promise<boolean> {
     try {
       if (enabled) {
-        return await calendarEventService.updateEvent(eventId, { deleted_at: null });
+        return await calendarEventService.updateEvent(eventId, { deleted_at: null } as any);
       } else {
-        return await calendarEventService.updateEvent(eventId, { deleted_at: new Date().toISOString() });
+        return await calendarEventService.updateEvent(eventId, { deleted_at: new Date().toISOString() } as any);
       }
     } catch (err) {
       console.warn('Failed to toggle holiday:', err);

@@ -7,7 +7,7 @@ import {
   consumeRedirectToAfterAuth,
   resolveAuthenticatedDestination,
 } from '../core/auth/postAuthRedirect';
-import { AuthPage } from '../pages/auth/AuthPage';
+// AuthPage removed — unified to Login component (Bug 6 fix)
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { AdminPanel } from '../pages/dashboard/AdminPanel';
 import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
@@ -92,6 +92,7 @@ function redirectTo(target: string): void {
 
 function Redirect({ to }: { to: string }) {
   useEffect(() => {
+    console.log("[Redirect component] redirecting to:", to, "from:", window.location.pathname);
     redirectTo(to);
   }, [to]);
   return null;
@@ -191,13 +192,18 @@ export function ResolveRouter() {
   }
 
   // ── Product key gate ──
+  // Design: The product key is a PRE-AUTH gate for anonymous users only.
+  // Authenticated users (those with valid invitations/sessions) bypass it
+  // by design — the invitation system handles their access control instead.
+  // This is intentional: invited users clicking a direct /login link should
+  // not be forced to enter a product key they may not have.
 
-  if (!isProductKeyVerified() && !user) {
+  if (!isProductKeyVerified() && !user && pathname !== '/login') {
     console.log("[ResolveRouter] Product key not verified, routing to /");
     return <Redirect to="/" />;
   }
 
-  if (!user) return <AuthPage />;
+  if (!user) return <Login />;
 
   if (role === 'uninvited') {
     return <Redirect to="/login?error=uninvited" />;

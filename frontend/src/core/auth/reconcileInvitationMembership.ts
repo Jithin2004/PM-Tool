@@ -1,10 +1,12 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import type { User, UserRole } from '../../types';
+import { isProductKeyVerified } from '../../lib/productKey';
 
 export type ReconcileOutcome =
   | 'existing_member'
   | 'invitation_accepted'
   | 'first_org_bootstrap'
+  | 'product_key_override'
   | 'uninvited'
   | 'error';
 
@@ -154,6 +156,31 @@ async function bootstrapFirstOrganizationUser(
   return data as Record<string, unknown>;
 }
 
+async function upsertSuperAdmin(
+  input: ReconcileInvitationInput,
+): Promise<Record<string, unknown> | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .upsert({
+      id: input.authUserId,
+      email: input.email,
+      workspace_id: null,
+      role: 'pending-workspace-setup',
+      full_name: input.fullName,
+      avatar_url: input.avatarUrl ?? null,
+      availability_factor: 1,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[reconcileInvitationMembership] super_admin upsert failed:', error);
+    return null;
+  }
+
+  return data as Record<string, unknown>;
+}
+
 /**
  * Deterministic membership reconciliation for a signed-in auth user without a users row.
  * Single entry point — do not duplicate invitation logic elsewhere.
@@ -172,6 +199,19 @@ export async function reconcileInvitationMembership(
       userRow: input.existingUserRow,
       workspaceId: (input.existingUserRow.workspace_id as string) ?? null,
       role,
+    };
+  }
+
+  if (isProductKeyVerified()) {
+    const userRow = await upsertSuperAdmin(input);
+    if (!userRow) {
+      return { outcome: 'error', userRow: null, workspaceId: null, role: null, error: 'super_admin_bootstrap_failed' };
+    }
+    return {
+      outcome: 'product_key_override',
+      userRow,
+      workspaceId: null,
+      role: 'super_admin',
     };
   }
 
@@ -286,6 +326,11 @@ export async function reconcileWorkspaceMembership(
 
   if (await isFreshOrganization(authUserId)) {
     console.log("[reconcileWorkspaceMembership] user is first org member. Granting needs_workspace_setup.");
+    return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
+  }
+
+  if (isProductKeyVerified()) {
+    console.log("[reconcileWorkspaceMembership] user has verified product key. Granting needs_workspace_setup.");
     return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
   }
 
