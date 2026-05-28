@@ -208,12 +208,16 @@ export function calculateTaskCountdown(
   status: string,
   workWindow?: WorkWindow
 ): CountdownResult {
-  if (status === 'validation' || status === 'merged' || status === 'done') {
+  if (status === 'validation' || status === 'merged' || status === 'done' || status === 'review') {
     return { text: 'DONE', color: 'text-emerald-500', pulse: 'bg-emerald-500' };
   }
 
   if (status === 'backlog') {
     return { text: 'WAITING', color: 'text-white/40 font-mono', pulse: 'bg-white/10' };
+  }
+
+  if (status === 'ready' || status === 'todo') {
+    return { text: 'READY', color: 'text-cyan-400 font-mono', pulse: 'bg-cyan-500/50' };
   }
 
   if (!weightHours || weightHours <= 0) {

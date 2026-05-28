@@ -5,6 +5,7 @@ import { List } from 'react-window';
 import { useTasks } from '../hooks/useTasks';
 import { TaskCard } from './task/TaskCard';
 import { TaskCreateModal } from './task/TaskCreateModal';
+import { TaskEditModal } from './task/TaskEditModal';
 import { hasCapability } from '../core/auth/permissions';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { KANBAN_COLUMNS } from '../constants/product';
@@ -31,11 +32,12 @@ export default function ExecutionBoard({
   onPromoteToAsset
 }: ExecutionBoardProps) {
   const { workspace } = useWorkspace();
-  const { tasks, dependencies, loading, addTask, updateTaskStatus } = useTasks(workspace?.id);
+  const { tasks, dependencies, loading, addTask, updateTask, updateTaskStatus } = useTasks(workspace?.id);
   
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   
   const [filterByProject, setFilterByProject] = useState<string | null>(null);
   const [projectsPanelOpen, setProjectsPanelOpen] = useState(true);
@@ -278,6 +280,7 @@ export default function ExecutionBoard({
                   hasWriteAccess={hasWriteAccess}
                   columns={KANBAN_COLUMNS}
                   onTransitionTask={handleTransitionTask}
+                  onEditTask={setEditingTask}
                   onPromoteToAsset={onPromoteToAsset}
                   onClick={(t) => {
                     setSelectedTask(t);
@@ -328,6 +331,7 @@ export default function ExecutionBoard({
                         hasWriteAccess={hasWriteAccess}
                         columns={KANBAN_COLUMNS}
                         onTransitionTask={handleTransitionTask}
+                        onEditTask={setEditingTask}
                         onPromoteToAsset={onPromoteToAsset}
                         onClick={(t) => {
                           setSelectedTask(t);
@@ -359,6 +363,23 @@ export default function ExecutionBoard({
           onSubmit={handleCreateTask}
           notify={notify}
         />
+        
+        {editingTask && (
+          <TaskEditModal
+            isOpen={!!editingTask}
+            onClose={() => setEditingTask(null)}
+            task={editingTask}
+            projects={projects}
+            users={users}
+            onSubmit={async (taskId, updates) => {
+              if (updateTask) {
+                await updateTask(taskId, updates);
+                onRecalibrateAnalytics();
+              }
+            }}
+            notify={notify}
+          />
+        )}
         
         {isDrawerOpen && selectedTask && (
           <div className="fixed inset-0 z-[9999] flex justify-end">

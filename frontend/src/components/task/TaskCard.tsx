@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, ArrowRight, ArrowUp, AlertTriangle, Clock, Users, Shield, Link2, MoreHorizontal } from 'lucide-react';
+import { User, ArrowRight, ArrowUp, AlertTriangle, Clock, Users, Shield, Link2, MoreHorizontal, Edit2 } from 'lucide-react';
 import { Task, Project } from '../../types';
 import { getTaskDeadline } from '../../core/types/temporal';
 import { calculateTaskCountdown } from '../../services/etaService';
@@ -11,6 +11,7 @@ interface TaskCardProps {
   hasWriteAccess: boolean;
   columns: { id: string; title: string; color: string }[];
   onTransitionTask: (taskId: string, targetStatus: Task['status']) => void;
+  onEditTask?: (task: Task) => void;
   onPromoteToAsset?: (task: { title: string; description: string; projectId: string }) => void;
   onClick: (task: Task) => void;
   assigneeProfile?: { full_name?: string; email?: string; avatar_url?: string; role?: string; availability_factor?: number } | null;
@@ -26,6 +27,7 @@ export function TaskCard({
   hasWriteAccess, 
   columns, 
   onTransitionTask, 
+  onEditTask,
   onPromoteToAsset, 
   onClick,
   assigneeProfile,
@@ -36,7 +38,7 @@ export function TaskCard({
 }: TaskCardProps) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const interval = setInterval(() => setTick(t => t + 1), 60_000);
+    const interval = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -180,11 +182,37 @@ export function TaskCard({
             )}
             
             {hasWriteAccess && (
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1 bg-surface-2 rounded border border-border p-0.5 shadow-sm">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Basic move forward logic for quick transition
+                    if (onEditTask) {
+                       onEditTask(task);
+                    }
+                  }}
+                  className="p-1 hover:bg-surface-3 rounded transition-colors text-text-tertiary hover:text-accent-primary"
+                  title="Edit task"
+                >
+                  <Edit2 className="w-3 h-3" />
+                </button>
+                <div className="w-px h-3 bg-border-subtle mx-0.5" />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const currentIndex = columns.findIndex(c => c.id === task.status);
+                    const prevIndex = Math.max(0, currentIndex - 1);
+                    if (prevIndex !== currentIndex) {
+                      onTransitionTask(task.id, columns[prevIndex].id as Task['status']);
+                    }
+                  }}
+                  className="p-1 hover:bg-surface-3 rounded transition-colors text-text-tertiary hover:text-text-primary"
+                  title="Move backward"
+                >
+                  <ArrowRight className="w-3 h-3 rotate-180" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
                     const currentIndex = columns.findIndex(c => c.id === task.status);
                     const nextIndex = Math.min(columns.length - 1, currentIndex + 1);
                     if (nextIndex !== currentIndex) {
@@ -192,6 +220,7 @@ export function TaskCard({
                     }
                   }}
                   className="p-1 hover:bg-surface-3 rounded transition-colors text-text-tertiary hover:text-text-primary"
+                  title="Move forward"
                 >
                   <ArrowRight className="w-3 h-3" />
                 </button>

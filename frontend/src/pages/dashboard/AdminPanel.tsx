@@ -241,6 +241,31 @@ export function AdminPanel() {
                             ) : (
                               <span className="text-[10px] font-mono-pm uppercase italic text-center" style={{ color: 'var(--pm-on-surface-variant)' }}>System Administrator</span>
                             )}
+                            {hasCapability(profile?.role, 'platform_governance') && p.role !== 'super_admin' && (
+                              <div className="pt-2 mt-2" style={{ borderTop: '1px solid rgba(70,69,84,0.3)' }}>
+                                <button
+                                  onClick={() => {
+                                    setActiveGearPopover(null);
+                                    askConfirmation(
+                                      "Remove Member",
+                                      `Are you sure you want to remove ${p.full_name || p.email} from the workspace? This action cannot be undone.`,
+                                      () => {
+                                        // TODO: Implement actual member removal logic here
+                                        console.log("Remove member:", p.id);
+                                      },
+                                      "Remove"
+                                    );
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-[11px] font-mono-pm uppercase tracking-widest transition-all"
+                                  style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--pm-error)', border: '1px solid rgba(239,68,68,0.2)' }}
+                                  onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.2)'; }}
+                                  onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.1)'; }}
+                                >
+                                  <Icon name="person_remove" size={14} />
+                                  Remove Person
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>

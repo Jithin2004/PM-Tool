@@ -51,24 +51,30 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
   }, [handleVerify]);
 
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen bg-bg flex items-center justify-center p-6 relative overflow-hidden font-geist">
+      {/* Grid Overlay */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }}>
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-        className="w-full max-w-sm"
+        className="w-full max-w-md pm-card p-10 relative z-10"
       >
         {/* Branding */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 border border-border mb-4">
-            <Shield className="w-5 h-5 text-text-secondary" />
+        <div className="flex flex-col items-center text-center mb-10">
+          <div className="w-16 h-16 bg-white/5 border flex items-center justify-center rounded-xl mb-6 shadow-sm"
+               style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+            <Shield className="w-8 h-8" style={{ color: 'var(--pm-primary)' }} />
           </div>
-          <h1 className="text-lg font-medium tracking-tight text-text-secondary">Resolve PM</h1>
-          <p className="text-[10px] font-mono uppercase tracking-wide text-text-quaternary mt-1">Product Activation</p>
+          <h1 className="text-3xl font-semibold tracking-tight mb-2" style={{ color: 'var(--pm-on-surface)' }}>RESOLVE PM</h1>
+          <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Product Activation</p>
         </div>
 
         {/* Gate Card */}
-        <div className="bg-surface border border-border p-6">
+        <div>
           <AnimatePresence mode="wait">
             {state === 'input' && (
               <motion.div
@@ -76,10 +82,11 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="space-y-4"
+                className="space-y-5"
               >
-                <div className="flex items-center gap-2.5 px-3 py-2 bg-surface-3 border border-border-subtle">
-                  <KeyRound className="w-3.5 h-3.5 text-text-quaternary shrink-0" />
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border"
+                     style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+                  <KeyRound className="w-4 h-4 shrink-0" style={{ color: 'var(--pm-on-surface-variant)' }} />
                   <input
                     ref={inputRef}
                     type="text"
@@ -87,15 +94,16 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                     onChange={(e) => setKey(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Enter your product key"
-                    className="flex-1 bg-transparent text-[12px] font-mono text-text-secondary outline-none placeholder:text-text-quaternary"
+                    className="flex-1 bg-transparent text-sm font-mono-pm outline-none placeholder:opacity-50"
+                    style={{ color: 'var(--pm-on-surface)' }}
                     autoComplete="off"
                     spellCheck={false}
                   />
                 </div>
 
                 {errorMsg && (
-                  <div className="flex items-start gap-2 text-[11px] font-mono text-signal-critical/70">
-                    <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-2 text-sm" style={{ color: 'var(--pm-error)' }}>
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                     <span>{errorMsg}</span>
                   </div>
                 )}
@@ -103,13 +111,14 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                 <button
                   onClick={handleVerify}
                   disabled={!key.trim()}
-                  className={`w-full py-2.5 text-[11px] uppercase font-mono tracking-wider transition-all ${
+                  className={`w-full rounded-xl h-12 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs transition-all active:scale-[0.98] shadow-sm hover:shadow-md ${
                     key.trim()
-                      ? 'bg-white/10 text-text-secondary hover:bg-white/15 border border-border'
-                      : 'bg-white/5 text-text-quaternary border border-border-subtle cursor-not-allowed'
+                      ? 'opacity-100'
+                      : 'opacity-50 cursor-not-allowed'
                   }`}
+                  style={{ background: 'var(--pm-primary)', color: 'white' }}
                 >
-                  Activate
+                  Activate License
                 </button>
               </motion.div>
             )}
@@ -122,8 +131,8 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                 exit={{ opacity: 0 }}
                 className="text-center py-6"
               >
-                <Loader className="w-6 h-6 text-text-quaternary mx-auto mb-3 animate-spin" />
-                <p className="text-[11px] font-mono text-text-quaternary">Verifying product key...</p>
+                <Loader className="w-8 h-8 mx-auto mb-4 animate-spin" style={{ color: 'var(--pm-primary)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--pm-on-surface-variant)' }}>Verifying product key...</p>
               </motion.div>
             )}
 
@@ -136,9 +145,9 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                 transition={{ duration: 0.3 }}
                 className="text-center py-6"
               >
-                <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-3" />
-                <p className="text-[12px] font-mono text-emerald-400/80">Activation successful</p>
-                <p className="text-[10px] font-mono text-text-quaternary mt-2">Initializing workspace...</p>
+                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
+                <p className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Activation successful</p>
+                <p className="text-sm mt-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Initializing workspace...</p>
               </motion.div>
             )}
 
@@ -148,15 +157,16 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="space-y-4"
+                className="space-y-5"
               >
-                <div className="text-center py-2">
-                  <XCircle className="w-6 h-6 text-signal-critical/60 mx-auto mb-2" />
-                  <p className="text-[11px] font-mono text-signal-critical/60">Verification failed</p>
+                <div className="text-center py-4">
+                  <XCircle className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--pm-error)' }} />
+                  <p className="text-sm font-medium" style={{ color: 'var(--pm-error)' }}>Verification failed</p>
                 </div>
                 <button
                   onClick={handleVerify}
-                  className="w-full py-2.5 text-[11px] uppercase font-medium tracking-wider bg-white/10 text-text-secondary hover:bg-white/15 border border-border transition-all"
+                  className="w-full rounded-xl h-12 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs transition-all active:scale-[0.98]"
+                  style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface)', border: '1px solid rgba(70,69,84,0.3)' }}
                 >
                   Retry
                 </button>
@@ -166,7 +176,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
         </div>
 
         {/* Footer */}
-        <p className="text-[9px] font-mono uppercase tracking-wider text-text-quaternary text-center mt-6">
+        <p className="text-[10px] uppercase tracking-wider text-center mt-10" style={{ color: 'var(--pm-on-surface-variant)' }}>
           Secure activation &middot; Keyserver connection required
         </p>
       </motion.div>

@@ -9,6 +9,7 @@ import type { Sprint, Task, User, Epic, Project, CalendarEvent } from '../../typ
 import { supabase } from '../../lib/supabase';
 import { TaskCard } from '../task/TaskCard';
 import { TaskCreateModal } from '../task/TaskCreateModal';
+import { TaskEditModal } from '../task/TaskEditModal';
 import { CompletionFeedbackModal } from '../task/CompletionFeedbackModal';
 import { SCRUM_COLUMNS } from '../../constants/product';
 import { activityLogService } from '../../services/activityLogService';
@@ -29,6 +30,7 @@ interface SprintBoardProps {
   notify: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   onUpdateTaskStatus: (taskId: string, status: Task['status']) => Promise<void>;
   onCreateTask: (taskData: any) => Promise<void>;
+  onUpdateTask?: (taskId: string, updates: Partial<Task>) => Promise<void>;
   onCreateSprint: (sprint: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   onConvertToScrum?: (projectId: string) => Promise<void>;
   allKanbanProjects?: Project[];
@@ -36,7 +38,7 @@ interface SprintBoardProps {
 
 export function SprintBoard({
   project, projectId, workspaceId, sprints, tasks, users, epics, calendarEvents = [],
-  currentUserProfile, notify, onUpdateTaskStatus, onCreateTask, onCreateSprint,
+  currentUserProfile, notify, onUpdateTaskStatus, onUpdateTask, onCreateTask, onCreateSprint,
   onConvertToScrum, allKanbanProjects
 }: SprintBoardProps) {
   const [activeTab, setActiveTab] = useState<ScrumTab>('active-sprint');
@@ -44,6 +46,7 @@ export function SprintBoard({
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
   const [isAddingExisting, setIsAddingExisting] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sprintName, setSprintName] = useState('');
   const [sprintGoal, setSprintGoal] = useState('');
   const [sprintStart, setSprintStart] = useState('');
@@ -413,6 +416,7 @@ export function SprintBoard({
                           hasWriteAccess={hasWriteAccess}
                           columns={SCRUM_COLUMNS as any}
                           onTransitionTask={handleStatusChange}
+                          onEditTask={setEditingTask}
                           onClick={() => {}}
                           assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
                           assigneeLoading={!!task.assignee_id && !userMap.has(task.assignee_id)}
@@ -573,6 +577,22 @@ export function SprintBoard({
       {/* Modals */}
       <AnimatePresence>
         <TaskCreateModal isOpen={isAddingTask} onClose={() => setIsAddingTask(false)} projects={[project]} users={users} defaultStatus="backlog" defaultProjectId={project.id} onSubmit={onCreateTask} notify={notify} />
+
+        {editingTask && (
+          <TaskEditModal
+            isOpen={!!editingTask}
+            onClose={() => setEditingTask(null)}
+            task={editingTask}
+            projects={[project]}
+            users={users}
+            onSubmit={async (taskId, updates) => {
+              if (onUpdateTask) {
+                await onUpdateTask(taskId, updates);
+              }
+            }}
+            notify={notify}
+          />
+        )}
 
         {isCreatingSprint && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">

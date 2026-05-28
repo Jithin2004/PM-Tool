@@ -32,6 +32,7 @@ import { useWorkspace } from '../../../context/WorkspaceContext';
 import { useCalendarEvents } from '../../../hooks/useCalendarEvents';
 import { TaskCard } from '../../task/TaskCard';
 import { TaskCreateModal } from '../../task/TaskCreateModal';
+import { TaskEditModal } from '../../task/TaskEditModal';
 import { CompletionFeedbackModal } from '../../task/CompletionFeedbackModal';
 import { KANBAN_COLUMNS, SCRUM_COLUMNS } from '../../../constants/product';
 import { Task, Project, TaskStatus, CalendarEvent } from '../../../types';
@@ -283,6 +284,7 @@ export function ExecutionSystem({
             userMap={userMap}
             hasWriteAccess={hasWriteAccess}
             onTransitionTask={handleTransitionTask}
+            onEditTask={setEditingTask}
             onTaskClick={setSelectedTask}
             notify={notify}
           />
@@ -319,6 +321,22 @@ export function ExecutionSystem({
       </div>
 
       <AnimatePresence>
+        {editingTask && (
+          <TaskEditModal
+            isOpen={!!editingTask}
+            onClose={() => setEditingTask(null)}
+            task={editingTask}
+            projects={projects}
+            users={users}
+            onSubmit={async (taskId, updates) => {
+              if (updateTask) {
+                await updateTask(taskId, updates);
+                onRecalibrateAnalytics();
+              }
+            }}
+            notify={notify}
+          />
+        )}
         {isAddingTask && (
           <TaskCreateModal
             isOpen={isAddingTask}
@@ -362,6 +380,7 @@ function BoardView({
   hasWriteAccess, 
   blockedByMap, 
   onTransitionTask, 
+  onEditTask,
   onTaskClick,
   density
 }: any) {
@@ -423,6 +442,7 @@ function BoardView({
                     hasWriteAccess={hasWriteAccess}
                     columns={KANBAN_COLUMNS}
                     onTransitionTask={onTransitionTask}
+                    onEditTask={onEditTask}
                     onClick={onTaskClick}
                     assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
                     blockedByTasks={blockedByMap.get(task.id)}
@@ -438,7 +458,7 @@ function BoardView({
   );
 }
 
-function SprintView({ tasks, projects, userMap, hasWriteAccess, onTransitionTask, onTaskClick, notify }: any) {
+function SprintView({ tasks, projects, userMap, hasWriteAccess, onTransitionTask, onEditTask, onTaskClick, notify }: any) {
   // Simple Sprint view implementation
   const sprintTasks = tasks.filter((t: any) => t.sprint_id || t.status !== 'done');
   
@@ -524,6 +544,7 @@ function SprintView({ tasks, projects, userMap, hasWriteAccess, onTransitionTask
                     hasWriteAccess={hasWriteAccess}
                     columns={SCRUM_COLUMNS}
                     onTransitionTask={onTransitionTask}
+                    onEditTask={onEditTask}
                     onClick={onTaskClick}
                     assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
                   />
