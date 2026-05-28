@@ -149,7 +149,7 @@ export function ExecutionHeader({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex -space-x-2">
+          <div className="flex items-center -space-x-2">
             {users.slice(0, 5).map((u, i) => (
               <div key={u.id || i} title={u.full_name || u.email} className="w-6 h-6 rounded-full border-2 border-bg bg-surface-3 flex items-center justify-center text-[10px] font-bold text-text-tertiary shadow-sm overflow-hidden" style={{ zIndex: 5 - i }}>
                 {u.avatar_url ? (
