@@ -17,6 +17,8 @@ export function Login() {
     if (err === 'uninvited') {
       setError('Your account is not invited. Ask your admin to invite you.');
       window.history.replaceState(null, '', '/login');
+      // Sign out to prevent having a lingering unauthorized session
+      supabase.auth.signOut().catch(console.error);
     }
   }, []);
 

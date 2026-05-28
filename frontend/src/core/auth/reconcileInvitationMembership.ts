@@ -114,14 +114,19 @@ async function upsertMemberFromInvitation(
   return data as Record<string, unknown>;
 }
 
-export async function isFreshOrganization(): Promise<boolean> {
-  const { count, error } = await supabase
+export async function isFreshOrganization(authUserId: string): Promise<boolean> {
+  const { data, count, error } = await supabase
     .from('users')
-    .select('*', { count: 'exact', head: true });
+    .select('id', { count: 'exact' });
 
-  console.log("[isFreshOrganization]:", { count, error });
+  console.log("[isFreshOrganization]:", { count, error, data });
+  if (error || count === null) return false;
+  
   // A fresh organization has 0 users (before signup) or 1 user (themselves, via auto-create trigger)
-  return !error && count !== null && count <= 1;
+  if (count === 0) return true;
+  if (count === 1 && data && data.length === 1 && data[0].id === authUserId) return true;
+  
+  return false;
 }
 
 async function bootstrapFirstOrganizationUser(
@@ -184,7 +189,7 @@ export async function reconcileInvitationMembership(
     };
   }
 
-  if (await isFreshOrganization()) {
+  if (await isFreshOrganization(input.authUserId)) {
     const userRow = await bootstrapFirstOrganizationUser(input);
     if (!userRow) {
       return { outcome: 'error', userRow: null, workspaceId: null, role: null, error: 'bootstrap_failed' };
@@ -279,7 +284,7 @@ export async function reconcileWorkspaceMembership(
     }
   }
 
-  if (await isFreshOrganization()) {
+  if (await isFreshOrganization(authUserId)) {
     console.log("[reconcileWorkspaceMembership] user is first org member. Granting needs_workspace_setup.");
     return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
   }
