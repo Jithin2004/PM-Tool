@@ -16,7 +16,7 @@ export function Login() {
     const err = getErrorParam();
     if (err === 'uninvited') {
       setError('Your account is not invited. Ask your admin to invite you.');
-      window.history.replaceState(null, '', '/login');
+      // Keep the URL as /login?error=uninvited so it survives remounts
       // Sign out to prevent having a lingering unauthorized session
       supabase.auth.signOut().catch(console.error);
     }
