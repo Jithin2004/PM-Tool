@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Plus, Trash2, Edit2, X, RefreshCw } from 'lucide-react';
 import { calendarService, CalendarEvent } from '../../services/calendarService';
 import { useAuth } from '../../context/AuthContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface EventFormData {
   summary: string;
@@ -12,6 +13,7 @@ interface EventFormData {
 
 export function CalendarView() {
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,22 +33,26 @@ export function CalendarView() {
     setLoading(true);
     setError('');
     try {
+      if (!workspace?.id) return;
+      
       // Default to showing past month and next 3 months
-      const timeMin = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const timeMax = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
-      const data = await calendarService.getEvents(timeMin, timeMax);
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+      const data = await calendarService.getEvents(workspace.id, startDate, endDate);
       setEvents(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error(err);
-      setError('Could not fetch events. Ensure Google Calendar is connected.');
+      setError(err.message || 'Could not fetch events. Ensure Google Calendar is connected.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEvents();
-  }, []);
+    if (workspace?.id) {
+      fetchEvents();
+    }
+  }, [workspace?.id]);
 
   const handleConnect = () => {
     window.location.href = calendarService.getAuthUrl();
@@ -77,16 +83,25 @@ export function CalendarView() {
     e.preventDefault();
     setLoading(true);
     try {
+      if (!workspace?.id) throw new Error("No active workspace");
+
       if (editingEvent) {
         await calendarService.updateEvent(editingEvent.id, formData);
       } else {
-        await calendarService.createEvent(formData);
+        await calendarService.createEvent({
+          ...formData,
+          workspace_id: workspace.id,
+          event_type: 'meeting',
+          title: formData.summary,
+          start_date: formData.start,
+          end_date: formData.end
+        } as any);
       }
       setIsModalOpen(false);
       fetchEvents();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Failed to save event');
+      setError(err.message || 'Failed to save event');
     } finally {
       setLoading(false);
     }
@@ -98,9 +113,9 @@ export function CalendarView() {
     try {
       await calendarService.deleteEvent(id);
       fetchEvents();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Failed to delete event');
+      setError(err.message || 'Failed to delete event');
     } finally {
       setLoading(false);
     }
