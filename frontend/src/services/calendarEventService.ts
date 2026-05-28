@@ -10,8 +10,7 @@ import type { CalendarEvent, CalendarEventType } from '../types';
  * becomes the string "undefined/events/..." when the env var is missing.
  */
 const CALENDAR_API_BASE =
-  import.meta.env.VITE_CALENDAR_API_URL ||
-  `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/calendar`;
+  `${import.meta.env.VITE_CALENDAR_API_URL || 'http://localhost:5001'}/api/calendar`;
 
 interface RecurrenceRule {
   freq: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
