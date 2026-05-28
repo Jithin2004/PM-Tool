@@ -217,6 +217,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const handleSessionExpiry = useCallback(async (reason: string) => {
+    // Bug 7 fix: Guard against re-entry (logout() calls this, then signOut()
+    // fires onAuthStateChange SIGNED_OUT which would call this again)
+    if (sessionExpiryInProgressRef.current) return;
+    sessionExpiryInProgressRef.current = true;
+
+    try {
+      if (userRef.current) {
+        try {
+          const p = profileRef.current;
+          const ws = p?.workspace_id;
+          if (ws) {
+            await activityLogService.logSessionExpired(ws, userRef.current.id, reason);
+          }
+        } catch {}
+      }
+      await flushNow();
+      clearSession();
+      setUser(null);
+      setProfile(null);
+      supabase.removeAllChannels();
+
+      if (window.location.pathname === '/login') {
+        return; // Do not show session expired toast or redirect if intentionally signed out on the login page
+      }
+
+      // Bug 2 fix: Only capture the redirect location when NOT on /login,
+      // so we don't pointlessly save /login as a post-auth redirect target.
+      captureRedirectFromLocation();
+
+      window.dispatchEvent(new CustomEvent('notify-toast', {
+        detail: { message: `Session ${reason}. Redirecting...`, type: 'error' },
+      }));
+      if (window.location.pathname !== '/') {
+        navigateTo('/', true);
+      }
+    } finally {
+      sessionExpiryInProgressRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -352,47 +393,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, [syncProfile, handleSessionExpiry]);
-
-  const handleSessionExpiry = useCallback(async (reason: string) => {
-    // Bug 7 fix: Guard against re-entry (logout() calls this, then signOut()
-    // fires onAuthStateChange SIGNED_OUT which would call this again)
-    if (sessionExpiryInProgressRef.current) return;
-    sessionExpiryInProgressRef.current = true;
-
-    try {
-      if (userRef.current) {
-        try {
-          const p = profileRef.current;
-          const ws = p?.workspace_id;
-          if (ws) {
-            await activityLogService.logSessionExpired(ws, userRef.current.id, reason);
-          }
-        } catch {}
-      }
-      await flushNow();
-      clearSession();
-      setUser(null);
-      setProfile(null);
-      supabase.removeAllChannels();
-
-      if (window.location.pathname === '/login') {
-        return; // Do not show session expired toast or redirect if intentionally signed out on the login page
-      }
-
-      // Bug 2 fix: Only capture the redirect location when NOT on /login,
-      // so we don't pointlessly save /login as a post-auth redirect target.
-      captureRedirectFromLocation();
-
-      window.dispatchEvent(new CustomEvent('notify-toast', {
-        detail: { message: `Session ${reason}. Redirecting...`, type: 'error' },
-      }));
-      if (window.location.pathname !== '/') {
-        navigateTo('/', true);
-      }
-    } finally {
-      sessionExpiryInProgressRef.current = false;
-    }
-  }, []);
 
   const logout = async () => {
     await handleSessionExpiry('expired');
