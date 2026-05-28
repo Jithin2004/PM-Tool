@@ -47,12 +47,13 @@ export const calendarService = {
     return `${CALENDAR_API_URL}/auth/google`;
   },
 
-  async getEvents(timeMin: string, timeMax: string): Promise<CalendarEvent[]> {
-    const res = await fetch(`${CALENDAR_API_URL}/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`, {
+  async getEvents(workspaceId: string, startDate: string, endDate: string): Promise<CalendarEvent[]> {
+    const res = await fetch(`${CALENDAR_API_URL}/events?workspace_id=${encodeURIComponent(workspaceId)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`, {
       headers: getHeaders()
     });
     if (!res.ok) {
-      throw new Error(`Failed to fetch events: ${res.statusText}`);
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Failed to fetch events: ${res.statusText}`);
     }
     return res.json();
   },
@@ -64,7 +65,8 @@ export const calendarService = {
       body: JSON.stringify(event)
     });
     if (!res.ok) {
-      throw new Error(`Failed to create event: ${res.statusText}`);
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Failed to create event: ${res.statusText}`);
     }
     return res.json();
   },
@@ -76,7 +78,8 @@ export const calendarService = {
       body: JSON.stringify(event)
     });
     if (!res.ok) {
-      throw new Error(`Failed to update event: ${res.statusText}`);
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Failed to update event: ${res.statusText}`);
     }
     return res.json();
   },
@@ -87,7 +90,8 @@ export const calendarService = {
       headers: getHeaders()
     });
     if (!res.ok) {
-      throw new Error(`Failed to delete event: ${res.statusText}`);
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Failed to delete event: ${res.statusText}`);
     }
   },
 
@@ -98,7 +102,8 @@ export const calendarService = {
       body: JSON.stringify(params)
     });
     if (!res.ok) {
-      throw new Error(`Failed to upsert event: ${res.statusText}`);
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Failed to upsert event: ${res.statusText}`);
     }
     return res.json();
   }

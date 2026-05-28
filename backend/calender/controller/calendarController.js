@@ -136,7 +136,7 @@ exports.getEventsInRange = async (req, res) => {
         res.json(allEvents);
     } catch (error) {
         console.error('getEventsInRange Error:', error);
-        res.status(500).json({ error: 'Failed to fetch events' });
+        res.status(500).json({ error: error.message || 'Failed to fetch events' });
     }
 };
 
@@ -166,7 +166,7 @@ exports.createEvent = async (req, res) => {
         res.json(responseEvent);
     } catch (error) {
         console.error('createEvent Error:', error);
-        res.status(500).json({ error: 'Failed to create event' });
+        res.status(500).json({ error: error.message || 'Failed to create event' });
     }
 };
 
@@ -200,7 +200,7 @@ exports.updateEvent = async (req, res) => {
         res.json(responseEvent);
     } catch (error) {
         console.error('updateEvent Error:', error);
-        res.status(500).json({ error: 'Failed to update event' });
+        res.status(500).json({ error: error.message || 'Failed to update event' });
     }
 };
 
@@ -229,7 +229,7 @@ exports.deleteEvent = async (req, res) => {
         res.json(responseEvent);
     } catch (error) {
         console.error('deleteEvent Error:', error);
-        res.status(500).json({ error: 'Failed to delete event' });
+        res.status(500).json({ error: error.message || 'Failed to delete event' });
     }
 };
 
@@ -272,7 +272,7 @@ exports.upsertBySourceKey = async (req, res) => {
         }
     } catch (error) {
         console.error('upsertBySourceKey Error:', error);
-        res.status(500).json({ error: 'Failed to upsert event' });
+        res.status(500).json({ error: error.message || 'Failed to upsert event' });
     }
 };
 
@@ -286,7 +286,7 @@ exports.getSyncLogs = async (req, res) => {
         res.json(logs);
     } catch (error) {
         console.error('getSyncLogs Error:', error);
-        res.status(500).json({ error: 'Failed to fetch sync logs' });
+        res.status(500).json({ error: error.message || 'Failed to fetch sync logs' });
     }
 };
 
@@ -299,6 +299,6 @@ exports.appendSyncLog = async (req, res) => {
         res.json(log);
     } catch (error) {
         console.error('appendSyncLog Error:', error);
-        res.status(500).json({ error: 'Failed to append sync log' });
+        res.status(500).json({ error: error.message || 'Failed to append sync log' });
     }
 };
