@@ -60,7 +60,7 @@ export function ProjectWorkspace() {
             <h1 className="text-2xl font-sans tracking-tight font-medium text-text-primary">Portfolio Orchestration</h1>
           </div>
           <p className="text-sm text-text-tertiary">
-            Executive oversight of {workspace?.name || 'Workspace'} execution cycles and delivery timelines.
+            Executive oversight of {workspace?.settings?.companyName || workspace?.name || 'Workspace'}'s execution cycles and delivery timelines.
           </p>
         </div>
         

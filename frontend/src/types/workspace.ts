@@ -24,6 +24,8 @@ export interface WorkspaceSettings {
   default_mode?: string;
   auto_archive?: boolean;
   notifications?: boolean;
+  companyName?: string;
+  logoUrl?: string;
 }
 
 export interface Workspace {

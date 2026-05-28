@@ -7,7 +7,7 @@ import { hasCapability } from '../../core/auth/permissions';
 import { Icon } from '../../components/ui/Icon';
 import { supabase } from '../../lib/supabase';
 
-type AdminTab = 'identity' | 'calendar' | 'teams';
+type AdminTab = 'general' | 'identity' | 'calendar' | 'teams';
 
 function getInitials(name: string) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -56,9 +56,13 @@ export function AdminPanel() {
   const [tab, setTab] = useState<AdminTab>('identity');
   const [activeGearPopover, setActiveGearPopover] = useState<string | null>(null);
 
-  const { workspace, user: currentUserProfile } = useWorkspace();
+  const { workspace, user: currentUserProfile, updateWorkspaceSettings } = useWorkspace();
   const canGovernPlatform = hasCapability(profile?.role, 'platform_governance');
   const canViewCalendar = hasCapability(profile?.role, 'view_decision_center');
+
+  // General Settings state
+  const [companyName, setCompanyName] = useState(workspace?.settings?.companyName || workspace?.name || '');
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Invitation state
   const [invitations, setInvitations] = useState<any[]>([]);
@@ -234,6 +238,7 @@ export function AdminPanel() {
   const activeProfiles = profiles || [];
 
   const tabs: { id: AdminTab; label: string; icon: string }[] = [
+    { id: 'general', label: 'General Settings', icon: 'settings' },
     { id: 'identity', label: 'Workspace Access', icon: 'groups' },
     { id: 'teams', label: 'Delivery Units', icon: 'hub' },
     ...(canViewCalendar ? [{ id: 'calendar' as AdminTab, label: 'Calendar Intelligence', icon: 'calendar_month' }] : []),
@@ -270,6 +275,53 @@ export function AdminPanel() {
           </button>
         ))}
       </div>
+
+      {/* ── General Settings Tab ───────────────────────────────── */}
+      {tab === 'general' && (
+        <div className="space-y-8">
+          <div className="pm-card p-6 lg:w-1/2">
+            <h3 className="font-semibold mb-6 flex items-center gap-2">
+              <Icon name="business" size={18} style={{ color: 'var(--pm-primary)' }} />
+              Organization Identity
+            </h3>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setSavingSettings(true);
+              try {
+                await updateWorkspaceSettings({ companyName });
+                notify("Organization Identity updated successfully.", "success");
+              } catch (err) {
+                notify("Failed to update organization identity.", "error");
+              } finally {
+                setSavingSettings(false);
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Company Name</label>
+                <input
+                  required
+                  type="text"
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
+                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                  placeholder="e.g. Acme Corp"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={savingSettings}
+                className="w-full rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
+                style={{ background: 'rgba(192,193,255,0.1)', color: 'var(--pm-primary)', border: '1px solid rgba(192,193,255,0.2)' }}
+                onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
+              >
+                {savingSettings ? 'Saving...' : 'Save Changes'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── Workspace Access Tab ───────────────────────────────── */}
       {tab === 'identity' && (

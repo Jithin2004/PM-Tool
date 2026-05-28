@@ -44,7 +44,7 @@ export function WorkspaceSetupPage() {
   const { user, workspace, createWorkspace, updateWorkspaceSettings, error } = useWorkspace();
   const { refreshProfile } = useAuth();
   const [step, setStep] = useState(1);
-  const [workspaceName, setWorkspaceName] = useState(workspace?.name || `${user?.email?.split('@')[0] || 'My'} Workspace`);
+  const [workspaceName, setWorkspaceName] = useState(workspace?.name || '');
   const [settings, setSettings] = useState<WorkspaceSettings>(workspace?.settings || DEFAULT_SETTINGS);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplate | null>(null);
   const [saving, setSaving] = useState(false);
@@ -99,7 +99,7 @@ export function WorkspaceSetupPage() {
       } else {
         const created = await createWorkspace({
           name: workspaceName.trim() || 'Resolve Workspace',
-          settings,
+          settings: { ...settings, companyName: workspaceName.trim() || 'Resolve Workspace' },
           templateId: selectedTemplate?.id,
           executionMode: selectedTemplate?.executionMode,
           defaultLanes: selectedTemplate?.lanes,
@@ -243,13 +243,16 @@ export function WorkspaceSetupPage() {
           {step === 1 && (
             <div className="space-y-6">
               <label className="block text-xs uppercase font-mono-pm tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                Workspace Designation
+                Organization Identity (Company Name) <span className="text-signal-critical">*</span>
                 <input
                   value={workspaceName}
-                  onChange={event => setWorkspaceName(event.target.value)}
+                  onChange={event => {
+                    setWorkspaceName(event.target.value);
+                    setSettings(prev => ({ ...prev, companyName: event.target.value }));
+                  }}
                   className="mt-2.5 h-11 w-full border rounded-lg px-4 text-sm outline-none transition-all font-sans focus:border-[var(--pm-primary)]"
                   style={{ borderColor: 'rgba(70,69,84,0.3)', background: 'var(--pm-surface-low)', color: 'var(--pm-on-surface)' }}
-                  placeholder="e.g. ALPHA_PM_WORKSPACE"
+                  placeholder="e.g. Acme Corp"
                 />
               </label>
 
@@ -619,11 +622,12 @@ export function WorkspaceSetupPage() {
             {step < 5 && (
               <button
                 onClick={() => {
+                  if (step === 1 && !workspaceName.trim()) return;
                   if (step === 2 && !selectedTemplate) return;
                   if (step === 4 && !settings.country) return;
                   setStep(prev => prev + 1);
                 }}
-                disabled={(step === 2 && !selectedTemplate) || (step === 4 && !settings.country)}
+                disabled={(step === 1 && !workspaceName.trim()) || (step === 2 && !selectedTemplate) || (step === 4 && !settings.country)}
                 className="rounded-lg transition-all px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest font-semibold cursor-pointer shadow-md disabled:opacity-50"
                 style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}
               >

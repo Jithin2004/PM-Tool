@@ -1006,8 +1006,10 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
               </div>
               {!isSidebarCollapsed && (
-                <div className="whitespace-nowrap flex-1">
-                  <h1 className="font-semibold tracking-tight text-[13px] font-geist" style={{ color: 'var(--pm-primary)' }}>Resolve PM</h1>
+                <div className="whitespace-nowrap flex-1 overflow-hidden">
+                  <h1 className="font-semibold tracking-tight text-[13px] font-geist truncate" style={{ color: 'var(--pm-primary)' }}>
+                    Resolve PM {workspace?.settings?.companyName ? `| ${workspace.settings.companyName}` : ''}
+                  </h1>
                   <p className="text-[9px] font-mono-pm uppercase tracking-[0.15em]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Enterprise Orchestration</p>
                 </div>
               )}
@@ -1363,7 +1365,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 <div>
                   <p className="font-mono-pm text-[9px] uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Command Center</p>
                   <h2 className="text-[22px] font-semibold tracking-tight leading-none font-geist" style={{ color: 'var(--pm-on-surface)' }}>
-                    {profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}'s Workspace
+                    {workspace?.settings?.companyName ? `${workspace.settings.companyName} Workspace` : `${profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}'s Workspace`}
                   </h2>
                   <p className="font-mono-pm text-[11px] mt-1.5" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · {dbNotifications.filter(n => !n.read_at).length > 0 ? `${dbNotifications.filter(n => !n.read_at).length} unread notification${dbNotifications.filter(n => !n.read_at).length > 1 ? 's' : ''}` : 'All systems operational'}
