@@ -243,11 +243,17 @@ export function ResolveRouter() {
 
   if (!user) return <Login />;
 
-  if (role === 'uninvited') {
+  if (role === 'uninvited' || !role) {
     return <Redirect to="/login?error=uninvited" />;
   }
 
-  if (!workspace) return <WorkspaceSetupWizard />;
+  if (!workspace && role === 'pending-workspace-setup') {
+    return <WorkspaceSetupWizard />;
+  }
+
+  if (!workspace) {
+    return <Redirect to="/login?error=uninvited" />;
+  }
 
   // ── Alias redirects (canonicalize) ──
 

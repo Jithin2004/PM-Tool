@@ -100,7 +100,7 @@ async function upsertMemberFromInvitation(
       full_name: input.fullName,
       avatar_url: input.avatarUrl ?? null,
       availability_factor: 1,
-    })
+    }, { onConflict: 'id' })
     .select()
     .single();
 
@@ -144,7 +144,7 @@ async function bootstrapFirstOrganizationUser(
       full_name: input.fullName,
       avatar_url: input.avatarUrl ?? null,
       availability_factor: 1,
-    })
+    }, { onConflict: 'id' })
     .select()
     .single();
 
@@ -175,7 +175,7 @@ async function upsertSuperAdmin(
       full_name: input.fullName,
       avatar_url: input.avatarUrl ?? null,
       availability_factor: 1,
-    })
+    }, { onConflict: 'id' })
     .select()
     .single();
 
