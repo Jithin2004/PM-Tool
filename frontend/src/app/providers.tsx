@@ -9,7 +9,7 @@ interface AppProvidersProps {
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <React.Suspense fallback={<>{children}</>}>
+    <React.Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-surface"><div className="w-8 h-8 border-2 border-accent-primary border-t-transparent rounded-full animate-spin" /></div>}>
       <ObservabilityProvider>
         <AuthProvider>
           <WorkspaceProvider>{children}</WorkspaceProvider>
