@@ -37,8 +37,13 @@ DROP TABLE IF EXISTS activity_logs CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
 DROP TABLE IF EXISTS files CASCADE;
 DROP TABLE IF EXISTS comments CASCADE;
+DROP TABLE IF EXISTS task_comments CASCADE;
 DROP TABLE IF EXISTS task_dependencies CASCADE;
+DROP TABLE IF EXISTS wait_states CASCADE;
 DROP TABLE IF EXISTS tasks CASCADE;
+DROP TABLE IF EXISTS project_signoffs CASCADE;
+DROP TABLE IF EXISTS project_allocations CASCADE;
+DROP TABLE IF EXISTS allocation_periods CASCADE;
 DROP TABLE IF EXISTS projects CASCADE;
 DROP TABLE IF EXISTS team_members CASCADE;
 DROP TABLE IF EXISTS teams CASCADE;
@@ -512,28 +517,11 @@ $$;
 
 
 -- Auto-creates a users row when a new auth.users record is inserted (OAuth / email signup).
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = ''
-AS $$
-BEGIN
-  INSERT INTO public.users (id, email, full_name, avatar_url, role)
-  VALUES (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
-    coalesce(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture'),
-    'viewer'
-  )
-  ON CONFLICT (id) DO NOTHING;
-  RETURN new;
-END;
-$$;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+-- WARNING: Removed handle_new_user because it pre-inserts users as 'viewer', causing a 400 Bad Request
+-- when reconcileInvitationMembership attempts to upsert them to 'pending-workspace-setup' or other roles.
+-- The client-side reconciliation handles user row creation securely.
+-- CREATE OR REPLACE FUNCTION public.handle_new_user() ...
+-- CREATE TRIGGER on_auth_user_created ...
 
 -- Fix 3: Privilege Escalation Protection
 CREATE OR REPLACE FUNCTION prevent_role_escalation()
@@ -542,6 +530,11 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = ''
 AS $$
 BEGIN
+  -- Allow users to reclaim their workspace if they are the true owner
+  IF EXISTS (SELECT 1 FROM workspaces WHERE id = NEW.workspace_id AND owner_id = NEW.id) THEN
+    RETURN NEW;
+  END IF;
+
   -- Prevent changing workspace_id after it has been set
   IF OLD.workspace_id IS NOT NULL AND NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN
     RAISE EXCEPTION 'Unauthorized: Cannot migrate workspaces.';
@@ -880,8 +873,12 @@ CREATE POLICY "Users can update their own safe profile fields"
   USING (id = auth.uid())
   WITH CHECK (
     id = auth.uid()
-    AND role IS NOT DISTINCT FROM (SELECT role FROM users WHERE id = auth.uid())
-    AND workspace_id IS NOT DISTINCT FROM (SELECT workspace_id FROM users WHERE id = auth.uid())
+    AND (
+      (role IS NOT DISTINCT FROM (SELECT role FROM users WHERE id = auth.uid())
+       AND workspace_id IS NOT DISTINCT FROM (SELECT workspace_id FROM users WHERE id = auth.uid()))
+      OR
+      EXISTS (SELECT 1 FROM workspaces WHERE workspaces.id = users.workspace_id AND workspaces.owner_id = auth.uid())
+    )
   );
 
 

@@ -94,10 +94,10 @@ export function WorkspaceSetupWizard() {
           {step === 4 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
               <label className="block text-sm font-semibold">Step 4: Delivery Method</label>
-              <select value={delivery} onChange={e => setDelivery(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50">
-                <option>Agile</option>
-                <option>Waterfall</option>
-                <option>Hybrid</option>
+              <select value={delivery} onChange={e => setDelivery(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50 text-white">
+                <option className="bg-slate-900 text-white" value="Agile">Agile</option>
+                <option className="bg-slate-900 text-white" value="Waterfall">Waterfall</option>
+                <option className="bg-slate-900 text-white" value="Hybrid">Hybrid</option>
               </select>
             </div>
           )}
@@ -105,11 +105,11 @@ export function WorkspaceSetupWizard() {
           {step === 5 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
               <label className="block text-sm font-semibold">Step 5: Completion Policy</label>
-              <select value={policy} onChange={e => setPolicy(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50">
-                <option>Flexible</option>
-                <option>Controlled</option>
-                <option>Strict</option>
-                <option>Enterprise</option>
+              <select value={policy} onChange={e => setPolicy(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50 text-white">
+                <option className="bg-slate-900 text-white" value="Flexible">Flexible</option>
+                <option className="bg-slate-900 text-white" value="Controlled">Controlled</option>
+                <option className="bg-slate-900 text-white" value="Strict">Strict</option>
+                <option className="bg-slate-900 text-white" value="Enterprise">Enterprise</option>
               </select>
             </div>
           )}
@@ -117,9 +117,9 @@ export function WorkspaceSetupWizard() {
           {step === 6 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
               <label className="block text-sm font-semibold">Step 6: Capacity Planning</label>
-              <select value={capacity} onChange={e => setCapacity(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50">
-                <option>Yes</option>
-                <option>No</option>
+              <select value={capacity} onChange={e => setCapacity(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50 text-white">
+                <option className="bg-slate-900 text-white" value="Yes">Yes</option>
+                <option className="bg-slate-900 text-white" value="No">No</option>
               </select>
             </div>
           )}
