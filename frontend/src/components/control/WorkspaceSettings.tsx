@@ -2,13 +2,22 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useOperationalData } from '../../context/OperationalDataContext';
 import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw } from 'lucide-react';
 
 export function WorkspaceSettings() {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
+  const { raw: { users } } = useOperationalData();
   const { notify } = useDashboard();
   const [saving, setSaving] = useState(false);
+
+  const owner = useMemo(() => {
+    if (!workspace?.ownerId || !users) return null;
+    return users.find((u: any) => u.id === workspace.ownerId);
+  }, [workspace?.ownerId, users]);
+
+  const ownerDisplay = owner ? (owner.full_name || owner.email) : (workspace?.ownerId || 'N/A');
 
   const settings = useMemo(() => ({
     country: workspace?.settings?.country || 'Not set',
@@ -90,7 +99,7 @@ export function WorkspaceSettings() {
           </div>
           <div className="border border-border bg-bg p-4">
             <p className="text-[9px] uppercase text-text-tertiary mb-1">Owner</p>
-            <p className="text-text-secondary truncate">{workspace?.ownerId || 'N/A'}</p>
+            <p className="text-text-secondary truncate" title={workspace?.ownerId}>{ownerDisplay}</p>
           </div>
           <div className="border border-border bg-bg p-4">
             <p className="text-[9px] uppercase text-text-tertiary mb-1">Version</p>
