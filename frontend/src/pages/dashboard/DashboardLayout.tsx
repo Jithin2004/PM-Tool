@@ -1525,187 +1525,183 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-bg backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
           >
-            {/* ... rest of the isAdding code ... */}
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-surface border border-border w-full max-w-xl p-6 sm:p-8 overflow-y-auto max-h-[90vh] md:max-h-none rounded-sm my-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-8 h-8 bg-white/5 border border-border flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-text-secondary" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-medium tracking-tight">Workspace Setup</h3>
-                  <p className="text-[10px] font-mono text-text-secondary uppercase">New project creation</p>
-                </div>
-              </div>
-
-              <form onSubmit={handleCreateProject} className="space-y-6">
-                <div>
-                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Project Designation</label>
-                  <input
-                    autoFocus
-                    required
-                    type="text"
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                    placeholder="E.g. QUANTUM STORAGE OPTIMIZER"
-                  />
-                </div>
-
-
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Execution Mode</label>
-                    <select
-                      value={newExecutionMode}
-                      onChange={e => setNewExecutionMode(e.target.value)}
-                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
-                    >
-                      <option value="KANBAN">KANBAN</option>
-                      <option value="SCRUM">SCRUM</option>
-                      <option value="SDLC">SDLC</option>
-                    </select>
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="relative bg-surface/80 backdrop-blur-xl border border-border/50 w-full max-w-2xl p-8 overflow-y-auto max-h-[90vh] md:max-h-none rounded-2xl my-auto shadow-2xl shadow-black/50"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500" />
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 bg-teal-500/10 border border-teal-500/20 rounded-xl flex items-center justify-center shadow-inner">
+                    <Zap className="w-6 h-6 text-teal-400" />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Priority Selection</label>
-                    <select
-                      value={newPriority}
-                      onChange={e => setNewPriority(e.target.value)}
-                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
-                    >
-                      <option value="low">LOW PRIORITY</option>
-                      <option value="medium">MEDIUM PRIORITY</option>
-                      <option value="high">CRITICAL PRIORITY</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Assign Team</label>
-                    <select
-                      value={newTeamId}
-                      onChange={e => setNewTeamId(e.target.value)}
-                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none appearance-none"
-                    >
-                      <option value="">UNALLOCATED</option>
-                      {activeTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
+                    <h3 className="text-2xl font-bold tracking-tight text-text-primary">Workspace Setup</h3>
+                    <p className="text-[11px] font-bold text-text-tertiary uppercase tracking-widest mt-1">New project creation</p>
                   </div>
                 </div>
 
-                {getSuggestedTeam() && !newTeamId && (
-                  <div className="bg-surface-3 border border-border p-3 flex justify-between items-center">
+                <form onSubmit={handleCreateProject} className="space-y-6">
+                  <div>
+                    <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2 flex items-center gap-2">Project Designation <span className="w-1.5 h-1.5 rounded-full bg-teal-500" /></label>
+                    <input
+                      autoFocus
+                      required
+                      type="text"
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 focus:bg-surface-3 transition-all outline-none text-text-primary placeholder:text-text-quaternary"
+                      placeholder="E.g. QUANTUM STORAGE OPTIMIZER"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[10px] font-mono text-signal-info uppercase tracking-wide mb-0.5">AI Suggestion</p>
-                      <p className="text-xs font-mono text-text-secondary">Team <strong>{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
+                      <label className="block text-[10px] uppercase font-bold tracking-widest text-text-secondary mb-2">Execution Mode</label>
+                      <select
+                        value={newExecutionMode}
+                        onChange={e => setNewExecutionMode(e.target.value)}
+                        className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 outline-none appearance-none cursor-pointer hover:bg-surface-3 transition-colors"
+                      >
+                        <option value="KANBAN">KANBAN</option>
+                        <option value="SCRUM">SCRUM</option>
+                        <option value="SDLC">SDLC</option>
+                      </select>
                     </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold tracking-widest text-text-secondary mb-2">Priority Selection</label>
+                      <select
+                        value={newPriority}
+                        onChange={e => setNewPriority(e.target.value)}
+                        className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 outline-none appearance-none cursor-pointer hover:bg-surface-3 transition-colors"
+                      >
+                        <option value="low">LOW PRIORITY</option>
+                        <option value="medium">MEDIUM PRIORITY</option>
+                        <option value="high">CRITICAL PRIORITY</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-[10px] uppercase font-bold tracking-widest text-text-secondary mb-2">Assign Team</label>
+                      <select
+                        value={newTeamId}
+                        onChange={e => setNewTeamId(e.target.value)}
+                        className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 outline-none appearance-none cursor-pointer hover:bg-surface-3 transition-colors"
+                      >
+                        <option value="">UNALLOCATED</option>
+                        {activeTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {getSuggestedTeam() && !newTeamId && (
+                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 flex justify-between items-center relative overflow-hidden">
+                      <div className="absolute left-0 top-0 w-1 h-full bg-blue-500" />
+                      <div>
+                        <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">AI Suggestion</p>
+                        <p className="text-xs text-text-secondary">Team <strong className="text-white">{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setNewTeamId(getSuggestedTeam()?.id || '')}
+                        className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border border-blue-500/30 active:scale-95"
+                      >
+                        Auto-Assign
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold tracking-widest text-text-secondary mb-2">Proposed Start Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={proposedStartDate}
+                        onChange={e => setProposedStartDate(e.target.value)}
+                        className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 outline-none text-text-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold tracking-widest text-text-secondary mb-2">Client Deadline *</label>
+                      <input
+                        type="date"
+                        required
+                        value={newClientDeadline}
+                        onChange={e => setNewClientDeadline(e.target.value)}
+                        className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 outline-none text-text-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Anticipated Operational Friction Section */}
+                  <div className="space-y-4 p-5 bg-surface-3/30 border border-border/50 rounded-xl">
+                    <span className="block text-[10px] uppercase font-bold tracking-widest text-text-secondary">Anticipated Operational Friction</span>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionInfra ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
+                          {frictionInfra && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <input type="checkbox" checked={frictionInfra} onChange={e => setFrictionInfra(e.target.checked)} className="hidden" />
+                        <span>Client Infrastructure Access Lag</span>
+                      </label>
+                      <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionData ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
+                          {frictionData && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <input type="checkbox" checked={frictionData} onChange={e => setFrictionData(e.target.checked)} className="hidden" />
+                        <span>External Data Provisioning Delay</span>
+                      </label>
+                      <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionSla ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
+                          {frictionSla && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <input type="checkbox" checked={frictionSla} onChange={e => setFrictionSla(e.target.checked)} className="hidden" />
+                        <span>Third-Party SLA / Compliance Review</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="bg-surface-3/30 border border-border/50 rounded-xl p-5 relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-text-quaternary/30 to-transparent" />
+                    <div className="flex justify-between items-center text-[10px] uppercase font-bold tracking-widest mb-3">
+                      <span className="text-text-secondary">Statistical Estimate</span>
+                      <span className="text-text-tertiary bg-surface-3 px-2 py-0.5 rounded-md border border-border/50">
+                        DYNAMIC σ
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-tertiary leading-relaxed">
+                      Project timeline dynamically managed by downstream task intervals and verified external friction metrics.
+                    </p>
+                    <p className="text-xs text-text-quaternary mt-3 italic leading-relaxed">
+                      Target deadline (±σ) is contractually bound to downstream task execution blocks and external client liabilities.
+                      {(frictionInfra || frictionData || frictionSla) && (
+                        <span className="block mt-2 text-signal-warning text-[10px] uppercase font-bold tracking-wider not-italic flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-signal-warning animate-pulse" />
+                          Warning: Timeline is bound to active external wait-states.
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      type="submit"
+                      className="flex-[2] bg-teal-500 text-white h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-teal-400 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(20,184,166,0.3)]"
+                    >
+                      Commit Project
+                    </button>
                     <button
                       type="button"
-                      onClick={() => setNewTeamId(getSuggestedTeam()?.id || '')}
-                      className="bg-surface-3 hover:bg-surface-3 text-blue-300 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wide transition-colors border border-border"
+                      onClick={() => setIsAdding(false)}
+                      className="flex-1 bg-surface-3/50 border border-border/50 text-text-secondary h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-surface-3 hover:text-text-primary transition-all active:scale-[0.98]"
                     >
-                      Auto-Assign
+                      Abort
                     </button>
                   </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Proposed Start Date *</label>
-                    <input
-                      type="date"
-                      required
-                      value={proposedStartDate}
-                      onChange={e => setProposedStartDate(e.target.value)}
-                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Client Deadline *</label>
-                    <input
-                      type="date"
-                      required
-                      value={newClientDeadline}
-                      onChange={e => setNewClientDeadline(e.target.value)}
-                      className="w-full bg-bg border border-border h-12 px-4 font-mono text-sm focus:border-white/40 outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Anticipated Operational Friction Section */}
-                <div className="space-y-3 p-4 bg-white/5 border border-border rounded-sm">
-                  <span className="block text-[10px] uppercase font-mono text-text-secondary tracking-wide">Anticipated Operational Friction</span>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-xs font-mono text-text-secondary cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={frictionInfra}
-                        onChange={e => setFrictionInfra(e.target.checked)}
-                        className="w-3.5 h-3.5 accent-white cursor-pointer"
-                      />
-                      <span>Client Infrastructure Access Lag</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-mono text-text-secondary cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={frictionData}
-                        onChange={e => setFrictionData(e.target.checked)}
-                        className="w-3.5 h-3.5 accent-white cursor-pointer"
-                      />
-                      <span>External Data Provisioning Delay</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-mono text-text-secondary cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={frictionSla}
-                        onChange={e => setFrictionSla(e.target.checked)}
-                        className="w-3.5 h-3.5 accent-white cursor-pointer"
-                      />
-                      <span>Third-Party SLA / Compliance Review</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="bg-white/5 border border-border p-4">
-                  <div className="flex justify-between items-center text-[10px] uppercase font-mono mb-2">
-                    <span className="text-text-secondary">Statistical Estimate</span>
-                    <span className="text-text-secondary">
-                      DYNAMIC σ
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-mono text-text-secondary mt-1 leading-relaxed">
-                    Project timeline dynamically managed by downstream task intervals and verified external friction metrics.
-                  </p>
-                  <p className="text-[11px] font-mono text-text-secondary mt-2 italic leading-relaxed">
-                    Target deadline (±σ) is contractually bound to downstream task execution blocks and external client liabilities.
-                    {(frictionInfra || frictionData || frictionSla) && (
-                      <span className="block mt-1 text-signal-warning text-[10px] uppercase font-bold">
-                        Warning: Timeline is bound to active external wait-states.
-                      </span>
-                    )}
-                  </p>
-                </div>
-
-                <div className="flex gap-4 pt-4">
-                  <button
-                    type="submit"
-                    className="flex-1 bg-white text-black h-12 font-medium hover:bg-neutral-200 transition-colors uppercase text-xs tracking-wide"
-                  >
-                    Commit Project
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsAdding(false)}
-                    className="flex-1 border border-border h-12 font-medium hover:bg-white/5 transition-colors uppercase text-xs tracking-wide"
-                  >
-                    Abort
-                  </button>
-                </div>
-              </form>
+                </form>
             </motion.div>
           </motion.div>
         )}

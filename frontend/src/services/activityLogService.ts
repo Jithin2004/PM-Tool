@@ -131,8 +131,22 @@ export const activityLogService = {
   },
 
   async computeHash(entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash'>, previousHash: string, createdAt?: string): Promise<string> {
-    const ts = createdAt || entry.created_at || new Date().toISOString();
-    const message = `${entry.workspace_id}${entry.actor_id ?? ''}${entry.project_id ?? ''}${entry.task_id ?? ''}${entry.action}${JSON.stringify(entry.metadata)}${previousHash}${ts}`;
+    const rawTs = createdAt || entry.created_at || new Date().toISOString();
+    const ts = new Date(rawTs).toISOString(); // Normalize postgres timestamp differences (+00:00 vs Z)
+    
+    // Deterministic stringify for JSONB roundtrips
+    const deterministicStringify = (obj: any): string => {
+      if (obj === null || obj === undefined) return 'null';
+      if (Array.isArray(obj)) return '[' + obj.map(deterministicStringify).join(',') + ']';
+      if (typeof obj === 'object') {
+        const keys = Object.keys(obj).sort();
+        return '{' + keys.map(k => JSON.stringify(k) + ':' + deterministicStringify(obj[k])).join(',') + '}';
+      }
+      return JSON.stringify(obj);
+    };
+
+    const metadataStr = entry.metadata ? deterministicStringify(entry.metadata) : 'null';
+    const message = `${entry.workspace_id}${entry.actor_id ?? ''}${entry.project_id ?? ''}${entry.task_id ?? ''}${entry.action}${metadataStr}${previousHash}${ts}`;
     return sha256(message);
   },
 
