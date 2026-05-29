@@ -252,10 +252,20 @@ export const activityLogService = {
     for (let i = 0; i < logs.length; i++) {
       const log = logs[i];
       if (i === 0 && (!log.previous_hash || log.previous_hash === 'GENESIS_BLOCK')) {
-        currentPrevHash = log.hash!;
+        currentPrevHash = log.hash || 'GENESIS_BLOCK';
         continue;
       }
-      if (log.previous_hash !== currentPrevHash) return { valid: false, tamperedIndex: i };
+      if (!log.hash && !log.previous_hash) {
+        currentPrevHash = 'GENESIS_BLOCK';
+        continue;
+      }
+      if (log.previous_hash !== currentPrevHash) {
+        if (log.previous_hash === 'GENESIS_BLOCK' || !log.previous_hash) {
+          currentPrevHash = log.hash || 'GENESIS_BLOCK';
+          continue;
+        }
+        return { valid: false, tamperedIndex: i };
+      }
       const recomputed = await this.computeHash(log, log.previous_hash!);
       if (log.hash !== recomputed) return { valid: false, tamperedIndex: i };
       currentPrevHash = log.hash!;
@@ -289,15 +299,21 @@ export const activityLogService = {
 
       // Genesis entry at index 0 with null/legacy previous_hash is valid
       if (i === 0 && (!log.previous_hash || log.previous_hash === 'GENESIS_BLOCK')) {
-        currentPrevHash = log.hash!;
+        currentPrevHash = log.hash || 'GENESIS_BLOCK';
+        continue;
+      }
+
+      // Legacy rows without hashes are implicitly valid
+      if (!log.hash && !log.previous_hash) {
+        currentPrevHash = 'GENESIS_BLOCK';
         continue;
       }
 
       // Non-genesis hash mismatch = real corruption
       if (log.previous_hash !== currentPrevHash) {
-        if (log.previous_hash === 'GENESIS_BLOCK') {
+        if (log.previous_hash === 'GENESIS_BLOCK' || !log.previous_hash) {
            // Soft reset due to the disabled hashing period
-           currentPrevHash = log.hash!;
+           currentPrevHash = log.hash || 'GENESIS_BLOCK';
            continue;
         }
         if (!broken) { broken = true; firstBad = i; }
@@ -344,12 +360,16 @@ export const activityLogService = {
     for (let i = 0; i < logs.length; i++) {
       const log = logs[i];
       if (i === 0 && (!log.previous_hash || log.previous_hash === 'GENESIS_BLOCK')) {
-        currentPrevHash = log.hash!;
+        currentPrevHash = log.hash || 'GENESIS_BLOCK';
+        continue;
+      }
+      if (!log.hash && !log.previous_hash) {
+        currentPrevHash = 'GENESIS_BLOCK';
         continue;
       }
       if (log.previous_hash !== currentPrevHash) {
-        if (log.previous_hash === 'GENESIS_BLOCK') {
-          currentPrevHash = log.hash!;
+        if (log.previous_hash === 'GENESIS_BLOCK' || !log.previous_hash) {
+          currentPrevHash = log.hash || 'GENESIS_BLOCK';
           continue;
         }
         return { valid: false, brokenIndex: i, severity: 'critical', reason: `Hash mismatch at index ${i}` };

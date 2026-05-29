@@ -290,7 +290,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           items = items.map(item => {
             if (item.id === 'overview') return { ...item, label: 'Strategic Telemetry' };
             if (item.id === 'projects') return { ...item, label: 'Org Orchestration' };
-            if (item.id === 'mission-control') return { ...item, label: 'Operational Health' };
             return item;
           });
         } else if (isPM) {
