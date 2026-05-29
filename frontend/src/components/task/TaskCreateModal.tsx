@@ -77,52 +77,60 @@ export function TaskCreateModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-bg backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-bg border border-border p-6 rounded-sm w-full max-w-md relative overflow-hidden"
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="bg-surface border border-white/10 p-8 rounded-2xl w-full max-w-md relative overflow-hidden shadow-2xl"
       >
-        {/* Visual neon light accent */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-primary to-accent-secondary" />
+        {/* Visual glow accent */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-accent-primary via-accent-secondary to-accent-primary" />
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent-primary/20 blur-[80px] rounded-full pointer-events-none" />
         
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-primary flex items-center gap-1.5">
-            <Terminal className="w-4 h-4 text-signal-info" />
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-sm font-semibold tracking-wide uppercase text-text-primary flex items-center gap-2">
+            <Terminal className="w-5 h-5 text-accent-primary drop-shadow-[0_0_8px_rgba(var(--color-accent-primary-rgb),0.5)]" />
             {mode === 'epic' ? 'Add Epic' : mode === 'story' ? 'Add Story' : 'Add Task'}
           </h3>
           <button
             onClick={onClose}
-            className="text-text-quaternary hover:text-text-primary cursor-pointer"
+            className="p-1.5 rounded-md hover:bg-white/5 text-text-quaternary hover:text-text-primary transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">{mode === 'epic' ? 'Epic Name' : mode === 'story' ? 'Story Title' : 'Task Title'} *</label>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">
+              {mode === 'epic' ? 'Epic Name' : mode === 'story' ? 'Story Title' : 'Task Title'} <span className="text-signal-error">*</span>
+            </label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Implement Authentication"
-              className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors"
+              className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary placeholder-white/20 focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all rounded-lg shadow-inner"
             />
           </div>
 
-          <div>
-            <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">Target Project *</label>
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">
+              Target Project <span className="text-signal-error">*</span>
+            </label>
             {defaultProjectId ? (
-              <div className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-tertiary">{projects.find(p => p.id === defaultProjectId)?.name || projects[0]?.name}</div>
+              <div className="w-full bg-surface-2/50 border border-border/30 p-2.5 text-sm text-text-secondary rounded-lg">
+                {projects.find(p => p.id === defaultProjectId)?.name || projects[0]?.name}
+              </div>
             ) : (
               <select
                 required
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors"
+                className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all rounded-lg appearance-none cursor-pointer"
               >
                 <option value="">-- SELECT PROJECT --</option>
                 {projects.map(p => (
@@ -132,35 +140,35 @@ export function TaskCreateModal({
             )}
           </div>
 
-          <div>
-            <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">Description</label>
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Technical specs, links, etc."
               rows={3}
-              className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors resize-none"
+              className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary placeholder-white/20 focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all resize-none rounded-lg shadow-inner"
             />
           </div>
 
           <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">Weight (Hours)</label>
+            <div className="flex-1 space-y-1.5">
+              <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Weight (Hours)</label>
               <input
                 type="number"
                 min="0.5"
                 step="0.5"
                 value={estimatedHours}
                 onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors"
+                className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all rounded-lg shadow-inner"
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">Assignee</label>
+            <div className="flex-1 space-y-1.5">
+              <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Assignee</label>
               <select
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors"
+                className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all rounded-lg appearance-none cursor-pointer"
               >
                 <option value="">Unassigned</option>
                 {users.map(u => (
@@ -170,18 +178,18 @@ export function TaskCreateModal({
             </div>
           </div>
 
-          <div className="pt-4 border-t border-border-subtle flex justify-end gap-3">
+          <div className="pt-6 mt-4 flex justify-end gap-3 border-t border-white/5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-[9px] font-medium uppercase tracking-wide text-text-tertiary hover:text-text-primary transition-colors"
+              className="px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-white/5 rounded-lg transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white text-[9px] font-medium uppercase tracking-wide transition-colors shadow-sm disabled:opacity-50"
+              className="px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/90 text-white text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all shadow-[0_0_15px_rgba(var(--color-accent-primary-rgb),0.3)] hover:shadow-[0_0_20px_rgba(var(--color-accent-primary-rgb),0.5)] disabled:opacity-50 disabled:shadow-none"
             >
               {isSubmitting ? 'Processing...' : mode === 'epic' ? 'Create Epic' : mode === 'story' ? 'Create Story' : 'Create Task'}
             </button>

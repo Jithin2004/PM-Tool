@@ -19,40 +19,45 @@ export function LogisticsPanel() {
 
   if (!hasCapability(profile?.role, 'manage_logistics')) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 font-geist"
-        style={{ color: 'var(--pm-on-surface-variant)' }}>
-        <Icon name="lock" size={40} style={{ opacity: 0.3 }} />
-        <div className="text-center">
-          <p className="font-mono-pm text-[11px] uppercase tracking-widest mb-1" style={{ color: 'var(--pm-error)' }}>
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-20">
+        <div className="w-20 h-20 bg-surface-2 border border-border/50 rounded-full flex items-center justify-center shadow-lg">
+          <Icon name="lock" size={32} style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }} />
+        </div>
+        <div className="text-center max-w-sm">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-signal-error mb-2">
             CLEARANCE DENIED
           </p>
-          <p className="text-sm">Logistics management privileges required to access this module.</p>
+          <p className="text-sm font-medium text-text-tertiary">Logistics management privileges are strictly required to access this orchestration module.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 font-geist" style={{ color: 'var(--pm-on-surface)' }}>
+    <div className="flex flex-col gap-6 font-sans">
       {/* Header */}
-      <div className="flex items-end justify-between px-1 pt-2">
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between px-6 md:px-10 pt-8 pb-4 border-b border-border/40">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Operational Logistics</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+              <Icon name="local_shipping" size={20} style={{ color: 'rgb(129, 140, 248)' }} />
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight text-text-primary">Operational Logistics</h1>
+          </div>
+          <p className="text-sm font-medium text-text-tertiary">
             Resource management, attendance tracking, and capacity planning.
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-          style={{ background: 'rgba(255,183,131,0.08)', border: '1px solid rgba(255,183,131,0.2)' }}>
-          <Icon name="local_shipping" size={16} style={{ color: 'var(--pm-tertiary)' }} />
-          <span className="font-mono-pm text-[10px] uppercase tracking-widest" style={{ color: 'var(--pm-tertiary)' }}>
-            Logistics Module
+        <div className="mt-4 md:mt-0 flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/5 border border-indigo-500/20 shadow-sm backdrop-blur-md">
+          <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">
+            System Online
           </span>
         </div>
       </div>
 
       {/* Logistics Dashboard */}
-      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(70,69,84,0.3)' }}>
+      <div className="px-6 md:px-10">
         <LogisticsDashboard
           profiles={profiles}
           teams={teams}

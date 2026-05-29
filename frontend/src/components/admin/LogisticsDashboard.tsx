@@ -490,19 +490,10 @@ export function LogisticsDashboard({
   }, [dayAttendance, profiles, selectedDate]);
 
   return (
-    <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 pb-16">
+    <main className="w-full pb-16">
       {/* Visual Section Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 border-b border-border pb-8">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Truck className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-3xl font-medium tracking-tight uppercase">Logistics Orchestration Control</h2>
-          </div>
-          <p className="text-sm font-mono text-text-secondary">
-            Real-time payload routing, pipeline congestion analysis, execution node monitoring, and load balancing constraints.
-          </p>
-        </div>
-
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+        
         {/* Tab Selector */}
         {!hideTabs && (
         <div className="flex overflow-x-auto scrollbar-none bg-surface-3/50 backdrop-blur-md p-1.5 border border-border/50 rounded-xl w-full md:w-auto max-w-full shadow-sm" role="tablist" aria-label="Logistics sections">
