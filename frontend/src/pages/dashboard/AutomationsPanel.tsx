@@ -6,6 +6,7 @@ import {
 } from '../../services/automationEngine';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
+import { Zap, Plus, Settings2, Trash2, Shield, Activity, Power, Download } from 'lucide-react';
 
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return '';
@@ -71,61 +72,69 @@ export default function AutomationsPanel() {
   };
 
   if (loading) return (
-    <div className="p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <span className="text-[10px] font-mono uppercase tracking-wide text-text-quaternary">CONTROL</span>
-        <span className="text-text-quaternary">/</span>
-        <span className="text-xs font-mono text-text-secondary">Automations</span>
-      </div>
-      <div className="text-[11px] font-mono text-text-quaternary">Loading automations...</div>
+    <div className="p-8 animate-fade-in flex flex-col items-center justify-center h-[50vh]">
+      <div className="w-10 h-10 border-2 border-accent-primary border-t-transparent rounded-full animate-spin mb-4" />
+      <div className="text-xs font-bold uppercase tracking-widest text-text-tertiary">Initializing Automation Engine...</div>
     </div>
   );
 
   return (
-    <div className="p-6 max-w-5xl">
-      <div className="flex items-center gap-3 mb-6">
-        <span className="text-[10px] font-mono uppercase tracking-wide text-text-quaternary">CONTROL</span>
-        <span className="text-text-quaternary">/</span>
-        <span className="text-xs font-mono text-text-secondary">Automations</span>
+    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12 animate-fade-in">
+      <div className="relative mb-10">
+        <div className="absolute -inset-1 bg-gradient-to-r from-teal-500/20 via-emerald-500/20 to-transparent blur-2xl opacity-50 -z-10" />
+        <h2 className="text-4xl font-semibold tracking-tight text-text-primary mb-2 flex items-center gap-3">
+          <Zap className="w-8 h-8 text-teal-400" />
+          Automation Engine
+        </h2>
+        <p className="text-sm text-text-tertiary tracking-wide max-w-2xl">
+          Event-driven operational triggers, dynamic state machines, and background orchestration
+        </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-border pb-3 mb-6">
+      <div className="flex gap-6 border-b border-border/50 pb-px mb-8 relative">
         <button onClick={() => setTab('marketplace')}
-          className={`text-[10px] font-mono uppercase tracking-wider ${tab === 'marketplace' ? 'text-text-primary border-b-2 border-white/40 pb-3' : 'text-text-quaternary hover:text-text-tertiary'}`}>
-          Marketplace ({templates.length})
+          className={`text-[11px] font-bold uppercase tracking-widest px-1 pb-4 border-b-2 transition-all ${tab === 'marketplace' ? 'text-teal-400 border-teal-400' : 'text-text-quaternary border-transparent hover:text-text-secondary hover:border-border'}`}>
+          Marketplace <span className="ml-1.5 bg-surface-3 px-2 py-0.5 rounded-full text-[9px]">{templates.length}</span>
         </button>
         <button onClick={() => setTab('rules')}
-          className={`text-[10px] font-mono uppercase tracking-wider ${tab === 'rules' ? 'text-text-primary border-b-2 border-white/40 pb-3' : 'text-text-quaternary hover:text-text-tertiary'}`}>
-          My Rules ({rules.length})
+          className={`text-[11px] font-bold uppercase tracking-widest px-1 pb-4 border-b-2 transition-all ${tab === 'rules' ? 'text-teal-400 border-teal-400' : 'text-text-quaternary border-transparent hover:text-text-secondary hover:border-border'}`}>
+          My Rules <span className="ml-1.5 bg-surface-3 px-2 py-0.5 rounded-full text-[9px]">{rules.length}</span>
         </button>
       </div>
 
       {/* ── Marketplace ── */}
       {tab === 'marketplace' && (
         <div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {templates.map(tmpl => {
               const msgKey = `install_${tmpl.id}`;
               const installed = rules.find(r => r.name === tmpl.name);
               return (
-                <div key={tmpl.id} className="border border-border bg-surface-3 p-4 hover:border-border transition-colors">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[9px] font-mono uppercase text-text-quaternary bg-white/5 px-1.5 py-0.5">{tmpl.category}</span>
+                <div key={tmpl.id} className="group relative bg-surface/40 backdrop-blur-md border border-border/50 hover:border-teal-500/30 rounded-2xl p-6 transition-all duration-300 shadow-sm hover:shadow-teal-500/5 flex flex-col">
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent rounded-2xl pointer-events-none" />
+                  
+                  <div className="relative z-10 flex-1">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-text-secondary bg-surface-3 border border-border/50 px-2 py-1 rounded-md">{tmpl.category}</span>
+                    </div>
+                    <div className="text-sm font-bold text-text-primary mb-2 group-hover:text-teal-400 transition-colors">{tmpl.name}</div>
+                    {tmpl.description && <div className="text-[11px] text-text-tertiary mb-5">{tmpl.description}</div>}
                   </div>
-                  <div className="text-xs font-mono text-text-secondary mb-1">{tmpl.name}</div>
-                  {tmpl.description && <div className="text-[9px] font-mono text-text-quaternary mb-3">{tmpl.description}</div>}
-                  <div className="text-[8px] font-mono text-text-quaternary mb-3">Trigger: {tmpl.trigger_event}</div>
-                  <div className="flex items-center gap-2">
-                    {installed ? (
-                      <span className="text-[9px] font-mono text-emerald-400">Installed</span>
-                    ) : (
-                      <button onClick={() => handleInstall(tmpl)}
-                        className="px-3 py-1.5 bg-surface-3 border border-border text-signal-info text-[9px] font-mono uppercase tracking-wider hover:bg-surface-3">
-                        Install
-                      </button>
-                    )}
-                    {messages[msgKey] && <span className="text-[9px] font-mono text-text-quaternary">{messages[msgKey]}</span>}
+                  
+                  <div className="relative z-10 border-t border-border/50 pt-4 mt-auto">
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-text-tertiary mb-4 flex items-center gap-1.5"><Zap className="w-3 h-3 text-teal-500" /> Trigger: <span className="text-text-secondary">{tmpl.trigger_event}</span></div>
+                    <div className="flex items-center justify-between">
+                      {installed ? (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-signal-safe flex items-center gap-1.5 bg-signal-safe/10 px-3 py-1.5 rounded-lg border border-signal-safe/20"><Shield className="w-3 h-3" /> Installed</span>
+                      ) : (
+                        <button onClick={() => handleInstall(tmpl)}
+                          className="px-4 py-2 bg-surface-3 border border-border/50 text-text-secondary text-[10px] font-bold uppercase tracking-wider hover:bg-teal-500/10 hover:border-teal-500/30 hover:text-teal-400 rounded-lg transition-all active:scale-95 flex items-center gap-1.5">
+                          <Download className="w-3 h-3" /> Install Template
+                        </button>
+                      )}
+                      {messages[msgKey] && <span className="text-[10px] font-bold uppercase tracking-wider text-signal-info">{messages[msgKey]}</span>}
+                    </div>
                   </div>
                 </div>
               );
@@ -137,73 +146,87 @@ export default function AutomationsPanel() {
       {/* ── Rules ── */}
       {tab === 'rules' && (
         <div>
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-end mb-6">
             <button onClick={() => setShowCreate(!showCreate)}
-              className="px-3 py-1.5 bg-surface-3 border border-border text-signal-info text-[9px] font-mono uppercase tracking-wider hover:bg-surface-3">
-              {showCreate ? 'Cancel' : 'New Rule'}
+              className="px-5 py-2.5 bg-teal-500/10 border border-teal-500/30 text-teal-400 text-[10px] font-bold uppercase tracking-wider hover:bg-teal-500/20 rounded-xl transition-all active:scale-95 flex items-center gap-2 shadow-sm">
+              <Plus className="w-4 h-4" />
+              {showCreate ? 'Cancel Creation' : 'Create Custom Rule'}
             </button>
           </div>
 
           {showCreate && (
-            <div className="border border-border bg-surface-3 p-4 mb-4">
+            <div className="bg-surface/40 backdrop-blur-md border border-teal-500/30 rounded-2xl p-6 mb-8 shadow-lg animate-fade-in relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-teal-500" />
+              <h3 className="text-xs font-bold uppercase tracking-widest text-text-secondary mb-5">Configure Automation</h3>
               <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
-                placeholder="Rule name" className="w-full bg-bg border border-border p-2 text-[11px] font-mono text-text-primary placeholder-white/20 mb-2" />
-              <div className="flex gap-2 mb-2">
-                <select value={newEvent} onChange={e => setNewEvent(e.target.value)}
-                  className="flex-1 bg-bg border border-border p-2 text-[11px] font-mono text-text-primary">
-                  <option value="task.created">Task created</option>
-                  <option value="task.status_changed">Task status changed</option>
-                  <option value="task.completed">Task completed</option>
-                  <option value="task.blocked">Task blocked</option>
-                  <option value="sprint.completed">Sprint completed</option>
-                  <option value="leave.approved">Leave approved</option>
-                  <option value="document.created">Document created</option>
-                  <option value="approval.completed">Approval completed</option>
-                </select>
-                <select value={newActionType} onChange={e => setNewActionType(e.target.value)}
-                  className="w-36 bg-bg border border-border p-2 text-[11px] font-mono text-text-primary">
-                  <option value="send_notification">Notify</option>
-                  <option value="move_task">Move task</option>
-                  <option value="assign_task">Assign task</option>
-                  <option value="create_task">Create task</option>
-                  <option value="create_approval">Create approval</option>
-                  <option value="call_webhook">Webhook</option>
-                </select>
+                placeholder="Rule Name (e.g., Alert on critical bugs)" className="w-full bg-surface-3/50 border border-border/50 focus:border-teal-500/50 p-3 rounded-xl text-sm text-text-primary mb-4 transition-all outline-none" />
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-2 block">Trigger Event</label>
+                  <select value={newEvent} onChange={e => setNewEvent(e.target.value)}
+                    className="w-full bg-surface-3/50 border border-border/50 focus:border-teal-500/50 p-3 rounded-xl text-sm text-text-primary outline-none transition-all cursor-pointer">
+                    <option value="task.created">Task created</option>
+                    <option value="task.status_changed">Task status changed</option>
+                    <option value="task.completed">Task completed</option>
+                    <option value="task.blocked">Task blocked</option>
+                    <option value="sprint.completed">Sprint completed</option>
+                    <option value="leave.approved">Leave approved</option>
+                    <option value="document.created">Document created</option>
+                    <option value="approval.completed">Approval completed</option>
+                  </select>
+                </div>
+                <div className="sm:w-64">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-2 block">Action</label>
+                  <select value={newActionType} onChange={e => setNewActionType(e.target.value)}
+                    className="w-full bg-surface-3/50 border border-border/50 focus:border-teal-500/50 p-3 rounded-xl text-sm text-text-primary outline-none transition-all cursor-pointer">
+                    <option value="send_notification">Notify</option>
+                    <option value="move_task">Move task</option>
+                    <option value="assign_task">Assign task</option>
+                    <option value="create_task">Create task</option>
+                    <option value="create_approval">Create approval</option>
+                    <option value="call_webhook">Webhook</option>
+                  </select>
+                </div>
               </div>
-              <button onClick={handleCreateRule}
-                className="px-3 py-1.5 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-medium">Create</button>
+              <button onClick={handleCreateRule} disabled={!newName.trim()}
+                className="px-6 py-2.5 bg-teal-500 text-white text-[11px] font-bold uppercase tracking-wider hover:bg-teal-400 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+                Deploy Rule
+              </button>
             </div>
           )}
 
           {rules.length === 0 ? (
-            <div className="border border-border bg-surface-3 p-12 text-center">
-              <span className="text-[10px] font-mono text-text-quaternary">No automation rules yet</span>
-              <span className="text-[8px] font-mono text-text-quaternary mt-1 block">Install from marketplace or create one</span>
+            <div className="border border-dashed border-border/50 bg-surface/30 rounded-2xl p-16 flex flex-col items-center justify-center text-center">
+              <Settings2 className="w-12 h-12 text-text-quaternary mb-4 opacity-50" />
+              <span className="text-sm font-bold text-text-secondary mb-2">No active automation rules</span>
+              <span className="text-xs text-text-tertiary">Install predefined templates from the marketplace or create your own custom workflow logic.</span>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-3">
               {rules.map(rule => (
-                <div key={rule.id} className="border border-border bg-surface-3 px-4 py-3 flex items-center justify-between">
+                <div key={rule.id} className="bg-surface/40 backdrop-blur-md border border-border/50 hover:border-border rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-surface/60">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-text-secondary">{rule.name}</span>
-                      <span className={`text-[9px] font-mono ${rule.enabled ? 'text-emerald-400' : 'text-text-quaternary'}`}>
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="text-sm font-bold text-text-primary">{rule.name}</span>
+                      <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md border ${rule.enabled ? 'bg-signal-safe/10 border-signal-safe/20 text-signal-safe' : 'bg-surface-3 border-border/50 text-text-quaternary'}`}>
                         {rule.enabled ? 'Active' : 'Disabled'}
                       </span>
                     </div>
-                    <div className="text-[8px] font-mono text-text-quaternary mt-0.5">
-                      {rule.trigger_event}
-                      {rule.execution_count ? ` · ${rule.execution_count} runs` : ''}
-                      {rule.last_executed_at ? ` · last ${timeAgo(rule.last_executed_at)}` : ''}
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold text-text-tertiary uppercase tracking-wider">
+                      <span className="flex items-center gap-1 bg-surface-3 px-2 py-1 rounded border border-border/50"><Zap className="w-3 h-3 text-teal-500" /> {rule.trigger_event}</span>
+                      {rule.execution_count ? <span className="flex items-center gap-1"><Activity className="w-3 h-3" /> {rule.execution_count} runs</span> : null}
+                      {rule.last_executed_at ? <span>Last run {timeAgo(rule.last_executed_at)}</span> : null}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-3">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button onClick={() => handleToggle(rule.id, rule.enabled)}
-                      className={`text-[9px] font-mono px-2 py-1 border ${rule.enabled ? 'border-border text-signal-warning' : 'border-emerald-500/30 text-emerald-400'} hover:border-white/30`}>
-                      {rule.enabled ? 'Disable' : 'Enable'}
+                      className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-4 py-2 border rounded-lg transition-all active:scale-95 ${rule.enabled ? 'bg-surface-3 border-border/50 text-text-secondary hover:bg-surface-4' : 'bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-teal-500/20'}`}>
+                      <Power className="w-3 h-3" /> {rule.enabled ? 'Disable' : 'Enable'}
                     </button>
                     <button onClick={() => handleDelete(rule.id)}
-                      className="text-[9px] font-mono px-2 py-1 border border-red-500/20 text-signal-critical/60 hover:border-red-500/40">Delete</button>
+                      className="flex items-center justify-center p-2 border border-signal-critical/20 bg-signal-critical/5 text-signal-critical/60 hover:text-signal-critical hover:bg-signal-critical/10 rounded-lg transition-all active:scale-95" title="Delete Rule">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}
