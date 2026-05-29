@@ -877,7 +877,7 @@ CREATE POLICY "Users can update their own safe profile fields"
       (role IS NOT DISTINCT FROM (SELECT role FROM users WHERE id = auth.uid())
        AND workspace_id IS NOT DISTINCT FROM (SELECT workspace_id FROM users WHERE id = auth.uid()))
       OR
-      EXISTS (SELECT 1 FROM workspaces WHERE workspaces.id = users.workspace_id AND workspaces.owner_id = auth.uid())
+      EXISTS (SELECT 1 FROM workspaces WHERE workspaces.id = workspace_id AND workspaces.owner_id = auth.uid())
     )
   );
 
