@@ -54,7 +54,7 @@ interface OperationalDataContextValue {
   };
 }
 
-const OperationalDataContext = createContext<OperationalDataContextValue | null>(null);
+export const OperationalDataContext = createContext<OperationalDataContextValue | null>(null);
 
 export function OperationalDataProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, updateRole } = useAuth();

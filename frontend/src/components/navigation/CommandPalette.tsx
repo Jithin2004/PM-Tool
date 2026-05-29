@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import { Search, Folder, CheckSquare, Flag, FileText, User, X, ChevronRight, Zap } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { useOperationalData } from '../../context/OperationalDataContext';
+import { OperationalDataContext } from '../../context/OperationalDataContext';
 
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const { workspace } = useWorkspace();
-  const { raw: { projects, tasks, profiles } } = useOperationalData();
+  const { workspace } = useWorkspace() || { workspace: null };
+  const operationalData = useContext(OperationalDataContext);
+  const projects = operationalData?.raw?.projects || [];
+  const tasks = operationalData?.raw?.tasks || [];
+  const profiles = operationalData?.raw?.profiles || [];
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
