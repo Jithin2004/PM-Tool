@@ -150,7 +150,9 @@ export const activityLogService = {
         task_id: entry.task_id,
         action: entry.action,
         metadata: entry.metadata,
-        created_at: createdAt
+        created_at: createdAt,
+        hash: hash,
+        previous_hash: previousHash
       });
       if (error) {
         if (error.code !== '42501') console.error('ActivityLogService: appendLog failed:', error);
@@ -197,7 +199,9 @@ export const activityLogService = {
         task_id: entry.task_id,
         action: entry.action,
         metadata: entry.metadata,
-        created_at: createdAt
+        created_at: createdAt,
+        hash: hash,
+        previous_hash: previousHash
       });
       if (error) {
         if (error.code === '42501') {

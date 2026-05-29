@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { realtimeOrchestrator } from '../services/realtimeOrchestrator';
 import type { Meeting } from '../types';
 
 export function useMeetings(workspaceId?: string, projectId?: string) {
@@ -24,16 +25,32 @@ export function useMeetings(workspaceId?: string, projectId?: string) {
   useEffect(() => {
     fetchMeetings();
     if (workspaceId && isSupabaseConfigured) {
-      const channel = createRealtimeChannel(`meetings-${workspaceId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings', filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
+      const unsubscribe = realtimeOrchestrator.subscribe(
+        `meetings-${workspaceId}`,
+        'meetings',
+        `workspace_id=eq.${workspaceId}`,
+        (payload) => {
           if (payload.eventType === 'INSERT') setMeetings(prev => [payload.new as Meeting, ...prev]);
           else if (payload.eventType === 'UPDATE') setMeetings(prev => prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m));
           else if (payload.eventType === 'DELETE') setMeetings(prev => prev.filter(m => m.id !== payload.old.id));
-        })
-        .subscribe();
-      return () => { supabase.removeChannel(channel); };
+        }
+      );
+      return () => { unsubscribe(); };
     }
   }, [fetchMeetings, workspaceId]);
+
+  // Multi-Tab State Consistency
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === `meetings_${workspaceId}` && e.newValue) {
+        try {
+          setMeetings(JSON.parse(e.newValue));
+        } catch (err) {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [workspaceId]);
 
   return { meetings, loading, fetchMeetings };
 }

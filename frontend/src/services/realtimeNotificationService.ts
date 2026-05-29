@@ -1,4 +1,5 @@
-import { supabase, createRealtimeChannel, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { realtimeOrchestrator } from './realtimeOrchestrator';
 import { fetchNotifications } from './notificationService';
 import type { Notification } from '../types';
 
@@ -19,25 +20,21 @@ export function subscribeToWorkspaceNotifications(
 ): () => void {
   if (!isSupabaseConfigured) return () => {};
 
-  const channel = createRealtimeChannel(`notifications-changes-${workspaceId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `workspace_id=eq.${workspaceId}`,
-      },
-      payload => {
+  const unsubscribe = realtimeOrchestrator.subscribe(
+    `notifications-changes-${workspaceId}`,
+    'notifications',
+    `workspace_id=eq.${workspaceId}`,
+    (payload) => {
+      if (payload.eventType === 'INSERT') {
         const row = payload.new as NotificationRow;
         if (!row.user_id || row.user_id === userId) {
           onInsert(row);
         }
-      },
-    )
-    .subscribe();
+      }
+    }
+  );
 
   return () => {
-    supabase.removeChannel(channel);
+    unsubscribe();
   };
 }

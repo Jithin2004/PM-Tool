@@ -26,14 +26,23 @@ export interface OperationalSnapshot {
 }
 
 export async function refreshOperationalSnapshot(workspaceId: string): Promise<OperationalSnapshot> {
+  const safeFetch = async <T>(promise: Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await promise;
+    } catch (err) {
+      console.warn('[operationalSyncService] Partial failure caught:', err);
+      return fallback;
+    }
+  };
+
   const [projects, profiles, teams, attendanceRows, salaryRows, workspaceSettingsBlob, serverMetricsResult] = await Promise.all([
-    fetchProjects(workspaceId),
-    fetchWorkspaceProfiles(workspaceId),
-    fetchWorkspaceTeams(workspaceId),
-    fetchWorkspaceAttendance(workspaceId),
-    fetchWorkspaceSalaries(workspaceId),
-    fetchWorkspaceSettingsBlob(workspaceId),
-    supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }),
+    safeFetch(fetchProjects(workspaceId), []),
+    safeFetch(fetchWorkspaceProfiles(workspaceId), []),
+    safeFetch(fetchWorkspaceTeams(workspaceId), []),
+    safeFetch(fetchWorkspaceAttendance(workspaceId), []),
+    safeFetch(fetchWorkspaceSalaries(workspaceId), []),
+    safeFetch(fetchWorkspaceSettingsBlob(workspaceId), {}),
+    safeFetch(supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }), { data: undefined }),
   ]);
 
   return { 
@@ -51,14 +60,23 @@ export async function refreshOperationalPartial(
   workspaceId: string,
   keys: Array<keyof OperationalSnapshot>,
 ): Promise<Partial<OperationalSnapshot>> {
+  const safeFetch = async <T>(promise: Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await promise;
+    } catch (err) {
+      console.warn('[operationalSyncService] Partial failure caught:', err);
+      return fallback;
+    }
+  };
+
   const loaders: Record<keyof OperationalSnapshot, () => Promise<unknown>> = {
-    projects: () => fetchProjects(workspaceId),
-    profiles: () => fetchWorkspaceProfiles(workspaceId),
-    teams: () => fetchWorkspaceTeams(workspaceId),
-    attendanceRows: () => fetchWorkspaceAttendance(workspaceId),
-    salaryRows: () => fetchWorkspaceSalaries(workspaceId),
-    workspaceSettingsBlob: () => fetchWorkspaceSettingsBlob(workspaceId),
-    serverMetrics: () => Promise.resolve(supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }).then(r => r.data)),
+    projects: () => safeFetch(fetchProjects(workspaceId), []),
+    profiles: () => safeFetch(fetchWorkspaceProfiles(workspaceId), []),
+    teams: () => safeFetch(fetchWorkspaceTeams(workspaceId), []),
+    attendanceRows: () => safeFetch(fetchWorkspaceAttendance(workspaceId), []),
+    salaryRows: () => safeFetch(fetchWorkspaceSalaries(workspaceId), []),
+    workspaceSettingsBlob: () => safeFetch(fetchWorkspaceSettingsBlob(workspaceId), {}),
+    serverMetrics: () => safeFetch(supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }).then(r => r.data), undefined),
   };
 
   const entries = await Promise.all(keys.map(async key => [key, await loaders[key]()]));

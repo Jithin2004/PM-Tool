@@ -27,7 +27,6 @@ import {
   Users,
   BarChart2
 } from 'lucide-react';
-import { useTasks } from '../../../hooks/useTasks';
 import { useWorkspace } from '../../../context/WorkspaceContext';
 import { useOperationalData } from '../../../context/OperationalDataContext';
 import { useCalendarEvents } from '../../../hooks/useCalendarEvents';
@@ -40,6 +39,11 @@ import { Task, Project, TaskStatus, CalendarEvent } from '../../../types';
 import { ExecutionHeader, ExecutionViewType } from './ExecutionHeader';
 import { hasCapability } from '../../../core/auth/permissions';
 import { buildVisibilityContext, filterVisibleTasks } from '../../../utils/visibilityFilter';
+import { supabase } from '../../../lib/supabase';
+import { reconstructProjectTimeline } from '../../../core/execution/flowEngine';
+import type { DeliveryTimeline } from '../../../core/execution/flowEngine';
+
+const ExecutionTimelineView = React.lazy(() => import('./ExecutionTimelineView'));
 
 interface ExecutionSystemProps {
   projects: Project[];
@@ -59,8 +63,12 @@ export function ExecutionSystem({
   initialView = 'board'
 }: ExecutionSystemProps) {
   const { workspace } = useWorkspace();
-  const { raw: { teams, workspaceSettingsBlob }, updateWorkspaceSettings } = useOperationalData();
-  const { tasks, dependencies, loading, addTask, updateTask, updateTaskStatus } = useTasks(workspace?.id);
+  const { 
+    loading, 
+    raw: { tasks, dependencies, teams, workspaceSettingsBlob }, 
+    taskActions: { addTask, updateTask, updateTaskStatus },
+    updateWorkspaceSettings 
+  } = useOperationalData();
 
   const visibilityContext = useMemo(() => {
     if (!currentUserProfile) return null;
@@ -441,11 +449,14 @@ export function ExecutionSystem({
         )}
 
         {activeView === 'timeline' && (
-          <TimelineView
-            tasks={filteredTasks}
-            projects={projects}
-            dependencies={dependencies}
-          />
+          <React.Suspense fallback={<div className="p-8 text-center text-sm text-text-quaternary animate-pulse">Loading Timeline Engine...</div>}>
+            <ExecutionTimelineView
+              tasks={filteredTasks}
+              projects={projects}
+              dependencies={dependencies}
+              users={users}
+            />
+          </React.Suspense>
         )}
 
         {activeView === 'roadmap' && (
@@ -478,6 +489,7 @@ export function ExecutionSystem({
             task={editingTask}
             projects={projects}
             users={users}
+            currentUserProfile={currentUserProfile}
             onSubmit={async (taskId, updates) => {
               if (updateTask) {
                 await updateTask(taskId, updates);
@@ -735,192 +747,6 @@ function SprintView({
   );
 }
 
-function TimelineView({ tasks, projects, dependencies }: any) {
-  const [zoom, setZoom] = useState<'days' | 'weeks'>('days');
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
-  const { timelineItems, start, end } = useMemo(() => {
-    const dates = tasks
-      .map((t: any) => t.deadline || t.due_date)
-      .filter(Boolean)
-      .map((d: string) => new Date(d));
-    if (dates.length === 0) {
-      const now = new Date();
-      return { timelineItems: [], start: now, end: new Date(now.getTime() + 14 * 86400000) };
-    }
-    
-    const min = new Date(Math.min(...dates.map(d => d.getTime())));
-    const max = new Date(Math.max(...dates.map(d => d.getTime())));
-    
-    // Add buffer
-    const timelineStart = new Date(min);
-    timelineStart.setDate(timelineStart.getDate() - 2);
-    const timelineEnd = new Date(max);
-    timelineEnd.setDate(timelineEnd.getDate() + 7);
-    
-    return {
-      timelineItems: tasks.filter((t: any) => t.deadline || t.due_date),
-      start: timelineStart,
-      end: timelineEnd,
-    };
-  }, [tasks]);
-
-  const daysCount = Math.ceil((end.getTime() - start.getTime()) / 86400000);
-  
-  return (
-    <div className="bg-surface-2 border border-border rounded-xl flex flex-col h-full overflow-hidden shadow-sm">
-      <div className="p-4 bg-surface border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider">Execution Timeline</h3>
-          <div className="flex items-center bg-surface-3 rounded-lg p-1 border border-border shadow-sm">
-            <button 
-              onClick={() => setZoom('days')}
-              className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${zoom === 'days' ? 'bg-surface text-text-primary shadow-sm' : 'text-text-tertiary hover:text-text-secondary'}`}
-            >
-              Days
-            </button>
-            <button 
-              onClick={() => setZoom('weeks')}
-              className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${zoom === 'weeks' ? 'bg-surface text-text-primary shadow-sm' : 'text-text-tertiary hover:text-text-secondary'}`}
-            >
-              Weeks
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4 text-[11px] font-medium text-text-tertiary uppercase tracking-tight">
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded bg-accent-primary" /> Active</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded bg-signal-safe" /> Complete</div>
-            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded bg-signal-critical" /> Blocked</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto scrollbar-thin" ref={scrollRef}>
-        <div className="min-w-max relative pb-10">
-          {/* Timeline Header (Ruler) */}
-          <div className="sticky top-0 z-20 flex bg-surface/90 backdrop-blur-md border-b border-border">
-            <div className="w-64 shrink-0 p-3 border-r border-border text-[10px] font-bold text-text-tertiary uppercase tracking-widest bg-surface/50">Execution Entity</div>
-            <div className="flex">
-              {zoom === 'days' ? Array.from({ length: daysCount }).map((_, i) => {
-                const date = new Date(start);
-                date.setDate(date.getDate() + i);
-                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                const isToday = date.toDateString() === new Date().toDateString();
-                
-                return (
-                  <div 
-                    key={i} 
-                    className={`w-12 shrink-0 p-3 border-r border-border-subtle text-[10px] text-center font-bold transition-colors ${
-                      isToday ? 'bg-accent-primary/10 text-accent-primary' : isWeekend ? 'bg-bg/30 text-text-quaternary' : 'text-text-tertiary'
-                    }`}
-                  >
-                    {date.getDate()}
-                    <div className="text-[8px] font-medium mt-0.5 opacity-60">{date.toLocaleString('default', { weekday: 'short' })}</div>
-                  </div>
-                );
-              }) : Array.from({ length: Math.ceil(daysCount / 7) }).map((_, i) => {
-                const date = new Date(start);
-                date.setDate(date.getDate() + i * 7);
-                return (
-                  <div 
-                    key={i} 
-                    className="w-32 shrink-0 p-3 border-r border-border-subtle text-[10px] text-center font-bold text-text-tertiary transition-colors"
-                  >
-                    Week {i + 1}
-                    <div className="text-[8px] font-medium mt-0.5 opacity-60">{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Timeline Content */}
-          <div className="relative">
-            {projects.map((project: any) => {
-              const projectTasks = timelineItems.filter((t: any) => t.project_id === project.id);
-              if (projectTasks.length === 0) return null;
-
-              return (
-                <div key={project.id} className="border-b border-border-subtle group">
-                  <div className="flex items-center bg-surface-3/10 hover:bg-surface-3/20 transition-colors">
-                    <div className="w-64 shrink-0 p-3 border-r border-border flex items-center gap-2">
-                      <div className="w-5 h-5 rounded bg-accent-primary/10 flex items-center justify-center">
-                        <Shield className="w-3 h-3 text-accent-primary" />
-                      </div>
-                      <span className="text-[12px] font-bold text-text-secondary truncate">{project.name}</span>
-                    </div>
-                    <div className="flex-1 relative h-12">
-                      {/* Project range bar would go here if project had start/end */}
-                    </div>
-                  </div>
-
-                  {projectTasks.map((task: any) => {
-                    const taskDate = new Date(task.deadline || task.due_date);
-                    const offsetDays = Math.ceil((taskDate.getTime() - start.getTime()) / 86400000);
-                    const isBlocked = dependencies.some((d: any) => d.task_id === task.id);
-                    
-                    return (
-                      <div key={task.id} className="flex hover:bg-white/[0.02] transition-colors border-b border-border-subtle/30">
-                        <div className="w-64 shrink-0 p-3 pl-10 border-r border-border text-[11px] text-text-tertiary truncate">
-                          {task.name}
-                        </div>
-                        <div className="flex-1 relative h-10 flex items-center">
-                          {/* Task Bar */}
-                          <motion.div 
-                            initial={{ scaleX: 0 }}
-                            animate={{ scaleX: 1 }}
-                            className={`absolute h-6 rounded-md shadow-premium border flex items-center px-2 cursor-pointer group/bar ${
-                              task.status === 'done' ? 'bg-signal-safe/10 border-signal-safe/20 text-signal-safe' :
-                              isBlocked ? 'bg-signal-critical/10 border-signal-critical/20 text-signal-critical' :
-                              'bg-accent-primary/10 border-accent-primary/20 text-accent-primary'
-                            }`}
-                            style={{ 
-                              left: zoom === 'days' ? `${(offsetDays - 2) * 48}px` : `${((offsetDays - 2) / 7) * 128}px`, 
-                              width: zoom === 'days' ? '144px' : '64px',
-                              transformOrigin: 'left'
-                            }}
-                          >
-                            <div className={`w-1.5 h-1.5 rounded-full mr-2 ${
-                              task.status === 'done' ? 'bg-signal-safe' : isBlocked ? 'bg-signal-critical' : 'bg-accent-primary'
-                            }`} />
-                            <span className="text-[10px] font-bold truncate">{task.status}</span>
-                            
-                            {/* Hover Intel */}
-                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover/bar:block z-30 w-48 bg-surface border border-border p-2 rounded-lg shadow-xl">
-                              <p className="text-[11px] font-bold text-text-primary mb-1">{task.name}</p>
-                              <p className="text-[9px] text-text-tertiary mb-2">Deadline: {taskDate.toLocaleDateString()}</p>
-                              <div className="flex items-center gap-1.5 pt-1.5 border-t border-border-subtle">
-                                <Clock className="w-3 h-3 text-text-quaternary" />
-                                <span className="text-[9px] font-bold uppercase text-text-quaternary">Critical Path Item</span>
-                              </div>
-                            </div>
-                          </motion.div>
-
-                          {/* Dependency Lines (Visual only for now) */}
-                          {isBlocked && (
-                            <div 
-                              className="absolute h-[1px] bg-signal-critical/30 dashed" 
-                              style={{ 
-                                left: zoom === 'days' ? `${(offsetDays - 5) * 48}px` : `${((offsetDays - 5) / 7) * 128}px`, 
-                                width: zoom === 'days' ? '144px' : '64px',
-                                top: '50%'
-                              }} 
-                            />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function RoadmapView({ projects, tasks }: any) {
   const roadmapData = useMemo(() => {

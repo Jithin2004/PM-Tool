@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, Layers, Plus, Shield, ChevronDown, X, Terminal, Send, Lock } from 'lucide-react';
 import { List } from 'react-window';
-import { useTasks } from '../hooks/useTasks';
+import { useOperationalData } from '../context/OperationalDataContext';
 import { TaskCard } from './task/TaskCard';
 import { TaskCreateModal } from './task/TaskCreateModal';
 import { TaskEditModal } from './task/TaskEditModal';
@@ -32,7 +32,7 @@ export default function ExecutionBoard({
   onPromoteToAsset
 }: ExecutionBoardProps) {
   const { workspace } = useWorkspace();
-  const { tasks, dependencies, loading, addTask, updateTask, updateTaskStatus } = useTasks(workspace?.id);
+  const { loading, raw: { tasks, dependencies }, taskActions: { addTask, updateTask, updateTaskStatus } } = useOperationalData();
   
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);

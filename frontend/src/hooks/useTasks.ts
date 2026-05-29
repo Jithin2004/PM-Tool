@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { realtimeOrchestrator } from '../services/realtimeOrchestrator';
 import { Task, TaskStatus, TaskDependency } from '../types';
 import { normalizeTaskFromRow, normalizeTasksFromRows, taskToDbRow } from '../core/types/normalize';
 import { sendNotification } from '../services/notificationService';
@@ -8,16 +9,21 @@ import { fireEventWebhooks } from '../services/webhookService';
 import { evaluateTriggers } from '../services/automationEngine';
 import { useAuth } from '../context/AuthContext';
 import { sha256 } from '../utils/cryptoUtils';
-import { hasCapability } from '../core/auth/permissions';
+import { hasCapability, guardCapability } from '../core/auth/permissions';
 
-
-// Recursive utility function for DFS-based circular dependency detection
 export const wouldCreateCycle = (
   taskId: string,
   dependsOnTaskId: string,
   currentDeps: TaskDependency[]
 ): boolean => {
   if (taskId === dependsOnTaskId) return true;
+
+  // 1. Build adjacency map once for O(1) lookups
+  const adj = new Map<string, string[]>();
+  for (const dep of currentDeps) {
+    if (!adj.has(dep.task_id)) adj.set(dep.task_id, []);
+    adj.get(dep.task_id)!.push(dep.depends_on_task_id);
+  }
 
   const visited = new Set<string>();
 
@@ -27,11 +33,7 @@ export const wouldCreateCycle = (
 
     visited.add(currentId);
 
-    // Find all tasks that currentId depends on
-    const nextTasks = currentDeps
-      .filter(dep => dep.task_id === currentId)
-      .map(dep => dep.depends_on_task_id);
-
+    const nextTasks = adj.get(currentId) || [];
     for (const nextId of nextTasks) {
       if (dfs(nextId)) return true;
     }
@@ -52,6 +54,19 @@ export function useTasks(workspaceId?: string) {
   const limit = 50;
 
   const { user, profile } = useAuth();
+
+  // Wave 7/9 Hardening: Developer-scope ownership verification helpers
+  const isDeveloper = profile?.role === 'developer';
+  const isAssignedTo = useCallback((taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    return task?.assignee_id === user?.id;
+  }, [tasks, user]);
+
+  /** Fields developers are NOT allowed to modify */
+  const DEVELOPER_PROTECTED_FIELDS = new Set([
+    'assignee_id', 'project_id', 'priority', 'confidence', 'risk',
+    'delay_drift_days', 'predicted_completion', 'workspace_id',
+  ]);
 
   const insertTaskHistoryLog = useCallback(async (
     taskId: string,
@@ -108,9 +123,29 @@ export function useTasks(workspaceId?: string) {
 
   const queueMutation = useCallback((operation: string, payload: any) => {
     if (!workspaceId) return;
-    const queue = JSON.parse(localStorage.getItem(`offline_task_queue_${workspaceId}`) || '[]');
-    queue.push({ operation, payload, timestamp: new Date().toISOString(), workspace_id: workspaceId, retry_count: 0 });
-    localStorage.setItem(`offline_task_queue_${workspaceId}`, JSON.stringify(queue));
+    const queueKey = `offline_task_queue_${workspaceId}`;
+    let queue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+    
+    // Deduplication & idempotency key
+    const targetId = payload.taskId || payload.temporaryId;
+    const idempotencyKey = `${operation}-${targetId}-${Date.now()}`;
+    
+    const existingIdx = queue.findIndex((q: any) => q.operation === operation && q.payload.taskId === targetId && targetId);
+    
+    if (existingIdx >= 0 && operation !== 'addTask' && operation !== 'deleteTask') {
+      queue[existingIdx].payload = { ...queue[existingIdx].payload, ...payload };
+      queue[existingIdx].timestamp = new Date().toISOString();
+      queue[existingIdx].idempotencyKey = idempotencyKey;
+    } else {
+      queue.push({ operation, payload, timestamp: new Date().toISOString(), workspace_id: workspaceId, retry_count: 0, idempotencyKey });
+    }
+
+    // Size caps to prevent localStorage exhaustion
+    if (queue.length > 50) {
+      queue = queue.slice(queue.length - 50);
+    }
+
+    localStorage.setItem(queueKey, JSON.stringify(queue));
     window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Changes queued. Syncing when connection returns.", type: "warning" } }));
   }, [workspaceId]);
 
@@ -120,14 +155,76 @@ export function useTasks(workspaceId?: string) {
     const queue = JSON.parse(localStorage.getItem(queueKey) || '[]');
     if (queue.length === 0) return;
 
+    // Wave 7.5 P0-8: Re-validate current role before replay.
+    // The user's role may have changed (e.g. demoted) while offline.
+    const currentRole = profile?.role;
+    const currentUserId = user?.id;
+    const isCurrentlyDeveloper = currentRole === 'developer';
+    const isCurrentlyViewer = currentRole === 'viewer';
+    const isPMOrAdmin = currentRole === 'super_admin' || currentRole === 'pm';
+
+    // Viewers cannot perform ANY task mutations — purge entire queue
+    if (isCurrentlyViewer || !currentRole || !currentUserId) {
+      console.warn('[processQueue] User lacks mutation permissions — purging offline queue.');
+      localStorage.removeItem(queueKey);
+      return;
+    }
+
     const getRealId = (id: string) => {
       if (!id || !id.startsWith('local-')) return id;
       const map = JSON.parse(localStorage.getItem(`id_map_${workspaceId}`) || '{}');
       return map[id] || id;
     };
 
-    for (const item of queue) {
+    // Sort by timestamp to ensure event ordering integrity
+    queue.sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    // Evict stale mutations (older than 48 hours)
+    let validQueue = queue.filter((q: any) => (Date.now() - new Date(q.timestamp).getTime()) < 48 * 60 * 60 * 1000);
+    const staleCount = queue.length - validQueue.length;
+    
+    if (staleCount > 0) {
+       localStorage.setItem(queueKey, JSON.stringify(validQueue));
+       import('../core/observability/ObservabilityEngine').then(({ ObservabilityEngine }) => {
+         for(let i=0; i<staleCount; i++) ObservabilityEngine.reportReplayAttempt(false, false, true);
+       });
+    }
+
+    import('../core/observability/ObservabilityEngine').then(({ ObservabilityEngine }) => {
+      ObservabilityEngine.updateQueueSize(validQueue.length);
+    });
+
+    for (const item of validQueue) {
       try {
+        // Wave 7.5 P0-8: Per-item role/ownership gate
+        const op = item.operation;
+
+        // Developers cannot: create tasks, delete tasks, manage dependencies
+        if (isCurrentlyDeveloper && ['addTask', 'deleteTask', 'addDependency', 'removeDependency'].includes(op)) {
+          console.warn(`[processQueue] Developer blocked from replaying '${op}' — skipping.`);
+          const cq = JSON.parse(localStorage.getItem(queueKey) || '[]');
+          localStorage.setItem(queueKey, JSON.stringify(cq.filter((q: any) => q.timestamp !== item.timestamp)));
+          continue;
+        }
+
+        // Developers can only update tasks assigned to them
+        if (isCurrentlyDeveloper && ['updateTaskStatus', 'updateTask', 'updateTaskDates'].includes(op)) {
+          const targetTaskId = getRealId(item.payload.taskId);
+          const targetTask = tasks.find(t => t.id === targetTaskId);
+          if (targetTask && targetTask.assignee_id !== currentUserId) {
+            console.warn(`[processQueue] Developer blocked from replaying '${op}' on unassigned task — skipping.`);
+            const cq = JSON.parse(localStorage.getItem(queueKey) || '[]');
+            localStorage.setItem(queueKey, JSON.stringify(cq.filter((q: any) => q.timestamp !== item.timestamp)));
+            continue;
+          }
+
+          // Strip protected fields from updateTask payloads
+          if (op === 'updateTask' && item.payload.updates) {
+            const stripped = { ...item.payload.updates };
+            DEVELOPER_PROTECTED_FIELDS.forEach(f => delete stripped[f]);
+            item.payload.updates = stripped;
+          }
+        }
         if (item.operation === 'addTask') {
           const taskData = { ...item.payload.taskData };
           if (taskData.project_id) taskData.project_id = getRealId(taskData.project_id);
@@ -230,8 +327,17 @@ export function useTasks(workspaceId?: string) {
         const currentQueue = JSON.parse(localStorage.getItem(queueKey) || '[]');
         const nextQueue = currentQueue.filter((qItem: any) => qItem.timestamp !== item.timestamp);
         localStorage.setItem(queueKey, JSON.stringify(nextQueue));
-      } catch (err) {
+        import('../core/observability/ObservabilityEngine').then(({ ObservabilityEngine }) => {
+          ObservabilityEngine.reportReplayAttempt(true, false, false);
+        });
+      } catch (err: any) {
         console.warn('Sync failed for item:', item, err);
+        
+        const isRejected = err?.code === '42501' || err?.message?.includes('RLS'); // Auth/RLS failure
+        import('../core/observability/ObservabilityEngine').then(({ ObservabilityEngine }) => {
+          ObservabilityEngine.reportReplayAttempt(false, isRejected, false);
+        });
+
         // Fail: Increment retry_count and keep in queue
         const currentQueue = JSON.parse(localStorage.getItem(queueKey) || '[]');
         const nextQueue = currentQueue.map((qItem: any) => 
@@ -242,7 +348,13 @@ export function useTasks(workspaceId?: string) {
         localStorage.setItem(queueKey, JSON.stringify(nextQueue));
       }
     }
-  }, [workspaceId]);
+    
+    // Final check on remaining queue
+    const finalQueue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+    import('../core/observability/ObservabilityEngine').then(({ ObservabilityEngine }) => {
+      ObservabilityEngine.updateQueueSize(finalQueue.length);
+    });
+  }, [workspaceId, profile, user, tasks, DEVELOPER_PROTECTED_FIELDS]);
 
   useEffect(() => {
     window.addEventListener('online', processQueue);
@@ -372,84 +484,90 @@ export function useTasks(workspaceId?: string) {
     };
   }, [fetchTasks, workspaceId]);
 
-  // Realtime subscriptions use stable refs to prevent duplicate channel registration
-  const channelsRef = useRef<ReturnType<typeof supabase.channel>[]>([]);
-
   useEffect(() => {
     if (!workspaceId || !isSupabaseConfigured) return;
 
-    for (const ch of channelsRef.current) {
-      supabase.removeChannel(ch);
-    }
-    channelsRef.current = [];
-
-    const taskChannel = createRealtimeChannel(`tasks-changes-${workspaceId}`)
-      .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'tasks',
-          filter: `workspace_id=eq.${workspaceId}` 
-        }, 
-        (payload) => {
-          const { eventType, new: newRecord, old: oldRecord } = payload;
-          if (eventType === 'INSERT') {
-            if (newRecord.deleted_at) return;
-            setTasks(prev => {
-              if (prev.some(t => t.id === newRecord.id)) return prev;
-              return [normalizeTaskFromRow(newRecord as Record<string, unknown>), ...prev];
-            });
-          } else if (eventType === 'UPDATE') {
-            if (newRecord.deleted_at) {
-              setTasks(prev => prev.filter(t => t.id !== newRecord.id));
-            } else {
-              setTasks(prev =>
-                prev.map(t =>
-                  t.id === newRecord.id
-                    ? normalizeTaskFromRow({ ...t, ...newRecord } as Record<string, unknown>)
-                    : t,
-                ),
-              );
-            }
-          } else if (eventType === 'DELETE') {
-            setTasks(prev => prev.filter(t => t.id !== oldRecord.id));
+    const unsubscribeTasks = realtimeOrchestrator.subscribe(
+      `tasks-changes-${workspaceId}`,
+      'tasks',
+      `workspace_id=eq.${workspaceId}`,
+      (payload) => {
+        const { eventType, new: newRecord, old: oldRecord } = payload;
+        if (eventType === 'INSERT') {
+          if (newRecord.deleted_at) return;
+          setTasks(prev => {
+            if (prev.some(t => t.id === newRecord.id)) return prev;
+            return [normalizeTaskFromRow(newRecord as Record<string, unknown>), ...prev];
+          });
+        } else if (eventType === 'UPDATE') {
+          if (newRecord.deleted_at) {
+            setTasks(prev => prev.filter(t => t.id !== newRecord.id));
+          } else {
+            setTasks(prev =>
+              prev.map(t =>
+                t.id === newRecord.id
+                  ? normalizeTaskFromRow({ ...t, ...newRecord } as Record<string, unknown>)
+                  : t,
+              ),
+            );
           }
+        } else if (eventType === 'DELETE') {
+          setTasks(prev => prev.filter(t => t.id !== oldRecord.id));
         }
-      )
-      .subscribe();
+      }
+    );
 
-    const depChannel = createRealtimeChannel(`task-dependencies-changes-${workspaceId}`)
-      .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'task_dependencies',
-          filter: `workspace_id=eq.${workspaceId}` 
-        }, 
-        (payload) => {
-          const { eventType, new: newRecord, old: oldRecord } = payload;
-          if (eventType === 'INSERT') {
-            setDependencies(prev => {
-              if (prev.some(d => d.task_id === newRecord.task_id && d.depends_on_task_id === newRecord.depends_on_task_id)) return prev;
-              return [...prev, newRecord as TaskDependency];
-            });
-          } else if (eventType === 'DELETE') {
-            setDependencies(prev => prev.filter(d => !(d.task_id === oldRecord.task_id && d.depends_on_task_id === oldRecord.depends_on_task_id)));
-          }
+    const unsubscribeDeps = realtimeOrchestrator.subscribe(
+      `task-dependencies-changes-${workspaceId}`,
+      'task_dependencies',
+      `workspace_id=eq.${workspaceId}`,
+      (payload) => {
+        const { eventType, new: newRecord, old: oldRecord } = payload;
+        if (eventType === 'INSERT') {
+          setDependencies(prev => {
+            if (prev.some(d => d.task_id === newRecord.task_id && d.depends_on_task_id === newRecord.depends_on_task_id)) return prev;
+            return [...prev, newRecord as TaskDependency];
+          });
+        } else if (eventType === 'DELETE') {
+          setDependencies(prev => prev.filter(d => !(d.task_id === oldRecord.task_id && d.depends_on_task_id === oldRecord.depends_on_task_id)));
         }
-      )
-      .subscribe();
-
-    channelsRef.current = [taskChannel, depChannel];
+      }
+    );
 
     return () => {
-      for (const ch of channelsRef.current) {
-        supabase.removeChannel(ch);
-      }
-      channelsRef.current = [];
+      unsubscribeTasks();
+      unsubscribeDeps();
     };
+  }, [workspaceId]);
+
+  // Multi-Tab State Consistency (Cross-Tab Synchronization)
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.newValue) return;
+      try {
+        if (e.key === `tasks_${workspaceId}`) {
+          setTasks(JSON.parse(e.newValue));
+        } else if (e.key === `task_dependencies_${workspaceId}`) {
+          setDependencies(JSON.parse(e.newValue));
+        }
+      } catch (err) {
+        console.warn('Failed to sync across tabs', err);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, [workspaceId]);
 
   const addTask = async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
     if (!workspaceId) return null;
+    // Wave 7/9: Developers cannot create tasks — only PMs and Admins
+    if (isDeveloper) {
+      const msg = 'Unauthorized: Developers cannot create tasks. Contact your PM.';
+      setError(msg);
+      throw new Error(msg);
+    }
+    guardCapability(profile?.role, 'manage_tasks', 'addTask');
+
     
     if (isSupabaseConfigured) {
       const { data, error: insertError } = await supabase
@@ -509,6 +627,13 @@ export function useTasks(workspaceId?: string) {
 
   const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
     if (!workspaceId) return;
+    guardCapability(profile?.role, 'manage_tasks', 'updateTaskStatus');
+    // Wave 7/9: Developers can only change status on their assigned tasks
+    if (isDeveloper && !isAssignedTo(taskId)) {
+      const msg = 'Unauthorized: You can only update tasks assigned to you.';
+      setError(msg);
+      throw new Error(msg);
+    }
     
     if (isSupabaseConfigured) {
       const oldStatus = tasks.find(t => t.id === taskId)?.status || null;
@@ -567,6 +692,13 @@ export function useTasks(workspaceId?: string) {
 
   const updateTaskDates = async (taskId: string, startDate: string | null, deadline: string | null) => {
     if (!workspaceId) return;
+    guardCapability(profile?.role, 'manage_tasks', 'updateTaskDates');
+    // Wave 7/9: Developers can only change dates on their assigned tasks
+    if (isDeveloper && !isAssignedTo(taskId)) {
+      const msg = 'Unauthorized: You can only update dates for tasks assigned to you.';
+      setError(msg);
+      throw new Error(msg);
+    }
 
     if (isSupabaseConfigured) {
       const task = tasks.find(t => t.id === taskId);
@@ -639,6 +771,24 @@ export function useTasks(workspaceId?: string) {
 
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     if (!workspaceId) return;
+    guardCapability(profile?.role, 'manage_tasks', 'updateTask');
+
+    // Wave 7/9: Developer scope restrictions
+    if (isDeveloper) {
+      // Developers can only update tasks assigned to them
+      if (!isAssignedTo(taskId)) {
+        const msg = 'Unauthorized: You can only update tasks assigned to you.';
+        setError(msg);
+        throw new Error(msg);
+      }
+      // Strip protected fields — developers cannot modify governance fields
+      const protectedAttempts = Object.keys(updates).filter(k => DEVELOPER_PROTECTED_FIELDS.has(k));
+      if (protectedAttempts.length > 0) {
+        const msg = `Unauthorized: Developers cannot modify: ${protectedAttempts.join(', ')}. Contact your PM.`;
+        setError(msg);
+        throw new Error(msg);
+      }
+    }
     
     if (isSupabaseConfigured) {
       const originalTask = tasks.find(t => t.id === taskId);
@@ -689,6 +839,13 @@ export function useTasks(workspaceId?: string) {
 
   const deleteTask = async (taskId: string) => {
     if (!workspaceId) return;
+    // Wave 7/9: Developers cannot delete tasks
+    if (isDeveloper) {
+      const msg = 'Unauthorized: Developers cannot delete tasks. Contact your PM.';
+      setError(msg);
+      throw new Error(msg);
+    }
+    guardCapability(profile?.role, 'manage_tasks', 'deleteTask');
     
     if (isSupabaseConfigured) {
       const { error: deleteError } = await supabase
@@ -719,8 +876,15 @@ export function useTasks(workspaceId?: string) {
     }
   };
 
-  const addDependency = async (taskId: string, dependsOnTaskId: string) => {
+  const addDependency = async (taskId: string, dependsOnTaskId: string, metadata?: Record<string, any>) => {
     if (!workspaceId) return;
+    // Wave 7/9: Developers cannot create dependencies
+    if (isDeveloper) {
+      const msg = 'Unauthorized: Developers cannot create task dependencies. Contact your PM.';
+      setError(msg);
+      throw new Error(msg);
+    }
+    guardCapability(profile?.role, 'manage_tasks', 'addDependency');
 
     if (wouldCreateCycle(taskId, dependsOnTaskId, dependencies)) {
       const cycleError = "Circular dependency detected! A task cannot transitively depend on itself.";
@@ -776,6 +940,13 @@ export function useTasks(workspaceId?: string) {
 
   const removeDependency = async (taskId: string, dependsOnTaskId: string) => {
     if (!workspaceId) return;
+    // Wave 7/9: Developers cannot remove dependencies
+    if (isDeveloper) {
+      const msg = 'Unauthorized: Developers cannot remove task dependencies. Contact your PM.';
+      setError(msg);
+      throw new Error(msg);
+    }
+    guardCapability(profile?.role, 'manage_tasks', 'removeDependency');
     
     if (isSupabaseConfigured) {
       const { error: deleteError } = await supabase

@@ -57,8 +57,8 @@ export function ExecutionHeader({
 
   return (
     <div className="flex flex-col gap-4 mb-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold text-text-primary tracking-tight">
             {projectName || 'Execution Engine'}
           </h1>
@@ -70,8 +70,8 @@ export function ExecutionHeader({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-surface-2 border border-border rounded-lg p-1 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          <div className="flex items-center bg-surface-2 border border-border rounded-lg p-1 shadow-sm overflow-x-auto max-w-full no-scrollbar">
             {views.map((view) => (
               <button
                 key={view.id}
@@ -109,19 +109,19 @@ export function ExecutionHeader({
         </div>
       </div>
 
-      <div className="flex items-center justify-between py-2 border-y border-border-subtle">
-        <div className="flex items-center gap-4">
-          <div className="relative">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-2 border-y border-border-subtle gap-4">
+        <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-auto">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary" />
             <input
               type="text"
               placeholder="Search tasks..."
               onChange={(e) => onSearchChange(e.target.value)}
-              className="bg-surface-2 border border-border rounded-lg pl-8 pr-3 py-1.5 text-[12px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-primary/50 w-64 transition-all"
+              className="bg-surface-2 border border-border rounded-lg pl-8 pr-3 py-1.5 text-[12px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-primary/50 w-full sm:w-64 transition-all"
             />
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
             <button className="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-2 border border-border rounded-lg text-[12px] text-text-secondary hover:bg-surface-3 transition-all">
               <Filter className="w-3.5 h-3.5" />
               Filters

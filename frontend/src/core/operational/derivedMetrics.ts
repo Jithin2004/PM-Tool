@@ -129,6 +129,27 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
   const taskSubstates = input.workspaceSettingsBlob?.task_substates || {};
   const globalBlockers = input.workspaceSettingsBlob?.execution_blockers || [];
 
+  // Pre-compute indices for O(1) lookups
+  const tasksByProject = new Map<string, any[]>();
+  input.tasks.forEach(t => {
+    if (!tasksByProject.has(t.project_id)) tasksByProject.set(t.project_id, []);
+    tasksByProject.get(t.project_id)!.push(t);
+  });
+
+  const blockersByTask = new Map<string, any[]>();
+  globalBlockers.forEach((b: any) => {
+    if (b.task_id) {
+      if (!blockersByTask.has(b.task_id)) blockersByTask.set(b.task_id, []);
+      blockersByTask.get(b.task_id)!.push(b);
+    }
+  });
+
+  const depsByTask = new Map<string, any[]>();
+  (input.dependencies || []).forEach(d => {
+    if (!depsByTask.has(d.task_id)) depsByTask.set(d.task_id, []);
+    depsByTask.get(d.task_id)!.push(d);
+  });
+
   input.projects.forEach(project => {
     const duration = stateDurations[project.id] || {
       currentState: 'active',
@@ -154,8 +175,8 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
     }
 
     // Advanced Execution Intelligence modeling
-    const projectTasks = input.tasks.filter(t => t.project_id === project.id);
-    const projectBlockers = globalBlockers.filter((b: any) => b.task_id && projectTasks.some((t: any) => t.id === b.task_id));
+    const projectTasks = tasksByProject.get(project.id) || [];
+    const projectBlockers = projectTasks.flatMap(t => blockersByTask.get(t.id) || []);
 
     // Wait-Time ratio calculation
     const waitCount = projectTasks.filter(t => 
@@ -169,7 +190,7 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
     const blockerRecurrence = Math.min(100, projectBlockers.length * 15 + (projectBlockers.filter((b: any) => b.history && b.history.length > 1).length * 20));
 
     // Dependency instability score (1-100)
-    const projectDepsCount = (input.dependencies || []).filter(d => projectTasks.some(t => t.id === d.task_id)).length;
+    const projectDepsCount = projectTasks.reduce((acc, t) => acc + (depsByTask.get(t.id)?.length || 0), 0);
     const dependencyInstability = Math.min(100, projectDepsCount * 25);
 
     // Client responsiveness score (1-100)

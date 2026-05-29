@@ -235,6 +235,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       await flushNow();
       clearSession();
+
+      // Fix 4 + Wave 7.5 P1-5: Comprehensive session purge
+      // Remove ALL sensitive operational data from localStorage
+      if (typeof window !== 'undefined') {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+            key.startsWith('tasks_') || 
+            key.startsWith('projects_') || 
+            key.startsWith('offline_task_queue_') || 
+            key.startsWith('task_dependencies_') ||
+            key.startsWith('id_map_') ||
+            key.startsWith('workspace_settings_') ||
+            key.startsWith('resolve-command-') ||
+            key === 'SYSTEM_SETTINGS' ||
+            key === 'resolve-session-id' ||
+            key === 'resolve-log-forensics'
+          )) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+      }
+
       setUser(null);
       setProfile(null);
       supabase.removeAllChannels();
@@ -421,13 +446,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (updates: Partial<User>) => {
     if (!profile?.id || !isSupabaseConfigured) return false;
 
+    // Wave 7.5 P1-6: Strip security-sensitive fields before persistence.
+    // Users must NOT be able to self-escalate via updateProfile().
+    const FORBIDDEN_PROFILE_FIELDS = new Set([
+      'role', 'workspace_id', 'id', 'created_at',
+    ]);
+    const sanitized: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (!FORBIDDEN_PROFILE_FIELDS.has(key)) {
+        sanitized[key] = value;
+      }
+    }
+
+    if (Object.keys(sanitized).length === 0) return false;
+
     const { error } = await supabase
       .from('users')
-      .update(updates)
+      .update(sanitized)
       .eq('id', profile.id);
 
     if (!error) {
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
+      setProfile(prev => prev ? { ...prev, ...sanitized } : null);
       return true;
     }
     return false;

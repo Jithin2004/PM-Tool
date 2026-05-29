@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { realtimeOrchestrator } from '../services/realtimeOrchestrator';
 import { Project, ProjectStatus } from '../types';
 
 export function useProjects(workspaceId?: string) {
@@ -199,38 +200,33 @@ export function useProjects(workspaceId?: string) {
     fetchProjects(controller.signal);
     
     if (workspaceId && isSupabaseConfigured) {
-      // Setup real-time subscription for this workspace's projects
-      const channel = createRealtimeChannel(`projects-changes-${workspaceId}`)
-        .on('postgres_changes', { 
-            event: '*', 
-            schema: 'public', 
-            table: 'projects',
-            filter: `workspace_id=eq.${workspaceId}` 
-          }, 
-          (payload) => {
-            const { eventType, new: newRecord, old: oldRecord } = payload;
-            if (eventType === 'INSERT') {
-              if (newRecord.deleted_at) return;
-              setProjects(prev => {
-                if (prev.some(p => p.id === newRecord.id)) return prev;
-                return [newRecord as Project, ...prev];
-              });
-            } else if (eventType === 'UPDATE') {
-              if (newRecord.deleted_at) {
-                setProjects(prev => prev.filter(p => p.id !== newRecord.id));
-              } else {
-                setProjects(prev => prev.map(p => p.id === newRecord.id ? { ...p, ...newRecord } : p));
-              }
-            } else if (eventType === 'DELETE') {
-              setProjects(prev => prev.filter(p => p.id !== oldRecord.id));
+      const unsubscribe = realtimeOrchestrator.subscribe(
+        `projects-changes-${workspaceId}`,
+        'projects',
+        `workspace_id=eq.${workspaceId}`,
+        (payload) => {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          if (eventType === 'INSERT') {
+            if (newRecord.deleted_at) return;
+            setProjects(prev => {
+              if (prev.some(p => p.id === newRecord.id)) return prev;
+              return [newRecord as Project, ...prev];
+            });
+          } else if (eventType === 'UPDATE') {
+            if (newRecord.deleted_at) {
+              setProjects(prev => prev.filter(p => p.id !== newRecord.id));
+            } else {
+              setProjects(prev => prev.map(p => p.id === newRecord.id ? { ...p, ...newRecord } : p));
             }
+          } else if (eventType === 'DELETE') {
+            setProjects(prev => prev.filter(p => p.id !== oldRecord.id));
           }
-        )
-        .subscribe();
+        }
+      );
         
       return () => {
         controller.abort();
-        supabase.removeChannel(channel);
+        unsubscribe();
       };
     }
     
@@ -238,6 +234,21 @@ export function useProjects(workspaceId?: string) {
       controller.abort();
     };
   }, [fetchProjects, workspaceId]);
+
+  // Multi-Tab State Consistency
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === `projects_${workspaceId}` && e.newValue) {
+        try {
+          setProjects(JSON.parse(e.newValue));
+        } catch (err) {
+          console.warn('Failed to sync projects across tabs', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [workspaceId]);
 
   const addProject = async (projectData: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => {
     if (!workspaceId) return null;

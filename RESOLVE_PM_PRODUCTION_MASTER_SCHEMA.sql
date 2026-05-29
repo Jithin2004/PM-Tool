@@ -256,7 +256,6 @@ CREATE TABLE notifications (
 );
 
 
--- 11. activity_logs
 CREATE TABLE activity_logs (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -265,8 +264,17 @@ CREATE TABLE activity_logs (
   task_id       uuid        REFERENCES tasks(id) ON DELETE CASCADE,
   action        text        NOT NULL,
   metadata      jsonb       NOT NULL DEFAULT '{}'::jsonb,
+  hash          text,
+  previous_hash text,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
+
+-- Fix 6: Audit & Forensic Protection (WORM rules for activity logs)
+CREATE RULE activity_logs_no_update AS
+  ON UPDATE TO activity_logs DO INSTEAD NOTHING;
+
+CREATE RULE activity_logs_no_delete AS
+  ON DELETE TO activity_logs DO INSTEAD NOTHING;
 
 
 -- 12. attendance
@@ -399,9 +407,17 @@ CREATE INDEX IF NOT EXISTS idx_tasks_workspace      ON tasks(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_project        ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_assignee       ON tasks(assignee_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_sprint         ON tasks(sprint_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status         ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_activity_workspace   ON activity_logs(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_ws     ON notifications(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_ws_user   ON attendance(workspace_id, user_id);
+
+-- Fix 1: Database Performance Governance (Added large-table indexing)
+CREATE INDEX IF NOT EXISTS idx_task_deps_depends    ON task_dependencies(depends_on_task_id);
+CREATE INDEX IF NOT EXISTS idx_projects_composite   ON projects(workspace_id, status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_users_workspace      ON users(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_teams_workspace      ON teams(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_comments_task        ON comments(task_id);
 
 
 -- =============================================================
@@ -444,6 +460,100 @@ $$;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Fix 3: Privilege Escalation Protection
+CREATE OR REPLACE FUNCTION prevent_role_escalation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  -- Prevent changing workspace_id after it has been set
+  IF OLD.workspace_id IS NOT NULL AND NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN
+    RAISE EXCEPTION 'Unauthorized: Cannot migrate workspaces.';
+  END IF;
+
+  -- Prevent role escalation unless performed by a super_admin of the same workspace
+  IF OLD.role IS NOT NULL AND NEW.role IS DISTINCT FROM OLD.role THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.users me 
+      WHERE me.id = auth.uid() 
+        AND me.workspace_id = OLD.workspace_id 
+        AND me.role = 'super_admin'
+    ) THEN
+      RAISE EXCEPTION 'Unauthorized: Only super_admin can modify roles.';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS check_role_escalation ON users;
+CREATE TRIGGER check_role_escalation
+  BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION prevent_role_escalation();
+
+
+-- Wave 7/9 Hardening: Developer task mutation restrictions
+-- Prevents developers from: reassigning tasks, moving tasks between projects,
+-- modifying governance/analytics fields (confidence, risk, delay_drift_days)
+CREATE OR REPLACE FUNCTION enforce_developer_task_restrictions()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_role text;
+BEGIN
+  -- Lookup the role of the current user
+  SELECT role INTO v_role FROM public.users WHERE id = auth.uid() LIMIT 1;
+
+  -- Only restrict developers — PMs/super_admins have full access
+  IF v_role IS DISTINCT FROM 'developer' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Block 1: Developers cannot reassign tasks
+  IF NEW.assignee_id IS DISTINCT FROM OLD.assignee_id THEN
+    RAISE EXCEPTION 'Unauthorized: Developers cannot reassign tasks. Contact your PM.';
+  END IF;
+
+  -- Block 2: Developers cannot move tasks between projects
+  IF NEW.project_id IS DISTINCT FROM OLD.project_id THEN
+    RAISE EXCEPTION 'Unauthorized: Developers cannot move tasks between projects.';
+  END IF;
+
+  -- Block 3: Developers cannot modify governance/analytics fields
+  IF NEW.confidence IS DISTINCT FROM OLD.confidence THEN
+    RAISE EXCEPTION 'Unauthorized: Developers cannot modify confidence ratings.';
+  END IF;
+
+  IF NEW.risk IS DISTINCT FROM OLD.risk THEN
+    RAISE EXCEPTION 'Unauthorized: Developers cannot modify risk assessments.';
+  END IF;
+
+  IF NEW.delay_drift_days IS DISTINCT FROM OLD.delay_drift_days THEN
+    RAISE EXCEPTION 'Unauthorized: Developers cannot modify delay drift values.';
+  END IF;
+
+  IF NEW.predicted_completion IS DISTINCT FROM OLD.predicted_completion THEN
+    RAISE EXCEPTION 'Unauthorized: Developers cannot modify predicted completion dates.';
+  END IF;
+
+  -- Block 4: Developers cannot modify priority (only PMs decide priority)
+  IF NEW.priority IS DISTINCT FROM OLD.priority THEN
+    RAISE EXCEPTION 'Unauthorized: Developers cannot modify task priority.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS check_developer_task_restrictions ON tasks;
+CREATE TRIGGER check_developer_task_restrictions
+  BEFORE UPDATE ON tasks
+  FOR EACH ROW EXECUTE FUNCTION enforce_developer_task_restrictions();
 
 
 -- =============================================================
@@ -599,11 +709,18 @@ CREATE POLICY "Workspace owner can create workspace"
 
 
 -- ── Users ─────────────────────────────────────────────────────
+-- Wave 7.5: P0-1 — Users SELECT restricted to same workspace + self
+-- Wave 7.5: P0-2 — Pending user workspace hijack prevention
+-- Wave 7.5: P0-3 — Self-update restricted to safe profile fields only
 
 DROP POLICY IF EXISTS "Users are visible within the platform" ON users;
-CREATE POLICY "Users are visible within the platform"
+DROP POLICY IF EXISTS "Users visible within workspace" ON users;
+CREATE POLICY "Users visible within workspace"
   ON users FOR SELECT
-  USING (auth.uid() IS NOT NULL);
+  USING (
+    id = auth.uid()
+    OR workspace_id = current_workspace()
+  );
 
 DROP POLICY IF EXISTS "Workspace owner can create first super admin user" ON users;
 CREATE POLICY "Workspace owner can create first super admin user"
@@ -678,110 +795,330 @@ CREATE POLICY "Invited users can bootstrap their own user row"
     )
   );
 
+-- P0-3: Self-update — users may only modify safe profile fields.
+-- role, workspace_id are immutable via self-update.
+-- The trigger prevent_role_escalation provides defense-in-depth,
+-- but this WITH CHECK enforces it at the RLS layer.
 DROP POLICY IF EXISTS "Users can update their own user row" ON users;
-CREATE POLICY "Users can update their own user row"
+CREATE POLICY "Users can update their own safe profile fields"
   ON users FOR UPDATE
   USING (id = auth.uid())
-  WITH CHECK (id = auth.uid());
+  WITH CHECK (
+    id = auth.uid()
+    AND role IS NOT DISTINCT FROM (SELECT role FROM users WHERE id = auth.uid())
+    AND workspace_id IS NOT DISTINCT FROM (SELECT workspace_id FROM users WHERE id = auth.uid())
+  );
 
 
 -- ── Teams ─────────────────────────────────────────────────────
+-- Wave 7.5: P0-7 — Team mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Teams are isolated by workspace" ON teams;
-CREATE POLICY "Teams are isolated by workspace"
+DROP POLICY IF EXISTS "Teams are visible to workspace" ON teams;
+DROP POLICY IF EXISTS "Teams can be managed by PMs and Admins" ON teams;
+
+CREATE POLICY "Teams are visible to workspace"
+  ON teams FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Teams can be managed by PMs and Admins"
   ON teams FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Team Members ──────────────────────────────────────────────
+-- Wave 7.5: P0-7 — Team member mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Team members are isolated by workspace" ON team_members;
-CREATE POLICY "Team members are isolated by workspace"
+DROP POLICY IF EXISTS "Team members are visible to workspace" ON team_members;
+DROP POLICY IF EXISTS "Team members can be managed by PMs and Admins" ON team_members;
+
+CREATE POLICY "Team members are visible to workspace"
+  ON team_members FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Team members can be managed by PMs and Admins"
   ON team_members FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Projects ──────────────────────────────────────────────────
 
 DROP POLICY IF EXISTS "Projects are isolated by workspace" ON projects;
-CREATE POLICY "Projects are isolated by workspace"
+-- Fix 2: RLS Validation (Added strict role gating for mutations)
+CREATE POLICY "Projects are visible to workspace"
+  ON projects FOR SELECT
+  USING (workspace_id = current_workspace() AND deleted_at IS NULL);
+
+CREATE POLICY "Projects can be mutated by PMs and Admins"
   ON projects FOR ALL
-  USING (workspace_id = current_workspace() AND deleted_at IS NULL)
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Tasks ─────────────────────────────────────────────────────
+-- Wave 7/9 Hardening: Granular developer permission scoping
 
 DROP POLICY IF EXISTS "Tasks are isolated by workspace" ON tasks;
-CREATE POLICY "Tasks are isolated by workspace"
-  ON tasks FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+DROP POLICY IF EXISTS "Tasks are visible to workspace" ON tasks;
+DROP POLICY IF EXISTS "Tasks can be mutated by developers, PMs, and Admins" ON tasks;
+
+-- SELECT: All workspace members can read tasks
+CREATE POLICY "Tasks are visible to workspace"
+  ON tasks FOR SELECT
+  USING (workspace_id = current_workspace());
+
+-- INSERT: Only PMs and Admins can create tasks
+CREATE POLICY "Tasks can be created by PMs and Admins"
+  ON tasks FOR INSERT
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- UPDATE for PMs/Admins: Full update access
+CREATE POLICY "Tasks can be fully updated by PMs and Admins"
+  ON tasks FOR UPDATE
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- UPDATE for Developers: ONLY tasks assigned to them
+CREATE POLICY "Developers can update their assigned tasks"
+  ON tasks FOR UPDATE
+  USING (
+    workspace_id = current_workspace() AND
+    assignee_id = auth.uid() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role = 'developer')
+  );
+
+-- DELETE: Only PMs and Admins can delete tasks
+CREATE POLICY "Tasks can be deleted by PMs and Admins"
+  ON tasks FOR DELETE
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Task Dependencies ─────────────────────────────────────────
+-- Wave 7/9 Hardening: Developers cannot create or remove dependencies
 
 DROP POLICY IF EXISTS "Task dependencies are isolated by workspace" ON task_dependencies;
-CREATE POLICY "Task dependencies are isolated by workspace"
+
+CREATE POLICY "Task dependencies are visible to workspace"
+  ON task_dependencies FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Task dependencies can be managed by PMs and Admins"
   ON task_dependencies FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Comments ──────────────────────────────────────────────────
+-- Wave 7/9 Hardening: Author-only mutation for non-admins
 
 DROP POLICY IF EXISTS "Comments are isolated by workspace" ON comments;
-CREATE POLICY "Comments are isolated by workspace"
+
+-- SELECT: All workspace members can read comments
+CREATE POLICY "Comments are visible to workspace"
+  ON comments FOR SELECT
+  USING (workspace_id = current_workspace());
+
+-- INSERT: Authenticated workspace members can create comments (author_id must be self)
+CREATE POLICY "Comments can be created by authenticated users"
+  ON comments FOR INSERT
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    author_id = auth.uid()
+  );
+
+-- UPDATE/DELETE for PMs/Admins: Full moderation access
+CREATE POLICY "Comments can be moderated by PMs and Admins"
   ON comments FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- UPDATE/DELETE for non-admins: Own comments only
+CREATE POLICY "Users can edit their own comments"
+  ON comments FOR UPDATE
+  USING (workspace_id = current_workspace() AND author_id = auth.uid());
+
+CREATE POLICY "Users can delete their own comments"
+  ON comments FOR DELETE
+  USING (workspace_id = current_workspace() AND author_id = auth.uid());
 
 
 -- ── Files ─────────────────────────────────────────────────────
+-- Wave 7.5: Files — SELECT for all, mutations restricted to uploader + PM/Admin
 
 DROP POLICY IF EXISTS "Files are isolated by workspace" ON files;
-CREATE POLICY "Files are isolated by workspace"
+DROP POLICY IF EXISTS "Files are visible to workspace" ON files;
+DROP POLICY IF EXISTS "Files can be uploaded by authenticated users" ON files;
+DROP POLICY IF EXISTS "Files can be managed by PMs and Admins" ON files;
+
+CREATE POLICY "Files are visible to workspace"
+  ON files FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Files can be uploaded by authenticated users"
+  ON files FOR INSERT
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    uploaded_by = auth.uid()
+  );
+
+CREATE POLICY "Files can be managed by PMs and Admins"
   ON files FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Notifications ─────────────────────────────────────────────
+-- Wave 7.5: P1-1 — Notification INSERT restricted: user_id must be self or by PM/Admin
 
 DROP POLICY IF EXISTS "Notifications are isolated by workspace" ON notifications;
-CREATE POLICY "Notifications are isolated by workspace"
+DROP POLICY IF EXISTS "Notifications are visible to workspace members" ON notifications;
+DROP POLICY IF EXISTS "Notifications can be self-targeted" ON notifications;
+DROP POLICY IF EXISTS "Notifications can be managed by PMs and Admins" ON notifications;
+
+CREATE POLICY "Notifications are visible to workspace members"
+  ON notifications FOR SELECT
+  USING (workspace_id = current_workspace());
+
+-- Non-admins can only create notifications targeted at themselves
+CREATE POLICY "Notifications can be self-targeted"
+  ON notifications FOR INSERT
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    user_id = auth.uid()
+  );
+
+-- PM/Admin can create notifications for anyone and manage them
+CREATE POLICY "Notifications can be managed by PMs and Admins"
   ON notifications FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- Users can mark their own notifications as read
+DROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
+CREATE POLICY "Users can update own notifications"
+  ON notifications FOR UPDATE
+  USING (workspace_id = current_workspace() AND user_id = auth.uid());
 
 
 -- ── Activity Logs ─────────────────────────────────────────────
+-- Wave 7.5: P1-3 — actor_id must match auth.uid() to prevent forgery
 
 DROP POLICY IF EXISTS "Activity logs are isolated by workspace" ON activity_logs;
-CREATE POLICY "Activity logs are isolated by workspace"
-  ON activity_logs FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+DROP POLICY IF EXISTS "Activity logs are readable by workspace" ON activity_logs;
+DROP POLICY IF EXISTS "Activity logs can be inserted with verified actor" ON activity_logs;
+
+CREATE POLICY "Activity logs are readable by workspace"
+  ON activity_logs FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Activity logs can be inserted with verified actor"
+  ON activity_logs FOR INSERT
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    (actor_id IS NULL OR actor_id = auth.uid())
+  );
 
 
 -- ── Attendance ────────────────────────────────────────────────
+-- Wave 7.5: P0-6 — Attendance mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Attendance is isolated by workspace" ON attendance;
-CREATE POLICY "Attendance is isolated by workspace"
+DROP POLICY IF EXISTS "Attendance is visible to workspace" ON attendance;
+DROP POLICY IF EXISTS "Attendance can be managed by PMs and Admins" ON attendance;
+
+CREATE POLICY "Attendance is visible to workspace"
+  ON attendance FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Attendance can be managed by PMs and Admins"
   ON attendance FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Salaries ──────────────────────────────────────────────────
+-- Wave 7.5: P0-5 — Salary mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Salaries are isolated by workspace" ON salaries;
-CREATE POLICY "Salaries are isolated by workspace"
+DROP POLICY IF EXISTS "Salaries are visible to admins" ON salaries;
+DROP POLICY IF EXISTS "Salaries can be managed by PMs and Admins" ON salaries;
+
+CREATE POLICY "Salaries are visible to admins"
+  ON salaries FOR SELECT
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+CREATE POLICY "Salaries can be managed by PMs and Admins"
   ON salaries FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Invitations ───────────────────────────────────────────────
@@ -819,42 +1156,105 @@ CREATE POLICY "Invited users can accept their own invitation"
 
 
 -- ── Workspace Holidays ────────────────────────────────────────
+-- Wave 7.5: Holidays mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Workspace holidays are isolated by workspace" ON workspace_holidays;
-CREATE POLICY "Workspace holidays are isolated by workspace"
+DROP POLICY IF EXISTS "Workspace holidays are visible to workspace" ON workspace_holidays;
+DROP POLICY IF EXISTS "Workspace holidays can be managed by PMs and Admins" ON workspace_holidays;
+
+CREATE POLICY "Workspace holidays are visible to workspace"
+  ON workspace_holidays FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Workspace holidays can be managed by PMs and Admins"
   ON workspace_holidays FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Team Events ───────────────────────────────────────────────
+-- Wave 7.5: Team events mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Team events are isolated by team" ON team_events;
-CREATE POLICY "Team events are isolated by team"
+DROP POLICY IF EXISTS "Team events are visible to workspace" ON team_events;
+DROP POLICY IF EXISTS "Team events can be managed by PMs and Admins" ON team_events;
+
+CREATE POLICY "Team events are visible to workspace"
+  ON team_events FOR SELECT
+  USING (team_id IN (SELECT id FROM teams WHERE workspace_id = current_workspace()));
+
+CREATE POLICY "Team events can be managed by PMs and Admins"
   ON team_events FOR ALL
-  USING  (team_id IN (SELECT id FROM teams WHERE workspace_id = current_workspace()))
-  WITH CHECK (team_id IN (SELECT id FROM teams WHERE workspace_id = current_workspace()));
+  USING (
+    team_id IN (SELECT id FROM teams WHERE workspace_id = current_workspace()) AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    team_id IN (SELECT id FROM teams WHERE workspace_id = current_workspace()) AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Personal Leave ────────────────────────────────────────────
+-- Wave 7.5: P1-2 — Self-only mutation for non-admins
 
 DROP POLICY IF EXISTS "Personal leaves are isolated by user workspace" ON personal_leave;
-CREATE POLICY "Personal leaves are isolated by user workspace"
+DROP POLICY IF EXISTS "Personal leave is visible to workspace" ON personal_leave;
+DROP POLICY IF EXISTS "Users can manage their own leave" ON personal_leave;
+DROP POLICY IF EXISTS "PMs and Admins can manage all leave" ON personal_leave;
+
+CREATE POLICY "Personal leave is visible to workspace"
+  ON personal_leave FOR SELECT
+  USING (user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()));
+
+CREATE POLICY "Users can manage their own leave"
   ON personal_leave FOR ALL
-  USING  (user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()))
-  WITH CHECK (user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()));
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "PMs and Admins can manage all leave"
+  ON personal_leave FOR ALL
+  USING (
+    user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()) AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()) AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── Workspace Settings ────────────────────────────────────────
+-- Wave 7.5: P0-4 — Workspace settings mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Workspace settings are isolated by workspace" ON workspace_settings;
-CREATE POLICY "Workspace settings are isolated by workspace"
+DROP POLICY IF EXISTS "Workspace settings are visible to workspace" ON workspace_settings;
+DROP POLICY IF EXISTS "Workspace settings can be managed by PMs and Admins" ON workspace_settings;
+
+CREATE POLICY "Workspace settings are visible to workspace"
+  ON workspace_settings FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Workspace settings can be managed by PMs and Admins"
   ON workspace_settings FOR ALL
-  USING (workspace_id = current_workspace())
-  WITH CHECK (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
 
 
 -- ── System Audit Ledger ───────────────────────────────────────
+-- Wave 7.5: P1-4 — Audit ledger SELECT binds BOTH role AND workspace_id
 
 DROP POLICY IF EXISTS "System audit ledger is viewable by workspace admins" ON system_audit_ledger;
 CREATE POLICY "System audit ledger is viewable by workspace admins"
@@ -864,6 +1264,7 @@ CREATE POLICY "System audit ledger is viewable by workspace admins"
     AND EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
+        AND users.workspace_id = current_workspace()
         AND users.role IN ('super_admin', 'pm')
     )
   );

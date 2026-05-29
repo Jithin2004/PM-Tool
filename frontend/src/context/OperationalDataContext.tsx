@@ -5,14 +5,17 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { DataGovernanceEngine } from '../core/governance/dataGovernanceEngine';
 import { useAuth } from './AuthContext';
 import { useWorkspace } from './WorkspaceContext';
 import { useTasks } from '../hooks/useTasks';
 import { hasCapability } from '../core/auth/permissions';
 import { computeOperationalDerived } from '../core/operational/derivedMetrics';
 import type { OperationalDerivedState, OperationalRawState } from '../core/operational/types';
+import { compileCoherentPlatformState, GovernanceCache } from '../core/execution/governanceEngine';
 import { refreshOperationalSnapshot, refreshOperationalPartial } from '../services/operationalSyncService';
 import { saveLogisticsData } from '../services/logisticsService';
 import {
@@ -24,6 +27,7 @@ import type { Project, Profile, Team, UserRole, Notification } from '../types';
 interface OperationalDataContextValue {
   raw: OperationalRawState;
   derived: OperationalDerivedState;
+  governanceCache: GovernanceCache;
   loading: boolean;
   dbNotifications: Notification[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
@@ -44,6 +48,9 @@ interface OperationalDataContextValue {
     removeDependency: ReturnType<typeof useTasks>['removeDependency'];
     updateTaskDates: ReturnType<typeof useTasks>['updateTaskDates'];
     updateTask: ReturnType<typeof useTasks>['updateTask'];
+    addTask: ReturnType<typeof useTasks>['addTask'];
+    updateTaskStatus: ReturnType<typeof useTasks>['updateTaskStatus'];
+    deleteTask: ReturnType<typeof useTasks>['deleteTask'];
   };
 }
 
@@ -59,6 +66,9 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     removeDependency,
     updateTaskDates,
     updateTask,
+    addTask,
+    updateTaskStatus,
+    deleteTask,
   } = useTasks(workspace?.id);
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -69,6 +79,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const [workspaceSettingsBlob, setWorkspaceSettingsBlob] = useState<Record<string, unknown>>({});
   const [serverMetrics, setServerMetrics] = useState<{ deliveryConfidence: number; executionPressure: number; dailyFatigue: number; riskForecast: number; } | undefined>();
   const [loading, setLoading] = useState(true);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const [dbNotifications, setDbNotifications] = useState<Notification[]>([]);
 
   const raw: OperationalRawState = useMemo(
@@ -103,9 +114,68 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     [projects, tasks, dependencies, teams, profiles, attendanceRows, salaryRows, workspaceSettingsBlob, profile?.id, profile?.role, serverMetrics],
   );
 
+  const decisions = useMemo(() => {
+    return (workspaceSettingsBlob?.operational_decisions || []) as any[];
+  }, [workspaceSettingsBlob]);
+
+  const events = useMemo(() => {
+    return (workspaceSettingsBlob?.coordination_events || []) as any[];
+  }, [workspaceSettingsBlob]);
+
+  const blockers = useMemo(() => {
+    const rawBlockers = (workspaceSettingsBlob?.execution_blockers || []) as any[];
+    const validTaskIds = new Set(tasks.map(t => t.id));
+    return rawBlockers.filter(b => validTaskIds.has(b.task_id));
+  }, [workspaceSettingsBlob, tasks]);
+
+  const [governanceCache, setGovernanceCache] = useState<GovernanceCache>(() => 
+    compileCoherentPlatformState(projects, tasks, teams, profiles, blockers, dependencies, decisions, events)
+  );
+
+  useEffect(() => {
+    let active = true;
+    const timer = setTimeout(() => {
+      if (active) {
+        setGovernanceCache(compileCoherentPlatformState(projects, tasks, teams, profiles, blockers, dependencies, decisions, events));
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [projects, tasks, teams, profiles, blockers, dependencies, decisions, events]);
+
   const refreshAll = useCallback(async () => {
     if (!workspace?.id) return;
     const snapshot = await refreshOperationalSnapshot(workspace.id);
+
+    // FIX 1 & 2: JSONB Monolith Decomposition & Operational History Partitioning
+    // Background governance check to partition out inactive blockers from hot storage
+    if (snapshot.workspaceSettingsBlob?.execution_blockers) {
+      const blockers = snapshot.workspaceSettingsBlob.execution_blockers as any[];
+      DataGovernanceEngine.partitionBlockerHistory(workspace.id, blockers).then(result => {
+        if (result.archivedCount > 0) {
+          console.log(`[DataGovernance] Archived ${result.archivedCount} blockers. Decomposing monolith.`);
+          updateWorkspaceSettings({ execution_blockers: result.active });
+        }
+      }).catch(console.error);
+    }
+    
+    // Background execution of audit compression & observability aggregation
+    DataGovernanceEngine.compressAuditHistory(workspace.id).catch(console.error);
+    DataGovernanceEngine.aggregateObservabilitySignals(workspace.id).catch(console.error);
+    
+    // FIX 6 & 7: Intelligence History Scalability & Dependency History Reconstruction
+    if (snapshot.serverMetrics) {
+      DataGovernanceEngine.snapshotOrganizationalIntelligence(workspace.id, snapshot.serverMetrics).catch(console.error);
+    }
+    
+    // FIX 8: Archival Consistency Governance
+    // Periodically verify the integrity of our archival flow
+    DataGovernanceEngine.verifyArchivalConsistency(workspace.id, 'blocker_archive').then(isValid => {
+      if (!isValid) console.warn('Archival consistency warning: Blocker archive integrity compromised');
+    }).catch(console.error);
+
     setProjects(snapshot.projects);
     setProfiles(snapshot.profiles);
     setTeams(snapshot.teams);
@@ -170,11 +240,45 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       }
       if (mounted) setLoading(false);
     };
+
     load();
+
+    // Reconnect Storm Hardening
+    const handleOnline = () => {
+      setIsReconnecting(true);
+      // Staged recovery with random jitter to prevent thundering herd
+      const delay = Math.random() * 2000 + 1000;
+      setTimeout(() => {
+        if (mounted && user && profile && workspace?.id) {
+          refreshAll().finally(() => {
+            setIsReconnecting(false);
+          });
+        }
+      }, delay);
+    };
+    window.addEventListener('online', handleOnline);
+
     return () => {
       mounted = false;
+      window.removeEventListener('online', handleOnline);
     };
   }, [user, profile, workspace?.id, refreshAll]);
+
+  // Multi-Tab State Consistency
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === `workspace_settings_${workspace?.id}` && e.newValue) {
+        try {
+          const next = JSON.parse(e.newValue);
+          setWorkspaceSettingsBlob(next);
+        } catch (err) {
+          console.warn('Failed to sync settings across tabs', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [workspace?.id]);
 
   useEffect(() => {
     fetchNotifications();
@@ -310,43 +414,60 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     [profile?.role],
   );
 
+  const patchQueueRef = useRef<Record<string, unknown>[]>([]);
+  const isSyncingSettingsRef = useRef(false);
+
+  const processSettingsQueue = useCallback(async () => {
+    if (isSyncingSettingsRef.current || patchQueueRef.current.length === 0 || !workspace?.id || !isSupabaseConfigured) return;
+    
+    isSyncingSettingsRef.current = true;
+    try {
+      while (patchQueueRef.current.length > 0) {
+        const batch = patchQueueRef.current.splice(0, patchQueueRef.current.length);
+        const combinedPatch = Object.assign({}, ...batch);
+
+        const { data: existing, error: findError } = await supabase
+          .from('workspace_settings')
+          .select('*')
+          .eq('workspace_id', workspace.id)
+          .maybeSingle();
+
+        if (!findError && existing) {
+          const merged = {
+            ...(existing.settings_blob as Record<string, unknown>),
+            ...combinedPatch,
+          };
+          await supabase
+            .from('workspace_settings')
+            .update({ settings_blob: merged })
+            .eq('workspace_id', workspace.id);
+        } else if (!existing) {
+          await supabase
+            .from('workspace_settings')
+            .insert({ workspace_id: workspace.id, settings_blob: combinedPatch });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync workspace settings:', e);
+    } finally {
+      isSyncingSettingsRef.current = false;
+    }
+  }, [workspace?.id]);
+
   const updateWorkspaceSettings = useCallback(
     async (patch: Record<string, unknown>) => {
       if (!workspace?.id) return;
 
       setWorkspaceSettingsBlob(prev => {
         const next = { ...prev, ...patch };
-
-        if (isSupabaseConfigured) {
-          (async () => {
-            const { data: existing, error: findError } = await supabase
-              .from('workspace_settings')
-              .select('*')
-              .eq('workspace_id', workspace.id)
-              .maybeSingle();
-
-            if (!findError && existing) {
-              const merged = {
-                ...(existing.settings_blob as Record<string, unknown>),
-                ...patch,
-              };
-              await supabase
-                .from('workspace_settings')
-                .update({ settings_blob: merged })
-                .eq('workspace_id', workspace.id);
-            } else {
-              await supabase
-                .from('workspace_settings')
-                .insert({ workspace_id: workspace.id, settings_blob: patch });
-            }
-          })();
-        }
-
         localStorage.setItem(`workspace_settings_${workspace.id}`, JSON.stringify(next));
         return next;
       });
+      
+      patchQueueRef.current.push(patch);
+      processSettingsQueue().catch(console.error);
     },
-    [workspace?.id],
+    [workspace?.id, processSettingsQueue],
   );
 
   const handleUpdateRoleLocal = useCallback(
@@ -361,6 +482,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     () => ({
       raw,
       derived,
+      governanceCache,
       loading,
       dbNotifications,
       setProjects,
@@ -376,11 +498,12 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       markNotificationRead,
       fetchNotifications,
       updateWorkspaceSettings,
-      taskActions: { addDependency, removeDependency, updateTaskDates, updateTask },
+      taskActions: { addDependency, removeDependency, updateTaskDates, updateTask, addTask, updateTaskStatus, deleteTask },
     }),
     [
       raw,
       derived,
+      governanceCache,
       loading,
       dbNotifications,
       refreshAll,
@@ -401,6 +524,13 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       updateTask,
     ],
   );
+
+  useEffect(() => {
+    // FIX 7: Dependency graph snapshot
+    if (workspace?.id && dependencies.length > 0) {
+      DataGovernanceEngine.snapshotDependencyGraph(workspace.id, dependencies).catch(console.error);
+    }
+  }, [workspace?.id, dependencies.length]); // Snapshot when dependency count changes
 
   return (
     <OperationalDataContext.Provider value={value}>{children}</OperationalDataContext.Provider>

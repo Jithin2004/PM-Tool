@@ -250,13 +250,14 @@ export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
   };
 }
 
+import { supabase } from '../lib/supabase';
+import { activityLogService } from './activityLogService';
+import { sendNotification } from './notificationService';
+
 export async function propagateAndPersist(
   input: ImpactInput,
   existingResult?: ImpactResult
 ): Promise<ImpactResult> {
-  const { supabase } = await import('../lib/supabase');
-  const { activityLogService } = await import('./activityLogService');
-  const { sendNotification } = await import('./notificationService');
 
   const result = existingResult || await computeImpact(input);
 

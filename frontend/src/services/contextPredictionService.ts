@@ -1,4 +1,5 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { confidenceCalibrationService, getConfidenceBucket } from './confidenceCalibrationService';
 import { activityLogService } from './activityLogService';
 
 export interface ContextAccuracy {
@@ -147,7 +148,7 @@ export const contextPredictionService = {
     reason: string;
     contributingContexts: string[];
   }> {
-    const { confidenceCalibrationService, getConfidenceBucket } = await import('./confidenceCalibrationService');
+
     const global = await confidenceCalibrationService.getConfidenceAdjustment(workspaceId, rawConfidence);
 
     const allMetrics = await this.computeContextAccuracy(workspaceId);

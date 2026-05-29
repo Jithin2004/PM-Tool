@@ -6,6 +6,7 @@ import type { Workspace, WorkspaceSettings } from '../types/workspace';
 import { useAuth } from './AuthContext';
 import { hasCapability } from '../core/auth/permissions';
 import { buildOAuthRedirectUrl, setRedirectToAfterAuth } from '../core/auth/postAuthRedirect';
+import { holidaySourceService } from '../services/holidaySourceService';
 
 interface WorkspaceContextValue {
   user: User | null;
@@ -128,12 +129,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
           // Auto-fetch next year's holidays in background (owner / super_admin only)
           if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || hasCapability(profile.role, 'manage_settings'))) {
-            import('../services/holidaySourceService').then(({ holidaySourceService }) => {
-              holidaySourceService.checkAndSyncNextYear(parsed.id, parsed.settings.country, parsed.settings.region || '', profile?.id).catch(() => {});
-            });
+            holidaySourceService.checkAndSyncNextYear(parsed.id, parsed.settings.country, parsed.settings.region || '', profile?.id).catch(() => {});
           } else if (parsed.settings?.country) {
             console.log('[Calendar Sync] skipped: non-owner');
           }
+
+          // Wave 8: Trigger Audit Integrity Verification
+          import('../core/observability/ObservabilityEngine').then(({ ObservabilityEngine }) => {
+            ObservabilityEngine.verifyAuditLedger(supabase, parsed.id);
+          });
         } else {
           setWorkspace(null);
         }

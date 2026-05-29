@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { useTasks } from '../../hooks/useTasks';
+
 import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
 import { hasCapability } from '../../core/auth/permissions';
-import { useOperationalDerived } from '../../context/OperationalDataContext';
+import { useOperationalDerived, useOperationalData } from '../../context/OperationalDataContext';
 
 type ViewMode = 'grid' | 'list' | 'timeline';
 type StatusFilter = 'all' | 'active' | 'deployed' | 'planning';
@@ -27,7 +27,7 @@ function getInitials(name: string) {
 
 export default function PortfolioPage() {
   const { workspace, projects } = useWorkspace() as any;
-  const { tasks } = useTasks(workspace?.id) as any;
+  const { raw: { tasks } } = useOperationalData();
   const { profile } = useAuth();
   const { projectFrictionMetrics } = useOperationalDerived();
 
@@ -231,19 +231,21 @@ export default function PortfolioPage() {
           })}
 
           {/* New initiative slot */}
-          <button className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer group"
-            style={{ border: '2px dashed rgba(70,69,84,0.4)' }}
-            onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(192,193,255,0.4)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.03)'; }}
-            onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = ''; }}>
-            <Icon name="add_circle" size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
-            <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em] font-bold"
-              style={{ color: 'var(--pm-on-surface-variant)' }}>
-              Initiate Project
-            </span>
-            <span className="text-xs" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>
-              Draft a new strategic initiative
-            </span>
-          </button>
+          {hasCapability(profile?.role, 'manage_projects') && (
+            <button className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer group"
+              style={{ border: '2px dashed rgba(70,69,84,0.4)' }}
+              onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(192,193,255,0.4)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.03)'; }}
+              onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = ''; }}>
+              <Icon name="add_circle" size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
+              <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em] font-bold"
+                style={{ color: 'var(--pm-on-surface-variant)' }}>
+                Initiate Project
+              </span>
+              <span className="text-xs" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>
+                Draft a new strategic initiative
+              </span>
+            </button>
+          )}
         </div>
       )}
 

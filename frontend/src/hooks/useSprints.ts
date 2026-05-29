@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { realtimeOrchestrator } from '../services/realtimeOrchestrator';
 import type { Sprint } from '../types';
 
 export function useSprints(workspaceId?: string, projectId?: string) {
@@ -24,16 +25,34 @@ export function useSprints(workspaceId?: string, projectId?: string) {
   useEffect(() => {
     fetchSprints();
     if (workspaceId && isSupabaseConfigured) {
-      const channel = createRealtimeChannel(`sprints-${workspaceId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sprints', filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
+      const unsubscribe = realtimeOrchestrator.subscribe(
+        `sprints-${workspaceId}`,
+        'sprints',
+        `workspace_id=eq.${workspaceId}`,
+        (payload) => {
           if (payload.eventType === 'INSERT') setSprints(prev => [payload.new as Sprint, ...prev]);
           else if (payload.eventType === 'UPDATE') setSprints(prev => prev.map(s => s.id === payload.new.id ? { ...s, ...payload.new } : s));
           else if (payload.eventType === 'DELETE') setSprints(prev => prev.filter(s => s.id !== payload.old.id));
-        })
-        .subscribe();
-      return () => { supabase.removeChannel(channel); };
+        }
+      );
+      return () => { unsubscribe(); };
     }
   }, [fetchSprints, workspaceId]);
+
+  // Multi-Tab State Consistency
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === `sprints_${workspaceId}` && e.newValue) {
+        try {
+          setSprints(JSON.parse(e.newValue));
+        } catch (err) {
+          console.warn('Failed to sync sprints across tabs', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [workspaceId]);
 
   return { sprints, loading, fetchSprints };
 }

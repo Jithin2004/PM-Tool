@@ -135,7 +135,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       const activeDevTasks = tasks.filter(t => t.assignee_id === profile.id && t.status !== 'done');
       const activeHours = activeDevTasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
       const weeklyCapacity = 40 * (profile.availability_factor || 1.0);
-      const breachId = `overload-${profile.id}-${Math.floor(activeHours)}`;
+      
+      // FIX 5: Reduce Coordination Noise - Make breach ID stable per profile to prevent spam on minor hour changes
+      const breachId = `overload-${profile.id}`;
 
       if (activeHours > weeklyCapacity && !notifiedBreaches.includes(breachId)) {
         notifiedBreaches.push(breachId);
@@ -147,13 +149,18 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           'Operator Capacity Breach',
           `"${profile.full_name || profile.email}" is overloaded: active tasks sum to ${activeHours}h (Weekly limit: ${weeklyCapacity}h).`
         );
+      } else if (activeHours <= weeklyCapacity && notifiedBreaches.includes(breachId)) {
+        // Clear the breach if it's resolved so it can fire again later if needed
+        notifiedBreaches = notifiedBreaches.filter(id => id !== breachId);
+        updated = true;
       }
     });
 
     // 2. High delivery risk task check
     tasks.forEach(task => {
       if (task.status === 'done') return;
-      const breachId = `risk-${task.id}-${task.risk}`;
+      // FIX 5: Reduce Coordination Noise - Make breach ID stable per task to prevent spam
+      const breachId = `risk-${task.id}`;
 
       if (task.risk === 'high' && !notifiedBreaches.includes(breachId)) {
         notifiedBreaches.push(breachId);
@@ -165,6 +172,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           'High Delivery Risk Warning',
           `Task "${task.name.toUpperCase()}" estimation deviation has breached acceptable margins.`
         );
+      } else if (task.risk !== 'high' && notifiedBreaches.includes(breachId)) {
+        notifiedBreaches = notifiedBreaches.filter(id => id !== breachId);
+        updated = true;
       }
     });
 
@@ -400,36 +410,36 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     if (p.length === 0) return { section: 'OVERVIEW', page: '' };
 
     let section = p[0];
-    let page = p.length > 1 ? p.slice(1).join(' / ') : '';
+    let page = p.length > 1 ? p[p.length - 1] : '';
     
     const sectionLabels: Record<string, string> = {
-      workspace: 'WORKSPACE',
-      execution: 'EXECUTION',
-      resources: 'RESOURCES',
-      control: 'SYSTEM CONTROL'
+      workspace: 'Workspace',
+      execution: 'Execution',
+      resources: 'Resources',
+      control: 'System Control'
     };
     
     const pageLabels: Record<string, string> = {
-      'portfolio': 'PORTFOLIO',
-      'knowledge': 'KNOWLEDGE',
-      'decisions': 'DECISIONS',
-      'board': 'BOARD',
-      'timeline': 'TIMELINE',
-      'gantt': 'GANTT',
-      'sprints': 'SPRINTS',
-      'teams': 'TEAMS',
-      'capacity': 'CAPACITY',
-      'work-logs': 'WORK LOGS',
-      'identity': 'IDENTITY',
-      'analytics': 'ANALYTICS',
-      'audit': 'AUDIT LOG',
-      'automations': 'AUTOMATIONS',
-      'connections': 'INTEGRATIONS'
+      'portfolio': 'Portfolio',
+      'knowledge': 'Knowledge',
+      'decisions': 'Decisions',
+      'board': 'Board',
+      'timeline': 'Timeline',
+      'gantt': 'Gantt',
+      'sprints': 'Sprints',
+      'teams': 'Teams',
+      'capacity': 'Capacity',
+      'work-logs': 'Work Logs',
+      'identity': 'Identity',
+      'analytics': 'Analytics',
+      'audit': 'Audit Log',
+      'automations': 'Automations',
+      'connections': 'Integrations'
     };
 
     return {
-      section: sectionLabels[section] || section.toUpperCase(),
-      page: pageLabels[p[p.length - 1]] || page.toUpperCase()
+      section: sectionLabels[section] || section.charAt(0).toUpperCase() + section.slice(1),
+      page: pageLabels[page] || page.charAt(0).toUpperCase() + page.slice(1)
     };
   }, [routePath]);
 
@@ -1309,12 +1319,17 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </div>
 
             {/* Top bar center: live breadcrumb / context label */}
-            <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono-pm">
+            <div className="hidden sm:flex items-center gap-2 text-xs font-geist">
               <span className="w-1.5 h-1.5 rounded-full operational-pulse" style={{ background: 'var(--pm-primary)' }} />
-              <span className="uppercase tracking-[0.15em]" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>Resolve PM</span>
+              <span className="font-semibold" style={{ color: 'var(--pm-primary)' }}>Resolve PM</span>
               <span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }}>/</span>
-              <span className="uppercase" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>{breadcrumb?.section || 'Command Center'}</span>
-              {breadcrumb?.page && <><span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }}>/</span><span style={{ color: 'var(--pm-on-surface)' }}>{breadcrumb.page}</span></>}
+              <span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.8 }}>{breadcrumb?.section || 'Command Center'}</span>
+              {breadcrumb?.page && (
+                <>
+                  <span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }}>/</span>
+                  <span className="font-medium" style={{ color: 'var(--pm-on-surface)' }}>{breadcrumb.page}</span>
+                </>
+              )}
             </div>
 
             {/* Top bar right: compact utilities */}
@@ -1417,24 +1432,19 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Context Header — Welcome + operational context */}
+          {/* Context Header — Welcome + operational context (Simplified to reduce visual noise) */}
           {window.location.pathname === '/workspace' && (
-            <div className="px-6 pt-7 pb-5 border-b" style={{ borderColor: 'var(--pm-outline-variant)' }}>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="font-mono-pm text-[9px] uppercase tracking-[0.2em] mb-1" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Command Center</p>
-                  <h2 className="text-[22px] font-semibold tracking-tight leading-none font-geist" style={{ color: 'var(--pm-on-surface)' }}>
-                    {workspace?.settings?.companyName ? `${workspace.settings.companyName} Workspace` : `${profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}'s Workspace`}
-                  </h2>
-                  <p className="font-mono-pm text-[11px] mt-1.5" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · {dbNotifications.filter(n => !n.read_at).length > 0 ? `${dbNotifications.filter(n => !n.read_at).length} unread notification${dbNotifications.filter(n => !n.read_at).length > 1 ? 's' : ''}` : 'All systems operational'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 font-mono-pm text-[9px] uppercase tracking-[0.2em]"
-                  style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
-                  <div className="w-1.5 h-1.5 rounded-full operational-pulse" style={{ background: 'var(--pm-primary)' }} />
-                  Live
-                </div>
+            <div className="px-6 pt-5 pb-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--pm-outline-variant)' }}>
+              <h2 className="text-lg font-semibold tracking-tight font-geist" style={{ color: 'var(--pm-on-surface)' }}>
+                {workspace?.settings?.companyName ? `${workspace.settings.companyName} Workspace` : `${profile?.full_name?.split(' ')[0] || user.email?.split('@')[0]}'s Workspace`}
+              </h2>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-text-tertiary">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </span>
+                {dbNotifications.filter(n => !n.read_at).length === 0 && (
+                  <span className="text-xs font-medium text-emerald-400/80 bg-emerald-500/10 px-2 py-0.5 rounded">All systems nominal</span>
+                )}
               </div>
             </div>
           )}

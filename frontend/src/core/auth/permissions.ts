@@ -146,11 +146,34 @@ export function canAccessRoute(role: UserRole | undefined, pathname: string): bo
   return hasCapability(role, required);
 }
 
+// Fix 5: Rate Limiting & Abuse Resilience (Frontend mutation governance)
+const mutationTimestamps: number[] = [];
+const MAX_MUTATIONS_PER_10S = 30;
+
 export function guardCapability(
   role: UserRole | undefined,
   capability: Capability,
   operationName?: string,
 ): void {
+  if (operationName) {
+    const now = Date.now();
+    mutationTimestamps.push(now);
+    
+    // Clean up timestamps older than 10 seconds
+    while (mutationTimestamps.length > 0 && mutationTimestamps[0] < now - 10000) {
+      mutationTimestamps.shift();
+    }
+    
+    if (mutationTimestamps.length > MAX_MUTATIONS_PER_10S) {
+      const msg = `Rate Limit Exceeded: Too many operational mutations requested. Please wait before retrying.`;
+      console.warn(`[Guard] ${msg}`);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: msg, type: 'error' } }));
+      }
+      throw new Error(msg);
+    }
+  }
+
   if (!hasCapability(role, capability)) {
     const msg = `Unauthorized: capability "${capability}" required${operationName ? ` for ${operationName}` : ''}.`;
     console.error(`[Guard] ${msg}`);

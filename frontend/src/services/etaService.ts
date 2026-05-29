@@ -2,8 +2,11 @@ import { calculateExpectedEffort, calculatePertStandardDeviation, normalizePertI
 import { addWorkingHours, calculateDailyProductiveHours, findNextWorkingSlot, type WorkWindow } from '../utils/productivity';
 import { calendarEventService } from './calendarEventService';
 import { effectivenessMultiplier, teamOutput } from './resourceProfileService';
+import { confidenceCalibrationService } from './confidenceCalibrationService';
+import { contextPredictionService, inferTaskCategory } from './contextPredictionService';
 import type { WorkspaceSettings } from '../types/workspace';
 import type { CalendarEvent, Task, ResourceProfile } from '../types';
+import type { Database } from '../lib/database.types';
 
 export interface EtaInput {
   best?: number;
@@ -173,12 +176,12 @@ export async function predictEta(input: EtaInput): Promise<EtaResult> {
   const base = computeEta(input);
   let confidence = base.rawConfidence;
   if (input.workspaceId) {
-    const { confidenceCalibrationService } = await import('./confidenceCalibrationService');
+
     const adj = await confidenceCalibrationService.getConfidenceAdjustment(input.workspaceId, base.rawConfidence);
     confidence = adj.adjustedConfidence;
 
     if (input.assigneeId || input.taskName || input.projectId) {
-      const { contextPredictionService, inferTaskCategory } = await import('./contextPredictionService');
+
       const contexts: Array<{ type: 'assignee' | 'task_category' | 'project_type' | 'execution_mode' | 'industry'; value: string }> = [];
       if (input.assigneeId) contexts.push({ type: 'assignee', value: input.assigneeId });
       if (input.taskName) contexts.push({ type: 'task_category', value: inferTaskCategory(input.taskName, input.taskTags) });

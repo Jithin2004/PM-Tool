@@ -28,13 +28,20 @@ import { normalizePath, parseProjectRoute, isRegisteredPath } from './routeRegis
 const withRetry = (componentImport: () => Promise<any>) => {
   return lazy(async () => {
     try {
-      return await componentImport();
+      const module = await componentImport();
+      sessionStorage.removeItem('chunk_reload_count');
+      return module;
     } catch (error: any) {
       console.warn('Failed to load dynamic import:', error);
       if (error?.message?.includes('Failed to fetch dynamically imported module')) {
-        window.location.reload();
+        const reloadCount = parseInt(sessionStorage.getItem('chunk_reload_count') || '0', 10);
+        if (reloadCount < 2) {
+          sessionStorage.setItem('chunk_reload_count', (reloadCount + 1).toString());
+          window.location.reload();
+          return { default: () => <RouteFallback /> };
+        }
       }
-      return { default: () => <RouteFallback /> };
+      return { default: () => <div className="flex items-center justify-center min-h-[50vh] p-8 text-center text-rose-400/80 font-mono text-sm tracking-tight border border-rose-500/10 rounded-lg bg-rose-500/5 max-w-md mx-auto mt-20">System partition failed to load. Please verify connection and refresh.</div> };
     }
   });
 };
@@ -56,6 +63,7 @@ const WorkLogsPage = withRetry(() => import('../pages/resources/WorkLogsPage'));
 
 const AnalyticsPage = withRetry(() => import('../pages/control/AnalyticsPage'));
 const AuditPage = withRetry(() => import('../pages/control/AuditPage'));
+const ObservabilityPanel = withRetry(() => import('../pages/dashboard/ObservabilityPanel').then(m => ({ default: m.ObservabilityPanel })));
 const SettingsPage = withRetry(() => import('../pages/control/SettingsPage'));
 
 const DocumentView = withRetry(() => import('../pages/dashboard/DocumentView'));
@@ -342,6 +350,10 @@ export function ResolveRouter() {
   if (pathname === '/control/audit') {
     if (!guardRoute(role, '/control/audit')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
     return <RouteShell><AuditPage /></RouteShell>;
+  }
+  if (pathname === '/control/system-health') {
+    if (!guardRoute(role, '/control')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    return <RouteShell><ObservabilityPanel /></RouteShell>;
   }
   if (pathname === '/control/automations' || pathname.startsWith('/control/automations/')) {
     if (!guardRoute(role, '/control/automations')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;

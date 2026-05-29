@@ -93,7 +93,16 @@ export function TaskCard({
   return (
     <motion.div
       onClick={() => onClick(task)}
-      className={`group relative shrink-0 w-full pm-card task-card overflow-hidden cursor-pointer ${isCompact ? 'p-2' : isExecutive ? 'p-5' : 'p-3.5'
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick(task);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Task: ${task.name}. Status: ${task.status}.`}
+      className={`group relative shrink-0 w-full pm-card task-card overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] ${isCompact ? 'p-2' : isExecutive ? 'p-5' : 'p-3.5'
         }`}
     >
       {/* Risk indicator side bar */}
@@ -142,16 +151,15 @@ export function TaskCard({
 
         {/* Dynamic Timeline Tracking Row */}
         {task.estimated_hours > 0 && !isCompact && (
-          <div className="w-full mt-1 mb-1">
-            <div className="flex justify-between text-[9px] font-mono-pm uppercase tracking-widest text-text-tertiary mb-1">
-              <span>Elapsed: {elapsedHours.toFixed(1)}h</span>
-              <span>Allotted: {task.estimated_hours.toFixed(1)}h</span>
-            </div>
-            <div className="w-full h-1 bg-surface-3 rounded-full overflow-hidden">
+          <div className="w-full mt-1.5 mb-0.5 group/timeline relative">
+            <div className="w-full h-1 bg-surface-3 rounded-full overflow-hidden opacity-60 group-hover/timeline:opacity-100 transition-opacity">
               <div
                 className={`h-full rounded-full transition-all ${isOverdue ? 'bg-signal-critical' : 'bg-accent-secondary'}`}
                 style={{ width: `${Math.min(100, (elapsedHours / task.estimated_hours) * 100)}%` }}
               />
+            </div>
+            <div className="absolute hidden group-hover/timeline:flex -top-5 left-0 text-[9px] font-mono-pm uppercase tracking-widest text-text-tertiary bg-slate-800 p-1 rounded shadow-sm z-10">
+              Elapsed: {elapsedHours.toFixed(1)}h / {task.estimated_hours.toFixed(1)}h
             </div>
           </div>
         )}
@@ -163,51 +171,37 @@ export function TaskCard({
           </p>
         )}
 
-        {/* Middle Stats/Badges */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {task.risk && (
-            <span className={`flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded border ${riskColors[task.risk] || riskColors.low}`}>
+        {/* Middle Stats/Badges - Simplified for visual calmness */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {task.risk && task.risk !== 'low' && (
+            <span className={`flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded ${riskColors[task.risk]}`}>
               <AlertTriangle className="w-2.5 h-2.5" />
               {task.risk}
             </span>
           )}
 
-          {substate && ['WAITING_FOR_CLIENT', 'WAITING_FOR_DATA', 'WAITING_FOR_INFRASTRUCTURE', 'WAITING_FOR_APPROVAL', 'BLOCKED_DEPENDENCY', 'BLOCKED_INFRASTRUCTURE', 'BLOCKED_ACCESS'].includes(substate) && (
-            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400">
-              <AlertTriangle className="w-2.5 h-2.5 text-rose-400" />
-              Friction: {substate.replace('WAITING_FOR_', '').replace('BLOCKED_', '').replace(/_/g, ' ')}
-            </span>
-          )}
-
           {activeBlocker && (
-            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-rose-950/60 border border-rose-500/30 text-rose-400 font-mono-pm">
-              <Clock className="w-2.5 h-2.5 text-rose-400 animate-pulse" />
-              Blocked {blockerDurationDays.toFixed(1)}d
-            </span>
-          )}
-
-          {task.status !== 'done' && liabilityTag && (
-            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-signal-critical-bg border border-signal-critical/20 text-signal-critical">
-              <Shield className="w-2.5 h-2.5" />
-              {liabilityTag}
+            <span className="flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 font-mono-pm">
+              <Clock className="w-2.5 h-2.5" />
+              {blockerDurationDays.toFixed(1)}d
             </span>
           )}
 
           {drift > 0 && task.status !== 'done' && (
-            <span className="flex items-center gap-1 text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded shadow-sm bg-signal-warning-bg text-signal-warning border border-signal-warning/20">
-              +{drift.toFixed(1)} Days Drift (±σ)
+            <span className="flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded text-signal-warning bg-signal-warning-bg/50" title={`Timeline drift of ${drift.toFixed(1)} days detected.`}>
+              +{drift.toFixed(0)}d drift
             </span>
           )}
 
           {task.story_points && (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface-variant)' }}>
+            <span className="text-[9px] font-mono-pm px-1.5 py-0.5 rounded text-text-quaternary">
               {task.story_points} SP
             </span>
           )}
 
           {(task.deadline || task.due_date) && (
-            <span className="flex items-center gap-1 text-[10px] font-medium text-text-tertiary">
-              <Clock className="w-3 h-3" />
+            <span className="flex items-center gap-0.5 text-[9px] font-medium text-text-tertiary">
+              <Clock className="w-2.5 h-2.5" />
               {new Date(getTaskDeadline(task)!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
@@ -254,8 +248,9 @@ export function TaskCard({
                       onEditTask(task);
                     }
                   }}
-                  className="p-1 hover:bg-surface-3 rounded transition-colors text-text-tertiary hover:text-accent-primary"
+                  className="p-1 hover:bg-surface-3 rounded transition-colors text-text-tertiary hover:text-accent-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-primary"
                   title="Edit task"
+                  aria-label={`Edit task ${task.name}`}
                 >
                   <Edit2 className="w-3 h-3" />
                 </button>
@@ -293,15 +288,14 @@ export function TaskCard({
           </div>
         </div>
 
-        {/* Sub-state Transition dropdown */}
+        {/* Sub-state Transition dropdown - Made more subtle */}
         {hasWriteAccess && onUpdateSubstate && task.status !== 'done' && !isCompact && (
-          <div className="mt-2 pt-2 border-t border-border-subtle/40 flex items-center justify-between gap-2">
-            <span className="text-[9px] font-mono-pm uppercase tracking-widest text-text-tertiary">Flow Gate</span>
+          <div className="mt-1 pt-1 flex items-center justify-between gap-2 opacity-50 hover:opacity-100 transition-opacity">
             <select
               value={substate || 'EXECUTING'}
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => onUpdateSubstate(task.id, e.target.value)}
-              className="bg-slate-900 border border-slate-700/60 text-slate-300 text-[10px] font-mono-pm px-2 py-1 rounded cursor-pointer max-w-[150px] uppercase leading-tight hover:border-indigo-500/50 focus:border-indigo-500 transition-colors"
+              className="bg-transparent border-none text-text-quaternary hover:text-text-secondary text-[9px] font-mono-pm px-0 py-0.5 cursor-pointer max-w-[150px] uppercase leading-tight outline-none"
             >
               <optgroup label="ACTIVE" className="bg-slate-950">
                 <option value="EXECUTING">EXECUTING</option>
@@ -326,15 +320,6 @@ export function TaskCard({
                 <option value="INTERNAL_REVIEW">INTERNAL REVIEW</option>
               </optgroup>
             </select>
-          </div>
-        )}
-
-        {/* Systemic Liability Label */}
-        {liabilityTag && task.status !== 'done' && !isCompact && (
-          <div className="mt-2 pt-2 border-t border-border-subtle">
-            <span className="text-[9px] font-mono-pm uppercase tracking-widest text-text-tertiary bg-surface-3/50 px-2 py-1 rounded border border-border-subtle inline-block">
-              {liabilityTag}
-            </span>
           </div>
         )}
       </div>
