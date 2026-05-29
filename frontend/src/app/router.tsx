@@ -236,17 +236,10 @@ export function ResolveRouter() {
     );
   }
 
-  // ── Product key gate ──
-  // Design: The product key is a PRE-AUTH gate for anonymous users only.
-  // Authenticated users (those with valid invitations/sessions) bypass it
-  // by design — the invitation system handles their access control instead.
-  // This is intentional: invited users clicking a direct /login link should
-  // not be forced to enter a product key they may not have.
-
-  if (!isProductKeyVerified() && !user && pathname !== '/login') {
-    console.log("[ResolveRouter] Product key not verified, routing to /");
-    return <Redirect to="/" />;
-  }
+  // ── Auth Gate ──
+  // The system uses a post-auth verification model (Product Key OR Invitation).
+  // Unauthenticated users are sent to login, where they will authenticate
+  // and then be validated by the reconcileInvitationMembership core logic.
 
   if (!user) return <Login />;
 

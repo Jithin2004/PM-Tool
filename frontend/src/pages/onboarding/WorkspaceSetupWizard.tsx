@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
 import { Check, Layers, Users, Zap, Briefcase, Plus } from 'lucide-react';
 import { demoWorkspacesService } from '../../services/demoWorkspacesService';
+import { clearLicense } from '../../lib/productKey';
 
 export function WorkspaceSetupWizard() {
   const { createWorkspace, error } = useWorkspace();
@@ -32,6 +33,7 @@ export function WorkspaceSetupWizard() {
         } as any
       });
       if (created) {
+        clearLicense();
         await refreshProfile();
         window.location.href = '/overview';
       }
@@ -51,6 +53,7 @@ export function WorkspaceSetupWizard() {
       });
       if (ws) {
         await demoWorkspacesService.injectDemoData(ws.id, profile!.id, type);
+        clearLicense();
         await refreshProfile();
         window.location.href = '/overview';
       }

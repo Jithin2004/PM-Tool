@@ -13,6 +13,7 @@ import {
   captureRedirectFromLocation,
   navigateTo,
 } from '../core/auth/postAuthRedirect';
+import { clearLicense } from '../lib/productKey';
 
 interface AuthContextType {
   user: any | null;
@@ -259,6 +260,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         keysToRemove.forEach(k => localStorage.removeItem(k));
       }
+
+      // Requirement 6: Logout clears product-key session state
+      clearLicense();
 
       setUser(null);
       setProfile(null);

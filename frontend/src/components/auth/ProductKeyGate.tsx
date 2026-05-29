@@ -176,9 +176,14 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
         </div>
 
         {/* Footer */}
-        <p className="text-[10px] uppercase tracking-wider text-center mt-10" style={{ color: 'var(--pm-on-surface-variant)' }}>
-          Secure activation &middot; Keyserver connection required
-        </p>
+        <div className="flex flex-col items-center gap-4 mt-10">
+          <p className="text-[10px] uppercase tracking-wider text-center" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            Secure activation &middot; Keyserver connection required
+          </p>
+          <a href="/" className="text-xs transition-colors hover:underline" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            Return to Landing
+          </a>
+        </div>
       </motion.div>
     </div>
   );
