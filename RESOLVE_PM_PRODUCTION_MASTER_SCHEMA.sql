@@ -347,11 +347,10 @@ CREATE TABLE activity_logs (
 );
 
 -- Fix 6: Audit & Forensic Protection (WORM rules for activity logs)
-CREATE RULE activity_logs_no_update AS
-  ON UPDATE TO activity_logs DO INSTEAD NOTHING;
-
-CREATE RULE activity_logs_no_delete AS
-  ON DELETE TO activity_logs DO INSTEAD NOTHING;
+-- WARNING: Removed WORM RULES because they break referential integrity (ERROR: XX000).
+-- Do not reintroduce without understanding PostgreSQL RULE implications on foreign keys.
+-- CREATE RULE activity_logs_no_update AS ON UPDATE TO activity_logs DO INSTEAD NOTHING;
+-- CREATE RULE activity_logs_no_delete AS ON DELETE TO activity_logs DO INSTEAD NOTHING;
 
 
 -- 12. attendance
@@ -461,11 +460,9 @@ CREATE TABLE system_audit_ledger (
 );
 
 -- WORM: Prevent any modification of committed audit blocks
-CREATE RULE system_audit_ledger_no_update AS
-  ON UPDATE TO system_audit_ledger DO INSTEAD NOTHING;
-
-CREATE RULE system_audit_ledger_no_delete AS
-  ON DELETE TO system_audit_ledger DO INSTEAD NOTHING;
+-- WARNING: Removed WORM RULES because they break referential integrity (ERROR: XX000).
+-- CREATE RULE system_audit_ledger_no_update AS ON UPDATE TO system_audit_ledger DO INSTEAD NOTHING;
+-- CREATE RULE system_audit_ledger_no_delete AS ON DELETE TO system_audit_ledger DO INSTEAD NOTHING;
 
 -- Performance indexes
 CREATE INDEX IF NOT EXISTS idx_sal_workspace ON system_audit_ledger(workspace_id);
