@@ -127,7 +127,7 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
   };
 
   const taskSubstates = input.workspaceSettingsBlob?.task_substates || {};
-  const globalBlockers = input.workspaceSettingsBlob?.execution_blockers || [];
+  const globalBlockers = (input.workspaceSettingsBlob?.execution_blockers as any[]) || [];
 
   // Pre-compute indices for O(1) lookups
   const tasksByProject = new Map<string, any[]>();

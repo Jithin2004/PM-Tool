@@ -77,10 +77,10 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
       projectTasks.some((t: any) => t.id === d.task_id) && 
       projectTasks.some((t: any) => t.id === d.depends_on_task_id)
     );
-    const taskSubstates = workspaceSettingsBlob?.task_substates || {};
-    const blockers = workspaceSettingsBlob?.execution_blockers || [];
-    const decisions = workspaceSettingsBlob?.operational_decisions || [];
-    const events = workspaceSettingsBlob?.coordination_events || [];
+    const taskSubstates = (workspaceSettingsBlob?.task_substates as Record<string, string>) || {};
+    const blockers = (workspaceSettingsBlob?.execution_blockers as any[]) || [];
+    const decisions = (workspaceSettingsBlob?.operational_decisions as any[]) || [];
+    const events = (workspaceSettingsBlob?.coordination_events as any[]) || [];
 
     return reconstructProjectTimeline(
       activeProject.id,

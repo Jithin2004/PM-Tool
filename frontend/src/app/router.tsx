@@ -11,8 +11,8 @@ import {
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { AdminPanel } from '../pages/dashboard/AdminPanel';
 import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
-import { WorkspaceSetupPage } from '../pages/onboarding/WorkspaceSetupPage';
-import { ProjectCreatePage } from '../pages/project/ProjectCreatePage';
+import { WorkspaceSetupWizard } from '../pages/onboarding/WorkspaceSetupWizard';
+import { ProjectCreationWizard } from '../pages/project/ProjectCreationWizard';
 import { LandingPage } from '../landing/LandingPage';
 import { PrivacyPage } from '../landing/PrivacyPage';
 import { TermsPage } from '../landing/TermsPage';
@@ -51,6 +51,10 @@ const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
 const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage'));
 const KnowledgePage = withRetry(() => import('../pages/workspace/KnowledgePage'));
 const DecisionsPage = withRetry(() => import('../pages/workspace/DecisionsPage'));
+const ExecutiveOverview = withRetry(() => import('../pages/dashboard/ExecutiveOverview').then(m => ({ default: m.ExecutiveOverview })));
+const ExecutiveDigestPage = withRetry(() => import('../pages/workspace/ExecutiveDigestPage').then(m => ({ default: m.ExecutiveDigestPage })));
+const ProductAdoptionDashboard = withRetry(() => import('../pages/workspace/ProductAdoptionDashboard').then(m => ({ default: m.ProductAdoptionDashboard })));
+const ReportsCenter = withRetry(() => import('../pages/workspace/ReportsCenter'));
 
 const BoardPage = withRetry(() => import('../pages/execution/BoardPage'));
 const TimelinePage = withRetry(() => import('../pages/execution/TimelinePage'));
@@ -250,7 +254,7 @@ export function ResolveRouter() {
     return <Redirect to="/login?error=uninvited" />;
   }
 
-  if (!workspace) return <WorkspaceSetupPage />;
+  if (!workspace) return <WorkspaceSetupWizard />;
 
   // ── Alias redirects (canonicalize) ──
 
@@ -263,11 +267,11 @@ export function ResolveRouter() {
 
   if (rawPathname === '/projects/new' || pathname === '/projects/new') {
     if (!guardRoute(role, '/projects/new')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
-    return <RouteShell><ProjectCreatePage /></RouteShell>;
+    return <RouteShell><ProjectCreationWizard /></RouteShell>;
   }
 
   if (pathname === '/onboarding/workspace') {
-    return <WorkspaceSetupPage />;
+    return <WorkspaceSetupWizard />;
   }
 
   // ── OVERVIEW ──
@@ -284,6 +288,14 @@ export function ResolveRouter() {
   if (pathname === '/workspace/portfolio') {
     if (!guardRoute(role, '/workspace/portfolio')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
     return <RouteShell><PortfolioPage /></RouteShell>;
+  }
+  if (pathname === '/workspace/executive') {
+    if (!guardRoute(role, '/workspace/executive')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    return <RouteShell><ExecutiveOverview /></RouteShell>;
+  }
+  if (pathname === '/workspace/reports') {
+    if (!guardRoute(role, '/workspace/reports')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    return <RouteShell><ReportsCenter /></RouteShell>;
   }
   if (pathname === '/workspace/knowledge') {
     return <RouteShell><KnowledgePage /></RouteShell>;

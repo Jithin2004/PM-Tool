@@ -1,6 +1,6 @@
 import type { 
   ExecutionCategory, 
-  ExecutionState, 
+  GranularExecutionState, 
   ExecutionDependency, 
   ExecutionStream, 
   Task 
@@ -9,7 +9,7 @@ import type {
 /**
  * Returns the parent category for any canonical execution state.
  */
-export function getExecutionCategory(state: ExecutionState): ExecutionCategory {
+export function getExecutionCategory(state: GranularExecutionState): ExecutionCategory {
   switch (state) {
     case 'EXECUTING':
     case 'DEPLOYING':
@@ -42,7 +42,7 @@ export function getExecutionCategory(state: ExecutionState): ExecutionCategory {
  * Maps granular execution states to Vite's V3 legacy DB/UI Task statuses
  * to ensure complete backward compatibility.
  */
-export function mapToTaskStatus(state: ExecutionState): 'backlog' | 'ready' | 'in_progress' | 'review' | 'done' {
+export function mapToTaskStatus(state: GranularExecutionState): 'backlog' | 'ready' | 'in_progress' | 'review' | 'done' {
   switch (state) {
     // ACTIVE Mapping
     case 'EXECUTING':
@@ -79,8 +79,8 @@ export function mapToTaskStatus(state: ExecutionState): 'backlog' | 'ready' | 'i
  * Specifically checks for dependency gates.
  */
 export function canTransitionTo(
-  currentState: ExecutionState,
-  targetState: ExecutionState,
+  currentState: GranularExecutionState,
+  targetState: GranularExecutionState,
   dependencies: ExecutionDependency[]
 ): { allowed: boolean; reason?: string } {
   // If target is ACTIVE and task is blocked by active dependencies, deny transition

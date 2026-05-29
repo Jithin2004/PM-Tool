@@ -1,16 +1,27 @@
 import { predictEta, getSchedulingContext } from './etaService';
-import { type Task, type TaskDependency, type CalendarEvent } from '../types';
+import { type Task, type TaskDependency, type CalendarEvent, type Milestone, type Project } from '../types';
 import type { WorkspaceSettings } from '../types/workspace';
 import type { WorkWindow } from '../utils/productivity';
+import type { WaitState } from '../core/types/collaboration';
+
+export interface EntityDependency {
+  source_id: string;
+  source_type: 'task' | 'milestone' | 'project';
+  target_id: string;
+  target_type: 'task' | 'milestone' | 'project';
+}
 
 export interface ImpactInput {
   workspaceId: string;
-  triggerTaskId?: string;
-  triggerEntityType: 'task' | 'meeting' | 'leave' | 'holiday' | 'dependency' | 'approval';
-  triggerAction: 'created' | 'updated' | 'deleted' | 'rescheduled' | 'approved' | 'rejected';
+  triggerEntityId?: string;
+  triggerEntityType: 'task' | 'milestone' | 'project' | 'meeting' | 'leave' | 'holiday' | 'dependency' | 'approval' | 'wait_state';
+  triggerAction: 'created' | 'updated' | 'deleted' | 'rescheduled' | 'approved' | 'rejected' | 'resolved';
   actorId?: string;
   tasks: Task[];
-  dependencies: TaskDependency[];
+  milestones?: Milestone[];
+  projects?: Project[];
+  waitStates?: WaitState[];
+  dependencies: (TaskDependency | EntityDependency)[];
   calendarEvents: CalendarEvent[];
   workspaceSettings: WorkspaceSettings;
 }
@@ -40,22 +51,59 @@ export interface ImpactResult {
   triggerAction: string;
 }
 
-function buildReverseGraph(dependencies: TaskDependency[]): Map<string, string[]> {
+function buildReverseGraph(dependencies: (TaskDependency | EntityDependency)[], tasks: Task[], milestones?: Milestone[]): Map<string, string[]> {
   const graph = new Map<string, string[]>();
   for (const dep of dependencies) {
-    const dependents = graph.get(dep.depends_on_task_id) || [];
-    dependents.push(dep.task_id);
-    graph.set(dep.depends_on_task_id, dependents);
+    const source = 'task_id' in dep ? dep.task_id : dep.source_id;
+    const target = 'depends_on_task_id' in dep ? dep.depends_on_task_id : dep.target_id;
+    
+    // Archival-Aware Governance: Ignore ghost edges where either node is missing (archived)
+    const sourceExists = tasks.some(t => t.id === source) || milestones?.some(m => m.id === source);
+    const targetExists = tasks.some(t => t.id === target) || milestones?.some(m => m.id === target);
+    if (!sourceExists || !targetExists) continue;
+
+    const dependents = graph.get(target) || [];
+    dependents.push(source);
+    graph.set(target, dependents);
+  }
+  
+  // Implicit hierarchy edges: A milestone implicitly depends on its tasks. A task implicitly depends on its project/milestone wait states.
+  if (milestones) {
+    for (const t of tasks) {
+      if (t.milestone_id) {
+        const dependents = graph.get(t.id) || [];
+        if (!dependents.includes(t.milestone_id)) dependents.push(t.milestone_id);
+        graph.set(t.id, dependents);
+      }
+    }
   }
   return graph;
 }
 
-function buildForwardGraph(dependencies: TaskDependency[]): Map<string, string[]> {
+function buildForwardGraph(dependencies: (TaskDependency | EntityDependency)[], tasks: Task[], milestones?: Milestone[]): Map<string, string[]> {
   const graph = new Map<string, string[]>();
   for (const dep of dependencies) {
-    const deps = graph.get(dep.task_id) || [];
-    deps.push(dep.depends_on_task_id);
-    graph.set(dep.task_id, deps);
+    const source = 'task_id' in dep ? dep.task_id : dep.source_id;
+    const target = 'depends_on_task_id' in dep ? dep.depends_on_task_id : dep.target_id;
+    
+    // Archival-Aware Governance: Ignore ghost edges where either node is missing (archived)
+    const sourceExists = tasks.some(t => t.id === source) || milestones?.some(m => m.id === source);
+    const targetExists = tasks.some(t => t.id === target) || milestones?.some(m => m.id === target);
+    if (!sourceExists || !targetExists) continue;
+
+    const deps = graph.get(source) || [];
+    deps.push(target);
+    graph.set(source, deps);
+  }
+  
+  if (milestones) {
+    for (const t of tasks) {
+      if (t.milestone_id) {
+        const deps = graph.get(t.milestone_id) || [];
+        if (!deps.includes(t.id)) deps.push(t.id);
+        graph.set(t.milestone_id, deps);
+      }
+    }
   }
   return graph;
 }
@@ -124,14 +172,14 @@ async function recalculateTask(
   };
 }
 
-export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
+export async function computeImpactLocal(input: ImpactInput): Promise<ImpactResult> {
   const {
-    workspaceId, triggerTaskId, triggerEntityType, triggerAction,
-    tasks, dependencies, calendarEvents, workspaceSettings, actorId
+    workspaceId, triggerEntityId, triggerEntityType, triggerAction,
+    tasks, milestones, waitStates, dependencies, calendarEvents, workspaceSettings, actorId
   } = input;
 
-  const reverseGraph = buildReverseGraph(dependencies);
-  const forwardGraph = buildForwardGraph(dependencies);
+  const reverseGraph = buildReverseGraph(dependencies, tasks, milestones);
+  const forwardGraph = buildForwardGraph(dependencies, tasks, milestones);
   const taskMap = new Map(tasks.map(t => [t.id, t]));
 
   const workWindow: WorkWindow = {
@@ -156,18 +204,21 @@ export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
   };
 
   const visited = new Set<string>();
-  let affectedTaskIds: string[] = [];
+  let affectedEntityIds: string[] = [];
 
-  if (triggerTaskId && taskMap.has(triggerTaskId)) {
-    visited.add(triggerTaskId);
-    affectedTaskIds = findDownstreamTasks(triggerTaskId, reverseGraph, visited);
-  } else if (triggerEntityType === 'meeting' || triggerEntityType === 'leave' || triggerEntityType === 'holiday') {
-    affectedTaskIds = tasks
-      .filter(t => t.status !== 'done' && t.start_date)
-      .map(t => t.id);
-  } else if (triggerEntityType === 'approval' && triggerTaskId) {
-    visited.add(triggerTaskId);
-    affectedTaskIds = findDownstreamTasks(triggerTaskId, reverseGraph, visited);
+  // Halt propagation if a Project-level wait state is active
+  const projectWaitStateActive = waitStates?.some(ws => ws.target_type === 'project' && ws.status === 'active');
+  
+  if (!projectWaitStateActive) {
+    if (triggerEntityId && (taskMap.has(triggerEntityId) || milestones?.some(m => m.id === triggerEntityId))) {
+      visited.add(triggerEntityId);
+      affectedEntityIds = findDownstreamTasks(triggerEntityId, reverseGraph, visited);
+    } else if (triggerEntityType === 'meeting' || triggerEntityType === 'leave' || triggerEntityType === 'holiday') {
+      affectedEntityIds = tasks.filter(t => t.status !== 'done' && t.start_date).map(t => t.id);
+    } else if (triggerEntityType === 'approval' && triggerEntityId) {
+      visited.add(triggerEntityId);
+      affectedEntityIds = findDownstreamTasks(triggerEntityId, reverseGraph, visited);
+    }
   }
 
   const affectedEntities: AffectedEntity[] = [];
@@ -175,15 +226,25 @@ export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
   let totalRiskDelta = 0;
   let totalConfidenceDelta = 0;
 
-  for (const taskId of affectedTaskIds) {
-    const task = taskMap.get(taskId);
-    if (!task || task.status === 'done') continue;
+  for (const entityId of affectedEntityIds) {
+    const task = taskMap.get(entityId);
+    if (!task || task.status === 'done') {
+      // It's a milestone. If it's a milestone, we aggregate its children dates in the persistence step.
+      continue; 
+    }
+
+    // Task wait state check to avoid duplicate shifting
+    const activeWaitState = waitStates?.find(ws => ws.target_type === 'task' && ws.target_id === entityId && ws.status === 'active');
+    if (activeWaitState) continue; // Task is paused independently.
+
+    const milestoneWaitState = task.milestone_id ? waitStates?.find(ws => ws.target_type === 'milestone' && ws.target_id === task.milestone_id && ws.status === 'active') : undefined;
+    if (milestoneWaitState) continue; // Paused by parent.
 
     const originalEta = task.predicted_completion || task.deadline || null;
     const originalRisk = task.risk || 'low';
     const originalConfidence = task.confidence ?? 100;
 
-    const predecessorIds = forwardGraph.get(taskId) || [];
+    const predecessorIds = forwardGraph.get(entityId) || [];
     const predecessorDates = predecessorIds
       .map(id => taskMap.get(id))
       .filter((t): t is Task => !!t)
@@ -220,7 +281,7 @@ export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
     totalCapacityDelta += Math.max(0, deltaDays) * 8;
 
     affectedEntities.push({
-      taskId,
+      taskId: entityId,
       taskName: task.name,
       originalEta,
       newEta: eta,
@@ -244,7 +305,7 @@ export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
     etaDelta: affectedEntities.reduce((sum, e) => sum + Math.max(0, e.deltaDays), 0),
     riskDelta: totalRiskDelta,
     confidenceDelta: avgConfidenceDelta,
-    propagatedFrom: triggerTaskId || null,
+    propagatedFrom: triggerEntityId || null,
     triggerEntityType,
     triggerAction
   };
@@ -292,7 +353,7 @@ export async function propagateAndPersist(
           delta_days: entity.deltaDays,
           risk_delta: entity.newRisk !== entity.originalRisk ? `${entity.originalRisk}→${entity.newRisk}` : 'none',
           confidence_delta: entity.newConfidence - entity.originalConfidence,
-          propagated_from: input.triggerTaskId
+          propagated_from: input.triggerEntityId
         }
       });
 
@@ -312,7 +373,7 @@ export async function propagateAndPersist(
     await activityLogService.appendLog({
       workspace_id: input.workspaceId,
       actor_id: input.actorId,
-      task_id: input.triggerTaskId,
+      task_id: input.triggerEntityId,
       action: 'timeline_impact_cascade',
       metadata: {
         trigger_type: input.triggerEntityType,
@@ -324,6 +385,65 @@ export async function propagateAndPersist(
         avg_confidence_delta: result.confidenceDelta,
         affected_task_ids: result.affectedEntities.map(e => e.taskId)
       }
+    });
+  }
+
+  return result;
+}
+
+export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
+  const startMs = performance.now();
+  let result: ImpactResult;
+  let executionLocation = 'main_thread';
+
+  try {
+    if (window.Worker) {
+      result = await new Promise<ImpactResult>((resolve, reject) => {
+        const worker = new Worker(new URL('./timelineImpactWorker.ts', import.meta.url), { type: 'module' });
+        
+        const timeout = setTimeout(() => {
+          worker.terminate();
+          reject(new Error('Worker timeout'));
+        }, 15000);
+
+        worker.onmessage = (e) => {
+          clearTimeout(timeout);
+          worker.terminate();
+          if (e.data.type === 'success') resolve(e.data.result);
+          else reject(new Error(e.data.error));
+        };
+
+        worker.onerror = (err) => {
+          clearTimeout(timeout);
+          worker.terminate();
+          reject(err);
+        };
+
+        worker.postMessage(input);
+      });
+      executionLocation = 'worker';
+    } else {
+      throw new Error('Web Workers not supported');
+    }
+  } catch (err) {
+    console.warn(`[timelineImpactEngine] Worker offload failed, falling back to local:`, err);
+    result = await computeImpactLocal(input);
+  }
+
+  const durationMs = performance.now() - startMs;
+  if (input.tasks.length >= 500) {
+    console.log(`[timelineImpactEngine] Processed ${input.tasks.length} tasks via ${executionLocation} in ${Math.round(durationMs)}ms`);
+    import('./activityLogService').then(({ activityLogService }) => {
+      activityLogService.appendLog({
+        workspace_id: input.workspaceId,
+        action: 'timeline_impact_computed',
+        metadata: {
+          task_count: input.tasks.length,
+          duration_ms: durationMs,
+          location: executionLocation,
+          affected_count: result.affectedEntities.length
+        }
+      }).catch(() => {});
     });
   }
 

@@ -59,7 +59,7 @@ export default function DecisionsPage() {
   const [decRationale, setDecRationale] = useState('');
   const [decImpact, setDecImpact] = useState('');
   const [decParticipants, setDecParticipants] = useState<string[]>([]);
-  const [decSteps, setDecSteps] = useState<'pm' | 'developer' | 'super_admin' | 'viewer'[]>(['pm', 'super_admin']);
+  const [decSteps, setDecSteps] = useState<Array<'pm' | 'developer' | 'super_admin' | 'viewer'>>(['pm', 'super_admin']);
 
   // Form states for Coordination Event
   const [evtTitle, setEvtTitle] = useState('');
@@ -102,7 +102,7 @@ export default function DecisionsPage() {
     const mockDecisions: OperationalDecision[] = [
       {
         id: 'dec-mock-1',
-        workspaceId: workspaceSettingsBlob?.workspace_id || 'ws-default',
+        workspaceId: (workspaceSettingsBlob?.workspace_id as string) || 'ws-default',
         title: 'Scope Adjustment: Defer secondary reporting features',
         type: 'scope_adjustment',
         ownerId: userId,
@@ -138,7 +138,7 @@ export default function DecisionsPage() {
       },
       {
         id: 'dec-mock-2',
-        workspaceId: workspaceSettingsBlob?.workspace_id || 'ws-default',
+        workspaceId: (workspaceSettingsBlob?.workspace_id as string) || 'ws-default',
         title: 'Timeline Recalibration: Relocate API resources due to blocker propagation',
         type: 'timeline_recalibration',
         ownerId: userId,
@@ -169,7 +169,7 @@ export default function DecisionsPage() {
     const mockEvents: CoordinationEvent[] = [
       {
         id: 'evt-mock-1',
-        workspaceId: workspaceSettingsBlob?.workspace_id || 'ws-default',
+        workspaceId: (workspaceSettingsBlob?.workspace_id as string) || 'ws-default',
         title: 'Urgent Triage & Resource Allocation Sync',
         eventType: 'triage',
         timestamp: new Date(Date.now() - 2 * 86400000).toISOString(),
@@ -195,7 +195,7 @@ export default function DecisionsPage() {
 
     const newDec: OperationalDecision = {
       id: `dec-${Date.now()}`,
-      workspaceId: workspaceSettingsBlob?.workspace_id || 'ws-default',
+      workspaceId: (workspaceSettingsBlob?.workspace_id as string) || 'ws-default',
       title: decTitle,
       type: decType,
       ownerId: userId,
@@ -238,7 +238,7 @@ export default function DecisionsPage() {
 
     const newEvt: CoordinationEvent = {
       id: `evt-${Date.now()}`,
-      workspaceId: workspaceSettingsBlob?.workspace_id || 'ws-default',
+      workspaceId: (workspaceSettingsBlob?.workspace_id as string) || 'ws-default',
       title: evtTitle,
       eventType: evtType,
       timestamp: new Date().toISOString(),

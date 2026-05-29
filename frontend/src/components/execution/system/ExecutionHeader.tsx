@@ -29,6 +29,10 @@ interface ExecutionHeaderProps {
   onGroupByChange: (group: any) => void;
   canAddTask?: boolean;
   users?: any[];
+  readinessScore?: number;
+  readinessClassification?: 'Healthy' | 'At Risk' | 'Not Ready';
+  readinessRemediationList?: string[];
+  onOpenReadiness?: () => void;
 }
 
 export function ExecutionHeader({
@@ -44,6 +48,10 @@ export function ExecutionHeader({
   onGroupByChange,
   canAddTask = true,
   users = [],
+  readinessScore,
+  readinessClassification,
+  readinessRemediationList = [],
+  onOpenReadiness
 }: ExecutionHeaderProps) {
   const views: { id: ExecutionViewType; label: string; icon: React.ReactNode }[] = [
     { id: 'board', label: 'Board', icon: <LayoutGrid className="w-4 h-4" /> },
@@ -68,6 +76,57 @@ export function ExecutionHeader({
           <span className="text-[11px] text-text-tertiary font-medium">
             {taskCount} tasks
           </span>
+          
+          {readinessScore !== undefined && onOpenReadiness && (
+            <div className="relative group/readiness z-50">
+              <button 
+                onClick={onOpenReadiness}
+                className={`flex items-center gap-1.5 px-2 py-0.5 border rounded text-[10px] font-bold uppercase tracking-wider transition-all hover:opacity-80 ${
+                  readinessClassification === 'Healthy' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                  readinessClassification === 'At Risk' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 
+                  'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                }`}
+              >
+                Readiness: {readinessScore}%
+              </button>
+              
+              <div className="absolute top-full left-0 mt-2 w-64 bg-surface-elevated border border-surface-border rounded-lg shadow-xl opacity-0 pointer-events-none group-hover/readiness:opacity-100 transition-all overflow-hidden">
+                <div className="p-3 border-b border-surface-border bg-surface-base">
+                  <h4 className="text-xs font-bold text-on-surface">Completion Readiness</h4>
+                  <p className={`text-xl font-bold ${
+                    readinessClassification === 'Healthy' ? 'text-emerald-400' :
+                    readinessClassification === 'At Risk' ? 'text-amber-400' : 'text-rose-400'
+                  }`}>{readinessScore}%</p>
+                </div>
+                {readinessRemediationList.length > 0 ? (
+                  <div className="p-3">
+                    <p className="text-[10px] uppercase font-bold text-text-tertiary mb-2 tracking-wider">Remaining</p>
+                    <ul className="space-y-1">
+                      {readinessRemediationList.slice(0, 4).map((r, i) => (
+                        <li key={i} className="text-xs text-rose-300 flex items-start gap-1">
+                          <span className="opacity-50">•</span> {r}
+                        </li>
+                      ))}
+                      {readinessRemediationList.length > 4 && (
+                        <li className="text-xs text-text-tertiary pt-1 italic">
+                          +{readinessRemediationList.length - 4} more issues
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="p-3">
+                    <p className="text-xs text-emerald-400 flex items-center gap-1">
+                      <span>✓</span> Ready for closure
+                    </p>
+                  </div>
+                )}
+                <div className="p-2 bg-surface-base border-t border-surface-border text-center">
+                  <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">Click to open panel</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">

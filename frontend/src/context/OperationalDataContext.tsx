@@ -81,6 +81,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const [loading, setLoading] = useState(true);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [dbNotifications, setDbNotifications] = useState<Notification[]>([]);
+  const [allocationPeriods, setAllocationPeriods] = useState<any[]>([]);
 
   const raw: OperationalRawState = useMemo(
     () => ({
@@ -92,8 +93,9 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       attendanceRows,
       salaryRows,
       workspaceSettingsBlob,
+      allocationPeriods,
     }),
-    [projects, tasks, dependencies, teams, profiles, attendanceRows, salaryRows, workspaceSettingsBlob],
+    [projects, tasks, dependencies, teams, profiles, attendanceRows, salaryRows, workspaceSettingsBlob, allocationPeriods],
   );
 
   const derived = useMemo(
@@ -183,6 +185,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     setSalaryRows(snapshot.salaryRows);
     setWorkspaceSettingsBlob(snapshot.workspaceSettingsBlob);
     setServerMetrics(snapshot.serverMetrics);
+    if (snapshot.allocationPeriods) setAllocationPeriods(snapshot.allocationPeriods);
   }, [workspace?.id]);
 
   const refreshProjects = useCallback(async () => {

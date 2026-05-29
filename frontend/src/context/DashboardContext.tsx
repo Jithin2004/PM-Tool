@@ -12,6 +12,7 @@ interface DashboardContextType {
   milestones: Milestone[];
   approvals: Approval[];
   meetings: Meeting[];
+  allocationPeriods: any[]; // Phase 2A.1
   userCustomRoles: Record<string, string>;
   customRoles: string[];
   systemData: any;

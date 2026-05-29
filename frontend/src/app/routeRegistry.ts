@@ -60,6 +60,12 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'settings', path: '/control/settings', label: 'Settings', iconName: 'Settings', capability: 'manage_settings', group: 'system', disclosureTier: 'operational' },
   { id: 'integrations', path: '/control/connections', label: 'Integrations', iconName: 'Link2', capability: 'manage_integrations', group: 'system', disclosureTier: 'platform' },
 
+  // Executive routes
+  { id: 'executive', path: '/workspace/executive', label: 'Executive Overview', iconName: 'Activity', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
+  { id: 'reports', path: '/workspace/reports', label: 'Reports Center', iconName: 'FileText', capability: 'view_reports', group: 'intelligence', disclosureTier: 'intelligence' },
+  { id: 'executive-digest', path: '/workspace/executive-digest', label: 'Executive Digest', iconName: 'Target', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
+  { id: 'adoption', path: '/workspace/adoption', label: 'Adoption Analytics', iconName: 'Users', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
+
   // Non-sidebar / helper routes
   { id: 'landing', path: '/', label: 'Home', iconName: 'LayoutDashboard', isPublic: true, disclosureTier: 'essential' },
   { id: 'privacy', path: '/privacy', label: 'Privacy Policy', iconName: 'FileText', isPublic: true, disclosureTier: 'essential' },
@@ -118,6 +124,7 @@ export function renderRouteIcon(name: string, className = "w-[15px] h-[15px] shr
   return React.createElement(IconComponent, { className });
 }
 
+import { normalizePath } from './routePaths';
 export { normalizePath, ROUTE_ALIASES } from './routePaths';
 
 export function parseProjectRoute(pathname: string): {

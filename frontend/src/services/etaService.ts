@@ -6,7 +6,6 @@ import { confidenceCalibrationService } from './confidenceCalibrationService';
 import { contextPredictionService, inferTaskCategory } from './contextPredictionService';
 import type { WorkspaceSettings } from '../types/workspace';
 import type { CalendarEvent, Task, ResourceProfile } from '../types';
-import type { Database } from '../lib/database.types';
 
 export interface EtaInput {
   best?: number;
@@ -27,6 +26,9 @@ export interface EtaInput {
   taskTags?: string[];
   resourceProfiles?: ResourceProfile[];
   engineerCount?: number;
+  allocationPercent?: number; // Project Allocation % (0-100)
+  totalUtilizationPercent?: number; // Total User Capacity % (0-X)
+  allocationPeriods?: any[]; // Phase 2A.1: Array of AllocationPeriod
 }
 
 export async function getSchedulingContext(
@@ -127,7 +129,15 @@ function computeEta(input: EtaInput): Omit<EtaResult, 'confidence'> & { rawConfi
   const estimatedEffortHours = input.estimatedHours ?? calculateExpectedEffort(pert);
   const uncertaintyHours = calculatePertStandardDeviation(pert);
   const attendanceFactor = Math.max(0.1, input.attendanceFactor ?? 1);
-  const availabilityFactor = Math.max(0.1, input.availabilityFactor ?? 1);
+  
+  // Phase 2A: Capacity Engine Integration
+  // A 50% allocation means the person is only available half the time, doubling the chronological ETA.
+  // Phase 2A.1: If time-bound allocationResolver exists, do not double-count it here.
+  const allocationRatio = Math.max(0.01, (input.allocationPercent ?? 100) / 100);
+  const availabilityFactor = input.workWindow.allocationResolver 
+    ? Math.max(0.1, input.availabilityFactor ?? 1)
+    : Math.max(0.1, (input.availabilityFactor ?? 1) * allocationRatio);
+  
   const teamLoadFactor = Math.max(1, input.teamLoadFactor ?? 1);
   const interruptionHours = Math.max(0, input.interruptionHours ?? 0);
 
@@ -165,6 +175,12 @@ function computeEta(input: EtaInput): Omit<EtaResult, 'confidence'> & { rawConfi
 }
 
 export function predictEtaSync(input: EtaInput): EtaResult {
+  if (input.allocationPeriods && input.allocationPeriods.length > 0 && input.projectId) {
+    input.workWindow.allocationResolver = (dateStr: string) => {
+      const active = input.allocationPeriods!.find(p => p.project_id === input.projectId && p.start_date <= dateStr && p.end_date >= dateStr);
+      return active ? active.allocation_percent : (input.allocationPercent ?? 100);
+    };
+  }
   const base = computeEta(input);
   return {
     ...base,
@@ -173,6 +189,12 @@ export function predictEtaSync(input: EtaInput): EtaResult {
 }
 
 export async function predictEta(input: EtaInput): Promise<EtaResult> {
+  if (input.allocationPeriods && input.allocationPeriods.length > 0 && input.projectId) {
+    input.workWindow.allocationResolver = (dateStr: string) => {
+      const active = input.allocationPeriods!.find(p => p.project_id === input.projectId && p.start_date <= dateStr && p.end_date >= dateStr);
+      return active ? active.allocation_percent : (input.allocationPercent ?? 100);
+    };
+  }
   const base = computeEta(input);
   let confidence = base.rawConfidence;
   if (input.workspaceId) {
@@ -198,6 +220,14 @@ export async function predictEta(input: EtaInput): Promise<EtaResult> {
       if (totalEng > 3) confidence = Math.max(5, confidence - 3);
     }
   }
+
+  // Phase 2A: Capacity Pressure Confidence Correction
+  if (input.totalUtilizationPercent) {
+    if (input.totalUtilizationPercent > 100) confidence -= 10;
+    if (input.totalUtilizationPercent > 150) confidence -= 20;
+    if (input.totalUtilizationPercent > 200) confidence -= 35;
+  }
+  confidence = Math.max(5, Math.min(99, confidence));
 
   return {
     ...base,

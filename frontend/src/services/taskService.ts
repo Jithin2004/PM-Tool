@@ -65,3 +65,33 @@ export async function createTaskDependency(input: {
     return true;
   } catch (err) { logServiceFailure('createTaskDependency', input, err); return false; }
 }
+
+export async function archiveTask(taskId: string, workspaceId: string, actorId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const now = new Date().toISOString();
+
+    // 1. Archive the task
+    await supabase.from('tasks').update({ status: 'archived', deleted_at: now }).eq('id', taskId);
+
+    // 2. Archive associated wait states
+    await supabase.from('wait_states').update({ status: 'archived', deleted_at: now }).eq('target_type', 'task').eq('target_id', taskId).is('deleted_at', null);
+
+    // 3. Deactivate (delete) related dependency edges to prevent ghost dependencies
+    await supabase.from('task_dependencies').delete().eq('task_id', taskId);
+    await supabase.from('task_dependencies').delete().eq('depends_on_task_id', taskId);
+
+    // Audit
+    await activityLogService.appendLog({
+      workspace_id: workspaceId,
+      actor_id: actorId,
+      action: 'task_archived',
+      metadata: { task_id: taskId, cascade_triggered: true, dependencies_pruned: true },
+    });
+
+    return true;
+  } catch (err) { 
+    logServiceFailure('archiveTask', { taskId }, err); 
+    return false;
+  }
+}

@@ -23,6 +23,7 @@ export interface OperationalSnapshot {
     dailyFatigue: number;
     riskForecast: number;
   };
+  allocationPeriods: any[]; // Phase 2A.1
 }
 
 export async function refreshOperationalSnapshot(workspaceId: string): Promise<OperationalSnapshot> {
@@ -35,14 +36,15 @@ export async function refreshOperationalSnapshot(workspaceId: string): Promise<O
     }
   };
 
-  const [projects, profiles, teams, attendanceRows, salaryRows, workspaceSettingsBlob, serverMetricsResult] = await Promise.all([
+  const [projects, profiles, teams, attendanceRows, salaryRows, workspaceSettingsBlob, serverMetricsResult, allocationPeriods] = await Promise.all([
     safeFetch(fetchProjects(workspaceId), []),
     safeFetch(fetchWorkspaceProfiles(workspaceId), []),
     safeFetch(fetchWorkspaceTeams(workspaceId), []),
     safeFetch(fetchWorkspaceAttendance(workspaceId), []),
     safeFetch(fetchWorkspaceSalaries(workspaceId), []),
     safeFetch(fetchWorkspaceSettingsBlob(workspaceId), {}),
-    safeFetch(supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }), { data: undefined }),
+    safeFetch(supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }) as unknown as Promise<any>, { data: undefined }),
+    safeFetch(import('./capacityEngine').then(m => m.capacityEngine.fetchAllocationPeriods(workspaceId)), []),
   ]);
 
   return { 
@@ -52,7 +54,8 @@ export async function refreshOperationalSnapshot(workspaceId: string): Promise<O
     attendanceRows, 
     salaryRows, 
     workspaceSettingsBlob, 
-    serverMetrics: serverMetricsResult?.data || undefined 
+    serverMetrics: serverMetricsResult?.data || undefined,
+    allocationPeriods: allocationPeriods as any[]
   };
 }
 
@@ -76,7 +79,8 @@ export async function refreshOperationalPartial(
     attendanceRows: () => safeFetch(fetchWorkspaceAttendance(workspaceId), []),
     salaryRows: () => safeFetch(fetchWorkspaceSalaries(workspaceId), []),
     workspaceSettingsBlob: () => safeFetch(fetchWorkspaceSettingsBlob(workspaceId), {}),
-    serverMetrics: () => safeFetch(supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }).then(r => r.data), undefined),
+    serverMetrics: () => safeFetch(supabase.rpc('get_operational_intelligence', { p_workspace_id: workspaceId }) as unknown as Promise<any>, { data: undefined }).then(r => r.data),
+    allocationPeriods: () => safeFetch(import('./capacityEngine').then(m => m.capacityEngine.fetchAllocationPeriods(workspaceId)), []),
   };
 
   const entries = await Promise.all(keys.map(async key => [key, await loaders[key]()]));

@@ -176,8 +176,8 @@ export function calculateResilienceSystem(
       actorName: 'Project Manager',
       targetId: d.id,
       targetType: 'governance',
-      metadata: { category: d.category, status: d.status },
-      rationale: d.description,
+      metadata: { category: d.type, status: d.approvalStatus },
+      rationale: d.rationale || d.title,
       hash: `hash-dec-${d.id.slice(0, 8)}`
     });
   });
@@ -237,8 +237,8 @@ export function calculateResilienceSystem(
       decisionId: d.id,
       decisionTitle: d.title,
       coordinationEventName: relatedEvent?.title || 'Decisions Alignment Sync',
-      participantsCount: relatedEvent?.attendeeIds?.length || 2,
-      outcome: d.status === 'approved' ? 'Mitigation Strategy Cleared' : 'Triage Under Review',
+      participantsCount: relatedEvent?.participants?.length || 2,
+      outcome: d.approvalStatus === 'approved' ? 'Mitigation Strategy Cleared' : 'Triage Under Review',
       timestamp: d.createdAt
     };
   });
@@ -265,14 +265,14 @@ export function calculateResilienceSystem(
   // 5. Governance Actions Record
   const governanceActions: GovernanceAction[] = [];
   decisions.forEach((d, idx) => {
-    if (d.category === 'release_decision' || d.category === 'ownership_transition') {
+    if (d.type === 'release_decision' as any || d.type === 'ownership_transition' as any) {
       governanceActions.push({
         id: `ga-${d.id}-${idx}`,
-        actionType: d.category === 'release_decision' ? 'timeline_adjustment' : 'role_update',
+        actionType: d.type === 'release_decision' as any ? 'timeline_adjustment' : 'role_update',
         actorId: 'pm-id',
         actorName: 'Portfolio Manager',
         details: d.title,
-        rationale: d.description,
+        rationale: d.rationale || '',
         timestamp: d.createdAt
       });
     }
@@ -327,7 +327,7 @@ export function calculateResilienceSystem(
         incidentType: 'timeline_drift',
         severity: (p.delay_drift_days || 0) > 6 ? 'critical' : 'high',
         description: `Timeline target drift exceeded: project has slipped by ${p.delay_drift_days} days.`,
-        mitigated: decisions.some(d => d.description.includes(p.name) && d.status === 'approved'),
+        mitigated: decisions.some(d => (d.rationale || '').includes(p.name) && d.approvalStatus === 'approved'),
         timestamp: p.updated_at || now
       });
     }

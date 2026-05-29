@@ -9,6 +9,7 @@ export interface WorkWindow {
   shutdowns?: Array<{ start: string; end: string; name: string }>;
   teamEvents?: Array<{ start: Date; end: Date; availabilityFactor: number }>;
   personalLeaves?: Array<{ start: Date; end: Date; availabilityFactor: number }>;
+  allocationResolver?: (dateStr: string) => number; // Returns 0-100% for a specific date
 }
 
 function timeToMinutes(time: string): number {
@@ -99,6 +100,12 @@ export function getDailyCapacity(date: Date, window: WorkWindow): number {
       }
     });
     dayCapacity *= leaveFactor;
+  }
+
+  if (window.allocationResolver) {
+    const alloc = window.allocationResolver(yyyymmdd);
+    const allocRatio = Math.max(0.01, alloc / 100);
+    dayCapacity *= allocRatio;
   }
 
   return Number(dayCapacity.toFixed(2));

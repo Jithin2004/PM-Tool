@@ -10,6 +10,7 @@ import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { ProjectCard } from '../../components/project/ProjectCard';
 import { hasCapability } from '../../core/auth/permissions';
+import { EmptyState } from '../../components/common/EmptyState';
 
 export function ProjectWorkspace() {
   const { workspace, user } = useWorkspace() as any;
@@ -166,14 +167,14 @@ export function ProjectWorkspace() {
         </AnimatePresence>
 
         {filteredProjects.length === 0 && (
-          <div className="col-span-full border border-dashed border-border-subtle rounded-xl py-20 flex flex-col items-center justify-center text-center bg-surface-2/30">
-            <div className="w-12 h-12 rounded-full bg-surface-3 flex items-center justify-center mb-4 border border-border">
-              <Briefcase className="w-5 h-5 text-text-secondary" />
-            </div>
-            <h3 className="text-sm font-medium text-text-primary mb-1">No Projects Found</h3>
-            <p className="text-xs text-text-tertiary">
-              Adjust your filters or create a new initiative to begin tracking.
-            </p>
+          <div className="col-span-full">
+            <EmptyState 
+              icon={Briefcase}
+              title="No initiatives initialized yet"
+              description="Launch your first delivery vehicle to activate execution metrics or use our guided templates."
+              actionLabel="Initialize Project"
+              onAction={() => window.location.href='/projects/new'}
+            />
           </div>
         )}
       </div>

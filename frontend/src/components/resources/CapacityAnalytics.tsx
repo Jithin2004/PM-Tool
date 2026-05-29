@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
-import { BarChart3, TrendingUp, Users, AlertTriangle, Target } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, AlertTriangle, Target, CalendarDays } from 'lucide-react';
+import { capacityEngine } from '../../services/capacityEngine';
+import { AllocationPeriodManager } from './AllocationPeriodManager';
 
 export function CapacityAnalytics() {
   const { profile } = useAuth();
-  const { profiles, teams, tasks, projects } = useDashboard();
+  const { profiles, teams, tasks, projects, allocationPeriods } = useDashboard();
 
   const capacityData = useMemo(() => {
     const totalCapacity = profiles.length * 160;
@@ -35,6 +37,44 @@ export function CapacityAnalytics() {
     const forecast = Math.round(totalAssigned / Math.max(1, profiles.length) / 160 * 100);
     return { totalCapacity, totalAssigned, utilization, byTeam, overloaded, forecast };
   }, [profiles, tasks, teams]);
+
+  const timelineData = useMemo(() => {
+    // Generate next 3 months
+    const periods = [];
+    for (let i = 0; i < 3; i++) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + i);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+      const monthName = d.toLocaleString('default', { month: 'short' }) + ' ' + d.getFullYear();
+      periods.push({ id: start, label: monthName, dateStr: start });
+    }
+
+    const staticAllocations = projects.map(p => ({
+      id: '', workspace_id: '', project_id: p.id, user_id: '', allocation_percent: 100
+    }));
+
+    return periods.map(p => {
+      let allocated = 0;
+      let totalCap = profiles.length * 100; // base capacity in %
+      let confidence = 100;
+      
+      profiles.forEach(prof => {
+        const util = capacityEngine.calculateUtilization(staticAllocations, prof.id, 100, allocationPeriods || [], p.dateStr);
+        allocated += util.totalAssignedPercent;
+      });
+
+      const overloadPct = totalCap > 0 ? Math.max(0, Math.round((allocated / totalCap) * 100) - 100) : 0;
+      if (overloadPct > 0) confidence -= (overloadPct * 1.5);
+
+      return {
+        label: p.label,
+        available: totalCap,
+        allocated: allocated,
+        overload: overloadPct,
+        confidence: Math.max(10, Math.round(confidence))
+      };
+    });
+  }, [profiles, projects, allocationPeriods]);
 
   return (
     <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-8 font-geist" style={{ color: 'var(--pm-on-surface)' }}>
@@ -127,6 +167,42 @@ export function CapacityAnalytics() {
           <p className="text-lg font-bold tracking-tight" style={{ color: 'var(--pm-error)' }}>{capacityData.overloaded.length} members</p>
         </div>
       </div>
+
+      <div className="glass-panel rounded-xl p-6">
+        <h3 className="text-sm font-semibold tracking-tight mb-4 flex items-center gap-2" style={{ color: 'var(--pm-on-surface)' }}>
+          <CalendarDays className="w-4 h-4" style={{ color: 'var(--pm-on-surface-variant)' }} /> Capacity Timeline (Monthly)
+        </h3>
+        <div className="space-y-4">
+          {timelineData.map(t => (
+            <div key={t.label} className="p-4 rounded-xl flex items-center justify-between" style={{ background: 'var(--pm-surface-high)' }}>
+              <div className="w-1/4">
+                <p className="text-sm font-medium" style={{ color: 'var(--pm-on-surface)' }}>{t.label}</p>
+                <p className="text-[10px] font-mono-pm uppercase tracking-widest mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Forecast</p>
+              </div>
+              <div className="flex gap-8">
+                <div>
+                  <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Allocated</p>
+                  <p className="text-sm font-bold tracking-tight" style={{ color: 'var(--pm-tertiary)' }}>{t.allocated}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Overload</p>
+                  <p className="text-sm font-bold tracking-tight" style={{ color: t.overload > 0 ? 'var(--pm-error)' : 'var(--pm-on-surface-variant)' }}>
+                    {t.overload}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Confidence</p>
+                  <p className="text-sm font-bold tracking-tight" style={{ color: t.confidence > 80 ? 'var(--pm-primary)' : t.confidence > 50 ? 'var(--pm-warning)' : 'var(--pm-error)' }}>
+                    {t.confidence}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <AllocationPeriodManager />
     </div>
   );
 }

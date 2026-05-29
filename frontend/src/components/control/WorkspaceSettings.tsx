@@ -4,18 +4,20 @@ import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw } from 'lucide-react';
+import { DemoWorkspaceManager } from '../workspace/DemoWorkspaceManager';
+import { PilotReadinessPanel } from '../workspace/PilotReadinessPanel';
 
 export function WorkspaceSettings() {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
-  const { raw: { users } } = useOperationalData();
+  const { raw: { profiles } } = useOperationalData();
   const { notify } = useDashboard();
   const [saving, setSaving] = useState(false);
 
   const owner = useMemo(() => {
-    if (!workspace?.ownerId || !users) return null;
-    return users.find((u: any) => u.id === workspace.ownerId);
-  }, [workspace?.ownerId, users]);
+    if (!workspace?.ownerId || !profiles) return null;
+    return profiles.find((u: any) => u.id === workspace.ownerId);
+  }, [workspace?.ownerId, profiles]);
 
   const ownerDisplay = owner ? (owner.full_name || owner.email) : (workspace?.ownerId || 'N/A');
 
@@ -43,7 +45,10 @@ export function WorkspaceSettings() {
         <p className="text-sm text-text-tertiary tracking-wide max-w-2xl">General settings, feature toggles, and system preferences</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <DemoWorkspaceManager />
+      <PilotReadinessPanel />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
         <div className="group relative bg-surface/40 backdrop-blur-md border border-border/50 hover:border-accent-primary/30 rounded-2xl p-6 sm:p-8 transition-all duration-300 shadow-sm hover:shadow-accent-primary/5">
           <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent rounded-2xl pointer-events-none" />
           <h3 className="text-xs font-bold tracking-widest uppercase text-text-secondary mb-6 flex items-center gap-2.5">

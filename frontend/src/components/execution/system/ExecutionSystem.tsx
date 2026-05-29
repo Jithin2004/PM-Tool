@@ -296,7 +296,7 @@ export function ExecutionSystem({
     }
 
     const updatedSubStates = {
-      ...(workspaceSettingsBlob?.task_substates || {}),
+      ...(workspaceSettingsBlob?.task_substates as Record<string, string> || {}),
       [taskId]: substate
     };
     

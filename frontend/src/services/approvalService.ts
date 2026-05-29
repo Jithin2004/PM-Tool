@@ -77,7 +77,7 @@ export async function updateApprovalChain(chainId: string, updates: Partial<Appr
 export async function deleteApprovalChain(chainId: string): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
   try {
-    await supabase.from('approval_chains').update({ enabled: false }).eq('id', chainId);
+    await supabase.from('approval_chains').update({ enabled: false, deleted_at: new Date().toISOString() }).eq('id', chainId);
     return true;
   } catch { return false; }
 }

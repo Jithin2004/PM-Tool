@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { X, Terminal } from 'lucide-react';
 import { Project, Task, TaskStatus } from '../../types';
 import { hasCapability } from '../../core/auth/permissions';
+import { TaskDiscussionTab } from './TaskDiscussionTab';
+import { TaskActivityTab } from './TaskActivityTab';
 
 interface TaskEditModalProps {
   isOpen: boolean;
@@ -31,6 +33,7 @@ export function TaskEditModal({
   const [estimatedHours, setEstimatedHours] = useState(task.estimated_hours || 5);
   const [assigneeId, setAssigneeId] = useState(task.assignee_id || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'discussion' | 'activity'>('details');
 
   useEffect(() => {
     if (isOpen) {
@@ -95,8 +98,30 @@ export function TaskEditModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+        <div className="flex gap-4 border-b border-border-subtle mb-4">
+          <button
+            onClick={() => setActiveTab('details')}
+            className={`pb-2 text-[10px] font-mono tracking-wide uppercase transition-colors ${activeTab === 'details' ? 'text-accent-primary border-b-2 border-accent-primary' : 'text-text-quaternary hover:text-text-secondary'}`}
+          >
+            Details
+          </button>
+          <button
+            onClick={() => setActiveTab('discussion')}
+            className={`pb-2 text-[10px] font-mono tracking-wide uppercase transition-colors ${activeTab === 'discussion' ? 'text-accent-primary border-b-2 border-accent-primary' : 'text-text-quaternary hover:text-text-secondary'}`}
+          >
+            Discussion
+          </button>
+          <button
+            onClick={() => setActiveTab('activity')}
+            className={`pb-2 text-[10px] font-mono tracking-wide uppercase transition-colors ${activeTab === 'activity' ? 'text-accent-primary border-b-2 border-accent-primary' : 'text-text-quaternary hover:text-text-secondary'}`}
+          >
+            Activity
+          </button>
+        </div>
+
+        {activeTab === 'details' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
             <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">Task Title *</label>
             <input
               type="text"
@@ -182,6 +207,20 @@ export function TaskEditModal({
             </button>
           </div>
         </form>
+        )}
+
+        {activeTab === 'discussion' && (
+          <TaskDiscussionTab 
+            taskId={task.id} 
+            users={users} 
+            currentUserProfile={currentUserProfile} 
+            notify={notify} 
+          />
+        )}
+
+        {activeTab === 'activity' && (
+          <TaskActivityTab taskId={task.id} />
+        )}
       </motion.div>
     </div>
   );

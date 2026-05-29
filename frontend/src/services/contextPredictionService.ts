@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { confidenceCalibrationService, getConfidenceBucket } from './confidenceCalibrationService';
 import { activityLogService } from './activityLogService';
 

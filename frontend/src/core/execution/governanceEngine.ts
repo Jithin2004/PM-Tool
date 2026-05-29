@@ -72,7 +72,7 @@ export function compileCoherentPlatformState(
     const teamObj = taskObj?.assignee_id ? userToTeamMap.get(taskObj.assignee_id) : undefined;
 
     const whyDeliveryRisk = taskObj 
-      ? `Task "${taskObj.name}" is stalled due to a ${taskObj.execution_state || 'WAITING'} state, which directly delays task delivery.`
+      ? `Task "${taskObj.name}" is stalled due to a ${(taskObj as any).execution_state || taskObj.status || 'WAITING'} state, which directly delays task delivery.`
       : 'Active roadblock events are arresting execution progress.';
 
     const whyExecutionDrift = projObj && (projObj.delay_drift_days || 0) > 0

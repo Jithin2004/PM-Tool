@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { AppProviders } from './app/providers';
 import { ResolveRouter } from './app/router';
 import { registerDebugTools } from './debug/registerDebugTools';
+import { CommandPalette } from './components/navigation/CommandPalette';
 
 export default function App() {
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function App() {
 
   return (
     <AppProviders>
+      <CommandPalette />
       <ResolveRouter />
     </AppProviders>
   );

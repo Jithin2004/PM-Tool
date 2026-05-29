@@ -101,15 +101,15 @@ function computeReleaseDelta(entities: AffectedEntity[]): number {
 }
 
 async function computeTriggerFingerprint(
-  triggerTaskId: string | undefined,
+  triggerEntityId: string | undefined,
   tasks: Task[],
   dependencies: TaskDependency[]
 ): Promise<string> {
-  if (!triggerTaskId) return 'none';
-  const task = tasks.find(t => t.id === triggerTaskId);
+  if (!triggerEntityId) return 'none';
+  const task = tasks.find(t => t.id === triggerEntityId);
   if (!task) return 'none';
   const taskDeps = dependencies
-    .filter(d => d.task_id === triggerTaskId || d.depends_on_task_id === triggerTaskId)
+    .filter(d => d.task_id === triggerEntityId || d.depends_on_task_id === triggerEntityId)
     .map(d => `${d.task_id}:${d.depends_on_task_id}`)
     .sort()
     .join(',');
@@ -201,12 +201,12 @@ export const impactSimulationService = {
     const releaseDelta = computeReleaseDelta(result.affectedEntities);
     const severity = computeSeverity(releaseDelta, result);
     const mitigations = generateMitigationOptions(result);
-    const fingerprint = await computeTriggerFingerprint(input.triggerTaskId, input.tasks, input.dependencies);
+    const fingerprint = await computeTriggerFingerprint(input.triggerEntityId, input.tasks, input.dependencies as any);
 
     const expiresAt = new Date(Date.now() + staleAfterHours * 3600000).toISOString();
 
-    const triggerTask = input.triggerTaskId
-      ? input.tasks.find(t => t.id === input.triggerTaskId)
+    const triggerTask = input.triggerEntityId
+      ? input.tasks.find(t => t.id === input.triggerEntityId)
       : null;
     const triggerSnapshot = triggerTask
       ? {
@@ -229,7 +229,7 @@ export const impactSimulationService = {
       .insert({
         workspace_id: input.workspaceId,
         trigger_type: result.triggerEntityType,
-        trigger_id: input.triggerTaskId || null,
+        trigger_id: input.triggerEntityId || null,
         trigger_fingerprint: fingerprint,
         trigger_snapshot: triggerSnapshot ? JSON.stringify(triggerSnapshot) : null,
         affected_entities: JSON.stringify(result.affectedEntities),
@@ -256,7 +256,7 @@ export const impactSimulationService = {
     await activityLogService.appendLog({
       workspace_id: input.workspaceId,
       actor_id: input.actorId,
-      task_id: input.triggerTaskId,
+      task_id: input.triggerEntityId,
       action: 'impact_simulation_generated',
       metadata: {
         simulation_id: (data as SimulationRow).id,
@@ -316,7 +316,7 @@ export const impactSimulationService = {
 
     const input: ImpactInput = {
       workspaceId: simulation.workspace_id,
-      triggerTaskId: simulation.trigger_id || undefined,
+      triggerEntityId: simulation.trigger_id || undefined,
       triggerEntityType: simulation.trigger_type as ImpactInput['triggerEntityType'],
       triggerAction: 'rescheduled',
       actorId,
@@ -533,7 +533,7 @@ export const impactSimulationService = {
       .select('*')
       .eq('workspace_id', input.workspaceId)
       .eq('trigger_type', input.triggerEntityType)
-      .eq('trigger_id', input.triggerTaskId || '')
+      .eq('trigger_id', input.triggerEntityId || '')
       .eq('status', 'pending')
       .eq('stale', false)
       .gte('expires_at', new Date().toISOString())
@@ -542,7 +542,7 @@ export const impactSimulationService = {
 
     if (existing && existing.length > 0) {
       const sim = rowToSimulation(existing[0] as SimulationRow);
-      const currentFingerprint = await computeTriggerFingerprint(input.triggerTaskId, input.tasks, input.dependencies);
+      const currentFingerprint = await computeTriggerFingerprint(input.triggerEntityId, input.tasks, input.dependencies as any);
       if (currentFingerprint === sim.trigger_fingerprint) {
         return sim;
       }
@@ -554,8 +554,8 @@ export const impactSimulationService = {
   },
 
   computeStaleReason(sim: ImpactSimulation, input: ImpactInput): string {
-    if (!input.triggerTaskId) return 'Trigger task no longer available';
-    const currentTask = input.tasks.find(t => t.id === input.triggerTaskId);
+    if (!input.triggerEntityId) return 'Trigger task no longer available';
+    const currentTask = input.tasks.find(t => t.id === input.triggerEntityId);
     if (!currentTask) return 'Trigger task deleted';
 
     const snapshot = (sim as any).trigger_snapshot as Record<string, any> | null;

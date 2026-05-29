@@ -430,7 +430,7 @@ export function AdminDashboard({
                               style={{ color: 'var(--pm-on-surface-variant)', background: 'var(--pm-surface-high)' }}
                               onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-error)'; (e.currentTarget as any).style.background = 'rgba(255,100,100,0.1)'; }}
                               onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
-                              title="Delete Unit"
+                              title="Archive Unit"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

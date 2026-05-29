@@ -21,7 +21,8 @@ import {
   RotateCcw,
   Search,
   UserCheck,
-  Info
+  Info,
+  ArrowRight
 } from 'lucide-react';
 
 const AuditView = React.memo(function AuditView() {
@@ -104,7 +105,7 @@ const AuditView = React.memo(function AuditView() {
     if (!selectedReplayProjectId) return null;
     
     // Combine active operational state with historically archived state for complete replay reconstruction
-    const activeBlockers = workspaceSettingsBlob?.execution_blockers || [];
+    const activeBlockers = (workspaceSettingsBlob?.execution_blockers as any[]) || [];
     const allBlockers = [...activeBlockers, ...historicalBlockers];
     
     return buildOperationalReplay(
@@ -112,7 +113,7 @@ const AuditView = React.memo(function AuditView() {
       projects, 
       tasks, 
       allBlockers, 
-      workspaceSettingsBlob?.operational_decisions || [], 
+      (workspaceSettingsBlob?.operational_decisions as any[]) || [], 
       res
     );
   }, [selectedReplayProjectId, projects, tasks, workspaceSettingsBlob, res, historicalBlockers]);
@@ -521,7 +522,7 @@ const AuditView = React.memo(function AuditView() {
                           <div key={inc.id} className="p-2 bg-surface-2 border border-border rounded text-[10px] flex justify-between items-center">
                             <span className="font-bold text-text-primary">{inc.incidentType.toUpperCase()}</span>
                             <span className="text-[8px] font-mono text-signal-critical bg-signal-critical-bg px-1.5 py-0.5 rounded border border-signal-critical/20 uppercase">
-                              +{projectObj?.delay_drift_days || 0}d drift
+                              +{projects.find(p => p.id === selectedReplayProjectId)?.delay_drift_days || 0}d drift
                             </span>
                           </div>
                         ))}

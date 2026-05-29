@@ -10,6 +10,7 @@ export interface OperationalRawState {
   attendanceRows: AttendanceRow[];
   salaryRows: SalaryRow[];
   workspaceSettingsBlob: Record<string, unknown>;
+  allocationPeriods?: any[]; // Phase 2A.1
 }
 
 export interface AttendanceRow {

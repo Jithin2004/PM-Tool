@@ -16,6 +16,8 @@ export interface WorkspaceSettings {
   attendanceEnabled: boolean;
   payrollEnabled: boolean;
   productivityFactor: number;
+  completionPolicy?: 'flexible' | 'controlled' | 'strict' | 'enterprise';
+  allowOverallocation?: boolean;
   saturdayRule?: 'all' | 'off' | '2nd_4th' | '1st_3rd' | 'custom';
   country?: string;
   region?: string;

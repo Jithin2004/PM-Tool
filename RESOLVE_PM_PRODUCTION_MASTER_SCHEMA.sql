@@ -73,6 +73,8 @@ CREATE TABLE workspaces (
   productivity_factor numeric     NOT NULL DEFAULT 0.8,
   country             text,
   region              text,
+  completion_policy   text        NOT NULL DEFAULT 'controlled' CHECK (completion_policy IN ('flexible', 'controlled', 'strict', 'enterprise')),
+  allow_overallocation boolean    NOT NULL DEFAULT false,
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now()
 );
@@ -196,6 +198,14 @@ CREATE TABLE tasks (
   -- Analytics
   confidence            integer,
   delay_drift_days      integer     DEFAULT 0,
+  
+  -- Time Tracking (Phase 1A)
+  milestone_id          uuid,
+  work_time_hours       numeric     DEFAULT 0,
+  wait_time_hours       numeric     DEFAULT 0,
+  cycle_time_hours      numeric     DEFAULT 0,
+  last_activity_at      timestamptz,
+  
   -- Soft delete
   deleted_at            timestamptz,
   created_at            timestamptz NOT NULL DEFAULT now(),
@@ -214,6 +224,60 @@ CREATE TABLE task_dependencies (
   CHECK (task_id <> depends_on_task_id)
 );
 
+-- 7.1. wait_states
+--    Polymorphic wait state tracking for Phase 1A Enterprise Delivery Model.
+CREATE TABLE wait_states (
+  id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  target_type         text        NOT NULL CHECK (target_type IN ('project', 'milestone', 'task')),
+  target_id           uuid        NOT NULL,
+  category            text        NOT NULL CHECK (category IN ('client', 'vendor', 'approval', 'compliance', 'infrastructure', 'data', 'internal_cross_team')),
+  reason              text,
+  waiting_on          text        NOT NULL CHECK (waiting_on IN ('client', 'vendor', 'internal_team', 'pm', 'compliance', 'infrastructure', 'external_partner', 'other')),
+  status              text        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'resolved')),
+  started_at          timestamptz NOT NULL DEFAULT now(),
+  resolved_at         timestamptz,
+  duration_hours      numeric     DEFAULT 0
+);
+
+-- 7.2. project_signoffs
+CREATE TABLE project_signoffs (
+  id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  approver_id         uuid        NOT NULL REFERENCES users(id),
+  role                text        NOT NULL,
+  notes               text,
+  created_at          timestamptz NOT NULL DEFAULT now()
+);
+
+-- 7.3. project_allocations
+CREATE TABLE project_allocations (
+  id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  user_id             uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  allocation_percent  numeric     NOT NULL DEFAULT 100 CHECK (allocation_percent >= 0 AND allocation_percent <= 1000),
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(project_id, user_id)
+);
+
+-- 7.4. allocation_periods
+CREATE TABLE allocation_periods (
+  id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  user_id             uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  allocation_percent  numeric     NOT NULL CHECK (allocation_percent >= 0 AND allocation_percent <= 100),
+  start_date          date        NOT NULL,
+  end_date            date        NOT NULL,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  deleted_at          timestamptz,
+  CHECK (start_date <= end_date)
+);
+
 
 -- 8. comments
 CREATE TABLE comments (
@@ -224,6 +288,19 @@ CREATE TABLE comments (
   author_id     uuid        REFERENCES users(id) ON DELETE SET NULL,
   body          text        NOT NULL,
   created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+-- 8.1 task_comments
+CREATE TABLE task_comments (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id      uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  task_id           uuid        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  author_id         uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content           text        NOT NULL,
+  parent_comment_id uuid        REFERENCES task_comments(id) ON DELETE CASCADE,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  deleted_at        timestamptz
 );
 
 
@@ -673,6 +750,7 @@ ALTER TABLE projects          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_comments     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE files             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_logs     ENABLE ROW LEVEL SECURITY;

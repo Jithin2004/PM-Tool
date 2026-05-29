@@ -119,6 +119,8 @@ export interface MeetingAttendee {
   attended: boolean;
 }
 
+export type MilestoneType = 'execution' | 'approval' | 'client' | 'infrastructure' | 'compliance' | 'delivery';
+
 export interface Milestone {
   id: string;
   workspace_id: string;
@@ -128,8 +130,28 @@ export interface Milestone {
   description?: string;
   target_date: string;
   status: MilestoneState;
+  owner_id?: string;
+  milestone_type?: MilestoneType;
   created_at: string;
   updated_at: string;
+}
+
+export type WaitStateCategory = 'client' | 'vendor' | 'approval' | 'compliance' | 'infrastructure' | 'data' | 'internal_cross_team';
+export type WaitStateOwner = 'client' | 'vendor' | 'internal_team' | 'pm' | 'compliance' | 'infrastructure' | 'external_partner' | 'other';
+export type WaitStateTargetType = 'project' | 'milestone' | 'task';
+
+export interface WaitState {
+  id: string;
+  workspace_id: string;
+  target_type: WaitStateTargetType;
+  target_id: string;
+  category: WaitStateCategory;
+  reason?: string;
+  waiting_on: WaitStateOwner;
+  status: 'active' | 'resolved';
+  started_at: string;
+  resolved_at?: string;
+  duration_hours: number;
 }
 
 export interface Approval {

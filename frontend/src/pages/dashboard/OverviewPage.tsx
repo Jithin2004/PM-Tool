@@ -8,6 +8,8 @@ import { useOperationalDerived, useOperationalData } from '../../context/Operati
 import { buildVisibilityContext, filterVisibleTasks } from '../../utils/visibilityFilter';
 import { hasCapability } from '../../core/auth/permissions';
 import { activityLogService } from '../../services/activityLogService';
+import { GettingStartedHub } from '../../components/workspace/GettingStartedHub';
+import { ContextualHelp } from '../../components/common/ContextualHelp';
 
 export default function OverviewPage() {
   const { workspace } = useWorkspace() as any;
@@ -716,6 +718,7 @@ function PMOrchestrationSurface({
 
   return (
     <div className="space-y-8 pb-16 font-geist text-slate-100" style={{ color: 'var(--pm-on-surface)' }}>
+      <GettingStartedHub />
       {/* Header */}
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
@@ -765,12 +768,11 @@ function PMOrchestrationSurface({
               </div>
               <div className="flex gap-2 items-center">
                 <span className="font-mono-pm text-[9px] uppercase tracking-[0.2em]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>LIVE</span>
-                <div className="relative group/tooltip">
-                  <Icon name="help_outline" size={14} style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5, cursor: 'pointer' }} />
-                  <div className="absolute hidden group-hover/tooltip:block right-0 top-6 w-48 p-2 bg-slate-800 border border-slate-700 text-[10px] rounded shadow-lg z-10 text-slate-300">
-                    {kpi.explanation}
-                  </div>
-                </div>
+                <ContextualHelp 
+                  topic={kpi.label} 
+                  definition={kpi.explanation} 
+                  importance="Key portfolio metric for organizational awareness." 
+                />
               </div>
             </div>
             <div className="text-3xl font-bold tracking-tight" style={{ color: kpi.color }}>{kpi.value}</div>

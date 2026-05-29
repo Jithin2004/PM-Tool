@@ -40,3 +40,38 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
   } catch (err) { logServiceFailure('createProject', input, err); }
   return null;
 }
+
+export async function archiveProject(projectId: string, workspaceId: string, actorId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const now = new Date().toISOString();
+
+    // 1. Archive the project itself
+    await supabase.from('projects').update({ status: 'archived', deleted_at: now }).eq('id', projectId);
+
+    // 2. Cascade to Tasks
+    await supabase.from('tasks').update({ status: 'archived', deleted_at: now }).eq('project_id', projectId).is('deleted_at', null);
+
+    // 3. Cascade to Wait States (Targeting Project)
+    await supabase.from('wait_states').update({ status: 'archived', deleted_at: now }).eq('target_type', 'project').eq('target_id', projectId).is('deleted_at', null);
+
+    // 4. Cascade to Signoffs
+    await supabase.from('project_signoffs').update({ status: 'archived', deleted_at: now }).eq('project_id', projectId).is('deleted_at', null);
+
+    // 5. Cascade to Allocation Periods (Phase 2B)
+    await supabase.from('allocation_periods').update({ deleted_at: now }).eq('project_id', projectId).is('deleted_at', null);
+
+    // Audit the action
+    await activityLogService.appendLog({
+      workspace_id: workspaceId,
+      actor_id: actorId,
+      action: 'project_archived',
+      metadata: { project_id: projectId, cascade_triggered: true },
+    });
+
+    return true;
+  } catch (err) { 
+    logServiceFailure('archiveProject', { projectId }, err); 
+    return false;
+  }
+}

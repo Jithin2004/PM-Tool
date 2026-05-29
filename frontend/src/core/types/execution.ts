@@ -46,8 +46,13 @@ export interface Task {
   sprint_id?: string;
   story_id?: string;
   parent_task_id?: string;
+  milestone_id?: string;
   definition_of_done?: string;
   acceptance_criteria?: string;
+  work_time_hours?: number;
+  wait_time_hours?: number;
+  cycle_time_hours?: number;
+  last_activity_at?: IsoDateTime;
   created_at: string;
   updated_at: string;
 }

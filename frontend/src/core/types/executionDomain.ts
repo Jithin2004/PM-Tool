@@ -2,7 +2,7 @@ import type { Member } from './workspace';
 
 export type ExecutionCategory = 'ACTIVE' | 'WAITING' | 'BLOCKED' | 'COORDINATION';
 
-export type ExecutionState =
+export type GranularExecutionState =
   // ACTIVE Sub-states
   | 'EXECUTING'
   | 'DEPLOYING'
