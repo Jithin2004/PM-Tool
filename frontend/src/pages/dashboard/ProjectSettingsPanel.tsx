@@ -89,7 +89,7 @@ export default function ProjectSettingsPanel({ projectId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-[100] bg-bg flex items-center justify-center p-4" onClick={onClose}>
-      <div className="w-full max-w-2xl bg-surface border border-white/15 p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-2xl bg-surface-3/50 backdrop-blur-xl border border-border/50 rounded-2xl p-8 max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <span className="text-xs font-mono text-text-secondary">Project Settings</span>
           <button onClick={onClose} className="text-text-quaternary hover:text-text-secondary text-[10px] font-medium">Close</button>
@@ -104,7 +104,7 @@ export default function ProjectSettingsPanel({ projectId, onClose }: Props) {
             const msg = messages[`${svc.key}_sync`];
             const cd = getCooldownRemaining(health[svc.key]);
             return (
-              <div key={svc.key} className="border border-border bg-surface-3 p-4">
+              <div key={svc.key} className="border border-border/50 bg-surface/40 backdrop-blur-md rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-mono text-text-secondary">{svc.label}</span>
                   {isSyncing && <span className="text-[10px] font-mono text-cyan-400 transition-opacity duration-300">Syncing...</span>}
@@ -117,17 +117,17 @@ export default function ProjectSettingsPanel({ projectId, onClose }: Props) {
                     <input type="text" value={cfg[field] || ''}
                       onChange={e => handleFieldChange(svc.key, field, e.target.value)}
                       placeholder={`Enter ${field.replace(/_/g, ' ')}`}
-                      className="w-full bg-bg border border-border p-2 text-[11px] font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors" />
+                      className="w-full bg-surface-3/50 border border-border/50 rounded-lg p-2.5 text-[11px] font-mono text-text-primary placeholder-white/20 focus:border-accent-primary/50 focus:outline-none transition-colors" />
                   </div>
                 ))}
                 <div className="flex items-center gap-2 mt-3">
                   <button onClick={() => handleSaveConfig(svc.key, cfg)}
-                    className="px-3 py-1.5 bg-surface-3 border border-border text-signal-info text-[9px] font-mono uppercase tracking-wider hover:bg-surface-3 transition-colors">
+                    className="px-4 py-2 bg-surface-3/50 border border-border/50 rounded-lg text-signal-info text-[9px] font-mono uppercase tracking-wider hover:bg-surface-3 hover:border-signal-info/30 transition-colors shadow-sm">
                     Save Config
                   </button>
                   <button onClick={() => handleSync(svc.key)}
                     disabled={isSyncing || cd > 0}
-                    className="px-3 py-1.5 bg-cyan-600/20 border border-cyan-500/30 text-cyan-400 text-[9px] font-mono uppercase tracking-wider hover:bg-cyan-600/30 transition-colors disabled:opacity-30">
+                    className="px-4 py-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400 text-[9px] font-mono uppercase tracking-wider hover:bg-cyan-500/20 transition-colors disabled:opacity-30 shadow-sm">
                     {cd > 0 ? formatCooldown(cd) : 'Sync Now'}
                   </button>
                 </div>
@@ -141,7 +141,7 @@ export default function ProjectSettingsPanel({ projectId, onClose }: Props) {
                   </div>
                 )}
                 {(svc.key === 'github' || svc.key === 'gitlab') && cfg.repo_url && (
-                  <div className="mt-3 border border-border-subtle bg-surface-3 p-3">
+                  <div className="mt-4 border border-border/50 rounded-xl bg-surface-3/30 p-4 shadow-inner">
                     <div className="text-[9px] font-mono text-text-quaternary uppercase tracking-wider mb-1">Repository</div>
                     <div className="text-[10px] font-mono text-text-tertiary">
                       {cfg.repo_url}<br />

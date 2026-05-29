@@ -221,8 +221,8 @@ export function WorkspaceSetupPage() {
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
         {/* Main Form Section */}
         <section 
-          className="glass-panel rounded-2xl p-8 shadow-premium animate-in fade-in slide-in-from-bottom-3 duration-300 font-geist"
-          style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+          className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300 font-geist"
+          style={{ color: 'var(--pm-on-surface)' }}
         >
           <div className="mb-8 flex items-center justify-between border-b pb-5" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
             <div>
@@ -250,8 +250,8 @@ export function WorkspaceSetupPage() {
                     setWorkspaceName(event.target.value);
                     setSettings(prev => ({ ...prev, companyName: event.target.value }));
                   }}
-                  className="mt-2.5 h-11 w-full border rounded-lg px-4 text-sm outline-none transition-all font-sans focus:border-[var(--pm-primary)]"
-                  style={{ borderColor: 'rgba(70,69,84,0.3)', background: 'var(--pm-surface-low)', color: 'var(--pm-on-surface)' }}
+                  className="mt-2.5 h-11 w-full bg-surface-3 border border-border/50 rounded-lg px-4 text-sm outline-none transition-all font-sans focus:border-accent-primary focus:bg-surface-4"
+                  style={{ color: 'var(--pm-on-surface)' }}
                   placeholder="e.g. Acme Corp"
                 />
               </label>
@@ -263,11 +263,11 @@ export function WorkspaceSetupPage() {
                     <button
                       key={type}
                       onClick={() => setSettings(prev => ({ ...prev, businessType: type as BusinessType }))}
-                      className={`border rounded-xl px-4 py-3.5 text-left text-xs transition-all font-sans`}
+                      className={`border border-border/50 rounded-xl px-4 py-3.5 text-left text-xs transition-all font-sans`}
                       style={{ 
-                        borderColor: settings.businessType === type ? 'var(--pm-primary)' : 'rgba(70,69,84,0.2)',
-                        background: settings.businessType === type ? 'rgba(192, 193, 255, 0.1)' : 'var(--pm-surface-lowest)',
-                        color: settings.businessType === type ? 'var(--pm-primary)' : 'var(--pm-on-surface)'
+                        borderColor: settings.businessType === type ? 'var(--accent-primary)' : 'rgba(70,69,84,0.2)',
+                        background: settings.businessType === type ? 'rgba(var(--accent-primary-rgb), 0.1)' : 'var(--pm-surface-lowest)',
+                        color: settings.businessType === type ? 'var(--accent-primary)' : 'var(--pm-on-surface)'
                       }}
                     >
                       <div className="flex items-center gap-2">
@@ -288,8 +288,8 @@ export function WorkspaceSetupPage() {
                     setIgnoredHolidayDates(new Set());
                     setPreviewHolidays([]);
                   }}
-                  className="mt-2.5 h-11 w-full border rounded-lg px-4 text-sm outline-none transition-all font-sans focus:border-[var(--pm-primary)]"
-                  style={{ borderColor: 'rgba(70,69,84,0.3)', background: 'var(--pm-surface-low)', color: 'var(--pm-on-surface)' }}
+                  className="mt-2.5 h-11 w-full bg-surface-3 border border-border/50 rounded-lg px-4 text-sm outline-none transition-all font-sans focus:border-accent-primary focus:bg-surface-4"
+                  style={{ color: 'var(--pm-on-surface)' }}
                 >
                   <option value="">Select country</option>
                   {COUNTRIES.map(c => (
@@ -321,8 +321,7 @@ export function WorkspaceSetupPage() {
                           workflowRules: { ceremonies: tpl.ceremonies, teamStructure: tpl.teamStructure }
                         }));
                       }}
-                      className={`w-full text-left border rounded-2xl p-5 transition-all shadow-sm hover:shadow-premium ${isSelected ? '!border-[var(--pm-primary)] bg-[var(--pm-primary)]/5' : 'bg-[var(--pm-surface-low)] hover:border-white/20'}`}
-                      style={{ borderColor: isSelected ? '' : 'rgba(70,69,84,0.2)' }}
+                      className={`w-full text-left border rounded-2xl p-5 transition-all shadow-sm hover:shadow-md ${isSelected ? 'border-accent-primary bg-accent-primary/5' : 'bg-surface-3 border-border/50 hover:border-accent-primary/30'}`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -360,19 +359,19 @@ export function WorkspaceSetupPage() {
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                 Shift Commencement
-                <input type="time" value={settings.workStart} onChange={event => setSettings(prev => ({ ...prev, workStart: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
+                <input type="time" value={settings.workStart} onChange={event => setSettings(prev => ({ ...prev, workStart: event.target.value }))} className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans" />
               </label>
               <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                 Shift Conclusion
-                <input type="time" value={settings.workEnd} onChange={event => setSettings(prev => ({ ...prev, workEnd: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
+                <input type="time" value={settings.workEnd} onChange={event => setSettings(prev => ({ ...prev, workEnd: event.target.value }))} className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans" />
               </label>
               <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                 Break Duration (Min)
-                <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
+                <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans" />
               </label>
               <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
                 Timezone Calibration
-                <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans" style={{ borderColor: 'rgba(70,69,84,0.3)' }} />
+                <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans" />
               </label>
               {(() => {
                 const countryData = getCountryByCode(settings.country || '');
@@ -382,8 +381,7 @@ export function WorkspaceSetupPage() {
                     <select
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
-                      className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] outline-none focus:!border-[var(--pm-primary)]/60 transition-all font-sans"
-                      style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                      className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] outline-none focus:border-accent-primary focus:bg-surface-4 transition-all font-sans"
                     >
                       <option value="">Select state/region</option>
                       {countryData.states.map(s => (
@@ -398,8 +396,7 @@ export function WorkspaceSetupPage() {
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
                       placeholder="Optional"
-                      className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans"
-                      style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                      className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans"
                     />
                   </label>
                 );
@@ -410,8 +407,7 @@ export function WorkspaceSetupPage() {
                   value={settings.city || ''}
                   onChange={event => setSettings(prev => ({ ...prev, city: event.target.value }))}
                   placeholder="Optional"
-                  className="mt-2 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans"
-                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                  className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans"
                 />
               </label>
               <div className="sm:col-span-2">
@@ -438,8 +434,7 @@ export function WorkspaceSetupPage() {
                   <select
                     value={settings.saturdayRule || 'all'}
                     onChange={event => setSettings(prev => ({ ...prev, saturdayRule: event.target.value as any }))}
-                    className="h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans"
-                    style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                    className="h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans"
                   >
                     <option value="all">All Saturdays Working</option>
                     <option value="off">All Saturdays Off</option>
@@ -533,13 +528,12 @@ export function WorkspaceSetupPage() {
                   step={0.05}
                   value={settings.productivityFactor}
                   onChange={event => setSettings(prev => ({ ...prev, productivityFactor: Number(event.target.value) || 0.8 }))}
-                  className="mt-2.5 h-11 w-full border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] focus:!border-[var(--pm-primary)]/60 outline-none transition-all font-sans"
-                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                  className="mt-2.5 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans"
                 />
               </label>
 
               <div className="space-y-3.5">
-                <label className="flex items-center justify-between border rounded-xl p-4.5 transition-all bg-[var(--pm-surface-low)]" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                <label className="flex items-center justify-between border border-border/50 rounded-xl p-4.5 transition-all bg-surface-3">
                   <div>
                     <span className="block text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface)]">Attendance Tracker</span>
                     <span className="block text-[10px] text-[var(--pm-on-surface-variant)] mt-0.5">Automated logging of developer online sessions</span>
@@ -547,7 +541,7 @@ export function WorkspaceSetupPage() {
                   <input type="checkbox" className="accent-accent-primary h-4.5 w-4.5 cursor-pointer" checked={settings.attendanceEnabled} onChange={event => setSettings(prev => ({ ...prev, attendanceEnabled: event.target.checked }))} />
                 </label>
 
-                <label className="flex items-center justify-between border rounded-xl p-4.5 transition-all bg-[var(--pm-surface-low)]" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                <label className="flex items-center justify-between border border-border/50 rounded-xl p-4.5 transition-all bg-surface-3">
                   <div>
                     <span className="block text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface)]">Payroll Ledger</span>
                     <span className="block text-[10px] text-[var(--pm-on-surface-variant)] mt-0.5">Integrate salary calculations and financial telemetry</span>
@@ -566,8 +560,7 @@ export function WorkspaceSetupPage() {
                   value={inviteEmail}
                   onChange={event => setInviteEmail(event.target.value)}
                   placeholder="teammate@company.com"
-                  className="h-11 flex-1 border rounded-lg bg-[var(--pm-surface-low)] px-4 text-sm text-[var(--pm-on-surface)] outline-none focus:!border-[var(--pm-primary)]/60 transition-all font-sans"
-                  style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                  className="h-11 flex-1 border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] outline-none focus:border-accent-primary focus:bg-surface-4 transition-all font-sans"
                 />
                 <button onClick={addInvite} className="flex h-11 w-11 items-center justify-center rounded-lg bg-text-primary hover:bg-neutral-200 text-bg transition-colors cursor-pointer shadow-sm">
                   <Plus className="h-4.5 w-4.5" />
@@ -575,7 +568,7 @@ export function WorkspaceSetupPage() {
               </div>
               <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
                 {invites.map(email => (
-                  <div key={email} className="flex items-center justify-between border rounded-lg bg-[var(--pm-surface-low)] px-4.5 py-3 text-xs font-mono-pm" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                  <div key={email} className="flex items-center justify-between border border-border/50 rounded-lg bg-surface-3 px-4.5 py-3 text-xs font-mono-pm">
                     <span>{email}</span>
                     <button onClick={() => removeInvite(email)} disabled={saving} className="text-[var(--pm-on-surface-variant)] hover:text-signal-critical transition-colors">
                       <X className="h-4 w-4" />
@@ -588,7 +581,7 @@ export function WorkspaceSetupPage() {
           )}
 
           {step === 7 && (
-            <div className="border rounded-xl bg-[var(--pm-surface-low)] p-8 text-center space-y-4" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+            <div className="border border-border/50 rounded-xl bg-surface-3 p-8 text-center space-y-4">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
                 <Check className="h-5 w-5" />
               </div>
@@ -599,7 +592,7 @@ export function WorkspaceSetupPage() {
                 </p>
               </div>
               {selectedTemplate && (
-                <div className="mt-4 border rounded-xl bg-[var(--pm-surface-lowest)] p-4 text-left space-y-1.5" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+                <div className="mt-4 border border-border/50 rounded-xl bg-surface-3/50 p-4 text-left space-y-1.5">
                   <span className="text-[9px] font-mono-pm uppercase tracking-widest text-[var(--pm-primary)]">Workflow Architecture</span>
                   <p className="text-xs font-semibold text-[var(--pm-on-surface)]">{selectedTemplate.name}</p>
                   <p className="text-[10px] font-mono text-[var(--pm-on-surface-variant)]">{selectedTemplate.executionMode} · {selectedTemplate.lanes} Lanes · {selectedTemplate.teamStructure}</p>
@@ -613,8 +606,7 @@ export function WorkspaceSetupPage() {
             <button
               disabled={step === 1 || saving}
               onClick={() => setStep(prev => Math.max(1, prev - 1))}
-              className="border rounded-lg px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest transition-all text-[var(--pm-on-surface-variant)] disabled:opacity-40 cursor-pointer"
-              style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+              className="border border-border/50 rounded-lg px-5 py-2.5 text-xs font-mono-pm uppercase tracking-widest transition-all text-[var(--pm-on-surface-variant)] disabled:opacity-40 cursor-pointer"
             >
               Back
             </button>
@@ -669,15 +661,15 @@ export function WorkspaceSetupPage() {
         </section>
 
         <aside 
-          className="glass-panel rounded-2xl p-8 shadow-premium h-fit space-y-6 font-geist"
-          style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+          className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-sm h-fit space-y-6 font-geist"
+          style={{ color: 'var(--pm-on-surface)' }}
         >
           <div>
             <p className="text-[10px] font-mono-pm uppercase tracking-[0.25em]" style={{ color: 'var(--pm-on-surface-variant)' }}>Operational Forecaster</p>
             <h3 className="mt-2.5 text-sm font-semibold tracking-tight uppercase" style={{ color: 'var(--pm-on-surface)' }}>Estimated Capacity ETA</h3>
           </div>
           
-          <div className="border rounded-xl p-5 space-y-1 text-center" style={{ borderColor: 'rgba(70,69,84,0.2)', background: 'var(--pm-surface-low)' }}>
+          <div className="border border-border/50 rounded-xl p-5 space-y-1 text-center bg-surface-3/50">
             <span className="block text-[9px] font-mono-pm uppercase" style={{ color: 'var(--pm-on-surface-variant)' }}>40h Initiative Completion</span>
             <span className="block mt-1 text-2xl font-bold tracking-tight" style={{ color: 'var(--pm-tertiary)' }}>{preview.predictedCompletion.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
           </div>

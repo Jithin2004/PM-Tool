@@ -491,15 +491,15 @@ export default function DecisionsPage() {
             <>
               <button
                 onClick={() => setIsDecisionModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-primary rounded-lg text-[10px] font-bold uppercase tracking-wider text-white hover:brightness-110 shadow-sm"
+                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-500 rounded-xl text-xs font-bold uppercase tracking-wider text-white hover:from-blue-500 hover:to-teal-400 shadow-lg hover:shadow-teal-500/25 transition-all"
               >
-                <Plus className="w-3.5 h-3.5" /> Register Decision
+                <Plus className="w-4 h-4" /> Register Decision
               </button>
               <button
                 onClick={() => setIsEventModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-border bg-surface hover:bg-surface-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-text-secondary"
+                className="flex items-center gap-1.5 px-4 py-2 border border-border/50 bg-surface-3/50 hover:bg-surface-3 rounded-xl text-xs font-bold uppercase tracking-wider text-text-secondary hover:text-text-primary transition-all shadow-sm"
               >
-                <Plus className="w-3.5 h-3.5" /> Log Sync Meeting
+                <Plus className="w-4 h-4" /> Log Sync Meeting
               </button>
             </>
           )}
@@ -516,10 +516,10 @@ export default function DecisionsPage() {
           { label: 'Ownership Churn', value: `${analytics.ownershipChurnCount}`, desc: 'Total assignee handoffs' },
           { label: 'Intervention Impact', value: `${analytics.averageInterventionImpact > 0 ? '+' : ''}${analytics.averageInterventionImpact}`, desc: 'Admin intervention score' },
         ].map((kpi, idx) => (
-          <div key={idx} className="bg-surface-2 border border-border p-4 rounded-xl text-center">
-            <span className="text-[9px] font-bold text-text-tertiary uppercase tracking-widest block mb-1">{kpi.label}</span>
-            <span className="text-xl font-extrabold text-text-primary block">{kpi.value}</span>
-            <span className="text-[9px] text-text-quaternary font-medium block mt-1">{kpi.desc}</span>
+          <div key={idx} className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-5 rounded-2xl text-center shadow-sm hover:shadow-md transition-shadow">
+            <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-2">{kpi.label}</span>
+            <span className="text-2xl font-bold bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent block">{kpi.value}</span>
+            <span className="text-[10px] text-text-quaternary font-bold block mt-2">{kpi.desc}</span>
           </div>
         ))}
       </div>
@@ -528,7 +528,7 @@ export default function DecisionsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Decisions Stream */}
         <div className="lg:col-span-7 flex flex-col gap-4">
-          <div className="bg-surface-2 border border-border rounded-xl p-5">
+          <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-accent-primary" />
@@ -591,7 +591,7 @@ export default function DecisionsPage() {
         <div className="lg:col-span-5 flex flex-col gap-5">
           {/* Decision Detail & Action console */}
           {selectedDecision ? (
-            <div className="bg-surface border border-border p-5 rounded-xl flex flex-col gap-4">
+            <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm flex flex-col gap-6">
               <div className="flex items-start justify-between border-b border-border pb-3">
                 <div>
                   <span className="text-[8px] font-mono text-text-quaternary uppercase tracking-widest">{selectedDecision.id}</span>
@@ -889,12 +889,14 @@ export default function DecisionsPage() {
 
       {/* Register Decision Modal */}
       {isDecisionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface-2 border border-border rounded-xl w-full max-w-lg p-6 shadow-xl flex flex-col gap-4">
-            <div className="flex justify-between items-center border-b border-border pb-3">
-              <h3 className="text-sm font-bold uppercase text-text-primary">Register Operational Decision</h3>
-              <button onClick={() => setIsDecisionModalOpen(false)} className="text-text-tertiary hover:text-text-primary">
-                <X className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-bg/80 backdrop-blur-md" onClick={() => setIsDecisionModalOpen(false)} />
+          <div className="relative bg-surface/80 backdrop-blur-xl border border-border/50 rounded-2xl w-full max-w-lg p-8 shadow-2xl shadow-black/50 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 rounded-t-2xl z-50" />
+            <div className="flex justify-between items-center border-b border-border/50 pb-4">
+              <h3 className="text-lg font-bold tracking-tight text-text-primary">Register Operational Decision</h3>
+              <button onClick={() => setIsDecisionModalOpen(false)} className="p-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -1034,12 +1036,14 @@ export default function DecisionsPage() {
 
       {/* Log Sync Meeting Modal */}
       {isEventModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface-2 border border-border rounded-xl w-full max-w-md p-6 shadow-xl flex flex-col gap-4">
-            <div className="flex justify-between items-center border-b border-border pb-3">
-              <h3 className="text-sm font-bold uppercase text-text-primary">Log Coordination Sync Meeting</h3>
-              <button onClick={() => setIsEventModalOpen(false)} className="text-text-tertiary hover:text-text-primary">
-                <X className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-bg/80 backdrop-blur-md" onClick={() => setIsEventModalOpen(false)} />
+          <div className="relative bg-surface/80 backdrop-blur-xl border border-border/50 rounded-2xl w-full max-w-md p-8 shadow-2xl shadow-black/50 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 rounded-t-2xl z-50" />
+            <div className="flex justify-between items-center border-b border-border/50 pb-4">
+              <h3 className="text-lg font-bold tracking-tight text-text-primary">Log Coordination Sync Meeting</h3>
+              <button onClick={() => setIsEventModalOpen(false)} className="p-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
+                <X className="w-5 h-5" />
               </button>
             </div>
 

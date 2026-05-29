@@ -505,7 +505,7 @@ export function LogisticsDashboard({
 
         {/* Tab Selector */}
         {!hideTabs && (
-        <div className="flex overflow-x-auto scrollbar-none bg-white/5 p-1 border border-border-subtle rounded-sm w-full md:w-auto max-w-full" role="tablist" aria-label="Logistics sections">
+        <div className="flex overflow-x-auto scrollbar-none bg-surface-3/50 backdrop-blur-md p-1.5 border border-border/50 rounded-xl w-full md:w-auto max-w-full shadow-sm" role="tablist" aria-label="Logistics sections">
           <button
             onClick={() => setActiveTab('orchestration')}
             role="tab"
@@ -568,21 +568,21 @@ export function LogisticsDashboard({
           >
             {/* Real-time Logistics Telemetry Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <div className="border border-border bg-surface p-5 rounded-sm">
-                <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Queue Congestion</p>
-                <p className="text-2xl font-sans tracking-tight text-indigo-400 font-bold">{orchestrationMetrics.congestion} tasks/node</p>
+              <div className="border border-border/50 bg-surface-3/50 backdrop-blur-md p-6 rounded-2xl shadow-sm hover:shadow-md transition-all">
+                <p className="text-[10px] font-bold uppercase text-text-tertiary tracking-wider mb-2">Queue Congestion</p>
+                <p className="text-3xl font-extrabold tracking-tight text-indigo-400">{orchestrationMetrics.congestion} <span className="text-sm font-medium text-text-tertiary">tasks/node</span></p>
               </div>
-              <div className="border border-border bg-surface p-5 rounded-sm">
-                <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Dispatch Rate</p>
-                <p className="text-2xl font-sans tracking-tight text-cyan-400 font-bold">{orchestrationMetrics.dispatchRate}%</p>
+              <div className="border border-border/50 bg-surface-3/50 backdrop-blur-md p-6 rounded-2xl shadow-sm hover:shadow-md transition-all">
+                <p className="text-[10px] font-bold uppercase text-text-tertiary tracking-wider mb-2">Dispatch Rate</p>
+                <p className="text-3xl font-extrabold tracking-tight text-cyan-400">{orchestrationMetrics.dispatchRate}%</p>
               </div>
-              <div className="border border-border bg-surface p-5 rounded-sm">
-                <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Pipeline Latency</p>
-                <p className="text-2xl font-sans tracking-tight text-accent-secondary font-bold">~{orchestrationMetrics.latency}h/task</p>
+              <div className="border border-border/50 bg-surface-3/50 backdrop-blur-md p-6 rounded-2xl shadow-sm hover:shadow-md transition-all">
+                <p className="text-[10px] font-bold uppercase text-text-tertiary tracking-wider mb-2">Pipeline Latency</p>
+                <p className="text-3xl font-extrabold tracking-tight text-accent-secondary">~{orchestrationMetrics.latency} <span className="text-sm font-medium text-text-tertiary">h/task</span></p>
               </div>
-              <div className="border border-border bg-surface p-5 rounded-sm">
-                <p className="text-[9px] font-mono uppercase text-text-tertiary tracking-wide mb-1">Escalation Index</p>
-                <p className="text-2xl font-sans tracking-tight text-rose-400 font-bold">{orchestrationMetrics.escalationCount} anomalies</p>
+              <div className="border border-border/50 bg-surface-3/50 backdrop-blur-md p-6 rounded-2xl shadow-sm hover:shadow-md transition-all">
+                <p className="text-[10px] font-bold uppercase text-text-tertiary tracking-wider mb-2">Escalation Index</p>
+                <p className="text-3xl font-extrabold tracking-tight text-rose-400">{orchestrationMetrics.escalationCount} <span className="text-sm font-medium text-text-tertiary">anomalies</span></p>
               </div>
             </div>
 
@@ -590,7 +590,7 @@ export function LogisticsDashboard({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Backlog dispatch queue */}
-              <div className="lg:col-span-1 border border-border bg-surface p-5 rounded-sm flex flex-col justify-between h-[34rem]">
+              <div className="lg:col-span-1 border border-border/50 bg-surface-3/50 backdrop-blur-md p-6 rounded-2xl flex flex-col justify-between h-[34rem] shadow-sm">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center pb-3 border-b border-border-subtle">
                     <div>
@@ -677,7 +677,7 @@ export function LogisticsDashboard({
               </div>
 
               {/* Execution nodes map */}
-              <div className="lg:col-span-2 border border-border bg-surface p-5 rounded-sm h-[34rem] overflow-y-auto space-y-4">
+              <div className="lg:col-span-2 border border-border/50 bg-surface-3/50 backdrop-blur-md p-6 rounded-2xl h-[34rem] overflow-y-auto space-y-4 shadow-sm">
                 <div className="flex justify-between items-center pb-3 border-b border-border-subtle">
                   <div>
                     <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Execution Nodes</h4>
@@ -759,7 +759,7 @@ export function LogisticsDashboard({
             className="space-y-8"
           >
             {/* Header controls for Attendance */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center bg-surface border border-border p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm">
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-mono uppercase tracking-wider text-text-tertiary">Tracking Target Date</label>
                 <div className="relative">

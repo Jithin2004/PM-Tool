@@ -281,7 +281,7 @@ export function AdminPanel() {
       {/* ── General Settings Tab ───────────────────────────────── */}
       {tab === 'general' && (
         <div className="space-y-8">
-          <div className="pm-card p-6 lg:w-1/2">
+          <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 lg:w-1/2 shadow-sm">
             <h3 className="font-semibold mb-6 flex items-center gap-2">
               <Icon name="business" size={18} style={{ color: 'var(--pm-primary)' }} />
               Organization Identity
@@ -522,7 +522,7 @@ export function AdminPanel() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {/* Invite Member */}
               <div 
-                className="pm-card p-7 group relative overflow-hidden cursor-pointer"
+                className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-7 group relative overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-shadow"
                 onClick={() => setShowInviteForm(!showInviteForm)}
               >
                 <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all"
@@ -544,7 +544,7 @@ export function AdminPanel() {
 
               {/* Designations */}
               <div 
-                className="pm-card p-7 group relative overflow-hidden cursor-pointer"
+                className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-7 group relative overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-shadow"
                 onClick={() => {
                   setShowDesignations(!showDesignations);
                   if (!showDesignations) {
@@ -570,7 +570,7 @@ export function AdminPanel() {
               </div>
 
               {/* System Overview */}
-              <div className="glass-panel p-7 rounded-xl flex flex-col">
+              <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-7 flex flex-col shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                   <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em]"
                     style={{ color: 'var(--pm-on-surface-variant)' }}>
@@ -614,7 +614,7 @@ export function AdminPanel() {
             
             {showInviteForm && canGovernPlatform && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-                <div className="pm-card p-6">
+                <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
                   <h3 className="font-semibold mb-6 flex items-center gap-2">
                     <Icon name="lock" size={18} style={{ color: 'var(--pm-primary)' }} />
                     Send Invitation
@@ -664,7 +664,7 @@ export function AdminPanel() {
                   </form>
                 </div>
                 
-                <div className="pm-card p-6">
+                <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
                   <h3 className="font-semibold mb-6 flex items-center gap-2">
                     <Icon name="group" size={18} style={{ color: 'var(--pm-tertiary)' }} />
                     Pending Invitations
@@ -699,7 +699,7 @@ export function AdminPanel() {
             )}
 
             {showDesignations && (
-              <div className="pm-card p-6 mt-5 space-y-6">
+              <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 mt-5 space-y-6 shadow-sm">
                 <div className="flex justify-between items-center border-b pb-4" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
                   <div>
                     <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -780,7 +780,7 @@ export function AdminPanel() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {activeTeams.map((team: any) => (
-              <div key={team.id} className="pm-card p-6 group">
+              <div key={team.id} className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 group shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-5">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center"
                     style={{ background: 'var(--pm-surface-highest)', border: '1px solid rgba(70,69,84,0.3)', color: 'var(--pm-primary)' }}>
@@ -873,7 +873,7 @@ export function AdminPanel() {
           </div>
 
           {(showTeamForm || editingTeamId) && (
-            <div className="pm-card p-6 mt-5" id="team-form">
+            <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 mt-5 shadow-sm" id="team-form">
               <h3 className="font-semibold mb-6 flex items-center gap-2">
                 <Icon name="offline_bolt" size={18} style={{ color: 'var(--pm-primary)' }} />
                 {editingTeamId ? 'Update Delivery Unit' : 'Initialize Delivery Unit'}

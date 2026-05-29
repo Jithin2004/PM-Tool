@@ -158,25 +158,25 @@ export function ExecutiveAnalytics() {
 
       {/* Global Learning Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-surface-2 border border-border p-5 rounded-xl">
-          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-1">Execution Trust Rating</span>
-          <p className="text-2xl font-bold text-text-primary">
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-2">Execution Trust Rating</span>
+          <p className="text-3xl font-extrabold text-text-primary">
             {globalMetrics.avgTrust}% <span className="text-xs font-medium text-text-tertiary">Avg across systems</span>
           </p>
         </div>
-        <div className="bg-surface-2 border border-border p-5 rounded-xl">
-          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-1">Operational Memory Log</span>
-          <p className="text-2xl font-bold text-text-primary">
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-2">Operational Memory Log</span>
+          <p className="text-3xl font-extrabold text-text-primary">
             {memory.mitigationOutcomes.length} <span className="text-xs font-medium text-text-tertiary">events registered</span>
           </p>
         </div>
-        <div className="bg-surface-2 border border-border p-5 rounded-xl">
-          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-1">Friction Hotspots</span>
-          <p className="text-2xl font-bold text-signal-warning">{memory.executionPatterns.length} Patterns</p>
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-2">Friction Hotspots</span>
+          <p className="text-3xl font-extrabold text-signal-warning">{memory.executionPatterns.length} Patterns</p>
         </div>
-        <div className="bg-surface-2 border border-border p-5 rounded-xl">
-          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-1">Recurrent Timeline Drift</span>
-          <p className={`text-2xl font-bold ${globalMetrics.activeDrifts > 5 ? 'text-signal-critical' : 'text-text-primary'}`}>
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-2">Recurrent Timeline Drift</span>
+          <p className={`text-3xl font-extrabold ${globalMetrics.activeDrifts > 5 ? 'text-signal-critical' : 'text-text-primary'}`}>
             +{globalMetrics.activeDrifts} Days
           </p>
         </div>
@@ -185,7 +185,7 @@ export function ExecutiveAnalytics() {
       {/* Strategic Trend Console & Tabs */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Stability Trend Chart */}
-        <div className="lg:col-span-7 bg-surface-2 border border-border rounded-xl p-5 flex flex-col justify-between">
+        <div className="lg:col-span-7 bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
           <div>
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <TrendingUp className="w-4 h-4 text-accent-primary" /> Delivery Stability Index
@@ -213,7 +213,7 @@ export function ExecutiveAnalytics() {
         </div>
 
         {/* Strategic Delivery Profile Checklist for PMs/Stakeholders */}
-        <div className="lg:col-span-5 bg-surface-2 border border-border rounded-xl p-5 flex flex-col gap-4">
+        <div className="lg:col-span-5 bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 flex flex-col gap-5 shadow-sm hover:shadow-md transition-shadow">
           <div>
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <Award className="w-4 h-4 text-accent-secondary" /> Project Delivery Behavior Profiles
@@ -261,7 +261,7 @@ export function ExecutiveAnalytics() {
       </div>
 
       {/* Main Console Explorer */}
-      <div className="bg-surface border border-border rounded-xl p-5 shadow-sm">
+      <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
           <div className="flex items-center bg-surface-2 rounded-lg p-1 border border-border">
             {[
@@ -298,7 +298,7 @@ export function ExecutiveAnalytics() {
               const currentBorder = borderStyles[insight.severity] || borderStyles.low;
 
               return (
-                <div key={insight.id} className={`border rounded-xl p-4 bg-surface-2/50 flex flex-col justify-between ${currentBorder}`}>
+                <div key={insight.id} className={`border rounded-2xl p-5 bg-surface-2/50 backdrop-blur-sm flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow ${currentBorder}`}>
                   <div>
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-xs font-bold text-text-primary">{insight.title}</span>
@@ -337,7 +337,7 @@ export function ExecutiveAnalytics() {
                   const currentStatus = statusColors[mo.status] || statusColors.in_progress;
 
                   return (
-                    <div key={mo.id} className="p-3 bg-surface-2 border border-border-subtle rounded-lg flex items-center justify-between gap-4">
+                    <div key={mo.id} className="p-4 bg-surface-2 border border-border-subtle rounded-xl flex items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[9px] font-bold text-text-primary">{mo.mitigationTitle}</span>
@@ -372,7 +372,7 @@ export function ExecutiveAnalytics() {
               const currentTrend = trendStyles[dep.trend] || trendStyles.stable;
 
               return (
-                <div key={dep.dependencyType} className="bg-surface-2 border border-border p-4 rounded-xl flex flex-col justify-between hover:border-border-subtle transition-all">
+                <div key={dep.dependencyType} className="bg-surface-2 border border-border/50 p-5 rounded-2xl flex flex-col justify-between shadow-sm hover:shadow-md transition-all">
                   <div className="flex justify-between items-start">
                     <span className="text-[10px] font-bold text-text-primary uppercase tracking-wider">{dep.dependencyType} channels</span>
                     <span className={`text-[10px] font-bold uppercase ${currentTrend}`}>
@@ -402,7 +402,7 @@ export function ExecutiveAnalytics() {
         {activeTab === 'teams' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {visibleTeamProfiles.map(team => (
-              <div key={team.teamId} className="bg-surface-2 border border-border p-4 rounded-xl flex flex-col justify-between hover:border-border-subtle transition-all">
+              <div key={team.teamId} className="bg-surface-2 border border-border/50 p-5 rounded-2xl flex flex-col justify-between shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-center justify-between border-b border-border-subtle/50 pb-2 mb-3">
                   <h4 className="text-xs font-bold text-text-primary uppercase">{team.teamName}</h4>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
@@ -433,7 +433,7 @@ export function ExecutiveAnalytics() {
 
       {/* Developer specific: Local Recurrent Blocker Warning */}
       {isDeveloper && (
-        <div className="bg-surface-2 border border-border rounded-xl p-5">
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
             <AlertTriangle className="w-4 h-4 text-signal-critical" />
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">Developer Local Recovery Dashboard</h3>

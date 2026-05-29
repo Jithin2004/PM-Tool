@@ -20,27 +20,27 @@ interface WidgetCardProps {
 
 export function WidgetCard({ title, children, loading, error, empty, emptyMessage, emptyAction, action, className = '' }: WidgetCardProps) {
   return (
-    <motion.div variants={slideUp} initial="hidden" animate="visible" className={`bg-surface border border-border ${className}`}>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-        <h3 className="text-[10px] uppercase font-sans tracking-tight tracking-wider text-text-secondary">{title}</h3>
+    <motion.div variants={slideUp} initial="hidden" animate="visible" className={`bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden ${className}`}>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-surface/50">
+        <h3 className="text-xs font-bold tracking-widest text-text-secondary uppercase">{title}</h3>
         {action && <div className="flex items-center gap-2">{action}</div>}
       </div>
-      <div className="p-4">
+      <div className="p-5">
         {loading ? (
-          <div className="space-y-2">
-            <div className="h-3 bg-white/5 rounded transition-opacity duration-300" />
-            <div className="h-3 bg-white/5 rounded w-3/4 transition-opacity duration-300" />
-            <div className="h-3 bg-white/5 rounded w-1/2 transition-opacity duration-300" />
+          <div className="space-y-3">
+            <div className="h-3 bg-surface-3 rounded-full transition-opacity duration-300" />
+            <div className="h-3 bg-surface-3 rounded-full w-3/4 transition-opacity duration-300" />
+            <div className="h-3 bg-surface-3 rounded-full w-1/2 transition-opacity duration-300" />
           </div>
         ) : error ? (
-          <div className="text-[11px] text-signal-critical/70 font-mono">{error}</div>
+          <div className="text-xs text-red-400 font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-xl">{error}</div>
         ) : empty ? (
-          <div className="text-center py-6">
-            <p className="text-[11px] font-mono text-text-quaternary mb-3">{emptyMessage || 'No data'}</p>
+          <div className="text-center py-8">
+            <p className="text-xs font-bold text-text-quaternary mb-4">{emptyMessage || 'No data available'}</p>
             {emptyAction && (
               <button
                 onClick={emptyAction.onClick}
-                className="text-[10px] uppercase font-medium tracking-wider text-text-tertiary hover:text-text-secondary transition-colors border border-border px-3 py-1.5 hover:border-border"
+                className="text-[10px] font-bold tracking-wider text-blue-400 hover:text-blue-300 transition-all border border-blue-500/20 rounded-lg px-3 py-1.5 hover:bg-blue-500/10 uppercase shadow-inner"
               >
                 {emptyAction.label} →
               </button>

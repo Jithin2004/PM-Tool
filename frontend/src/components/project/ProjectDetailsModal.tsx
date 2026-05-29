@@ -383,8 +383,15 @@ export function ProjectDetailsModal({
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-bg backdrop-blur-md" />
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-surface border border-border w-full max-w-2xl overflow-y-auto max-h-[90vh] md:max-h-none shadow-2xl rounded-sm my-auto">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-bg/80 backdrop-blur-md" />
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+        animate={{ opacity: 1, scale: 1, y: 0 }} 
+        exit={{ opacity: 0, scale: 0.95, y: 20 }} 
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="relative bg-surface/80 backdrop-blur-xl border border-border/50 w-full max-w-2xl overflow-y-auto max-h-[90vh] md:max-h-none shadow-2xl shadow-black/50 rounded-2xl my-auto"
+      >
+        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 z-50" />
 
         {showLogs && (
           <div className="absolute inset-0 z-50 bg-surface flex flex-col">
@@ -631,15 +638,17 @@ export function ProjectDetailsModal({
 
         <div className="p-8">
           <div className="flex justify-between items-start mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <BrainCircuit className="w-4 h-4 text-text-secondary" />
-                <span className="text-[10px] font-mono text-text-secondary uppercase tracking-[0.2em]">Project Overview</span>
+            <div className="flex gap-4 items-center">
+              <div className="w-12 h-12 bg-teal-500/10 border border-teal-500/20 rounded-xl flex items-center justify-center shadow-inner shrink-0">
+                <BrainCircuit className="w-6 h-6 text-teal-400" />
               </div>
-              <h3 className="text-2xl font-medium tracking-tight">Predictive Workspace: {project.name}</h3>
+              <div>
+                <h3 className="text-2xl font-bold tracking-tight text-text-primary">Predictive Workspace: {project.name}</h3>
+                <span className="text-[11px] font-bold text-text-tertiary uppercase tracking-widest">Project Overview</span>
+              </div>
             </div>
-            <button onClick={onClose} className="p-2 border border-border hover:bg-white/5 transition-colors">
-              <Plus className="w-5 h-5 rotate-45 text-text-secondary" />
+            <button onClick={onClose} className="p-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
+              <Plus className="w-5 h-5 rotate-45" />
             </button>
           </div>
 
@@ -669,22 +678,22 @@ export function ProjectDetailsModal({
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Project Designation</label>
-                  <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-bg border border-border h-11 px-4 font-mono text-sm focus:border-white/40 outline-none" />
+                  <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2 flex items-center gap-2">Project Designation <span className="w-1.5 h-1.5 rounded-full bg-teal-500" /></label>
+                  <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 outline-none text-text-primary focus:bg-surface-3 transition-all" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Status</label>
-                    <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Status</label>
+                    <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none hover:bg-surface-3 transition-colors cursor-pointer appearance-none">
                       <option value="planning">PLANNING</option>
-                      <option value="in-progress">IN_PROGRESS</option>
+                      <option value="in-progress">IN PROGRESS</option>
                       <option value="review">REVIEW</option>
                       <option value="deployed">DEPLOYED</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Priority</label>
-                    <select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Priority</label>
+                    <select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none hover:bg-surface-3 transition-colors cursor-pointer appearance-none">
                       <option value="low">LOW</option>
                       <option value="medium">MEDIUM</option>
                       <option value="high">HIGH</option>
@@ -693,17 +702,17 @@ export function ProjectDetailsModal({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Proposed Start</label>
-                    <input type="date" value={proposedStartDate} onChange={e => setProposedStartDate(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
+                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Proposed Start</label>
+                    <input type="date" value={proposedStartDate} onChange={e => setProposedStartDate(e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none transition-colors" />
                   </div>
                   <div>
-                    <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Client Deadline</label>
-                    <input type="date" value={clientDeadline} onChange={e => setClientDeadline(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none" />
+                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Client Deadline</label>
+                    <input type="date" value={clientDeadline} onChange={e => setClientDeadline(e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none transition-colors" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase font-mono text-text-secondary mb-2">Assign Team</label>
-                  <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-bg border border-border h-11 px-3 font-mono text-xs focus:border-white/40 outline-none">
+                  <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Assign Team</label>
+                  <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none hover:bg-surface-3 transition-colors cursor-pointer appearance-none">
                     <option value="">UNALLOCATED</option>
                     {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
@@ -758,36 +767,36 @@ export function ProjectDetailsModal({
               </div>
 
               <div className="space-y-6">
-                <div className="bg-white/5 border border-border p-6 rounded-sm relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-12 h-12" /></div>
-                  <h4 className="text-[10px] font-sans tracking-tight text-text-secondary uppercase tracking-wide mb-4">Predictive Outcome</h4>
+                <div className="bg-surface-3/30 border border-border/50 p-6 rounded-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-3 opacity-10"><Activity className="w-24 h-24" /></div>
+                  <h4 className="text-[11px] font-bold tracking-widest text-text-secondary uppercase mb-6 flex items-center gap-2">Predictive Outcome</h4>
 
                   {hasAllData ? (
                     <>
-                      <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="bg-white/5 p-3">
-                          <p className="text-[10px] font-mono text-text-secondary uppercase mb-1">Total Real Hours</p>
-                          <p className="text-xl font-sans tracking-tight">{expectedRealHours.toFixed(1)}h</p>
+                      <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
+                        <div className="bg-surface-3/50 p-4 rounded-xl border border-border/30">
+                          <p className="text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-2">Total Real Hours</p>
+                          <p className="text-2xl font-bold tracking-tight text-white">{expectedRealHours.toFixed(1)}<span className="text-sm text-text-tertiary ml-1">h</span></p>
                         </div>
-                        <div className="bg-white/5 p-3">
-                          <p className="text-[10px] font-mono text-text-secondary uppercase mb-1">Working Days</p>
-                          <p className="text-xl font-sans tracking-tight">{calendarExpected}d</p>
+                        <div className="bg-surface-3/50 p-4 rounded-xl border border-border/30">
+                          <p className="text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-2">Working Days</p>
+                          <p className="text-2xl font-bold tracking-tight text-white">{calendarExpected}<span className="text-sm text-text-tertiary ml-1">d</span></p>
                         </div>
-                        <div className="bg-surface-3 p-3 border border-border">
-                          <p className="text-[10px] font-mono text-signal-info uppercase mb-1">Remaining ETA</p>
-                          <p className="text-xl font-sans tracking-tight text-signal-info">{etaRemainingDays.toFixed(1)}d</p>
+                        <div className="bg-blue-500/10 p-4 rounded-xl border border-blue-500/20">
+                          <p className="text-[10px] font-bold tracking-widest text-blue-400 uppercase mb-2">Remaining ETA</p>
+                          <p className="text-2xl font-bold tracking-tight text-blue-300">{etaRemainingDays.toFixed(1)}<span className="text-sm text-blue-400/50 ml-1">d</span></p>
                         </div>
-                        <div className={`p-3 border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-signal-critical-bg border-red-500/20' : 'bg-signal-safe-bg border-border'}`}>
-                          <p className={`text-[10px] font-mono uppercase mb-1 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-signal-critical' : 'text-signal-safe'}`}>Variance</p>
-                          <p className={`text-xl font-mono ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-signal-critical' : 'text-signal-safe'}`}>
+                        <div className={`p-4 rounded-xl border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+                          <p className={`text-[10px] font-bold tracking-widest uppercase mb-2 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-emerald-400'}`}>Variance</p>
+                          <p className={`text-xl font-bold ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-300' : 'text-emerald-300'}`}>
                             {deadlineVariance !== null ? `${Math.abs(deadlineVariance)}d ${deadlineVariance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
                           </p>
                         </div>
                       </div>
 
-                      <div className="mb-6">
-                        <p className="text-[10px] font-mono text-text-secondary uppercase mb-2">Predicted End</p>
-                        <p className="text-lg font-sans tracking-tight text-text-primary">{etaCompletionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <div className="mb-6 bg-surface-3/50 border border-border/50 rounded-xl p-4">
+                        <p className="text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-2">Predicted End</p>
+                        <p className="text-lg font-bold tracking-tight text-text-primary">{etaCompletionDate.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                       </div>
                     </>
                   ) : (

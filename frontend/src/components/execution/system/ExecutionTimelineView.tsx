@@ -253,7 +253,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Continuity Card */}
-        <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-2">
             <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Continuity Score</span>
             <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${continuityGrade.color}`}>
@@ -268,7 +268,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
         </div>
 
         {/* Operational Drift Card */}
-        <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-2">
             <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Operational Drift</span>
             {timeline.driftDays > 0 ? (
@@ -291,7 +291,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
         </div>
 
         {/* Wait-State Latency Card */}
-        <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-2">
             <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Wait-Time Latency</span>
             <span className="text-xs font-bold text-text-primary">{waitPercentage}% Ratio</span>
@@ -306,7 +306,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
         </div>
 
         {/* Coordination Overhead */}
-        <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-2">
             <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Overhead Density</span>
             <span className="text-xs font-bold text-text-primary">{timeline.flows.reduce((s, f) => s + f.interruptionCount, 0)} Interruptions</span>
@@ -322,7 +322,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
       </div>
 
       {/* Timeline Console Chart */}
-      <div className="bg-surface border border-border rounded-xl flex flex-col overflow-hidden shadow-sm">
+      <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl flex flex-col overflow-hidden shadow-sm">
         <div className="overflow-x-auto scrollbar-thin">
           <div className="min-w-[800px] relative">
             {/* Timeline Header (Ruler) */}
@@ -479,7 +479,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
 
       {/* Dependency Cascades */}
       {timeline.propagations.length > 0 && (
-        <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
+        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
             <Link2 className="w-4 h-4 text-signal-critical" />
             <h4 className="text-sm font-bold text-text-primary uppercase tracking-wider">Dependency Delay Cascade Network</h4>
@@ -507,7 +507,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
       )}
 
       {/* Wait-States Breakdowns */}
-      <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
+      <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
           <Activity className="w-4 h-4 text-accent-secondary" />
           <h4 className="text-sm font-bold text-text-primary uppercase tracking-wider">Wait-State Latency Intelligence</h4>
@@ -516,8 +516,8 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
           {Object.entries(categoryStats).map(([cat, stat]) => {
             const hasOverhead = stat.count > 0;
             return (
-              <div key={cat} className={`border rounded-xl p-4 text-center transition-all ${
-                hasOverhead ? 'bg-surface border-border' : 'bg-surface/30 border-border-subtle/50 opacity-40'
+              <div key={cat} className={`border rounded-xl p-5 text-center transition-all shadow-sm hover:shadow-md ${
+                hasOverhead ? 'bg-surface border-border/50' : 'bg-surface-3/30 border-border-subtle/50 opacity-40'
               }`}>
                 <p className="text-[9px] font-bold text-text-tertiary uppercase tracking-widest mb-1">{cat}</p>
                 <p className="text-lg font-bold text-text-primary">{stat.hours.toFixed(1)}h</p>
