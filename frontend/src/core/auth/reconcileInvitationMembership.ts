@@ -5,7 +5,6 @@ import { isProductKeyVerified } from '../../lib/productKey';
 export type ReconcileOutcome =
   | 'existing_member'
   | 'invitation_accepted'
-  | 'first_org_bootstrap'
   | 'product_key_override'
   | 'uninvited'
   | 'error';
@@ -116,46 +115,6 @@ async function upsertMemberFromInvitation(
   return data as Record<string, unknown>;
 }
 
-export async function isFreshOrganization(authUserId: string): Promise<boolean> {
-  const { data, count, error } = await supabase
-    .from('users')
-    .select('id', { count: 'exact' });
-
-  console.log("[isFreshOrganization]:", { count, error, data });
-  if (error || count === null) return false;
-  
-  // A fresh organization has 0 users (before signup) or 1 user (themselves, via auto-create trigger)
-  if (count === 0) return true;
-  if (count === 1 && data && data.length === 1 && data[0].id === authUserId) return true;
-  
-  return false;
-}
-
-async function bootstrapFirstOrganizationUser(
-  input: ReconcileInvitationInput,
-): Promise<Record<string, unknown> | null> {
-  const { data, error } = await supabase
-    .from('users')
-    .upsert({
-      id: input.authUserId,
-      email: input.email,
-      workspace_id: null,
-      role: 'pending-workspace-setup',
-      full_name: input.fullName,
-      avatar_url: input.avatarUrl ?? null,
-      availability_factor: 1,
-    }, { onConflict: 'id' })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('[reconcileInvitationMembership] first-org bootstrap failed:', error);
-    return null;
-  }
-
-  return data as Record<string, unknown>;
-}
-
 async function upsertSuperAdmin(
   input: ReconcileInvitationInput,
 ): Promise<{ userRow: Record<string, unknown> | null; workspaceId: string | null; role: UserRole }> {
@@ -232,19 +191,6 @@ export async function reconcileInvitationMembership(
       userRow,
       workspaceId: invite.workspace_id,
       role: invite.role as UserRole,
-    };
-  }
-
-  if (await isFreshOrganization(input.authUserId)) {
-    const userRow = await bootstrapFirstOrganizationUser(input);
-    if (!userRow) {
-      return { outcome: 'error', userRow: null, workspaceId: null, role: null, error: 'bootstrap_failed' };
-    }
-    return {
-      outcome: 'first_org_bootstrap',
-      userRow,
-      workspaceId: null,
-      role: 'pending-workspace-setup',
     };
   }
 
@@ -328,11 +274,6 @@ export async function reconcileWorkspaceMembership(
       console.warn("[reconcileWorkspaceMembership] inviteUpsertError:", inviteUpsertError);
       return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
     }
-  }
-
-  if (await isFreshOrganization(authUserId)) {
-    console.log("[reconcileWorkspaceMembership] user is first org member. Granting needs_workspace_setup.");
-    return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
   }
 
   if (isProductKeyVerified()) {
