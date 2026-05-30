@@ -3,11 +3,12 @@ import {
   LayoutDashboard, Briefcase, BookOpen, ListTodo, Route,
   BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
   Activity, Shield, Zap, Settings, Link2, FileText,
-  Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork
+  Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork,
+  Radar
 } from 'lucide-react';
 
 import {
-  Radar, TreeStructure, ArchiveBox, Kanban, Timeline,
+  TreeStructure, Archive, Kanban, Calendar,
   ChartLineUp, Compass, Broadcast, Binoculars, Files,
   Notebook, UsersThree, GitBranch as PhosphorGitBranch
 } from '@phosphor-icons/react';
@@ -19,11 +20,12 @@ const ROUTE_ICON_MAP: Record<string, React.ComponentType<any>> = {
   BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
   Activity, Shield, Zap, Settings, Link2, FileText,
   Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork,
+  Radar,
 
   // Resolve PM Enterprise Command Center Set (Phosphor)
-  TreeStructure, ArchiveBox, Kanban, Timeline,
+  TreeStructure, ArchiveBox: Archive, Kanban, Timeline: Calendar,
   ChartLineUp, Compass, Broadcast, Binoculars, Files,
-  Notebook, UsersThree, PhosphorGitBranch, Radar
+  Notebook, UsersThree, PhosphorGitBranch
 };
 
 export interface RouteIconProps {
