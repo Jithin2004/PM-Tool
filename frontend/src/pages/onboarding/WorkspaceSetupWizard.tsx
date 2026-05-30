@@ -30,6 +30,7 @@ export function WorkspaceSetupWizard() {
   const [capacity, setCapacity] = useState('Standard');
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
   
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
@@ -62,8 +63,11 @@ export function WorkspaceSetupWizard() {
         await refreshProfile();
         window.location.href = '/overview';
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      if (err?.code === '42P01' || err?.message?.includes('relation "workspaces" does not exist')) {
+        setDbError('Database not initialized. You must execute RESOLVE_PM_PRODUCTION_MASTER_SCHEMA.sql in your Supabase SQL Editor.');
+      }
     } finally {
       setLoading(false);
     }
@@ -83,8 +87,11 @@ export function WorkspaceSetupWizard() {
         await refreshProfile();
         window.location.href = '/overview';
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      if (err?.code === '42P01' || err?.message?.includes('relation "workspaces" does not exist')) {
+        setDbError('Database not initialized. You must execute RESOLVE_PM_PRODUCTION_MASTER_SCHEMA.sql in your Supabase SQL Editor.');
+      }
     } finally {
       setDemoLoading(false);
     }
@@ -129,6 +136,21 @@ export function WorkspaceSetupWizard() {
 
           <h2 className="text-2xl font-bold mb-6 text-[var(--pm-on-surface)]">Guided Setup</h2>
           
+          {dbError && (
+            <div className="mb-6 p-4 border border-red-500/50 bg-red-500/10 rounded-lg animate-in fade-in">
+              <h3 className="text-red-400 font-bold mb-2 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">!</span>
+                Database Missing
+              </h3>
+              <p className="text-sm text-red-200 leading-relaxed">
+                {dbError}
+              </p>
+              <p className="text-xs text-red-300 mt-2 font-mono">
+                Please copy the contents of <strong>RESOLVE_PM_PRODUCTION_MASTER_SCHEMA.sql</strong> and run it in your Supabase project's SQL Editor to create the necessary tables.
+              </p>
+            </div>
+          )}
+
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
               <label className="block text-sm font-semibold">Step 1: Workspace Name</label>
