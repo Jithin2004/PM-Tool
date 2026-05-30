@@ -83,6 +83,7 @@ export function EmailChipsInput({ value, onChange, placeholder }: EmailChipsInpu
             <select
               value={chip.role}
               onChange={(e) => updateRole(chip.email, e.target.value as EmailChip['role'])}
+              onClick={(e) => e.stopPropagation()}
               className="text-[10px] uppercase font-semibold text-[var(--pm-primary)] bg-[var(--pm-primary)]/10 hover:bg-[var(--pm-primary)]/20 px-1.5 py-0.5 rounded-full ml-1 border-none outline-none cursor-pointer appearance-none text-center min-w-[70px] transition-colors focus:ring-1 focus:ring-[var(--pm-primary)]"
               aria-label={`Select role for ${chip.email}`}
             >

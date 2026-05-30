@@ -1,4 +1,4 @@
-BEGIN;
+
 
 -- =============================================================
 -- RESOLVE PM — PRODUCTION MASTER DATABASE SCHEMA
@@ -17,7 +17,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- -------------------------------------------------------------
 
 -- Triggers
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+-- DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users; -- Removed to prevent permission errors in Supabase SQL Editor
 
 -- Functions
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
@@ -1360,4 +1360,4 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 
-COMMIT;
+
