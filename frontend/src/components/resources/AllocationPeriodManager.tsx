@@ -102,7 +102,7 @@ export function AllocationPeriodManager() {
                 <span className="font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{user?.full_name || 'Unknown'}</span>
                 <span style={{ color: 'var(--pm-on-surface-variant)' }}>{project?.name || 'Unknown'}</span>
                 <span className="font-mono-pm uppercase text-[10px] tracking-widest">{p.allocation_percent}%</span>
-                <span className="font-mono-pm text-[10px] text-gray-500">{p.start_date} to {p.end_date}</span>
+                <span className="font-mono-pm text-[10px] text-text-tertiary">{p.start_date} to {p.end_date}</span>
               </div>
               {canManage && (
                 <button onClick={() => handleDelete(p.id)} className="p-1 rounded hover:bg-red-500/10 text-red-500">

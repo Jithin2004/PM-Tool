@@ -238,7 +238,7 @@ export function CalendarIntelligencePanel() {
               <button 
                 onClick={handleSyncNow} 
                 disabled={syncing || !workspace?.settings?.country} 
-                className="px-5 py-2 bg-white text-black rounded-lg text-[12px] font-bold hover:bg-neutral-200 transition-all uppercase tracking-widest disabled:opacity-50"
+                className="px-5 py-2 bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] rounded-lg text-[12px] font-bold hover:opacity-90 transition-all uppercase tracking-widest disabled:opacity-50"
               >
                 {syncing ? 'Syncing Pipeline...' : 'Force Global Sync'}
               </button>

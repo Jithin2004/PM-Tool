@@ -419,7 +419,7 @@ export function WorkspaceSetupWizard() {
               disabled={!selectedTemplate || demoLoading}
               className={`w-full p-3.5 rounded-xl font-medium text-sm flex justify-center items-center gap-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-surface-3 ${
                 selectedTemplate 
-                  ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-md' 
+                  ? 'bg-[var(--pm-tertiary)] text-[var(--pm-on-tertiary)] hover:opacity-90 shadow-md' 
                   : 'bg-surface-4 text-[var(--pm-on-surface-variant)] border border-border/50 cursor-not-allowed'
               }`}
             >

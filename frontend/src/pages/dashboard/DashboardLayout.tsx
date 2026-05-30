@@ -972,6 +972,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 {items.map(item => {
                   const active = isSidebarItemActive(item.path);
                   const isDecisions = item.id === 'decisions';
+                  const groupColor = group === 'core' ? '#4f46e5' : group === 'intelligence' ? '#14b8a6' : group === 'resources' ? '#f59e0b' : 'var(--pm-primary)';
+                  const groupBg = group === 'core' ? 'rgba(79, 70, 229, 0.1)' : group === 'intelligence' ? 'rgba(20, 184, 166, 0.1)' : group === 'resources' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(67,70,83,0.5)';
                   return (
                     <button
                       key={item.id}
@@ -982,14 +984,14 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       }}
                       className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-lg text-[12px] font-medium transition-all duration-150`}
                       style={active ? {
-                        background: 'rgba(67,70,83,0.5)',
-                        color: 'var(--pm-primary)',
-                        borderLeft: isSidebarCollapsed ? '' : '3px solid var(--pm-primary)',
+                        background: groupBg,
+                        color: groupColor,
+                        borderLeft: isSidebarCollapsed ? '' : `3px solid ${groupColor}`,
                         paddingLeft: isSidebarCollapsed ? '' : '9px',
                       } : {
                         color: 'var(--pm-on-surface-variant)',
                       }}
-                      onMouseEnter={e => { if (!active) { (e.currentTarget as any).style.background = 'rgba(51,53,55,0.4)'; (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; } }}
+                      onMouseEnter={e => { if (!active) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; } }}
                       onMouseLeave={e => { if (!active) { (e.currentTarget as any).style.background = ''; (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; } }}
                     >
                       {renderRouteIcon(item.iconName)}
@@ -1111,6 +1113,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <div className="space-y-1">
                         {items.map(item => {
                           const active = isSidebarItemActive(item.path);
+                          const groupColor = group === 'core' ? '#4f46e5' : group === 'intelligence' ? '#14b8a6' : group === 'resources' ? '#f59e0b' : 'var(--pm-primary)';
+                          const groupBg = group === 'core' ? 'rgba(79, 70, 229, 0.1)' : group === 'intelligence' ? 'rgba(20, 184, 166, 0.1)' : group === 'resources' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(67,70,83,0.5)';
                           return (
                             <button
                               key={item.id}
@@ -1120,10 +1124,16 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                                 setMobileSidebarOpen(false);
                               }}
                               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                                active
-                                  ? 'bg-primary-gradient text-text-primary shadow-md'
-                                  : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                                active ? 'shadow-sm' : 'hover:bg-surface-high hover:text-text-primary'
                               }`}
+                              style={active ? {
+                                background: groupBg,
+                                color: groupColor,
+                                borderLeft: `3px solid ${groupColor}`,
+                                paddingLeft: '9px',
+                              } : {
+                                color: 'var(--pm-on-surface-variant)',
+                              }}
                             >
                               {renderRouteIcon(item.iconName)}
                               {item.label}

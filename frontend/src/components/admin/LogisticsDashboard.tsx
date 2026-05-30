@@ -503,7 +503,7 @@ export function LogisticsDashboard({
             aria-selected={activeTab === 'orchestration'}
             aria-controls="tabpanel-orchestration"
             id="tab-orchestration"
-            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-wide transition-all ${activeTab === 'orchestration' ? 'bg-white text-black font-semibold' : 'text-text-tertiary hover:text-text-primary'}`}
+            className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-wide transition-all ${activeTab === 'orchestration' ? 'bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] font-semibold' : 'text-text-tertiary hover:text-text-primary'}`}
           >
             Dispatch &amp; Routing
           </button>

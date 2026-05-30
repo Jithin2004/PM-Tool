@@ -69,7 +69,7 @@ function groupByOperationalZone(signals: CollaborationSignal[]): ZoneActivity[] 
 }
 
 function getZoneIntensity(total: number, maxTotal: number): string {
-  if (maxTotal === 0) return 'bg-gray-50';
+  if (maxTotal === 0) return 'bg-surface-2';
   const ratio = total / maxTotal;
   if (ratio > 0.66) return 'bg-indigo-100';
   if (ratio > 0.33) return 'bg-indigo-50';

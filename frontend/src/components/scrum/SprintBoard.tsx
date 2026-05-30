@@ -623,7 +623,7 @@ export function SprintBoard({
                     <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">End</label><input type="date" value={sprintEnd} onChange={e => setSprintEnd(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none" /></div>
                   </div>
                   <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Committed Velocity (SP)</label><input type="number" value={sprintVelocity} onChange={e => setSprintVelocity(Number(e.target.value))} className="w-full bg-bg border border-border h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" /></div>
-                  <button type="submit" className="w-full bg-white text-black h-10 font-semibold uppercase tracking-wide text-[10px] hover:bg-neutral-200 transition-all cursor-pointer">Create Sprint</button>
+                  <button type="submit" className="w-full bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] h-10 font-semibold uppercase tracking-wide text-[10px] hover:opacity-90 transition-all cursor-pointer">Create Sprint</button>
                 </form>
               </motion.div>
             </div>

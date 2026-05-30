@@ -129,7 +129,7 @@ export function TaskCard({
             </div>
             <div className="flex items-center gap-1.5">
               {substate && (
-                <span className="bg-slate-800/80 text-indigo-300 border border-slate-700/60 text-[8px] font-semibold font-mono-pm px-1 py-0.5 rounded uppercase leading-none">
+                <span className="bg-[var(--pm-surface-high)] text-[var(--pm-primary)] border border-border text-[8px] font-semibold font-mono-pm px-1 py-0.5 rounded uppercase leading-none">
                   {substate.replace(/_/g, ' ')}
                 </span>
               )}

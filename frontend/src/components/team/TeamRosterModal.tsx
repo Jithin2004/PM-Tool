@@ -317,7 +317,7 @@ export function TeamRosterModal({
               <button
                 key={filter}
                 onClick={() => setCapacityFilter(filter)}
-                className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wide transition-all border whitespace-nowrap ${capacityFilter === filter ? 'bg-white text-black font-semibold border-white' : 'border-border text-text-tertiary hover:text-text-primary hover:bg-white/5'}`}
+                className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wide transition-all border whitespace-nowrap ${capacityFilter === filter ? 'bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] font-semibold border-transparent' : 'border-border text-text-tertiary hover:text-text-primary hover:bg-white/5'}`}
               >
                 {filter}
               </button>

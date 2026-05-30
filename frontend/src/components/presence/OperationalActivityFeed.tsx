@@ -43,7 +43,7 @@ export function OperationalActivityFeed({ feed, signals, maxItems = 10 }: Operat
   if (merged.length === 0) return null;
 
   return (
-    <div className="text-xs text-gray-500 space-y-1">
+    <div className="text-xs text-text-tertiary space-y-1">
       {merged.map(item => (
         <div key={item.id} className="flex items-start gap-2 py-1">
           <PresenceIndicator state={item.state} className="mt-1 shrink-0" />

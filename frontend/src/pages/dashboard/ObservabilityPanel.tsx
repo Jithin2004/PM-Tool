@@ -10,7 +10,7 @@ export const ObservabilityPanel: React.FC = () => {
 
   if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
     return (
-      <div className="flex h-full items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex h-full items-center justify-center bg-surface">
         <div className="text-center text-gray-500">
           <ShieldAlert className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>You do not have clearance to view operational telemetry.</p>
@@ -38,7 +38,7 @@ export const ObservabilityPanel: React.FC = () => {
   };
 
   const MetricCard = ({ title, value, subtitle, icon: Icon }: any) => (
-    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-xl p-5 shadow-sm">
+    <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
       <div className="flex justify-between items-start mb-2">
         <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">{title}</span>
         <Icon className="w-4 h-4 text-gray-400" />
@@ -60,7 +60,7 @@ export const ObservabilityPanel: React.FC = () => {
             Executive-grade operational telemetry and incident governance.
           </p>
         </div>
-        <div className="flex items-center gap-3 bg-white dark:bg-gray-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="flex items-center gap-3 bg-surface-2 px-4 py-2 rounded-lg border border-border shadow-sm">
           <span className="text-sm font-medium text-gray-600 dark:text-gray-300">System State</span>
           <div className="flex items-center gap-2">
             <StatusIcon status={health.status} />
@@ -101,7 +101,7 @@ export const ObservabilityPanel: React.FC = () => {
         {/* Component Health */}
         <div className="col-span-1 space-y-6">
           <h2 className="text-lg font-medium text-gray-900 dark:text-white">Component Health</h2>
-          <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-surface-2 border border-border rounded-xl overflow-hidden shadow-sm">
             <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
               {[
                 { label: 'API Services', status: health.apiHealth, icon: Server },
@@ -110,7 +110,7 @@ export const ObservabilityPanel: React.FC = () => {
                 { label: 'State Sync', status: health.syncHealth, icon: RefreshCcw },
                 { label: 'Audit Verification', status: audit.status, icon: ShieldCheck }
               ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                <div key={i} className="flex items-center justify-between p-4 hover:bg-surface-3 transition-colors">
                   <div className="flex items-center gap-3">
                     <item.icon className="w-5 h-5 text-gray-400" />
                     <span className="font-medium text-gray-700 dark:text-gray-300">{item.label}</span>
@@ -128,7 +128,7 @@ export const ObservabilityPanel: React.FC = () => {
         {/* Incident Timeline */}
         <div className="col-span-2 space-y-6">
           <h2 className="text-lg font-medium text-gray-900 dark:text-white">Incident Timeline</h2>
-          <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-xl p-6 shadow-sm min-h-[400px]">
+          <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm min-h-[400px]">
             {incidents.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-gray-400 text-center">
                 <CheckCircle className="w-12 h-12 mb-4 text-emerald-100 dark:text-emerald-900/50" />
@@ -146,7 +146,7 @@ export const ObservabilityPanel: React.FC = () => {
                       exit={{ opacity: 0, scale: 0.95 }}
                       className={`relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active`}
                     >
-                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-gray-800 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 ${
+                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-surface shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 ${
                         incident.severity === 'critical' ? 'bg-rose-500' :
                         incident.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
                       }`}>
@@ -155,7 +155,7 @@ export const ObservabilityPanel: React.FC = () => {
                          <Info className="w-4 h-4 text-white" />}
                       </div>
                       
-                      <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 rounded-xl shadow-sm">
+                      <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-surface-2 border border-border p-4 rounded-xl shadow-sm">
                         <div className="flex justify-between items-start mb-1">
                           <span className={`text-xs font-semibold uppercase tracking-wider ${
                             incident.severity === 'critical' ? 'text-rose-600 dark:text-rose-400' :
@@ -171,7 +171,7 @@ export const ObservabilityPanel: React.FC = () => {
                         <p className="text-sm text-gray-500 dark:text-gray-400">{incident.causality}</p>
                         
                         {!incident.resolved && (
-                          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50 flex justify-end">
+                          <div className="mt-3 pt-3 border-t border-border flex justify-end">
                             <button 
                               onClick={() => resolveIncident(incident.id)}
                               className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 rounded-md transition-colors"

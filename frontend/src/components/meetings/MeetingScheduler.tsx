@@ -130,7 +130,7 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
                   </div>
                 </div>
 
-                <button type="submit" className="w-full bg-white text-black h-10 font-semibold uppercase tracking-wide text-[10px] hover:bg-neutral-200 transition-all cursor-pointer">
+                <button type="submit" className="w-full bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] h-10 font-semibold uppercase tracking-wide text-[10px] hover:opacity-90 transition-all cursor-pointer">
                   Schedule
                 </button>
               </form>

@@ -85,7 +85,7 @@ export function TransitionImpactPreview({ currentMode, targetMode, hasTasks, has
       <div className="space-y-0.5">
         {changes.map(c => (
           <div key={c.label} className="flex items-start gap-2 py-0.5">
-            <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${c.willChange ? 'bg-blue-400' : 'bg-gray-600'}`} />
+            <span className={`mt-1 w-1.5 h-1.5 rounded-full shrink-0 ${c.willChange ? 'bg-blue-400' : 'bg-surface-highest'}`} />
             <div className="min-w-0">
               <span className="text-[10px] font-mono text-text-tertiary">{c.label}</span>
               <span className="text-[9px] font-mono text-text-quaternary ml-1">— {c.description}</span>

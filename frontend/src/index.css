@@ -256,25 +256,25 @@ body {
 }
 
 /* ==========================================
-   Slate Light Premium Theme Token Overrides
+   Resolve PM Executive Light Theme Token Overrides
    ========================================== */
 .light {
   background-color: var(--bg) !important;
   color: var(--text-primary) !important;
 
-  /* Design token variables — Premium Slate Light Theme */
-  --bg: #f1f5f9; /* Slate 100 - brightish but not plain white */
-  --surface: #ffffff;
-  --surface-2: #f8fafc; /* Slate 50 for cards */
-  --surface-3: #e2e8f0; /* Slate 200 for elevated/inputs */
+  /* Design token variables — Executive Warm Light Theme */
+  --bg: #F4F2EE; /* Sand/Paper Background */
+  --surface: #ECE8E1; /* Stone Sidebar */
+  --surface-2: #FBFAF8; /* Ivory Cards */
+  --surface-3: #F1EEE8; /* Warm Secondary Surface */
   
-  --border: #cbd5e1; /* Slate 300 */
-  --border-subtle: #e2e8f0; /* Slate 200 */
+  --border: #D8D1C7; /* Subtle Outline */
+  --border-subtle: #ECE8E1; /* Stone Subtler Outline */
   
-  --text-primary: #0f172a; /* Slate 900 */
-  --text-secondary: #475569; /* Slate 600 */
-  --text-tertiary: #64748b; /* Slate 500 */
-  --text-quaternary: #94a3b8; /* Slate 400 */
+  --text-primary: #1F2937; /* Very Dark Gray */
+  --text-secondary: #6B7280; /* Muted Dark Gray */
+  --text-tertiary: #9CA3AF; /* Tertiary Gray */
+  --text-quaternary: #D1D5DB; /* Quaternary Gray */
   
   --signal-critical: #e11d48; /* Rose 600 */
   --signal-warning: #d97706; /* Amber 600 */
@@ -617,18 +617,18 @@ body {
 }
 
 .light {
-  /* PM Color Tokens (Light Mode Overrides - Slate/Indigo) */
-  --pm-bg:                    #f1f5f9;
-  --pm-surface-lowest:        #ffffff;
-  --pm-surface-low:           #f8fafc;
-  --pm-surface:               #f1f5f9;
-  --pm-surface-high:          #e2e8f0;
-  --pm-surface-highest:       #cbd5e1;
-  --pm-surface-bright:        #ffffff;
-  --pm-surface-variant:       #e2e8f0;
+  /* PM Color Tokens (Light Mode Overrides - Executive Warm) */
+  --pm-bg:                    #F4F2EE;
+  --pm-surface-lowest:        #FBFAF8;
+  --pm-surface-low:           #FBFAF8;
+  --pm-surface:               #F4F2EE;
+  --pm-surface-high:          #ECE8E1;
+  --pm-surface-highest:       #D8D1C7;
+  --pm-surface-bright:        #FBFAF8;
+  --pm-surface-variant:       #F1EEE8;
 
-  --pm-on-surface:            #0f172a;
-  --pm-on-surface-variant:    #475569;
+  --pm-on-surface:            #1F2937;
+  --pm-on-surface-variant:    #6B7280;
 
   --pm-primary:               #4f46e5;
   --pm-primary-container:     #e0e7ff;
@@ -637,10 +637,10 @@ body {
   --pm-primary-fixed:         #4f46e5;
   --pm-primary-fixed-dim:     #4338ca;
 
-  --pm-secondary:             #475569;
-  --pm-secondary-container:   #f1f5f9;
-  --pm-on-secondary:          #0f172a;
-  --pm-on-secondary-container:#1e293b;
+  --pm-secondary:             #6B7280;
+  --pm-secondary-container:   #F1EEE8;
+  --pm-on-secondary:          #1F2937;
+  --pm-on-secondary-container:#374151;
 
   --pm-tertiary:              #ea580c;
   --pm-tertiary-container:    #ffedd5;
@@ -650,10 +650,10 @@ body {
   --pm-error-container:       #fee2e2;
   --pm-on-error-container:    #991b1b;
 
-  --pm-outline:               #cbd5e1;
-  --pm-outline-variant:       #e2e8f0;
+  --pm-outline:               #D8D1C7;
+  --pm-outline-variant:       #ECE8E1;
 
-  --pm-inverse-surface:       #0f172a;
-  --pm-inverse-on-surface:    #f8fafc;
+  --pm-inverse-surface:       #1F2937;
+  --pm-inverse-on-surface:    #FBFAF8;
   --pm-inverse-primary:       #818cf8;
 }

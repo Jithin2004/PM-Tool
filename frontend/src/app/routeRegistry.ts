@@ -1,17 +1,6 @@
 import React from 'react';
 import type { Capability } from '../core/auth/permissions';
-import {
-  LayoutDashboard, Briefcase, BookOpen, ListTodo, Route,
-  BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
-  Activity, Shield, Zap, Settings, Link2, FileText,
-  Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork
-} from 'lucide-react';
-
-import {
-  Radar, TreeStructure, ArchiveBox, Kanban, Timeline,
-  ChartLineUp, Compass, Broadcast, Binoculars, Files,
-  Notebook, UsersThree, GitBranch as PhosphorGitBranch
-} from '@phosphor-icons/react';
+import { RouteIcon } from '../components/ui/RouteIcon';
 
 export type SidebarGroup = 'core' | 'intelligence' | 'resources' | 'system';
 export type DisclosureTier = 'essential' | 'operational' | 'intelligence' | 'platform';
@@ -116,20 +105,8 @@ export const PROJECT_SUBROUTES = new Set([
   'timeline',
 ]);
 
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
-  LayoutDashboard, Briefcase, BookOpen, ListTodo, Route,
-  BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
-  Activity, Shield, Zap, Radar, Settings, Link2, FileText,
-  Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork,
-  TreeStructure, ArchiveBox, Kanban, Timeline,
-  ChartLineUp, Compass, Broadcast, Binoculars, Files,
-  Notebook, UsersThree, PhosphorGitBranch
-};
-
 export function renderRouteIcon(name: string, className = "w-[15px] h-[15px] shrink-0"): React.ReactNode {
-  const IconComponent = ICON_MAP[name];
-  if (!IconComponent) return null;
-  return React.createElement(IconComponent, { className });
+  return React.createElement(RouteIcon, { name, className });
 }
 
 import { normalizePath } from './routePaths';

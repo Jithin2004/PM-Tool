@@ -3,7 +3,7 @@ import type { OperationalState } from '../../core/presence/types';
 const STATE_COLORS: Record<OperationalState, string> = {
   active: 'bg-green-500',
   idle: 'bg-yellow-400',
-  away: 'bg-gray-400',
+  away: 'bg-surface-highest',
   reviewing: 'bg-blue-500',
   editing: 'bg-emerald-500',
   planning: 'bg-purple-500',

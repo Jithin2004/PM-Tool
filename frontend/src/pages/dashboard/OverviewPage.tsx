@@ -306,7 +306,7 @@ function DeveloperWorkspace({
             Tactical task delivery, active roadblocks, and release coordination.
           </p>
         </div>
-        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-slate-700 bg-slate-900/60"
+        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
           style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(129,140,248,0.5)' }} />
           <span id="clock" ref={clockRef} className="font-mono-pm text-xs uppercase tracking-widest text-slate-400" style={{ color: 'var(--pm-on-surface-variant)' }}>

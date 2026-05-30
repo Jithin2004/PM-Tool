@@ -18,7 +18,7 @@ const STATUS_META: Record<string, { label: string; color: string; dot: string }>
 };
 
 function getStatusMeta(status: string) {
-  return STATUS_META[status] || { label: status?.toUpperCase() || 'UNKNOWN', color: 'var(--pm-on-surface-variant)', dot: 'bg-gray-400' };
+  return STATUS_META[status] || { label: status?.toUpperCase() || 'UNKNOWN', color: 'var(--pm-on-surface-variant)', dot: 'bg-surface-highest' };
 }
 
 function getInitials(name: string) {

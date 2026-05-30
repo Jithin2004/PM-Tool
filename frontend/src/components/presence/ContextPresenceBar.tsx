@@ -15,7 +15,7 @@ export function ContextPresenceBar({ presences, signals, summary }: ContextPrese
   const activePresences = presences.filter(p => !p.idle);
 
   return (
-    <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-gray-500 border-b border-gray-200">
+    <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-text-tertiary border-b border-border">
       <span className="font-medium text-gray-600">
         {summary.total} active
       </span>

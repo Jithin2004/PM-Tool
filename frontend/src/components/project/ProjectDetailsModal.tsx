@@ -463,7 +463,7 @@ export function ProjectDetailsModal({
                             ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/20'
                             : verificationState === 'TAMPERED'
                             ? 'bg-signal-critical-bg border-red-500/35 text-signal-critical hover:bg-signal-critical-bg'
-                            : 'bg-white text-black border-white hover:bg-neutral-200'
+                            : 'bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] border-transparent hover:opacity-90'
                         }`}
                       >
                         {verificationState === 'VERIFYING' ? "Scanning..." : verificationState === 'SECURED' ? "Re-Verify" : "Verify Ledger"}

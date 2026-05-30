@@ -92,7 +92,7 @@ export function WorkspaceSettings() {
                 <p className="text-[10px] text-text-tertiary">Automatically archive projects when all tasks are done</p>
               </div>
               <div className={`w-11 h-6 rounded-full transition-colors cursor-not-allowed ${settings.autoArchive ? 'bg-signal-safe shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-surface-3'} relative shrink-0`}>
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.autoArchive ? 'left-6' : 'left-1'}`} />
+                <div className={`w-4 h-4 bg-[var(--pm-primary)] rounded-full absolute top-1 transition-all ${settings.autoArchive ? 'left-6' : 'left-1'}`} />
               </div>
             </div>
             <div className="flex items-center justify-between bg-surface/50 border border-border/50 rounded-xl p-4 sm:p-5 hover:border-border transition-colors">
