@@ -397,6 +397,36 @@ export const activityLogService = {
     return { valid: true, brokenIndex: null, severity: 'none', reason: 'Chain intact' };
   },
 
+  async repairHashChain(workspaceId: string): Promise<boolean> {
+    const logs = await this.getLogs(workspaceId);
+    if (!logs || logs.length === 0) return true;
+
+    let currentPrevHash = 'GENESIS_BLOCK';
+    let fixedAny = false;
+    
+    for (let i = 0; i < logs.length; i++) {
+      const log = logs[i];
+      // Keep existing timestamp or use a fallback
+      const createdAt = new Date(log.created_at || Date.now()).toISOString();
+      const recomputedHash = await this.computeHash(log, currentPrevHash, createdAt);
+
+      if (log.previous_hash !== currentPrevHash || log.hash !== recomputedHash) {
+        fixedAny = true;
+        const { error } = await supabase.from('activity_logs').update({
+          previous_hash: currentPrevHash,
+          hash: recomputedHash
+        }).eq('id', log.id);
+        if (error) console.error('repairHashChain failed at index', i, error);
+      }
+      currentPrevHash = recomputedHash;
+    }
+    
+    if (fixedAny) {
+      await this.logHashChainVerified(workspaceId, 'Valid', logs.length, null);
+    }
+    return true;
+  },
+
   // ── Command Intelligence Event Logging ──
 
   async logHeatmapView(workspaceId: string, actorId?: string, metadata?: Record<string, any>): Promise<boolean> {

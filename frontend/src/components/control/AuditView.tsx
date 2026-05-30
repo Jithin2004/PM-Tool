@@ -222,11 +222,28 @@ const AuditView = React.memo(function AuditView() {
               </p>
             </div>
           </div>
-          {chainStatus && (
-            <span className="text-[9px] font-mono text-text-quaternary uppercase">
-              Hash: {chainStatus.message}
-            </span>
-          )}
+          <div className="flex items-center gap-4">
+            {chainStatus && chainStatus.status !== 'Valid' && (
+              <button
+                onClick={async () => {
+                  setLogsLoading(true);
+                  await activityLogService.repairHashChain(wsId);
+                  const chain = await activityLogService.verifyHashChain(wsId);
+                  setChainStatus({ status: chain.status, logCount: chain.logCount, message: chain.message });
+                  setLogsLoading(false);
+                }}
+                disabled={logsLoading}
+                className="px-3 py-1.5 bg-signal-critical/10 text-signal-critical hover:bg-signal-critical hover:text-white border border-signal-critical/20 rounded text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+              >
+                {logsLoading ? 'Repairing...' : 'Repair Ledger'}
+              </button>
+            )}
+            {chainStatus && (
+              <span className="text-[9px] font-mono text-text-quaternary uppercase">
+                Hash: {chainStatus.message}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
