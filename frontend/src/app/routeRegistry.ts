@@ -63,7 +63,7 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   // Executive routes
   { id: 'executive', path: '/workspace/executive', label: 'Executive Overview', iconName: 'Activity', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
   { id: 'reports', path: '/workspace/reports', label: 'Reports Center', iconName: 'FileText', capability: 'view_reports', group: 'intelligence', disclosureTier: 'intelligence' },
-  { id: 'executive-digest', path: '/workspace/executive-digest', label: 'Executive Digest', iconName: 'Target', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
+
 
   // Non-sidebar / helper routes
   { id: 'landing', path: '/', label: 'Home', iconName: 'LayoutDashboard', isPublic: true, disclosureTier: 'essential' },
