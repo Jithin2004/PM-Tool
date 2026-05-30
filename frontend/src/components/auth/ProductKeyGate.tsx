@@ -175,14 +175,34 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
           </AnimatePresence>
         </div>
 
-        {/* Footer */}
-        <div className="flex flex-col items-center gap-4 mt-10">
-          <p className="text-[10px] uppercase tracking-wider text-center" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Secure activation &middot; Keyserver connection required
+        {/* Empty State Options */}
+        <div className="mt-8 pt-6 border-t" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+          <p className="text-xs text-center font-medium mb-4" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            Don't have a product key?
           </p>
-          <a href="/" className="text-xs transition-colors hover:underline" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Return to Landing
-          </a>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => alert('Access request workflow initiated (Demo)')}
+              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-white/5"
+              style={{ color: 'var(--pm-primary)', border: '1px solid rgba(70,69,84,0.3)' }}
+            >
+              Request Access
+            </button>
+            <button
+              onClick={() => alert('Contacting workspace admin... (Demo)')}
+              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-white/5"
+              style={{ color: 'var(--pm-secondary)', border: '1px solid rgba(70,69,84,0.3)' }}
+            >
+              Contact Workspace Admin
+            </button>
+            <a
+              href="/"
+              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-white/5 mt-2"
+              style={{ color: 'var(--pm-on-surface-variant)' }}
+            >
+              Return Home
+            </a>
+          </div>
         </div>
       </motion.div>
     </div>

@@ -9,14 +9,9 @@ export default function ReportsCenter() {
   const [exporting, setExporting] = useState(false);
 
   const handleExport = async (type: string, reportName?: any) => {
+    if (type !== 'PDF') return;
     setExporting(true);
-    if (type === 'PDF') {
-      await exportToPDF(workspace?.id || 'unknown', reportName || 'PortfolioReport', { timestamp: Date.now() });
-    } else {
-      setTimeout(() => {
-        alert(`${type} export complete`);
-      }, 500);
-    }
+    await exportToPDF(workspace?.id || 'unknown', reportName || 'PortfolioReport', { timestamp: Date.now() });
     setExporting(false);
   };
 
@@ -62,14 +57,14 @@ export default function ReportsCenter() {
             Export raw portfolio data and wait-state analytics for offline viewing or integration.
           </p>
           <div className="flex gap-3">
-            <button onClick={() => handleExport('PDF')} disabled={exporting} className="px-4 py-2 bg-surface-4 border border-border/50 text-[var(--pm-on-surface)] rounded-lg text-xs font-semibold hover:bg-surface-highest transition-colors">
-              Export PDF
+            <button onClick={() => handleExport('PDF')} disabled={exporting} className="px-4 py-2 bg-surface-4 border border-border/50 text-[var(--pm-on-surface)] rounded-lg text-xs font-semibold hover:bg-surface-highest transition-colors cursor-pointer disabled:opacity-50">
+              {exporting ? 'Exporting...' : 'Export PDF'}
             </button>
-            <button onClick={() => handleExport('Excel')} disabled={exporting} className="px-4 py-2 bg-surface-4 border border-border/50 text-[var(--pm-on-surface)] rounded-lg text-xs font-semibold hover:bg-surface-highest transition-colors">
-              Export Excel
+            <button disabled className="px-4 py-2 bg-surface-4 border border-border/50 text-[var(--pm-on-surface-variant)] opacity-50 rounded-lg text-xs font-semibold cursor-not-allowed">
+              Export Excel (Coming Soon)
             </button>
-            <button onClick={() => handleExport('CSV')} disabled={exporting} className="px-4 py-2 bg-surface-4 border border-border/50 text-[var(--pm-on-surface)] rounded-lg text-xs font-semibold hover:bg-surface-highest transition-colors">
-              Export CSV
+            <button disabled className="px-4 py-2 bg-surface-4 border border-border/50 text-[var(--pm-on-surface-variant)] opacity-50 rounded-lg text-xs font-semibold cursor-not-allowed">
+              Export CSV (Coming Soon)
             </button>
           </div>
         </div>

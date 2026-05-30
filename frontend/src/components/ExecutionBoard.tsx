@@ -12,7 +12,10 @@ import { KANBAN_COLUMNS } from '../constants/product';
 import { TaskStatus, Task, Project } from '../types';
 import { supabase } from '../lib/supabase';
 import { CompletionFeedbackModal } from './task/CompletionFeedbackModal';
+import { CompletionConfirmationModal } from './task/CompletionConfirmationModal';
+import { WaitStateModal } from './task/WaitStateModal';
 import { activityLogService } from '../services/activityLogService';
+import { WaitState } from '../core/types/collaboration';
 
 interface ExecutionBoardProps {
   projects: Project[];
@@ -42,7 +45,9 @@ export default function ExecutionBoard({
   const [filterByProject, setFilterByProject] = useState<string | null>(null);
   const [projectsPanelOpen, setProjectsPanelOpen] = useState(true);
 
+  const [confirmingCompletionTask, setConfirmingCompletionTask] = useState<Task | null>(null);
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
+  const [waitStateTask, setWaitStateTask] = useState<Task | null>(null);
 
   const role = currentUserProfile?.role || 'viewer';
   const hasWriteAccess = hasCapability(role, 'manage_tasks');
@@ -113,7 +118,7 @@ export default function ExecutionBoard({
     if (targetStatus === 'done') {
       const task = tasks.find(t => t.id === taskId);
       if (task) {
-        setPendingCompletionTask(task);
+        setConfirmingCompletionTask(task);
         return;
       }
     }
@@ -167,16 +172,51 @@ export default function ExecutionBoard({
     onRecalibrateAnalytics();
   };
 
+  const handleWaitStateSubmit = async (waitStateData: { reason: string; owner: string; notes: string }) => {
+    if (!waitStateTask || !workspace?.id || !currentUserProfile?.id) return;
+    
+    const newWaitState: WaitState = {
+      id: crypto.randomUUID(),
+      workspace_id: workspace.id,
+      target_type: 'task',
+      target_id: waitStateTask.id,
+      category: waitStateData.reason as any,
+      waiting_on: waitStateData.owner as any,
+      status: 'active',
+      reported_by: currentUserProfile.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      metadata: { notes: waitStateData.notes }
+    };
+
+    try {
+      await supabase.from('wait_states').insert([newWaitState]);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   if (loading) {
     return <div className="text-text-primary text-xs font-mono p-6">SYNCING BOARD...</div>;
   }
 
   return (
-    <div className="w-full bg-bg border border-border-subtle rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
-      {/* Visual Accent top gradient line */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500/80 via-purple-500/80 to-pink-500/80" />
+    <>
+      {/* Mobile Fallback */}
+      <div className="block md:hidden bg-surface border border-border-subtle rounded-xl p-8 text-center mt-4">
+        <Layers className="w-12 h-12 text-accent-primary mx-auto mb-4 opacity-80" />
+        <h2 className="text-lg font-bold text-text-primary mb-2">Desktop View Required</h2>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          The Kanban Board requires a larger viewport for drag-and-drop operations and complex visualizations. Please access this view on a tablet or desktop device.
+        </p>
+      </div>
 
-      {/* Header controls */}
+      {/* Desktop Board */}
+      <div className="hidden md:block w-full bg-bg border border-border-subtle rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
+        {/* Visual Accent top gradient line */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500/80 via-purple-500/80 to-pink-500/80" />
+
+        {/* Header controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-border-subtle pb-4">
         <div>
           <h2 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary flex items-center gap-2">
@@ -282,6 +322,7 @@ export default function ExecutionBoard({
                   onTransitionTask={handleTransitionTask}
                   onEditTask={setEditingTask}
                   onPromoteToAsset={onPromoteToAsset}
+                  onOpenWaitState={setWaitStateTask}
                   onClick={(t) => {
                     setSelectedTask(t);
                     setIsDrawerOpen(true);
@@ -333,6 +374,7 @@ export default function ExecutionBoard({
                         onTransitionTask={handleTransitionTask}
                         onEditTask={setEditingTask}
                         onPromoteToAsset={onPromoteToAsset}
+                        onOpenWaitState={setWaitStateTask}
                         onClick={(t) => {
                           setSelectedTask(t);
                           setIsDrawerOpen(true);
@@ -419,6 +461,18 @@ export default function ExecutionBoard({
           </div>
         )}
       </AnimatePresence>
+      {confirmingCompletionTask && (
+        <CompletionConfirmationModal
+          task={confirmingCompletionTask}
+          waitStates={[]}
+          dependencies={dependencies}
+          onConfirm={() => {
+            setPendingCompletionTask(confirmingCompletionTask);
+            setConfirmingCompletionTask(null);
+          }}
+          onCancel={() => setConfirmingCompletionTask(null)}
+        />
+      )}
       {pendingCompletionTask && (
         <CompletionFeedbackModal
           task={pendingCompletionTask}
@@ -427,6 +481,16 @@ export default function ExecutionBoard({
           onClose={() => setPendingCompletionTask(null)}
         />
       )}
+      {waitStateTask && (
+        <WaitStateModal
+          isOpen={true}
+          onClose={() => setWaitStateTask(null)}
+          task={waitStateTask}
+          onSubmit={handleWaitStateSubmit}
+          notify={notify}
+        />
+      )}
     </div>
+    </>
   );
 }

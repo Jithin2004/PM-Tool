@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Terminal } from 'lucide-react';
 import { Project, TaskStatus } from '../../types';
+import { AssigneePicker } from './AssigneePicker';
 
 interface TaskCreateModalProps {
   isOpen: boolean;
@@ -165,16 +166,11 @@ export function TaskCreateModal({
             </div>
             <div className="flex-1 space-y-1.5">
               <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Assignee</label>
-              <select
+              <AssigneePicker
+                users={users}
                 value={assigneeId}
-                onChange={(e) => setAssigneeId(e.target.value)}
-                className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all rounded-lg appearance-none cursor-pointer"
-              >
-                <option value="">Unassigned</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.email}</option>
-                ))}
-              </select>
+                onChange={setAssigneeId}
+              />
             </div>
           </div>
 

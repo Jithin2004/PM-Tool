@@ -62,31 +62,38 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
   }, [projectTasks, activePhase]);
 
   return (
-    <div className="w-full bg-bg border border-border-subtle rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500/80 via-blue-500/80 to-cyan-500/80" />
-
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-border-subtle pb-4">
-        <div className="flex items-center gap-2">
-          <Rocket className="w-4 h-4 text-emerald-400" />
-          <h2 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">SDLC Pipeline</h2>
-          <span className="text-[9px] font-mono text-text-quaternary">— {project.name}</span>
-        </div>
-        {hasWriteAccess && (
-          <button onClick={() => setIsAddingTask(true)} className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-text-primary text-[9px] font-mono uppercase tracking-wide rounded-sm cursor-pointer">
-            Queue Task
-          </button>
-        )}
+    <>
+      <div className="block md:hidden bg-surface border border-border-subtle rounded-xl p-8 text-center mt-4">
+        <Rocket className="w-12 h-12 text-accent-primary mx-auto mb-4 opacity-80" />
+        <h2 className="text-lg font-bold text-text-primary mb-2">Desktop View Required</h2>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          The SDLC Board requires a larger viewport. Please access this view on a tablet or desktop device.
+        </p>
       </div>
 
-      {/* SDLC Phase Pipeline */}
-      <div className="mb-6 grid grid-cols-4 sm:grid-cols-8 gap-2">
-        {phaseStats.map(phase => (
-          <button
-            key={phase.id}
-            onClick={() => setActivePhase(activePhase === phase.id ? null : phase.id)}
-            className={`flex flex-col items-center gap-1 p-2 border rounded-sm transition-all cursor-pointer ${activePhase === phase.id ? 'bg-emerald-900/30 border-emerald-500/40' : 'bg-surface-3 border-border-subtle hover:border-white/15'}`}
-          >
+      <div className="hidden md:block w-full bg-bg border border-border-subtle rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500/80 via-blue-500/80 to-cyan-500/80" />
+
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-border-subtle pb-4">
+          <div className="flex items-center gap-2">
+            <Rocket className="w-4 h-4 text-emerald-400" />
+            <h2 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">SDLC Pipeline</h2>
+            <span className="text-[9px] font-mono text-text-quaternary">— {project.name}</span>
+          </div>
+          {hasWriteAccess && (
+            <button onClick={() => setIsAddingTask(true)} className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-text-primary text-[9px] font-mono uppercase tracking-wide rounded-sm cursor-pointer">
+              Queue Task
+            </button>
+          )}
+        </div>
+
+        <div className="mb-6 grid grid-cols-4 sm:grid-cols-8 gap-2">
+          {phaseStats.map(phase => (
+            <button
+              key={phase.id}
+              onClick={() => setActivePhase(activePhase === phase.id ? null : phase.id)}
+              className={`flex flex-col items-center gap-1 p-2 border rounded-sm transition-all cursor-pointer ${activePhase === phase.id ? 'bg-emerald-900/30 border-emerald-500/40' : 'bg-surface-3 border-border-subtle hover:border-white/15'}`}
+            >
             <div className={`text-text-tertiary ${phase.progress === 100 ? 'text-emerald-400' : ''}`}>{PHASE_ICONS[phase.id]}</div>
             <span className="text-[7px] font-mono uppercase text-text-tertiary truncate w-full text-center">{phase.title}</span>
             {phase.taskCount > 0 && (
@@ -172,6 +179,7 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
       <AnimatePresence>
         <TaskCreateModal isOpen={isAddingTask} onClose={() => setIsAddingTask(false)} projects={[project]} users={users} defaultStatus="backlog" defaultProjectId={project.id} onSubmit={onCreateTask} notify={notify} />
       </AnimatePresence>
-    </div>
+      </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X, Terminal } from 'lucide-react';
 import { Project, Task, TaskStatus } from '../../types';
 import { hasCapability } from '../../core/auth/permissions';
+import { AssigneePicker } from './AssigneePicker';
 import { TaskDiscussionTab } from './TaskDiscussionTab';
 import { TaskActivityTab } from './TaskActivityTab';
 
@@ -176,17 +177,12 @@ export function TaskEditModal({
             </div>
             <div className="flex-1">
               <label className="block text-[8px] font-mono uppercase tracking-wider text-text-quaternary mb-1">Assignee</label>
-              <select
+              <AssigneePicker
+                users={users}
                 value={assigneeId}
+                onChange={setAssigneeId}
                 disabled={isDeveloper}
-                onChange={(e) => setAssigneeId(e.target.value)}
-                className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <option value="">Unassigned</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.email}</option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 

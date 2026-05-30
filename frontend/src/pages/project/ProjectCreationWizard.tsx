@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
 import { Check, CalendarDays, Users } from 'lucide-react';
 import { createProject } from '../../services/projectService';
+import { ProjectChipsInput } from '../../components/ui/ProjectChipsInput';
 
 export function ProjectCreationWizard() {
   const { workspace } = useWorkspace();
@@ -11,7 +12,8 @@ export function ProjectCreationWizard() {
   
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [milestones, setMilestones] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [milestones, setMilestones] = useState<string[]>([]);
   const [team, setTeam] = useState('');
   const [policy, setPolicy] = useState('Strict');
   const [loading, setLoading] = useState(false);
@@ -42,14 +44,29 @@ export function ProjectCreationWizard() {
         {step === 1 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
             <label className="block text-sm font-semibold">Step 1: Project Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50" placeholder="e.g. ERP Migration Phase 1" />
+            <input 
+              value={name} 
+              onChange={e => {
+                setName(e.target.value);
+                setNameError('');
+              }} 
+              className="w-full p-3 rounded bg-surface-4 border border-border/50" 
+              placeholder="e.g. ERP Migration Phase 1" 
+            />
+            {nameError && (
+              <p className="text-sm text-red-500 mt-1">{nameError}</p>
+            )}
           </div>
         )}
 
         {step === 2 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
             <label className="block text-sm font-semibold">Step 2: Key Milestones</label>
-            <input value={milestones} onChange={e => setMilestones(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50" placeholder="Discovery, Implementation, Go-Live" />
+            <ProjectChipsInput 
+              value={milestones} 
+              onChange={setMilestones} 
+              placeholder="Discovery, Implementation, Go-Live (Press Enter to add)" 
+            />
           </div>
         )}
 
@@ -72,11 +89,22 @@ export function ProjectCreationWizard() {
         )}
 
         <div className="mt-8 flex justify-between">
-          <button disabled={step === 1} onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded border border-border/50 disabled:opacity-50">Back</button>
+          <button disabled={step === 1} onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded border border-border/50 disabled:opacity-50 cursor-pointer">Back</button>
           {step < 4 ? (
-            <button onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded bg-[var(--pm-primary)] text-white">Next</button>
+            <button 
+              onClick={() => {
+                if (step === 1 && !name.trim()) {
+                  setNameError('Project Name is required');
+                  return;
+                }
+                setStep(s => s + 1);
+              }} 
+              className="px-4 py-2 rounded bg-[var(--pm-primary)] text-white cursor-pointer"
+            >
+              Next
+            </button>
           ) : (
-            <button onClick={handleFinish} disabled={loading} className="px-4 py-2 rounded bg-emerald-600 text-white flex items-center gap-2">
+            <button onClick={handleFinish} disabled={loading} className="px-4 py-2 rounded bg-emerald-600 text-white flex items-center gap-2 cursor-pointer disabled:opacity-50">
               {loading ? 'Initializing...' : 'Generate Project'} <Check className="w-4 h-4" />
             </button>
           )}

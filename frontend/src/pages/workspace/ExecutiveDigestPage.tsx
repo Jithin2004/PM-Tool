@@ -8,6 +8,7 @@ export function ExecutiveDigestPage() {
   const { raw: { projects, tasks } } = useOperationalData();
   const { workspace } = useWorkspace() as any;
   const [includeDemoData, setIncludeDemoData] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
 
   const isDemo = workspace?.is_demo_workspace || workspace?.name?.toLowerCase().includes('demo');
 
@@ -16,12 +17,14 @@ export function ExecutiveDigestPage() {
   const completedProjects = projects.filter(p => p.status === 'archived' && (includeDemoData || !isDemo));
   const atRisk = activeProjects.filter(p => p.risk === 'high').length;
   
-  const handleExport = () => {
-    exportToPDF(workspace?.id || 'unknown', 'ExecutiveDigest', {
+  const handleExport = async () => {
+    setIsExporting(true);
+    await exportToPDF(workspace?.id || 'unknown', 'ExecutiveDigest', {
       activeProjects: activeProjects.length,
       completedProjects: completedProjects.length,
       atRisk
     });
+    setIsExporting(false);
   };
   
   return (
@@ -49,8 +52,8 @@ export function ExecutiveDigestPage() {
           <button className="flex items-center gap-2 px-4 py-2 bg-surface-2 border border-border rounded-lg text-xs font-bold text-text-secondary hover:text-text-primary transition-colors">
             <FileText className="w-4 h-4" /> Weekly Digest
           </button>
-          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-accent-secondary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-accent-secondary/90 transition-all shadow-lg shadow-accent-secondary/20">
-            <Download className="w-4 h-4" /> Export Report
+          <button onClick={handleExport} disabled={isExporting} className="flex items-center gap-2 px-4 py-2 bg-accent-secondary text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-accent-secondary/90 transition-all shadow-lg shadow-accent-secondary/20 disabled:opacity-50 cursor-pointer">
+            <Download className="w-4 h-4" /> {isExporting ? 'Exporting...' : 'Export Report'}
           </button>
         </div>
       </div>

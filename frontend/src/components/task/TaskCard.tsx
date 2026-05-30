@@ -21,7 +21,7 @@ interface TaskCardProps {
   density?: 'comfortable' | 'compact' | 'executive';
   substate?: string;
   blockers?: any[];
-  onUpdateSubstate?: (taskId: string, substate: string) => void;
+  onOpenWaitState?: (task: Task) => void;
 }
 
 export function TaskCard({
@@ -40,7 +40,7 @@ export function TaskCard({
   density = 'comfortable',
   substate,
   blockers,
-  onUpdateSubstate
+  onOpenWaitState
 }: TaskCardProps) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -288,38 +288,19 @@ export function TaskCard({
           </div>
         </div>
 
-        {/* Sub-state Transition dropdown - Made more subtle */}
-        {hasWriteAccess && onUpdateSubstate && task.status !== 'done' && !isCompact && (
-          <div className="mt-1 pt-1 flex items-center justify-between gap-2 opacity-50 hover:opacity-100 transition-opacity">
-            <select
-              value={substate || 'EXECUTING'}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => onUpdateSubstate(task.id, e.target.value)}
-              className="bg-transparent border-none text-text-quaternary hover:text-text-secondary text-[9px] font-mono-pm px-0 py-0.5 cursor-pointer max-w-[150px] uppercase leading-tight outline-none"
+        {/* Action Bar */}
+        {hasWriteAccess && onOpenWaitState && task.status !== 'done' && !isCompact && (
+          <div className="mt-2 pt-2 border-t border-border-subtle flex justify-between items-center">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenWaitState(task);
+              }}
+              className="flex items-center gap-1.5 px-2 py-1 bg-surface-2 hover:bg-amber-500/10 text-text-quaternary hover:text-amber-400 text-[10px] font-mono-pm uppercase tracking-wide rounded border border-border hover:border-amber-500/30 transition-colors cursor-pointer"
             >
-              <optgroup label="ACTIVE" className="bg-slate-950">
-                <option value="EXECUTING">EXECUTING</option>
-                <option value="DEPLOYING">DEPLOYING</option>
-                <option value="TESTING">TESTING</option>
-                <option value="VALIDATING">VALIDATING</option>
-              </optgroup>
-              <optgroup label="WAITING" className="bg-slate-950">
-                <option value="WAITING_FOR_CLIENT">WAITING CLIENT</option>
-                <option value="WAITING_FOR_DATA">WAITING DATA</option>
-                <option value="WAITING_FOR_INFRASTRUCTURE">WAITING INFRA</option>
-                <option value="WAITING_FOR_APPROVAL">WAITING APPROVAL</option>
-              </optgroup>
-              <optgroup label="BLOCKED" className="bg-slate-950">
-                <option value="BLOCKED_DEPENDENCY">BLOCKED DEP</option>
-                <option value="BLOCKED_INFRASTRUCTURE">BLOCKED INFRA</option>
-                <option value="BLOCKED_ACCESS">BLOCKED ACCESS</option>
-              </optgroup>
-              <optgroup label="COORDINATION" className="bg-slate-950">
-                <option value="CLIENT_VERIFICATION">CLIENT VERIF</option>
-                <option value="RELEASE_WINDOW_PENDING">RELEASE PENDING</option>
-                <option value="INTERNAL_REVIEW">INTERNAL REVIEW</option>
-              </optgroup>
-            </select>
+              <Clock className="w-3 h-3" />
+              Log Delay
+            </button>
           </div>
         )}
       </div>

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { OperationalDataProvider, useOperationalData } from '../../context/OperationalDataContext';
@@ -111,78 +112,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     taskCount: tasks.length,
   });
 
-  // Timeline Intelligence Daemon (Capacity & Risk breaching monitor)
-  useEffect(() => {
-    if (!workspace?.id || tasks.length === 0 || profiles.length === 0) return;
 
-    const cacheKey = `notified_breaches_${workspace.id}`;
-    let notifiedBreaches: string[] = [];
-    try {
-      notifiedBreaches = JSON.parse(localStorage.getItem(cacheKey) || '[]');
-    } catch (e) {
-      console.warn("Dashboard Layout Error:", {
-        source: "DashboardLayout",
-        operation: "fetch_notified_breaches",
-        workspace_id: workspace.id,
-        timestamp: new Date().toISOString(),
-        error: e
-      });
-    }
-
-    let updated = false;
-
-    // 1. Operator overload check
-    profiles.forEach(profile => {
-      const activeDevTasks = tasks.filter(t => t.assignee_id === profile.id && t.status !== 'done');
-      const activeHours = activeDevTasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
-      const weeklyCapacity = 40 * (profile.availability_factor || 1.0);
-      
-      // FIX 5: Reduce Coordination Noise - Make breach ID stable per profile to prevent spam on minor hour changes
-      const breachId = `overload-${profile.id}`;
-
-      if (activeHours > weeklyCapacity && !notifiedBreaches.includes(breachId)) {
-        notifiedBreaches.push(breachId);
-        updated = true;
-        
-        sendNotification(
-          workspace.id,
-          'risk',
-          'Operator Capacity Breach',
-          `"${profile.full_name || profile.email}" is overloaded: active tasks sum to ${activeHours}h (Weekly limit: ${weeklyCapacity}h).`
-        );
-      } else if (activeHours <= weeklyCapacity && notifiedBreaches.includes(breachId)) {
-        // Clear the breach if it's resolved so it can fire again later if needed
-        notifiedBreaches = notifiedBreaches.filter(id => id !== breachId);
-        updated = true;
-      }
-    });
-
-    // 2. High delivery risk task check
-    tasks.forEach(task => {
-      if (task.status === 'done') return;
-      // FIX 5: Reduce Coordination Noise - Make breach ID stable per task to prevent spam
-      const breachId = `risk-${task.id}`;
-
-      if (task.risk === 'high' && !notifiedBreaches.includes(breachId)) {
-        notifiedBreaches.push(breachId);
-        updated = true;
-
-        sendNotification(
-          workspace.id,
-          'risk',
-          'High Delivery Risk Warning',
-          `Task "${task.name.toUpperCase()}" estimation deviation has breached acceptable margins.`
-        );
-      } else if (task.risk !== 'high' && notifiedBreaches.includes(breachId)) {
-        notifiedBreaches = notifiedBreaches.filter(id => id !== breachId);
-        updated = true;
-      }
-    });
-
-    if (updated) {
-      localStorage.setItem(cacheKey, JSON.stringify(notifiedBreaches));
-    }
-  }, [workspace?.id, tasks, profiles]);
 
   // Onboarding Tour state
   const [showGuide, setShowGuide] = useState(() => {
@@ -673,73 +603,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   }, []);
 
 
-  // Automated database migration to dedicated tables
-  useEffect(() => {
-    if (!isSupabaseConfigured || loading || !workspace?.id) return;
 
-    const migrateData = async () => {
-      // Migrate Attendance
-      const oldAttendance = rawSystemData.attendance;
-      if (oldAttendance && Object.keys(oldAttendance).length > 0 && attendanceRows.length === 0) {
-        console.log("Migrating attendance records to dedicated table...");
-        const toInsert: any[] = [];
-        Object.keys(oldAttendance).forEach(dateStr => {
-          const dayData = oldAttendance[dateStr];
-          Object.keys(dayData).forEach(userId => {
-            const record = dayData[userId];
-            // Verify if record matches UUID or format
-            toInsert.push({
-              workspace_id: workspace.id,
-              user_id: userId,
-              date: dateStr,
-              status: record.status,
-              leave_type: record.leaveType || null,
-              availability_factor: record.status === 'present' ? 1.0 : record.status === 'half_day' ? 0.5 : 0.0
-            });
-          });
-        });
-
-        if (toInsert.length > 0) {
-          try {
-            const { error } = await supabase.from('attendance').insert(toInsert);
-            if (!error) {
-              console.log(`Successfully migrated ${toInsert.length} attendance records.`);
-              await refreshAttendance();
-            }
-          } catch (e) {
-            console.error("Attendance migration failed:", e);
-          }
-        }
-      }
-
-      // Migrate Salaries
-      const oldSalaries = rawSystemData.salaries;
-      if (oldSalaries && Object.keys(oldSalaries).length > 0 && salaryRows.length === 0) {
-        console.log("Migrating salaries records to dedicated table...");
-        const toInsert = Object.keys(oldSalaries).map(userId => ({
-          workspace_id: workspace.id,
-          user_id: userId,
-          base_salary: Number(oldSalaries[userId]) || 3000
-        }));
-
-        if (toInsert.length > 0) {
-          try {
-            const { error } = await supabase.from('salaries').insert(toInsert);
-            if (!error) {
-              console.log(`Successfully migrated ${toInsert.length} salary records.`);
-              await refreshSalaries();
-            }
-          } catch (e) {
-            console.error("Salary migration failed:", e);
-          }
-        }
-      }
-    };
-
-    // Run migration after data has been loaded
-    const delay = setTimeout(migrateData, 5000);
-    return () => clearTimeout(delay);
-  }, [loading, rawSystemData, attendanceRows.length, salaryRows.length, workspace?.id, refreshAttendance, refreshSalaries]);
 
   const handleLogout = async () => {
     await logout();
@@ -1393,8 +1257,10 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           )}
 
           {/* Dynamic Page Routing Slot */}
-          <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-6">
-            {children}
+          <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-6 relative">
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </main>
 
           {/* Status Footer */}
