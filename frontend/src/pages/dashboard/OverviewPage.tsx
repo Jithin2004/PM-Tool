@@ -295,7 +295,7 @@ function DeveloperWorkspace({
   };
 
   return (
-    <div className="space-y-8 pb-16 font-geist text-slate-100" style={{ color: 'var(--pm-on-surface)' }}>
+    <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
@@ -309,7 +309,7 @@ function DeveloperWorkspace({
         <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
           style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(129,140,248,0.5)' }} />
-          <span id="clock" ref={clockRef} className="font-mono-pm text-xs uppercase tracking-widest text-slate-400" style={{ color: 'var(--pm-on-surface-variant)' }}>
+          <span id="clock" ref={clockRef} className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]" style={{ color: 'var(--pm-on-surface-variant)' }}>
              UTC
           </span>
         </div>
@@ -343,10 +343,10 @@ function DeveloperWorkspace({
         {/* Left Column - Assigned Tasks & Neighboring Dependencies */}
         <div className="lg:col-span-8 space-y-6">
           {/* Active Assigned Work */}
-          <div className="glass-panel rounded-xl p-6 bg-slate-900/40 border border-slate-800">
+          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-slate-200">Assigned Work Console</h2>
-              <span className="font-mono-pm text-[10px] uppercase text-slate-400">FULL ACCESS ({devOpenTasks.length} active)</span>
+              <h2 className="text-base font-semibold text-[var(--pm-primary)]">Assigned Work Console</h2>
+              <span className="font-mono-pm text-[10px] uppercase text-[var(--pm-on-surface-variant)]">FULL ACCESS ({devOpenTasks.length} active)</span>
             </div>
             <div className="space-y-4">
               {devOpenTasks.length > 0 ? (
@@ -354,14 +354,14 @@ function DeveloperWorkspace({
                   const sub = taskSubStates[t.id] || 'EXECUTING';
                   const isBlocked = devBlockedTasks.some((bt: any) => bt.id === t.id);
                   return (
-                    <div key={t.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl transition-all gap-4 bg-slate-900/60 border border-slate-800"
+                    <div key={t.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl transition-all gap-4 bg-surface-2 border border-border"
                       style={{ 
                         background: isBlocked ? 'rgba(239, 68, 68, 0.04)' : 'var(--pm-surface-high)', 
                         borderColor: isBlocked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(70,69,84,0.3)' 
                       }}>
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-slate-200" style={{ color: 'var(--pm-on-surface)' }}>{t.name}</span>
+                          <span className="text-sm font-semibold text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>{t.name}</span>
                           {t.risk === 'high' && (
                             <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm">HIGH RISK</span>
                           )}
@@ -369,14 +369,14 @@ function DeveloperWorkspace({
                             <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-red-500/10 text-red-400 border border-red-500/20">BLOCKED</span>
                           )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 font-mono-pm text-[11px] text-slate-400">
-                          <span>EST: <strong className="text-slate-200">{t.estimated_hours}h</strong></span>
+                        <div className="flex flex-wrap items-center gap-3 font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)]">
+                          <span>EST: <strong className="text-[var(--pm-primary)]">{t.estimated_hours}h</strong></span>
                           <span>•</span>
                           <span>PRIORITY: <strong style={{ color: t.priority === 'urgent' ? 'var(--pm-error)' : 'var(--pm-on-surface)' }}>{t.priority?.toUpperCase()}</strong></span>
                           {t.deadline && (
                             <>
                               <span>•</span>
-                              <span>DUE: <strong className="text-slate-200">{new Date(t.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</strong></span>
+                              <span>DUE: <strong className="text-[var(--pm-primary)]">{new Date(t.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</strong></span>
                             </>
                           )}
                         </div>
@@ -384,30 +384,30 @@ function DeveloperWorkspace({
 
                       <div className="flex items-center gap-4">
                         <div className="flex flex-col gap-1">
-                          <span className="font-mono-pm text-[9px] uppercase text-right mr-1 text-slate-400">SUB-STATE</span>
+                          <span className="font-mono-pm text-[9px] uppercase text-right mr-1 text-[var(--pm-on-surface-variant)]">SUB-STATE</span>
                           <select
                             value={sub}
                             onChange={(e) => handleUpdateSubState(t.id, e.target.value)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-mono-pm border cursor-pointer uppercase transition-colors bg-slate-950 text-slate-200 border-slate-700"
+                            className="px-3 py-1.5 rounded-lg text-xs font-mono-pm border cursor-pointer uppercase transition-colors bg-surface-3 text-[var(--pm-primary)] border-border"
                           >
-                            <optgroup label="ACTIVE" className="bg-slate-950">
+                            <optgroup label="ACTIVE" className="bg-surface-3">
                               <option value="EXECUTING">EXECUTING</option>
                               <option value="DEPLOYING">DEPLOYING</option>
                               <option value="TESTING">TESTING</option>
                               <option value="VALIDATING">VALIDATING</option>
                             </optgroup>
-                            <optgroup label="WAITING" className="bg-slate-950">
+                            <optgroup label="WAITING" className="bg-surface-3">
                               <option value="WAITING_FOR_CLIENT">WAITING FOR CLIENT</option>
                               <option value="WAITING_FOR_DATA">WAITING FOR DATA</option>
                               <option value="WAITING_FOR_INFRASTRUCTURE">WAITING FOR INFRASTRUCTURE</option>
                               <option value="WAITING_FOR_APPROVAL">WAITING FOR APPROVAL</option>
                             </optgroup>
-                            <optgroup label="BLOCKED" className="bg-slate-950">
+                            <optgroup label="BLOCKED" className="bg-surface-3">
                               <option value="BLOCKED_DEPENDENCY">BLOCKED DEPENDENCY</option>
                               <option value="BLOCKED_INFRASTRUCTURE">BLOCKED INFRASTRUCTURE</option>
                               <option value="BLOCKED_ACCESS">BLOCKED ACCESS</option>
                             </optgroup>
-                            <optgroup label="COORDINATION" className="bg-slate-950">
+                            <optgroup label="COORDINATION" className="bg-surface-3">
                               <option value="CLIENT_VERIFICATION">CLIENT VERIFICATION</option>
                               <option value="RELEASE_WINDOW_PENDING">RELEASE WINDOW PENDING</option>
                               <option value="INTERNAL_REVIEW">INTERNAL REVIEW</option>
@@ -428,17 +428,17 @@ function DeveloperWorkspace({
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 gap-3">
                   <Icon name="check_circle" size={36} style={{ color: '#34d399', opacity: 0.5 }} />
-                  <p className="text-sm font-medium text-slate-400">All assigned work successfully delivered. Outstanding job!</p>
+                  <p className="text-sm font-medium text-[var(--pm-on-surface-variant)]">All assigned work successfully delivered. Outstanding job!</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Neighboring Execution Dependencies */}
-          <div className="glass-panel rounded-xl p-6 bg-slate-900/40 border border-slate-800">
+          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-slate-200">Neighboring Dependencies Map</h2>
-              <span className="font-mono-pm text-[10px] uppercase text-slate-400">LIMITED VISIBILITY (Upstream & Downstream)</span>
+              <h2 className="text-base font-semibold text-[var(--pm-primary)]">Neighboring Dependencies Map</h2>
+              <span className="font-mono-pm text-[10px] uppercase text-[var(--pm-on-surface-variant)]">LIMITED VISIBILITY (Upstream & Downstream)</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -447,16 +447,16 @@ function DeveloperWorkspace({
                 <h3 className="text-xs font-semibold uppercase tracking-wider font-mono-pm text-indigo-400">▲ Upstream (What I Wait For)</h3>
                 {devDependencies.upstream.length > 0 ? (
                   devDependencies.upstream.map(({ dep, task }: any) => (
-                    <div key={dep.task_id + '-' + dep.depends_on_task_id} className="p-3 rounded-lg border bg-slate-950/60 border-slate-800 flex flex-col gap-1.5">
-                      <span className="text-xs font-semibold text-slate-200">{task.name}</span>
-                      <div className="flex items-center justify-between text-[10px] font-mono-pm text-slate-400">
+                    <div key={dep.task_id + '-' + dep.depends_on_task_id} className="p-3 rounded-lg border bg-surface-3 border-border flex flex-col gap-1.5">
+                      <span className="text-xs font-semibold text-[var(--pm-primary)]">{task.name}</span>
+                      <div className="flex items-center justify-between text-[10px] font-mono-pm text-[var(--pm-on-surface-variant)]">
                         <span>STATUS: <strong className="text-indigo-400">{task.status?.toUpperCase()}</strong></span>
                         <span>ASSIGNEE: <strong>{task.assignee_id ? (userMap[task.assignee_id]?.full_name?.split(' ')[0] || 'Assigned') : 'Unassigned'}</strong></span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs py-4 text-center font-mono-pm text-slate-500">No active upstream blocks.</p>
+                  <p className="text-xs py-4 text-center font-mono-pm text-text-tertiary">No active upstream blocks.</p>
                 )}
               </div>
 
@@ -465,16 +465,16 @@ function DeveloperWorkspace({
                 <h3 className="text-xs font-semibold uppercase tracking-wider font-mono-pm text-amber-400">▼ Downstream (Who Waits For Me)</h3>
                 {devDependencies.downstream.length > 0 ? (
                   devDependencies.downstream.map(({ dep, task }: any) => (
-                    <div key={dep.task_id + '-' + dep.depends_on_task_id} className="p-3 rounded-lg border bg-slate-950/60 border-slate-800 flex flex-col gap-1.5">
-                      <span className="text-xs font-semibold text-slate-200">{task.name}</span>
-                      <div className="flex items-center justify-between text-[10px] font-mono-pm text-slate-400">
+                    <div key={dep.task_id + '-' + dep.depends_on_task_id} className="p-3 rounded-lg border bg-surface-3 border-border flex flex-col gap-1.5">
+                      <span className="text-xs font-semibold text-[var(--pm-primary)]">{task.name}</span>
+                      <div className="flex items-center justify-between text-[10px] font-mono-pm text-[var(--pm-on-surface-variant)]">
                         <span>STATUS: <strong className="text-red-400">BLOCKED</strong></span>
                         <span>ASSIGNEE: <strong>{task.assignee_id ? (userMap[task.assignee_id]?.full_name?.split(' ')[0] || 'Assigned') : 'Unassigned'}</strong></span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs py-4 text-center font-mono-pm text-slate-500">No developers waiting on your tasks.</p>
+                  <p className="text-xs py-4 text-center font-mono-pm text-text-tertiary">No developers waiting on your tasks.</p>
                 )}
               </div>
             </div>
@@ -491,59 +491,59 @@ function DeveloperWorkspace({
                   <Icon name="warning" size={16} style={{ color: 'var(--pm-error)' }} />
                   <span className="text-xs font-semibold font-mono-pm uppercase tracking-widest text-red-400">Roadblock Coordinator</span>
                 </div>
-                <button onClick={() => setSelectedUnblockTask(null)} className="text-red-400 hover:text-white transition-colors cursor-pointer text-xs font-mono-pm uppercase">Close</button>
+                <button onClick={() => setSelectedUnblockTask(null)} className="text-red-400 hover:text-text-primary transition-colors cursor-pointer text-xs font-mono-pm uppercase">Close</button>
               </div>
               
               <div className="text-xs">
-                <p className="font-semibold text-slate-200 mb-1">TASK:</p>
-                <p className="text-slate-400">{selectedUnblockTask.name}</p>
+                <p className="font-semibold text-[var(--pm-primary)] mb-1">TASK:</p>
+                <p className="text-[var(--pm-on-surface-variant)]">{selectedUnblockTask.name}</p>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="font-mono-pm text-[9px] uppercase tracking-wider text-slate-400">Unblock Request / Coordination Notes</label>
+                <label className="font-mono-pm text-[9px] uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Unblock Request / Coordination Notes</label>
                 <textarea
                   value={unblockReason}
                   onChange={(e) => setUnblockReason(e.target.value)}
                   placeholder="Enter what resources, data, or approvals are needed to clear this block..."
-                  className="p-3 rounded-lg text-xs font-mono-pm min-h-[90px] border transition-colors outline-none bg-slate-950 text-slate-200 border-slate-800"
+                  className="p-3 rounded-lg text-xs font-mono-pm min-h-[90px] border transition-colors outline-none bg-surface-3 text-[var(--pm-primary)] border-border"
                 />
               </div>
 
               <button
                 onClick={() => handleSendUnblockRequest(selectedUnblockTask.id, unblockReason)}
                 disabled={!unblockReason.trim()}
-                className="w-full py-2 rounded-lg text-xs font-mono-pm uppercase tracking-widest bg-red-500 text-white font-semibold hover:bg-red-600 disabled:opacity-50 transition-all cursor-pointer text-center"
+                className="w-full py-2 rounded-lg text-xs font-mono-pm uppercase tracking-widest bg-red-500 text-text-primary font-semibold hover:bg-red-600 disabled:opacity-50 transition-all cursor-pointer text-center"
               >
                 Send Unblock Signal
               </button>
             </div>
           ) : (
-            <div className="glass-panel rounded-xl p-5 bg-slate-900/40 border border-slate-800 flex flex-col items-center justify-center text-center min-h-[160px] gap-2">
+            <div className="glass-panel rounded-xl p-5 bg-surface-2 border border-border flex flex-col items-center justify-center text-center min-h-[160px] gap-2">
               <Icon name="lock" size={24} style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }} />
-              <h3 className="text-xs font-semibold uppercase tracking-wider font-mono-pm text-slate-400">Blocker Coordinator</h3>
-              <p className="text-[11px] text-slate-500">Select "Unblock Request" on any blocked task to notify project managers.</p>
+              <h3 className="text-xs font-semibold uppercase tracking-wider font-mono-pm text-[var(--pm-on-surface-variant)]">Blocker Coordinator</h3>
+              <p className="text-[11px] text-text-tertiary">Select "Unblock Request" on any blocked task to notify project managers.</p>
             </div>
           )}
 
           {/* Required Approvals & Coordination */}
-          <div className="glass-panel rounded-xl p-5 bg-slate-900/40 border border-slate-800 space-y-4">
-            <div className="flex items-center gap-2 border-b pb-3 border-slate-800">
+          <div className="glass-panel rounded-xl p-5 bg-surface-2 border border-border space-y-4">
+            <div className="flex items-center gap-2 border-b pb-3 border-border">
               <Icon name="check_circle" size={16} style={{ color: 'var(--pm-primary)' }} />
-              <h3 className="text-xs font-semibold uppercase tracking-widest font-mono-pm text-slate-200">Approvals & waiting states</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-widest font-mono-pm text-[var(--pm-primary)]">Approvals & waiting states</h3>
             </div>
             <div className="space-y-3">
               {devOpenTasks.some((t: any) => ['WAITING_FOR_APPROVAL', 'INTERNAL_REVIEW', 'CLIENT_VERIFICATION'].includes(taskSubStates[t.id])) ? (
                 devOpenTasks.filter((t: any) => ['WAITING_FOR_APPROVAL', 'INTERNAL_REVIEW', 'CLIENT_VERIFICATION'].includes(taskSubStates[t.id])).map((t: any) => (
-                  <div key={t.id} className="p-3 rounded-lg border bg-slate-950/60 border-slate-800 flex flex-col gap-1.5 text-xs">
-                    <span className="font-semibold text-slate-200">{t.name}</span>
-                    <div className="flex items-center justify-between text-[10px] font-mono-pm text-slate-400">
+                  <div key={t.id} className="p-3 rounded-lg border bg-surface-3 border-border flex flex-col gap-1.5 text-xs">
+                    <span className="font-semibold text-[var(--pm-primary)]">{t.name}</span>
+                    <div className="flex items-center justify-between text-[10px] font-mono-pm text-[var(--pm-on-surface-variant)]">
                       <span className="text-amber-400 font-bold uppercase">{taskSubStates[t.id]?.replace(/_/g, ' ')}</span>
                       <span>EST: {t.estimated_hours}h</span>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-[11px] py-4 text-center font-mono-pm text-slate-500">No tasks waiting for review or approval.</p>
+                <p className="text-[11px] py-4 text-center font-mono-pm text-text-tertiary">No tasks waiting for review or approval.</p>
               )}
             </div>
           </div>
@@ -557,15 +557,15 @@ function DeveloperWorkspace({
 
             <div className="flex flex-col items-center justify-center py-2 text-center">
               <span className="font-mono-pm text-[9px] uppercase tracking-[0.2em] text-indigo-400 mb-1">NEXT WEEKLY PROD ROLLOUT</span>
-              <span className="text-2xl font-bold tracking-wider font-mono-pm text-white">{releaseCountdown || '00h 00m 00s'}</span>
-              <span className="text-[10px] mt-1 text-slate-500">Friday 18:00 UTC Rollout Cadence</span>
+              <span className="text-2xl font-bold tracking-wider font-mono-pm text-text-primary">{releaseCountdown || '00h 00m 00s'}</span>
+              <span className="text-[10px] mt-1 text-text-tertiary">Friday 18:00 UTC Rollout Cadence</span>
             </div>
 
             {deploymentTasks.length > 0 && (
               <div className="space-y-2 mt-2">
-                <span className="font-mono-pm text-[9px] uppercase tracking-wider block text-slate-400">ACTIVE INTEGRATIONS ({deploymentTasks.length})</span>
+                <span className="font-mono-pm text-[9px] uppercase tracking-wider block text-[var(--pm-on-surface-variant)]">ACTIVE INTEGRATIONS ({deploymentTasks.length})</span>
                 {deploymentTasks.map((dt: any) => (
-                  <div key={dt.id} className="p-2.5 rounded bg-slate-950 border border-slate-800 flex items-center justify-between text-xs text-slate-300">
+                  <div key={dt.id} className="p-2.5 rounded bg-surface-3 border border-border flex items-center justify-between text-xs text-[var(--pm-secondary)]">
                     <span className="truncate max-w-[150px]">{dt.name}</span>
                     <span className="font-mono-pm text-[10px] text-indigo-300 uppercase">{taskSubStates[dt.id]}</span>
                   </div>
@@ -717,7 +717,7 @@ function PMOrchestrationSurface({
   }, [tasks, dependencies, activeTasks, profiles]);
 
   return (
-    <div className="space-y-8 pb-16 font-geist text-slate-100" style={{ color: 'var(--pm-on-surface)' }}>
+    <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
       <GettingStartedHub />
       {/* Header */}
       <div className="flex items-end justify-between px-1 pt-2">
@@ -727,10 +727,10 @@ function PMOrchestrationSurface({
             Execution coordination, roadblock resolution, and delivery velocity.
           </p>
         </div>
-        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-slate-700 bg-slate-900/60"
+        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
           style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 operational-pulse" />
-          <span className="font-mono-pm text-xs uppercase tracking-widest text-slate-400">PM CONSOLE</span>
+          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]">PM CONSOLE</span>
         </div>
       </div>
 
@@ -787,23 +787,23 @@ function PMOrchestrationSurface({
         {/* Left Column: Friction Classifier Gauges & Dependency Tracker */}
         <div className="lg:col-span-6 space-y-6">
           {/* Friction categories */}
-          <div className="glass-panel rounded-xl p-6 bg-slate-900/40 border border-slate-800 relative group/friction">
+          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border relative group/friction">
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-base font-semibold text-indigo-300">Wait-Time & Friction Analytics</h2>
               <div className="relative group/tooltip">
                 <Icon name="info" size={16} style={{ color: 'var(--pm-on-surface-variant)', cursor: 'pointer' }} />
-                <div className="absolute hidden group-hover/tooltip:block right-0 top-6 w-64 p-3 bg-slate-800 border border-slate-700 text-xs rounded shadow-lg z-10 text-slate-300">
-                  <p className="font-semibold text-slate-200 mb-1">How this is calculated:</p>
+                <div className="absolute hidden group-hover/tooltip:block right-0 top-6 w-64 p-3 bg-surface-high border border-border text-xs rounded shadow-lg z-10 text-[var(--pm-secondary)]">
+                  <p className="font-semibold text-[var(--pm-primary)] mb-1">How this is calculated:</p>
                   <p>Wait-time ratio compares hours spent in 'Waiting'/'Blocked' sub-states against total active execution time. Friction categories aggregate historical resolution delays for dependencies, infrastructure outages, and coordination approvals.</p>
                 </div>
               </div>
             </div>
             
             <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800 text-center">
+              <div className="p-4 rounded-lg bg-surface-3 border border-border text-center">
                 <span className="font-mono-pm text-[9px] uppercase tracking-[0.2em] text-indigo-400 block mb-1">AVERAGE PORTFOLIO WAIT-TIME LATENCY</span>
-                <div className="text-3xl font-bold tracking-tight text-white font-mono-pm">{globalFrictionSummary?.avgWaitTimeRatio ?? 0}%</div>
-                <p className="text-[11px] mt-1.5 text-slate-400">Delivery cycle stalled in waiting states or dependency bottlenecks.</p>
+                <div className="text-3xl font-bold tracking-tight text-text-primary font-mono-pm">{globalFrictionSummary?.avgWaitTimeRatio ?? 0}%</div>
+                <p className="text-[11px] mt-1.5 text-[var(--pm-on-surface-variant)]">Delivery cycle stalled in waiting states or dependency bottlenecks.</p>
               </div>
 
               <div className="space-y-3">
@@ -816,10 +816,10 @@ function PMOrchestrationSurface({
                 ].map((c, i) => (
                   <div key={i} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-300 font-medium">{c.label}</span>
-                      <span className="font-mono-pm text-slate-400">{c.score}/100</span>
+                      <span className="text-[var(--pm-secondary)] font-medium">{c.label}</span>
+                      <span className="font-mono-pm text-[var(--pm-on-surface-variant)]">{c.score}/100</span>
                     </div>
-                    <div className="h-2 w-full rounded-full overflow-hidden bg-slate-950">
+                    <div className="h-2 w-full rounded-full overflow-hidden bg-surface-3">
                       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${c.score}%`, background: c.color }} />
                     </div>
                   </div>
@@ -829,24 +829,24 @@ function PMOrchestrationSurface({
           </div>
 
           {/* Dependency Handoffs */}
-          <div className="glass-panel rounded-xl p-6 bg-slate-900/40 border border-slate-800">
-            <h2 className="text-base font-semibold mb-4 text-slate-200">Dependency Handoff Tracker</h2>
+          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+            <h2 className="text-base font-semibold mb-4 text-[var(--pm-primary)]">Dependency Handoff Tracker</h2>
             <div className="space-y-3">
               {activeDependencyHandoffs.length > 0 ? (
                 activeDependencyHandoffs.map((handoff) => (
-                  <div key={handoff.id} className="p-3 rounded-lg border bg-slate-950/60 border-slate-800 flex flex-col gap-2">
+                  <div key={handoff.id} className="p-3 rounded-lg border bg-surface-3 border-border flex flex-col gap-2">
                     <div className="flex justify-between items-start">
                       <span className="text-xs font-semibold text-rose-400">Blocked Task: {handoff.task.name}</span>
-                      <span className="text-[10px] text-slate-500 font-mono-pm">Assignee: {handoff.waitingName}</span>
+                      <span className="text-[10px] text-text-tertiary font-mono-pm">Assignee: {handoff.waitingName}</span>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] bg-slate-900/80 p-2 rounded border border-slate-800">
-                      <span className="text-slate-300 font-medium">Waiting on: {handoff.dependsOn.name}</span>
+                    <div className="flex items-center justify-between text-[11px] bg-surface-2 p-2 rounded border border-border">
+                      <span className="text-[var(--pm-secondary)] font-medium">Waiting on: {handoff.dependsOn.name}</span>
                       <span className="font-mono-pm text-[9px] uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">{handoff.blockerName} ({handoff.dependsOn.status})</span>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-slate-500 py-6 text-center font-mono-pm">No cross-task dependency bottlenecks detected.</p>
+                <p className="text-xs text-text-tertiary py-6 text-center font-mono-pm">No cross-task dependency bottlenecks detected.</p>
               )}
             </div>
           </div>
@@ -854,8 +854,8 @@ function PMOrchestrationSurface({
 
         {/* Right Column: Interactive Blocker Coordinator */}
         <div className="lg:col-span-6 space-y-6">
-          <div className="glass-panel rounded-xl p-6 bg-slate-900/40 border border-slate-800">
-            <h2 className="text-base font-semibold mb-4 text-slate-200">Active Roadblocks Coordinator</h2>
+          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+            <h2 className="text-base font-semibold mb-4 text-[var(--pm-primary)]">Active Roadblocks Coordinator</h2>
             
             <div className="space-y-5">
               {activeBlockers.length > 0 ? (
@@ -863,11 +863,11 @@ function PMOrchestrationSurface({
                   const taskObj = tasks.find((t: any) => t.id === b.task_id);
                   const lastUpdate = b.history?.[b.history.length - 1];
                   return (
-                    <div key={b.task_id} className="p-4 rounded-xl border bg-slate-950/50 border-slate-800 space-y-4">
-                      <div className="flex justify-between items-start border-b border-slate-800 pb-2">
+                    <div key={b.task_id} className="p-4 rounded-xl border bg-surface-3 border-border space-y-4">
+                      <div className="flex justify-between items-start border-b border-border pb-2">
                         <div>
                           <h4 className="text-xs font-bold text-red-400 font-mono-pm uppercase">ROADBLOCK DETECTED</h4>
-                          <h3 className="text-sm font-semibold text-slate-200 mt-1">{taskObj?.name || 'Unknown Task'}</h3>
+                          <h3 className="text-sm font-semibold text-[var(--pm-primary)] mt-1">{taskObj?.name || 'Unknown Task'}</h3>
                         </div>
                         <button
                           onClick={() => handleResolveBlocker(b.task_id)}
@@ -879,10 +879,10 @@ function PMOrchestrationSurface({
 
                       <div className="text-xs space-y-1.5">
                         {lastUpdate && (
-                          <div className="p-2.5 rounded bg-slate-900 border border-slate-800">
-                            <span className="font-mono-pm text-[9px] text-slate-500 block uppercase">LAST COORDINATION EVENT</span>
-                            <p className="text-slate-300 mt-1">{lastUpdate.notes}</p>
-                            <span className="text-[9px] text-slate-500 mt-1 block">
+                          <div className="p-2.5 rounded bg-surface-2 border border-border">
+                            <span className="font-mono-pm text-[9px] text-text-tertiary block uppercase">LAST COORDINATION EVENT</span>
+                            <p className="text-[var(--pm-secondary)] mt-1">{lastUpdate.notes}</p>
+                            <span className="text-[9px] text-text-tertiary mt-1 block">
                               Logged: {new Date(lastUpdate.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} UTC
                             </span>
                           </div>
@@ -892,11 +892,11 @@ function PMOrchestrationSurface({
                       {/* Controls: Assign Owner & Add Update */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                         <div className="flex flex-col gap-1">
-                          <label className="text-[9px] font-mono-pm uppercase text-slate-400">Assign Owner</label>
+                          <label className="text-[9px] font-mono-pm uppercase text-[var(--pm-on-surface-variant)]">Assign Owner</label>
                           <select
                             value={b.owner_id || ''}
                             onChange={(e) => handleAssignBlockerOwner(b.task_id, e.target.value)}
-                            className="bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 outline-none"
+                            className="bg-surface-2 border border-border rounded px-2.5 py-1.5 text-xs text-[var(--pm-primary)] outline-none"
                           >
                             <option value="">Unassigned</option>
                             {profiles.map((p: any) => (
@@ -906,14 +906,14 @@ function PMOrchestrationSurface({
                         </div>
 
                         <div className="flex flex-col gap-1">
-                          <label className="text-[9px] font-mono-pm uppercase text-slate-400">Post Coordination Update</label>
+                          <label className="text-[9px] font-mono-pm uppercase text-[var(--pm-on-surface-variant)]">Post Coordination Update</label>
                           <div className="flex gap-2">
                             <input
                               type="text"
                               value={pmNotesMap[b.task_id] || ''}
                               onChange={(e) => setPmNotesMap(prev => ({ ...prev, [b.task_id]: e.target.value }))}
                               placeholder="Type note..."
-                              className="bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 outline-none flex-1"
+                              className="bg-surface-2 border border-border rounded px-2.5 py-1 text-xs text-[var(--pm-primary)] outline-none flex-1"
                             />
                             <button
                               onClick={() => handlePostBlockerNote(b.task_id)}
@@ -928,7 +928,7 @@ function PMOrchestrationSurface({
                   );
                 })
               ) : (
-                <p className="text-xs text-slate-500 py-10 text-center font-mono-pm">No active roadblocks currently reported.</p>
+                <p className="text-xs text-text-tertiary py-10 text-center font-mono-pm">No active roadblocks currently reported.</p>
               )}
             </div>
           </div>
@@ -1001,7 +1001,7 @@ function SuperAdminGovernanceSurface({
   }, [tasks]);
 
   return (
-    <div className="space-y-8 pb-16 font-geist text-slate-100" style={{ color: 'var(--pm-on-surface)' }}>
+    <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
       {/* Header */}
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
@@ -1010,10 +1010,10 @@ function SuperAdminGovernanceSurface({
             Organizational status, threat/capacity alerts, and blockchain audit verification.
           </p>
         </div>
-        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-slate-700 bg-slate-900/60"
+        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
           style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 operational-pulse" />
-          <span className="font-mono-pm text-xs uppercase tracking-widest text-slate-400">SUPER ADMIN</span>
+          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]">SUPER ADMIN</span>
         </div>
       </div>
 
@@ -1045,7 +1045,7 @@ function SuperAdminGovernanceSurface({
         {/* Left Column: Alerts & Breaches */}
         <div className="lg:col-span-6 space-y-6">
           {/* Capacity Breaches */}
-          <div className="glass-panel rounded-xl p-6 bg-slate-900/40 border border-slate-800">
+          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
             <div className="flex items-start justify-between mb-4">
               <h2 className="text-base font-semibold text-rose-400 flex items-center gap-2">
                 <Icon name="warning" size={18} style={{ color: 'var(--pm-error)' }} />
@@ -1053,8 +1053,8 @@ function SuperAdminGovernanceSurface({
               </h2>
               <div className="relative group/tooltip">
                 <Icon name="info" size={16} style={{ color: 'var(--pm-on-surface-variant)', cursor: 'pointer' }} />
-                <div className="absolute hidden group-hover/tooltip:block right-0 top-6 w-64 p-3 bg-slate-800 border border-slate-700 text-xs rounded shadow-lg z-10 text-slate-300">
-                  <p className="font-semibold text-slate-200 mb-1">Why did this alert fire?</p>
+                <div className="absolute hidden group-hover/tooltip:block right-0 top-6 w-64 p-3 bg-surface-high border border-border text-xs rounded shadow-lg z-10 text-[var(--pm-secondary)]">
+                  <p className="font-semibold text-[var(--pm-primary)] mb-1">Why did this alert fire?</p>
                   <p>An operator is assigned more estimated hours than their defined weekly capacity bandwidth (default: 40h * availability factor). Rebalance load to mitigate burnout and timeline drift.</p>
                 </div>
               </div>
@@ -1064,20 +1064,20 @@ function SuperAdminGovernanceSurface({
                 overloadedOperators.map((o: any) => (
                   <div key={o.profile.id} className="p-3 rounded-lg border bg-rose-950/10 border-rose-900/30 flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-semibold text-slate-200">{o.profile.full_name || o.profile.email}</span>
-                      <p className="text-[10px] text-slate-400 font-mono-pm mt-1">ALLOCATED: {o.activeHours}h (Capacity limit: {o.capacity}h)</p>
+                      <span className="text-xs font-semibold text-[var(--pm-primary)]">{o.profile.full_name || o.profile.email}</span>
+                      <p className="text-[10px] text-[var(--pm-on-surface-variant)] font-mono-pm mt-1">ALLOCATED: {o.activeHours}h (Capacity limit: {o.capacity}h)</p>
                     </div>
                     <span className="text-[9px] font-mono-pm uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">OVERLOAD</span>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-slate-500 py-6 text-center font-mono-pm">All operators are within safe bandwidth levels.</p>
+                <p className="text-xs text-text-tertiary py-6 text-center font-mono-pm">All operators are within safe bandwidth levels.</p>
               )}
             </div>
           </div>
 
           {/* Risk Deviations */}
-          <div className="glass-panel rounded-xl p-6 bg-slate-900/40 border border-slate-800">
+          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
             <h2 className="text-base font-semibold mb-4 text-amber-400 flex items-center gap-2">
               <Icon name="radar" size={18} style={{ color: '#ff9800' }} />
               High Delivery Risk Tasks
@@ -1087,14 +1087,14 @@ function SuperAdminGovernanceSurface({
                 riskBreaches.map((t: any) => (
                   <div key={t.id} className="p-3 rounded-lg border bg-amber-950/10 border-amber-900/20 flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-semibold text-slate-200">{t.name}</span>
-                      <p className="text-[10px] text-slate-400 font-mono-pm mt-1">ESTIMATE: {t.estimated_hours}h · STATUS: {t.status?.replace(/_/g, ' ')}</p>
+                      <span className="text-xs font-semibold text-[var(--pm-primary)]">{t.name}</span>
+                      <p className="text-[10px] text-[var(--pm-on-surface-variant)] font-mono-pm mt-1">ESTIMATE: {t.estimated_hours}h · STATUS: {t.status?.replace(/_/g, ' ')}</p>
                     </div>
                     <span className="text-[9px] font-mono-pm uppercase px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">HIGH RISK</span>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-slate-500 py-6 text-center font-mono-pm">No tasks flagged with critical estimation drift.</p>
+                <p className="text-xs text-text-tertiary py-6 text-center font-mono-pm">No tasks flagged with critical estimation drift.</p>
               )}
             </div>
           </div>
@@ -1102,23 +1102,23 @@ function SuperAdminGovernanceSurface({
 
         {/* Right Column: Security Telemetry (Blockchain Hashing) */}
         <div className="lg:col-span-6 space-y-6">
-          <div className="glass-panel rounded-xl p-6 bg-slate-900/40 border border-slate-800">
+          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
             <h2 className="text-base font-semibold mb-4 text-indigo-300 flex items-center gap-2">
               <Icon name="shield" size={18} style={{ color: 'var(--pm-primary)' }} />
               Audit Log Blockchain Integrity
             </h2>
 
-            <div className="p-4 rounded-xl border bg-slate-950/60 border-slate-800 flex items-center justify-between">
+            <div className="p-4 rounded-xl border bg-surface-3 border-border flex items-center justify-between">
               <div>
-                <span className="font-mono-pm text-[9px] uppercase tracking-widest text-slate-400 block mb-1">HASH CHAIN VALIDATION</span>
+                <span className="font-mono-pm text-[9px] uppercase tracking-widest text-[var(--pm-on-surface-variant)] block mb-1">HASH CHAIN VALIDATION</span>
                 {verifyingChain ? (
-                  <span className="text-xs text-slate-400">Verifying blocks...</span>
+                  <span className="text-xs text-[var(--pm-on-surface-variant)]">Verifying blocks...</span>
                 ) : chainIntegrity ? (
                   <span className="text-sm font-bold" style={{ color: chainIntegrity.status === 'Valid' ? '#34d399' : 'var(--pm-error)' }}>
                     Chain {chainIntegrity.status} ({chainIntegrity.logCount} blocks scanned)
                   </span>
                 ) : (
-                  <span className="text-xs text-slate-400">Failed to verify audit blockchain</span>
+                  <span className="text-xs text-[var(--pm-on-surface-variant)]">Failed to verify audit blockchain</span>
                 )}
               </div>
               
@@ -1132,20 +1132,20 @@ function SuperAdminGovernanceSurface({
             </div>
 
             <div className="mt-6">
-              <span className="font-mono-pm text-[10px] uppercase text-slate-500 tracking-wider block mb-3">RECENT AUDIT STREAM</span>
+              <span className="font-mono-pm text-[10px] uppercase text-text-tertiary tracking-wider block mb-3">RECENT AUDIT STREAM</span>
               <div className="space-y-3 pm-scrollbar max-h-56 overflow-y-auto pr-1">
                 {logs.length > 0 ? (
                   logs.map((log) => (
-                    <div key={log.id} className="p-2.5 rounded bg-slate-950/80 border border-slate-850 text-xs flex justify-between items-start gap-4">
+                    <div key={log.id} className="p-2.5 rounded bg-surface-3 border border-border text-xs flex justify-between items-start gap-4">
                       <div>
-                        <span className="font-bold text-slate-300 uppercase text-[10px] font-mono-pm">{log.action}</span>
-                        <p className="text-slate-400 mt-0.5 leading-relaxed">{JSON.stringify(log.metadata)}</p>
+                        <span className="font-bold text-[var(--pm-secondary)] uppercase text-[10px] font-mono-pm">{log.action}</span>
+                        <p className="text-[var(--pm-on-surface-variant)] mt-0.5 leading-relaxed">{JSON.stringify(log.metadata)}</p>
                       </div>
-                      <span className="font-mono-pm text-[8px] text-slate-500 tracking-widest">{log.hash?.slice(0, 8)}...</span>
+                      <span className="font-mono-pm text-[8px] text-text-tertiary tracking-widest">{log.hash?.slice(0, 8)}...</span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-500 py-6 text-center font-mono-pm">No recent logs recorded in current epoch.</p>
+                  <p className="text-xs text-text-tertiary py-6 text-center font-mono-pm">No recent logs recorded in current epoch.</p>
                 )}
               </div>
             </div>

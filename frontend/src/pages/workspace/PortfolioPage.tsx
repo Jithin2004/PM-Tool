@@ -165,9 +165,9 @@ export default function PortfolioPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between font-mono-pm text-[9px]" style={{ color: 'var(--pm-on-surface-variant)' }}>
                     <span>DELIVERY RATIO</span>
-                    <span className="text-slate-300">WAIT: {frictionMetric.waitTimeRatio}%</span>
+                    <span className="text-[var(--pm-secondary)]">WAIT: {frictionMetric.waitTimeRatio}%</span>
                   </div>
-                  <div className="h-2 w-full rounded-full overflow-hidden flex bg-slate-950">
+                  <div className="h-2 w-full rounded-full overflow-hidden flex bg-surface-3">
                     <div className="h-full rounded-l transition-all duration-500" style={{ width: `${Math.round(doneRatio * 100)}%`, background: '#34d399' }} />
                     <div className="h-full transition-all duration-500" style={{ width: `${Math.min(100 - Math.round(doneRatio * 100), frictionMetric.waitTimeRatio)}%`, background: '#ff9800' }} />
                     <div className="h-full rounded-r bg-red-500/20" style={{ flex: 1 }} />
@@ -186,7 +186,7 @@ export default function PortfolioPage() {
                       style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>CALIBRATED COGNITION</span>
                     <div className="flex items-center gap-1.5">
                       <span className="font-mono-pm text-base font-semibold" style={{ color: confColor }}>{confidence}%</span>
-                      <span className="text-[10px] text-slate-500">CONFIDENCE</span>
+                      <span className="text-[10px] text-text-tertiary">CONFIDENCE</span>
                     </div>
                   </div>
                   <div>
@@ -194,7 +194,7 @@ export default function PortfolioPage() {
                       style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>STABILITY</span>
                     <div className="flex items-center gap-1">
                       <span className="font-mono-pm text-base font-semibold text-indigo-300">{frictionMetric.operationalContinuity}/100</span>
-                      <span className="text-[10px] text-slate-500">CONTINUITY</span>
+                      <span className="text-[10px] text-text-tertiary">CONTINUITY</span>
                     </div>
                   </div>
                 </div>

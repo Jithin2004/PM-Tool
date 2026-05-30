@@ -619,10 +619,10 @@ body {
 .light {
   /* PM Color Tokens (Light Mode Overrides - Executive Warm) */
   --pm-bg:                    #F4F2EE;
-  --pm-surface-lowest:        #FBFAF8;
-  --pm-surface-low:           #FBFAF8;
+  --pm-surface-lowest:        #E5E0D8;
+  --pm-surface-low:           #ECE8E1;
   --pm-surface:               #F4F2EE;
-  --pm-surface-high:          #ECE8E1;
+  --pm-surface-high:          #FBFAF8;
   --pm-surface-highest:       #D8D1C7;
   --pm-surface-bright:        #FBFAF8;
   --pm-surface-variant:       #F1EEE8;

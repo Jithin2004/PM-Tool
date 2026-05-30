@@ -158,7 +158,7 @@ export function TaskCard({
                 style={{ width: `${Math.min(100, (elapsedHours / task.estimated_hours) * 100)}%` }}
               />
             </div>
-            <div className="absolute hidden group-hover/timeline:flex -top-5 left-0 text-[9px] font-mono-pm uppercase tracking-widest text-text-tertiary bg-slate-800 p-1 rounded shadow-sm z-10">
+            <div className="absolute hidden group-hover/timeline:flex -top-5 left-0 text-[9px] font-mono-pm uppercase tracking-widest text-text-tertiary bg-surface-high p-1 rounded shadow-sm z-10">
               Elapsed: {elapsedHours.toFixed(1)}h / {task.estimated_hours.toFixed(1)}h
             </div>
           </div>
