@@ -3,9 +3,15 @@ import type { Capability } from '../core/auth/permissions';
 import {
   LayoutDashboard, Briefcase, BookOpen, ListTodo, Route,
   BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
-  Activity, Shield, Zap, Radar, Settings, Link2, FileText,
+  Activity, Shield, Zap, Settings, Link2, FileText,
   Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork
 } from 'lucide-react';
+
+import {
+  Radar, TreeStructure, ArchiveBox, Kanban, Timeline,
+  ChartLineUp, Compass, Broadcast, Binoculars, Files,
+  Notebook, UsersThree, GitBranch as PhosphorGitBranch
+} from '@phosphor-icons/react';
 
 export type SidebarGroup = 'core' | 'intelligence' | 'resources' | 'system';
 export type DisclosureTier = 'essential' | 'operational' | 'intelligence' | 'platform';
@@ -34,20 +40,20 @@ export interface SidebarNavItem {
 // Canonical routes registry
 export const CANONICAL_ROUTES: AppRoute[] = [
   // Core routes
-  { id: 'overview', path: '/overview', label: 'Overview', iconName: 'LayoutDashboard', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
-  { id: 'projects', path: '/workspace', label: 'Projects', iconName: 'Briefcase', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
-  { id: 'knowledge', path: '/workspace/knowledge', label: 'Knowledge Hub', iconName: 'BookOpen', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
-  { id: 'board', path: '/execution', label: 'Tasks', iconName: 'ListTodo', capability: 'view_tasks', group: 'core', disclosureTier: 'essential' },
-  { id: 'scheduling', path: '/execution/timeline', label: 'Scheduling', iconName: 'Route', capability: 'view_scheduling', group: 'core', disclosureTier: 'operational' },
+  { id: 'overview', path: '/overview', label: 'Overview', iconName: 'Radar', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'projects', path: '/workspace', label: 'Projects', iconName: 'TreeStructure', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'knowledge', path: '/workspace/knowledge', label: 'Knowledge Hub', iconName: 'ArchiveBox', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'board', path: '/execution', label: 'Tasks', iconName: 'Kanban', capability: 'view_tasks', group: 'core', disclosureTier: 'essential' },
+  { id: 'scheduling', path: '/execution/timeline', label: 'Scheduling', iconName: 'Timeline', capability: 'view_scheduling', group: 'core', disclosureTier: 'operational' },
   
   // Intelligence routes
-  { id: 'analytics', path: '/control/analytics', label: 'Analytics', iconName: 'BarChart3', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
-  { id: 'decisions', path: '/workspace/decisions', label: 'Decision Center', iconName: 'BrainCircuit', capability: 'view_decision_center', group: 'intelligence', disclosureTier: 'intelligence' },
+  { id: 'analytics', path: '/control/analytics', label: 'Analytics', iconName: 'ChartLineUp', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
+  { id: 'decisions', path: '/workspace/decisions', label: 'Decision Center', iconName: 'Compass', capability: 'view_decision_center', group: 'intelligence', disclosureTier: 'intelligence' },
   
   // Resources routes
-  { id: 'work-logs', path: '/resources/work-logs', label: 'Work Logs', iconName: 'Clock', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
-  { id: 'logistics', path: '/resources', label: 'Logistics', iconName: 'Truck', capability: 'manage_logistics', group: 'resources', disclosureTier: 'operational' },
-  { id: 'teams', path: '/resources/teams', label: 'Team Roster', iconName: 'Users', capability: 'view_teams', group: 'resources', disclosureTier: 'operational' },
+  { id: 'work-logs', path: '/resources/work-logs', label: 'Work Logs', iconName: 'Notebook', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
+  { id: 'logistics', path: '/resources', label: 'Logistics', iconName: 'PhosphorGitBranch', capability: 'manage_logistics', group: 'resources', disclosureTier: 'operational' },
+  { id: 'teams', path: '/resources/teams', label: 'Team Roster', iconName: 'UsersThree', capability: 'view_teams', group: 'resources', disclosureTier: 'operational' },
   { id: 'capacity', path: '/resources/capacity', label: 'Capacity Forecast', iconName: 'BarChart3', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
   { id: 'portfolio', path: '/workspace/portfolio', label: 'Project Sponsors', iconName: 'Building2', capability: 'view_stakeholders', group: 'resources', disclosureTier: 'intelligence' },
   { id: 'audit', path: '/control/audit', label: 'Audit Log', iconName: 'Activity', capability: 'view_audit_log', group: 'resources', disclosureTier: 'platform' },
@@ -55,14 +61,14 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   // System routes
   { id: 'identity', path: '/control/identity', label: 'Admin & Identity', iconName: 'Shield', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
   { id: 'automations', path: '/control/automations', label: 'Automations', iconName: 'Zap', capability: 'manage_automations', group: 'system', disclosureTier: 'platform' },
-  { id: 'mission-control', path: '/control/mission-control', label: 'Mission Control', iconName: 'Radar', capability: 'view_mission_control', group: 'intelligence', disclosureTier: 'platform' },
+  { id: 'mission-control', path: '/control/mission-control', label: 'Mission Control', iconName: 'Broadcast', capability: 'view_mission_control', group: 'intelligence', disclosureTier: 'platform' },
   { id: 'system-health', path: '/control/system-health', label: 'System Health', iconName: 'Activity', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
   { id: 'settings', path: '/control/settings', label: 'Settings', iconName: 'Settings', capability: 'manage_settings', group: 'system', disclosureTier: 'operational' },
   { id: 'integrations', path: '/control/connections', label: 'Integrations', iconName: 'Link2', capability: 'manage_integrations', group: 'system', disclosureTier: 'platform' },
 
   // Executive routes
-  { id: 'executive', path: '/workspace/executive', label: 'Executive Overview', iconName: 'Activity', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
-  { id: 'reports', path: '/workspace/reports', label: 'Reports Center', iconName: 'FileText', capability: 'view_reports', group: 'intelligence', disclosureTier: 'intelligence' },
+  { id: 'executive', path: '/workspace/executive', label: 'Executive Overview', iconName: 'Binoculars', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
+  { id: 'reports', path: '/workspace/reports', label: 'Reports Center', iconName: 'Files', capability: 'view_reports', group: 'intelligence', disclosureTier: 'intelligence' },
 
 
   // Non-sidebar / helper routes
@@ -114,7 +120,10 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   LayoutDashboard, Briefcase, BookOpen, ListTodo, Route,
   BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
   Activity, Shield, Zap, Radar, Settings, Link2, FileText,
-  Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork
+  Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork,
+  TreeStructure, ArchiveBox, Kanban, Timeline,
+  ChartLineUp, Compass, Broadcast, Binoculars, Files,
+  Notebook, UsersThree, PhosphorGitBranch
 };
 
 export function renderRouteIcon(name: string, className = "w-[15px] h-[15px] shrink-0"): React.ReactNode {
