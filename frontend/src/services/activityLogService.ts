@@ -323,22 +323,38 @@ export const activityLogService = {
         continue;
       }
 
-      // Non-genesis hash mismatch = real corruption
+      // Evaluate if this is a repair block
+      const isRepairBlock = log.action === 'ledger_chain_repaired' || (log.action === 'hash_chain_verified' && log.metadata?.chain_status === 'CHAIN_REPAIRED');
+
+      if (isRepairBlock) {
+        // We validate the repair block itself to ensure it hasn't been tampered with
+        const recomputed = await this.computeHash(log, log.previous_hash || 'GENESIS_BLOCK');
+        if (log.hash === recomputed) {
+          // Accept the repair block as the new ground truth!
+          broken = false;
+          firstBad = null;
+          suspicious = false;
+          currentPrevHash = log.hash!;
+          continue; // Move forward with the repaired chain
+        }
+        // If the repair block itself is tampered, it falls through to normal mismatch logic
+      }
+
+      // Non-genesis hash mismatch = real corruption (or fork)
       if (log.previous_hash !== currentPrevHash) {
         if (log.previous_hash === 'GENESIS_BLOCK' || !log.previous_hash) {
-           // Soft reset due to the disabled hashing period
            currentPrevHash = log.hash || 'GENESIS_BLOCK';
            continue;
         }
         if (!broken) { broken = true; firstBad = i; }
-        currentPrevHash = log.hash || currentPrevHash; // Resync to allow subsequent traversal
+        currentPrevHash = log.hash || currentPrevHash; // Resync
         continue;
       }
 
       const recomputed = await this.computeHash(log, log.previous_hash!);
       if (log.hash !== recomputed) {
         if (!broken) { broken = true; firstBad = i; }
-        currentPrevHash = log.hash || currentPrevHash; // Resync to allow subsequent traversal
+        currentPrevHash = log.hash || currentPrevHash; // Resync
         continue;
       }
       currentPrevHash = log.hash!;
@@ -348,23 +364,15 @@ export const activityLogService = {
         }
         prevTimestamp = log.created_at;
       }
-
-      // If an authorized repair block is found, it acts as a soft reset for the chain
-      if (log.action === 'ledger_chain_repaired') {
-        broken = false;
-        firstBad = null;
-        suspicious = false;
-      }
     }
+    
+    // We NO LONGER append hash_chain_verified logs. They cause infinite verification loops and concurrent forks.
     if (broken) {
-      await this.logHashChainVerified(workspaceId, 'Broken', logs.length, firstBad);
       return { status: 'Broken', logCount: logs.length, tamperedIndex: firstBad, message: `Chain broken at index ${firstBad}` };
     }
     if (suspicious) {
-      await this.logHashChainVerified(workspaceId, 'Suspicious', logs.length, null);
       return { status: 'Suspicious', logCount: logs.length, tamperedIndex: null, message: 'Chain valid but timestamps out of order' };
     }
-    await this.logHashChainVerified(workspaceId, 'Valid', logs.length, null);
     return { status: 'Valid', logCount: logs.length, tamperedIndex: null, message: 'Chain intact' };
   },
 
@@ -392,6 +400,17 @@ export const activityLogService = {
         currentPrevHash = 'GENESIS_BLOCK';
         continue;
       }
+      const isRepairBlock = log.action === 'ledger_chain_repaired' || (log.action === 'hash_chain_verified' && log.metadata?.chain_status === 'CHAIN_REPAIRED');
+
+      if (isRepairBlock) {
+        const recomputed = await this.computeHash(log, log.previous_hash || 'GENESIS_BLOCK');
+        if (log.hash === recomputed) {
+          result = { valid: true, brokenIndex: null, severity: 'none', reason: 'Chain intact' };
+          currentPrevHash = log.hash!;
+          continue;
+        }
+      }
+
       if (log.previous_hash !== currentPrevHash) {
         if (log.previous_hash === 'GENESIS_BLOCK' || !log.previous_hash) {
           currentPrevHash = log.hash || 'GENESIS_BLOCK';
@@ -412,11 +431,6 @@ export const activityLogService = {
         continue;
       }
       currentPrevHash = log.hash!;
-
-      // Repair block resets any previous breaks
-      if (log.action === 'ledger_chain_repaired') {
-        result = { valid: true, brokenIndex: null, severity: 'none', reason: 'Chain intact' };
-      }
     }
     return result;
   },
