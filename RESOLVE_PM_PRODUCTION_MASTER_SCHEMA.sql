@@ -531,7 +531,7 @@ SECURITY DEFINER SET search_path = ''
 AS $$
 BEGIN
   -- Allow users to reclaim their workspace if they are the true owner
-  IF EXISTS (SELECT 1 FROM workspaces WHERE id = NEW.workspace_id AND owner_id = NEW.id) THEN
+  IF EXISTS (SELECT 1 FROM public.workspaces WHERE id = NEW.workspace_id AND owner_id = NEW.id) THEN
     RETURN NEW;
   END IF;
 
