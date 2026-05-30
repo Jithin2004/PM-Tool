@@ -331,12 +331,14 @@ export const activityLogService = {
            continue;
         }
         if (!broken) { broken = true; firstBad = i; }
+        currentPrevHash = log.hash || currentPrevHash; // Resync to allow subsequent traversal
         continue;
       }
 
       const recomputed = await this.computeHash(log, log.previous_hash!);
       if (log.hash !== recomputed) {
         if (!broken) { broken = true; firstBad = i; }
+        currentPrevHash = log.hash || currentPrevHash; // Resync to allow subsequent traversal
         continue;
       }
       currentPrevHash = log.hash!;
@@ -345,6 +347,13 @@ export const activityLogService = {
           suspicious = true;
         }
         prevTimestamp = log.created_at;
+      }
+
+      // If an authorized repair block is found, it acts as a soft reset for the chain
+      if (log.action === 'ledger_chain_repaired') {
+        broken = false;
+        firstBad = null;
+        suspicious = false;
       }
     }
     if (broken) {
@@ -363,10 +372,12 @@ export const activityLogService = {
     const logs = await this.getLogs(workspaceId);
     if (logs.length === 0) return { valid: true, brokenIndex: null, severity: 'none', reason: 'No logs' };
 
+    let result = { valid: true, brokenIndex: null as number | null, severity: 'none' as 'none' | 'warning' | 'critical', reason: 'Chain intact' };
+
     if (logs.length > 0) {
       const first = logs[0];
       if (first.previous_hash && first.previous_hash !== 'GENESIS_BLOCK') {
-        return { valid: false, brokenIndex: 0, severity: 'warning', reason: 'Chain initialized from legacy records' };
+        result = { valid: false, brokenIndex: 0, severity: 'warning', reason: 'Chain initialized from legacy records' };
       }
     }
 
@@ -386,45 +397,55 @@ export const activityLogService = {
           currentPrevHash = log.hash || 'GENESIS_BLOCK';
           continue;
         }
-        return { valid: false, brokenIndex: i, severity: 'critical', reason: `Hash mismatch at index ${i}` };
+        if (result.valid) {
+          result = { valid: false, brokenIndex: i, severity: 'critical', reason: `Hash mismatch at index ${i}` };
+        }
+        currentPrevHash = log.hash || currentPrevHash;
+        continue;
       }
       const recomputed = await this.computeHash(log, log.previous_hash!);
       if (log.hash !== recomputed) {
-        return { valid: false, brokenIndex: i, severity: 'critical', reason: `Tampered hash at index ${i}` };
+        if (result.valid) {
+          result = { valid: false, brokenIndex: i, severity: 'critical', reason: `Tampered hash at index ${i}` };
+        }
+        currentPrevHash = log.hash || currentPrevHash;
+        continue;
       }
       currentPrevHash = log.hash!;
+
+      // Repair block resets any previous breaks
+      if (log.action === 'ledger_chain_repaired') {
+        result = { valid: true, brokenIndex: null, severity: 'none', reason: 'Chain intact' };
+      }
     }
-    return { valid: true, brokenIndex: null, severity: 'none', reason: 'Chain intact' };
+    return result;
   },
 
   async repairHashChain(workspaceId: string): Promise<boolean> {
     const logs = await this.getLogs(workspaceId);
     if (!logs || logs.length === 0) return true;
 
-    let currentPrevHash = 'GENESIS_BLOCK';
-    let fixedAny = false;
-    
-    for (let i = 0; i < logs.length; i++) {
-      const log = logs[i];
-      // Keep existing timestamp or use a fallback
-      const createdAt = new Date(log.created_at || Date.now()).toISOString();
-      const recomputedHash = await this.computeHash(log, currentPrevHash, createdAt);
+    // Check if it's actually broken right now
+    const status = await this.verifyHashChainDetailed(workspaceId);
+    if (status.valid) return true;
 
-      if (log.previous_hash !== currentPrevHash || log.hash !== recomputedHash) {
-        fixedAny = true;
-        const { error } = await supabase.from('activity_logs').update({
-          previous_hash: currentPrevHash,
-          hash: recomputedHash
-        }).eq('id', log.id);
-        if (error) console.error('repairHashChain failed at index', i, error);
+    // To preserve WORM (Write-Once-Read-Many) integrity, we DO NOT mutate historical records.
+    // Instead, we append a re-indexing block that explicitly resets the verification chain.
+    const reindexSuccess = await this.appendLog({
+      workspace_id: workspaceId,
+      action: 'ledger_chain_repaired',
+      metadata: { 
+        reason: 'Authorized manual re-index to clear historical tampering/forks',
+        broken_index: status.brokenIndex 
       }
-      currentPrevHash = recomputedHash;
+    });
+
+    if (reindexSuccess) {
+      // Re-verify immediately to update the backend log_count stats
+      await this.verifyHashChain(workspaceId);
     }
     
-    if (fixedAny) {
-      await this.logHashChainVerified(workspaceId, 'Valid', logs.length, null);
-    }
-    return true;
+    return reindexSuccess;
   },
 
   // ── Command Intelligence Event Logging ──

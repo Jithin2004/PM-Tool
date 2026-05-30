@@ -266,6 +266,8 @@ export function ProjectDetailsModal({
     setVerificationState('VERIFYING');
     setTamperedIndex(null);
 
+    let isTampered = false;
+    let localTamperedIdx: number | null = null;
     let currentPrevHash = 'GENESIS_BLOCK';
 
     for (let i = 0; i < localLogs.length; i++) {
@@ -277,9 +279,14 @@ export function ProjectDetailsModal({
 
       // 1. Verify previous hash matches current chain predecessor
       if (log.previousHash !== currentPrevHash) {
-        setVerificationState('TAMPERED');
-        setTamperedIndex(i);
-        return;
+        if (!isTampered) {
+          isTampered = true;
+          localTamperedIdx = i;
+          setVerificationState('TAMPERED');
+          setTamperedIndex(i);
+        }
+        currentPrevHash = log.hash || currentPrevHash;
+        continue;
       }
 
       // 2. Re-compute block hash
@@ -287,15 +294,30 @@ export function ProjectDetailsModal({
       const computedHash = await sha256(message);
 
       if (log.hash !== computedHash) {
-        setVerificationState('TAMPERED');
-        setTamperedIndex(i);
-        return;
+        if (!isTampered) {
+          isTampered = true;
+          localTamperedIdx = i;
+          setVerificationState('TAMPERED');
+          setTamperedIndex(i);
+        }
+        currentPrevHash = log.hash || currentPrevHash;
+        continue;
       }
 
       currentPrevHash = log.hash;
+
+      // Reset state if we encounter an authorized repair block
+      if (log.changes.action === 'ledger_chain_repaired' || log.changes.includes('ledger_chain_repaired')) {
+        isTampered = false;
+        localTamperedIdx = null;
+        setVerificationState('VERIFYING'); // Will become SECURED at the end
+        setTamperedIndex(null);
+      }
     }
 
-    setVerificationState('SECURED');
+    if (!isTampered) {
+      setVerificationState('SECURED');
+    }
     setScanningIndex(null);
   };
 

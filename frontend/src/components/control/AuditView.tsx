@@ -227,9 +227,13 @@ const AuditView = React.memo(function AuditView() {
               <button
                 onClick={async () => {
                   setLogsLoading(true);
-                  await activityLogService.repairHashChain(wsId);
-                  const chain = await activityLogService.verifyHashChain(wsId);
-                  setChainStatus({ status: chain.status, logCount: chain.logCount, message: chain.message });
+                  try {
+                    await activityLogService.repairHashChain(wsId);
+                    const chain = await activityLogService.verifyHashChain(wsId);
+                    setChainStatus({ status: chain.status, logCount: chain.logCount, message: chain.message });
+                  } catch (e: any) {
+                    alert(e.message);
+                  }
                   setLogsLoading(false);
                 }}
                 disabled={logsLoading}
