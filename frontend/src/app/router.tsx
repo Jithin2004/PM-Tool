@@ -52,7 +52,7 @@ const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage')
 const KnowledgePage = withRetry(() => import('../pages/workspace/KnowledgePage'));
 const DecisionsPage = withRetry(() => import('../pages/workspace/DecisionsPage'));
 const ExecutiveOverview = withRetry(() => import('../pages/dashboard/ExecutiveOverview').then(m => ({ default: m.ExecutiveOverview })));
-const ExecutiveDigestPage = withRetry(() => import('../pages/workspace/ExecutiveDigestPage').then(m => ({ default: m.ExecutiveDigestPage })));
+
 const ProductAdoptionDashboard = withRetry(() => import('../pages/workspace/ProductAdoptionDashboard').then(m => ({ default: m.ProductAdoptionDashboard })));
 const ReportsCenter = withRetry(() => import('../pages/workspace/ReportsCenter'));
 
