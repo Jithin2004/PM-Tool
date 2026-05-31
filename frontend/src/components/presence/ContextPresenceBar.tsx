@@ -16,7 +16,7 @@ export function ContextPresenceBar({ presences, signals, summary }: ContextPrese
 
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 text-xs text-text-tertiary border-b border-border">
-      <span className="font-medium text-gray-600">
+      <span className="font-medium text-[var(--pm-text-secondary)]">
         {summary.total} active
       </span>
       {summary.editing > 0 && <span>{summary.editing} editing</span>}
@@ -31,7 +31,7 @@ export function ContextPresenceBar({ presences, signals, summary }: ContextPrese
           </div>
         ))}
         {activePresences.length > 6 && (
-          <span className="text-gray-600 dark:text-gray-400">+{activePresences.length - 6}</span>
+          <span className="text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)]">+{activePresences.length - 6}</span>
         )}
       </div>
     </div>

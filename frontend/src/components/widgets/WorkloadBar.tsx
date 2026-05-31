@@ -22,7 +22,7 @@ export function WorkloadBar({ label, value, maxValue = 100, status = 'healthy', 
       onClick={onClick}
     >
       <span className="text-[11px] font-mono text-text-secondary w-24 truncate shrink-0">{label}</span>
-      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+      <div className="flex-1 h-2 bg-[var(--pm-surface)]/5 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${ratio * 100}%` }}

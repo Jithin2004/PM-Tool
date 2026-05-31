@@ -78,7 +78,7 @@ export function WorkLogsPanel() {
         </div>
         <div className="divide-y" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
           {filtered.map((entry: any) => (
-            <div key={entry.profile.id} className="p-6 flex items-center justify-between transition-colors hover:bg-white/5">
+            <div key={entry.profile.id} className="p-6 flex items-center justify-between transition-colors hover:bg-[var(--pm-surface)]/5">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden" style={{ background: 'var(--pm-surface-high)', border: '1px solid rgba(70,69,84,0.3)' }}>
                   {entry.profile.avatar_url ? (

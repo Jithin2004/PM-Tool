@@ -281,7 +281,7 @@ export default function CommandAnalytics({ isOpen, onClose, role, workspaceId, p
                               </div>
                               <div className="flex items-center gap-3 mt-1">
                                 <span className="text-[8px] font-mono text-text-quaternary">{chain.count} completions</span>
-                                <div className="flex-1 max-w-[100px] h-1 bg-white/5">
+                                <div className="flex-1 max-w-[100px] h-1 bg-[var(--pm-surface)]/5">
                                   <div className="h-full bg-cyan-500/40" style={{ width: `${chain.completion_pct}%` }} />
                                 </div>
                                 <span className="text-[8px] font-mono text-cyan-400/60">{chain.completion_pct}%</span>

@@ -48,7 +48,7 @@ export function OperationalActivityFeed({ feed, signals, maxItems = 10 }: Operat
         <div key={item.id} className="flex items-start gap-2 py-1">
           <PresenceIndicator state={item.state} className="mt-1 shrink-0" />
           <div className="min-w-0">
-            <span className="text-gray-700 font-medium">{item.username}</span>
+            <span className="text-[var(--pm-text-secondary)] font-medium">{item.username}</span>
             {item.description.replace(item.username, '')}
           </div>
         </div>

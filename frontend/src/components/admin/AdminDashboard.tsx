@@ -279,7 +279,7 @@ export function AdminDashboard({
                     <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Team Members</label>
                     <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
                       {availableDevs.map(dev => (
-                        <label key={dev.id} className="flex items-center gap-2 text-xs font-mono-pm cursor-pointer hover:bg-white/5 p-1.5 rounded transition-colors" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                        <label key={dev.id} className="flex items-center gap-2 text-xs font-mono-pm cursor-pointer hover:bg-[var(--pm-surface)]/5 p-1.5 rounded transition-colors" style={{ color: 'var(--pm-on-surface-variant)' }}>
                           <input
                             type="checkbox"
                             className="accent-[var(--pm-primary)]"
@@ -362,7 +362,7 @@ export function AdminDashboard({
                   <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-3" style={{ color: 'var(--pm-on-surface-variant)' }}>Active Designations</label>
                   <div className="divide-y rounded-lg border max-h-40 overflow-y-auto p-2" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
                     {customRoles.map(role => (
-                      <div key={role} className="flex justify-between items-center py-2.5 px-2 hover:bg-white/5 transition-colors rounded">
+                      <div key={role} className="flex justify-between items-center py-2.5 px-2 hover:bg-[var(--pm-surface)]/5 transition-colors rounded">
                         <span className="text-xs font-mono-pm" style={{ color: 'var(--pm-on-surface-variant)' }}>{role}</span>
                         {!['viewer', 'developer', 'designer', 'qa engineer'].includes(role.toLowerCase()) ? (
                           <button
@@ -521,7 +521,7 @@ export function AdminDashboard({
                 </h3>
                 <div className="divide-y rounded-lg border max-h-[220px] overflow-y-auto p-4" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
                   {invitations.map(inv => (
-                    <div key={inv.id} className="flex justify-between items-center py-3 hover:bg-white/5 transition-colors rounded px-2">
+                    <div key={inv.id} className="flex justify-between items-center py-3 hover:bg-[var(--pm-surface)]/5 transition-colors rounded px-2">
                       <div className="flex flex-col">
                         <span className="text-[11px] font-mono-pm" style={{ color: 'var(--pm-on-surface-variant)' }}>{inv.email}</span>
                         <span className="text-[9px] font-mono-pm uppercase tracking-widest mt-1" style={{ color: 'var(--pm-primary)' }}>Role: {inv.role}</span>

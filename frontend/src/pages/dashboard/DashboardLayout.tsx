@@ -948,13 +948,13 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               )}
             </div>
             {!isSidebarCollapsed && (
-              <button onClick={() => setIsSidebarCollapsed(true)} className="p-1 rounded hover:bg-white/5 text-text-tertiary hover:text-text-primary transition-colors">
+              <button onClick={() => setIsSidebarCollapsed(true)} className="p-1 rounded hover:bg-[var(--pm-surface)]/5 text-text-tertiary hover:text-text-primary transition-colors">
                 <ChevronLeft className="w-4 h-4" />
               </button>
             )}
           </div>
           {isSidebarCollapsed && (
-            <button onClick={() => setIsSidebarCollapsed(false)} className="mx-auto mt-2 p-1 rounded hover:bg-white/5 text-text-tertiary hover:text-text-primary transition-colors">
+            <button onClick={() => setIsSidebarCollapsed(false)} className="mx-auto mt-2 p-1 rounded hover:bg-[var(--pm-surface)]/5 text-text-tertiary hover:text-text-primary transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
           )}
@@ -984,7 +984,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       }}
                       className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-lg text-[12px] font-medium transition-all duration-150`}
                       style={active ? {
-                        background: groupBg,
+                        background: 'var(--pm-surface-high)',
                         color: groupColor,
                         borderLeft: isSidebarCollapsed ? '' : `3px solid ${groupColor}`,
                         paddingLeft: isSidebarCollapsed ? '' : '9px',
@@ -1098,7 +1098,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   </div>
                   <button
                     onClick={() => setMobileSidebarOpen(false)}
-                    className="p-1.5 hover:bg-white/5 rounded-lg text-text-secondary"
+                    className="p-1.5 hover:bg-[var(--pm-surface)]/5 rounded-lg text-text-secondary"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -1127,7 +1127,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                                 active ? 'shadow-sm' : 'hover:bg-surface-high hover:text-text-primary'
                               }`}
                               style={active ? {
-                                background: groupBg,
+                                background: 'var(--pm-surface-high)',
                                 color: groupColor,
                                 borderLeft: `3px solid ${groupColor}`,
                                 paddingLeft: '9px',
@@ -1155,7 +1155,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
                 <div className="p-4 border-t border-border bg-bg shrink-0">
                   <div className="flex items-center gap-3 p-2">
-                    <div className="w-9 h-9 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-[var(--pm-surface)]/5 border border-border flex items-center justify-center overflow-hidden shrink-0">
                       {profile?.avatar_url ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> :
                         <Users className="w-4 h-4 text-text-secondary" />}
                     </div>
@@ -1416,7 +1416,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <div className="absolute left-0 top-0 w-1 h-full bg-blue-500" />
                       <div>
                         <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">AI Suggestion</p>
-                        <p className="text-xs text-text-secondary">Team <strong className="text-gray-900 dark:text-white">{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
+                        <p className="text-xs text-text-secondary">Team <strong className="text-[var(--pm-text)] dark:text-white">{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
                       </div>
                       <button
                         type="button"
@@ -1457,21 +1457,21 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     <div className="space-y-3">
                       <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionInfra ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
-                          {frictionInfra && <svg className="w-3.5 h-3.5 text-gray-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {frictionInfra && <svg className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" checked={frictionInfra} onChange={e => setFrictionInfra(e.target.checked)} className="hidden" />
                         <span>Client Infrastructure Access Lag</span>
                       </label>
                       <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionData ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
-                          {frictionData && <svg className="w-3.5 h-3.5 text-gray-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {frictionData && <svg className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" checked={frictionData} onChange={e => setFrictionData(e.target.checked)} className="hidden" />
                         <span>External Data Provisioning Delay</span>
                       </label>
                       <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionSla ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
-                          {frictionSla && <svg className="w-3.5 h-3.5 text-gray-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {frictionSla && <svg className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" checked={frictionSla} onChange={e => setFrictionSla(e.target.checked)} className="hidden" />
                         <span>Third-Party SLA / Compliance Review</span>
@@ -1504,7 +1504,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   <div className="flex gap-4 pt-4">
                     <button
                       type="submit"
-                      className="flex-[2] bg-teal-500 text-gray-900 dark:text-white h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-teal-400 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(20,184,166,0.3)]"
+                      className="flex-[2] bg-teal-500 text-[var(--pm-text)] dark:text-white h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-teal-400 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(20,184,166,0.3)]"
                     >
                       Commit Project
                     </button>
@@ -1608,7 +1608,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <h4 className="text-base font-semibold">Kanban Board Ready</h4>
                       <p className="text-xs text-text-tertiary">Project created. Add work items to your board to start tracking progress.</p>
                       <div className="flex justify-center gap-3 pt-4">
-                        <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 0 })} className="px-4 py-2 bg-white/10 text-text-primary text-[10px] font-mono uppercase tracking-wider">Add Work Items</button>
+                        <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 0 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider">Add Work Items</button>
                         <button onClick={() => setProjectSetupGuide(null)} className="px-4 py-2 bg-cyan-600 text-text-primary text-[10px] font-mono uppercase tracking-wider">Launch Board</button>
                       </div>
                     </div>
@@ -1622,7 +1622,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     {['Epics', 'Stories', 'Sprint', 'Launch'].map((s, i) => (
                       <React.Fragment key={s}>
                         <span className={`flex items-center gap-1 ${i <= projectSetupGuide.step ? 'text-cyan-400' : ''}`}>
-                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${i <= projectSetupGuide.step ? 'bg-cyan-500/20 border border-cyan-500' : 'bg-white/5 border border-border'}`}>{i < projectSetupGuide.step ? <Check className="w-2.5 h-2.5" /> : i + 1}</span>
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${i <= projectSetupGuide.step ? 'bg-cyan-500/20 border border-cyan-500' : 'bg-[var(--pm-surface)]/5 border border-border'}`}>{i < projectSetupGuide.step ? <Check className="w-2.5 h-2.5" /> : i + 1}</span>
                           {s}
                         </span>
                         {i < 3 && <span className="text-text-quaternary">Î“Ã¥Ã†</span>}
@@ -1635,7 +1635,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <Layers className="w-10 h-10 text-pink-400 mx-auto" />
                       <h4 className="text-sm font-semibold">Create Epics</h4>
                       <p className="text-[11px] text-text-tertiary">Epics are large bodies of work that contain multiple stories.</p>
-                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 1 })} className="px-4 py-2 bg-white/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip Î“Ã‡Ã¶ Next</button>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 1 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-colors">Skip Î“Ã‡Ã¶ Next</button>
                     </div>
                   )}
 
@@ -1644,7 +1644,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <ListOrdered className="w-10 h-10 text-signal-warning mx-auto" />
                       <h4 className="text-sm font-semibold">Create Stories</h4>
                       <p className="text-[11px] text-text-tertiary">Break epics into user stories with acceptance criteria.</p>
-                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 2 })} className="px-4 py-2 bg-white/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip Î“Ã‡Ã¶ Next</button>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 2 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-colors">Skip Î“Ã‡Ã¶ Next</button>
                     </div>
                   )}
 
@@ -1653,7 +1653,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <Play className="w-10 h-10 text-signal-info mx-auto" />
                       <h4 className="text-sm font-semibold">Create Sprint</h4>
                       <p className="text-[11px] text-text-tertiary">Define sprint duration and assign stories to the backlog.</p>
-                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 3 })} className="px-4 py-2 bg-white/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-white/20 transition-colors">Skip Î“Ã‡Ã¶ Next</button>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 3 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-colors">Skip Î“Ã‡Ã¶ Next</button>
                     </div>
                   )}
 

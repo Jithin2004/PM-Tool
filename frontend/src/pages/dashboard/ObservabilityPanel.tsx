@@ -11,7 +11,7 @@ export const ObservabilityPanel: React.FC = () => {
   if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
     return (
       <div className="flex h-full items-center justify-center bg-surface">
-        <div className="text-center text-gray-500">
+        <div className="text-center text-[var(--pm-text-secondary)]">
           <ShieldAlert className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>You do not have clearance to view operational telemetry.</p>
         </div>
@@ -40,11 +40,11 @@ export const ObservabilityPanel: React.FC = () => {
   const MetricCard = ({ title, value, subtitle, icon: Icon }: any) => (
     <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
       <div className="flex justify-between items-start mb-2">
-        <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">{title}</span>
-        <Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+        <span className="text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)] text-sm font-medium">{title}</span>
+        <Icon className="w-4 h-4 text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)]" />
       </div>
-      <div className="text-2xl font-semibold text-gray-900 dark:text-white">{value}</div>
-      {subtitle && <div className="text-sm text-gray-500 mt-1">{subtitle}</div>}
+      <div className="text-2xl font-semibold text-[var(--pm-text)] dark:text-white">{value}</div>
+      {subtitle && <div className="text-sm text-[var(--pm-text-secondary)] mt-1">{subtitle}</div>}
     </div>
   );
 
@@ -52,19 +52,19 @@ export const ObservabilityPanel: React.FC = () => {
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--pm-text)] dark:text-white flex items-center gap-3">
             <Activity className="w-6 h-6 text-indigo-500" />
             Platform Observability
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)] mt-1">
             Executive-grade operational telemetry and incident governance.
           </p>
         </div>
         <div className="flex items-center gap-3 bg-surface-2 px-4 py-2 rounded-lg border border-border shadow-sm">
-          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">System State</span>
+          <span className="text-sm font-medium text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)]">System State</span>
           <div className="flex items-center gap-2">
             <StatusIcon status={health.status} />
-            <span className="font-semibold capitalize text-gray-900 dark:text-white">{health.status}</span>
+            <span className="font-semibold capitalize text-[var(--pm-text)] dark:text-white">{health.status}</span>
           </div>
         </div>
       </div>
@@ -100,7 +100,7 @@ export const ObservabilityPanel: React.FC = () => {
         
         {/* Component Health */}
         <div className="col-span-1 space-y-6">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Component Health</h2>
+          <h2 className="text-lg font-medium text-[var(--pm-text)] dark:text-white">Component Health</h2>
           <div className="bg-surface-2 border border-border rounded-xl overflow-hidden shadow-sm">
             <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
               {[
@@ -112,11 +112,11 @@ export const ObservabilityPanel: React.FC = () => {
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between p-4 hover:bg-surface-3 transition-colors">
                   <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                    <span className="font-medium text-gray-700 dark:text-gray-300">{item.label}</span>
+                    <item.icon className="w-5 h-5 text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)]" />
+                    <span className="font-medium text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)]">{item.label}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500 capitalize">{item.status}</span>
+                    <span className="text-sm text-[var(--pm-text-secondary)] capitalize">{item.status}</span>
                     <StatusIcon status={item.status} />
                   </div>
                 </div>
@@ -127,10 +127,10 @@ export const ObservabilityPanel: React.FC = () => {
 
         {/* Incident Timeline */}
         <div className="col-span-2 space-y-6">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Incident Timeline</h2>
+          <h2 className="text-lg font-medium text-[var(--pm-text)] dark:text-white">Incident Timeline</h2>
           <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm min-h-[400px]">
             {incidents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-600 dark:text-gray-400 text-center">
+              <div className="flex flex-col items-center justify-center h-64 text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)] text-center">
                 <CheckCircle className="w-12 h-12 mb-4 text-emerald-100 dark:text-emerald-900/50" />
                 <p>No active incidents.</p>
                 <p className="text-sm">Platform is operating normally.</p>
@@ -150,9 +150,9 @@ export const ObservabilityPanel: React.FC = () => {
                         incident.severity === 'critical' ? 'bg-rose-500' :
                         incident.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
                       }`}>
-                        {incident.severity === 'critical' ? <XCircle className="w-4 h-4 text-gray-900 dark:text-white" /> :
-                         incident.severity === 'warning' ? <AlertTriangle className="w-4 h-4 text-gray-900 dark:text-white" /> :
-                         <Info className="w-4 h-4 text-gray-900 dark:text-white" />}
+                        {incident.severity === 'critical' ? <XCircle className="w-4 h-4 text-[var(--pm-text)] dark:text-white" /> :
+                         incident.severity === 'warning' ? <AlertTriangle className="w-4 h-4 text-[var(--pm-text)] dark:text-white" /> :
+                         <Info className="w-4 h-4 text-[var(--pm-text)] dark:text-white" />}
                       </div>
                       
                       <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-surface-2 border border-border p-4 rounded-xl shadow-sm">
@@ -163,12 +163,12 @@ export const ObservabilityPanel: React.FC = () => {
                           }`}>
                             {incident.category} {incident.dedupCount > 0 ? `(${incident.dedupCount + 1}x)` : ''}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-[var(--pm-text-secondary)]">
                             {new Date(incident.timestamp).toLocaleTimeString()}
                           </span>
                         </div>
-                        <h3 className="font-medium text-gray-900 dark:text-white mb-1">{incident.message}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{incident.causality}</p>
+                        <h3 className="font-medium text-[var(--pm-text)] dark:text-white mb-1">{incident.message}</h3>
+                        <p className="text-sm text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)]">{incident.causality}</p>
                         
                         {!incident.resolved && (
                           <div className="mt-3 pt-3 border-t border-border flex justify-end">

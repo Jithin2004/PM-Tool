@@ -101,7 +101,7 @@ export function WorkspaceSettings() {
                 <p className="text-[10px] text-text-tertiary">Receive system alerts and task notifications</p>
               </div>
               <div className={`w-11 h-6 rounded-full transition-colors cursor-not-allowed ${settings.notifications ? 'bg-signal-safe shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-surface-3'} relative shrink-0`}>
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.notifications ? 'left-6' : 'left-1'}`} />
+                <div className={`w-4 h-4 bg-[var(--pm-surface)] rounded-full absolute top-1 transition-all ${settings.notifications ? 'left-6' : 'left-1'}`} />
               </div>
             </div>
           </div>
@@ -139,7 +139,7 @@ export function WorkspaceSettings() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="relative overflow-hidden group bg-accent-primary hover:bg-accent-primary/90 text-gray-900 dark:text-white h-11 px-8 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(var(--accent-primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--accent-primary-rgb),0.5)] active:scale-[0.98]"
+          className="relative overflow-hidden group bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white h-11 px-8 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(var(--accent-primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--accent-primary-rgb),0.5)] active:scale-[0.98]"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
           <Save className="w-4 h-4 relative z-10" />

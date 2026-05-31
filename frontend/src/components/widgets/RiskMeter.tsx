@@ -24,7 +24,7 @@ export function RiskMeter({ score, maxScore = 100, label }: RiskMeterProps) {
     <div className="space-y-1">
       {label && <div className="text-[10px] uppercase font-mono tracking-wider text-text-tertiary">{label}</div>}
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div className="flex-1 h-1.5 bg-[var(--pm-surface)]/5 rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${ratio * 100}%` }}

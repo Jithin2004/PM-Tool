@@ -505,7 +505,7 @@ export function getHealthDisplay(status: string): { label: string; color: string
     case 'syncing': return { label: 'Syncing', color: 'text-cyan-400' };
     case 'failed': return { label: 'Failed', color: 'text-red-400' };
     case 'token_expired': return { label: 'Token Expired', color: 'text-amber-400' };
-    default: return { label: 'Disconnected', color: 'text-gray-900 dark:text-white/30' };
+    default: return { label: 'Disconnected', color: 'text-[var(--pm-text)] dark:text-white/30' };
   }
 }
 
@@ -516,7 +516,7 @@ export function getConnectionDisplayState(
 ): { label: string; color: string; healthVisible: boolean } {
   // DISCONNECTED overrides all health states
   if (!hasAccount || healthStatus === 'disconnected' || !healthStatus) {
-    return { label: 'Disconnected', color: 'text-gray-900 dark:text-white/30', healthVisible: false };
+    return { label: 'Disconnected', color: 'text-[var(--pm-text)] dark:text-white/30', healthVisible: false };
   }
 
   // TOKEN_EXPIRED → warning
@@ -535,7 +535,7 @@ export function getConnectionDisplayState(
     return { label: 'Failed', color: 'text-red-400', healthVisible: false };
   }
 
-  return { label: 'Disconnected', color: 'text-gray-900 dark:text-white/30', healthVisible: false };
+  return { label: 'Disconnected', color: 'text-[var(--pm-text)] dark:text-white/30', healthVisible: false };
 }
 
 // ── Sync Functions ──

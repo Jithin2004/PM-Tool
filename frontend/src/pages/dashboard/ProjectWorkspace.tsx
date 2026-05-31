@@ -74,7 +74,7 @@ export function ProjectWorkspace() {
                   {deliveryConfidence}%
                 </span>
               ) : (
-                <span className="inline-block w-8 h-4 bg-white/10 animate-pulse rounded mt-0.5" />
+                <span className="inline-block w-8 h-4 bg-[var(--pm-surface)]/10 animate-pulse rounded mt-0.5" />
               )}
             </div>
             <div className="w-px h-6 bg-border-subtle"></div>

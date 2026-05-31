@@ -150,7 +150,7 @@ export function ExecutionReadinessPanel({ projectId, compact }: ExecutionReadine
             <span className={`text-[9px] font-mono uppercase tracking-wider ${getScoreColor()}`}>{getScoreLabel()}</span>
           </div>
         </div>
-        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div className="h-1.5 bg-[var(--pm-surface)]/5 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
               score >= 80 ? 'bg-emerald-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500'

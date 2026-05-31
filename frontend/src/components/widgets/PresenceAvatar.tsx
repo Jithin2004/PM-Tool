@@ -14,7 +14,7 @@ const sizeMap = { sm: 'w-6 h-6 text-[9px]', md: 'w-8 h-8 text-[10px]' };
 export function PresenceAvatar({ name, online, typing, idle, editing, size = 'sm' }: PresenceAvatarProps) {
   const initials = name.slice(0, 2).toUpperCase();
 
-  let dotColor = 'bg-white/10';
+  let dotColor = 'bg-[var(--pm-surface)]/10';
   let dotAnim = {};
   if (typing) {
     dotColor = 'bg-amber-400';
@@ -23,7 +23,7 @@ export function PresenceAvatar({ name, online, typing, idle, editing, size = 'sm
     dotColor = 'bg-emerald-400';
     dotAnim = { opacity: [1, 0.4, 1], transition: { duration: 2, repeat: Infinity } };
   } else if (online && idle) {
-    dotColor = 'bg-white/20';
+    dotColor = 'bg-[var(--pm-surface)]/20';
   }
 
   return (
@@ -32,7 +32,7 @@ export function PresenceAvatar({ name, online, typing, idle, editing, size = 'sm
       whileHover={{ scale: 1.05 }}
       transition={{ duration: 0.12 }}
     >
-      <div className={`${sizeMap[size]} rounded-full bg-white/5 flex items-center justify-center font-mono text-text-secondary`}>
+      <div className={`${sizeMap[size]} rounded-full bg-[var(--pm-surface)]/5 flex items-center justify-center font-mono text-text-secondary`}>
         {initials}
       </div>
       {(online || typing) && (

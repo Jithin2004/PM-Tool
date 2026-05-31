@@ -79,10 +79,10 @@ export function CommandPaletteDemo() {
           variants={stagger(0.06)}
           className="text-center mb-14"
         >
-          <motion.p variants={slideUp} className="text-[10px] font-mono uppercase tracking-widest text-gray-900 dark:text-white/30 mb-3">
+          <motion.p variants={slideUp} className="text-[10px] font-mono uppercase tracking-widest text-[var(--pm-text)] dark:text-white/30 mb-3">
             Keyboard-First Operations
           </motion.p>
-          <motion.h2 variants={slideUp} className="text-2xl sm:text-3xl font-medium tracking-tight text-gray-900 dark:text-white/80">
+          <motion.h2 variants={slideUp} className="text-2xl sm:text-3xl font-medium tracking-tight text-[var(--pm-text)] dark:text-white/80">
             Everything at your fingertips
           </motion.h2>
         </motion.div>
@@ -93,16 +93,16 @@ export function CommandPaletteDemo() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-          className="bg-[#FFFFFF] dark:bg-[#0c0c0c] border border-gray-200 dark:border-white/10 overflow-hidden"
+          className="bg-[#FFFFFF] dark:bg-[#0c0c0c] border border-[var(--pm-border)] dark:border-white/10 overflow-hidden"
         >
           {/* Input bar */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
-            <Command className="w-4 h-4 text-gray-900 dark:text-white/30 shrink-0" />
+            <Command className="w-4 h-4 text-[var(--pm-text)] dark:text-white/30 shrink-0" />
             <div className="flex-1 flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-gray-900 dark:text-white/20 shrink-0" />
-              <span className="font-mono text-sm text-gray-900 dark:text-white/70">
+              <Search className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white/20 shrink-0" />
+              <span className="font-mono text-sm text-[var(--pm-text)] dark:text-white/70">
                 {typed}
-                <span className="inline-block w-[2px] h-4 bg-white/40 ml-0.5 animate-pulse" />
+                <span className="inline-block w-[2px] h-4 bg-[var(--pm-surface)]/40 ml-0.5 animate-pulse" />
               </span>
             </div>
           </div>
@@ -122,24 +122,24 @@ export function CommandPaletteDemo() {
                   {demo.results.map((result, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/[0.04] transition-colors cursor-default"
+                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--pm-surface)]/[0.04] transition-colors cursor-default"
                     >
-                      <result.icon className="w-3.5 h-3.5 text-gray-900 dark:text-white/30 shrink-0" />
+                      <result.icon className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white/30 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-mono text-gray-900 dark:text-white/80 truncate">{result.label}</p>
-                        <p className="text-[10px] font-mono text-gray-900 dark:text-white/30 truncate">{result.description}</p>
+                        <p className="text-[12px] font-mono text-[var(--pm-text)] dark:text-white/80 truncate">{result.label}</p>
+                        <p className="text-[10px] font-mono text-[var(--pm-text)] dark:text-white/30 truncate">{result.description}</p>
                       </div>
-                      <ArrowRight className="w-3 h-3 text-gray-900 dark:text-white/20 shrink-0" />
+                      <ArrowRight className="w-3 h-3 text-[var(--pm-text)] dark:text-white/20 shrink-0" />
                     </div>
                   ))}
                 </div>
 
                 {/* Footer hint */}
                 <div className="px-4 py-2 border-t border-white/[0.06]">
-                  <p className="text-[9px] font-mono text-gray-900 dark:text-white/20">
-                    <span className="text-gray-900 dark:text-white/30">/nav</span> navigation &middot;{' '}
-                    <span className="text-gray-900 dark:text-white/30">/task</span> tasks &middot;{' '}
-                    <span className="text-gray-900 dark:text-white/30">/ai</span> intelligence
+                  <p className="text-[9px] font-mono text-[var(--pm-text)] dark:text-white/20">
+                    <span className="text-[var(--pm-text)] dark:text-white/30">/nav</span> navigation &middot;{' '}
+                    <span className="text-[var(--pm-text)] dark:text-white/30">/task</span> tasks &middot;{' '}
+                    <span className="text-[var(--pm-text)] dark:text-white/30">/ai</span> intelligence
                   </p>
                 </div>
               </motion.div>
@@ -154,7 +154,7 @@ export function CommandPaletteDemo() {
               key={i}
               onClick={() => setDemoIndex(i)}
               className={`h-1 transition-all duration-300 ${
-                i === demoIndex ? 'w-5 bg-white/40' : 'w-2 bg-white/10 hover:bg-white/20'
+                i === demoIndex ? 'w-5 bg-[var(--pm-surface)]/40' : 'w-2 bg-[var(--pm-surface)]/10 hover:bg-[var(--pm-surface)]/20'
               }`}
             />
           ))}

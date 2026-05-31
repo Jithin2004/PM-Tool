@@ -48,7 +48,7 @@ export function Login() {
         className="w-full max-w-md pm-card p-10 relative z-10"
       >
         <div className="flex flex-col items-center text-center mb-10">
-          <div className="w-16 h-16 bg-white/5 border border-border flex items-center justify-center rounded-xl mb-6 p-2 shadow-sm">
+          <div className="w-16 h-16 bg-[var(--pm-surface-elevated)]/5 border border-border flex items-center justify-center rounded-xl mb-6 p-2 shadow-sm">
             <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-semibold tracking-tight mb-2" style={{ color: 'var(--pm-on-surface)' }}>RESOLVE PM</h1>
@@ -65,13 +65,13 @@ export function Login() {
               </p>
               
               <div className="flex flex-col gap-3">
-                <a href="/activate" className="w-full bg-accent-primary hover:bg-accent-primary/90 text-gray-900 dark:text-white h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all shadow-sm">
+                <a href="/activate" className="w-full bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all shadow-sm">
                   Enter Product Key
                 </a>
                 <button onClick={() => window.location.href = 'mailto:admin@example.com?subject=Request Access'} className="w-full bg-surface-2 hover:bg-surface-3 text-text-primary border border-border/50 h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all">
                   Request Invitation
                 </button>
-                <a href="/" className="w-full bg-transparent hover:bg-white/5 text-text-tertiary h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all">
+                <a href="/" className="w-full bg-transparent hover:bg-[var(--pm-surface)]/5 text-text-tertiary h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all">
                   Return Home
                 </a>
               </div>

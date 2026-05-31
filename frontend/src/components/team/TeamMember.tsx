@@ -16,7 +16,7 @@ export function TeamMember({ name, role, load, efficiency, urgent }: { name: str
           {load}% LOAD
         </div>
       </div>
-      <div className="w-full bg-white/5 h-1 relative overflow-hidden">
+      <div className="w-full bg-[var(--pm-surface)]/5 h-1 relative overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${Math.min(100, load)}%` }}

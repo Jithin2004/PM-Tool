@@ -119,7 +119,7 @@ export function TeamRosterView() {
 
               {/* Roster Matrix View */}
               <div className="p-0">
-                <div className="overflow-x-auto">
+                <div>
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-border bg-surface-3/30 text-[9px] font-mono uppercase tracking-wider text-text-tertiary">

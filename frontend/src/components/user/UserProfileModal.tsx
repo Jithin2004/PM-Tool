@@ -148,7 +148,7 @@ export function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: {
             Note: Your profile picture is automatically synced from Google. Uploading from your gallery will create a temporary local override for this device.
           </div>
           <div className="flex gap-4 pt-4">
-            <button type="submit" className="flex-1 bg-gradient-to-r from-blue-600 to-teal-500 text-gray-900 dark:text-white h-12 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg hover:from-blue-500 hover:to-teal-400 hover:shadow-teal-500/25 transition-all">
+            <button type="submit" className="flex-1 bg-gradient-to-r from-blue-600 to-teal-500 text-[var(--pm-text)] dark:text-white h-12 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg hover:from-blue-500 hover:to-teal-400 hover:shadow-teal-500/25 transition-all">
               Update Identity
             </button>
             <button type="button" onClick={onClose} className="flex-1 border border-border/50 text-text-secondary h-12 rounded-xl font-bold uppercase tracking-wider text-xs hover:bg-surface-3 hover:text-text-primary transition-all">

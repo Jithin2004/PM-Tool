@@ -41,7 +41,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </p>
             
             {this.state.error && (
-              <div className="bg-white dark:bg-black/30 border border-border p-3 rounded-lg mb-8 text-left overflow-auto max-h-32">
+              <div className="bg-[var(--pm-surface)] dark:bg-black/30 border border-border p-3 rounded-lg mb-8 text-left overflow-auto max-h-32">
                 <p className="text-[10px] font-mono text-red-400">
                   {this.state.error.toString()}
                 </p>
@@ -64,7 +64,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   this.setState({ hasError: false, error: null });
                   window.location.href = '/workspace';
                 }}
-                className="w-full sm:w-auto px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/90 text-gray-900 dark:text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-lg shadow-accent-primary/20 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-lg shadow-accent-primary/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Home className="w-4 h-4" /> Return Home
               </button>

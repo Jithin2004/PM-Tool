@@ -73,7 +73,7 @@ function getZoneIntensity(total: number, maxTotal: number): string {
   const ratio = total / maxTotal;
   if (ratio > 0.66) return 'bg-indigo-100';
   if (ratio > 0.33) return 'bg-indigo-50';
-  return 'bg-gray-50';
+  return 'bg-[var(--pm-surface)]';
 }
 
 export function CollaborationHeatmap({ signals }: CollaborationHeatmapProps) {
@@ -117,14 +117,14 @@ export function CollaborationHeatmap({ signals }: CollaborationHeatmapProps) {
 
   return (
     <div className="space-y-1.5">
-      <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase tracking-wider font-semibold pb-1 border-b border-gray-100">
+      <div className="text-[10px] text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)] uppercase tracking-wider font-semibold pb-1 border-b border-[var(--pm-border)]">
         collaboration activity
       </div>
 
       <div className="grid grid-cols-[auto_repeat(4,_1fr)] gap-px">
-        <div className="text-[9px] text-gray-700 dark:text-gray-300 pr-2" />
+        <div className="text-[9px] text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)] pr-2" />
         {TIME_BUCKETS.map(b => (
-          <div key={b} className="text-[9px] text-gray-600 dark:text-gray-400 text-center" title={BUCKET_RANGES[b]}>
+          <div key={b} className="text-[9px] text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)] text-center" title={BUCKET_RANGES[b]}>
             {b.slice(0, 3)}
           </div>
         ))}
@@ -136,7 +136,7 @@ export function CollaborationHeatmap({ signals }: CollaborationHeatmapProps) {
 
           return (
             <>
-              <div key={`label-${zone}`} className="text-[10px] text-gray-500 pr-2 truncate">{zone}</div>
+              <div key={`label-${zone}`} className="text-[10px] text-[var(--pm-text-secondary)] pr-2 truncate">{zone}</div>
               {TIME_BUCKETS.map(b => {
                 const z = zonesByBucket[b].find(z => z.label === zone);
                 const total = z?.total || 0;
@@ -149,7 +149,7 @@ export function CollaborationHeatmap({ signals }: CollaborationHeatmapProps) {
                     title={`${zone} — ${z ? `${z.total} signals (${z.editing}e/${z.reviewing}r/${z.planning}p${z.blocked ? `/${z.blocked}b` : ''})` : 'no activity'} in ${BUCKET_RANGES[b]}`}
                   >
                     {total > 0 && (
-                      <span className="text-[9px] text-gray-500 font-mono">{total}</span>
+                      <span className="text-[9px] text-[var(--pm-text-secondary)] font-mono">{total}</span>
                     )}
                   </div>
                 );

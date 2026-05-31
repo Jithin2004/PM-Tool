@@ -197,7 +197,7 @@ export function TaskEditModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-gray-900 dark:text-white text-[9px] font-medium uppercase tracking-wide transition-colors shadow-sm disabled:opacity-50"
+              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white text-[9px] font-medium uppercase tracking-wide transition-colors shadow-sm disabled:opacity-50"
             >
               {isSubmitting ? 'Processing...' : 'Save Changes'}
             </button>

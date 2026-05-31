@@ -70,28 +70,28 @@ export function ImpactSimulationDrawer({ simulation, onApply, onDismiss, onApply
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white/5 rounded-lg p-3 border border-border-subtle">
+          <div className="bg-[var(--pm-surface)]/5 rounded-lg p-3 border border-border-subtle">
             <div className="flex items-center gap-1.5 text-[10px] font-mono text-text-quaternary uppercase mb-1">
               <Activity className="w-3 h-3" />
               Affected Tasks
             </div>
             <div className="text-lg font-bold text-text-primary">{simulation.affected_entities.length}</div>
           </div>
-          <div className="bg-white/5 rounded-lg p-3 border border-border-subtle">
+          <div className="bg-[var(--pm-surface)]/5 rounded-lg p-3 border border-border-subtle">
             <div className="flex items-center gap-1.5 text-[10px] font-mono text-text-quaternary uppercase mb-1">
               <Clock className="w-3 h-3" />
               Release Delay
             </div>
             <div className={`text-lg font-bold ${delayColor}`}>{simulation.release_delta > 0 ? `+${simulation.release_delta}d` : '0d'}</div>
           </div>
-          <div className="bg-white/5 rounded-lg p-3 border border-border-subtle">
+          <div className="bg-[var(--pm-surface)]/5 rounded-lg p-3 border border-border-subtle">
             <div className="flex items-center gap-1.5 text-[10px] font-mono text-text-quaternary uppercase mb-1">
               <AlertTriangle className="w-3 h-3" />
               Confidence
             </div>
             <div className={`text-lg font-bold ${confColor}`}>{simulation.confidence_delta >= 0 ? '+' : ''}{simulation.confidence_delta}%</div>
           </div>
-          <div className="bg-white/5 rounded-lg p-3 border border-border-subtle">
+          <div className="bg-[var(--pm-surface)]/5 rounded-lg p-3 border border-border-subtle">
             <div className="flex items-center gap-1.5 text-[10px] font-mono text-text-quaternary uppercase mb-1">
               <GitBranch className="w-3 h-3" />
               Risk
@@ -100,7 +100,7 @@ export function ImpactSimulationDrawer({ simulation, onApply, onDismiss, onApply
           </div>
         </div>
 
-        <div className="bg-white/5 rounded-lg p-3 border border-border-subtle">
+        <div className="bg-[var(--pm-surface)]/5 rounded-lg p-3 border border-border-subtle">
           <div className="flex items-center gap-1.5 text-[10px] font-mono text-text-quaternary uppercase mb-1">
             <Users className="w-3 h-3" />
             Dependency Cascades
@@ -121,7 +121,7 @@ export function ImpactSimulationDrawer({ simulation, onApply, onDismiss, onApply
                 <div key={m.type} className={`flex items-center justify-between px-3 py-2 rounded-md border text-[11px] transition-all ${
                   m.status === 'accepted' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
                   m.status === 'rejected' ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' :
-                  'bg-white/5 border-border text-text-secondary hover:border-cyan-500/30'
+                  'bg-[var(--pm-surface)]/5 border-border text-text-secondary hover:border-cyan-500/30'
                 }`}>
                   <div className="flex-1 min-w-0 mr-2">
                     <div className="font-medium truncate">{m.label}</div>
@@ -141,7 +141,7 @@ export function ImpactSimulationDrawer({ simulation, onApply, onDismiss, onApply
         )}
 
         {showDetails && (
-          <div className="bg-white/5 rounded-lg border border-border divide-y divide-white/5 max-h-48 overflow-y-auto">
+          <div className="bg-[var(--pm-surface)]/5 rounded-lg border border-border divide-y divide-white/5 max-h-48 overflow-y-auto">
             {simulation.affected_entities.map(e => (
               <div key={e.taskId} className="px-3 py-2 flex items-center justify-between text-[11px]">
                 <span className="text-text-secondary truncate mr-2">{e.taskName}</span>

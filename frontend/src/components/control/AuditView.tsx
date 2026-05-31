@@ -169,6 +169,20 @@ const AuditView = React.memo(function AuditView() {
   // Expanded Trace ID for trace logs view
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
 
+  // Ledger filters (P4)
+  const [ledgerActorFilter, setLedgerActorFilter] = useState<string>('');
+  const [ledgerActionFilter, setLedgerActionFilter] = useState<string>('');
+
+  const filteredAuditEvents = useMemo(() => {
+    let events = res.auditEvents;
+    if (ledgerActorFilter) events = events.filter(e => e.actorName === ledgerActorFilter);
+    if (ledgerActionFilter) events = events.filter(e => e.action === ledgerActionFilter);
+    return events;
+  }, [res.auditEvents, ledgerActorFilter, ledgerActionFilter]);
+
+  const uniqueActors = useMemo(() => [...new Set(res.auditEvents.map(e => e.actorName))], [res.auditEvents]);
+  const uniqueActions = useMemo(() => [...new Set(res.auditEvents.map(e => e.action))], [res.auditEvents]);
+
   if (!wsId) {
     return <div className="flex-1 flex items-center justify-center text-text-tertiary font-mono text-sm">No workspace selected</div>;
   }
@@ -237,7 +251,7 @@ const AuditView = React.memo(function AuditView() {
                   setLogsLoading(false);
                 }}
                 disabled={logsLoading}
-                className="px-3 py-1.5 bg-signal-critical/10 text-signal-critical hover:bg-signal-critical hover:text-gray-900 dark:text-white border border-signal-critical/20 rounded text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 bg-signal-critical/10 text-signal-critical hover:bg-signal-critical hover:text-[var(--pm-text)] dark:text-white border border-signal-critical/20 rounded text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
               >
                 {logsLoading ? 'Repairing...' : 'Repair Ledger'}
               </button>
@@ -253,27 +267,82 @@ const AuditView = React.memo(function AuditView() {
 
       {/* Tab: Audit Trail (Ledger) */}
       {activeTab === 'audit' && (isSuperAdmin || isPM) && (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
-          <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-surface-2 border-b border-border-subtle text-[9px] font-mono uppercase tracking-wider text-text-quaternary">
-            <div className="col-span-1">Index</div>
-            <div className="col-span-3">Action Type</div>
-            <div className="col-span-2">Actor</div>
-            <div className="col-span-2">Timestamp</div>
-            <div className="col-span-2">Target</div>
-            <div className="col-span-2 text-right">Ledger Hash</div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[var(--pm-text-secondary)]" />
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--pm-text-secondary)]">Immutable Event Ledger</span>
+              <span className="text-[9px] font-mono text-[var(--pm-text-quaternary)] ml-2">{filteredAuditEvents.length} / {res.auditEvents.length} events</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={ledgerActorFilter}
+                onChange={e => setLedgerActorFilter(e.target.value)}
+                className="text-[10px] font-mono uppercase tracking-wider bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded px-2 py-1 text-[var(--pm-text-secondary)] cursor-pointer"
+              >
+                <option value="">All Actors</option>
+                {uniqueActors.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+              <select
+                value={ledgerActionFilter}
+                onChange={e => setLedgerActionFilter(e.target.value)}
+                className="text-[10px] font-mono uppercase tracking-wider bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded px-2 py-1 text-[var(--pm-text-secondary)] cursor-pointer"
+              >
+                <option value="">All Actions</option>
+                {uniqueActions.map(a => <option key={a} value={a}>{a.replace(/_/g, ' ')}</option>)}
+              </select>
+              {(ledgerActorFilter || ledgerActionFilter) && (
+                <button onClick={() => { setLedgerActorFilter(''); setLedgerActionFilter(''); }} className="text-[9px] font-mono text-[var(--pm-cyan)] hover:underline cursor-pointer">Clear</button>
+              )}
+            </div>
           </div>
-          <div className="divide-y divide-border-subtle max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
-            {res.auditEvents.length === 0 ? (
-              <div className="px-4 py-8 text-center text-[10px] font-mono text-text-quaternary uppercase">No audit logs processed</div>
+          
+          <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin">
+            {filteredAuditEvents.length === 0 ? (
+              <div className="p-8 bg-[var(--pm-surface-elevated)] border border-[var(--pm-border)] rounded-xl text-center text-[10px] font-mono text-[var(--pm-text-quaternary)] uppercase">{res.auditEvents.length === 0 ? 'No ledger events recorded' : 'No events match the current filters'}</div>
             ) : (
-              res.auditEvents.map((ae, i) => (
-                <div key={ae.id} className="grid grid-cols-12 gap-2 px-4 py-3 text-[10px] font-mono text-text-tertiary hover:bg-white/5 items-center">
-                  <div className="col-span-1 text-text-quaternary font-mono">#{(i + 1).toString().padStart(3, '0')}</div>
-                  <div className="col-span-3 font-sans font-bold text-text-primary uppercase tracking-tight text-[9px]">{ae.action.replace(/_/g, ' ')}</div>
-                  <div className="col-span-2 font-sans font-medium text-text-secondary">{ae.actorName}</div>
-                  <div className="col-span-2 text-[9px] text-text-tertiary">{new Date(ae.timestamp).toLocaleString()}</div>
-                  <div className="col-span-2 truncate text-text-tertiary font-sans">{ae.rationale || `ID: ${ae.targetId.slice(0, 8)}`}</div>
-                  <div className="col-span-2 text-right text-text-quaternary select-all">{ae.hash.slice(0, 16)}</div>
+              filteredAuditEvents.map((ae, i) => (
+                <div key={ae.id} className="bg-[var(--pm-surface-elevated)] border border-[var(--pm-border)] rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden group hover:border-[var(--pm-primary)]/50 transition-colors">
+                  
+                  {/* Cryptographic Link Visual */}
+                  {i < res.auditEvents.length - 1 && (
+                    <div className="absolute left-6 -bottom-6 w-0.5 h-6 bg-[var(--pm-border)]" />
+                  )}
+
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-[var(--pm-surface)] border border-[var(--pm-border)] flex items-center justify-center">
+                        <span className="text-[10px] font-mono text-[var(--pm-text-secondary)] font-bold">#{(i + 1).toString().padStart(3, '0')}</span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-[var(--pm-text)] uppercase tracking-tight">{ae.action.replace(/_/g, ' ')}</div>
+                        <div className="text-[10px] text-[var(--pm-text-tertiary)] font-mono">{new Date(ae.timestamp).toLocaleString()}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <div className="text-[9px] font-mono text-[var(--pm-text-quaternary)] uppercase mb-0.5">Cryptographic Hash</div>
+                      <div className="text-[10px] font-mono text-[var(--pm-text-secondary)] bg-[var(--pm-surface)] px-2 py-1 rounded border border-[var(--pm-border)] select-all tracking-wider">
+                        {ae.hash.slice(0, 24)}...
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 p-3 bg-[var(--pm-surface)]/50 rounded-lg border border-[var(--pm-border)]/50">
+                    <div>
+                      <div className="text-[9px] font-mono text-[var(--pm-text-quaternary)] uppercase mb-1">Actor Identity</div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-[var(--pm-primary)]/20 flex items-center justify-center text-[8px] font-bold text-[var(--pm-primary)] border border-[var(--pm-primary)]/30">
+                          {ae.actorName.substring(0, 2).toUpperCase()}
+                        </div>
+                        <span className="text-xs font-medium text-[var(--pm-text)]">{ae.actorName}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] font-mono text-[var(--pm-text-quaternary)] uppercase mb-1">State Delta / Rationale</div>
+                      <div className="text-xs text-[var(--pm-text-secondary)]">{ae.rationale || `Modified entity: ${ae.targetId.slice(0, 8)}`}</div>
+                    </div>
+                  </div>
                 </div>
               ))
             )}

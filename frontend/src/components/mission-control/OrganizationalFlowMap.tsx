@@ -43,7 +43,7 @@ export function OrganizationalFlowMap({ presences, signals, feed }: Organization
           return (
             <div key={item.action} className="flex items-center gap-2">
               <span className="text-[10px] text-text-tertiary w-20 shrink-0 capitalize">{item.action}</span>
-              <div className="flex-1 h-3 bg-white/5 rounded-sm overflow-hidden">
+              <div className="flex-1 h-3 bg-[var(--pm-surface)]/5 rounded-sm overflow-hidden">
                 <div className="h-full bg-accent-primary rounded-sm opacity-60" style={{ width: `${pct}%` }} />
               </div>
               <span className="text-[10px] font-mono-pm text-text-tertiary w-4 text-right">{item.count}</span>

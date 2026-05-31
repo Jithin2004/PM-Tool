@@ -157,12 +157,12 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
         {expandedSection === id ? <ChevronDown className="w-3.5 h-3.5 text-text-quaternary" /> : <ChevronRight className="w-3.5 h-3.5 text-text-quaternary" />}
         {icon}
         <span className="text-xs font-mono uppercase tracking-wider text-text-tertiary">{label}</span>
-        {count > 0 && <span className="text-[9px] font-mono text-text-quaternary bg-white/5 px-1.5 py-0.5 rounded-sm">{count}</span>}
+        {count > 0 && <span className="text-[9px] font-mono text-text-quaternary bg-[var(--pm-surface)]/5 px-1.5 py-0.5 rounded-sm">{count}</span>}
       </div>
     </button>
   );
 
-  const inputClass = "w-full bg-white/5 border border-border rounded-sm px-3 py-1.5 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border focus:text-text-primary transition-colors";
+  const inputClass = "w-full bg-[var(--pm-surface)]/5 border border-border rounded-sm px-3 py-1.5 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border focus:text-text-primary transition-colors";
   const labelClass = "text-[9px] font-mono uppercase tracking-wider text-text-quaternary";
 
   return (
@@ -197,7 +197,7 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
                 className={inputClass}
                 onKeyDown={e => e.key === 'Enter' && addEpic()}
               />
-              <button onClick={addEpic} className="px-3 py-1.5 bg-white/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-white/20 transition-all rounded-sm flex items-center gap-1">
+              <button onClick={addEpic} className="px-3 py-1.5 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-all rounded-sm flex items-center gap-1">
                 <Plus className="w-3 h-3" /> Add
               </button>
             </div>
@@ -237,7 +237,7 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
                 className={inputClass}
                 placeholder="Pts"
               />
-              <button onClick={addStory} className="px-3 py-1.5 bg-white/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-white/20 transition-all rounded-sm flex items-center gap-1">
+              <button onClick={addStory} className="px-3 py-1.5 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-all rounded-sm flex items-center gap-1">
                 <Plus className="w-3 h-3" /> Add
               </button>
             </div>
@@ -267,7 +267,7 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
                 className={inputClass}
                 onKeyDown={e => e.key === 'Enter' && addTask()}
               />
-              <button onClick={addTask} className="px-3 py-1.5 bg-white/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-white/20 transition-all rounded-sm flex items-center gap-1">
+              <button onClick={addTask} className="px-3 py-1.5 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-all rounded-sm flex items-center gap-1">
                 <Plus className="w-3 h-3" /> Add
               </button>
             </div>
@@ -321,7 +321,7 @@ export function ScrumBootstrap({ projectId, workspaceId, onComplete, onSkip }: S
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-accent-primary text-gray-900 dark:text-white text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm disabled:opacity-50 shadow-sm cursor-pointer"
+          className="px-4 py-2 bg-accent-primary text-[var(--pm-text)] dark:text-white text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm disabled:opacity-50 shadow-sm cursor-pointer"
         >
           {saving ? 'Saving...' : hasAnyContent ? 'Save & Continue' : 'Skip — Go to Backlog'}
         </button>

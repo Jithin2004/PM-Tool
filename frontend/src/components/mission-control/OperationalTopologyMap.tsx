@@ -50,7 +50,7 @@ export function OperationalTopologyMap({ presences, signals, hotspots }: Operati
           return (
             <div key={s.section} className="flex items-center gap-2">
               <span className="text-[10px] text-text-tertiary w-16 shrink-0">{s.label}</span>
-              <div className="flex-1 h-4 bg-white/5 rounded-sm relative overflow-hidden">
+              <div className="flex-1 h-4 bg-[var(--pm-surface)]/5 rounded-sm relative overflow-hidden">
                 <div className={`h-full rounded-sm ${barColor}`} style={{ width: `${pct}%` }} />
               </div>
               <span className="text-[10px] font-mono-pm text-text-tertiary w-4 text-right">{s.count}</span>
@@ -63,7 +63,7 @@ export function OperationalTopologyMap({ presences, signals, hotspots }: Operati
       </div>
 
       {hotspots.length > 0 && (
-        <div className="pt-1 border-t border-gray-200 dark:border-white/10">
+        <div className="pt-1 border-t border-[var(--pm-border)] dark:border-white/10">
           <div className="text-[9px] text-text-secondary uppercase tracking-wider mb-1">hotspots</div>
           {hotspots.slice(0, 3).map(h => {
             let dotColor = 'bg-signal-warning';

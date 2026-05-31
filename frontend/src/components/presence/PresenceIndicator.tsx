@@ -22,7 +22,7 @@ interface PresenceIndicatorProps {
 export function PresenceIndicator({ state, className = '' }: PresenceIndicatorProps) {
   return (
     <span
-      className={`inline-block w-2 h-2 rounded-full ${STATE_COLORS[state] || 'bg-gray-400'} ${className}`}
+      className={`inline-block w-2 h-2 rounded-full ${STATE_COLORS[state] || 'bg-[var(--pm-surface)]'} ${className}`}
       title={state.replace(/_/g, ' ')}
     />
   );

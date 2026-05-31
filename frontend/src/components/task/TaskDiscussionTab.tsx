@@ -134,7 +134,7 @@ export function TaskDiscussionTab({ taskId, users, currentUserProfile, notify }:
                     />
                     <div className="flex gap-2 mt-2 justify-end">
                       <button onClick={() => setEditingId(null)} className="text-[9px] uppercase tracking-wide text-text-quaternary hover:text-text-secondary">Cancel</button>
-                      <button onClick={() => handleUpdate(c.id)} disabled={isSubmitting} className="text-[9px] uppercase tracking-wide bg-accent-primary text-gray-900 dark:text-white px-2 py-1 rounded">Save</button>
+                      <button onClick={() => handleUpdate(c.id)} disabled={isSubmitting} className="text-[9px] uppercase tracking-wide bg-accent-primary text-[var(--pm-text)] dark:text-white px-2 py-1 rounded">Save</button>
                     </div>
                   </div>
                 ) : (
@@ -164,7 +164,7 @@ export function TaskDiscussionTab({ taskId, users, currentUserProfile, notify }:
         <button
           type="submit"
           disabled={isSubmitting || !newComment.trim()}
-          className="h-[60px] px-4 bg-accent-primary hover:bg-accent-primary/90 text-gray-900 dark:text-white flex items-center justify-center disabled:opacity-50 transition-colors"
+          className="h-[60px] px-4 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white flex items-center justify-center disabled:opacity-50 transition-colors"
         >
           <Send className="w-4 h-4" />
         </button>

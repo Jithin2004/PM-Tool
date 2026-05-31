@@ -176,11 +176,11 @@ body.density-executive {
 
 :root {
   /* ── Enterprise Dark Design System (Linear/Vercel Inspired) ── */
-  --bg:          #09090b;          /* Graphite deepest layer        */
-  --surface:     #121214;          /* Slate sidebar / panels        */
-  --surface-2:   #18181b;          /* Charcoal cards                */
-  --surface-3:   #27272a;          /* Elevated cards                */
-  --border:      rgba(255,255,255,0.08);
+  --bg: #0B1120;          /* Graphite deepest layer        */
+  --surface: #111827;          /* Slate sidebar / panels        */
+  --surface-2: #1F2937;          /* Charcoal cards                */
+  --surface-3: #1E293B;          /* Elevated cards                */
+  --border: #4B5563;
   --border-subtle: rgba(255,255,255,0.03);
 
   --text-primary:    #fafafa;      /* Pure readability              */
@@ -332,21 +332,22 @@ body {
 /* ── PM Color Tokens ─────────────────────────────────────────── */
 :root {
   /* Surface hierarchy */
-  --pm-bg:                    #121416;
+  --pm-bg: #0B1120;
   --pm-surface-lowest:        #0c0e10;
   --pm-surface-low:           #1a1c1e;
-  --pm-surface:               #1e2022;
+  --pm-surface: #111827;
   --pm-surface-high:          #282a2c;
   --pm-surface-highest:       #333537;
   --pm-surface-bright:        #37393b;
   --pm-surface-variant:       #333537;
+  --pm-surface-hover:         #334155;
 
   /* On-surface text */
   --pm-on-surface:            #e2e2e5;
   --pm-on-surface-variant:    #c7c4d7;
 
   /* Primary (periwinkle) */
-  --pm-primary:               #c0c1ff;
+  --pm-primary: #7C3AED;
   --pm-primary-container:     #8083ff;
   --pm-on-primary:            #1000a9;
   --pm-on-primary-container:  #0d0096;
@@ -368,6 +369,32 @@ body {
   --pm-error:                 #ffb4ab;
   --pm-error-container:       #93000a;
   --pm-on-error-container:    #ffdad6;
+
+
+  /* ── Signature Artifact Aliases ──────────────────────────────── */
+  /* Text hierarchy */
+  --pm-text:                  #e2e2e5;
+  --pm-text-secondary:        #c7c4d7;
+  --pm-text-tertiary:         #71717a;
+  --pm-text-quaternary:       #3f3f46;
+
+  /* Signal colors */
+  --pm-risk:                  #f87171;
+  --pm-risk-bg:               rgba(248, 113, 113, 0.07);
+  --pm-warning:               #fbbf24;
+  --pm-warning-bg:            rgba(251, 191, 36, 0.07);
+  --pm-success:               #34d399;
+  --pm-success-bg:            rgba(52, 211, 153, 0.07);
+
+  /* Intelligence accent */
+  --pm-cyan:                  #22d3ee;
+
+  /* Layer 3 panels */
+  --pm-panel:                 #1E293B;
+
+  /* Elevated surface + border */
+  --pm-surface-elevated:      #1F2937;
+  --pm-border:                #4B5563;
 
   /* Outline */
   --pm-outline:               #908fa0;
@@ -567,4 +594,11 @@ body {
   --pm-inverse-surface:       #1F2937;
   --pm-inverse-on-surface:    #FBFAF8;
   --pm-inverse-primary:       #818cf8;
+}
+
+/* Form Focus Rings (No Glow, Soft Cyan) */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: transparent !important;
+  box-shadow: 0 0 0 2px var(--pm-cyan) !important;
 }

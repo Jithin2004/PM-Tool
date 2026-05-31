@@ -425,7 +425,7 @@ export function ProjectDetailsModal({
               <button
                 type="button"
                 onClick={() => setShowLogs(false)}
-                className="p-2 border border-border hover:bg-white/5 transition-colors"
+                className="p-2 border border-border hover:bg-[var(--pm-surface)]/5 transition-colors"
               >
                 <Plus className="w-4 h-4 rotate-45 text-text-secondary" />
               </button>
@@ -439,7 +439,7 @@ export function ProjectDetailsModal({
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
                     {verificationState === 'UNVERIFIED' && (
-                      <div className="p-3 bg-white/5 border border-border text-text-tertiary">
+                      <div className="p-3 bg-[var(--pm-surface)]/5 border border-border text-text-tertiary">
                         <Shield className="w-6 h-6" />
                       </div>
                     )}
@@ -507,7 +507,7 @@ export function ProjectDetailsModal({
 
                 {/* Verification Progress Bar */}
                 {verificationState === 'VERIFYING' && (
-                  <div className="w-full bg-white/5 h-1 relative overflow-hidden rounded-full">
+                  <div className="w-full bg-[var(--pm-surface)]/5 h-1 relative overflow-hidden rounded-full">
                     <div
                       className="bg-yellow-500 h-full transition-all duration-300"
                       style={{ width: `${((scanningIndex ?? 0) / localLogs.length) * 100}%` }}
@@ -547,7 +547,7 @@ export function ProjectDetailsModal({
                             ? 'border-red-500 bg-red-500/[0.04] shadow-sm'
                             : isSecuredBlock
                             ? 'border-emerald-500/20 bg-emerald-500/[0.01]'
-                            : 'border-border bg-white/5'
+                            : 'border-border bg-[var(--pm-surface)]/5'
                         }`}
                       >
                         {/* Upper Details Row */}
@@ -651,8 +651,8 @@ export function ProjectDetailsModal({
                 placeholder="Enter reason for modifying these parameters..."
               />
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={handleConfirmChange} disabled={!changeReason} className="flex-1 bg-white text-black text-[10px] uppercase font-medium py-2 disabled:opacity-50 tracking-wide font-semibold">Log & Commit</button>
-                <button type="button" onClick={() => setChangeReasonPrompt({ changes: null, open: false })} className="flex-1 border border-border text-text-secondary text-[10px] uppercase font-mono py-2 hover:bg-white/5 tracking-wide">Cancel</button>
+                <button type="button" onClick={handleConfirmChange} disabled={!changeReason} className="flex-1 bg-[var(--pm-surface)] text-[var(--pm-text)] text-[10px] uppercase font-medium py-2 disabled:opacity-50 tracking-wide font-semibold">Log & Commit</button>
+                <button type="button" onClick={() => setChangeReasonPrompt({ changes: null, open: false })} className="flex-1 border border-border text-text-secondary text-[10px] uppercase font-mono py-2 hover:bg-[var(--pm-surface)]/5 tracking-wide">Cancel</button>
               </div>
             </div>
           </div>
@@ -778,7 +778,7 @@ export function ProjectDetailsModal({
                         <button
                           type="button"
                           onClick={() => setIsDeleting(false)}
-                          className="flex-1 border border-border text-text-secondary py-2 text-[10px] font-mono uppercase tracking-wide hover:bg-white/5 transition-colors"
+                          className="flex-1 border border-border text-text-secondary py-2 text-[10px] font-mono uppercase tracking-wide hover:bg-[var(--pm-surface)]/5 transition-colors"
                         >
                           Cancel
                         </button>
@@ -798,11 +798,11 @@ export function ProjectDetailsModal({
                       <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
                         <div className="bg-surface-3/50 p-4 rounded-xl border border-border/30">
                           <p className="text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-2">Total Real Hours</p>
-                          <p className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{expectedRealHours.toFixed(1)}<span className="text-sm text-text-tertiary ml-1">h</span></p>
+                          <p className="text-2xl font-bold tracking-tight text-[var(--pm-text)] dark:text-white">{expectedRealHours.toFixed(1)}<span className="text-sm text-text-tertiary ml-1">h</span></p>
                         </div>
                         <div className="bg-surface-3/50 p-4 rounded-xl border border-border/30">
                           <p className="text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-2">Working Days</p>
-                          <p className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{calendarExpected}<span className="text-sm text-text-tertiary ml-1">d</span></p>
+                          <p className="text-2xl font-bold tracking-tight text-[var(--pm-text)] dark:text-white">{calendarExpected}<span className="text-sm text-text-tertiary ml-1">d</span></p>
                         </div>
                         <div className="bg-blue-500/10 p-4 rounded-xl border border-blue-500/20">
                           <p className="text-[10px] font-bold tracking-widest text-blue-400 uppercase mb-2">Remaining ETA</p>
@@ -883,7 +883,7 @@ export function ProjectDetailsModal({
                     </div>
                   )}
                 </div>
-                <button type="submit" className="w-full bg-white text-black h-12 font-semibold uppercase tracking-wide text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
+                <button type="submit" className="w-full bg-[var(--pm-panel)] text-[var(--pm-text)] h-12 font-semibold uppercase tracking-wide text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
                   Commit System Updates
                 </button>
               </div>
@@ -899,7 +899,7 @@ export function ProjectDetailsModal({
                   </p>
                   
                   {/* Current State Indicator */}
-                  <div className="bg-white/5 border border-border p-4 rounded-sm mb-4">
+                  <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[10px] font-mono text-text-secondary uppercase">Current State</span>
                       <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-sm font-bold ${
@@ -917,7 +917,7 @@ export function ProjectDetailsModal({
                         type="button"
                         onClick={() => handleStateTransition('active')}
                         className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${
-                          currentMetric.currentState === 'active' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-white/5'
+                          currentMetric.currentState === 'active' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
                         }`}
                       >
                         Active
@@ -926,7 +926,7 @@ export function ProjectDetailsModal({
                         type="button"
                         onClick={() => handleStateTransition('passive_wait')}
                         className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${
-                          currentMetric.currentState === 'passive_wait' ? 'bg-amber-950/40 text-amber-400 border-amber-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-white/5'
+                          currentMetric.currentState === 'passive_wait' ? 'bg-amber-950/40 text-amber-400 border-amber-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
                         }`}
                       >
                         Wait
@@ -935,7 +935,7 @@ export function ProjectDetailsModal({
                         type="button"
                         onClick={() => handleStateTransition('blocked')}
                         className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${
-                          currentMetric.currentState === 'blocked' ? 'bg-rose-950/40 text-rose-400 border-rose-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-white/5'
+                          currentMetric.currentState === 'blocked' ? 'bg-rose-950/40 text-rose-400 border-rose-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
                         }`}
                       >
                         Block
@@ -945,7 +945,7 @@ export function ProjectDetailsModal({
                 </div>
 
                 {/* State Duration Tracker & Manual Overrides */}
-                <div className="bg-white/5 border border-border p-4 rounded-sm">
+                <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm">
                   <h5 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">State Duration Calibration (Days)</h5>
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center justify-between gap-4">
@@ -992,7 +992,7 @@ export function ProjectDetailsModal({
                 </div>
 
                 {/* Liability Ratio & Friction Visualizer */}
-                <div className="bg-white/5 border border-border p-4 rounded-sm">
+                <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm">
                   <h5 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">Liability Analysis</h5>
                   
                   {/* Visual Bar Split */}
@@ -1047,7 +1047,7 @@ export function ProjectDetailsModal({
                   <h4 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">Timeline Shift Ledger</h4>
                   
                   {/* Ledger Audit Trail List */}
-                  <div className="bg-white/5 border border-border p-4 rounded-sm max-h-[160px] overflow-y-auto space-y-2.5 mb-4">
+                  <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm max-h-[160px] overflow-y-auto space-y-2.5 mb-4">
                     {timelineShiftLedger.filter((e: any) => e.projectId === project.id).length === 0 ? (
                       <p className="text-[10px] font-mono text-text-tertiary italic text-center py-4">
                         No timeline shifts logged. Delivery path matches estimation baseline.
@@ -1080,7 +1080,7 @@ export function ProjectDetailsModal({
                 </div>
 
                 {/* Log Timeline Shift Form */}
-                <div className="bg-white/5 border border-border p-4 rounded-sm space-y-3">
+                <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm space-y-3">
                   <h5 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide">Log Defensive Timeline Shift</h5>
                   
                   <div className="grid grid-cols-2 gap-3">
@@ -1144,7 +1144,7 @@ export function ProjectDetailsModal({
                       } as any;
                       handleAddShiftEvent(fakeForm);
                     }}
-                    className="w-full bg-white text-black h-9 text-[10px] uppercase font-bold tracking-wide hover:bg-neutral-200 transition-all"
+                    className="w-full bg-[var(--pm-surface)] text-[var(--pm-text)] h-9 text-[10px] uppercase font-bold tracking-wide hover:bg-neutral-200 transition-all"
                   >
                     Commit Defensive Shift to Ledger
                   </button>

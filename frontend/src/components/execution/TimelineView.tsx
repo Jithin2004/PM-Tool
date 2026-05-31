@@ -106,9 +106,9 @@ export function TimelineView({ projects, tasks, dependencies, profiles }: Timeli
                 <div key={i} className="relative">
                   <div className="flex items-center gap-4 mb-1">
                     <span className="text-[10px] font-mono text-text-secondary w-32 truncate" title={phase.label}>{phase.label}</span>
-                    <div className="flex-1 h-6 bg-white/5 relative rounded-sm overflow-hidden">
-                      <div className={`absolute h-full ${isPast ? 'bg-white/10' : 'bg-surface-3'} rounded-sm`} style={{ left: `${Math.max(0, left)}%`, width: `${Math.max(1, width)}%` }} />
-                      <div className={`absolute h-full ${isPast ? 'bg-white/20' : 'bg-surface-3'}`} style={{ left: `${Math.max(0, left)}%`, width: `${Math.max(1, width * (phase.progress / 100))}%` }} />
+                    <div className="flex-1 h-6 bg-[var(--pm-surface)]/5 relative rounded-sm overflow-hidden">
+                      <div className={`absolute h-full ${isPast ? 'bg-[var(--pm-surface)]/10' : 'bg-surface-3'} rounded-sm`} style={{ left: `${Math.max(0, left)}%`, width: `${Math.max(1, width)}%` }} />
+                      <div className={`absolute h-full ${isPast ? 'bg-[var(--pm-surface)]/20' : 'bg-surface-3'}`} style={{ left: `${Math.max(0, left)}%`, width: `${Math.max(1, width * (phase.progress / 100))}%` }} />
                     </div>
                     <span className="text-[9px] font-mono text-text-tertiary w-12 text-right">{phase.progress}%</span>
                   </div>

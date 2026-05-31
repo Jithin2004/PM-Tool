@@ -59,7 +59,7 @@ export function TeamRosterModal({
           setActiveSquadId(team.id);
           setRosterTab('analytics');
         }}
-        className={`p-4 cursor-pointer transition-all hover:bg-surface-3 flex flex-col gap-2 border-b border-border-subtle ${isActive ? 'bg-white/5 border-l-2 border-l-accent-primary' : ''}`}
+        className={`p-4 cursor-pointer transition-all hover:bg-surface-3 flex flex-col gap-2 border-b border-border-subtle ${isActive ? 'bg-[var(--pm-surface)]/5 border-l-2 border-l-accent-primary' : ''}`}
       >
         <div className="flex justify-between items-start gap-2">
           <h4 className="text-sm font-semibold tracking-tight uppercase truncate">{team.name}</h4>
@@ -73,7 +73,7 @@ export function TeamRosterModal({
         </div>
 
         {/* Progress indicator */}
-        <div className="w-full bg-white/5 h-1">
+        <div className="w-full bg-[var(--pm-surface)]/5 h-1">
           <div
             className={`h-full ${metrics.loadPercentage > 100 ? 'bg-signal-critical' : 'bg-accent-primary'}`}
             style={{ width: `${Math.min(100, metrics.loadPercentage)}%` }}
@@ -301,7 +301,7 @@ export function TeamRosterModal({
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="p-4 border-b border-border/50 bg-surface-2/50 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="p-4 border-b border-border/50 bg-[var(--pm-panel)]/50 flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
             <input
@@ -317,7 +317,7 @@ export function TeamRosterModal({
               <button
                 key={filter}
                 onClick={() => setCapacityFilter(filter)}
-                className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wide transition-all border whitespace-nowrap ${capacityFilter === filter ? 'bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] font-semibold border-transparent' : 'border-border text-text-tertiary hover:text-text-primary hover:bg-white/5'}`}
+                className={`px-3 py-1.5 text-[9px] font-mono uppercase tracking-wide transition-all border whitespace-nowrap ${capacityFilter === filter ? 'bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] font-semibold border-transparent' : 'border-border text-text-tertiary hover:text-text-primary hover:bg-[var(--pm-surface)]/5'}`}
               >
                 {filter}
               </button>
@@ -326,16 +326,16 @@ export function TeamRosterModal({
         </div>
 
         {/* Mobile Tab Controls */}
-        <div className="flex md:hidden bg-white/5 border-b border-border p-1 shrink-0">
+        <div className="flex md:hidden bg-[var(--pm-surface)]/5 border-b border-border p-1 shrink-0">
           <button
             onClick={() => setRosterTab('teams')}
-            className={`flex-1 text-center py-2 text-[10px] font-mono uppercase tracking-wide transition-all ${rosterTab === 'teams' ? 'bg-white text-black font-semibold' : 'text-text-tertiary'}`}
+            className={`flex-1 text-center py-2 text-[10px] font-mono uppercase tracking-wide transition-all ${rosterTab === 'teams' ? 'bg-[var(--pm-surface)] text-[var(--pm-text)] font-semibold' : 'text-text-tertiary'}`}
           >
             Team Directory
           </button>
           <button
             onClick={() => setRosterTab('analytics')}
-            className={`flex-1 text-center py-2 text-[10px] font-mono uppercase tracking-wide transition-all ${rosterTab === 'analytics' ? 'bg-white text-black font-semibold' : 'text-text-tertiary'}`}
+            className={`flex-1 text-center py-2 text-[10px] font-mono uppercase tracking-wide transition-all ${rosterTab === 'analytics' ? 'bg-[var(--pm-surface)] text-[var(--pm-text)] font-semibold' : 'text-text-tertiary'}`}
           >
             Deep Analytics
           </button>
@@ -377,7 +377,7 @@ export function TeamRosterModal({
                         setActiveSquadId(team.id);
                         setRosterTab('analytics');
                       }}
-                      className={`p-4 cursor-pointer transition-all hover:bg-surface-3 flex flex-col gap-2 ${isActive ? 'bg-white/5 border-l-2 border-l-accent-primary' : ''}`}
+                      className={`p-4 cursor-pointer transition-all hover:bg-surface-3 flex flex-col gap-2 ${isActive ? 'bg-[var(--pm-surface)]/5 border-l-2 border-l-accent-primary' : ''}`}
                     >
                       <div className="flex justify-between items-start gap-2">
                         <h4 className="text-sm font-semibold tracking-tight uppercase truncate">{team.name}</h4>
@@ -391,7 +391,7 @@ export function TeamRosterModal({
                       </div>
 
                       {/* Progress indicator */}
-                      <div className="w-full bg-white/5 h-1">
+                      <div className="w-full bg-[var(--pm-surface)]/5 h-1">
                         <div
                           className={`h-full ${metrics.loadPercentage > 100 ? 'bg-signal-critical' : 'bg-accent-primary'}`}
                           style={{ width: `${Math.min(100, metrics.loadPercentage)}%` }}
@@ -437,7 +437,7 @@ export function TeamRosterModal({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                   {/* Gauge 1: Load */}
-                  <div className="border border-border bg-white/5 p-6 flex flex-col justify-between h-40 relative overflow-hidden">
+                  <div className="border border-border bg-[var(--pm-surface)]/5 p-6 flex flex-col justify-between h-40 relative overflow-hidden">
                     <div className="flex justify-between items-start">
                       <p className="text-[10px] font-mono text-text-tertiary uppercase tracking-wide">Workload Status</p>
                       <Activity className={`w-4 h-4 ${activeMetrics.loadPercentage > 100 ? 'text-signal-critical transition-opacity duration-300' : 'text-signal-info'}`} />
@@ -446,13 +446,13 @@ export function TeamRosterModal({
                       <p className={`text-3xl font-mono font-bold ${activeMetrics.loadPercentage > 100 ? 'text-signal-critical' : 'text-text-primary'}`}>{activeMetrics.loadPercentage}%</p>
                       <p className="text-[10px] font-mono text-text-tertiary mt-1 uppercase">Capacity Utilization</p>
                     </div>
-                    <div className="w-full bg-white/5 h-1.5">
+                    <div className="w-full bg-[var(--pm-surface)]/5 h-1.5">
                       <div className={`h-full ${activeMetrics.loadPercentage > 100 ? 'bg-signal-critical' : 'bg-accent-primary'}`} style={{ width: `${Math.min(100, activeMetrics.loadPercentage)}%` }} />
                     </div>
                   </div>
 
                   {/* Gauge 2: Capacity Hours details */}
-                  <div className="border border-border bg-white/5 p-6 flex flex-col justify-between h-40">
+                  <div className="border border-border bg-[var(--pm-surface)]/5 p-6 flex flex-col justify-between h-40">
                     <div className="flex justify-between items-start">
                       <p className="text-[10px] font-mono text-text-tertiary uppercase tracking-wide">Allocated Workload</p>
                       <Clock className="w-4 h-4 text-text-tertiary" />
@@ -465,7 +465,7 @@ export function TeamRosterModal({
                   </div>
 
                   {/* Gauge 3: Potential Drift */}
-                  <div className="border border-border bg-white/5 p-6 flex flex-col justify-between h-40">
+                  <div className="border border-border bg-[var(--pm-surface)]/5 p-6 flex flex-col justify-between h-40">
                     <div className="flex justify-between items-start">
                       <p className="text-[10px] font-mono text-text-tertiary uppercase tracking-wide">Potential drift risk</p>
                       <AlertTriangle className="w-4 h-4 text-signal-warning" />
@@ -507,7 +507,7 @@ export function TeamRosterModal({
                         const expected = calculateExpectedTime(project.pert_best, project.pert_likely, project.pert_worst);
                         const progress = project.status === 'planning' ? 15 : project.status === 'in-progress' ? 50 : project.status === 'review' ? 85 : 100;
                         return (
-                          <div key={project.id} className="border border-border-subtle bg-surface-2 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-border transition-all">
+                          <div key={project.id} className="border border-border-subtle bg-[var(--pm-panel)] p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:border-border transition-all">
                             <div className="space-y-1">
                               <h5 className="text-sm font-semibold tracking-tight text-text-secondary">{project.name}</h5>
                               <div className="flex items-center gap-3 text-[10px] font-mono text-text-tertiary uppercase">
@@ -555,7 +555,7 @@ export function TeamRosterModal({
                           <div>
                             <h5 className="text-xs font-semibold text-text-secondary truncate max-w-[140px]">{activeSquadPM.full_name || 'Anonymous User'}</h5>
                             <p className="text-[9px] font-mono text-text-tertiary uppercase truncate max-w-[140px]">{activeSquadPM.email}</p>
-                            <span className="inline-block mt-1 text-[8px] font-mono bg-accent-primary text-black px-1.5 uppercase font-bold tracking-wide">SQUAD_LEAD</span>
+                            <span className="inline-block mt-1 text-[8px] font-mono bg-accent-primary text-[var(--pm-text)] px-1.5 uppercase font-bold tracking-wide">SQUAD_LEAD</span>
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-text-quaternary group-hover:text-text-primary transition-colors" />
@@ -567,7 +567,7 @@ export function TeamRosterModal({
                       <div
                         key={engineer.id}
                         onClick={() => setSelectedPersonnelId(engineer.id)}
-                        className="border border-border-subtle bg-surface-2 p-4 flex items-center justify-between hover:bg-white/5 cursor-pointer transition-all hover:scale-[1.01] group"
+                        className="border border-border-subtle bg-[var(--pm-panel)] p-4 flex items-center justify-between hover:bg-[var(--pm-surface)]/5 cursor-pointer transition-all hover:scale-[1.01] group"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 border border-border bg-bg flex items-center justify-center overflow-hidden shrink-0">
@@ -580,7 +580,7 @@ export function TeamRosterModal({
                           <div>
                             <h5 className="text-xs font-semibold text-text-secondary truncate max-w-[140px]">{engineer.full_name || 'Anonymous User'}</h5>
                             <p className="text-[9px] font-mono text-text-tertiary uppercase truncate max-w-[140px]">{engineer.email}</p>
-                            <span className="inline-block mt-1 text-[8px] font-mono bg-white/10 text-text-secondary border border-border px-1.5 uppercase tracking-wide">{(systemData.userCustomRoles && systemData.userCustomRoles[engineer.id]) || 'Viewer'}</span>
+                            <span className="inline-block mt-1 text-[8px] font-mono bg-[var(--pm-surface)]/10 text-text-secondary border border-border px-1.5 uppercase tracking-wide">{(systemData.userCustomRoles && systemData.userCustomRoles[engineer.id]) || 'Viewer'}</span>
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-text-quaternary group-hover:text-text-primary transition-colors" />
@@ -619,7 +619,7 @@ export function TeamRosterModal({
                     <h4 className="text-xs font-sans tracking-tight uppercase tracking-wide text-signal-info font-bold">Personnel Analytics</h4>
                     <button
                       onClick={() => setSelectedPersonnelId(null)}
-                      className="p-1 border border-border hover:bg-white/5 text-text-secondary hover:text-text-primary transition-colors"
+                      className="p-1 border border-border hover:bg-[var(--pm-surface)]/5 text-text-secondary hover:text-text-primary transition-colors"
                     >
                       <Plus className="w-4 h-4 rotate-45" />
                     </button>
@@ -627,7 +627,7 @@ export function TeamRosterModal({
 
                   {/* Profile Info */}
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 border border-border bg-white/5 flex items-center justify-center overflow-hidden">
+                    <div className="w-16 h-16 border border-border bg-[var(--pm-surface)]/5 flex items-center justify-center overflow-hidden">
                       {selectedPersonnel.profile.avatar_url ? (
                         <img src={selectedPersonnel.profile.avatar_url} alt={selectedPersonnel.profile.full_name} className="w-full h-full object-cover" />
                       ) : (
@@ -669,7 +669,7 @@ export function TeamRosterModal({
                     ) : (
                       <div className="space-y-2 max-h-60 overflow-y-auto">
                         {selectedPersonnel.activeProjects.map(proj => (
-                          <div key={proj.id} className="border border-border-subtle bg-surface-2 p-3 text-xs font-mono flex flex-col gap-1">
+                          <div key={proj.id} className="border border-border-subtle bg-[var(--pm-panel)] p-3 text-xs font-mono flex flex-col gap-1">
                             <span className="font-semibold text-text-secondary truncate">{proj.name}</span>
                             <div className="flex justify-between items-center text-[9px] text-text-tertiary">
                               <span>PRIORITY: <strong className={proj.priority === 'high' ? 'text-signal-critical' : 'text-signal-info'}>{proj.priority.toUpperCase()}</strong></span>
@@ -690,7 +690,7 @@ export function TeamRosterModal({
                   )}
                   <button
                     onClick={() => setSelectedPersonnelId(null)}
-                    className="w-full py-2 bg-white text-black text-[10px] uppercase font-mono tracking-wide font-semibold hover:bg-neutral-200 transition-colors"
+                    className="w-full py-2 bg-[var(--pm-surface)] text-[var(--pm-text)] text-[10px] uppercase font-mono tracking-wide font-semibold hover:bg-neutral-200 transition-colors"
                   >
                     Commit & Sync Analytics
                   </button>

@@ -54,21 +54,21 @@ export function RealtimePreview() {
           variants={stagger(0.06)}
           className="text-center mb-14"
         >
-          <motion.p variants={slideUp} className="text-[10px] font-mono uppercase tracking-widest text-gray-900 dark:text-white/30 mb-3">
+          <motion.p variants={slideUp} className="text-[10px] font-mono uppercase tracking-widest text-[var(--pm-text)] dark:text-white/30 mb-3">
             Realtime Collaboration
           </motion.p>
-          <motion.h2 variants={slideUp} className="text-2xl sm:text-3xl font-medium tracking-tight text-gray-900 dark:text-white/80">
+          <motion.h2 variants={slideUp} className="text-2xl sm:text-3xl font-medium tracking-tight text-[var(--pm-text)] dark:text-white/80">
             Live operational awareness
           </motion.h2>
         </motion.div>
 
         {/* Live activity feed */}
-        <div className="bg-[#FFFFFF] dark:bg-[#0c0c0c] border border-gray-200 dark:border-white/10">
+        <div className="bg-[#FFFFFF] dark:bg-[#0c0c0c] border border-[var(--pm-border)] dark:border-white/10">
           {/* Feed header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
             <div className="flex items-center gap-2">
-              <Activity className="w-3.5 h-3.5 text-gray-900 dark:text-white/30" />
-              <span className="text-[10px] font-mono uppercase tracking-wider text-gray-900 dark:text-white/40">Activity</span>
+              <Activity className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white/30" />
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--pm-text)] dark:text-white/40">Activity</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-emerald-400/60 rounded-full animate-pulse" />
@@ -91,7 +91,7 @@ export function RealtimePreview() {
                     animate={{ opacity: 1, height: 'auto', y: 0 }}
                     exit={{ opacity: 0, height: 0, scale: 0.97 }}
                     transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-                    className="flex items-center gap-3 px-3 py-2.5 bg-white/[0.01]"
+                    className="flex items-center gap-3 px-3 py-2.5 bg-[var(--pm-surface)]/[0.01]"
                   >
                     {/* Actor avatar */}
                     <div className={`w-6 h-6 flex items-center justify-center ${bgColor}`}>
@@ -102,10 +102,10 @@ export function RealtimePreview() {
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-mono text-gray-900 dark:text-white/70 truncate">
-                        <span className="text-gray-900 dark:text-white/90">{entry.actor}</span>
+                      <p className="text-[12px] font-mono text-[var(--pm-text)] dark:text-white/70 truncate">
+                        <span className="text-[var(--pm-text)] dark:text-white/90">{entry.actor}</span>
                         {' '}{entry.action}{' '}
-                        <span className="text-gray-900 dark:text-white/50">{entry.target}</span>
+                        <span className="text-[var(--pm-text)] dark:text-white/50">{entry.target}</span>
                       </p>
                     </div>
 
@@ -122,14 +122,14 @@ export function RealtimePreview() {
 
             {entries.length === 0 && (
               <div className="flex items-center justify-center h-[180px]">
-                <p className="text-[11px] font-mono text-gray-900 dark:text-white/20">Awaiting activity...</p>
+                <p className="text-[11px] font-mono text-[var(--pm-text)] dark:text-white/20">Awaiting activity...</p>
               </div>
             )}
           </div>
 
           {/* Presence bar */}
-          <div className="flex items-center gap-3 px-4 py-2.5 border-t border-white/[0.06] bg-white/[0.01]">
-            <User className="w-3 h-3 text-gray-900 dark:text-white/20" />
+          <div className="flex items-center gap-3 px-4 py-2.5 border-t border-white/[0.06] bg-[var(--pm-surface)]/[0.01]">
+            <User className="w-3 h-3 text-[var(--pm-text)] dark:text-white/20" />
             <div className="flex items-center -space-x-1">
               {ACTORS.map((actor, i) => (
                 <div
@@ -141,11 +141,11 @@ export function RealtimePreview() {
                   </span>
                 </div>
               ))}
-              <div className="w-5 h-5 flex items-center justify-center bg-white/5 border border-[#0a0a0a]">
-                <span className="text-[7px] font-mono text-gray-900 dark:text-white/30">+2</span>
+              <div className="w-5 h-5 flex items-center justify-center bg-[var(--pm-surface)]/5 border border-[#0a0a0a]">
+                <span className="text-[7px] font-mono text-[var(--pm-text)] dark:text-white/30">+2</span>
               </div>
             </div>
-            <span className="text-[9px] font-mono text-gray-900 dark:text-white/30">5 online</span>
+            <span className="text-[9px] font-mono text-[var(--pm-text)] dark:text-white/30">5 online</span>
           </div>
         </div>
       </div>

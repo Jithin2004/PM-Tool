@@ -117,60 +117,64 @@ function MissionControlContent() {
   const otherInsights = allInsights.filter(i => i.severity !== 'critical' && i.severity !== 'warning');
 
   return (
-    <div className="p-6 sm:p-10 max-w-[1600px] mx-auto font-geist animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-8 mb-10 border-b border-border/50 gap-6">
-        <div className="relative">
-          <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-transparent blur-3xl opacity-50 -z-10" />
-          <h1 className="text-4xl font-semibold tracking-tight text-text-primary mb-2">Mission Control</h1>
-          <p className="text-sm mt-1 text-text-tertiary flex items-center gap-3">
-            <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-signal-safe shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" /> {activeCount} active contributor{activeCount !== 1 ? 's' : ''}</span>
-            <span className="text-border">|</span>
-            <span className="uppercase tracking-widest text-[10px] font-bold text-text-secondary">{missionFocus.label}</span>
+    <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)] max-w-7xl mx-auto px-4" style={{ color: 'var(--pm-on-surface)' }}>
+      {/* Header */}
+      <div className="flex items-end justify-between px-1 pt-2 pb-8 mb-10 border-b border-border/50">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
+            Mission Control
+          </h1>
+          <p className="text-sm mt-1 flex items-center gap-3" style={{ color: 'var(--pm-on-surface-variant)' }}>
+             <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)] animate-pulse" /> {activeCount} active contributors</span>
+             <span className="text-border">|</span>
+             <span className="uppercase tracking-widest text-[10px] font-bold text-[var(--pm-on-surface-variant)]">{missionFocus.label}</span>
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-6">
-          <div className="flex bg-surface-3/50 p-1 rounded-xl border border-border/50">
+          <div className="flex bg-surface-3 border border-border p-1 rounded-xl">
             {(['strategic', 'tactical', 'diagnostic'] as const).map(v => (
               <button
                 key={v}
                 onClick={() => setView(v)}
                 className={`px-5 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all duration-300 ${
                   view === v 
-                    ? 'bg-accent-primary text-gray-900 dark:text-white shadow-lg shadow-accent-primary/20 scale-100' 
-                    : 'bg-transparent text-text-tertiary hover:text-text-secondary hover:bg-white/5 scale-95'
+                    ? 'bg-[var(--pm-primary)] text-[var(--pm-on-primary)] shadow-lg scale-100' 
+                    : 'bg-transparent text-[var(--pm-on-surface-variant)] hover:text-[var(--pm-on-surface)] scale-95'
                 }`}
               >
                 {v}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-3 bg-surface/50 border border-border/50 px-4 py-2 rounded-xl backdrop-blur-md">
-            <span className={`w-2.5 h-2.5 rounded-full shadow-lg ${
-              coordination.vitality.overall >= 70 ? 'bg-signal-safe shadow-signal-safe/40' 
-              : coordination.vitality.overall >= 40 ? 'bg-signal-warning shadow-signal-warning/40' 
-              : 'bg-signal-critical shadow-signal-critical/40'
+          <div className="flex items-center gap-3 px-4 py-2 rounded-xl border border-border bg-surface-2"
+            style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+            <span className={`w-1.5 h-1.5 rounded-full shadow-lg operational-pulse ${
+              coordination.vitality.overall >= 70 ? 'bg-emerald-400' 
+              : coordination.vitality.overall >= 40 ? 'bg-amber-400' 
+              : 'bg-red-400'
             }`} />
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-text-quaternary">System Vitality</span>
-              <span className="text-sm font-bold text-text-primary leading-none mt-0.5">
-                {coordination.vitality.overall}<span className="text-text-quaternary text-[10px]">/100</span>
+              <span className="font-mono-pm text-[9px] uppercase tracking-widest text-[var(--pm-on-surface-variant)]">System Vitality</span>
+              <span className="text-sm font-bold text-[var(--pm-on-surface)] leading-none mt-0.5 font-geist">
+                {coordination.vitality.overall}<span className="text-[var(--pm-on-surface-variant)] text-[10px]">/100</span>
               </span>
             </div>
           </div>
         </div>
       </div>
 
+
       {focusConfig.showPrimary && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-          <div className="relative group p-6 bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-500 overflow-hidden">
+          <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
             <div className="relative z-10"><VitalityOverview vitality={coordination.vitality} /></div>
           </div>
-          <div className="relative group p-6 bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-500 overflow-hidden">
+          <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
             <div className="relative z-10"><ExecutionPressureZones bottlenecks={coordination.bottlenecks} hotspots={coordination.hotspots} vitality={coordination.vitality} /></div>
           </div>
-          <div className="relative group p-6 bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-500 overflow-hidden">
+          <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
             <div className="relative z-10"><CoordinationRadar density={coordination.density} signals={presence.signals} /></div>
           </div>
@@ -179,15 +183,15 @@ function MissionControlContent() {
 
       {focusConfig.showSecondary && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-          <div className="relative group p-6 bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-500 overflow-hidden">
+          <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
             <div className="relative z-10"><OperationalTopologyMap presences={presence.collaborators} signals={presence.signals} hotspots={coordination.hotspots} /></div>
           </div>
-          <div className="relative group p-6 bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-500 overflow-hidden">
+          <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
             <div className="relative z-10"><OrganizationalFlowMap presences={presence.collaborators} signals={presence.signals} feed={presence.feed} /></div>
           </div>
-          <div className="relative group p-6 bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-500 overflow-hidden">
+          <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
             <div className="relative z-10"><DependencyRiskPanel predictions={predictions} insights={allInsights} /></div>
           </div>
@@ -196,7 +200,7 @@ function MissionControlContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {focusConfig.showTertiary && criticalInsights.length > 0 && (
-          <div className="relative group p-6 bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-500 overflow-hidden h-full">
+          <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden h-full">
             <div className="absolute inset-0 bg-gradient-to-b from-red-500/[0.02] to-transparent pointer-events-none" />
             <div className="relative z-10">
               <div className="text-[11px] font-bold uppercase tracking-widest text-text-secondary pb-4 mb-5 border-b border-border/50 flex items-center gap-2">
@@ -229,7 +233,7 @@ function MissionControlContent() {
         )}
 
         {focusConfig.showPassive && otherInsights.length > 0 && (
-          <div className="relative group p-6 bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-500 overflow-hidden h-full">
+          <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden h-full">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
             <div className="relative z-10">
               <div className="text-[11px] font-bold uppercase tracking-widest text-text-tertiary pb-4 mb-5 border-b border-border/50 flex items-center gap-2">

@@ -82,7 +82,7 @@ export default function ConnectionsPanel() {
     const display = describeChannelState(state);
 
     return (
-      <div key={ch.key} className="group relative bg-surface/40 backdrop-blur-md border border-border/50 hover:border-accent-primary/30 rounded-2xl p-5 transition-all duration-300 shadow-sm hover:shadow-accent-primary/5">
+      <div key={ch.key} className="group relative pm-card glass-panel p-5 border-transparent hover:border-[var(--pm-primary)] transition-all duration-300 shadow-sm hover:shadow-accent-primary/5">
         <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent rounded-2xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -108,12 +108,12 @@ export default function ConnectionsPanel() {
           <div className="flex flex-col items-end gap-2 shrink-0">
             {!hasAccount ? (
               <button onClick={() => handleConnect(ch.key)}
-                className="px-6 py-2 bg-accent-primary/10 border border-accent-primary/30 text-accent-primary text-[10px] font-bold uppercase tracking-wider hover:bg-accent-primary hover:text-gray-900 dark:text-white rounded-lg transition-all active:scale-95 shadow-sm">
+                className="px-6 py-2 bg-accent-primary/10 border border-accent-primary/30 text-accent-primary text-[10px] font-bold uppercase tracking-wider hover:bg-accent-primary hover:text-[var(--pm-text)] dark:text-white rounded-lg transition-all active:scale-95 shadow-sm">
                 Authorize
               </button>
             ) : (
               <button onClick={() => handleDisconnect(ch.key)}
-                className="px-6 py-2 bg-signal-critical/10 border border-signal-critical/30 text-signal-critical text-[10px] font-bold uppercase tracking-wider hover:bg-signal-critical hover:text-gray-900 dark:text-white rounded-lg transition-all active:scale-95 shadow-sm">
+                className="px-6 py-2 bg-signal-critical/10 border border-signal-critical/30 text-signal-critical text-[10px] font-bold uppercase tracking-wider hover:bg-signal-critical hover:text-[var(--pm-text)] dark:text-white rounded-lg transition-all active:scale-95 shadow-sm">
                 Disconnect
               </button>
             )}
@@ -133,16 +133,24 @@ export default function ConnectionsPanel() {
   const projectChannels = OPERATIONAL_CHANNELS.filter(c => c.scope === 'project');
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12 animate-fade-in">
-      <div className="relative mb-10">
-        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-transparent blur-2xl opacity-50 -z-10" />
-        <h2 className="text-4xl font-semibold tracking-tight text-text-primary mb-2 flex items-center gap-3">
-          <Network className="w-8 h-8 text-indigo-400" />
-          Integration Channels
-        </h2>
-        <p className="text-sm text-text-tertiary tracking-wide max-w-2xl">
-          External coordination signal ingestion pipelines and automated data synchronizations
-        </p>
+    <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)] max-w-7xl mx-auto px-4" style={{ color: 'var(--pm-on-surface)' }}>
+      {/* Header */}
+      <div className="flex items-end justify-between px-1 pt-2 pb-6 border-b border-border/50 mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
+            Integration Channels
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            External coordination signal ingestion pipelines and automated data synchronizations
+          </p>
+        </div>
+        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
+          style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(129,140,248,0.5)' }} />
+          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]" style={{ color: 'var(--pm-on-surface-variant)' }}>
+             DATA SYNC
+          </span>
+        </div>
       </div>
 
       <div className="space-y-12">

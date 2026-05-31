@@ -3,7 +3,7 @@ import React from 'react';
 export function CompliancePage() {
   return (
     <div className="min-h-screen bg-surface-container-lowest text-on-surface font-sans">
-      <header className="w-full h-16 flex items-center px-6 lg:px-12 border-b border-gray-200 dark:border-white/10 sticky top-0 bg-surface-container-lowest/80 backdrop-blur-md z-50">
+      <header className="w-full h-16 flex items-center px-6 lg:px-12 border-b border-[var(--pm-border)] dark:border-white/10 sticky top-0 bg-surface-container-lowest/80 backdrop-blur-md z-50">
         <a href="/" className="flex items-center gap-2">
           <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
             <span className="text-on-primary font-bold text-xs">R</span>
@@ -47,7 +47,7 @@ export function CompliancePage() {
         </section>
       </main>
 
-      <footer className="w-full py-8 px-6 lg:px-12 flex flex-col md:flex-row justify-between items-center border-t border-gray-100 dark:border-white/5 mt-12">
+      <footer className="w-full py-8 px-6 lg:px-12 flex flex-col md:flex-row justify-between items-center border-t border-[var(--pm-border)] dark:border-white/5 mt-12">
         <div className="flex flex-col items-center md:items-start gap-2 mb-6 md:mb-0">
           <span className="font-semibold text-on-surface">Resolve PM</span>
           <p className="text-sm text-on-surface-variant opacity-60">© 2026 Resolve PM. All rights reserved.</p>

@@ -49,14 +49,14 @@ export function transitionOAuthState(
 
 export function describeChannelState(state: ChannelState): { label: string; color: string } {
   switch (state) {
-    case 'unavailable': return { label: 'unavailable', color: 'text-gray-500' };
+    case 'unavailable': return { label: 'unavailable', color: 'text-[var(--pm-text-secondary)]' };
     case 'configuring': return { label: 'configuring', color: 'text-amber-400' };
     case 'awaiting_oauth': return { label: 'awaiting authorization', color: 'text-amber-400' };
     case 'connecting': return { label: 'connecting', color: 'text-cyan-400' };
     case 'connected': return { label: 'connected', color: 'text-emerald-400' };
     case 'degraded': return { label: 'degraded', color: 'text-orange-400' };
     case 'reconnecting': return { label: 'reconnecting', color: 'text-cyan-400' };
-    case 'ingestion_paused': return { label: 'ingestion paused', color: 'text-gray-600 dark:text-gray-400' };
+    case 'ingestion_paused': return { label: 'ingestion paused', color: 'text-[var(--pm-text-secondary)] dark:text-[var(--pm-text-secondary)]' };
     case 'webhook_error': return { label: 'delivery error', color: 'text-red-400' };
   }
 }

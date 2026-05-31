@@ -352,7 +352,7 @@ export function DependencyRiskPanel({ predictions, insights }: DependencyRiskPan
             className={`px-2.5 py-1 text-[9px] font-bold rounded uppercase tracking-wider border transition-all ${
               devFilterOnlyMyContext 
                 ? 'bg-accent-primary border-accent-primary text-bg' 
-                : 'bg-transparent border-border text-text-tertiary hover:bg-white/5'
+                : 'bg-transparent border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
             }`}
           >
             {devFilterOnlyMyContext ? 'My Context' : 'All Plans'}

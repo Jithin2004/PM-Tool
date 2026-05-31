@@ -81,7 +81,7 @@ export function KanbanBootstrap({ projectId, workspaceId, onComplete, onSkip }: 
                 min={0}
                 value={col.wipLimit}
                 onChange={e => updateColumn(i, 'wipLimit', parseInt(e.target.value) || 0)}
-                className="w-12 bg-white/5 border border-border rounded-sm px-1.5 py-1 text-[10px] font-mono text-text-secondary text-center outline-none focus:border-border"
+                className="w-12 bg-[var(--pm-surface)]/5 border border-border rounded-sm px-1.5 py-1 text-[10px] font-mono text-text-secondary text-center outline-none focus:border-border"
               />
             </div>
             {columns.length > 2 && (
@@ -104,7 +104,7 @@ export function KanbanBootstrap({ projectId, workspaceId, onComplete, onSkip }: 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-accent-primary text-gray-900 dark:text-white text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm disabled:opacity-50 cursor-pointer"
+          className="px-4 py-2 bg-accent-primary text-[var(--pm-text)] dark:text-white text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm disabled:opacity-50 cursor-pointer"
         >
           {saving ? 'Saving...' : 'Apply & Continue'}
         </button>

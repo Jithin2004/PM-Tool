@@ -44,8 +44,8 @@ export function CommandPalette() {
   const filteredTasks = tasks.filter(t => t.name.toLowerCase().includes(query.toLowerCase())).slice(0, 3);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-white dark:bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh]">
-      <div className="bg-surface border border-border w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-[var(--pm-surface)] dark:bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh]">
+      <div className="bg-[var(--pm-panel)] border border-border w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col">
         {/* Input */}
         <div className="flex items-center gap-3 px-4 py-4 border-b border-border">
           <Search className="w-5 h-5 text-text-quaternary" />
@@ -57,7 +57,7 @@ export function CommandPalette() {
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
-          <button onClick={handleClose} className="p-1 hover:bg-surface-2 rounded-md transition-colors text-text-tertiary">
+          <button onClick={handleClose} className="p-1 hover:bg-[var(--pm-panel)] rounded-md transition-colors text-text-tertiary">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -75,9 +75,9 @@ export function CommandPalette() {
                   { icon: <FileText />, label: 'Generate Report', color: 'text-rose-400' },
                   { icon: <Zap />, label: 'Open Executive Dashboard', color: 'text-accent-primary' }
                 ].map((action, i) => (
-                  <button key={i} className="w-full flex items-center justify-between p-2 hover:bg-surface-2 rounded-lg text-left group transition-all">
+                  <button key={i} className="w-full flex items-center justify-between p-2 hover:bg-[var(--pm-panel)] rounded-lg text-left group transition-all">
                     <div className="flex items-center gap-3">
-                      <div className={`p-1.5 rounded-md bg-surface-3 border border-border ${action.color}`}>
+                      <div className={`p-1.5 rounded-md bg-[var(--pm-panel)]-3 border border-border ${action.color}`}>
                         {React.cloneElement(action.icon as React.ReactElement<any>, { className: 'w-4 h-4' })}
                       </div>
                       <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary">{action.label}</span>
@@ -95,7 +95,7 @@ export function CommandPalette() {
                 <div className="p-2">
                   <div className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest px-2 mb-2">Projects</div>
                   {filteredProjects.map(p => (
-                    <button key={p.id} className="w-full flex items-center justify-between p-2 hover:bg-surface-2 rounded-lg text-left group transition-all">
+                    <button key={p.id} className="w-full flex items-center justify-between p-2 hover:bg-[var(--pm-panel)] rounded-lg text-left group transition-all">
                       <div className="flex items-center gap-3">
                         <Folder className="w-4 h-4 text-indigo-400" />
                         <span className="text-sm text-text-secondary group-hover:text-text-primary">{p.name}</span>
@@ -108,7 +108,7 @@ export function CommandPalette() {
                 <div className="p-2">
                   <div className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest px-2 mb-2">Tasks</div>
                   {filteredTasks.map(t => (
-                    <button key={t.id} className="w-full flex items-center justify-between p-2 hover:bg-surface-2 rounded-lg text-left group transition-all">
+                    <button key={t.id} className="w-full flex items-center justify-between p-2 hover:bg-[var(--pm-panel)] rounded-lg text-left group transition-all">
                       <div className="flex items-center gap-3">
                         <CheckSquare className="w-4 h-4 text-emerald-400" />
                         <span className="text-sm text-text-secondary group-hover:text-text-primary">{t.name}</span>
@@ -125,15 +125,15 @@ export function CommandPalette() {
             </>
           )}
         </div>
-        <div className="border-t border-border bg-surface-2 px-4 py-2 flex items-center justify-between">
+        <div className="border-t border-border bg-[var(--pm-panel)] px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-medium text-text-quaternary">Navigate</span>
-            <kbd className="px-1.5 py-0.5 bg-surface border border-border rounded text-[9px] font-mono text-text-tertiary">↑</kbd>
-            <kbd className="px-1.5 py-0.5 bg-surface border border-border rounded text-[9px] font-mono text-text-tertiary">↓</kbd>
+            <kbd className="px-1.5 py-0.5 bg-[var(--pm-panel)] border border-border rounded text-[9px] font-mono text-text-tertiary">↑</kbd>
+            <kbd className="px-1.5 py-0.5 bg-[var(--pm-panel)] border border-border rounded text-[9px] font-mono text-text-tertiary">↓</kbd>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-medium text-text-quaternary">Close</span>
-            <kbd className="px-1.5 py-0.5 bg-surface border border-border rounded text-[9px] font-mono text-text-tertiary">ESC</kbd>
+            <kbd className="px-1.5 py-0.5 bg-[var(--pm-panel)] border border-border rounded text-[9px] font-mono text-text-tertiary">ESC</kbd>
           </div>
         </div>
       </div>

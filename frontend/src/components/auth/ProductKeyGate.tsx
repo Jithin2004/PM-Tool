@@ -65,7 +65,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
       >
         {/* Branding */}
         <div className="flex flex-col items-center text-center mb-10">
-          <div className="w-16 h-16 bg-white/5 border flex items-center justify-center rounded-xl mb-6 shadow-sm"
+          <div className="w-16 h-16 bg-[var(--pm-surface-elevated)]/5 border flex items-center justify-center rounded-xl mb-6 shadow-sm"
                style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
             <Shield className="w-8 h-8" style={{ color: 'var(--pm-primary)' }} />
           </div>
@@ -183,21 +183,21 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
           <div className="flex flex-col gap-2">
             <button
               onClick={() => alert('Access request workflow initiated (Demo)')}
-              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-white/5"
+              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-[var(--pm-surface)]/5"
               style={{ color: 'var(--pm-primary)', border: '1px solid rgba(70,69,84,0.3)' }}
             >
               Request Access
             </button>
             <button
               onClick={() => alert('Contacting workspace admin... (Demo)')}
-              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-white/5"
+              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-[var(--pm-surface)]/5"
               style={{ color: 'var(--pm-secondary)', border: '1px solid rgba(70,69,84,0.3)' }}
             >
               Contact Workspace Admin
             </button>
             <a
               href="/"
-              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-white/5 mt-2"
+              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-[var(--pm-surface)]/5 mt-2"
               style={{ color: 'var(--pm-on-surface-variant)' }}
             >
               Return Home

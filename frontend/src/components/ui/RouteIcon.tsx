@@ -45,7 +45,7 @@ export function RouteIcon({ name, className = "w-[15px] h-[15px] shrink-0", weig
   
   if (!Component) {
     // Graceful fallback for missing icons
-    return <span className={`inline-block bg-white/10 rounded-sm ${className}`} />;
+    return <span className={`inline-block bg-[var(--pm-surface)]/10 rounded-sm ${className}`} />;
   }
 
   // Pass classNames to standard SVG wrapper. Phosphor uses 'weight', Lucide ignores it.

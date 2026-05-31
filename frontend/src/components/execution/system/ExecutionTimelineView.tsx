@@ -230,7 +230,15 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
   const endStr = new Date(maxTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
   return (
-    <div className="flex flex-col gap-6 h-full overflow-y-auto pr-2 pb-10 scrollbar-thin">
+    <>
+      <div className="block md:hidden bg-surface border border-border-subtle rounded-xl p-8 text-center mt-4">
+        <Activity className="w-12 h-12 text-accent-primary mx-auto mb-4 opacity-80" />
+        <h2 className="text-lg font-bold text-text-primary mb-2">Desktop View Required</h2>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          The Timeline View requires a larger viewport for complex visualizations. Please access this view on a tablet or desktop device.
+        </p>
+      </div>
+      <div className="hidden md:flex flex-col gap-6 h-full overflow-y-auto pr-2 pb-10 scrollbar-thin">
       {/* Project selector */}
       {projectsWithTasks.length > 1 && (
         <div className="flex items-center gap-2 border-b border-border pb-2 overflow-x-auto scrollbar-none shrink-0">
@@ -343,7 +351,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
                 const taskSub = workspaceSettingsBlob?.task_substates?.[flow.taskId] || task?.status;
 
                 return (
-                  <div key={flow.taskId} className="flex hover:bg-white/[0.01] transition-colors items-center">
+                  <div key={flow.taskId} className="flex hover:bg-[var(--pm-surface)]/[0.01] transition-colors items-center">
                     <div className="w-60 shrink-0 p-3 border-r border-border flex flex-col gap-1 min-w-[240px]">
                       <span className="text-[12px] font-bold text-text-primary truncate" title={flow.taskName}>{flow.taskName}</span>
                       <div className="flex items-center gap-1.5 mt-0.5">
@@ -448,7 +456,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
                           return (
                             <div
                               key={`cp-${cpIdx}`}
-                              className={`absolute w-2 h-2 rounded-full cursor-pointer group/cp border border-gray-100 dark:border-white/50 -translate-x-1/2 z-20 hover:scale-125 transition-transform ${colorClass}`}
+                              className={`absolute w-2 h-2 rounded-full cursor-pointer group/cp border border-[var(--pm-border)] dark:border-white/50 -translate-x-1/2 z-20 hover:scale-125 transition-transform ${colorClass}`}
                               style={{ left: `${left}%` }}
                             >
                               <div className="absolute bottom-full mb-2 hidden group-hover/cp:block z-35 w-56 bg-surface border border-border p-2.5 rounded-lg shadow-xl text-left">
@@ -528,5 +536,6 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
         </div>
       </div>
     </div>
+    </>
   );
 }

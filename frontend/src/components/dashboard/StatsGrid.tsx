@@ -17,7 +17,7 @@ export function StatCard({ label, value, icon: Icon, color = "text-text-primary"
 
 export function StatsGrid({ stats }: { stats: Stats }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/10 border-b border-border">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--pm-surface)]/10 border-b border-border">
       <StatCard label="ETA Confidence" value={`${stats.deliveryConfidence}%`} icon={Target} color="text-signal-safe" />
       <StatCard label="Active Workflows" value={stats.totalProjects} icon={BarChart3} />
       <StatCard label="Team Allocation" value={`${stats.teamBandwidth}%`} icon={Users} />

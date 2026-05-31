@@ -139,42 +139,48 @@ export function ExecutiveAnalytics() {
   }, [intel.riskTrends]);
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 space-y-6 font-geist text-text-primary">
-      {/* Page Header */}
-      <div className="flex items-center justify-between border-b border-border pb-4">
+    <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
+      {/* Header */}
+      <div className="flex items-end justify-between px-1 pt-2">
         <div>
-          <h2 className="text-xl font-bold tracking-tight uppercase flex items-center gap-2">
-            <Brain className="w-5.5 h-5.5 text-accent-primary" /> Organizational Memory &amp; Learning Engine
-          </h2>
-          <p className="text-[12px] text-text-tertiary">
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
+            <div className="flex items-center gap-2">
+              <Brain className="w-6 h-6 text-accent-primary" />
+              Organizational Memory & Learning Engine
+            </div>
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
             Institutional operational memory, blocker recurrence records, and mitigation effectiveness scores.
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-accent-primary/10 border border-accent-primary/20 rounded-full">
-          <History className="w-3.5 h-3.5 text-accent-primary" />
-          <span className="text-[9px] font-mono uppercase tracking-widest text-accent-primary font-bold">Memory Synced</span>
+        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
+          style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(192,132,252,0.5)' }} />
+          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]" style={{ color: 'var(--pm-on-surface-variant)' }}>
+             MEMORY SYNCED
+          </span>
         </div>
       </div>
 
       {/* Global Learning Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+        <div className="pm-card p-5 relative overflow-hidden group">
           <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-2">Execution Trust Rating</span>
           <p className="text-3xl font-extrabold text-text-primary">
             {globalMetrics.avgTrust}% <span className="text-xs font-medium text-text-tertiary">Avg across systems</span>
           </p>
         </div>
-        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+        <div className="pm-card p-5 relative overflow-hidden group">
           <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-2">Operational Memory Log</span>
           <p className="text-3xl font-extrabold text-text-primary">
             {memory.mitigationOutcomes.length} <span className="text-xs font-medium text-text-tertiary">events registered</span>
           </p>
         </div>
-        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+        <div className="pm-card p-5 relative overflow-hidden group">
           <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-2">Friction Hotspots</span>
           <p className="text-3xl font-extrabold text-signal-warning">{memory.executionPatterns.length} Patterns</p>
         </div>
-        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+        <div className="pm-card p-5 relative overflow-hidden group">
           <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-2">Recurrent Timeline Drift</span>
           <p className={`text-3xl font-extrabold ${globalMetrics.activeDrifts > 5 ? 'text-signal-critical' : 'text-text-primary'}`}>
             +{globalMetrics.activeDrifts} Days
@@ -185,7 +191,7 @@ export function ExecutiveAnalytics() {
       {/* Strategic Trend Console & Tabs */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Stability Trend Chart */}
-        <div className="lg:col-span-7 bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
+        <div className="lg:col-span-7 glass-panel rounded-xl p-6 bg-surface-2 border border-border flex flex-col justify-between">
           <div>
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <TrendingUp className="w-4 h-4 text-accent-primary" /> Delivery Stability Index
@@ -213,7 +219,7 @@ export function ExecutiveAnalytics() {
         </div>
 
         {/* Strategic Delivery Profile Checklist for PMs/Stakeholders */}
-        <div className="lg:col-span-5 bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 flex flex-col gap-5 shadow-sm hover:shadow-md transition-shadow">
+        <div className="lg:col-span-5 glass-panel rounded-xl p-6 bg-surface-2 border border-border flex flex-col gap-5">
           <div>
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <Award className="w-4 h-4 text-accent-secondary" /> Project Delivery Behavior Profiles
@@ -261,7 +267,7 @@ export function ExecutiveAnalytics() {
       </div>
 
       {/* Main Console Explorer */}
-      <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
+      <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
         <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
           <div className="flex items-center bg-surface-2 rounded-lg p-1 border border-border">
             {[
@@ -433,7 +439,7 @@ export function ExecutiveAnalytics() {
 
       {/* Developer specific: Local Recurrent Blocker Warning */}
       {isDeveloper && (
-        <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
+        <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
           <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
             <AlertTriangle className="w-4 h-4 text-signal-critical" />
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">Developer Local Recovery Dashboard</h3>

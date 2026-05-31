@@ -35,7 +35,7 @@ const iconColorMap: Record<InsightType, string> = {
 };
 
 const confidenceDots: Record<string, string> = {
-  low: 'bg-white/20',
+  low: 'bg-[var(--pm-surface)]/20',
   medium: 'bg-amber-400',
   high: 'bg-emerald-400',
 };

@@ -11,7 +11,7 @@ interface ExecutionMigrationPlannerProps {
 export function ExecutionMigrationPlanner({ projectId, currentMode, targetMode, onMigrate, onCancel }: ExecutionMigrationPlannerProps) {
   return (
     <div className="space-y-3">
-      <div className="px-2 py-1.5 bg-white/5 border border-border rounded">
+      <div className="px-2 py-1.5 bg-[var(--pm-surface)]/5 border border-border rounded">
         <p className="text-[9px] font-mono text-text-quaternary uppercase tracking-wider mb-1">rollback</p>
         <p className="text-[10px] font-mono text-text-tertiary">
           Execution mode can be changed again after migration. No data is permanently altered.
@@ -27,7 +27,7 @@ export function ExecutionMigrationPlanner({ projectId, currentMode, targetMode, 
         </button>
         <button
           onClick={onCancel}
-          className="px-4 py-1.5 bg-white/5 text-text-tertiary text-[10px] font-medium uppercase tracking-wider hover:bg-white/10 transition-colors border border-border"
+          className="px-4 py-1.5 bg-[var(--pm-surface)]/5 text-text-tertiary text-[10px] font-medium uppercase tracking-wider hover:bg-[var(--pm-surface)]/10 transition-colors border border-border"
         >
           Cancel
         </button>

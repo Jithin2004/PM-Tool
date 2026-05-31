@@ -341,7 +341,7 @@ export function WorkspaceSetupPage() {
                           {tpl.ceremonies.length > 0 && (
                             <div className="mt-2.5 flex flex-wrap gap-1">
                               {tpl.ceremonies.map(c => (
-                                <span key={c} className="text-[8px] font-mono bg-white/5 px-2 py-0.5 rounded text-accent-secondary/70">{c}</span>
+                                <span key={c} className="text-[8px] font-mono bg-[var(--pm-surface)]/5 px-2 py-0.5 rounded text-accent-secondary/70">{c}</span>
                               ))}
                             </div>
                           )}
@@ -419,7 +419,7 @@ export function WorkspaceSetupPage() {
                       <button
                         key={day.value}
                         onClick={() => toggleWorkday(day.value)}
-                        className={`h-10 border rounded-lg text-xs transition-all font-mono-pm ${active ? '!border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 text-[var(--pm-on-surface)] shadow-sm' : 'bg-[var(--pm-surface-low)] text-[var(--pm-on-surface-variant)] hover:border-gray-300 dark:border-white/20'}`}
+                        className={`h-10 border rounded-lg text-xs transition-all font-mono-pm ${active ? '!border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 text-[var(--pm-on-surface)] shadow-sm' : 'bg-[var(--pm-surface-low)] text-[var(--pm-on-surface-variant)] hover:border-[var(--pm-border)] dark:border-white/20'}`}
                         style={{ borderColor: active ? '' : 'rgba(70,69,84,0.2)' }}
                       >
                         {day.label}

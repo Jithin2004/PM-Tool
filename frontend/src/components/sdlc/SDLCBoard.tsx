@@ -97,7 +97,7 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
             <div className={`text-text-tertiary ${phase.progress === 100 ? 'text-emerald-400' : ''}`}>{PHASE_ICONS[phase.id]}</div>
             <span className="text-[7px] font-mono uppercase text-text-tertiary truncate w-full text-center">{phase.title}</span>
             {phase.taskCount > 0 && (
-              <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-1">
+              <div className="w-full h-1 bg-[var(--pm-surface)]/5 rounded-full overflow-hidden mt-1">
                 <div className="h-full bg-emerald-500 transition-all" style={{ width: `${phase.progress}%` }} />
               </div>
             )}
@@ -121,7 +121,7 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
               {projectMilestones.map(m => (
                 <div key={m.id} className="flex items-center justify-between text-[9px] font-mono">
                   <span className="text-text-secondary">{m.title}</span>
-                  <span className={`px-1.5 py-0.5 rounded-sm ${m.status === 'achieved' ? 'bg-emerald-500/10 text-emerald-400' : m.status === 'missed' ? 'bg-signal-critical-bg text-signal-critical' : 'bg-white/5 text-text-quaternary'}`}>{m.status}</span>
+                  <span className={`px-1.5 py-0.5 rounded-sm ${m.status === 'achieved' ? 'bg-emerald-500/10 text-emerald-400' : m.status === 'missed' ? 'bg-signal-critical-bg text-signal-critical' : 'bg-[var(--pm-surface)]/5 text-text-quaternary'}`}>{m.status}</span>
                 </div>
               ))}
             </div>
@@ -164,7 +164,7 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
           ) : (
             filteredTasks.map(task => (
               <div key={task.id} className="flex items-center gap-3 p-3 bg-bg border border-border-subtle rounded-sm hover:border-border transition-colors">
-                <div className={`w-2 h-2 rounded-full ${task.status === 'done' ? 'bg-emerald-400' : task.status === 'in_progress' ? 'bg-yellow-400' : task.status === 'review' ? 'bg-orange-400' : 'bg-white/20'}`} />
+                <div className={`w-2 h-2 rounded-full ${task.status === 'done' ? 'bg-emerald-400' : task.status === 'in_progress' ? 'bg-yellow-400' : task.status === 'review' ? 'bg-orange-400' : 'bg-[var(--pm-surface)]/20'}`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-mono text-text-secondary truncate">{task.name}</p>
                   <p className="text-[8px] font-mono text-text-quaternary uppercase">{task.status.replace('_', ' ')} · {task.estimated_hours}h</p>

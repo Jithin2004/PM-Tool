@@ -126,7 +126,7 @@ export default function KnowledgeHubPanel() {
           </div>
           {tab === 'active' && (
             <button onClick={() => setShowCreate(true)}
-              className="h-10 px-4 bg-accent-primary hover:bg-accent-primary/90 text-gray-900 dark:text-white rounded-lg text-sm font-semibold tracking-wide transition-all shadow-[0_0_15px_rgba(var(--color-accent-primary-rgb),0.2)] hover:shadow-[0_0_20px_rgba(var(--color-accent-primary-rgb),0.4)] flex items-center gap-2 whitespace-nowrap">
+              className="h-10 px-4 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white rounded-lg text-sm font-semibold tracking-wide transition-all shadow-[0_0_15px_rgba(var(--color-accent-primary-rgb),0.2)] hover:shadow-[0_0_20px_rgba(var(--color-accent-primary-rgb),0.4)] flex items-center gap-2 whitespace-nowrap">
               <Plus className="w-4 h-4" /> New Doc
             </button>
           )}
@@ -181,7 +181,7 @@ export default function KnowledgeHubPanel() {
               className="w-full bg-surface-3 border border-border/50 p-3 rounded-lg text-sm font-mono text-text-primary placeholder:text-text-quaternary focus:border-accent-primary/60 outline-none transition-all shadow-inner resize-y mb-6" />
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowCreate(false)}
-                className="px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-text-tertiary hover:text-text-primary hover:bg-white/5 rounded-lg transition-all">
+                className="px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-text-tertiary hover:text-text-primary hover:bg-[var(--pm-surface)]/5 rounded-lg transition-all">
                 Discard
               </button>
               <button onClick={handleCreate}
@@ -242,7 +242,7 @@ export default function KnowledgeHubPanel() {
                   {doc.tags?.length > 0 && (
                     <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-none">
                       {doc.tags.slice(0, 3).map((tag, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-white/5 border border-border/40 rounded text-[10px] font-medium text-text-secondary whitespace-nowrap">
+                        <span key={i} className="px-2 py-0.5 bg-[var(--pm-surface)]/5 border border-border/40 rounded text-[10px] font-medium text-text-secondary whitespace-nowrap">
                           {tag}
                         </span>
                       ))}
@@ -255,7 +255,7 @@ export default function KnowledgeHubPanel() {
                   {tab === 'active' ? (
                     <>
                       <button onClick={e => { e.stopPropagation(); handleTogglePin(doc.id, doc.pinned); }}
-                        className={`p-2 rounded-lg transition-all ${doc.pinned ? 'bg-signal-warning/10 text-signal-warning hover:bg-signal-warning/20' : 'bg-surface-3 text-text-tertiary hover:bg-white/10 hover:text-text-primary'}`}
+                        className={`p-2 rounded-lg transition-all ${doc.pinned ? 'bg-signal-warning/10 text-signal-warning hover:bg-signal-warning/20' : 'bg-surface-3 text-text-tertiary hover:bg-[var(--pm-surface)]/10 hover:text-text-primary'}`}
                         title={doc.pinned ? 'Unpin Document' : 'Pin Document'}>
                         <Pin className="w-4 h-4" />
                       </button>

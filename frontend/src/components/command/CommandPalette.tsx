@@ -799,8 +799,8 @@ export default function CommandPalette(props: Props) {
                         isHeader
                           ? 'text-[9px] uppercase tracking-wide text-text-quaternary pt-4 pb-1.5 px-4 cursor-default'
                           : isSelected
-                            ? 'bg-white/10 text-text-primary'
-                            : 'text-text-secondary hover:bg-white/5'
+                            ? 'bg-[var(--pm-surface)]/10 text-text-primary'
+                            : 'text-text-secondary hover:bg-[var(--pm-surface)]/5'
                       }`}
                     >
                       {isHeader && (

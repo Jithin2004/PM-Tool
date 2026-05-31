@@ -24,7 +24,7 @@ export function useIntegrationRegistry(options: UseIntegrationRegistryOptions = 
 
   const getChannelState = useCallback((channelKey: string): { label: string; color: string } => {
     const channel = channels.find(c => c.key === channelKey);
-    if (!channel) return { label: 'unknown', color: 'text-gray-500' };
+    if (!channel) return { label: 'unknown', color: 'text-[var(--pm-text-secondary)]' };
     return describeChannelState(channel.state);
   }, [channels]);
 

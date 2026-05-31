@@ -188,7 +188,7 @@ export function GuidedTour({
               </div>
               <button
                 onClick={onClose}
-                className="text-text-quaternary hover:text-text-primary transition-colors cursor-pointer text-[10px] font-mono uppercase tracking-wider bg-white/5 hover:bg-white/10 px-2 py-1 rounded"
+                className="text-text-quaternary hover:text-text-primary transition-colors cursor-pointer text-[10px] font-mono uppercase tracking-wider bg-[var(--pm-surface)]/5 hover:bg-[var(--pm-surface)]/10 px-2 py-1 rounded"
               >
                 Skip
               </button>
@@ -204,7 +204,7 @@ export function GuidedTour({
               <button
                 disabled={currentStepIndex === 0}
                 onClick={onPrev}
-                className={`px-3 py-1.5 border border-border text-[11px] font-mono uppercase tracking-wider hover:bg-white/5 transition-all rounded-md flex items-center gap-1 cursor-pointer ${currentStepIndex === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                className={`px-3 py-1.5 border border-border text-[11px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/5 transition-all rounded-md flex items-center gap-1 cursor-pointer ${currentStepIndex === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 <ChevronLeft className="w-3 h-3" />
                 Back

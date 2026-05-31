@@ -79,16 +79,24 @@ export default function AutomationsPanel() {
   );
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12 animate-fade-in">
-      <div className="relative mb-10">
-        <div className="absolute -inset-1 bg-gradient-to-r from-teal-500/20 via-emerald-500/20 to-transparent blur-2xl opacity-50 -z-10" />
-        <h2 className="text-4xl font-semibold tracking-tight text-text-primary mb-2 flex items-center gap-3">
-          <Zap className="w-8 h-8 text-teal-400" />
-          Automation Engine
-        </h2>
-        <p className="text-sm text-text-tertiary tracking-wide max-w-2xl">
-          Event-driven operational triggers, dynamic state machines, and background orchestration
-        </p>
+    <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)] max-w-7xl mx-auto px-4" style={{ color: 'var(--pm-on-surface)' }}>
+      {/* Header */}
+      <div className="flex items-end justify-between px-1 pt-2 pb-6 border-b border-border/50 mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
+            Automation Engine
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            Event-driven operational triggers, dynamic state machines, and background orchestration
+          </p>
+        </div>
+        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
+          style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-teal-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(45,212,191,0.5)' }} />
+          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]" style={{ color: 'var(--pm-on-surface-variant)' }}>
+             ACTIVE RULES: {rules.filter(r => r.enabled).length}
+          </span>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -111,7 +119,7 @@ export default function AutomationsPanel() {
               const msgKey = `install_${tmpl.id}`;
               const installed = rules.find(r => r.name === tmpl.name);
               return (
-                <div key={tmpl.id} className="group relative bg-surface/40 backdrop-blur-md border border-border/50 hover:border-teal-500/30 rounded-2xl p-6 transition-all duration-300 shadow-sm hover:shadow-teal-500/5 flex flex-col">
+                <div key={tmpl.id} className="group relative pm-card glass-panel p-6 border-transparent hover:border-[var(--pm-primary)] flex flex-col">
                   <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent rounded-2xl pointer-events-none" />
                   
                   <div className="relative z-10 flex-1">
@@ -155,7 +163,7 @@ export default function AutomationsPanel() {
           </div>
 
           {showCreate && (
-            <div className="bg-surface/40 backdrop-blur-md border border-teal-500/30 rounded-2xl p-6 mb-8 shadow-lg animate-fade-in relative overflow-hidden">
+            <div className="glass-panel pm-card rounded-2xl p-6 border-[var(--pm-primary)]/50 mb-8 shadow-lg animate-fade-in relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-teal-500" />
               <h3 className="text-xs font-bold uppercase tracking-widest text-text-secondary mb-5">Configure Automation</h3>
               <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
@@ -189,7 +197,7 @@ export default function AutomationsPanel() {
                 </div>
               </div>
               <button onClick={handleCreateRule} disabled={!newName.trim()}
-                className="px-6 py-2.5 bg-teal-500 text-gray-900 dark:text-white text-[11px] font-bold uppercase tracking-wider hover:bg-teal-400 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+                className="px-6 py-2.5 bg-teal-500 text-[var(--pm-text)] dark:text-white text-[11px] font-bold uppercase tracking-wider hover:bg-teal-400 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(20,184,166,0.3)]">
                 Deploy Rule
               </button>
             </div>
@@ -204,7 +212,7 @@ export default function AutomationsPanel() {
           ) : (
             <div className="space-y-3">
               {rules.map(rule => (
-                <div key={rule.id} className="bg-surface/40 backdrop-blur-md border border-border/50 hover:border-border rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-surface/60">
+                <div key={rule.id} className="pm-card glass-panel p-5 border-transparent hover:border-[var(--pm-primary)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-surface/60">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3 mb-1.5">
                       <span className="text-sm font-bold text-text-primary">{rule.name}</span>

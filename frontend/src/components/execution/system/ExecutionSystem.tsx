@@ -620,7 +620,7 @@ function BoardView({
                     density={density}
                     substate={taskSubstates[task.id]}
                     blockers={blockers}
-                    onUpdateSubstate={onUpdateSubstate}
+                    
                   />
                 ))
               )}
@@ -735,7 +735,7 @@ function SprintView({
                     assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
                     substate={taskSubstates[task.id]}
                     blockers={blockers}
-                    onUpdateSubstate={onUpdateSubstate}
+                    
                   />
                 ))}
               </div>

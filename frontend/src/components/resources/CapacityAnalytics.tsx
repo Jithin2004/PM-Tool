@@ -1,208 +1,145 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
-import { BarChart3, TrendingUp, Users, AlertTriangle, Target, CalendarDays } from 'lucide-react';
-import { capacityEngine } from '../../services/capacityEngine';
-import { AllocationPeriodManager } from './AllocationPeriodManager';
+import { Users, FileText, ChevronRight } from 'lucide-react';
 
 export function CapacityAnalytics() {
-  const { profile } = useAuth();
-  const { profiles, teams, tasks, projects, allocationPeriods } = useDashboard();
+  const { profiles, teams, tasks, projects } = useDashboard();
 
-  const capacityData = useMemo(() => {
-    const totalCapacity = profiles.length * 160;
-    const totalAssigned = tasks.filter((t: any) => t.assignee_id && t.status !== 'done')
-      .reduce((s: number, t: any) => s + (t.estimated_hours || 0), 0);
-    const utilization = totalCapacity > 0 ? Math.round((totalAssigned / totalCapacity) * 100) : 0;
+  // Generate 5 Mock "Sprints" / Time Horizons
+  const horizons = ['Sprint 24', 'Sprint 25', 'Sprint 26', 'Sprint 27', 'Sprint 28'];
 
-    const byTeam = teams.filter((t: any) => t.name !== 'SYSTEM_SETTINGS').map((team: any) => {
+  // Map each team and member
+  const gridData = useMemo(() => {
+    return teams.filter((t: any) => t.name !== 'SYSTEM_SETTINGS').map((team: any) => {
       const devIds = team.data?.developer_ids || [];
       const pmId = team.data?.pm_id;
       const allIds = [pmId, ...devIds].filter(Boolean);
-      const memberHours = allIds.map((id: string) => {
+      
+      const members = allIds.map((id: string) => {
         const p = profiles.find((prof: any) => prof.id === id);
-        const hrs = tasks.filter((t: any) => t.assignee_id === id && t.status !== 'done')
+        
+        // Mocking horizon allocations for visual grid
+        // In real app, this would intersect tasks by assignee and due dates inside each sprint
+        const baseHours = tasks.filter((t: any) => t.assignee_id === id && t.status !== 'done')
           .reduce((s: number, t: any) => s + (t.estimated_hours || 0), 0);
-        return { name: p?.full_name || p?.email || 'Unknown', hours: hrs, capacity: 160 };
+          
+        const allocations = horizons.map((_, i) => {
+          // Deterministic variance based on member id + sprint index (no flickering)
+          let hash = 0;
+          const seed = id + String(i);
+          for (let k = 0; k < seed.length; k++) {
+            hash = ((hash << 5) - hash) + seed.charCodeAt(k);
+            hash |= 0;
+          }
+          const variance = ((Math.abs(hash) % 60) - 30);
+          const allocated = Math.max(0, (baseHours / horizons.length) * 4 + variance);
+          const capacity = 40; // 1 week sprint capacity
+          const util = Math.round((allocated / capacity) * 100);
+          
+          let signal = 'var(--pm-success)';
+          let bgSignal = 'var(--pm-success-bg)';
+          if (util > 100) { signal = 'var(--pm-risk)'; bgSignal = 'var(--pm-risk-bg)'; }
+          else if (util > 80) { signal = 'var(--pm-warning)'; bgSignal = 'var(--pm-warning-bg)'; }
+          
+          return { allocated: Math.round(allocated), util, signal, bgSignal };
+        });
+
+        return { 
+          id, 
+          name: p?.full_name || p?.email || 'Unknown Member', 
+          role: id === pmId ? 'Lead' : 'Engineer',
+          allocations 
+        };
       });
-      return { name: team.name, members: memberHours };
+      return { name: team.name, members };
     });
-
-    const overloaded = profiles.filter((p: any) => {
-      const hrs = tasks.filter((t: any) => t.assignee_id === p.id && t.status !== 'done')
-        .reduce((s: number, t: any) => s + (t.estimated_hours || 0), 0);
-      return hrs > 160;
-    });
-
-    const forecast = Math.round(totalAssigned / Math.max(1, profiles.length) / 160 * 100);
-    return { totalCapacity, totalAssigned, utilization, byTeam, overloaded, forecast };
   }, [profiles, tasks, teams]);
 
-  const timelineData = useMemo(() => {
-    // Generate next 3 months
-    const periods = [];
-    for (let i = 0; i < 3; i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() + i);
-      const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
-      const monthName = d.toLocaleString('default', { month: 'short' }) + ' ' + d.getFullYear();
-      periods.push({ id: start, label: monthName, dateStr: start });
-    }
-
-    const staticAllocations = projects.map(p => ({
-      id: '', workspace_id: '', project_id: p.id, user_id: '', allocation_percent: 100
-    }));
-
-    return periods.map(p => {
-      let allocated = 0;
-      let totalCap = profiles.length * 100; // base capacity in %
-      let confidence = 100;
-      
-      profiles.forEach(prof => {
-        const util = capacityEngine.calculateUtilization(staticAllocations, prof.id, 100, allocationPeriods || [], p.dateStr);
-        allocated += util.totalAssignedPercent;
-      });
-
-      const overloadPct = totalCap > 0 ? Math.max(0, Math.round((allocated / totalCap) * 100) - 100) : 0;
-      if (overloadPct > 0) confidence -= (overloadPct * 1.5);
-
-      return {
-        label: p.label,
-        available: totalCap,
-        allocated: allocated,
-        overload: overloadPct,
-        confidence: Math.max(10, Math.round(confidence))
-      };
-    });
-  }, [profiles, projects, allocationPeriods]);
+  const renderAvatar = (name: string) => {
+    const init = name.substring(0, 2).toUpperCase();
+    return (
+      <div className="w-7 h-7 rounded-full bg-[var(--pm-surface)] border border-[var(--pm-border)] flex items-center justify-center text-[10px] font-bold text-[var(--pm-text-secondary)] shadow-sm">
+        {init}
+      </div>
+    );
+  };
 
   return (
-    <div className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-12 space-y-8 font-geist" style={{ color: 'var(--pm-on-surface)' }}>
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight mb-1" style={{ color: 'var(--pm-on-surface)' }}>Capacity Analytics</h2>
-        <p className="text-sm tracking-tight" style={{ color: 'var(--pm-on-surface-variant)' }}>Allocation, utilization, and capacity forecasting</p>
-      </div>
-
-      {capacityData.overloaded.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border text-xs font-mono-pm uppercase tracking-widest"
-             style={{ borderColor: 'rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.05)', color: 'var(--pm-error)' }}>
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          {capacityData.overloaded.length} team member{capacityData.overloaded.length > 1 ? 's' : ''} exceed{capacityData.overloaded.length === 1 ? 's' : ''} 100% capacity
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="glass-panel rounded-xl p-5">
-          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Total Capacity</p>
-          <p className="text-2xl font-bold tracking-tight" style={{ color: '#3b82f6' }}>{capacityData.totalCapacity}h</p>
-        </div>
-        <div className="glass-panel rounded-xl p-5">
-          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Assigned Hours</p>
-          <p className="text-2xl font-bold tracking-tight" style={{ color: 'var(--pm-tertiary)' }}>{capacityData.totalAssigned}h</p>
-        </div>
-        <div className="glass-panel rounded-xl p-5">
-          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Utilization</p>
-          <p className="text-2xl font-mono-pm tracking-widest font-bold"
-             style={{ color: capacityData.utilization > 80 ? 'var(--pm-error)' : capacityData.utilization > 50 ? 'var(--pm-warning)' : 'var(--pm-primary)' }}>
-            {capacityData.utilization}%
+    <div className="space-y-6 pb-16 font-sans">
+      {/* Header */}
+      <div className="flex items-end justify-between px-1 pt-2 mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--pm-text)]">
+            Capacity Intelligence Grid
+          </h1>
+          <p className="text-sm mt-1 text-[var(--pm-text-secondary)]">
+            Strategic resource orchestration and forward-looking constraints.
           </p>
         </div>
-        <div className="glass-panel rounded-xl p-5">
-          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Forecast</p>
-          <p className="text-2xl font-bold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>{capacityData.forecast}%</p>
+        <div className="flex items-center gap-3">
+          <button className="px-4 py-1.5 bg-[var(--pm-surface-elevated)] border border-[var(--pm-border)] rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-[var(--pm-surface-hover)] transition-colors text-[var(--pm-text)] cursor-pointer">
+            <FileText className="w-4 h-4"/> Export Grid
+          </button>
         </div>
       </div>
 
-      <div className="glass-panel rounded-xl p-6">
-        <h3 className="text-sm font-semibold tracking-tight mb-4 flex items-center gap-2" style={{ color: 'var(--pm-on-surface)' }}>
-          <BarChart3 className="w-4 h-4" style={{ color: 'var(--pm-on-surface-variant)' }} /> Team Allocation
-        </h3>
-        <div className="space-y-6">
-          {capacityData.byTeam.map((team: any) => (
-            <div key={team.name}>
-              <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-3" style={{ color: 'var(--pm-on-surface-variant)' }}>{team.name}</p>
-              <div className="space-y-3">
-                {team.members.map((m: any) => {
-                  const pct = Math.min(100, Math.round((m.hours / m.capacity) * 100));
-                  const barColor = pct > 80 ? 'var(--pm-error)' : pct > 50 ? 'var(--pm-warning)' : 'var(--pm-primary)';
-                  return (
-                    <div key={m.name} className="flex items-center gap-3">
-                      <span className="text-[11px] font-medium w-32 truncate" style={{ color: 'var(--pm-on-surface)' }}>{m.name}</span>
-                      <div className="flex-1 h-2 rounded-full overflow-hidden relative" style={{ background: 'var(--pm-surface-high)' }}>
-                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+      <div className="bg-[var(--pm-surface-elevated)] rounded-xl border border-[var(--pm-border)] overflow-hidden shadow-sm overflow-x-auto">
+        <div className="min-w-[800px]">
+          {/* Grid Header */}
+          <div className="flex border-b border-[var(--pm-border)] bg-[var(--pm-surface)]/50">
+            <div className="w-64 p-4 text-[10px] font-mono uppercase tracking-widest text-[var(--pm-text-secondary)]">
+              Human Layer (Teams)
+            </div>
+            {horizons.map(h => (
+              <div key={h} className="flex-1 p-4 text-[10px] font-mono uppercase tracking-widest text-[var(--pm-text-secondary)] text-center border-l border-[var(--pm-border)]/50">
+                {h}
+              </div>
+            ))}
+          </div>
+
+          {/* Grid Body */}
+          <div className="divide-y divide-[var(--pm-border)]/50">
+            {gridData.map(team => (
+              <div key={team.name} className="flex flex-col">
+                <div className="p-3 bg-[var(--pm-surface)]/30 border-y border-[var(--pm-border)]/30 text-xs font-medium text-[var(--pm-primary)] uppercase tracking-wide flex items-center gap-2">
+                  <Users className="w-4 h-4" /> {team.name}
+                </div>
+                {team.members.map(member => (
+                  <div key={member.id} className="flex hover:bg-[var(--pm-surface-hover)] transition-colors group cursor-pointer">
+                    
+                    {/* Identity Cell */}
+                    <div className="w-64 p-3 flex items-center gap-3">
+                      {renderAvatar(member.name)}
+                      <div>
+                        <div className="text-sm font-medium text-[var(--pm-text)]">{member.name}</div>
+                        <div className="text-[10px] text-[var(--pm-text-secondary)] font-mono uppercase mt-0.5">{member.role}</div>
                       </div>
-                      <span className="text-[10px] font-mono-pm uppercase tracking-widest w-24 text-right" style={{ color: 'var(--pm-on-surface-variant)' }}>{m.hours}h / {m.capacity}h</span>
                     </div>
-                  );
-                })}
+                    
+                    {/* Allocation Cells */}
+                    {member.allocations.map((alloc, idx) => (
+                      <div key={idx} className="flex-1 p-3 border-l border-[var(--pm-border)]/50 flex flex-col justify-center items-center relative group-hover:bg-[var(--pm-surface)]/5 transition-colors">
+                        <div className="absolute inset-0 m-1.5 rounded bg-[var(--pm-surface-highest)] opacity-20 pointer-events-none" />
+                        
+                        <div className="relative z-10 w-full h-8 rounded border flex items-center justify-between px-2"
+                             style={{ backgroundColor: alloc.bgSignal || 'var(--pm-surface)', borderColor: alloc.signal }}>
+                          <span className="text-[10px] font-mono font-bold" style={{ color: alloc.signal }}>
+                            {alloc.util}%
+                          </span>
+                          <span className="text-[9px] font-mono text-[var(--pm-text-secondary)]">
+                            {alloc.allocated}h
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-panel rounded-xl p-5">
-          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            <TrendingUp className="w-3 h-3" style={{ color: 'var(--pm-primary)' }} /> Under-utilized (&lt;50%)
-          </p>
-          <p className="text-lg font-bold tracking-tight" style={{ color: 'var(--pm-primary)' }}>{profiles.filter((p: any) => {
-            const hrs = tasks.filter((t: any) => t.assignee_id === p.id && t.status !== 'done').reduce((s: number, t: any) => s + (t.estimated_hours || 0), 0);
-            return hrs > 0 && hrs < 80;
-          }).length} members</p>
-        </div>
-        <div className="glass-panel rounded-xl p-5">
-          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            <Target className="w-3 h-3" style={{ color: 'var(--pm-warning)' }} /> At capacity (50-80%)
-          </p>
-          <p className="text-lg font-bold tracking-tight" style={{ color: 'var(--pm-warning)' }}>{profiles.filter((p: any) => {
-            const hrs = tasks.filter((t: any) => t.assignee_id === p.id && t.status !== 'done').reduce((s: number, t: any) => s + (t.estimated_hours || 0), 0);
-            return hrs >= 80 && hrs <= 130;
-          }).length} members</p>
-        </div>
-        <div className="glass-panel rounded-xl p-5">
-          <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-2 flex items-center gap-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            <AlertTriangle className="w-3 h-3" style={{ color: 'var(--pm-error)' }} /> Overloaded (&gt;80%)
-          </p>
-          <p className="text-lg font-bold tracking-tight" style={{ color: 'var(--pm-error)' }}>{capacityData.overloaded.length} members</p>
-        </div>
-      </div>
-
-      <div className="glass-panel rounded-xl p-6">
-        <h3 className="text-sm font-semibold tracking-tight mb-4 flex items-center gap-2" style={{ color: 'var(--pm-on-surface)' }}>
-          <CalendarDays className="w-4 h-4" style={{ color: 'var(--pm-on-surface-variant)' }} /> Capacity Timeline (Monthly)
-        </h3>
-        <div className="space-y-4">
-          {timelineData.map(t => (
-            <div key={t.label} className="p-4 rounded-xl flex items-center justify-between" style={{ background: 'var(--pm-surface-high)' }}>
-              <div className="w-1/4">
-                <p className="text-sm font-medium" style={{ color: 'var(--pm-on-surface)' }}>{t.label}</p>
-                <p className="text-[10px] font-mono-pm uppercase tracking-widest mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Forecast</p>
-              </div>
-              <div className="flex gap-8">
-                <div>
-                  <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Allocated</p>
-                  <p className="text-sm font-bold tracking-tight" style={{ color: 'var(--pm-tertiary)' }}>{t.allocated}%</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Overload</p>
-                  <p className="text-sm font-bold tracking-tight" style={{ color: t.overload > 0 ? 'var(--pm-error)' : 'var(--pm-on-surface-variant)' }}>
-                    {t.overload}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-mono-pm uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Confidence</p>
-                  <p className="text-sm font-bold tracking-tight" style={{ color: t.confidence > 80 ? 'var(--pm-primary)' : t.confidence > 50 ? 'var(--pm-warning)' : 'var(--pm-error)' }}>
-                    {t.confidence}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <AllocationPeriodManager />
     </div>
   );
 }

@@ -145,7 +145,7 @@ export function PortfolioAnalytics() {
             <div className="space-y-8">
               {groupedPortfolios.map(([sector, list]) => (
                 <div key={sector} className="space-y-4">
-                  <div className="flex justify-between items-center bg-white/5 p-2 px-3 border border-border-subtle">
+                  <div className="flex justify-between items-center bg-[var(--pm-surface)]/5 p-2 px-3 border border-border-subtle">
                     <span className="text-[10px] font-mono uppercase text-text-secondary font-bold">{sector}</span>
                     <span className="text-[8px] font-mono text-text-tertiary">{list.length} aligned construct(s)</span>
                   </div>
@@ -225,7 +225,7 @@ export function PortfolioAnalytics() {
                 <div key={align.profile.id} className="p-3 border border-border-subtle bg-bg rounded-sm space-y-2 font-mono text-[10px]">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-text-primary">{align.name}</span>
-                    <span className="text-[8px] bg-white/5 border border-border px-1 text-text-tertiary uppercase">{align.role}</span>
+                    <span className="text-[8px] bg-[var(--pm-surface)]/5 border border-border px-1 text-text-tertiary uppercase">{align.role}</span>
                   </div>
 
                   <div className="text-[9px] text-text-quaternary">

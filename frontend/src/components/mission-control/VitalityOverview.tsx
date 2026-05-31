@@ -13,7 +13,7 @@ const LEVEL_LABELS: Record<string, { label: string; color: string; bar: string }
 
 function Meter({ label, value }: { label: string; value: number }) {
   const pct = Math.min(100, value);
-  let barColor = 'bg-white/10';
+  let barColor = 'bg-[var(--pm-surface)]/10';
   if (pct >= 70) barColor = 'bg-signal-safe';
   else if (pct >= 40) barColor = 'bg-signal-warning';
   else barColor = 'bg-signal-critical';
@@ -24,7 +24,7 @@ function Meter({ label, value }: { label: string; value: number }) {
         <span>{label}</span>
         <span className="font-mono-pm">{value}</span>
       </div>
-      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-[var(--pm-surface)]/5 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all duration-700 ${barColor}`} style={{ width: `${pct}%` }} />
       </div>
     </div>

@@ -192,7 +192,7 @@ export default function DocumentView() {
                     Edit
                   </button>
                   <button onClick={() => setShowVersionComment(true)}
-                    className="px-3 py-1.5 bg-white/5 border border-border text-text-tertiary text-[9px] font-mono hover:border-white/30">
+                    className="px-3 py-1.5 bg-[var(--pm-surface)]/5 border border-border text-text-tertiary text-[9px] font-mono hover:border-white/30">
                     Create Version
                   </button>
                 </>

@@ -99,12 +99,12 @@ export function ProjectCreationWizard() {
                 }
                 setStep(s => s + 1);
               }} 
-              className="px-4 py-2 rounded bg-[var(--pm-primary)] text-gray-900 dark:text-white cursor-pointer"
+              className="px-4 py-2 rounded bg-[var(--pm-primary)] text-[var(--pm-text)] dark:text-white cursor-pointer"
             >
               Next
             </button>
           ) : (
-            <button onClick={handleFinish} disabled={loading} className="px-4 py-2 rounded bg-emerald-600 text-gray-900 dark:text-white flex items-center gap-2 cursor-pointer disabled:opacity-50">
+            <button onClick={handleFinish} disabled={loading} className="px-4 py-2 rounded bg-emerald-600 text-[var(--pm-text)] dark:text-white flex items-center gap-2 cursor-pointer disabled:opacity-50">
               {loading ? 'Initializing...' : 'Generate Project'} <Check className="w-4 h-4" />
             </button>
           )}

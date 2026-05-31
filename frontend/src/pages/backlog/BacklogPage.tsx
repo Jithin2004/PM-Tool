@@ -115,7 +115,7 @@ export default function BacklogPage() {
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-pink-400" />
               <h3 className="text-xs font-sans tracking-tight uppercase tracking-wider text-text-secondary">Epics</h3>
-              {hasEpics && <span className="text-[9px] font-mono text-text-quaternary bg-white/5 px-1.5 py-0.5 rounded-sm">{projectEpics.length}</span>}
+              {hasEpics && <span className="text-[9px] font-mono text-text-quaternary bg-[var(--pm-surface)]/5 px-1.5 py-0.5 rounded-sm">{projectEpics.length}</span>}
             </div>
             <button onClick={() => setShowCreateEpic(true)} className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider text-text-quaternary hover:text-text-secondary transition-colors">
               <Plus className="w-3 h-3" /> Add Epic
@@ -138,7 +138,7 @@ export default function BacklogPage() {
                           'text-text-quaternary'
                         }`}>{epic.priority}</span>
                       )}
-                      <span className="text-[9px] font-mono text-text-quaternary uppercase bg-white/5 px-1.5 py-0.5 rounded-sm">{epic.status}</span>
+                      <span className="text-[9px] font-mono text-text-quaternary uppercase bg-[var(--pm-surface)]/5 px-1.5 py-0.5 rounded-sm">{epic.status}</span>
                     </div>
                   </div>
                 ))}
@@ -161,7 +161,7 @@ export default function BacklogPage() {
             <div className="flex items-center gap-2">
               <ClipboardList className="w-4 h-4 text-signal-info" />
               <h3 className="text-xs font-sans tracking-tight uppercase tracking-wider text-text-secondary">Backlog Tasks</h3>
-              {hasBacklogTasks && <span className="text-[9px] font-mono text-text-quaternary bg-white/5 px-1.5 py-0.5 rounded-sm">{backlogTasks.length}</span>}
+              {hasBacklogTasks && <span className="text-[9px] font-mono text-text-quaternary bg-[var(--pm-surface)]/5 px-1.5 py-0.5 rounded-sm">{backlogTasks.length}</span>}
             </div>
           </div>
           <div className="p-4">
@@ -173,7 +173,7 @@ export default function BacklogPage() {
                       <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                         task.priority === 'urgent' ? 'bg-red-500' :
                         task.priority === 'high' ? 'bg-amber-500' :
-                        'bg-white/20'
+                        'bg-[var(--pm-surface)]/20'
                       }`} />
                       <span className="text-xs text-text-tertiary truncate">{task.name}</span>
                     </div>
@@ -238,7 +238,7 @@ export default function BacklogPage() {
               value={newEpicName}
               onChange={e => setNewEpicName(e.target.value)}
               placeholder="Epic name"
-              className="w-full bg-white/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border mb-4"
+              className="w-full bg-[var(--pm-surface)]/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border mb-4"
               onKeyDown={e => e.key === 'Enter' && handleCreateEpic()}
             />
             <div className="flex items-center gap-2">
@@ -258,18 +258,18 @@ export default function BacklogPage() {
                 value={newSprintName}
                 onChange={e => setNewSprintName(e.target.value)}
                 placeholder="Sprint name"
-                className="w-full bg-white/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border"
+                className="w-full bg-[var(--pm-surface)]/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border"
               />
               <input
                 value={newSprintGoal}
                 onChange={e => setNewSprintGoal(e.target.value)}
                 placeholder="Sprint goal (optional)"
-                className="w-full bg-white/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border"
+                className="w-full bg-[var(--pm-surface)]/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border"
               />
               <select
                 value={newSprintDuration}
                 onChange={e => setNewSprintDuration(parseInt(e.target.value))}
-                className="w-full bg-white/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary outline-none focus:border-border"
+                className="w-full bg-[var(--pm-surface)]/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary outline-none focus:border-border"
               >
                 <option value={1}>1 Week</option>
                 <option value={2}>2 Weeks</option>

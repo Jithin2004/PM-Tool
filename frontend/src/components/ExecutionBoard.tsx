@@ -175,7 +175,7 @@ export default function ExecutionBoard({
   const handleWaitStateSubmit = async (waitStateData: { reason: string; owner: string; notes: string }) => {
     if (!waitStateTask || !workspace?.id || !currentUserProfile?.id) return;
     
-    const newWaitState: WaitState = {
+    const newWaitState: any = {
       id: crypto.randomUUID(),
       workspace_id: workspace.id,
       target_type: 'task',
@@ -183,7 +183,7 @@ export default function ExecutionBoard({
       category: waitStateData.reason as any,
       waiting_on: waitStateData.owner as any,
       status: 'active',
-      reported_by: currentUserProfile.id,
+      created_by: currentUserProfile?.id || 'unknown',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       metadata: { notes: waitStateData.notes }
@@ -237,14 +237,14 @@ export default function ExecutionBoard({
       <div className="mb-6 bg-bg border border-border-subtle rounded-sm overflow-hidden">
         <button
           onClick={() => setProjectsPanelOpen(prev => !prev)}
-          className="w-full flex items-center justify-between px-4 py-3 border-b border-border-subtle hover:bg-surface-3 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between px-4 py-3 border-b border-border-subtle hover:bg-[var(--pm-surface-hover)] transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 transition-opacity duration-300" />
             <span className="text-[10px] font-mono uppercase tracking-wide text-text-tertiary">
               Project Overview
             </span>
-            <span className="text-[8px] font-mono text-text-quaternary bg-white/5 px-1.5 py-0.5 rounded-sm">
+            <span className="text-[8px] font-mono text-text-quaternary bg-[var(--pm-surface)]/5 px-1.5 py-0.5 rounded-sm">
               {projects.length} synced
             </span>
           </div>
@@ -273,7 +273,7 @@ export default function ExecutionBoard({
                 const isFiltered = filterByProject === project.id;
                 
                 return (
-                  <div key={project.id} className={`flex items-center justify-between px-4 py-2.5 hover:bg-surface-3 transition-colors ${isFiltered ? 'bg-surface-3 border-l-2 border-border' : ''}`}>
+                  <div key={project.id} className={`flex items-center justify-between px-4 py-2.5 hover:bg-[var(--pm-surface-hover)] transition-colors ${isFiltered ? 'bg-surface-3 border-l-2 border-border' : ''}`}>
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <span className="text-[10px] font-mono text-text-secondary truncate">{project.name}</span>
                     </div>
@@ -283,7 +283,7 @@ export default function ExecutionBoard({
                           <button onClick={() => { setFilterByProject(project.id); setIsAddingTask(true); }} className="text-[8px] font-mono text-cyan-400 hover:text-cyan-300 border border-cyan-500/20 px-1.5 py-0.5 rounded-sm transition-colors cursor-pointer">+Task</button>
                         </>
                       )}
-                      <span className="text-[8px] font-mono text-text-quaternary bg-white/5 px-1.5 py-0.5 rounded-sm">
+                      <span className="text-[8px] font-mono text-text-quaternary bg-[var(--pm-surface)]/5 px-1.5 py-0.5 rounded-sm">
                         {projectTaskCount} task{projectTaskCount !== 1 ? 's' : ''}
                       </span>
                       <button
@@ -343,7 +343,7 @@ export default function ExecutionBoard({
                   <span className={`w-1.5 h-1.5 rounded-full ${col.color.replace('border', 'bg').replace('/20', '')}`} />
                   {col.title}
                 </span>
-                <span className="px-2 py-0.5 bg-white/5 text-[9px] font-mono text-text-tertiary rounded-sm">
+                <span className="px-2 py-0.5 bg-[var(--pm-surface)]/5 text-[9px] font-mono text-text-tertiary rounded-sm">
                   {colTasks.length}
                 </span>
               </div>
@@ -448,7 +448,7 @@ export default function ExecutionBoard({
                 </div>
                 <button
                   onClick={() => setIsDrawerOpen(false)}
-                  className="w-6 h-6 hover:bg-white/5 border border-border rounded-sm flex items-center justify-center text-text-tertiary hover:text-text-primary cursor-pointer"
+                  className="w-6 h-6 hover:bg-[var(--pm-surface)]/5 border border-border rounded-sm flex items-center justify-center text-text-tertiary hover:text-text-primary cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
