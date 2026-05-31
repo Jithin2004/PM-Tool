@@ -29,7 +29,6 @@ export type Capability =
 const VIEW_CAPABILITIES: Capability[] = [
   'view_projects',
   'view_tasks',
-  'view_scheduling',
   'view_analytics',
   'view_decision_center',
   'view_reports',

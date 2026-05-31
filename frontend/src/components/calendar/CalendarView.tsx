@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Plus, Trash2, Edit2, X, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Calendar as CalendarIcon, Plus, Trash2, Edit2, X, RefreshCw, ChevronLeft, ChevronRight, Grid, List, CheckCircle } from 'lucide-react';
 import { calendarService, CalendarEvent } from '../../services/calendarService';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -11,12 +11,24 @@ interface EventFormData {
   end: string;
 }
 
+// Timezone-aware date string builder for datetime-local inputs
+const toLocalISOString = (date: Date) => {
+  const tzoffset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
+};
+
 export function CalendarView() {
   const { user, profile } = useAuth();
   const { workspace } = useWorkspace();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState('');
+  
+  // View states
+  const [viewMode, setViewMode] = useState<'month' | 'list'>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,9 +37,17 @@ export function CalendarView() {
   const [formData, setFormData] = useState<EventFormData>({
     summary: '',
     description: '',
-    start: new Date().toISOString().slice(0, 16),
-    end: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+    start: toLocalISOString(new Date()),
+    end: toLocalISOString(new Date(Date.now() + 3600000)),
   });
+
+  const notifyToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    window.dispatchEvent(
+      new CustomEvent('notify-toast', {
+        detail: { message, type }
+      })
+    );
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -42,15 +62,27 @@ export function CalendarView() {
       setEvents(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Could not fetch events. Ensure Google Calendar is connected.');
+      setError(err.message || 'Could not fetch events.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAccounts = async () => {
+    if (!workspace?.id) return;
+    try {
+      const { fetchConnectedAccounts } = await import('../../services/integrationService');
+      const data = await fetchConnectedAccounts(workspace.id);
+      setConnectedAccounts(data || []);
+    } catch (e) {
+      console.warn("Failed to fetch connected accounts:", e);
     }
   };
 
   useEffect(() => {
     if (workspace?.id) {
       fetchEvents();
+      fetchAccounts();
     }
   }, [workspace?.id]);
 
@@ -58,24 +90,85 @@ export function CalendarView() {
     window.location.href = calendarService.getAuthUrl();
   };
 
+  const handleSync = async () => {
+    const googleAccount = connectedAccounts.find(a => a.service === 'google_calendar');
+    if (!workspace?.id || !googleAccount?.access_token) {
+      notifyToast('Google Calendar is not authorized yet.', 'error');
+      return;
+    }
+    setSyncing(true);
+    setError('');
+    try {
+      const { syncGoogleCalendar } = await import('../../services/integrationService');
+      const result = await syncGoogleCalendar(workspace.id, googleAccount.access_token);
+      if (result.success) {
+        notifyToast(result.message || 'Google Calendar synced successfully.', 'success');
+        await fetchEvents();
+      } else {
+        throw new Error(result.message || 'Sync failed');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to sync with Google Calendar.');
+      notifyToast(err.message || 'Sync failed.', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleOpenModal = (event?: CalendarEvent) => {
     if (event) {
+      // If it is a company event or holiday, and user is not admin/PM, block editing
+      const isCompanyEvent = event.sourceType === 'company' || event.sourceType === 'holiday' || event.sourceType === 'festival';
+      const isReadOnlyRole = profile?.role === 'viewer';
+      if (isCompanyEvent && profile?.role !== 'pm' && profile?.role !== 'super_admin') {
+        notifyToast("Only PMs and Admins can modify company/global events.", "info");
+        return;
+      }
+      if (isReadOnlyRole) {
+        notifyToast("Viewers cannot modify events.", "info");
+        return;
+      }
+      
       setEditingEvent(event);
       setFormData({
         summary: event.summary,
         description: event.description || '',
-        start: new Date(event.start).toISOString().slice(0, 16),
-        end: new Date(event.end).toISOString().slice(0, 16),
+        start: toLocalISOString(new Date(event.start)),
+        end: toLocalISOString(new Date(event.end)),
       });
     } else {
+      if (profile?.role === 'viewer') {
+        notifyToast("Viewers cannot create events.", "info");
+        return;
+      }
       setEditingEvent(null);
       setFormData({
         summary: '',
         description: '',
-        start: new Date().toISOString().slice(0, 16),
-        end: new Date(Date.now() + 3600000).toISOString().slice(0, 16),
+        start: toLocalISOString(new Date()),
+        end: toLocalISOString(new Date(Date.now() + 3600000)),
       });
     }
+    setIsModalOpen(true);
+  };
+
+  const handleOpenModalForDate = (date: Date) => {
+    if (profile?.role === 'viewer') return;
+    setEditingEvent(null);
+    
+    const start = new Date(date);
+    start.setHours(9, 0, 0, 0);
+    
+    const end = new Date(date);
+    end.setHours(10, 0, 0, 0);
+    
+    setFormData({
+      summary: '',
+      description: '',
+      start: toLocalISOString(start),
+      end: toLocalISOString(end),
+    });
     setIsModalOpen(true);
   };
 
@@ -87,6 +180,7 @@ export function CalendarView() {
 
       if (editingEvent) {
         await calendarService.updateEvent(editingEvent.id, formData);
+        notifyToast('Event updated successfully.', 'success');
       } else {
         await calendarService.createEvent({
           ...formData,
@@ -96,6 +190,7 @@ export function CalendarView() {
           start_date: formData.start,
           end_date: formData.end
         } as any);
+        notifyToast('Event created successfully.', 'success');
       }
       setIsModalOpen(false);
       fetchEvents();
@@ -112,6 +207,7 @@ export function CalendarView() {
     setLoading(true);
     try {
       await calendarService.deleteEvent(id);
+      notifyToast('Event deleted.', 'success');
       fetchEvents();
     } catch (err: any) {
       console.error(err);
@@ -121,33 +217,137 @@ export function CalendarView() {
     }
   };
 
+  // Month grid calculations
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayIndex = new Date(year, month, 1).getDay(); // 0: Sun, 1: Mon, etc.
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  const days = useMemo(() => {
+    const tempDays = [];
+    
+    // Prev month padding
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      tempDays.push({
+        day: prevMonthDays - i,
+        isCurrentMonth: false,
+        date: new Date(year, month - 1, prevMonthDays - i)
+      });
+    }
+    
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      tempDays.push({
+        day: i,
+        isCurrentMonth: true,
+        date: new Date(year, month, i)
+      });
+    }
+    
+    // Next month padding
+    const remaining = 42 - tempDays.length;
+    for (let i = 1; i <= remaining; i++) {
+      tempDays.push({
+        day: i,
+        isCurrentMonth: false,
+        date: new Date(year, month + 1, i)
+      });
+    }
+    
+    return tempDays;
+  }, [currentDate, daysInMonth, firstDayIndex, prevMonthDays]);
+
+  const getDayEvents = (date: Date) => {
+    const cellStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const cellEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999).getTime();
+    
+    return events.filter(e => {
+      const eventStart = new Date(e.start).getTime();
+      return eventStart >= cellStart && eventStart <= cellEnd;
+    });
+  };
+
+  const getEventBadgeStyle = (sourceType?: string) => {
+    const type = (sourceType || 'meeting').toLowerCase();
+    if (type === 'holiday' || type === 'festival' || type === 'regional') {
+      return 'bg-rose-500/10 border-rose-500/20 text-rose-400 hover:bg-rose-500/20';
+    }
+    if (type === 'company') {
+      return 'bg-purple-500/10 border-purple-500/20 text-purple-400 hover:bg-purple-500/20';
+    }
+    return 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/20';
+  };
+
+  const googleAccount = connectedAccounts.find(a => a.service === 'google_calendar');
+  const isGoogleConnected = !!googleAccount;
+
   return (
     <div className="flex flex-col h-full bg-surface">
-      <div className="flex justify-between items-center p-6 border-b border-outline-variant">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 border-b border-outline-variant gap-4 bg-surface-container-lowest">
         <div>
           <h1 className="text-2xl font-semibold text-on-surface flex items-center gap-2">
             <CalendarIcon className="w-6 h-6 text-primary" />
-            Personal Scheduling
+            Scheduling & Calendar
           </h1>
           <p className="text-sm text-on-surface-variant mt-1">
-            Manage your work-related events and task deadlines. Synced with Google Calendar.
+            Personal scheduling, company events, and holidays synchronized in one view.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant mr-2">
+            <button
+              onClick={() => setViewMode('month')}
+              className={`p-1.5 rounded transition-all ${viewMode === 'month' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+              title="Month View"
+            >
+              <Grid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded transition-all ${viewMode === 'list' ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+              title="List View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+
           <button 
             onClick={fetchEvents}
             className="p-2 bg-surface-container hover:bg-surface-container-high rounded text-on-surface-variant transition-colors"
             title="Refresh"
+            disabled={loading}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button
-            onClick={handleConnect}
-            className="px-4 py-2 border border-outline hover:bg-surface-container rounded text-sm font-medium text-on-surface transition-colors"
-          >
-            Connect Google Calendar
-          </button>
-          {profile?.role !== 'developer' && profile?.role !== 'viewer' && (
+          
+          {isGoogleConnected ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium">
+                <CheckCircle className="w-3.5 h-3.5" />
+                Google Synced
+              </span>
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-on-primary rounded text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                Sync
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleConnect}
+              className="px-4 py-2 border border-outline hover:bg-surface-container rounded text-sm font-medium text-on-surface transition-colors"
+            >
+              Connect Google Calendar
+            </button>
+          )}
+
+          {profile?.role !== 'viewer' && (
             <button
               onClick={() => handleOpenModal()}
               className="px-4 py-2 bg-primary hover:bg-primary/90 text-on-primary rounded text-sm font-medium flex items-center gap-2 transition-colors"
@@ -159,22 +359,129 @@ export function CalendarView() {
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-y-auto">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
         {error && (
-          <div className="mb-4 p-4 bg-error/10 border border-error/20 text-error rounded-lg">
+          <div className="m-6 p-4 bg-error/10 border border-error/20 text-error rounded-lg">
             {error}
           </div>
         )}
 
         {loading && events.length === 0 ? (
-          <div className="flex items-center justify-center h-40">
+          <div className="flex items-center justify-center h-60">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
+        ) : viewMode === 'month' ? (
+          /* Month Grid View */
+          <div className="flex-1 flex flex-col p-6 min-h-0">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold text-on-surface">
+                  {currentDate.toLocaleString('default', { month: 'long' })} {year}
+                </h2>
+                <div className="flex items-center bg-surface-container rounded-lg p-1 border border-outline-variant">
+                  <button
+                    onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+                    className="p-1.5 hover:bg-surface-container-high rounded text-on-surface-variant transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentDate(new Date())}
+                    className="px-3 py-1 text-xs font-semibold text-on-surface hover:bg-surface-container-high rounded transition-colors"
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+                    className="p-1.5 hover:bg-surface-container-high rounded text-on-surface-variant transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4 text-xs font-medium text-on-surface-variant">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-sky-500/20 border border-sky-500/30" />
+                  Personal Meetings
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-purple-500/20 border border-purple-500/30" />
+                  Company Events
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-rose-500/20 border border-rose-500/30" />
+                  Holidays / Festivals
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 flex flex-col border border-outline-variant rounded-xl overflow-hidden bg-surface-container-lowest shadow-inner">
+              {/* Days of week header */}
+              <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-container-low text-center">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div key={day} className="py-3 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Days grid */}
+              <div className="flex-1 grid grid-cols-7 auto-rows-fr">
+                {days.map((d, index) => {
+                  const cellEvents = getDayEvents(d.date);
+                  const isToday = new Date().toDateString() === d.date.toDateString();
+                  
+                  return (
+                    <div
+                      key={index}
+                      className={`min-h-[100px] p-2 border-r border-b border-outline-variant/40 flex flex-col group relative transition-colors ${
+                        d.isCurrentMonth ? 'bg-surface-container-lowest' : 'bg-surface-container-low/10 text-on-surface-variant/40'
+                      } hover:bg-surface-container-high/20`}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
+                          isToday ? 'bg-primary text-on-primary shadow-sm' : d.isCurrentMonth ? 'text-on-surface' : 'text-on-surface-variant/40'
+                        }`}>
+                          {d.day}
+                        </span>
+                        
+                        {profile?.role !== 'viewer' && d.isCurrentMonth && (
+                          <button
+                            onClick={() => handleOpenModalForDate(d.date)}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded text-primary transition-all duration-200"
+                            title="Add Event"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 overflow-y-auto space-y-1 pr-0.5 scrollbar-thin max-h-[85px]">
+                        {cellEvents.map(event => (
+                          <button
+                            key={event.id}
+                            onClick={() => handleOpenModal(event)}
+                            className={`w-full text-left text-[10px] px-2 py-1 rounded border transition-all truncate block font-medium ${getEventBadgeStyle(event.sourceType)}`}
+                            title={event.summary}
+                          >
+                            {event.summary || '(No Title)'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         ) : events.length === 0 ? (
+          /* List View empty state */
           <div className="flex flex-col items-center justify-center h-60 text-on-surface-variant">
             <CalendarIcon className="w-12 h-12 opacity-20 mb-4" />
             <p>No events found for the upcoming period.</p>
-            {profile?.role !== 'developer' && profile?.role !== 'viewer' && (
+            {profile?.role !== 'viewer' && (
               <button
                 onClick={() => handleOpenModal()}
                 className="mt-4 px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded transition-colors"
@@ -184,17 +491,18 @@ export function CalendarView() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          /* List View Cards */
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {events.map((event) => {
               const startDate = new Date(event.start);
               const endDate = new Date(event.end);
               return (
-                <div key={event.id} className="p-4 bg-surface-container-lowest border border-outline-variant rounded-xl hover:border-primary/30 transition-all group flex flex-col h-full">
+                <div key={event.id} className="p-4 bg-surface-container-lowest border border-outline-variant rounded-xl hover:border-primary/30 transition-all group flex flex-col h-full shadow-sm">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-on-surface truncate pr-2" title={event.summary}>
                       {event.summary || '(No title)'}
                     </h3>
-                    {profile?.role !== 'developer' && profile?.role !== 'viewer' && (
+                    {profile?.role !== 'viewer' && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handleOpenModal(event)}
@@ -214,7 +522,9 @@ export function CalendarView() {
                   
                   <div className="text-xs text-on-surface-variant mb-3 flex flex-col gap-1">
                     <span>{startDate.toLocaleDateString()}</span>
-                    <span>{startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    <span>
+                      {startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {endDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </span>
                   </div>
                   
                   {event.description && (
@@ -224,8 +534,11 @@ export function CalendarView() {
                   )}
                   
                   {event.sourceType && (
-                    <div className="mt-3 text-[10px] uppercase font-mono tracking-wider text-primary/70">
-                      Linked: {event.sourceType}
+                    <div className="mt-3 flex justify-between items-center text-[9px] uppercase font-mono tracking-wider">
+                      <span className="text-on-surface-variant">Type:</span>
+                      <span className={`px-2 py-0.5 rounded-full border ${getEventBadgeStyle(event.sourceType)}`}>
+                        {event.sourceType}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -235,10 +548,10 @@ export function CalendarView() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Event Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[var(--pm-surface)] dark:bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-surface-container-high w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-outline-variant flex flex-col">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-surface-container-high w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-outline-variant flex flex-col animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between p-4 border-b border-outline-variant">
               <h2 className="font-semibold text-on-surface">{editingEvent ? 'Edit Event' : 'New Event'}</h2>
               <button 

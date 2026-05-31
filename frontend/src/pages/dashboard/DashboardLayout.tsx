@@ -186,6 +186,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           items: [
             { id: 'overview', label: 'Execution Workspace', path: '/overview', group: 'core' as SidebarGroup, disclosureTier: 'essential', iconName: 'LayoutDashboard' },
             { id: 'board', label: 'My Tasks Board', path: '/execution', group: 'core' as SidebarGroup, disclosureTier: 'essential', iconName: 'ListTodo' },
+            { id: 'scheduling', label: 'Scheduling', path: '/execution/timeline', group: 'core' as SidebarGroup, disclosureTier: 'operational', iconName: 'Timeline' },
           ]
         }
       ];
@@ -253,12 +254,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     const isDev = hasCapability(profile.role, 'manage_tasks') && !hasCapability(profile.role, 'manage_projects');
     const isView = hasCapability(profile.role, 'view_stakeholders') && !hasCapability(profile.role, 'manage_tasks');
     if (isDev) {
-      const allowed = ['/overview', '/execution', '/execution/board', '/login'];
+      const allowed = ['/overview', '/execution', '/execution/board', '/login', '/execution/timeline'];
       if (!allowed.includes(routePath)) {
         navigateTo('/overview');
         window.dispatchEvent(
           new CustomEvent('notify-toast', {
-            detail: { message: 'Developer role is restricted to the Execution Workspace and Board.', type: 'warning' },
+            detail: { message: 'Developer role is restricted to the Execution Workspace, Board, and Scheduling.', type: 'warning' },
           }),
         );
       }
