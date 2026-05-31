@@ -590,6 +590,11 @@ body {
   --pm-surface-highest:       #D8D1C7;
   --pm-surface-bright:        #FFFFFF;
   --pm-surface-variant:       #FFFFFF;
+  --pm-surface-hover:         #F3F4F6;
+  --pm-surface-elevated:      #FFFFFF;
+  --pm-panel:                 #F8FAFC;
+  
+  --pm-border:                #E5E7EB;
 
   --pm-on-surface:            #1F2937;
   --pm-on-surface-variant:    #6B7280;
@@ -616,6 +621,11 @@ body {
 
   --pm-outline:               #D8D1C7;
   --pm-outline-variant:       #ECE8E1;
+
+  --pm-text:                  #111827;
+  --pm-text-secondary:        #4B5563;
+  --pm-text-tertiary:         #6B7280;
+  --pm-text-quaternary:       #9CA3AF;
 
   --pm-inverse-surface:       #1F2937;
   --pm-inverse-on-surface:    #FBFAF8;

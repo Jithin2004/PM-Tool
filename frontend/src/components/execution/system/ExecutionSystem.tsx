@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useWorkspace } from '../../../context/WorkspaceContext';
 import { useOperationalData } from '../../../context/OperationalDataContext';
+import { useDashboard } from '../../../context/DashboardContext';
 import { useCalendarEvents } from '../../../hooks/useCalendarEvents';
 import { TaskCard } from '../../task/TaskCard';
 import { TaskCreateModal } from '../../task/TaskCreateModal';
@@ -645,11 +646,21 @@ function SprintView({
   blockers,
   onUpdateSubstate
 }: any) {
+  const { sprints } = useDashboard();
+  const activeSprint = sprints?.find((s: any) => s.status === 'active');
+
   // Simple Sprint view implementation
   const sprintTasks = tasks.filter((t: any) => t.sprint_id || t.status !== 'done');
   
   return (
     <div className="flex flex-col gap-6 h-full overflow-y-auto pr-2 scrollbar-thin">
+      {!activeSprint ? (
+        <div className="bg-surface-2 border border-border rounded-xl p-8 shadow-sm flex flex-col items-center justify-center text-center h-48">
+          <Layers className="w-10 h-10 text-text-quaternary mb-3" />
+          <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-1">No Active Sprint</h3>
+          <p className="text-xs text-text-tertiary">Plan and launch a sprint from the backlog to track velocity and execution risks.</p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
@@ -711,6 +722,7 @@ function SprintView({
           </div>
         </div>
       </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-10">
         {SCRUM_COLUMNS.map(col => {

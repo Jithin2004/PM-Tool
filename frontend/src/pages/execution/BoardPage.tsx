@@ -5,7 +5,9 @@ import { ExecutionSystem } from '../../components/execution/system/ExecutionSyst
 
 export default function BoardPage() {
   const { profile } = useAuth();
-  const { projects, profiles, notify, fetchProjects, handlePromoteTaskToAsset } = useDashboard();
+  const { projects, profiles, notify, fetchProjects, handlePromoteTaskToAsset, sprints } = useDashboard();
+  
+  const activeSprint = sprints?.find(s => s.status === 'active');
 
   return (
     <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
@@ -19,13 +21,15 @@ export default function BoardPage() {
             Kanban execution tracking and task assignments.
           </p>
         </div>
-        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
-          style={{ background: 'var(--pm-surface-highest)', borderColor: 'var(--pm-outline-variant)' }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(52,211,153,0.5)' }} />
-          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]" style={{ color: 'var(--pm-on-surface-variant)' }}>
-             ACTIVE SPRINT
-          </span>
-        </div>
+        {activeSprint && (
+          <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
+            style={{ background: 'var(--pm-surface-highest)', borderColor: 'var(--pm-outline-variant)' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(52,211,153,0.5)' }} />
+            <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]" style={{ color: 'var(--pm-on-surface-variant)' }}>
+               ACTIVE SPRINT
+            </span>
+          </div>
+        )}
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

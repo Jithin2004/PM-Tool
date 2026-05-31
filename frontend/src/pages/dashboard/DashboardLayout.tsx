@@ -855,7 +855,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     setNewName(taskData.title);
     navigateTo('/workspace');
     setIsAdding(true);
-    notify(`Task "${taskData.title}" elevated Î“Ã‡Ã¶ fill in PERT estimates to register as a project.`, 'info');
+    notify(`Task "${taskData.title}" elevated — fill in PERT estimates to register as a project.`, 'info');
   };
 
   const getSuggestedTeam = () => {
@@ -1211,7 +1211,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               >
                 <Search className="w-3 h-3" />
                 <span className="text-[10px] select-none font-mono">Search...</span>
-                <span className="ml-2 bg-surface-3 border border-border-subtle px-1 py-0.5 rounded text-[8px] font-mono tracking-tighter text-text-quaternary">Î“Ã®Ã¿K</span>
+                <span className="ml-2 bg-surface-3 border border-border-subtle px-1 py-0.5 rounded text-[8px] font-mono tracking-tighter text-text-quaternary">⌘K</span>
               </div>
 
               {/* Theme */}
@@ -1256,7 +1256,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </div>
           )}
 
-          {/* StatsGrid Î“Ã‡Ã¶ only show on project/completed tabs */}
+          {/* StatsGrid — only show on project/completed tabs */}
           {dashboardTab !== 'dashboard' && dashboardTab !== 'intelligence' && window.location.pathname === '/workspace' && (
             <StatsGrid stats={stats} />
           )}
@@ -1620,7 +1620,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                           <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${i <= projectSetupGuide.step ? 'bg-cyan-500/20 border border-cyan-500' : 'bg-[var(--pm-surface)]/5 border border-border'}`}>{i < projectSetupGuide.step ? <Check className="w-2.5 h-2.5" /> : i + 1}</span>
                           {s}
                         </span>
-                        {i < 3 && <span className="text-text-quaternary">Î“Ã¥Ã†</span>}
+                        {i < 3 && <span className="text-text-quaternary">→</span>}
                       </React.Fragment>
                     ))}
                   </div>
@@ -1630,7 +1630,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <Layers className="w-10 h-10 text-pink-400 mx-auto" />
                       <h4 className="text-sm font-semibold">Create Epics</h4>
                       <p className="text-[11px] text-text-tertiary">Epics are large bodies of work that contain multiple stories.</p>
-                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 1 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-colors">Skip Î“Ã‡Ã¶ Next</button>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 1 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-colors">Skip — Next</button>
                     </div>
                   )}
 
@@ -1639,7 +1639,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <ListOrdered className="w-10 h-10 text-signal-warning mx-auto" />
                       <h4 className="text-sm font-semibold">Create Stories</h4>
                       <p className="text-[11px] text-text-tertiary">Break epics into user stories with acceptance criteria.</p>
-                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 2 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-colors">Skip Î“Ã‡Ã¶ Next</button>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 2 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-colors">Skip — Next</button>
                     </div>
                   )}
 
@@ -1648,7 +1648,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <Play className="w-10 h-10 text-signal-info mx-auto" />
                       <h4 className="text-sm font-semibold">Create Sprint</h4>
                       <p className="text-[11px] text-text-tertiary">Define sprint duration and assign stories to the backlog.</p>
-                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 3 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-colors">Skip Î“Ã‡Ã¶ Next</button>
+                      <button onClick={() => setProjectSetupGuide({ ...projectSetupGuide, step: 3 })} className="px-4 py-2 bg-[var(--pm-surface)]/10 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-[var(--pm-surface)]/20 transition-colors">Skip — Next</button>
                     </div>
                   )}
 
