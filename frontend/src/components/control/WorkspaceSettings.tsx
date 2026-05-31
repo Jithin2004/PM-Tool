@@ -1,18 +1,40 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
-import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw } from 'lucide-react';
+import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw, ChevronDown } from 'lucide-react';
 import { DemoWorkspaceManager } from '../workspace/DemoWorkspaceManager';
 import { PilotReadinessPanel } from '../workspace/PilotReadinessPanel';
 
 export function WorkspaceSettings() {
   const { profile } = useAuth();
-  const { workspace } = useWorkspace();
+  const { workspace, updateWorkspaceSettings } = useWorkspace();
   const { raw: { profiles } } = useOperationalData();
   const { notify } = useDashboard();
   const [saving, setSaving] = useState(false);
+
+  const [formState, setFormState] = useState({
+    country: '',
+    region: '',
+    timezone: 'UTC',
+    mode: 'KANBAN',
+    autoArchive: true,
+    notifications: true,
+  });
+
+  useEffect(() => {
+    if (workspace?.settings) {
+      setFormState({
+        country: workspace.settings.country || '',
+        region: workspace.settings.region || '',
+        timezone: workspace.settings.timezone || 'UTC',
+        mode: workspace.settings.default_mode || 'KANBAN',
+        autoArchive: workspace.settings.auto_archive ?? true,
+        notifications: workspace.settings.notifications ?? true,
+      });
+    }
+  }, [workspace?.settings]);
 
   const owner = useMemo(() => {
     if (!workspace?.ownerId || !profiles) return null;
@@ -21,20 +43,23 @@ export function WorkspaceSettings() {
 
   const ownerDisplay = owner ? (owner.full_name || owner.email) : (workspace?.ownerId || 'N/A');
 
-  const settings = useMemo(() => ({
-    country: workspace?.settings?.country || 'Not set',
-    region: workspace?.settings?.region || 'None',
-    timezone: workspace?.settings?.timezone || 'UTC',
-    mode: workspace?.settings?.default_mode || 'KANBAN',
-    autoArchive: workspace?.settings?.auto_archive ?? true,
-    notifications: workspace?.settings?.notifications ?? true,
-  }), [workspace]);
-
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-    setSaving(false);
-    notify('Settings saved successfully', 'success');
+    try {
+      await updateWorkspaceSettings({
+        country: formState.country,
+        region: formState.region,
+        timezone: formState.timezone,
+        default_mode: formState.mode,
+        auto_archive: formState.autoArchive,
+        notifications: formState.notifications,
+      });
+      notify('Settings saved successfully', 'success');
+    } catch (err: any) {
+      notify(err.message || 'Failed to save settings', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -60,15 +85,45 @@ export function WorkspaceSettings() {
           <div className="space-y-5 relative z-10">
             <div className="group/input">
               <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block group-hover/input:text-text-secondary transition-colors">Country</label>
-              <input readOnly value={settings.country} className="w-full bg-surface/50 border border-border/50 focus:border-accent-primary/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none shadow-inner" />
+              <input 
+                value={formState.country} 
+                onChange={e => setFormState(s => ({ ...s, country: e.target.value }))}
+                placeholder="e.g. United States"
+                className="w-full bg-surface/50 border border-border/50 focus:border-accent-primary/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none shadow-inner placeholder:text-text-tertiary/50 focus:bg-surface" 
+              />
             </div>
             <div className="group/input">
               <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block group-hover/input:text-text-secondary transition-colors">Region / State</label>
-              <input readOnly value={settings.region} className="w-full bg-surface/50 border border-border/50 focus:border-accent-primary/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none shadow-inner" />
+              <input 
+                value={formState.region} 
+                onChange={e => setFormState(s => ({ ...s, region: e.target.value }))}
+                placeholder="e.g. California"
+                className="w-full bg-surface/50 border border-border/50 focus:border-accent-primary/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none shadow-inner placeholder:text-text-tertiary/50 focus:bg-surface" 
+              />
             </div>
             <div className="group/input">
               <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block group-hover/input:text-text-secondary transition-colors">Timezone</label>
-              <input readOnly value={settings.timezone} className="w-full bg-surface/50 border border-border/50 focus:border-accent-primary/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none shadow-inner" />
+              <div className="relative">
+                <select 
+                  value={formState.timezone} 
+                  onChange={e => setFormState(s => ({ ...s, timezone: e.target.value }))}
+                  className="w-full bg-surface/50 border border-border/50 focus:border-accent-primary/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none shadow-inner appearance-none focus:bg-surface"
+                >
+                  <option value="UTC">UTC (Universal Coordinated Time)</option>
+                  <option value="America/New_York">Eastern Time (US & Canada)</option>
+                  <option value="America/Chicago">Central Time (US & Canada)</option>
+                  <option value="America/Denver">Mountain Time (US & Canada)</option>
+                  <option value="America/Los_Angeles">Pacific Time (US & Canada)</option>
+                  <option value="Europe/London">London</option>
+                  <option value="Europe/Paris">Central European Time</option>
+                  <option value="Asia/Dubai">Dubai</option>
+                  <option value="Asia/Kolkata">India Standard Time</option>
+                  <option value="Asia/Singapore">Singapore</option>
+                  <option value="Asia/Tokyo">Tokyo</option>
+                  <option value="Australia/Sydney">Sydney</option>
+                </select>
+                <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+              </div>
             </div>
           </div>
         </div>
@@ -84,24 +139,41 @@ export function WorkspaceSettings() {
           <div className="space-y-5 relative z-10">
             <div className="group/input">
               <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block group-hover/input:text-text-secondary transition-colors">Default Execution Mode</label>
-              <input readOnly value={settings.mode} className="w-full bg-surface/50 border border-border/50 focus:border-cyan-400/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none shadow-inner" />
+              <div className="relative">
+                <select 
+                  value={formState.mode} 
+                  onChange={e => setFormState(s => ({ ...s, mode: e.target.value }))}
+                  className="w-full bg-surface/50 border border-border/50 focus:border-cyan-400/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none shadow-inner appearance-none focus:bg-surface"
+                >
+                  <option value="KANBAN">Kanban</option>
+                  <option value="SCRUM">Scrum / Sprint</option>
+                  <option value="TIMELINE">Timeline / Gantt</option>
+                </select>
+                <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+              </div>
             </div>
-            <div className="flex items-center justify-between bg-surface/50 border border-border/50 rounded-xl p-4 sm:p-5 hover:border-border transition-colors">
+            <div 
+              className="flex items-center justify-between bg-surface/50 border border-border/50 rounded-xl p-4 sm:p-5 hover:border-border transition-colors cursor-pointer"
+              onClick={() => setFormState(s => ({ ...s, autoArchive: !s.autoArchive }))}
+            >
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-text-secondary mb-1">Auto-archive Completed</p>
                 <p className="text-[10px] text-text-tertiary">Automatically archive projects when all tasks are done</p>
               </div>
-              <div className={`w-11 h-6 rounded-full transition-colors cursor-not-allowed ${settings.autoArchive ? 'bg-signal-safe shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-surface-3'} relative shrink-0`}>
-                <div className={`w-4 h-4 bg-[var(--pm-primary)] rounded-full absolute top-1 transition-all ${settings.autoArchive ? 'left-6' : 'left-1'}`} />
+              <div className={`w-11 h-6 rounded-full transition-colors ${formState.autoArchive ? 'bg-signal-safe shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-surface-3'} relative shrink-0`}>
+                <div className={`w-4 h-4 bg-[var(--pm-primary)] rounded-full absolute top-1 transition-all ${formState.autoArchive ? 'left-6' : 'left-1'}`} />
               </div>
             </div>
-            <div className="flex items-center justify-between bg-surface/50 border border-border/50 rounded-xl p-4 sm:p-5 hover:border-border transition-colors">
+            <div 
+              className="flex items-center justify-between bg-surface/50 border border-border/50 rounded-xl p-4 sm:p-5 hover:border-border transition-colors cursor-pointer"
+              onClick={() => setFormState(s => ({ ...s, notifications: !s.notifications }))}
+            >
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-text-secondary mb-1">Notifications Enabled</p>
                 <p className="text-[10px] text-text-tertiary">Receive system alerts and task notifications</p>
               </div>
-              <div className={`w-11 h-6 rounded-full transition-colors cursor-not-allowed ${settings.notifications ? 'bg-signal-safe shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-surface-3'} relative shrink-0`}>
-                <div className={`w-4 h-4 bg-[var(--pm-surface)] rounded-full absolute top-1 transition-all ${settings.notifications ? 'left-6' : 'left-1'}`} />
+              <div className={`w-11 h-6 rounded-full transition-colors ${formState.notifications ? 'bg-signal-safe shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-surface-3'} relative shrink-0`}>
+                <div className={`w-4 h-4 bg-[var(--pm-surface)] rounded-full absolute top-1 transition-all ${formState.notifications ? 'left-6' : 'left-1'}`} />
               </div>
             </div>
           </div>

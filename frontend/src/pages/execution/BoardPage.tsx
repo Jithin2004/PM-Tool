@@ -20,7 +20,7 @@ export default function BoardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
-          style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+          style={{ background: 'var(--pm-surface-highest)', borderColor: 'var(--pm-outline-variant)' }}>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(52,211,153,0.5)' }} />
           <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]" style={{ color: 'var(--pm-on-surface-variant)' }}>
              ACTIVE SPRINT

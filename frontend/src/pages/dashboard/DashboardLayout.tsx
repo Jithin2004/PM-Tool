@@ -15,6 +15,7 @@ import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { OperationalDataProvider, useOperationalData } from '../../context/OperationalDataContext';
+import { useTheme } from '../../context/ThemeContext';
 import { DashboardDataBridge } from '../../components/dashboard/DashboardDataBridge';
 import { ProgressiveUnlockHint } from '../../components/dashboard/ProgressiveUnlockHint';
 import { useProgressiveDisclosure } from '../../hooks/useProgressiveDisclosure';
@@ -523,13 +524,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     return calculateHoursFromRange(workingTimeFrom, workingTimeTo);
   }, [workingTimeFrom, workingTimeTo]);
   const [tilesPerRow, setTilesPerRow] = useState(3);
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('resolve-theme') as 'dark' | 'light') || 'dark';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('resolve-theme', theme);
-  }, [theme]);
+  const { theme, setTheme } = useTheme();
 
 
 

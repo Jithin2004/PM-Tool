@@ -422,16 +422,42 @@ body {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   display: inline-block;
   vertical-align: middle;
+  /* Outline */
+  --pm-outline:               #908fa0;
+  --pm-outline-variant:       #464554;
+
+  /* Inverse */
+  --pm-inverse-surface:       #e2e2e5;
+  --pm-inverse-on-surface:    #2f3133;
+  --pm-inverse-primary:       #494bd6;
+}
+
+/* ── PM Font Utilities ──────────────────────────────────────── */
+.font-geist        { font-family: 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif; }
+.font-mono-pm      { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+/* ── Material Symbols Config ────────────────────────────────── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+  user-select: none;
+}
+.material-symbols-filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
   line-height: 1;
   user-select: none;
 }
 
 /* ── Glass Panel ─────────────────────────────────────────────── */
 .glass-panel {
-  background: rgba(30, 32, 34, 0.7);
+  background: var(--glass-bg, rgba(30, 32, 34, 0.7));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
 }
 
 /* ── Operational Pulse ───────────────────────────────────────── */
@@ -594,6 +620,9 @@ body {
   --pm-inverse-surface:       #1F2937;
   --pm-inverse-on-surface:    #FBFAF8;
   --pm-inverse-primary:       #818cf8;
+
+  --glass-bg:                 rgba(255, 255, 255, 0.7);
+  --glass-border:             rgba(0, 0, 0, 0.08);
 }
 
 /* Form Focus Rings (No Glow, Soft Cyan) */
