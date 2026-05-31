@@ -141,7 +141,7 @@ export function CalendarView() {
       const isCompanyEvent = event.sourceType === 'company' || event.sourceType === 'holiday' || event.sourceType === 'festival';
       const isReadOnlyRole = profile?.role === 'viewer';
       if (isCompanyEvent && profile?.role !== 'pm' && profile?.role !== 'super_admin') {
-        notifyToast("Only PMs and Admins can modify company/global events.", "info");
+        notifyToast("Only PMs and Admins can modify organization/global events.", "info");
         return;
       }
       if (isReadOnlyRole) {
@@ -336,7 +336,7 @@ export function CalendarView() {
             Scheduling & Calendar
           </h1>
           <p className="text-sm text-on-surface-variant mt-1">
-            Personal scheduling, company events, and holidays synchronized in one view.
+            Personal scheduling, organization events, and holidays synchronized in one view.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -451,7 +451,7 @@ export function CalendarView() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded bg-purple-500/20 border border-purple-500/30" />
-                  Company Events
+                  Organization Events
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded bg-rose-500/20 border border-rose-500/30" />

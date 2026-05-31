@@ -5,7 +5,8 @@ const userIntegrationSchema = new mongoose.Schema({
     googleAccessToken: { type: String },
     googleRefreshToken: { type: String },
     googleTokenExpiry: { type: Number },
-    googleCalendarId: { type: String }
+    googlePersonalCalendarId: { type: String },
+    googleOrgCalendarId: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('UserIntegration', userIntegrationSchema);

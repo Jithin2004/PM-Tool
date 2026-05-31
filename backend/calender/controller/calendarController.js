@@ -32,20 +32,28 @@ exports.googleAuthCallback = async (req, res) => {
         oAuth2Client.setCredentials(tokens);
 
         let integration = await UserIntegration.findOne({ userId });
-        let googleCalendarId = integration ? integration.googleCalendarId : null;
+        let googlePersonalCalendarId = integration ? integration.googlePersonalCalendarId : null;
+        let googleOrgCalendarId = integration ? integration.googleOrgCalendarId : null;
 
-        if (!googleCalendarId) {
-            const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
+        const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
+        if (!googlePersonalCalendarId) {
             const newCal = await calendar.calendars.insert({
-                requestBody: { summary: 'PM-Tool Schedule' }
+                requestBody: { summary: `pm-tool-personal-schedules-${userId}` }
             });
-            googleCalendarId = newCal.data.id;
+            googlePersonalCalendarId = newCal.data.id;
+        }
+        if (!googleOrgCalendarId) {
+            const orgCal = await calendar.calendars.insert({
+                requestBody: { summary: 'pm-tool-organization-schedules' }
+            });
+            googleOrgCalendarId = orgCal.data.id;
         }
 
         const updateData = {
             googleAccessToken: tokens.access_token,
             googleTokenExpiry: tokens.expiry_date,
-            googleCalendarId
+            googlePersonalCalendarId,
+            googleOrgCalendarId
         };
         if (tokens.refresh_token) {
             updateData.googleRefreshToken = tokens.refresh_token;
@@ -116,9 +124,11 @@ exports.googleAuthCallback = async (req, res) => {
 };
 
 const getOAuthClientForUser = async (userId) => {
-    if (!userId) return { client: null, googleCalendarId: null };
+    if (!userId) return { client: null, googlePersonalCalendarId: null, googleOrgCalendarId: null };
     const integration = await UserIntegration.findOne({ userId });
-    if (!integration || !integration.googleRefreshToken || !integration.googleCalendarId) return { client: null, googleCalendarId: null };
+    if (!integration || !integration.googleRefreshToken || !integration.googlePersonalCalendarId || !integration.googleOrgCalendarId) {
+        return { client: null, googlePersonalCalendarId: null, googleOrgCalendarId: null };
+    }
 
     const client = new google.auth.OAuth2(client_id, client_secret, redirectUri);
     client.setCredentials({
@@ -136,7 +146,11 @@ const getOAuthClientForUser = async (userId) => {
         await integration.save();
     });
 
-    return { client, googleCalendarId: integration.googleCalendarId };
+    return { 
+        client, 
+        googlePersonalCalendarId: integration.googlePersonalCalendarId,
+        googleOrgCalendarId: integration.googleOrgCalendarId
+    };
 };
 
 exports.getEventsInRange = async (req, res) => {
@@ -156,11 +170,11 @@ exports.getEventsInRange = async (req, res) => {
             return ev;
         });
 
-        const { client, googleCalendarId } = await getOAuthClientForUser(req.user.id);
-        if (client && googleCalendarId) {
+        const { client, googlePersonalCalendarId } = await getOAuthClientForUser(req.user.id);
+        if (client && googlePersonalCalendarId) {
             const calendar = google.calendar({ version: 'v3', auth: client });
             const googleEvents = await calendar.events.list({
-                calendarId: googleCalendarId,
+                calendarId: googlePersonalCalendarId,
                 timeMin: start_date ? new Date(start_date).toISOString() : new Date().toISOString(),
                 timeMax: end_date ? new Date(end_date).toISOString() : undefined,
                 singleEvents: true,
@@ -201,27 +215,57 @@ exports.getEventsInRange = async (req, res) => {
 
 exports.createEvent = async (req, res) => {
     try {
-        const { client, googleCalendarId } = await getOAuthClientForUser(req.user.id);
-        let googleEventId = null;
+        const event = new CalendarEvent({ ...req.body });
+        // Use a deterministic Google event ID based on Mongoose ObjectId
+        const googleEventId = "pmtool" + event._id.toString();
+        event.google_event_id = googleEventId;
+        await event.save();
 
-        if (client && googleCalendarId && req.body.start_date && req.body.end_date) {
-            const calendar = google.calendar({ version: 'v3', auth: client });
-            const gEvent = await calendar.events.insert({
-                calendarId: googleCalendarId,
-                requestBody: {
-                    summary: req.body.title,
-                    description: req.body.description,
-                    start: { dateTime: new Date(req.body.start_date).toISOString() },
-                    end: { dateTime: new Date(req.body.end_date).toISOString() },
-                }
-            }).catch(e => console.error("Google insert error:", e));
-            if (gEvent && gEvent.data) googleEventId = gEvent.data.id;
+        const isCompanyEvent = req.body.event_type === 'company' || req.body.event_type === 'organization';
+
+        if (isCompanyEvent && req.body.start_date && req.body.end_date) {
+            // Fan-out to all organization schedules
+            const users = await UserIntegration.find({ googleOrgCalendarId: { $ne: null } });
+            await Promise.all(users.map(async (u) => {
+                if (!u.googleRefreshToken) return;
+                const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirectUri);
+                oAuth2Client.setCredentials({ 
+                    access_token: u.googleAccessToken, 
+                    refresh_token: u.googleRefreshToken,
+                    expiry_date: u.googleTokenExpiry
+                });
+                const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
+                await calendar.events.insert({
+                    calendarId: u.googleOrgCalendarId,
+                    requestBody: {
+                        id: googleEventId,
+                        summary: req.body.title,
+                        description: req.body.description,
+                        start: { dateTime: new Date(req.body.start_date).toISOString() },
+                        end: { dateTime: new Date(req.body.end_date).toISOString() },
+                    }
+                }).catch(e => console.error("Google org insert error for user:", u.userId, e));
+            }));
+        } else if (req.body.start_date && req.body.end_date) {
+            // Personal event
+            const { client, googlePersonalCalendarId } = await getOAuthClientForUser(req.user.id);
+            if (client && googlePersonalCalendarId) {
+                const calendar = google.calendar({ version: 'v3', auth: client });
+                await calendar.events.insert({
+                    calendarId: googlePersonalCalendarId,
+                    requestBody: {
+                        id: googleEventId,
+                        summary: req.body.title,
+                        description: req.body.description,
+                        start: { dateTime: new Date(req.body.start_date).toISOString() },
+                        end: { dateTime: new Date(req.body.end_date).toISOString() },
+                    }
+                }).catch(e => console.error("Google personal insert error:", e));
+            }
         }
 
-        const event = new CalendarEvent({ ...req.body, google_event_id: googleEventId });
-        await event.save();
         const responseEvent = event.toJSON();
-        // id is populated by Mongoose virtuals
+        responseEvent.id = responseEvent.id || responseEvent._id.toString();
         res.json(responseEvent);
     } catch (error) {
         console.error('createEvent Error:', error);
@@ -238,24 +282,52 @@ exports.updateEvent = async (req, res) => {
         const updated = await CalendarEvent.findByIdAndUpdate(id, { ...req.body, updated_at: new Date() }, { new: true });
 
         if (updated.google_event_id) {
-            const { client, googleCalendarId } = await getOAuthClientForUser(req.user.id);
-            if (client && googleCalendarId) {
-                const calendar = google.calendar({ version: 'v3', auth: client });
-                await calendar.events.update({
-                    calendarId: googleCalendarId,
-                    eventId: updated.google_event_id,
-                    requestBody: {
-                        summary: updated.title,
-                        description: updated.description,
-                        start: { dateTime: new Date(updated.start_date).toISOString() },
-                        end: { dateTime: new Date(updated.end_date).toISOString() },
-                    }
-                }).catch(e => console.error("Google update error:", e));
+            const isCompanyEvent = updated.event_type === 'company' || updated.event_type === 'organization';
+
+            if (isCompanyEvent) {
+                // Fan-out to all organization schedules
+                const users = await UserIntegration.find({ googleOrgCalendarId: { $ne: null } });
+                await Promise.all(users.map(async (u) => {
+                    if (!u.googleRefreshToken) return;
+                    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirectUri);
+                    oAuth2Client.setCredentials({ 
+                        access_token: u.googleAccessToken, 
+                        refresh_token: u.googleRefreshToken,
+                        expiry_date: u.googleTokenExpiry
+                    });
+                    const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
+                    await calendar.events.update({
+                        calendarId: u.googleOrgCalendarId,
+                        eventId: updated.google_event_id,
+                        requestBody: {
+                            summary: updated.title,
+                            description: updated.description,
+                            start: { dateTime: new Date(updated.start_date).toISOString() },
+                            end: { dateTime: new Date(updated.end_date).toISOString() },
+                        }
+                    }).catch(e => console.error("Google org update error for user:", u.userId, e));
+                }));
+            } else {
+                // Personal event update
+                const { client, googlePersonalCalendarId } = await getOAuthClientForUser(req.user.id);
+                if (client && googlePersonalCalendarId) {
+                    const calendar = google.calendar({ version: 'v3', auth: client });
+                    await calendar.events.update({
+                        calendarId: googlePersonalCalendarId,
+                        eventId: updated.google_event_id,
+                        requestBody: {
+                            summary: updated.title,
+                            description: updated.description,
+                            start: { dateTime: new Date(updated.start_date).toISOString() },
+                            end: { dateTime: new Date(updated.end_date).toISOString() },
+                        }
+                    }).catch(e => console.error("Google personal update error:", e));
+                }
             }
         }
 
         const responseEvent = updated.toJSON();
-        // id is populated by Mongoose virtuals
+        responseEvent.id = responseEvent.id || responseEvent._id.toString();
         res.json(responseEvent);
     } catch (error) {
         console.error('updateEvent Error:', error);
@@ -269,23 +341,42 @@ exports.deleteEvent = async (req, res) => {
         const existing = await CalendarEvent.findById(id);
         if (!existing) return res.status(404).json({ error: 'Not found' });
 
-        existing.deleted_at = new Date();
-        await existing.save();
+        await CalendarEvent.findByIdAndUpdate(id, { deleted_at: new Date() });
 
         if (existing.google_event_id) {
-            const { client, googleCalendarId } = await getOAuthClientForUser(req.user.id);
-            if (client && googleCalendarId) {
-                const calendar = google.calendar({ version: 'v3', auth: client });
-                await calendar.events.delete({
-                    calendarId: googleCalendarId,
-                    eventId: existing.google_event_id
-                }).catch(e => console.error("Google delete error:", e));
+            const isCompanyEvent = existing.event_type === 'company' || existing.event_type === 'organization';
+
+            if (isCompanyEvent) {
+                // Fan-out delete to all organization schedules
+                const users = await UserIntegration.find({ googleOrgCalendarId: { $ne: null } });
+                await Promise.all(users.map(async (u) => {
+                    if (!u.googleRefreshToken) return;
+                    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirectUri);
+                    oAuth2Client.setCredentials({ 
+                        access_token: u.googleAccessToken, 
+                        refresh_token: u.googleRefreshToken,
+                        expiry_date: u.googleTokenExpiry
+                    });
+                    const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
+                    await calendar.events.delete({
+                        calendarId: u.googleOrgCalendarId,
+                        eventId: existing.google_event_id
+                    }).catch(e => console.error("Google org delete error for user:", u.userId, e));
+                }));
+            } else {
+                // Personal event delete
+                const { client, googlePersonalCalendarId } = await getOAuthClientForUser(req.user.id);
+                if (client && googlePersonalCalendarId) {
+                    const calendar = google.calendar({ version: 'v3', auth: client });
+                    await calendar.events.delete({
+                        calendarId: googlePersonalCalendarId,
+                        eventId: existing.google_event_id
+                    }).catch(e => console.error("Google personal delete error:", e));
+                }
             }
         }
 
-        const responseEvent = existing.toJSON();
-        // id is populated by Mongoose virtuals
-        res.json(responseEvent);
+        res.json({ success: true });
     } catch (error) {
         console.error('deleteEvent Error:', error);
         res.status(500).json({ error: error.message || 'Failed to delete event' });
