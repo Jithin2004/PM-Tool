@@ -13,7 +13,7 @@ export default function SprintPage() {
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
-            Sprint Center
+            Execution Engine
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
             Iteration planning and velocity metrics.

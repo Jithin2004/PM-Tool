@@ -15,7 +15,7 @@ export default function BoardPage() {
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
-            Execution Board
+            Execution Engine
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
             Kanban execution tracking and task assignments.

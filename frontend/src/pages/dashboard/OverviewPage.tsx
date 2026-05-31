@@ -300,7 +300,7 @@ function DeveloperWorkspace({
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
-            {profile?.full_name ? `${profile.full_name.split(' ')[0]}'s Execution Workspace` : 'My Execution Workspace'}
+            Strategic Oversight
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
             Tactical task delivery, active roadblocks, and release coordination.
@@ -722,7 +722,7 @@ function PMOrchestrationSurface({
       {/* Header */}
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Delivery Center</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Strategic Oversight</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
             Execution coordination, roadblock resolution, and delivery velocity.
           </p>
@@ -1005,7 +1005,7 @@ function SuperAdminGovernanceSurface({
       {/* Header */}
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Strategic Telemetry</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Strategic Oversight</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
             Organizational status, threat/capacity alerts, and blockchain audit verification.
           </p>

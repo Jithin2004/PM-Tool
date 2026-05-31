@@ -172,6 +172,26 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   }
 ];
 
+const isPathAllowed = (path: string, role?: string): boolean => {
+  const isDev = hasCapability(role, 'manage_tasks') && !hasCapability(role, 'manage_projects');
+  const isView = hasCapability(role, 'view_stakeholders') && !hasCapability(role, 'manage_tasks');
+  
+  if (isDev) {
+    const allowed = ['/overview', '/execution', '/execution/board', '/login', '/execution/timeline'];
+    if (!allowed.includes(path)) return false;
+  }
+  if (isView) {
+    const allowed = ['/workspace/portfolio', '/workspace/decisions', '/login'];
+    if (!allowed.includes(path)) return false;
+  }
+  return true;
+};
+
+const isSubsectionAllowed = (sub: DomainSubsection, role?: string): boolean => {
+  if (sub.capability && !hasCapability(role, sub.capability)) return false;
+  return isPathAllowed(sub.path, role);
+};
+
 function ExecutiveSubsectionDashboard({ tab }: { tab: string }) {
   const renderContent = () => {
     switch (tab) {
@@ -1379,67 +1399,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     return current === path || current.startsWith(`${path}/`);
   };
 
-  const visibleSidebarGroups = useMemo(() => {
-    const isDev = hasCapability(profile?.role, 'manage_tasks') && !hasCapability(profile?.role, 'manage_projects');
-    if (isDev) {
-      return [
-        {
-          group: 'core' as SidebarGroup,
-          items: [
-            { id: 'overview', label: 'Execution Workspace', path: '/overview', group: 'core' as SidebarGroup, disclosureTier: 'essential', iconName: 'LayoutDashboard' },
-            { id: 'board', label: 'My Tasks Board', path: '/execution', group: 'core' as SidebarGroup, disclosureTier: 'essential', iconName: 'ListTodo' },
-            { id: 'scheduling', label: 'Scheduling', path: '/execution/timeline', group: 'core' as SidebarGroup, disclosureTier: 'operational', iconName: 'Timeline' },
-          ]
-        }
-      ];
-    }
-
-    const isView = hasCapability(profile?.role, 'view_stakeholders') && !hasCapability(profile?.role, 'manage_tasks');
-    if (isView) {
-      return [
-        {
-          group: 'core' as SidebarGroup,
-          items: [
-            { id: 'portfolio', label: 'Portfolio Analytics', path: '/workspace/portfolio', group: 'core' as SidebarGroup, disclosureTier: 'essential', iconName: 'Building2' },
-            { id: 'decisions', label: 'Decision Center', path: '/workspace/decisions', group: 'intelligence' as SidebarGroup, disclosureTier: 'intelligence', iconName: 'BrainCircuit' },
-          ]
-        }
-      ];
-    }
-
-    // Admins & PMs get full capability-filtered dashboard
-    const order: SidebarGroup[] = ['core', 'intelligence', 'resources', 'system'];
-    return order
-      .map(group => {
-        let items = SIDEBAR_NAV.filter(
-          item =>
-            item.group === group
-            && (!item.capability || hasCapability(profile?.role, item.capability))
-            && disclosure.isNavVisible(item),
-        );
-
-        // Advanced Enterprise Orchestration UX Title Adjustments
-        const isSuperAdmin = hasCapability(profile?.role, 'platform_governance');
-        const isPM = hasCapability(profile?.role, 'manage_projects') && !hasCapability(profile?.role, 'platform_governance');
-        if (isSuperAdmin) {
-          items = items.map(item => {
-            if (item.id === 'overview') return { ...item, label: 'Strategic Telemetry' };
-            if (item.id === 'projects') return { ...item, label: 'Org Orchestration' };
-            return item;
-          });
-        } else if (isPM) {
-          items = items.map(item => {
-            if (item.id === 'overview') return { ...item, label: 'Delivery Center' };
-            if (item.id === 'projects') return { ...item, label: 'Initiative Coordinator' };
-            if (item.id === 'board') return { ...item, label: 'Execution Flow' };
-            return item;
-          });
-        }
-
-        return { group, items };
-      })
-      .filter(g => g.items.length > 0);
-  }, [profile?.role, disclosure]);
+  const visibleDomains = useMemo(() => {
+    return EXECUTIVE_DOMAINS.map(domain => {
+      const allowedSubsections = domain.subsections.filter(sub => isSubsectionAllowed(sub, profile?.role));
+      return { ...domain, subsections: allowedSubsections };
+    }).filter(domain => domain.subsections.length > 0);
+  }, [profile?.role]);
 
   const [routePath, setRoutePath] = useState(() => normalizePath(window.location.pathname));
 
@@ -1448,6 +1413,56 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     window.addEventListener('popstate', syncRoute);
     return () => window.removeEventListener('popstate', syncRoute);
   }, []);
+
+  const queryTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+
+  const { activeDomain, activeSubsection } = useMemo(() => {
+    let currentDomain = visibleDomains[0];
+    let currentSub = currentDomain?.subsections[0];
+
+    for (const domain of visibleDomains) {
+      for (const sub of domain.subsections) {
+        if (sub.path === routePath && (sub.tab === queryTab || (!sub.tab && !queryTab))) {
+          return { activeDomain: domain, activeSubsection: sub };
+        }
+      }
+    }
+    
+    // Fallback matching just path if no exact match
+    for (const domain of visibleDomains) {
+      for (const sub of domain.subsections) {
+        if (sub.path === routePath) {
+          return { activeDomain: domain, activeSubsection: sub };
+        }
+      }
+    }
+    // Fallback matching partial path
+    for (const domain of visibleDomains) {
+      for (const sub of domain.subsections) {
+        if (routePath.startsWith(sub.path) && sub.path !== '/overview' && sub.path !== '/workspace') {
+          return { activeDomain: domain, activeSubsection: sub };
+        }
+      }
+    }
+    // Ensure project view falls into execution engine
+    if (routePath.startsWith('/projects/')) {
+      const executionDomain = visibleDomains.find(d => d.id === 'execution-engine');
+      if (executionDomain) {
+        return { activeDomain: executionDomain, activeSubsection: executionDomain.subsections[0] };
+      }
+    }
+
+    return { activeDomain: currentDomain, activeSubsection: currentSub };
+  }, [visibleDomains, routePath, queryTab]);
+
+  const handleDomainClick = (domainId: string) => {
+    const domain = visibleDomains.find(d => d.id === domainId);
+    if (domain && domain.subsections.length > 0) {
+      const firstSub = domain.subsections[0];
+      const targetPath = firstSub.tab ? `${firstSub.path}?tab=${firstSub.tab}` : firstSub.path;
+      navigateTo(targetPath);
+    }
+  };
 
   // Strict route guards for Phase 5 UX role alignment
   useEffect(() => {
@@ -1539,43 +1554,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     return () => window.removeEventListener('keydown', handler);
   }, [commandPaletteOpen]);
 
-  const breadcrumb = useMemo(() => {
-    const p = routePath.replace(/\/+$/, '').split('/').filter(Boolean);
-    if (p.length === 0) return { section: 'OVERVIEW', page: '' };
-
-    let section = p[0];
-    let page = p.length > 1 ? p[p.length - 1] : '';
-    
-    const sectionLabels: Record<string, string> = {
-      workspace: 'Workspace',
-      execution: 'Execution',
-      resources: 'Resources',
-      control: 'System Control'
-    };
-    
-    const pageLabels: Record<string, string> = {
-      'portfolio': 'Portfolio',
-      'knowledge': 'Knowledge',
-      'decisions': 'Decisions',
-      'board': 'Board',
-      'timeline': 'Timeline',
-      'gantt': 'Gantt',
-      'sprints': 'Sprints',
-      'teams': 'Teams',
-      'capacity': 'Capacity',
-      'work-logs': 'Work Logs',
-      'identity': 'Identity',
-      'analytics': 'Analytics',
-      'audit': 'Audit Log',
-      'automations': 'Automations',
-      'connections': 'Integrations'
-    };
-
-    return {
-      section: sectionLabels[section] || section.charAt(0).toUpperCase() + section.slice(1),
-      page: pageLabels[page] || page.charAt(0).toUpperCase() + page.slice(1)
-    };
-  }, [routePath]);
+  // Replaced static breadcrumbs with activeDomain logic
 
   const tourSteps: TourStep[] = useMemo(() => {
     const role = profile?.role || 'viewer';
@@ -2157,48 +2136,35 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </button>
           )}
 
-          {/* Nav — driven by routeRegistry */}
-          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 pm-scrollbar">
-            {visibleSidebarGroups.map(({ group, items }) => (
-              <div key={group} className="space-y-0.5">
-                {!isSidebarCollapsed && (
-                  <p className="text-[9px] font-mono-pm uppercase tracking-[0.2em] px-3 mb-2 whitespace-nowrap"
-                    style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.4 }}>
-                    {SIDEBAR_GROUP_LABELS[group]}
-                  </p>
-                )}
-                {items.map(item => {
-                  const active = isSidebarItemActive(item.path);
-                  const isDecisions = item.id === 'decisions';
-                  const groupColor = group === 'core' ? '#4f46e5' : group === 'intelligence' ? '#14b8a6' : group === 'resources' ? '#f59e0b' : 'var(--pm-primary)';
-                  const groupBg = group === 'core' ? 'rgba(79, 70, 229, 0.1)' : group === 'intelligence' ? 'rgba(20, 184, 166, 0.1)' : group === 'resources' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(67,70,83,0.5)';
-                  return (
-                    <button
-                      key={item.id}
-                      title={isSidebarCollapsed ? item.label : undefined}
-                      onClick={() => {
-                        if (isDecisions) setDashboardTab('intelligence');
-                        navigateTo(item.path);
-                      }}
-                      className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-lg text-[12px] font-medium transition-all duration-150`}
-                      style={active ? {
-                        background: 'var(--pm-surface-high)',
-                        color: groupColor,
-                        borderLeft: isSidebarCollapsed ? '' : `3px solid ${groupColor}`,
-                        paddingLeft: isSidebarCollapsed ? '' : '9px',
-                      } : {
-                        color: 'var(--pm-on-surface-variant)',
-                      }}
-                      onMouseEnter={e => { if (!active) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; } }}
-                      onMouseLeave={e => { if (!active) { (e.currentTarget as any).style.background = ''; (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; } }}
-                    >
-                      {renderRouteIcon(item.iconName)}
-                      {!isSidebarCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+          {/* Nav — Executive Domains */}
+          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 pm-scrollbar">
+            {visibleDomains.map(domain => {
+              const isActive = activeDomain?.id === domain.id;
+              const isIntelligence = domain.id === 'knowledge-hub' || domain.id === 'strategic-oversight';
+              const activeColor = domain.id === 'automation-engine' ? '#f59e0b' : isIntelligence ? '#14b8a6' : 'var(--pm-primary)';
+              
+              return (
+                <button
+                  key={domain.id}
+                  title={isSidebarCollapsed ? domain.label : undefined}
+                  onClick={() => handleDomainClick(domain.id)}
+                  className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-lg text-[12px] font-medium transition-all duration-150`}
+                  style={isActive ? {
+                    background: 'var(--pm-surface-high)',
+                    color: activeColor,
+                    borderLeft: isSidebarCollapsed ? '' : `3px solid ${activeColor}`,
+                    paddingLeft: isSidebarCollapsed ? '' : '9px',
+                  } : {
+                    color: 'var(--pm-on-surface-variant)',
+                  }}
+                  onMouseEnter={e => { if (!isActive) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; } }}
+                  onMouseLeave={e => { if (!isActive) { (e.currentTarget as any).style.background = ''; (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; } }}
+                >
+                  {renderRouteIcon(domain.iconName)}
+                  {!isSidebarCollapsed && <span className="whitespace-nowrap">{domain.label}</span>}
+                </button>
+              );
+            })}
           </div>
 
           {disclosure.active && disclosure.nextUnlock && (
@@ -2259,6 +2225,16 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
+              <button
+                onClick={() => navigateTo('/control/settings')}
+                className="p-1.5 rounded-md transition-colors cursor-pointer ml-1"
+                style={{ color: 'var(--pm-on-surface-variant)' }}
+                onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
+                onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
+                title="Settings"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </aside>
@@ -2302,45 +2278,36 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
-                  {visibleSidebarGroups.map(({ group, items }) => (
-                    <div key={group} className="space-y-2">
-                      <p className="text-[9px] font-mono font-bold text-text-tertiary uppercase tracking-wide px-3">
-                        {SIDEBAR_GROUP_LABELS[group]}
-                      </p>
-                      <div className="space-y-1">
-                        {items.map(item => {
-                          const active = isSidebarItemActive(item.path);
-                          const groupColor = group === 'core' ? '#4f46e5' : group === 'intelligence' ? '#14b8a6' : group === 'resources' ? '#f59e0b' : 'var(--pm-primary)';
-                          const groupBg = group === 'core' ? 'rgba(79, 70, 229, 0.1)' : group === 'intelligence' ? 'rgba(20, 184, 166, 0.1)' : group === 'resources' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(67,70,83,0.5)';
-                          return (
-                            <button
-                              key={item.id}
-                              onClick={() => {
-                                if (item.id === 'decisions') setDashboardTab('intelligence');
-                                navigateTo(item.path);
-                                setMobileSidebarOpen(false);
-                              }}
-                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                                active ? 'shadow-sm' : 'hover:bg-surface-high hover:text-text-primary'
-                              }`}
-                              style={active ? {
-                                background: 'var(--pm-surface-high)',
-                                color: groupColor,
-                                borderLeft: `3px solid ${groupColor}`,
-                                paddingLeft: '9px',
-                              } : {
-                                color: 'var(--pm-on-surface-variant)',
-                              }}
-                            >
-                              {renderRouteIcon(item.iconName)}
-                              {item.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
+                  {visibleDomains.map(domain => {
+                    const isActive = activeDomain?.id === domain.id;
+                    const isIntelligence = domain.id === 'knowledge-hub' || domain.id === 'strategic-oversight';
+                    const activeColor = domain.id === 'automation-engine' ? '#f59e0b' : isIntelligence ? '#14b8a6' : 'var(--pm-primary)';
+                    
+                    return (
+                      <button
+                        key={domain.id}
+                        onClick={() => {
+                          handleDomainClick(domain.id);
+                          setMobileSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                          isActive ? 'shadow-sm' : 'hover:bg-surface-high hover:text-text-primary'
+                        }`}
+                        style={isActive ? {
+                          background: 'var(--pm-surface-high)',
+                          color: activeColor,
+                          borderLeft: `3px solid ${activeColor}`,
+                          paddingLeft: '9px',
+                        } : {
+                          color: 'var(--pm-on-surface-variant)',
+                        }}
+                      >
+                        {renderRouteIcon(domain.iconName)}
+                        {domain.label}
+                      </button>
+                    );
+                  })}
                   {disclosure.active && disclosure.nextUnlock && (
                     <ProgressiveUnlockHint
                       message={disclosure.nextUnlock.message}
@@ -2390,18 +2357,33 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 </div>
             </div>
 
-            {/* Top bar center: live breadcrumb / context label */}
-            <div className="hidden sm:flex items-center gap-2 text-xs font-geist">
-              <span className="w-1.5 h-1.5 rounded-full operational-pulse" style={{ background: 'var(--pm-primary)' }} />
-              <span className="font-semibold" style={{ color: 'var(--pm-primary)' }}>Resolve PM</span>
-              <span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }}>/</span>
-              <span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.8 }}>{breadcrumb?.section || 'Command Center'}</span>
-              {breadcrumb?.page && (
-                <>
-                  <span style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }}>/</span>
-                  <span className="font-medium" style={{ color: 'var(--pm-on-surface)' }}>{breadcrumb.page}</span>
-                </>
-              )}
+            {/* Top bar center: Dynamic Subsections Pill Tabs */}
+            <div className="hidden sm:flex items-center gap-1 font-geist mx-auto flex-1 justify-center px-4 overflow-hidden">
+              {activeDomain?.subsections.map(sub => {
+                const isSubActive = activeSubsection === sub;
+                return (
+                  <button
+                    key={`${sub.path}-${sub.tab || ''}`}
+                    onClick={() => {
+                      const targetPath = sub.tab ? `${sub.path}?tab=${sub.tab}` : sub.path;
+                      navigateTo(targetPath);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all whitespace-nowrap`}
+                    style={isSubActive ? {
+                      background: 'var(--pm-primary)',
+                      color: 'var(--pm-on-primary)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    } : {
+                      color: 'var(--pm-on-surface-variant)',
+                      background: 'transparent'
+                    }}
+                    onMouseEnter={e => { if (!isSubActive) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; } }}
+                    onMouseLeave={e => { if (!isSubActive) { (e.currentTarget as any).style.background = 'transparent'; } }}
+                  >
+                    {sub.label}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Top bar right: compact utilities */}
@@ -2467,7 +2449,11 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           {/* Dynamic Page Routing Slot */}
           <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-6 relative">
             <ErrorBoundary>
-              {children}
+              {activeSubsection?.tab ? (
+                <ExecutiveSubsectionDashboard tab={activeSubsection.tab} />
+              ) : (
+                children
+              )}
             </ErrorBoundary>
           </main>
 

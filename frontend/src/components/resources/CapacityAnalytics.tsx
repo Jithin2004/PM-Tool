@@ -71,7 +71,7 @@ export function CapacityAnalytics() {
       <div className="flex items-end justify-between px-1 pt-2 mb-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--pm-text)]">
-            Capacity Intelligence Grid
+            Resource Orchestration
           </h1>
           <p className="text-sm mt-1 text-[var(--pm-text-secondary)]">
             Strategic resource orchestration and forward-looking constraints.
