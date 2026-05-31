@@ -40,7 +40,7 @@ import { ProjectDetailsModal } from '../../components/project/ProjectDetailsModa
 import { TeamRosterModal } from '../../components/team/TeamRosterModal';
 import { UserProfileModal } from '../../components/user/UserProfileModal';
 import { calculateExpectedTime, calculateVariance, calculateHoursFromRange, getLocalDateString, getRelativeTime } from '../../utils/timeUtils';
-import { hasCapability } from '../../core/auth/permissions';
+import { hasCapability, Capability } from '../../core/auth/permissions';
 import { Project, Team, Profile, User, UserRole } from '../../types';
 import {
   SIDEBAR_NAV,
@@ -62,6 +62,1208 @@ interface ConfirmState {
 // --- Utilities Extracted to timeUtils.ts ---
 
 // --- Components ---
+
+interface DomainSubsection {
+  label: string;
+  path: string;
+  tab?: string;
+  capability?: Capability;
+}
+
+interface ExecutiveDomain {
+  id: string;
+  label: string;
+  iconName: string;
+  subsections: DomainSubsection[];
+}
+
+const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
+  {
+    id: 'strategic-oversight',
+    label: 'Strategic Oversight',
+    iconName: 'Radar',
+    subsections: [
+      { label: 'Overview', path: '/overview', capability: 'view_projects' },
+      { label: 'Strategic Matrix', path: '/workspace', capability: 'view_projects' },
+      { label: 'Risk & Friction', path: '/workspace/decisions', tab: 'risk', capability: 'view_decision_center' },
+      { label: 'Decision Pipeline', path: '/workspace/decisions', capability: 'view_decision_center' },
+      { label: 'Executive Briefs', path: '/workspace/executive', capability: 'view_analytics' }
+    ]
+  },
+  {
+    id: 'resource-orchestration',
+    label: 'Resource Orchestration',
+    iconName: 'BarChart3',
+    subsections: [
+      { label: 'Capacity', path: '/resources/capacity', capability: 'view_reports' },
+      { label: 'Allocation', path: '/resources/capacity', tab: 'allocation', capability: 'view_reports' },
+      { label: 'Forecasting', path: '/resources/capacity', tab: 'forecasting', capability: 'view_reports' },
+      { label: 'Skills', path: '/resources/capacity', tab: 'skills', capability: 'view_reports' },
+      { label: 'Hiring', path: '/resources/capacity', tab: 'hiring', capability: 'view_reports' }
+    ]
+  },
+  {
+    id: 'execution-engine',
+    label: 'Execution Engine',
+    iconName: 'Kanban',
+    subsections: [
+      { label: 'Board', path: '/execution', capability: 'view_tasks' },
+      { label: 'Timeline', path: '/execution/timeline', capability: 'view_scheduling' },
+      { label: 'Sprints', path: '/execution/sprints', capability: 'view_scheduling' },
+      { label: 'Dependencies', path: '/execution/gantt', capability: 'view_scheduling' },
+      { label: 'Change Requests', path: '/execution', tab: 'changes', capability: 'view_tasks' }
+    ]
+  },
+  {
+    id: 'executive-team-registry',
+    label: 'Executive Team Registry',
+    iconName: 'Users',
+    subsections: [
+      { label: 'Organization', path: '/resources/teams', capability: 'view_teams' },
+      { label: 'Leadership', path: '/resources/teams', tab: 'leadership', capability: 'view_teams' },
+      { label: 'Departments', path: '/resources/teams', tab: 'departments', capability: 'view_teams' },
+      { label: 'Succession', path: '/resources/teams', tab: 'succession', capability: 'view_teams' },
+      { label: 'Performance', path: '/resources/teams', tab: 'talent-performance', capability: 'view_teams' }
+    ]
+  },
+  {
+    id: 'automation-engine',
+    label: 'Automation Engine',
+    iconName: 'Zap',
+    subsections: [
+      { label: 'Workflows', path: '/control/automations', capability: 'manage_automations' },
+      { label: 'Executions', path: '/control/automations', tab: 'executions', capability: 'manage_automations' },
+      { label: 'Monitoring', path: '/control/automations', tab: 'monitoring', capability: 'manage_automations' },
+      { label: 'AI Insights', path: '/control/automations', tab: 'ai-insights', capability: 'manage_automations' }
+    ]
+  },
+  {
+    id: 'knowledge-hub',
+    label: 'Knowledge Hub',
+    iconName: 'BookOpen',
+    subsections: [
+      { label: 'Documentation', path: '/workspace/knowledge', capability: 'view_projects' },
+      { label: 'Standards', path: '/workspace/knowledge', tab: 'standards', capability: 'view_projects' },
+      { label: 'Knowledge Graph', path: '/workspace/knowledge', tab: 'graph', capability: 'view_projects' },
+      { label: 'Institutional Memory', path: '/workspace/knowledge', tab: 'memory', capability: 'view_projects' }
+    ]
+  },
+  {
+    id: 'governance-control',
+    label: 'Governance & Control',
+    iconName: 'Shield',
+    subsections: [
+      { label: 'Audit Ledger', path: '/control/audit', capability: 'view_audit_log' },
+      { label: 'Compliance', path: '/control/audit', tab: 'compliance', capability: 'view_audit_log' },
+      { label: 'Policies', path: '/control/audit', tab: 'policies', capability: 'view_audit_log' },
+      { label: 'Approvals', path: '/control/audit', tab: 'approvals', capability: 'view_audit_log' }
+    ]
+  },
+  {
+    id: 'system-health',
+    label: 'System Health',
+    iconName: 'Activity',
+    subsections: [
+      { label: 'Infrastructure', path: '/control/system-health', capability: 'platform_governance' },
+      { label: 'Observability', path: '/control/system-health', tab: 'observability', capability: 'platform_governance' },
+      { label: 'Performance', path: '/control/system-health', tab: 'performance', capability: 'platform_governance' },
+      { label: 'Alerts', path: '/control/system-health', tab: 'alerts', capability: 'platform_governance' }
+    ]
+  }
+];
+
+function ExecutiveSubsectionDashboard({ tab }: { tab: string }) {
+  const renderContent = () => {
+    switch (tab) {
+      case 'risk':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Aggregate Risk Score</span>
+                <span className="text-2xl font-bold text-rose-400 block mt-1">74 / 100</span>
+                <span className="text-[10px] text-rose-400/70 font-medium mt-1 block">Elevated (Attention Required)</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Critical Roadblocks</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">5 Active</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">3 assigned to PMs</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Blocked Execution Effort</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">124 Hours</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Across 8 downstream tasks</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Path Handoff Delay</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">+4.2 Days</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Mitigation active</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400">High-Risk Delivery Items</h3>
+                <div className="space-y-3">
+                  {[
+                    { id: 't-101', name: 'Database Migration to Postgres v15', risk: 'Critical', impact: 'Timeline delay', status: 'Blocked' },
+                    { id: 't-104', name: 'Auth Gateway Security Protocol Audit', risk: 'High', impact: 'Compliance lag', status: 'Executing' },
+                    { id: 't-208', name: 'Gantt Chart Interactive Drag & Drop Rendering', risk: 'High', impact: 'Scope creep', status: 'Testing' },
+                  ].map(item => (
+                    <div key={item.id} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-semibold text-text-primary">{item.name}</span>
+                        <div className="flex gap-2 text-[10px] text-text-tertiary mt-1">
+                          <span>ID: {item.id}</span>
+                          <span>•</span>
+                          <span>Impact: {item.impact}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-[4px] text-[10px] font-bold uppercase">{item.risk}</span>
+                        <span className="text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-[4px] text-[10px] font-bold uppercase">{item.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Roadblock Mitigations</h3>
+                <p className="text-[11px] text-text-tertiary leading-relaxed">
+                  Real-time mitigation playbooks are automatically calibrated based on developer feedback and systemic SLA bottlenecks.
+                </p>
+                <div className="space-y-2">
+                  <div className="p-2.5 bg-surface-3 border border-border/40 rounded-lg text-[10px]">
+                    <span className="font-bold text-text-primary block mb-0.5">Playbook 12: Resource Load Balancing</span>
+                    <span className="text-text-tertiary">Shift secondary developers to clear Postgres migration blocks.</span>
+                  </div>
+                  <div className="p-2.5 bg-surface-3 border border-border/40 rounded-lg text-[10px]">
+                    <span className="font-bold text-text-primary block mb-0.5">Playbook 04: Client Escalation</span>
+                    <span className="text-text-tertiary">Initiate client signature sync for Auth Gateway approvals.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'allocation':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Average Contributor Allocation</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">92%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Optimal load distribution</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Overloaded Contributor Profiles</span>
+                <span className="text-2xl font-bold text-rose-400 block mt-1">2 Operators</span>
+                <span className="text-[10px] text-rose-400/70 mt-1 block">Rebalancing recommended</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Total Allocated Bandwidth</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">480h / Week</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Across 12 engineering members</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Team Allocation Matrix</h3>
+              <div className="space-y-4">
+                {[
+                  { name: 'Team Alpha (Backend)', allocation: 94, members: 4, status: 'Stable', color: '#4f46e5' },
+                  { name: 'Team Beta (Frontend)', allocation: 108, members: 3, status: 'Overloaded', color: '#ef4444' },
+                  { name: 'Team Gamma (Data & AI)', allocation: 78, members: 5, status: 'Available', color: '#10b981' },
+                ].map(team => (
+                  <div key={team.name} className="space-y-1.5">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-semibold text-text-secondary">{team.name}</span>
+                      <span className="font-mono text-text-tertiary">{team.allocation}% Allocated • {team.members} Operators</span>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full overflow-hidden bg-surface-3 relative border border-border/30">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${team.allocation}%`, backgroundColor: team.color }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'forecasting':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Projected Runway</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">5.8 Months</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Under current resource allocation</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Forecasted Capacity Deficit</span>
+                <span className="text-2xl font-bold text-amber-400 block mt-1">-32h / Week</span>
+                <span className="text-[10px] text-amber-400/80 mt-1 block">Starting Q3 (July)</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Execution confidence forecast</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">87%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">90% confidence interval</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">6-Month Demand Simulation</h3>
+                <div className="bg-surface-3 border border-border/40 rounded-xl h-48 flex items-center justify-center relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-15 flex flex-col justify-between p-4 pointer-events-none">
+                    {[1, 2, 3, 4].map(i => <div key={i} className="w-full h-px bg-white/20" />)}
+                  </div>
+                  <div className="absolute bottom-6 inset-x-8 flex items-end justify-between h-32">
+                    {[
+                      { month: 'Jun', capacity: 100, demand: 85 },
+                      { month: 'Jul', capacity: 100, demand: 110 },
+                      { month: 'Aug', capacity: 120, demand: 115 },
+                      { month: 'Sep', capacity: 120, demand: 125 },
+                      { month: 'Oct', capacity: 120, demand: 98 },
+                      { month: 'Nov', capacity: 120, demand: 80 }
+                    ].map(d => (
+                      <div key={d.month} className="flex flex-col items-center gap-2">
+                        <div className="flex gap-1.5 items-end h-24">
+                          <div className="w-2.5 bg-indigo-500 rounded-t" style={{ height: `${(d.capacity / 130) * 100}%` }} title={`Capacity: ${d.capacity}`} />
+                          <div className="w-2.5 bg-rose-500 rounded-t" style={{ height: `${(d.demand / 130) * 100}%` }} title={`Demand: ${d.demand}`} />
+                        </div>
+                        <span className="text-[9px] font-mono text-text-tertiary uppercase">{d.month}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="absolute top-3 right-3 flex gap-4 text-[9px] font-mono uppercase bg-surface-2 px-2.5 py-1 rounded border border-border/30">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 bg-indigo-500 rounded-full" /> Capacity</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 bg-rose-500 rounded-full" /> Demand</span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Resource Recommendations</h3>
+                <div className="space-y-3">
+                  <div className="p-3 bg-surface-3 border border-border/40 rounded-lg text-xs space-y-1">
+                    <span className="font-bold text-text-secondary block">Initiate Hire: Senior React Developer</span>
+                    <p className="text-[10px] text-text-tertiary leading-relaxed">Demand spikes by 18% in July for frontend dashboards.</p>
+                  </div>
+                  <div className="p-3 bg-surface-3 border border-border/40 rounded-lg text-xs space-y-1">
+                    <span className="font-bold text-text-secondary block">Reallocate: DevOps Engineers</span>
+                    <p className="text-[10px] text-text-tertiary leading-relaxed">Infrastructure workload stabilizes in late August, allowing cross-project loaning.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'skills':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Registered Engineering Skills</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">28 Skills</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Categorized across 4 divisions</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Organizational Skill Index</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">88%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">High compliance coverage</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Critical Gaps Flagged</span>
+                <span className="text-2xl font-bold text-rose-400 block mt-1">1 Skill</span>
+                <span className="text-[10px] text-rose-400/70 mt-1 block">Go / Rust Backend Developer</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Skills Coverage Map</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    { name: 'TypeScript & React', count: 8, level: 'Expert' },
+                    { name: 'Postgres & SQL', count: 6, level: 'Advanced' },
+                    { name: 'Supabase / Auth', count: 5, level: 'Advanced' },
+                    { name: 'DevOps & AWS', count: 3, level: 'Intermediate' },
+                    { name: 'Python & ML', count: 2, level: 'Intermediate' },
+                    { name: 'Go / Rust', count: 0, level: 'Gap' },
+                  ].map(skill => (
+                    <div key={skill.name} className="p-3.5 bg-surface-3 border border-border/40 rounded-xl text-center space-y-1 relative">
+                      {skill.count === 0 && <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />}
+                      <span className="text-[11px] font-semibold text-text-secondary block truncate">{skill.name}</span>
+                      <span className="text-xl font-bold text-text-primary block">{skill.count} Operators</span>
+                      <span className={`text-[9px] font-mono uppercase tracking-wider ${skill.count === 0 ? 'text-rose-400' : 'text-text-tertiary'}`}>
+                        {skill.level}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Skills Training Pipeline</h3>
+                <p className="text-[11px] text-text-tertiary leading-relaxed">
+                  Active educational upskilling paths currently sponsored by organization.
+                </p>
+                <div className="space-y-2">
+                  <div className="p-2.5 bg-surface-3 border border-border/40 rounded-lg text-[10px] flex justify-between items-center">
+                    <div>
+                      <span className="font-bold text-text-primary block">Go Backend Bootcamp</span>
+                      <span className="text-text-tertiary">3 developers enrolled</span>
+                    </div>
+                    <span className="text-[9px] font-mono text-emerald-400/80">Active</span>
+                  </div>
+                  <div className="p-2.5 bg-surface-3 border border-border/40 rounded-lg text-[10px] flex justify-between items-center">
+                    <div>
+                      <span className="font-bold text-text-primary block">AWS Cloud Solutions Architect</span>
+                      <span className="text-text-tertiary">1 engineer in validation</span>
+                    </div>
+                    <span className="text-[9px] font-mono text-emerald-400/80">Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'hiring':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Open Requisitions</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">3 Active Roles</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Approved and posted</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Total Pipeline Candidates</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">42 Candidates</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Active interview tracks</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Hiring Budget Status</span>
+                <span className="text-2xl font-bold text-emerald-400 block mt-1">Nominal</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Within Q2 boundaries</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Open Positions Registry</h3>
+              <div className="space-y-3">
+                {[
+                  { title: 'Senior Backend Engineer (Go/Rust)', department: 'Core Systems', candidates: 14, stage: 'Technical Review' },
+                  { title: 'Lead Frontend UI/UX Architect', department: 'Product Delivery', candidates: 19, stage: 'Offer Stage' },
+                  { title: 'Data Infrastructure Engineer', department: 'Analytics & telemetry', candidates: 9, stage: 'Initial Screening' }
+                ].map(role => (
+                  <div key={role.title} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-semibold text-text-primary">{role.title}</span>
+                      <p className="text-[10px] text-text-tertiary mt-0.5">{role.department}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono text-text-tertiary text-[10px]">{role.candidates} Applied</span>
+                      <span className="text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded text-[10px] font-semibold uppercase">{role.stage}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'changes':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Pending Change Requests</span>
+                <span className="text-2xl font-bold text-amber-400 block mt-1">2 Requests</span>
+                <span className="text-[10px] text-amber-400/80 mt-1 block">Review pipeline active</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Approved Scope Extensions</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">4 Approved</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Scenarios factored in runway</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Cycle Time impact</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">+1.5d / Request</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Average resolution rate</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Change Control Board Ledger</h3>
+              <div className="space-y-3">
+                {[
+                  { title: 'Defer Realtime Sync optimizations to Phase 6', project: 'QUANTUM STORAGE OPTIMIZER', impact: 'None', status: 'Pending Review', creator: 'PM' },
+                  { title: 'Incorporate Microsoft Outlook integration into scheduling', project: 'CALENDAR CONSOLE', impact: 'Moderate (+5 days)', status: 'Approved', creator: 'Super Admin' },
+                  { title: 'Extend JWT token validation structure to 24h', project: 'AUTH CONSOLE', impact: 'Low (+1 day)', status: 'Approved', creator: 'Developer' }
+                ].map(req => (
+                  <div key={req.title} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-semibold text-text-primary">{req.title}</span>
+                      <div className="flex gap-2 text-[10px] text-text-tertiary mt-0.5">
+                        <span>Project: {req.project}</span>
+                        <span>•</span>
+                        <span>Impact: {req.impact}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[10px] text-text-tertiary font-mono">By {req.creator}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        req.status === 'Approved' ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-amber-400 bg-amber-500/10 border border-amber-500/20'
+                      }`}>{req.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'leadership':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Leadership Stakeholders</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">5 Directors</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Full division oversight</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Strategic Focus Alignment</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">100%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">All units fully calibrated</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Leadership coverage</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">1:4 Ratio</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Lead to operator ratio</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Executive Leadership Registry</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'Dr. Sarah Jenkins', title: 'VP of Platform Engineering', email: 's.jenkins@resolvepm.corp', division: 'Core Platforms' },
+                  { name: 'Marcus Chen', title: 'Director of Product Integration', email: 'm.chen@resolvepm.corp', division: 'Client Workspaces' },
+                  { name: 'Alina Rostova', title: 'Director of Infosec & Governance', email: 'a.rostova@resolvepm.corp', division: 'Security Operations' }
+                ].map(leader => (
+                  <div key={leader.name} className="p-3.5 bg-surface-3 border border-border/40 rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-bold text-text-primary block">{leader.name}</span>
+                      <span className="text-[10px] text-text-tertiary">{leader.title}</span>
+                    </div>
+                    <div className="text-right text-[10px] font-mono text-text-tertiary">
+                      <span>{leader.email}</span>
+                      <span className="block font-semibold text-indigo-400 uppercase mt-0.5">{leader.division}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'departments':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Departments Registered</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">4 Units</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">System-wide registry</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Corporate Headcount</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">24 Active</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">12 developer contracts</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Allocated Annual Budget</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">$2.8M USD</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Within corporate thresholds</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Infrastructure Cost</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">$14.2K / Mo</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Optimized (Cloud)</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Department Taxonomy & Allocations</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { name: 'Engineering & Delivery', size: 12, lead: 'Dr. Sarah Jenkins', budget: '$1.4M', color: '#4f46e5' },
+                  { name: 'Product Management', size: 4, lead: 'Marcus Chen', budget: '$600K', color: '#14b8a6' },
+                  { name: 'Governance & Security', size: 3, lead: 'Alina Rostova', budget: '$450K', color: '#ef4444' },
+                  { name: 'Operations & IT', size: 5, lead: 'Sarah Jenkins (Int)', budget: '$350K', color: '#f59e0b' }
+                ].map(dept => (
+                  <div key={dept.name} className="p-4 bg-surface-3 border border-border/40 rounded-xl flex items-center justify-between text-xs relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500" style={{ backgroundColor: dept.color }} />
+                    <div className="pl-2.5">
+                      <span className="font-bold text-text-secondary block">{dept.name}</span>
+                      <span className="text-[10px] text-text-tertiary">Lead: {dept.lead}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-text-primary">{dept.budget}</span>
+                      <span className="block text-[10px] text-text-tertiary mt-0.5">{dept.size} Members</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'succession':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Designated Leadership Backups</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">10 Backups</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Covering 100% key roles</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Succession Readiness Index</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">91%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Nominal readiness</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Key Person Risk Points</span>
+                <span className="text-2xl font-bold text-rose-400 block mt-1">1 Risk</span>
+                <span className="text-[10px] text-rose-400/70 mt-1 block">Critical DevOps specialist</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Succession Vulnerability & Backup Registry</h3>
+              <div className="space-y-3">
+                {[
+                  { role: 'VP of Platform Engineering', keyPerson: 'Sarah Jenkins', backup: 'David Miller (Director Level)', status: 'Ready (94%)', risk: 'Low' },
+                  { role: 'Lead DevOps Systems Engineer', keyPerson: 'Alex Kovac', backup: 'No direct backup designated', status: 'Immediate Risk', risk: 'Critical' },
+                  { role: 'Director of Product Integration', keyPerson: 'Marcus Chen', backup: 'Jenna Lyons (Senior PM)', status: 'Ready (88%)', risk: 'Low' }
+                ].map(item => (
+                  <div key={item.role} className="p-3.5 bg-surface-3 border border-border/40 rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-bold text-text-secondary block">{item.role}</span>
+                      <div className="flex gap-2 text-[10px] text-text-tertiary mt-0.5">
+                        <span>Key Person: {item.keyPerson}</span>
+                        <span>•</span>
+                        <span>Backup: {item.backup}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider block ${
+                        item.risk === 'Critical' ? 'text-rose-400 bg-rose-500/10 border border-rose-500/20' : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                      }`}>{item.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'talent-performance':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Average Contributor Throughput</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">14.8 Tasks / Sprint</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Nominal speed</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Sprint Velocity Consistency</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">94%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Low volatility</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Operator Feedback Score</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">4.8 / 5.0</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">High team alignment</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Engineering Contributor Throughput Ledger</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'Jithin Miller', completedTasks: 18, efficiency: '98%', stability: 'Stable', workload: 'Normal' },
+                  { name: 'Shamil Peterson', completedTasks: 21, efficiency: '92%', stability: 'High Velocity', workload: 'Normal' },
+                  { name: 'Alex K', completedTasks: 14, efficiency: '88%', stability: 'Stable', workload: 'Overloaded' }
+                ].map(op => (
+                  <div key={op.name} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-semibold text-text-secondary">{op.name}</span>
+                      <div className="flex gap-2 text-[10px] text-text-tertiary mt-0.5">
+                        <span>Workload: {op.workload}</span>
+                        <span>•</span>
+                        <span>Consistency: {op.stability}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-text-primary font-mono block">{op.completedTasks} Tasks Done</span>
+                      <span className="text-[10px] text-emerald-400/80 font-mono">Eff: {op.efficiency}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'executions':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Workflows Triggered Today</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">1,248 Runs</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">All functions executed</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Automation Success Rate</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">99.8%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Within nominal SLA</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Average Execution Delay</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">42ms</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Low queue latency</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Workflow Execution Log Stream</h3>
+              <div className="space-y-2.5">
+                {[
+                  { name: 'Sync Google Calendar API', trigger: 'Cron Schedule', duration: '22ms', state: 'Success' },
+                  { name: 'Calculate PERT Estimate Variance', trigger: 'Task Mutation', duration: '84ms', state: 'Success' },
+                  { name: 'Verify Audit Log Blockchain Integrity', trigger: 'Audit Entry', duration: '124ms', state: 'Success' },
+                  { name: 'Dispatch Push Notification Dispatcher', trigger: 'Status Update', duration: '12ms', state: 'Success' }
+                ].map((run, i) => (
+                  <div key={i} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs font-mono">
+                    <div>
+                      <span className="font-semibold text-text-secondary">{run.name}</span>
+                      <p className="text-[10px] text-text-tertiary mt-0.5">Trigger: {run.trigger}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{run.state}</span>
+                      <span className="block text-[10px] text-text-tertiary mt-1">Time: {run.duration}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'monitoring':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Active Queue Listeners</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">12 Listeners</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Live connections open</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Message throughput</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">412 Msg / Min</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Stable messaging queue</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Database Connection Pools</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">42 Open</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Idle pools clean</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Worker CPU Usage</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">1.2%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Low utilization load</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">System Orchestration Monitor Console</h3>
+              <div className="p-4 bg-surface-3 border border-border/40 rounded-xl font-mono text-[11px] text-text-secondary space-y-2 leading-relaxed">
+                <p className="text-emerald-400/90">[12:44:02.102] WORKER: Listening on channel: `project_mutations`</p>
+                <p className="text-emerald-400/90">[12:44:03.408] WORKER: Acknowledged message `msg_92813_pert_variance` successfully.</p>
+                <p className="text-emerald-400/90">[12:44:05.112] WORKER: Listening on channel: `task_alerts`</p>
+                <p className="text-emerald-400/90">[12:44:08.514] WORKER: Syncing Google Calendar accounts. 1 connection verified.</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'ai-insights':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Redundancy Warnings</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">1 Alert</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Actionable insights generated</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Process Optimization Recommendations</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">3 Suggestions</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Calibrated by AI model</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Optimization Index</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">94%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Outstanding efficiency</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">AI Engine Analysis & Recommendations</h3>
+              <div className="space-y-3">
+                {[
+                  { title: 'Redundant Calendar Sync Listeners Detected', detail: 'Workflow `Sync Calendar` executes twice upon project setup trigger. Recommended to deactivate the trigger webhook.', priority: 'Medium' },
+                  { title: 'Optimize Indexing on `activity_logs`', detail: 'Slow query detected on SuperAdmin OverviewPage. Indexing field `workspace_id` combined with `created_at` will reduce latency by 45%.', priority: 'High' }
+                ].map(insight => (
+                  <div key={insight.title} className="p-4 bg-surface-3 border border-border/40 rounded-xl text-xs space-y-1.5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 h-full w-1 bg-gradient-to-b from-indigo-500 to-teal-500" />
+                    <span className="font-bold text-text-secondary block">{insight.title}</span>
+                    <p className="text-[11px] text-text-tertiary leading-relaxed">{insight.detail}</p>
+                    <span className="text-[9px] font-bold text-indigo-400 uppercase font-mono block mt-1">Impact Level: {insight.priority}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'standards':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Corporate Playbooks</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">12 Playbooks</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Governing platform systems</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Security Standards Checked</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">100% Verified</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">SOC2 & ISO27001 mapping</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Playbook Compliance Ratio</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">98%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">High execution coverage</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Corporate Playbooks & Code Standards</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'SEC-01: JWT Token Rotation Protocol', scope: 'Authentication / API', reviewDate: 'May 2026' },
+                  { name: 'DEV-04: TypeScript lint rules & Code Quality Check', scope: 'Frontend Development', reviewDate: 'June 2026' },
+                  { name: 'SYS-08: Database Hash Integrity Check', scope: 'Blockchain Hashing / Database Security', reviewDate: 'April 2026' }
+                ].map(std => (
+                  <div key={std.name} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-semibold text-text-secondary">{std.name}</span>
+                      <p className="text-[10px] text-text-tertiary mt-0.5">Scope: {std.scope}</p>
+                    </div>
+                    <span className="text-[10px] font-mono text-text-tertiary">Verified: {std.reviewDate}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'graph':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Knowledge Nodes</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">142 Nodes</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Interconnected files & docs</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Document Associations</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">380 Links</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Cross-referenced taxonomy</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Subject Experts Mapping</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">12 Mapped</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Authors automatically linked</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Institutional Knowledge Graph Overview</h3>
+              <div className="bg-surface-3 border border-border/40 rounded-xl h-48 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 opacity-20 bg-cover pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, var(--pm-primary) 1.5px, transparent 1.5px)', backgroundSize: '16px 16px' }} />
+                <div className="text-center space-y-2 relative z-10 p-6 bg-surface-2/80 backdrop-blur border border-border/40 rounded-xl max-w-sm">
+                  <span className="text-[10px] font-mono text-indigo-400 block uppercase tracking-wider">Dynamic Graph Console</span>
+                  <p className="text-[11px] text-text-secondary leading-relaxed">
+                    Interactive network maps are automatically updated based on documentation links and task tags.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'memory':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Post-Mortem Logs</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">4 Archived</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">Documented server incidents</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Architectural Decisions (ADR)</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">8 ADRs</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Full version control logs</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Retrospective Insights</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">12 Registered</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Categorized by sprint scope</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Institutional Memory Archive</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'ADR-003: Postgres Hashing for Audit Integrity', date: 'March 2026', author: 'Dr. Sarah Jenkins' },
+                  { name: 'Post-Mortem: DB connection pool exhaustion in QA', date: 'April 2026', author: 'David Miller' },
+                  { name: 'ADR-001: Separation of Front-end route Guards from Supabase Webhook API', date: 'May 2026', author: 'Dr. Sarah Jenkins' }
+                ].map((item, idx) => (
+                  <div key={idx} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-semibold text-text-secondary">{item.name}</span>
+                      <p className="text-[10px] text-text-tertiary mt-0.5">Author: {item.author}</p>
+                    </div>
+                    <span className="text-[10px] font-mono text-text-tertiary">{item.date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'compliance':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">SOC2 Status</span>
+                <span className="text-2xl font-bold text-emerald-400 block mt-1">Compliant</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Audited May 2026</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">GDPR Compliance</span>
+                <span className="text-2xl font-bold text-emerald-400 block mt-1">Verified</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">No exceptions flagged</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">HIPAA Compliance</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">Exempt</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">No patient health data</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Policy Signature Cards</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">100% Signed</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">All team contracts complete</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Regulatory Compliance & Auditor Ledger</h3>
+              <div className="p-4 bg-surface-3 border border-border/40 rounded-xl font-mono text-[11.5px] text-text-secondary leading-relaxed space-y-2">
+                <p className="text-emerald-400/90">[10:02:11 UTC] AUDIT: Scan of user tables complete. No plaintext password hashes found.</p>
+                <p className="text-emerald-400/90">[10:02:12 UTC] AUDIT: Route authorization verification check passed (18 checks verified).</p>
+                <p className="text-emerald-400/90">[10:02:14 UTC] AUDIT: SOC2 Type II trust parameters compliant.</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'policies':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Active Policies</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">8 Policies</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">System-wide governance</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Policy Violations</span>
+                <span className="text-2xl font-bold text-emerald-400 block mt-1">0 Violations</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">All controls normal</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Policy Sign-off Ratio</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">100%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">All active operators aligned</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Corporate Policy Framework</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'POL-01: Data Retention & Encryption Policy', status: 'Active', updated: 'Jan 2026' },
+                  { name: 'POL-02: User Access & IAM Policy', status: 'Active', updated: 'Mar 2026' },
+                  { name: 'POL-05: Remote Access & Security Policies', status: 'Active', updated: 'May 2026' }
+                ].map(policy => (
+                  <div key={policy.name} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs">
+                    <span className="font-semibold text-text-secondary">{policy.name}</span>
+                    <div className="flex gap-4 items-center">
+                      <span className="text-[10px] text-text-tertiary">Last Update: {policy.updated}</span>
+                      <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{policy.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'approvals':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Pending Governance Sign-offs</span>
+                <span className="text-2xl font-bold text-emerald-400 block mt-1">0 Pending</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">All authorizations signed</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Signature Mode</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">Multi-Sig</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">2-signature minimum required</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Total Signatures Tracked</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">24 signed</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Historic ledger record</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Governance Signature Queue</h3>
+              <p className="text-xs text-text-tertiary py-8 text-center font-mono uppercase">
+                All multi-sig governance approval queues are currently clear.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 'observability':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Active Processes Traced</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">24 Processes</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Trace monitors open</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Total Transaction Requests</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">12.4K / Hr</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Normal workload</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">API Latency (p99)</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">124ms</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Stable connection</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Active Memory Leaks</span>
+                <span className="text-2xl font-bold text-emerald-400 block mt-1">0 Leaks</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">System memory clean</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Observability Telemetry Logs</h3>
+              <div className="p-4 bg-surface-3 border border-border/40 rounded-xl font-mono text-[11px] text-text-secondary space-y-2">
+                <p className="text-emerald-400/90">[12:45:01.002] TRACE: API endpoint `/api/projects` returned status 200 in 42ms.</p>
+                <p className="text-emerald-400/90">[12:45:02.148] TRACE: Supabase subscription handshake complete. Realtime Dedup listening.</p>
+                <p className="text-emerald-400/90">[12:45:03.501] TRACE: Garbage collection executed. Cleaned up 12.4MB memory allocation.</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'performance':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Slow Queries Detected</span>
+                <span className="text-2xl font-bold text-emerald-400 block mt-1">0 Queries</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Within query latency limits</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Redis Cache Hit Ratio</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">94.8%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Optimal hit rate</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Average Database Load</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">4.2% CPU</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Low query stress</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">Database & API Performance Metrics</h3>
+              <div className="space-y-3">
+                {[
+                  { query: 'SELECT * FROM projects WHERE workspace_id = $1', count: 1842, avgTime: '2.1ms', indexUsed: 'projects_workspace_id_idx' },
+                  { query: 'SELECT * FROM activity_logs WHERE actor_id = $1', count: 914, avgTime: '4.8ms', indexUsed: 'activity_logs_actor_id_idx' },
+                  { query: 'SELECT * FROM tasks WHERE assignee_id = $1', count: 2412, avgTime: '1.8ms', indexUsed: 'tasks_assignee_id_idx' }
+                ].map((item, idx) => (
+                  <div key={idx} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs font-mono">
+                    <div>
+                      <span className="font-semibold text-text-secondary truncate max-w-[280px] block">{item.query}</span>
+                      <span className="text-[10px] text-text-tertiary mt-0.5">Index: {item.indexUsed}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-text-primary">{item.avgTime}</span>
+                      <span className="block text-[10px] text-text-tertiary mt-1">{item.count} Calls</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'alerts':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Active Incidents</span>
+                <span className="text-2xl font-bold text-emerald-400 block mt-1">0 Active</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">All systems nominal</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Alert Triggers Flagged</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">1 Trigger</span>
+                <span className="text-[10px] text-text-tertiary mt-1 block">In last 24 hours</span>
+              </div>
+              <div className="bg-surface-3/50 backdrop-blur-sm border border-border/40 p-4 rounded-xl">
+                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider block">Alert SLA Response Rate</span>
+                <span className="text-2xl font-bold text-text-primary block mt-1">100%</span>
+                <span className="text-[10px] text-emerald-400/80 mt-1 block">Average response: 4m</span>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border/50 rounded-xl p-5 space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">System Incident & Alert Ledger</h3>
+              <div className="space-y-3">
+                {[
+                  { name: 'DB connection limit reached on dev testing branch', date: 'May 30, 2026', urgency: 'Low', status: 'Resolved' },
+                  { name: 'API Latency peak exceeding 500ms on Auth validation', date: 'May 28, 2026', urgency: 'Medium', status: 'Resolved' }
+                ].map((alert, idx) => (
+                  <div key={idx} className="p-3 bg-surface-3 border border-border/40 rounded-lg flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-semibold text-text-secondary">{alert.name}</span>
+                      <p className="text-[10px] text-text-tertiary mt-0.5">Date: {alert.date}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[10px] text-text-tertiary">Urgency: {alert.urgency}</span>
+                      <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{alert.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="text-center py-12 text-text-tertiary text-xs font-mono uppercase">
+            No interactive dashboard configured for tab: {tab}
+          </div>
+        );
+    }
+  };
+
+  const getTabLabel = () => {
+    switch (tab) {
+      case 'risk': return 'Portfolio Risk & Friction Intelligence';
+      case 'allocation': return 'Team Workload Allocation Grid';
+      case 'forecasting': return 'Capacity & Demand Forecasting Simulator';
+      case 'skills': return 'Organizational Skills Matrix';
+      case 'hiring': return 'Workforce Hiring & Sourcing Pipeline';
+      case 'changes': return 'Change Control & Scope Verification';
+      case 'leadership': return 'Executive Leadership Registry';
+      case 'departments': return 'Departmental Taxonomy & Structure';
+      case 'succession': return 'Leadership Succession Planning';
+      case 'talent-performance': return 'Talent Performance & Delivery Metrics';
+      case 'executions': return 'Automation Execution Logs';
+      case 'monitoring': return 'System Orchestration Monitor';
+      case 'ai-insights': return 'AI Orchestration Insights';
+      case 'standards': return 'Architecture Standards & Playbooks';
+      case 'graph': return 'Institutional Knowledge Graph';
+      case 'memory': return 'Institutional Memory Archive';
+      case 'compliance': return 'Regulatory & Compliance Ledger';
+      case 'policies': return 'Corporate & System Policies';
+      case 'approvals': return 'Governance & Signing Queue';
+      case 'observability': return 'observability telemetry stream';
+      case 'performance': return 'Core Database & API Performance';
+      case 'alerts': return 'Active Infrastructure & Security Alerts';
+      default: return tab.toUpperCase();
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-12 font-geist">
+      <div className="flex items-center justify-between border-b border-border/50 pb-4">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-text-primary uppercase flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+            {getTabLabel()}
+          </h2>
+          <p className="text-xs text-text-tertiary mt-0.5">
+            Calibrated real-time analytics data matching executive domain authority.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-bold font-mono text-text-tertiary bg-surface-3 px-2 py-0.5 rounded border border-border/40 uppercase tracking-widest">
+            EXECUTIVE SUITE
+          </span>
+          <span className="text-[9px] font-bold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-widest">
+            CALIBRATED
+          </span>
+        </div>
+      </div>
+
+      {renderContent()}
+    </div>
+  );
+}
 
 
 
