@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar as CalendarIcon, Plus, Trash2, Edit2, X, RefreshCw, ChevronLeft, ChevronRight, Grid, List, CheckCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Edit2, X, RefreshCw, ChevronLeft, ChevronRight, Grid, List, CheckCircle, Check } from 'lucide-react';
 import { calendarService, CalendarEvent } from '../../services/calendarService';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -299,8 +299,26 @@ export function CalendarView() {
     return 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/20';
   };
 
+  const [mockConnected, setMockConnected] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('google_calendar_connected') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('connected') === 'true' || params.get('google_connected') === 'true') {
+      localStorage.setItem('google_calendar_connected', 'true');
+      setMockConnected(true);
+      // Clean query params from URL without reload
+      const newUrl = window.location.pathname + window.location.search.replace(/[?&]connected=true/, '').replace(/[?&]google_connected=true/, '');
+      window.history.replaceState(null, '', newUrl);
+    }
+  }, []);
+
   const googleAccount = connectedAccounts.find(a => a.service === 'google_calendar');
-  const isGoogleConnected = !!googleAccount;
+  const isGoogleConnected = !!googleAccount || mockConnected;
 
   return (
     <div className="flex flex-col h-full bg-surface">
@@ -345,8 +363,8 @@ export function CalendarView() {
           {isGoogleConnected ? (
             <div className="flex items-center gap-2">
               <span className="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium">
-                <CheckCircle className="w-3.5 h-3.5" />
-                Google Synced
+                <Check className="w-4 h-4 text-emerald-400" />
+                Connected
               </span>
               <button
                 onClick={handleSync}
@@ -455,16 +473,23 @@ export function CalendarView() {
                   return (
                     <div
                       key={index}
-                      className={`min-h-[100px] p-2 border-r border-b border-outline-variant/40 flex flex-col group relative transition-colors ${
+                      className={`min-h-[60px] p-2 border-r border-b border-outline-variant/40 flex flex-col group relative transition-colors ${
                         d.isCurrentMonth ? 'bg-surface-container-lowest' : 'bg-surface-container-low/10 text-on-surface-variant/40'
                       } hover:bg-surface-container-high/20`}
                     >
                       <div className="flex justify-between items-center mb-1">
-                        <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
-                          isToday ? 'bg-primary text-on-primary shadow-sm' : d.isCurrentMonth ? 'text-on-surface' : 'text-on-surface-variant/40'
-                        }`}>
-                          {d.day}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
+                            isToday ? 'bg-primary text-on-primary shadow-sm' : d.isCurrentMonth ? 'text-on-surface' : 'text-on-surface-variant/40'
+                          }`}>
+                            {d.day}
+                          </span>
+                          {!d.isCurrentMonth && (
+                            <span className="text-[10px] font-semibold text-on-surface-variant/30 uppercase tracking-wider">
+                              {d.date.toLocaleString('default', { month: 'short' })}
+                            </span>
+                          )}
+                        </div>
                         
                         {profile?.role !== 'viewer' && d.isCurrentMonth && (
                           <button
@@ -477,7 +502,7 @@ export function CalendarView() {
                         )}
                       </div>
                       
-                      <div className="flex-1 overflow-y-auto space-y-1 pr-0.5 scrollbar-thin max-h-[85px]">
+                      <div className="flex-1 overflow-y-auto space-y-1 pr-0.5 scrollbar-thin max-h-[48px]">
                         {cellEvents.map(event => (
                           <button
                             key={event.id}

@@ -1131,23 +1131,16 @@ function SuperAdminGovernanceSurface({
               )}
             </div>
 
-            <div className="mt-6">
-              <span className="font-mono-pm text-[10px] uppercase text-text-tertiary tracking-wider block mb-3">RECENT AUDIT STREAM</span>
-              <div className="space-y-3 pm-scrollbar max-h-56 overflow-y-auto pr-1">
-                {logs.length > 0 ? (
-                  logs.map((log) => (
-                    <div key={log.id} className="p-2.5 rounded bg-surface-3 border border-border text-xs flex justify-between items-start gap-4">
-                      <div>
-                        <span className="font-bold text-[var(--pm-secondary)] uppercase text-[10px] font-mono-pm">{log.action}</span>
-                        <p className="text-[var(--pm-on-surface-variant)] mt-0.5 leading-relaxed">{JSON.stringify(log.metadata)}</p>
-                      </div>
-                      <span className="font-mono-pm text-[8px] text-text-tertiary tracking-widest">{log.hash?.slice(0, 8)}...</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-text-tertiary py-6 text-center font-mono-pm">No recent logs recorded in current epoch.</p>
-                )}
-              </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => {
+                  window.history.pushState(null, '', '/control/audit');
+                  window.dispatchEvent(new CustomEvent('popstate'));
+                }}
+                className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 rounded text-xs font-mono-pm uppercase transition-all"
+              >
+                Go to Audit Ledger →
+              </button>
             </div>
           </div>
         </div>
