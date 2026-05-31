@@ -86,13 +86,27 @@ export function CalendarView() {
     }
   }, [workspace?.id]);
 
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data === 'google_calendar_connected') {
+        fetchAccounts();
+        fetchEvents();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   const handleConnect = () => {
-    // Enable local/mock connection state immediately
-    localStorage.setItem('google_calendar_connected', 'true');
-    setMockConnected(true);
-    notifyToast('Google Calendar connected successfully.', 'success');
-    fetchEvents();
-    fetchAccounts();
+    const width = 500;
+    const height = 600;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+    window.open(
+      calendarService.getAuthUrl(),
+      'Google Calendar Auth',
+      `width=${width},height=${height},left=${left},top=${top}`
+    );
   };
 
   const handleSync = async () => {
