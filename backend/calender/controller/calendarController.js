@@ -13,6 +13,7 @@ const SCOPES = ['https://www.googleapis.com/auth/calendar.app.created'];
 exports.googleAuth = async (req, res) => {
     const authUrl = oAuth2Client.generateAuthUrl({
         access_type: 'offline',
+        prompt: 'consent',
         scope: SCOPES,
         state: req.user.id
     });
@@ -41,14 +42,18 @@ exports.googleAuthCallback = async (req, res) => {
             googleCalendarId = newCal.data.id;
         }
 
+        const updateData = {
+            googleAccessToken: tokens.access_token,
+            googleTokenExpiry: tokens.expiry_date,
+            googleCalendarId
+        };
+        if (tokens.refresh_token) {
+            updateData.googleRefreshToken = tokens.refresh_token;
+        }
+
         await UserIntegration.findOneAndUpdate(
             { userId },
-            {
-                googleAccessToken: tokens.access_token,
-                googleRefreshToken: tokens.refresh_token,
-                googleTokenExpiry: tokens.expiry_date,
-                googleCalendarId
-            },
+            updateData,
             { upsert: true, new: true }
         );
 

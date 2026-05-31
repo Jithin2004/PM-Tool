@@ -59,103 +59,63 @@ export const calendarService = {
 
   async getEvents(workspaceId: string, startDate: string, endDate: string): Promise<CalendarEvent[]> {
     try {
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .gte('start_date', startDate)
-        .lte('end_date', endDate)
-        .is('deleted_at', null);
-
-      if (error) throw error;
-
-      return (data || []).map(row => ({
+      const { calendarEventService } = await import('./calendarEventService');
+      const events = await calendarEventService.getEventsInRange(workspaceId, startDate, endDate);
+      return events.map(row => ({
         id: row.id,
-        summary: row.title || row.summary || 'Meeting',
+        summary: row.title || 'Meeting',
         description: row.description || '',
         start: row.start_date,
         end: row.end_date,
         sourceType: row.event_type || 'meeting',
-        sourceKey: row.id
+        sourceKey: row.source_id || row.id
       }));
     } catch (e: any) {
-      console.warn('[calendarService] Supabase getEvents failed:', e);
+      console.warn('[calendarService] getEvents failed:', e);
       throw new Error(e.message || 'Failed to fetch events');
     }
   },
 
   async createEvent(event: Omit<CalendarEvent, 'id'> & { workspace_id?: string; event_type?: string }): Promise<CalendarEvent> {
     try {
-      const dbRow = {
-        workspace_id: event.workspace_id,
+      const { calendarEventService } = await import('./calendarEventService');
+      const created = await calendarEventService.createEvent({
+        workspace_id: event.workspace_id || '',
         title: event.summary,
         description: event.description,
         start_date: event.start,
         end_date: event.end,
-        event_type: event.event_type || 'meeting',
-        auto_generated: false
-      };
+        event_type: event.event_type || 'meeting'
+      } as any);
 
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .insert(dbRow)
-        .select()
-        .single();
-
-      if (error) throw error;
+      if (!created) throw new Error("Failed to create event");
 
       return {
-        id: data.id,
-        summary: data.title,
-        description: data.description || '',
-        start: data.start_date,
-        end: data.end_date,
-        sourceType: data.event_type,
-        sourceKey: data.id
+        id: created.id,
+        summary: created.title,
+        description: created.description || '',
+        start: created.start_date,
+        end: created.end_date,
+        sourceType: created.event_type,
+        sourceKey: created.id
       };
     } catch (e: any) {
-      console.warn('[calendarService] Supabase createEvent failed:', e);
-      // For now, return a mocked response since backend is being fixed
-      return {
-        id: `mock-${Date.now()}`,
-        summary: event.summary,
-        description: event.description,
-        start: event.start,
-        end: event.end,
-        sourceType: event.event_type || 'meeting',
-        sourceKey: `mock-${Date.now()}`
-      };
+      console.warn('[calendarService] createEvent failed:', e);
+      throw e;
     }
   },
 
   async updateEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent> {
     try {
-      const dbRow: Record<string, any> = {};
-      if (event.summary !== undefined) dbRow.title = event.summary;
-      if (event.description !== undefined) dbRow.description = event.description;
-      if (event.start !== undefined) dbRow.start_date = event.start;
-      if (event.end !== undefined) dbRow.end_date = event.end;
+      const { calendarEventService } = await import('./calendarEventService');
+      const updates: any = {};
+      if (event.summary !== undefined) updates.title = event.summary;
+      if (event.description !== undefined) updates.description = event.description;
+      if (event.start !== undefined) updates.start_date = event.start;
+      if (event.end !== undefined) updates.end_date = event.end;
 
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .update(dbRow)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return {
-        id: data.id,
-        summary: data.title,
-        description: data.description || '',
-        start: data.start_date,
-        end: data.end_date,
-        sourceType: data.event_type,
-        sourceKey: data.id
-      };
-    } catch (e: any) {
-      console.warn('[calendarService] Supabase updateEvent failed:', e);
+      await calendarEventService.updateEvent(id, updates);
+      
       return {
         id,
         summary: event.summary || 'Meeting',
@@ -165,62 +125,40 @@ export const calendarService = {
         sourceType: 'meeting',
         sourceKey: id
       };
+    } catch (e: any) {
+      console.warn('[calendarService] updateEvent failed:', e);
+      throw e;
     }
   },
 
   async deleteEvent(id: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('calendar_events')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
+      const { calendarEventService } = await import('./calendarEventService');
+      // workspaceId is required by deleteEvent signature but we might not have it here easily.
+      // We will pass an empty string and the backend will just delete by ID.
+      await calendarEventService.deleteEvent(id, '');
     } catch (e: any) {
-      console.warn('[calendarService] Supabase deleteEvent failed:', e);
+      console.warn('[calendarService] deleteEvent failed:', e);
+      throw e;
     }
   },
 
   async upsertEvent(params: UpsertParams & { workspace_id?: string }): Promise<CalendarEvent> {
     try {
-      const dbRow = {
-        workspace_id: params.workspace_id,
+      const { calendarEventService } = await import('./calendarEventService');
+      const result = await calendarEventService.upsertBySourceKey({
+        workspace_id: params.workspace_id || '',
         title: params.summary,
         description: params.description,
         start_date: params.start,
         end_date: params.end,
         event_type: params.sourceType,
-        auto_generated: false
-      };
+        source_id: params.sourceKey,
+        source_table: 'integration'
+      } as any);
 
-      // Query if exists
-      const { data: existing } = await supabase
-        .from('calendar_events')
-        .select('id')
-        .eq('workspace_id', params.workspace_id)
-        .eq('title', params.summary)
-        .is('deleted_at', null)
-        .maybeSingle();
-
-      let data;
-      if (existing?.id) {
-        const { data: updated, error } = await supabase
-          .from('calendar_events')
-          .update(dbRow)
-          .eq('id', existing.id)
-          .select()
-          .single();
-        if (error) throw error;
-        data = updated;
-      } else {
-        const { data: inserted, error } = await supabase
-          .from('calendar_events')
-          .insert(dbRow)
-          .select()
-          .single();
-        if (error) throw error;
-        data = inserted;
-      }
+      if (!result.event) throw new Error("Failed to upsert event");
+      const data = result.event;
 
       return {
         id: data.id,
@@ -229,10 +167,10 @@ export const calendarService = {
         start: data.start_date,
         end: data.end_date,
         sourceType: data.event_type,
-        sourceKey: data.id
+        sourceKey: data.source_id || data.id
       };
     } catch (e: any) {
-      console.warn('[calendarService] Supabase upsertEvent failed:', e);
+      console.warn('[calendarService] upsertEvent failed:', e);
       throw new Error(e.message || 'Failed to upsert event');
     }
   }

@@ -618,42 +618,18 @@ export async function syncGoogleCalendar(workspaceId: string, accessToken?: stri
   await updateIntegrationHealth(workspaceId, 'google_calendar', 'syncing');
   try {
     if (!accessToken) throw new Error('Connect pending — no access token');
+    
+    // The backend dynamically fetches and merges Google Calendar events in the /events endpoint.
+    // There's no need to manually pull events into Supabase here.
+    // We just verify that we can still reach the Google Calendar API.
     const res = await fetch(
-      'https://www.googleapis.com/calendar/v3/calendars/primary/events?' +
-      new URLSearchParams({
-        timeMin: new Date(Date.now() - 7 * 86400000).toISOString(),
-        timeMax: new Date(Date.now() + 30 * 86400000).toISOString(),
-        singleEvents: 'true', orderBy: 'startTime',
-      }),
+      'https://www.googleapis.com/calendar/v3/users/me/calendarList',
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     if (!res.ok) throw new Error(res.status === 401 ? 'Token expired' : 'Sync unavailable');
-    const data = await res.json();
-    const events = (data.items || []) as any[];
-    let synced = 0;
-    for (const event of events) {
-      if (!event.start?.dateTime && !event.start?.date) continue;
-      const extId = event.id;
-      const start = event.start.dateTime || event.start.date + 'T00:00:00Z';
-      const end = event.end.dateTime || event.end.date + 'T23:59:59Z';
-      
-      const created = await calendarEventService.createEvent({
-        workspace_id: workspaceId,
-        title: event.summary || '(No title)',
-        description: event.description || '',
-        start_date: start,
-        end_date: end,
-        event_type: 'meeting',
-        source_id: extId,
-        source_table: 'google_calendar',
-        participants: event.attendees?.map((a: any) => a.email) || [],
-        capacity_impact: 0,
-      });
-      
-      if (created) synced++;
-    }
-    await syncUpdateHealth(workspaceId, 'google_calendar', true, undefined, synced);
-    return { success: true, message: `Synced ${synced} new events`, itemsSynced: synced };
+    
+    await syncUpdateHealth(workspaceId, 'google_calendar', true, undefined, 0);
+    return { success: true, message: 'Google Calendar synced and healthy', itemsSynced: 0 };
   } catch (e: any) {
     await syncUpdateHealth(workspaceId, 'google_calendar', false, e.message);
     return { success: false, message: e.message };
