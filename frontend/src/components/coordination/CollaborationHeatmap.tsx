@@ -117,14 +117,14 @@ export function CollaborationHeatmap({ signals }: CollaborationHeatmapProps) {
 
   return (
     <div className="space-y-1.5">
-      <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold pb-1 border-b border-gray-100">
+      <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase tracking-wider font-semibold pb-1 border-b border-gray-100">
         collaboration activity
       </div>
 
       <div className="grid grid-cols-[auto_repeat(4,_1fr)] gap-px">
-        <div className="text-[9px] text-gray-300 pr-2" />
+        <div className="text-[9px] text-gray-700 dark:text-gray-300 pr-2" />
         {TIME_BUCKETS.map(b => (
-          <div key={b} className="text-[9px] text-gray-400 text-center" title={BUCKET_RANGES[b]}>
+          <div key={b} className="text-[9px] text-gray-600 dark:text-gray-400 text-center" title={BUCKET_RANGES[b]}>
             {b.slice(0, 3)}
           </div>
         ))}

@@ -263,10 +263,10 @@ body {
   color: var(--text-primary) !important;
 
   /* Design token variables — Executive Warm Light Theme */
-  --bg: #F4F2EE; /* Sand/Paper Background */
-  --surface: #ECE8E1; /* Stone Sidebar */
-  --surface-2: #FBFAF8; /* Ivory Cards */
-  --surface-3: #F1EEE8; /* Warm Secondary Surface */
+  --bg: #F8F7F4; /* Sand/Paper Background */
+  --surface: #F2EEE8; /* Stone Sidebar */
+  --surface-2: #FFFFFF; /* Ivory Cards */
+  --surface-3: #F8FAFC; /* Warm Secondary Surface */
   
   --border: #D8D1C7; /* Subtle Outline */
   --border-subtle: #ECE8E1; /* Stone Subtler Outline */
@@ -300,117 +300,28 @@ body {
   background: rgba(15, 23, 42, 0.2);
 }
 
-.light .bg-\[\#0a0a0a\] {
-  background-color: #f6f8fb !important;
-}
-
-.light .bg-\[\#0c0c0c\] {
-  background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-}
-
-.light .bg-\[\#0c0c0c\]\/80 {
-  background-color: rgba(255, 255, 255, 0.85) !important;
-  border-color: #e2e8f0 !important;
-}
-
-.light .bg-\[\#0f0f0f\] {
-  background-color: #f1f5f9 !important;
-}
-
-.light .bg-black {
-  background-color: #ffffff !important;
-  color: #1f2937 !important;
-  border-color: #e2e8f0 !important;
-}
-
-.light .bg-black\/40 {
-  background-color: rgba(15, 23, 42, 0.03) !important;
-}
-
-.light .bg-white\/5 {
-  background-color: rgba(15, 23, 42, 0.03) !important;
-}
-
-.light .bg-white\/10 {
-  background-color: rgba(15, 23, 42, 0.05) !important;
-}
-
-.light .text-white {
-  color: #1f2937 !important;
-}
-
-.light .text-white\/90,
-.light .text-white\/85,
-.light .text-white\/80 {
-  color: #1f2937 !important;
-}
-
-.light .text-white\/75,
-.light .text-white\/70,
-.light .text-white\/60 {
-  color: #4b5563 !important;
-}
-
-.light .text-white\/50,
-.light .text-white\/40 {
-  color: #6b7280 !important;
-}
-
-.light .border-white\/10 {
-  border-color: #e2e8f0 !important;
-}
-
-.light .border-white\/5 {
-  border-color: #f1f5f9 !important;
-}
-
-.light .border-white\/20 {
-  border-color: #cbd5e1 !important;
-}
-
-.light .border-white\/30 {
-  border-color: #cbd5e1 !important;
-}
-
 /* Modals background adjustment */
-.light .bg-\[\#0a0a0a\]\/95 {
-  background-color: rgba(246, 248, 251, 0.95) !important;
-}
-
-.light .bg-\[\#0a0a0a\]\/90 {
-  background-color: rgba(246, 248, 251, 0.9) !important;
-}
-
-.light .bg-\[\#0a0a0a\]\/98 {
-  background-color: rgba(246, 248, 251, 0.98) !important;
-}
-
-.light .bg-black\/80 {
-  background-color: rgba(15, 23, 42, 0.4) !important;
-}
+/* Removed hardcoded dark class overrides to enable true light mode */
 
 /* Specific buttons theme */
-.light .bg-white {
-  background-color: #1f2937 !important;
-  color: #ffffff !important;
-  border-color: #1f2937 !important;
-}
+/* Removed hardcoded dark class overrides to enable true light mode */
 
-.light .text-black {
-  color: #ffffff !important;
+/* Section Identities */
+.light .section-core, .light [data-section="core"] {
+  --tint: #EDF4FF;
+  --accent: #2563EB;
 }
-
-.light .hover\:bg-neutral-200:hover {
-  background-color: #374151 !important;
+.light .section-intelligence, .light [data-section="intelligence"] {
+  --tint: #ECFEFF;
+  --accent: #0F766E;
 }
-
-.light .shadow-white\/5 {
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04) !important;
+.light .section-resources, .light [data-section="resources"] {
+  --tint: #FFFBEB;
+  --accent: #B45309;
 }
-
-.light input::placeholder {
-  color: #94a3b8 !important;
+.light .section-governance, .light [data-section="governance"] {
+  --tint: #FFF1F2;
+  --accent: #BE123C;
 }
 
 /* ================================================================
@@ -618,14 +529,14 @@ body {
 
 .light {
   /* PM Color Tokens (Light Mode Overrides - Executive Warm) */
-  --pm-bg:                    #F4F2EE;
-  --pm-surface-lowest:        #E5E0D8;
-  --pm-surface-low:           #ECE8E1;
-  --pm-surface:               #F4F2EE;
-  --pm-surface-high:          #FBFAF8;
+  --pm-bg:                    #F8F7F4;
+  --pm-surface-lowest:        #F8F7F4;
+  --pm-surface-low:           #F2EEE8;
+  --pm-surface:               #FFFFFF;
+  --pm-surface-high:          #F8FAFC;
   --pm-surface-highest:       #D8D1C7;
-  --pm-surface-bright:        #FBFAF8;
-  --pm-surface-variant:       #F1EEE8;
+  --pm-surface-bright:        #FFFFFF;
+  --pm-surface-variant:       #FFFFFF;
 
   --pm-on-surface:            #1F2937;
   --pm-on-surface-variant:    #6B7280;

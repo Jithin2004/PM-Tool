@@ -128,7 +128,7 @@ export function CompletionFeedbackModal({ task, onSubmit, onSkip, onClose }: Com
           <button
             onClick={() => canSubmit && onSubmit({ actual_effort: Number(actualEffort), deviation_reason: deviationReason, blockers, lessons_learned: lessonsLearned })}
             disabled={!canSubmit}
-            className={`flex-1 h-12 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg ${canSubmit ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white hover:from-emerald-500 hover:to-teal-400 hover:shadow-emerald-500/25' : 'bg-surface-3/50 border border-border/50 text-text-quaternary cursor-not-allowed shadow-none'}`}
+            className={`flex-1 h-12 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg ${canSubmit ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-gray-900 dark:text-white hover:from-emerald-500 hover:to-teal-400 hover:shadow-emerald-500/25' : 'bg-surface-3/50 border border-border/50 text-text-quaternary cursor-not-allowed shadow-none'}`}
           >
             Submit Report
           </button>

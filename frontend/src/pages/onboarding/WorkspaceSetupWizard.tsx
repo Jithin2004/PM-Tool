@@ -340,10 +340,10 @@ export function WorkspaceSetupWizard() {
           <div className="mt-8 flex justify-between">
             <button disabled={step === 1 || selectedTemplate !== null} onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded border border-border/50 disabled:opacity-50 transition-colors">Back</button>
             {step < 7 ? (
-              <button disabled={selectedTemplate !== null || (step === 1 && !name.trim())} onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded bg-[var(--pm-primary)] text-white disabled:opacity-50 disabled:bg-surface-4 transition-colors">Next</button>
+              <button disabled={selectedTemplate !== null || (step === 1 && !name.trim())} onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded bg-[var(--pm-primary)] text-gray-900 dark:text-white disabled:opacity-50 disabled:bg-surface-4 transition-colors">Next</button>
             ) : (
-              <button onClick={handleFinish} disabled={loading || selectedTemplate !== null} className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2 disabled:opacity-50 disabled:bg-surface-4 transition-colors font-medium">
-                {loading ? 'Building...' : 'Complete Setup'} <Zap className="w-4 h-4 fill-white text-white" />
+              <button onClick={handleFinish} disabled={loading || selectedTemplate !== null} className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-gray-900 dark:text-white flex items-center gap-2 disabled:opacity-50 disabled:bg-surface-4 transition-colors font-medium">
+                {loading ? 'Building...' : 'Complete Setup'} <Zap className="w-4 h-4 fill-white text-gray-900 dark:text-white" />
               </button>
             )}
           </div>
@@ -391,19 +391,19 @@ export function WorkspaceSetupWizard() {
                       <div className="grid grid-cols-2 gap-y-3 gap-x-2">
                         <div className="text-xs">
                            <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Projects</div>
-                           <div className="font-semibold text-white mt-0.5">{summary.projects}</div>
+                           <div className="font-semibold text-gray-900 dark:text-white mt-0.5">{summary.projects}</div>
                         </div>
                         <div className="text-xs">
                            <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Milestones</div>
-                           <div className="font-semibold text-white mt-0.5">{summary.milestones}</div>
+                           <div className="font-semibold text-gray-900 dark:text-white mt-0.5">{summary.milestones}</div>
                         </div>
                         <div className="text-xs">
                            <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Tasks</div>
-                           <div className="font-semibold text-white mt-0.5">{summary.tasks}</div>
+                           <div className="font-semibold text-gray-900 dark:text-white mt-0.5">{summary.tasks}</div>
                         </div>
                         <div className="text-xs">
                            <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Team Members</div>
-                           <div className="font-semibold text-white mt-0.5">{summary.members}</div>
+                           <div className="font-semibold text-gray-900 dark:text-white mt-0.5">{summary.members}</div>
                         </div>
                       </div>
                     </div>
@@ -437,7 +437,7 @@ export function WorkspaceSetupWizard() {
               <button
                 onClick={() => { setSelectedTemplate(null); setName(''); }}
                 disabled={demoLoading}
-                className="w-full p-3 rounded-xl font-medium text-sm text-[var(--pm-on-surface-variant)] hover:text-white hover:bg-surface-4 border border-transparent transition-colors flex justify-center items-center gap-2"
+                className="w-full p-3 rounded-xl font-medium text-sm text-[var(--pm-on-surface-variant)] hover:text-gray-900 dark:text-white hover:bg-surface-4 border border-transparent transition-colors flex justify-center items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" /> Return to Manual Setup
               </button>

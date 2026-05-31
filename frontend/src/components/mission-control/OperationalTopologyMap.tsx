@@ -63,7 +63,7 @@ export function OperationalTopologyMap({ presences, signals, hotspots }: Operati
       </div>
 
       {hotspots.length > 0 && (
-        <div className="pt-1 border-t border-white/10">
+        <div className="pt-1 border-t border-gray-200 dark:border-white/10">
           <div className="text-[9px] text-text-secondary uppercase tracking-wider mb-1">hotspots</div>
           {hotspots.slice(0, 3).map(h => {
             let dotColor = 'bg-signal-warning';

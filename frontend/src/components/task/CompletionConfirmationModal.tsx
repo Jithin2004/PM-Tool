@@ -26,12 +26,12 @@ export function CompletionConfirmationModal({
   const isReady = activeWaitStates.length === 0 && unresolvedDependencies.length === 0;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-white dark:bg-black/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="bg-surface border border-white/10 p-8 rounded-2xl w-full max-w-md relative overflow-hidden shadow-2xl"
+        className="bg-surface border border-gray-200 dark:border-white/10 p-8 rounded-2xl w-full max-w-md relative overflow-hidden shadow-2xl"
       >
         <div className={`absolute top-0 left-0 right-0 h-[3px] ${isReady ? 'bg-emerald-500' : 'bg-red-500'}`} />
         
@@ -93,7 +93,7 @@ export function CompletionConfirmationModal({
           )}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-white/5 pt-5">
+        <div className="flex justify-end gap-3 border-t border-gray-100 dark:border-white/5 pt-5">
           <button
             onClick={onCancel}
             className="px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-white/5 rounded-lg transition-all cursor-pointer"
@@ -103,7 +103,7 @@ export function CompletionConfirmationModal({
           {isReady && (
             <button
               onClick={onConfirm}
-              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] cursor-pointer"
+              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-gray-900 dark:text-white text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] cursor-pointer"
             >
               <Play className="w-3.5 h-3.5" />
               Complete Task

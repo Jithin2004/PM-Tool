@@ -56,7 +56,7 @@ export function describeChannelState(state: ChannelState): { label: string; colo
     case 'connected': return { label: 'connected', color: 'text-emerald-400' };
     case 'degraded': return { label: 'degraded', color: 'text-orange-400' };
     case 'reconnecting': return { label: 'reconnecting', color: 'text-cyan-400' };
-    case 'ingestion_paused': return { label: 'ingestion paused', color: 'text-gray-400' };
+    case 'ingestion_paused': return { label: 'ingestion paused', color: 'text-gray-600 dark:text-gray-400' };
     case 'webhook_error': return { label: 'delivery error', color: 'text-red-400' };
   }
 }

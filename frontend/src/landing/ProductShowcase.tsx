@@ -67,8 +67,8 @@ export function ProductShowcase() {
       <div className="max-w-5xl mx-auto">
         {/* Section header */}
         <div className="text-center mb-20">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-white/30 mb-3">Platform Capabilities</p>
-          <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-white/80">
+          <p className="text-[10px] font-mono uppercase tracking-widest text-gray-900 dark:text-white/30 mb-3">Platform Capabilities</p>
+          <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-gray-900 dark:text-white/80">
             Everything you need to execute
           </h2>
         </div>
@@ -86,14 +86,14 @@ export function ProductShowcase() {
                 transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
               >
                 <div className="inline-flex items-center gap-2 px-2.5 py-1 border border-white/[0.06] bg-white/[0.02] mb-5">
-                  <slide.icon className="w-3 h-3 text-white/40" />
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">{slide.id}</span>
+                  <slide.icon className="w-3 h-3 text-gray-900 dark:text-white/40" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-gray-900 dark:text-white/40">{slide.id}</span>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-white/90 mb-3">{slide.title}</h3>
-                <p className="text-sm font-mono text-white/50 leading-relaxed mb-6">{slide.description}</p>
+                <h3 className="text-xl sm:text-2xl font-medium tracking-tight text-gray-900 dark:text-white/90 mb-3">{slide.title}</h3>
+                <p className="text-sm font-mono text-gray-900 dark:text-white/50 leading-relaxed mb-6">{slide.description}</p>
                 <ul className="space-y-2">
                   {slide.details.map(detail => (
-                    <li key={detail} className="flex items-center gap-2.5 text-[11px] font-mono text-white/40">
+                    <li key={detail} className="flex items-center gap-2.5 text-[11px] font-mono text-gray-900 dark:text-white/40">
                       <span className="w-1 h-1 bg-white/20" />
                       {detail}
                     </li>
@@ -111,11 +111,11 @@ export function ProductShowcase() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-                  className="aspect-[4/3] bg-[#0c0c0c] border border-white/10 flex items-center justify-center"
+                  className="aspect-[4/3] bg-[#FFFFFF] dark:bg-[#0c0c0c] border border-gray-200 dark:border-white/10 flex items-center justify-center"
                 >
                   <div className="text-center p-8">
-                    <slide.icon className="w-12 h-12 text-white/10 mx-auto mb-4" />
-                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/20">{slide.title}</p>
+                    <slide.icon className="w-12 h-12 text-gray-900 dark:text-white/10 mx-auto mb-4" />
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-gray-900 dark:text-white/20">{slide.title}</p>
                     <div className="mt-6 flex justify-center gap-2">
                       {[...Array(3)].map((_, i) => (
                         <div
@@ -148,16 +148,16 @@ export function ProductShowcase() {
               <button
                 onClick={prev}
                 disabled={current === 0}
-                className="p-2 border border-white/10 hover:bg-white/[0.04] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-2 border border-gray-200 dark:border-white/10 hover:bg-white/[0.04] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <ChevronLeft className="w-3.5 h-3.5 text-white/50" />
+                <ChevronLeft className="w-3.5 h-3.5 text-gray-900 dark:text-white/50" />
               </button>
               <button
                 onClick={next}
                 disabled={current === SLIDES.length - 1}
-                className="p-2 border border-white/10 hover:bg-white/[0.04] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-2 border border-gray-200 dark:border-white/10 hover:bg-white/[0.04] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <ChevronRight className="w-3.5 h-3.5 text-white/50" />
+                <ChevronRight className="w-3.5 h-3.5 text-gray-900 dark:text-white/50" />
               </button>
             </div>
           </div>

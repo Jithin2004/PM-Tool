@@ -1416,7 +1416,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <div className="absolute left-0 top-0 w-1 h-full bg-blue-500" />
                       <div>
                         <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">AI Suggestion</p>
-                        <p className="text-xs text-text-secondary">Team <strong className="text-white">{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
+                        <p className="text-xs text-text-secondary">Team <strong className="text-gray-900 dark:text-white">{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
                       </div>
                       <button
                         type="button"
@@ -1457,21 +1457,21 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     <div className="space-y-3">
                       <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionInfra ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
-                          {frictionInfra && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {frictionInfra && <svg className="w-3.5 h-3.5 text-gray-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" checked={frictionInfra} onChange={e => setFrictionInfra(e.target.checked)} className="hidden" />
                         <span>Client Infrastructure Access Lag</span>
                       </label>
                       <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionData ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
-                          {frictionData && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {frictionData && <svg className="w-3.5 h-3.5 text-gray-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" checked={frictionData} onChange={e => setFrictionData(e.target.checked)} className="hidden" />
                         <span>External Data Provisioning Delay</span>
                       </label>
                       <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionSla ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
-                          {frictionSla && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {frictionSla && <svg className="w-3.5 h-3.5 text-gray-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" checked={frictionSla} onChange={e => setFrictionSla(e.target.checked)} className="hidden" />
                         <span>Third-Party SLA / Compliance Review</span>
@@ -1504,7 +1504,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   <div className="flex gap-4 pt-4">
                     <button
                       type="submit"
-                      className="flex-[2] bg-teal-500 text-white h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-teal-400 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(20,184,166,0.3)]"
+                      className="flex-[2] bg-teal-500 text-gray-900 dark:text-white h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-teal-400 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(20,184,166,0.3)]"
                     >
                       Commit Project
                     </button>

@@ -31,7 +31,7 @@ export function ContextPresenceBar({ presences, signals, summary }: ContextPrese
           </div>
         ))}
         {activePresences.length > 6 && (
-          <span className="text-gray-400">+{activePresences.length - 6}</span>
+          <span className="text-gray-600 dark:text-gray-400">+{activePresences.length - 6}</span>
         )}
       </div>
     </div>

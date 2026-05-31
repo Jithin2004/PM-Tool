@@ -65,7 +65,7 @@ export function Login() {
               </p>
               
               <div className="flex flex-col gap-3">
-                <a href="/activate" className="w-full bg-accent-primary hover:bg-accent-primary/90 text-white h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all shadow-sm">
+                <a href="/activate" className="w-full bg-accent-primary hover:bg-accent-primary/90 text-gray-900 dark:text-white h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all shadow-sm">
                   Enter Product Key
                 </a>
                 <button onClick={() => window.location.href = 'mailto:admin@example.com?subject=Request Access'} className="w-full bg-surface-2 hover:bg-surface-3 text-text-primary border border-border/50 h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all">

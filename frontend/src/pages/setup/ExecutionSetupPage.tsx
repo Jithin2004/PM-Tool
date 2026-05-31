@@ -152,7 +152,7 @@ export default function ExecutionSetupPage() {
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={handleContinue}
-                className="px-6 py-2.5 bg-accent-primary text-white text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm shadow-sm flex items-center gap-2 cursor-pointer"
+                className="px-6 py-2.5 bg-accent-primary text-gray-900 dark:text-white text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm shadow-sm flex items-center gap-2 cursor-pointer"
               >
                 Continue Setup <ArrowRight className="w-3.5 h-3.5" />
               </button>

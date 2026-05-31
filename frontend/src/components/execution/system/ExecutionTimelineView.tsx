@@ -448,7 +448,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
                           return (
                             <div
                               key={`cp-${cpIdx}`}
-                              className={`absolute w-2 h-2 rounded-full cursor-pointer group/cp border border-white/50 -translate-x-1/2 z-20 hover:scale-125 transition-transform ${colorClass}`}
+                              className={`absolute w-2 h-2 rounded-full cursor-pointer group/cp border border-gray-100 dark:border-white/50 -translate-x-1/2 z-20 hover:scale-125 transition-transform ${colorClass}`}
                               style={{ left: `${left}%` }}
                             >
                               <div className="absolute bottom-full mb-2 hidden group-hover/cp:block z-35 w-56 bg-surface border border-border p-2.5 rounded-lg shadow-xl text-left">

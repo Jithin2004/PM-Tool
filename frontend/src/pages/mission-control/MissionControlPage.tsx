@@ -136,7 +136,7 @@ function MissionControlContent() {
                 onClick={() => setView(v)}
                 className={`px-5 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all duration-300 ${
                   view === v 
-                    ? 'bg-accent-primary text-white shadow-lg shadow-accent-primary/20 scale-100' 
+                    ? 'bg-accent-primary text-gray-900 dark:text-white shadow-lg shadow-accent-primary/20 scale-100' 
                     : 'bg-transparent text-text-tertiary hover:text-text-secondary hover:bg-white/5 scale-95'
                 }`}
               >

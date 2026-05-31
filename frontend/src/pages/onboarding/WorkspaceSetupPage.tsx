@@ -419,7 +419,7 @@ export function WorkspaceSetupPage() {
                       <button
                         key={day.value}
                         onClick={() => toggleWorkday(day.value)}
-                        className={`h-10 border rounded-lg text-xs transition-all font-mono-pm ${active ? '!border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 text-[var(--pm-on-surface)] shadow-sm' : 'bg-[var(--pm-surface-low)] text-[var(--pm-on-surface-variant)] hover:border-white/20'}`}
+                        className={`h-10 border rounded-lg text-xs transition-all font-mono-pm ${active ? '!border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 text-[var(--pm-on-surface)] shadow-sm' : 'bg-[var(--pm-surface-low)] text-[var(--pm-on-surface-variant)] hover:border-gray-300 dark:border-white/20'}`}
                         style={{ borderColor: active ? '' : 'rgba(70,69,84,0.2)' }}
                       >
                         {day.label}

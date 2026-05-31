@@ -798,11 +798,11 @@ export function ProjectDetailsModal({
                       <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
                         <div className="bg-surface-3/50 p-4 rounded-xl border border-border/30">
                           <p className="text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-2">Total Real Hours</p>
-                          <p className="text-2xl font-bold tracking-tight text-white">{expectedRealHours.toFixed(1)}<span className="text-sm text-text-tertiary ml-1">h</span></p>
+                          <p className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{expectedRealHours.toFixed(1)}<span className="text-sm text-text-tertiary ml-1">h</span></p>
                         </div>
                         <div className="bg-surface-3/50 p-4 rounded-xl border border-border/30">
                           <p className="text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-2">Working Days</p>
-                          <p className="text-2xl font-bold tracking-tight text-white">{calendarExpected}<span className="text-sm text-text-tertiary ml-1">d</span></p>
+                          <p className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{calendarExpected}<span className="text-sm text-text-tertiary ml-1">d</span></p>
                         </div>
                         <div className="bg-blue-500/10 p-4 rounded-xl border border-blue-500/20">
                           <p className="text-[10px] font-bold tracking-widest text-blue-400 uppercase mb-2">Remaining ETA</p>

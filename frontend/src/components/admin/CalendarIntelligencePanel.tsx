@@ -132,14 +132,14 @@ export function CalendarIntelligencePanel() {
               const token = session?.access_token;
               window.open(`${import.meta.env.VITE_CALENDAR_API_URL}/auth/google?token=${token}`, '_blank', 'width=600,height=700');
             }}
-            className="px-4 py-2 bg-[#4285F4] hover:bg-[#3367D6] text-white rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-[#4285F4] hover:bg-[#3367D6] text-gray-900 dark:text-white rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
           >
             <CalendarDays className="w-4 h-4" /> Connect Google Calendar
           </button>
           {canManageCalendar && (
             <button 
               onClick={() => setShowCreateForm(true)} 
-              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-gray-900 dark:text-white rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
             >
               <Plus className="w-4 h-4" /> Add Event
             </button>
@@ -183,7 +183,7 @@ export function CalendarIntelligencePanel() {
                     <div key={ci} className="aspect-square flex items-center justify-center text-[11px] font-bold relative group">
                       {cell && (
                         <div className={`w-full h-full flex items-center justify-center rounded-lg transition-all ${
-                          cell.events.length > 0 ? 'bg-accent-primary text-white shadow-sm' : 'text-text-tertiary hover:bg-surface-3 hover:text-text-primary'
+                          cell.events.length > 0 ? 'bg-accent-primary text-gray-900 dark:text-white shadow-sm' : 'text-text-tertiary hover:bg-surface-3 hover:text-text-primary'
                         }`}>
                           {cell.day}
                         </div>

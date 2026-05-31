@@ -51,12 +51,12 @@ export function OperationalNarrative() {
             >
               <div className={`sm:col-span-3 ${i % 2 === 0 ? 'sm:order-1' : 'sm:order-2'}`}>
                 <div className={`inline-flex items-center gap-2 ${i % 2 === 0 ? '' : 'sm:flex-row-reverse'}`}>
-                  <pillar.icon className="w-4 h-4 text-white/30" />
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">{pillar.id}</span>
+                  <pillar.icon className="w-4 h-4 text-gray-900 dark:text-white/30" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-gray-900 dark:text-white/30">{pillar.id}</span>
                 </div>
               </div>
               <div className={`sm:col-span-9 ${i % 2 === 0 ? 'sm:order-2' : 'sm:order-1'}`}>
-                <p className="text-base sm:text-lg font-mono text-white/70 leading-relaxed">
+                <p className="text-base sm:text-lg font-mono text-gray-900 dark:text-white/70 leading-relaxed">
                   {pillar.statement}
                 </p>
               </div>

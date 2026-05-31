@@ -189,7 +189,7 @@ export default function AutomationsPanel() {
                 </div>
               </div>
               <button onClick={handleCreateRule} disabled={!newName.trim()}
-                className="px-6 py-2.5 bg-teal-500 text-white text-[11px] font-bold uppercase tracking-wider hover:bg-teal-400 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+                className="px-6 py-2.5 bg-teal-500 text-gray-900 dark:text-white text-[11px] font-bold uppercase tracking-wider hover:bg-teal-400 rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(20,184,166,0.3)]">
                 Deploy Rule
               </button>
             </div>

@@ -41,7 +41,7 @@ export const ObservabilityPanel: React.FC = () => {
     <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
       <div className="flex justify-between items-start mb-2">
         <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">{title}</span>
-        <Icon className="w-4 h-4 text-gray-400" />
+        <Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
       </div>
       <div className="text-2xl font-semibold text-gray-900 dark:text-white">{value}</div>
       {subtitle && <div className="text-sm text-gray-500 mt-1">{subtitle}</div>}
@@ -112,7 +112,7 @@ export const ObservabilityPanel: React.FC = () => {
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between p-4 hover:bg-surface-3 transition-colors">
                   <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-gray-400" />
+                    <item.icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     <span className="font-medium text-gray-700 dark:text-gray-300">{item.label}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -130,7 +130,7 @@ export const ObservabilityPanel: React.FC = () => {
           <h2 className="text-lg font-medium text-gray-900 dark:text-white">Incident Timeline</h2>
           <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm min-h-[400px]">
             {incidents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-400 text-center">
+              <div className="flex flex-col items-center justify-center h-64 text-gray-600 dark:text-gray-400 text-center">
                 <CheckCircle className="w-12 h-12 mb-4 text-emerald-100 dark:text-emerald-900/50" />
                 <p>No active incidents.</p>
                 <p className="text-sm">Platform is operating normally.</p>
@@ -150,9 +150,9 @@ export const ObservabilityPanel: React.FC = () => {
                         incident.severity === 'critical' ? 'bg-rose-500' :
                         incident.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
                       }`}>
-                        {incident.severity === 'critical' ? <XCircle className="w-4 h-4 text-white" /> :
-                         incident.severity === 'warning' ? <AlertTriangle className="w-4 h-4 text-white" /> :
-                         <Info className="w-4 h-4 text-white" />}
+                        {incident.severity === 'critical' ? <XCircle className="w-4 h-4 text-gray-900 dark:text-white" /> :
+                         incident.severity === 'warning' ? <AlertTriangle className="w-4 h-4 text-gray-900 dark:text-white" /> :
+                         <Info className="w-4 h-4 text-gray-900 dark:text-white" />}
                       </div>
                       
                       <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-surface-2 border border-border p-4 rounded-xl shadow-sm">

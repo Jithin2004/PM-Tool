@@ -44,7 +44,7 @@ export function CommandPalette() {
   const filteredTasks = tasks.filter(t => t.name.toLowerCase().includes(query.toLowerCase())).slice(0, 3);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh]">
+    <div className="fixed inset-0 z-[100] bg-white dark:bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh]">
       <div className="bg-surface border border-border w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col">
         {/* Input */}
         <div className="flex items-center gap-3 px-4 py-4 border-b border-border">

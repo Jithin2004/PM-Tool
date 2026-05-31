@@ -37,10 +37,10 @@ export function AIInsightsPreview() {
           variants={stagger(0.06)}
           className="text-center mb-14"
         >
-          <motion.p variants={slideUp} className="text-[10px] font-mono uppercase tracking-widest text-white/30 mb-3">
+          <motion.p variants={slideUp} className="text-[10px] font-mono uppercase tracking-widest text-gray-900 dark:text-white/30 mb-3">
             Operational Intelligence
           </motion.p>
-          <motion.h2 variants={slideUp} className="text-2xl sm:text-3xl font-medium tracking-tight text-white/80">
+          <motion.h2 variants={slideUp} className="text-2xl sm:text-3xl font-medium tracking-tight text-gray-900 dark:text-white/80">
             Intelligence embedded, not bolted on
           </motion.h2>
         </motion.div>
@@ -56,18 +56,18 @@ export function AIInsightsPreview() {
             <motion.div
               key={insight.type}
               variants={slideUp}
-              className="group bg-[#0c0c0c] border border-white/10 hover:border-white/[0.15] transition-all p-5"
+              className="group bg-[#FFFFFF] dark:bg-[#0c0c0c] border border-gray-200 dark:border-white/10 hover:border-white/[0.15] transition-all p-5"
             >
               <div className="flex items-start gap-4">
                 {/* Icon */}
                 <div className="shrink-0 w-8 h-8 bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
-                  <insight.icon className="w-4 h-4 text-white/40" />
+                  <insight.icon className="w-4 h-4 text-gray-900 dark:text-white/40" />
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1.5">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-gray-900 dark:text-white/40">
                       {insight.label}
                     </span>
                     <span
@@ -80,14 +80,14 @@ export function AIInsightsPreview() {
                       {insight.confidence}
                     </span>
                   </div>
-                  <p className="text-[12px] font-mono text-white/60 leading-relaxed">
+                  <p className="text-[12px] font-mono text-gray-900 dark:text-white/60 leading-relaxed">
                     {insight.message}
                   </p>
                 </div>
 
                 {/* Action hint */}
                 <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Sparkles className="w-3.5 h-3.5 text-white/20" />
+                  <Sparkles className="w-3.5 h-3.5 text-gray-900 dark:text-white/20" />
                 </div>
               </div>
             </motion.div>
@@ -95,7 +95,7 @@ export function AIInsightsPreview() {
         </motion.div>
 
         {/* Sub-note */}
-        <p className="text-center mt-8 text-[10px] font-mono text-white/20">
+        <p className="text-center mt-8 text-[10px] font-mono text-gray-900 dark:text-white/20">
           No chatbot. No essays. Just operational intelligence.
         </p>
       </div>

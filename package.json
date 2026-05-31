@@ -1,5 +1,0 @@
-{
-  "dependencies": {
-    "pg-query-emscripten": "^5.1.0"
-  }
-}

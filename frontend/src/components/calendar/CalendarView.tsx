@@ -237,7 +237,7 @@ export function CalendarView() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-white dark:bg-black/60 flex items-center justify-center p-4">
           <div className="bg-surface-container-high w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-outline-variant flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-outline-variant">
               <h2 className="font-semibold text-on-surface">{editingEvent ? 'Edit Event' : 'New Event'}</h2>
