@@ -16,7 +16,7 @@ exports.googleAuth = async (req, res) => {
         scope: SCOPES,
         state: req.user.id
     });
-    res.json({ authUrl });
+    res.redirect(authUrl);
 };
 
 exports.googleAuthCallback = async (req, res) => {
@@ -54,17 +54,59 @@ exports.googleAuthCallback = async (req, res) => {
 
         // Return success script to close window or redirect
         res.send(`
-            <html><body>
-            <script>
-                window.opener.postMessage("google_calendar_connected", "*");
-                window.close();
-            </script>
-            Calendar connected! You can close this window.
-            </body></html>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Google Calendar Connected</title>
+                <style>
+                    body { font-family: 'Inter', system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f3f4f6; color: #1f2937; }
+                    .card { text-align: center; padding: 2.5rem; background: white; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); max-width: 400px; width: 90%; }
+                    h1 { margin-top: 0; font-size: 1.5rem; color: #10b981; }
+                    p { color: #6b7280; margin-bottom: 0; }
+                    svg { width: 64px; height: 64px; margin-bottom: 1rem; fill: #10b981; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <svg viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <h1>Successfully Connected!</h1>
+                    <p>Your Google Calendar is now integrated. This window will close automatically.</p>
+                </div>
+                <script>
+                    window.opener?.postMessage("google_calendar_connected", "*");
+                    setTimeout(() => window.close(), 3000);
+                </script>
+            </body>
+            </html>
         `);
     } catch (error) {
         console.error('Error retrieving access token', error);
-        res.status(500).send('Auth Failed');
+        res.status(500).send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Authentication Failed</title>
+                <style>
+                    body { font-family: 'Inter', system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f3f4f6; color: #1f2937; }
+                    .card { text-align: center; padding: 2.5rem; background: white; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); max-width: 400px; width: 90%; }
+                    h1 { margin-top: 0; font-size: 1.5rem; color: #ef4444; }
+                    p { color: #6b7280; margin-bottom: 0; }
+                    svg { width: 64px; height: 64px; margin-bottom: 1rem; fill: #ef4444; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <svg viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                    <h1>Authentication Failed</h1>
+                    <p>There was an error connecting your calendar. Please close this window and try again.</p>
+                </div>
+            </body>
+            </html>
+        `);
     }
 };
 
