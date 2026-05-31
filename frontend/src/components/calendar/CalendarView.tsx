@@ -198,7 +198,11 @@ export function CalendarView() {
       if (!workspace?.id) throw new Error("No active workspace");
 
       if (editingEvent) {
-        await calendarService.updateEvent(editingEvent.id, formData);
+        await calendarService.updateEvent(editingEvent.id, {
+          ...formData,
+          start: new Date(formData.start).toISOString(),
+          end: new Date(formData.end).toISOString()
+        });
         notifyToast('Event updated successfully.', 'success');
       } else {
         await calendarService.createEvent({
@@ -206,8 +210,10 @@ export function CalendarView() {
           workspace_id: workspace.id,
           event_type: 'meeting',
           title: formData.summary,
-          start_date: formData.start,
-          end_date: formData.end
+          start: new Date(formData.start).toISOString(),
+          end: new Date(formData.end).toISOString(),
+          start_date: new Date(formData.start).toISOString(),
+          end_date: new Date(formData.end).toISOString()
         } as any);
         notifyToast('Event created successfully.', 'success');
       }
