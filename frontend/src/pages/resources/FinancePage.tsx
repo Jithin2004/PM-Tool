@@ -9,8 +9,10 @@ import {
 import { 
   Plus, Landmark, Receipt, CreditCard, TrendingUp, TrendingDown, 
   Wallet, Building2, ChevronLeft, ChevronRight, Lock, 
-  AlertCircle, History 
+  AlertCircle, History, Download, X 
 } from 'lucide-react';
+import { CreateInvoiceModal } from '../../components/finance/CreateInvoiceModal';
+import { generateInvoicePDF } from '../../services/invoicePdfService';
 
 export default function FinancePage() {
   const { workspace } = useWorkspace();
@@ -32,6 +34,7 @@ export default function FinancePage() {
   } | null>(null);
 
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [adjustmentForm, setAdjustmentForm] = useState({ type: 'expense', amount: '', reason: '' });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -139,9 +142,26 @@ export default function FinancePage() {
     return (d.getMonth() + 1) === viewMonth && d.getFullYear() === viewYear;
   };
 
-  // Base snapshot totals
-  const baseRevenue = isClosed && snapshot ? Number(snapshot.total_revenue) : 
-    data.payments.filter(p => isCurrentMonth(p.payment_date)).reduce((sum, p) => sum + Number(p.amount), 0);
+  // Payment/Revenue mapping with GST extraction
+  let currentMonthRevenue = 0;
+  let currentMonthGST = 0;
+
+  data.payments.filter(p => isCurrentMonth(p.payment_date)).forEach(p => {
+    const inv = data.invoices.find(i => i.id === p.invoice_id);
+    if (inv && (inv.grand_total > 0 || inv.amount > 0)) {
+      const gTotal = inv.grand_total || inv.amount;
+      const taxAmt = inv.total_tax || 0;
+      const taxRatio = taxAmt / gTotal;
+      const paymentGST = Number(p.amount) * taxRatio;
+      currentMonthGST += paymentGST;
+      currentMonthRevenue += (Number(p.amount) - paymentGST);
+    } else {
+      currentMonthRevenue += Number(p.amount);
+    }
+  });
+
+  const baseRevenue = isClosed && snapshot ? Number(snapshot.total_revenue) : currentMonthRevenue;
+  const baseGST = isClosed ? 0 : currentMonthGST;
 
   const baseSalary = isClosed && snapshot ? Number(snapshot.total_salary_expense) :
     data.salaries.reduce((sum, s) => sum + Number(s.base_salary), 0);
@@ -160,9 +180,9 @@ export default function FinancePage() {
   const otherExpensesThisMonth = baseOther + adjOther;
   const netProfit = revenueThisMonth - salaryExpenses - otherExpensesThisMonth;
 
-  const pendingInvoices = data.invoices
-    .filter(i => ['draft', 'sent', 'overdue'].includes(i.status))
-    .reduce((sum, i) => sum + Number(i.amount), 0);
+  const pendingInvoicesAmount = data.invoices
+    .filter(i => ['draft', 'sent', 'overdue', 'partial'].includes(i.status))
+    .reduce((sum, i) => sum + Number(i.balance_due || i.amount || 0), 0);
 
   function getMonthName(m: number) {
     return new Date(2000, m - 1, 1).toLocaleString('default', { month: 'long' });
@@ -203,7 +223,7 @@ export default function FinancePage() {
             Manage Clients
           </button>
           {!isClosed ? (
-            <button className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+            <button onClick={() => setShowInvoiceModal(true)} className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">
               <Plus className="w-4 h-4" />
               New Invoice
             </button>
@@ -271,9 +291,16 @@ export default function FinancePage() {
         <div className="p-5 rounded-xl border relative overflow-hidden" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
           <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>
             <Receipt className="text-amber-500 w-4 h-4" />
-            <span>Pending Invoices</span>
+            <span>Pending Receivables</span>
           </div>
-          <div className="text-2xl font-bold font-mono tracking-tight mt-2">${pendingInvoices.toLocaleString()}</div>
+          <div className="text-2xl font-bold font-mono tracking-tight mt-2 flex items-baseline gap-2">
+            ${pendingInvoicesAmount.toLocaleString()}
+          </div>
+          {!isClosed && baseGST > 0 && (
+            <div className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
+              (GST Collected: ${baseGST.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})
+            </div>
+          )}
         </div>
 
         <div className="p-5 rounded-xl border relative overflow-hidden" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
@@ -354,14 +381,38 @@ export default function FinancePage() {
                       <div className="font-mono text-sm">{inv.invoice_number}</div>
                       <div className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>{new Date(inv.issue_date).toLocaleDateString()}</div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-mono font-medium">${Number(inv.amount).toLocaleString()}</div>
-                      <div className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full inline-block mt-1
-                        ${inv.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' : 
-                          inv.status === 'overdue' ? 'bg-rose-500/10 text-rose-500' : 
-                          'bg-amber-500/10 text-amber-500'}`}>
-                        {inv.status}
+                    <div className="text-right flex items-center gap-4">
+                      <div>
+                        <div className="font-mono font-medium">${Number(inv.grand_total || inv.amount).toLocaleString()}</div>
+                        <div className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full inline-block mt-1
+                          ${inv.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' : 
+                            inv.status === 'overdue' ? 'bg-rose-500/10 text-rose-500' : 
+                            inv.status === 'partial' ? 'bg-blue-500/10 text-blue-500' :
+                            'bg-amber-500/10 text-amber-500'}`}>
+                          {inv.status}
+                        </div>
                       </div>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const client = data.clients.find(c => c.id === inv.client_id);
+                            // Fetch company profile if not in state using a direct query, or use from state if loaded
+                            // Since we have data.companyProfile from loadData, we just use it:
+                            const comp = (data as any).companyProfile;
+                            if (comp && client) {
+                              await generateInvoicePDF(comp, client, inv, inv.line_items || []);
+                            } else {
+                              alert("Missing company profile or client details.");
+                            }
+                          } catch(err) {
+                            console.error(err);
+                          }
+                        }}
+                        className="p-1.5 text-text-tertiary hover:text-emerald-400 transition-colors"
+                        title="Download PDF"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -398,50 +449,69 @@ export default function FinancePage() {
 
       {/* Adjustment Modal */}
       {showAdjustmentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl p-6 shadow-xl border" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-            <h2 className="text-lg font-semibold mb-4">Add Financial Adjustment</h2>
-            <div className="space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-border/50">
+              <h2 className="text-lg font-semibold text-[var(--pm-on-surface)]">Add Adjustment</h2>
+              <button onClick={() => setShowAdjustmentModal(false)} className="text-[var(--pm-on-surface-variant)] hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Type</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>Type</label>
                 <select 
                   value={adjustmentForm.type} 
-                  onChange={e => setAdjustmentForm(p => ({ ...p, type: e.target.value }))}
-                  className="w-full px-3 py-2 rounded border bg-black/5 text-sm outline-none" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-                  <option value="expense">Expense Correction</option>
-                  <option value="revenue">Revenue Correction</option>
-                  <option value="salary">Payroll Correction</option>
+                  onChange={e => setAdjustmentForm({ ...adjustmentForm, type: e.target.value })}
+                  className="w-full bg-surface-highest border border-border rounded-lg px-3 py-2 text-sm outline-none"
+                >
+                  <option value="revenue">Revenue</option>
+                  <option value="salary">Salary</option>
+                  <option value="expense">Expense</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Amount</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>Amount ($)</label>
                 <input 
                   type="number" 
-                  value={adjustmentForm.amount}
-                  onChange={e => setAdjustmentForm(p => ({ ...p, amount: e.target.value }))}
-                  placeholder="e.g. -5000 or 5000"
-                  className="w-full px-3 py-2 rounded border bg-black/5 text-sm outline-none" style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                  value={adjustmentForm.amount} 
+                  onChange={e => setAdjustmentForm({ ...adjustmentForm, amount: e.target.value })}
+                  placeholder="e.g. -500 or 1200"
+                  className="w-full bg-surface-highest border border-border rounded-lg px-3 py-2 text-sm outline-none"
                 />
+                <p className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Use negative values for deductions.</p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Reason</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>Reason</label>
                 <input 
                   type="text" 
-                  value={adjustmentForm.reason}
-                  onChange={e => setAdjustmentForm(p => ({ ...p, reason: e.target.value }))}
-                  placeholder="e.g. Bank charge missing"
-                  className="w-full px-3 py-2 rounded border bg-black/5 text-sm outline-none" style={{ borderColor: 'rgba(70,69,84,0.3)' }}
+                  value={adjustmentForm.reason} 
+                  onChange={e => setAdjustmentForm({ ...adjustmentForm, reason: e.target.value })}
+                  placeholder="e.g. Server Cost Correction"
+                  className="w-full bg-surface-highest border border-border rounded-lg px-3 py-2 text-sm outline-none"
                 />
               </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setShowAdjustmentModal(false)} className="px-4 py-2 text-sm font-medium">Cancel</button>
-              <button onClick={submitAdjustment} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
-                Save Adjustment
+              <button 
+                onClick={submitAdjustment}
+                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors mt-4"
+              >
+                Submit
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Invoice Modal */}
+      {workspace && (
+        <CreateInvoiceModal 
+          isOpen={showInvoiceModal}
+          onClose={() => setShowInvoiceModal(false)}
+          workspaceId={workspace.id}
+          clients={data.clients}
+          companyProfile={(data as any).companyProfile}
+          onSuccess={loadData}
+        />
       )}
     </div>
   );
