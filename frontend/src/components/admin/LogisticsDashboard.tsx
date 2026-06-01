@@ -1322,7 +1322,9 @@ export function LogisticsDashboard({
             {/* Payroll Data Grid */}
             <div className="border border-border bg-surface overflow-hidden">
               <div className="p-6 border-b border-border bg-bg flex justify-between items-center">
-                <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary font-bold">Compiled Month Analytics Sheet</h3>
+                <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary font-bold">
+                  {payrollMode === 'monthly' ? 'Compiled Month Analytics Sheet' : 'Compiled Custom Range Analytics Sheet'}
+                </h3>
                 <span className="text-[10px] font-mono text-text-tertiary">Scope: {payrollMode === 'monthly' ? monthPrefix : `${customStartDate || 'TBD'} to ${customEndDate || 'TBD'}`}</span>
               </div>
 
