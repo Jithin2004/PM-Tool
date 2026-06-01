@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useOperationalData } from '../../context/OperationalDataContext';
 import { Icon } from '../ui/Icon';
 import { supabase } from '../../lib/supabase';
 function getRoleLabel(role: string) {
@@ -22,6 +23,7 @@ function getInitials(name: string) {
 export function MemberDirectory() {
   const { profile: currentUserProfile } = useAuth();
   const { profiles, invalidateAll, systemData } = useDashboard();
+  const { raw: { skills = [], userSkills = [] } } = useOperationalData();
   const { workspace } = useWorkspace();
   const [selectedMemberDetails, setSelectedMemberDetails] = useState<any | null>(null);
 
@@ -169,6 +171,27 @@ export function MemberDirectory() {
                         {selectedMemberDetails.date_of_joining ? new Date(selectedMemberDetails.date_of_joining).toLocaleDateString() : 'N/A'}
                       </div>
                     )}
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-[var(--pm-border)]">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)] mb-3">Professional Skills</h4>
+                  <div className="space-y-2">
+                    {(() => {
+                      const memberSkills = userSkills.filter(us => us.user_id === selectedMemberDetails.id);
+                      if (memberSkills.length === 0) {
+                        return <div className="text-xs text-[var(--pm-text-tertiary)] italic">No skills recorded yet.</div>;
+                      }
+                      return memberSkills.map(us => {
+                        const skillDef = skills.find(s => s.id === us.skill_id);
+                        return (
+                          <div key={us.id} className="flex justify-between items-center text-xs">
+                            <span className="font-medium text-[var(--pm-text)]">{skillDef?.name || 'Unknown Skill'}</span>
+                            <span className="text-[10px] uppercase tracking-wider text-[var(--pm-text-tertiary)] bg-[var(--pm-surface-highest)] px-2 py-0.5 rounded-full border border-[var(--pm-border)]">{us.level}</span>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               </div>

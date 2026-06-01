@@ -64,6 +64,7 @@ const SprintPage = withRetry(() => import('../pages/execution/SprintPage'));
 const TeamsPage = withRetry(() => import('../pages/resources/TeamsPage'));
 const CapacityPage = withRetry(() => import('../pages/resources/CapacityPage'));
 const WorkLogsPage = withRetry(() => import('../pages/resources/WorkLogsPage'));
+const FinancePage = withRetry(() => import('../pages/resources/FinancePage'));
 
 const AnalyticsPage = withRetry(() => import('../pages/control/AnalyticsPage'));
 const AuditPage = withRetry(() => import('../pages/control/AuditPage'));
@@ -343,6 +344,10 @@ export function ResolveRouter() {
   if (pathname === '/resources/work-logs') {
     if (!guardRoute(role, '/resources/work-logs')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
     return <RouteShell><WorkLogsPage /></RouteShell>;
+  }
+  if (pathname === '/resources/finance') {
+    if (!guardRoute(role, '/resources/finance')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    return <RouteShell><FinancePage /></RouteShell>;
   }
 
   // ── CONTROL ──

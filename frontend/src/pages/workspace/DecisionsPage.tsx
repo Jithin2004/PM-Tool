@@ -29,9 +29,11 @@ import {
   MessageSquare, 
   Zap, 
   FileText,
-  X,
-  UserPlus
+  UserPlus,
+  ThumbsUp,
+  X
 } from 'lucide-react';
+import { FilePanel } from '../../components/common/FilePanel';
 
 export default function DecisionsPage() {
   const { profile } = useAuth();
@@ -852,6 +854,16 @@ export default function DecisionsPage() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Files panel for decision */}
+              <div className="mt-2">
+                <FilePanel 
+                  entityType="decision"
+                  entityId={selectedDecision.id}
+                  currentUserId={userId}
+                  canEdit={canCoordinate}
+                />
               </div>
             </div>
           ) : (

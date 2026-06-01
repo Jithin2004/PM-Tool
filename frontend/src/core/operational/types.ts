@@ -11,6 +11,9 @@ export interface OperationalRawState {
   
   workspaceSettingsBlob: Record<string, unknown>;
   allocationPeriods?: any[]; // Phase 2A.1
+
+  skills?: Skill[];
+  userSkills?: UserSkill[];
 }
 
 export interface AttendanceRow {
@@ -29,6 +32,21 @@ export interface SalaryRow {
   workspace_id?: string;
   user_id: string;
   base_salary: number;
+}
+
+export interface Skill {
+  id: string;
+  workspace_id: string;
+  name: string;
+  category: string;
+}
+
+export interface UserSkill {
+  id: string;
+  user_id: string;
+  skill_id: string;
+  level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  verified_by?: string;
 }
 
 export interface ProjectFrictionMetric {

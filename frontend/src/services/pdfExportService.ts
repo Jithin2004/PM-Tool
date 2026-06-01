@@ -45,3 +45,52 @@ export const exportToPDF = async (
 
   return true;
 };
+
+export const exportToCSV = async (
+  workspaceId: string,
+  reportType: string,
+  data: any[]
+) => {
+  activityLogService.appendLog({
+    workspace_id: workspaceId,
+    actor_id: 'system',
+    action: 'csv_generation_started',
+    metadata: { reportType }
+  }).catch(() => {});
+
+  await new Promise(resolve => setTimeout(resolve, 800));
+
+  let csvContent = "";
+  if (data && data.length > 0) {
+    const headers = Object.keys(data[0]);
+    csvContent += headers.join(",") + "\n";
+    data.forEach(row => {
+      const values = headers.map(h => {
+        const val = row[h];
+        return typeof val === 'string' ? `"${val.replace(/"/g, '""')}"` : val;
+      });
+      csvContent += values.join(",") + "\n";
+    });
+  } else {
+    csvContent = "No data available";
+  }
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${reportType}_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+
+  activityLogService.appendLog({
+    workspace_id: workspaceId,
+    actor_id: 'system',
+    action: 'csv_generation_completed',
+    metadata: { reportType, success: true }
+  }).catch(() => {});
+
+  return true;
+};

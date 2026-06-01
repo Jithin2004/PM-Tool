@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, TrendingUp, TrendingDown, Target, Zap, Users, ChevronDown, Plus, X, Terminal,
   AlertTriangle, Calendar, Clock, BookOpen, ListChecks, BarChart3, GitBranch, CheckCircle2,
-  LayoutList, Layers
+  LayoutList, Layers, FileText
 } from 'lucide-react';
+import { FilePanel } from '../common/FilePanel';
 import type { Sprint, Task, User, Epic, Project, CalendarEvent } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { TaskCard } from '../task/TaskCard';
@@ -15,7 +16,7 @@ import { SCRUM_COLUMNS } from '../../constants/product';
 import { activityLogService } from '../../services/activityLogService';
 import { hasCapability } from '../../core/auth/permissions';
 
-type ScrumTab = 'product-backlog' | 'sprint-planner' | 'sprint-backlog' | 'active-sprint' | 'sprint-review' | 'velocity-analytics' | 'definition-of-done';
+type ScrumTab = 'product-backlog' | 'sprint-planner' | 'sprint-backlog' | 'active-sprint' | 'sprint-review' | 'velocity-analytics' | 'definition-of-done' | 'sprint-files';
 
 interface SprintBoardProps {
   project: Project;
@@ -254,6 +255,7 @@ export function SprintBoard({
     { id: 'sprint-review', label: 'Sprint Review', icon: <CheckCircle2 className="w-3 h-3" /> },
     { id: 'velocity-analytics', label: 'Velocity', icon: <BarChart3 className="w-3 h-3" /> },
     { id: 'definition-of-done', label: 'DoD', icon: <GitBranch className="w-3 h-3" /> },
+    { id: 'sprint-files', label: 'Files', icon: <FileText className="w-3 h-3" /> },
   ];
 
 
@@ -582,6 +584,22 @@ export function SprintBoard({
                 </label>
               ))}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'sprint-files' && (
+          <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
+            <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Sprint Files</h3>
+            {activeSprintId ? (
+              <FilePanel 
+                entityType="sprint"
+                entityId={activeSprintId}
+                currentUserId={currentUserProfile?.id || ''}
+                canEdit={hasWriteAccess}
+              />
+            ) : (
+              <div className="py-12 text-center text-text-quaternary font-mono text-[9px] uppercase">Please select a sprint to manage files</div>
+            )}
           </div>
         )}
 

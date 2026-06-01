@@ -187,3 +187,19 @@ export async function fetchWorkspaceSettingsBlob(workspaceId: string): Promise<R
     .maybeSingle();
   return (data?.settings_blob as Record<string, unknown>) || {};
 }
+
+export async function fetchSkills(workspaceId: string) {
+  const { data } = await supabase.from('skills').select('*').eq('workspace_id', workspaceId);
+  return data || [];
+}
+
+export async function fetchUserSkills(workspaceId: string) {
+  const { data: users } = await supabase.from('users').select('id').eq('workspace_id', workspaceId);
+  if (!users) return [];
+  const userIds = users.map(u => u.id);
+  
+  if (userIds.length === 0) return [];
+  
+  const { data: userSkills } = await supabase.from('user_skills').select('*').in('user_id', userIds);
+  return userSkills || [];
+}
