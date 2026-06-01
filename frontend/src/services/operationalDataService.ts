@@ -203,3 +203,47 @@ export async function fetchUserSkills(workspaceId: string) {
   const { data: userSkills } = await supabase.from('user_skills').select('*').in('user_id', userIds);
   return userSkills || [];
 }
+export async function createSkill(workspaceId: string, name: string, category: string = 'General') {
+  const { data, error } = await supabase.from('skills').insert({
+    workspace_id: workspaceId,
+    name,
+    category
+  }).select().single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteSkill(skillId: string) {
+  const { error } = await supabase.from('skills').delete().eq('id', skillId);
+  if (error) throw error;
+  return true;
+}
+
+export async function upsertUserSkill(userId: string, skillId: string, level: string, verifierId?: string) {
+  const { data: existing, error: findError } = await supabase.from('user_skills')
+    .select('id').eq('user_id', userId).eq('skill_id', skillId).maybeSingle();
+    
+  if (existing) {
+    const { error } = await supabase.from('user_skills')
+      .update({ level, verified_by: verifierId, updated_at: new Date().toISOString() })
+      .eq('id', existing.id);
+    if (error) throw error;
+    return true;
+  } else {
+    const { error } = await supabase.from('user_skills').insert({
+      user_id: userId,
+      skill_id: skillId,
+      level,
+      verified_by: verifierId
+    });
+    if (error) throw error;
+    return true;
+  }
+}
+
+export async function removeUserSkill(userId: string, skillId: string) {
+  const { error } = await supabase.from('user_skills').delete().eq('user_id', userId).eq('skill_id', skillId);
+  if (error) throw error;
+  return true;
+}

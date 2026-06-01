@@ -1,8 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useOperationalData } from '../../context/OperationalDataContext';
+import { useAuth } from '../../context/AuthContext';
+import { hasCapability } from '../../core/auth/permissions';
+import { Settings } from 'lucide-react';
+import { ManageSkillsModal } from './ManageSkillsModal';
 
 export function SkillsMatrixView() {
   const { raw: { skills = [], userSkills = [], profiles = [] } } = useOperationalData();
+  const { profile } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const canManageTeam = hasCapability(profile?.role, 'manage_team');
 
   // Compute coverage: which skills exist, and how many people have them?
   const skillCoverage = useMemo(() => {
@@ -20,9 +28,20 @@ export function SkillsMatrixView() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center gap-3 border-b border-border/50 pb-4 mb-6">
+      <div className="flex items-center justify-between border-b border-border/50 pb-4 mb-6">
         <h2 className="text-lg font-semibold text-[var(--pm-on-surface)]">Team Skills Matrix</h2>
+        {canManageTeam && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-surface-2 border border-border rounded text-sm font-medium text-text-secondary hover:text-text-primary hover:border-accent-primary transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            Manage Skills
+          </button>
+        )}
       </div>
+
+      {isModalOpen && <ManageSkillsModal onClose={() => setIsModalOpen(false)} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Coverage Overview */}
