@@ -22,6 +22,7 @@ export type Capability =
   | 'manage_settings'
   | 'manage_integrations'
   | 'manage_automations'
+  | 'manage_compensation'
   | 'platform_governance'
   | 'platform_security'
   | 'view_mission_control';
@@ -64,6 +65,7 @@ const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
     'manage_settings',
     'manage_integrations',
     'manage_automations',
+    'manage_compensation',
     'platform_governance',
     'platform_security',
     'view_mission_control',

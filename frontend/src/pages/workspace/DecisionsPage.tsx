@@ -473,9 +473,9 @@ export default function DecisionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-1">
         <div>
-          <h1 className="text-xl font-bold tracking-tight uppercase">Operational Decision &amp; Coordination Engine</h1>
-          <p className="text-[12px] mt-0.5" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Systemic alignment, cross-sprint approvals, and governance-aware mitigation tracking.
+          <h1 className="text-xl font-semibold tracking-tight text-text-primary">Decisions</h1>
+          <p className="text-sm mt-0.5 text-text-tertiary">
+            Track approvals, mitigate risks, and manage cross-functional decisions.
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -78,89 +78,54 @@ interface ExecutiveDomain {
 
 const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   {
-    id: 'strategic-oversight',
-    label: 'Strategic Oversight',
+    id: 'dashboard',
+    label: 'Dashboard',
     iconName: 'Radar',
     subsections: [
-      { label: 'Overview', path: '/overview', capability: 'view_projects' },
-      { label: 'Portfolio', path: '/workspace/portfolio', capability: 'view_projects' },
-      { label: 'Projects', path: '/workspace', capability: 'view_projects' },
-      { label: 'Decisions', path: '/workspace/decisions', capability: 'view_decision_center' },
-      { label: 'Reports', path: '/workspace/reports', capability: 'view_reports' },
-      { label: 'Executive Briefs', path: '/workspace/executive', capability: 'view_projects' }
+      { label: 'Overview', path: '/overview', capability: 'view_projects' }
     ]
   },
   {
-    id: 'resource-orchestration',
-    label: 'Resource Orchestration',
-    iconName: 'BarChart3',
-    subsections: [
-      { label: 'Capacity', path: '/resources/capacity', capability: 'view_reports' },
-      { label: 'Logistics', path: '/resources', capability: 'manage_logistics' },
-      { label: 'Work Logs', path: '/resources/work-logs', capability: 'view_reports' }
-    ]
-  },
-  {
-    id: 'execution-engine',
-    label: 'Execution Engine',
+    id: 'work',
+    label: 'Work',
     iconName: 'Kanban',
     subsections: [
-      { label: 'Board', path: '/execution', capability: 'view_tasks' },
+      { label: 'Projects', path: '/workspace', capability: 'view_projects' },
+      { label: 'Tasks', path: '/execution/board', capability: 'view_tasks' },
       { label: 'Calendar', path: '/execution/timeline', capability: 'view_scheduling' },
-      { label: 'Gantt', path: '/execution/gantt', capability: 'view_scheduling' },
-      { label: 'Sprints', path: '/execution/sprints', capability: 'view_scheduling' }
+      { label: 'Timeline', path: '/execution/gantt', capability: 'view_scheduling' }
     ]
   },
   {
-    id: 'executive-team-registry',
-    label: 'Executive Team Registry',
+    id: 'team',
+    label: 'Team',
     iconName: 'Users',
     subsections: [
-      { label: 'Organization', path: '/resources/teams', capability: 'view_teams' }
+      { label: 'Members', path: '/resources/teams', capability: 'view_teams' },
+      { label: 'Attendance', path: '/resources/attendance', capability: 'manage_logistics' },
+      { label: 'Workload', path: '/resources/capacity', capability: 'view_reports' },
+      { label: 'Payroll', path: '/resources/payroll', capability: 'manage_compensation' }
     ]
   },
   {
-    id: 'automation-engine',
-    label: 'Automation Engine',
-    iconName: 'Zap',
+    id: 'insights',
+    label: 'Insights',
+    iconName: 'BarChart3',
     subsections: [
-      { label: 'Workflows', path: '/control/automations', capability: 'manage_automations' }
+      { label: 'Analytics', path: '/control/analytics', capability: 'view_analytics' },
+      { label: 'Reports', path: '/workspace/reports', capability: 'view_reports' },
+      { label: 'Decisions', path: '/workspace/decisions', capability: 'view_decision_center' }
     ]
   },
   {
-    id: 'knowledge-hub',
-    label: 'Knowledge Hub',
-    iconName: 'BookOpen',
-    subsections: [
-      { label: 'Documentation', path: '/workspace/knowledge', capability: 'view_projects' }
-    ]
-  },
-  {
-    id: 'governance-control',
-    label: 'Governance & Control',
-    iconName: 'Shield',
-    subsections: [
-      { label: 'Audit Ledger', path: '/control/audit', capability: 'view_audit_log' }
-    ]
-  },
-  {
-    id: 'system-health',
-    label: 'System Health',
-    iconName: 'Activity',
-    subsections: [
-      { label: 'Platform Health', path: '/control/system-health', capability: 'platform_governance' },
-      { label: 'Analytics', path: '/control/analytics', capability: 'view_analytics' }
-    ]
-  },
-  {
-    id: 'administration',
-    label: 'Administration',
+    id: 'admin',
+    label: 'Admin',
     iconName: 'Settings',
     subsections: [
-      { label: 'Identity & Access', path: '/control/identity', capability: 'manage_settings' },
+      { label: 'Settings', path: '/control/settings', capability: 'manage_settings' },
       { label: 'Integrations', path: '/control/connections', capability: 'manage_integrations' },
-      { label: 'Mission Control', path: '/control/mission-control', capability: 'platform_governance' },
-      { label: 'Settings', path: '/control/settings', capability: 'manage_settings' }
+      { label: 'Audit Logs', path: '/control/audit', capability: 'view_audit_log' },
+      { label: 'Access Control', path: '/control/identity', capability: 'manage_settings' }
     ]
   }
 ];
@@ -206,11 +171,11 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     dbNotifications,
     updateWorkspaceSettings,
     refreshAttendance,
-    refreshSalaries,
+    
   } = useOperationalData();
 
   const attendanceRows = raw.attendanceRows;
-  const salaryRows = raw.salaryRows;
+  
 
   const projects = raw.projects;
   const tasks = raw.tasks;
@@ -458,7 +423,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         },
         {
           title: "Tactical Navigation Console",
-          description: "Use the Sidebar to access different operational layers. 'Operations' contains Logistics and Team Roster, while 'System' houses your global Settings.",
+          description: "Use the Sidebar to access different areas. 'Team' contains Team Management and Roster, while 'Admin' houses your global Settings.",
           targetSelector: "#tour-sidebar",
           actionBefore: () => navigateTo('/overview')
         },

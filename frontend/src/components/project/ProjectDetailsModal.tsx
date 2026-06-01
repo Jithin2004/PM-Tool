@@ -893,7 +893,7 @@ export function ProjectDetailsModal({
               {/* Left Column: Delivery Friction Summary */}
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">Execution State Orchestration</h4>
+                  <h4 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">Execution State Management</h4>
                   <p className="text-[11px] text-text-tertiary leading-relaxed mb-4">
                     Transition the current delivery state to model passive latency and contractually relevant wait-state friction.
                   </p>

@@ -28,11 +28,39 @@ export async function fetchWorkspaceProfiles(workspaceId: string): Promise<Profi
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: true });
 
-  if (!error && data) return data as Profile[];
+  let users = (!error && data) ? (data as Profile[]) : [];
+  
+  if (users.length === 0) {
+    const { data: fallback, error: fallbackErr } = await supabase.from('profiles').select('*');
+    if (!fallbackErr && fallback) {
+      users = fallback as Profile[];
+    }
+  }
 
-  const { data: fallback, error: fallbackErr } = await supabase.from('profiles').select('*');
-  if (!fallbackErr && fallback) return fallback as Profile[];
-  return [];
+  if (users.length > 0) {
+    const { data: empData, error: empError } = await supabase
+      .from('employment_records')
+      .select('profile_id, date_of_joining, employment_status')
+      .eq('workspace_id', workspaceId);
+
+    if (!empError && empData) {
+      const empMap = new Map();
+      empData.forEach((record: any) => empMap.set(record.profile_id, record));
+      users = users.map(u => {
+        const emp = empMap.get(u.id);
+        if (emp) {
+          return {
+            ...u,
+            date_of_joining: emp.date_of_joining,
+            employment_status: emp.employment_status,
+          };
+        }
+        return u;
+      });
+    }
+  }
+
+  return users;
 }
 
 export async function fetchWorkspaceAttendance(workspaceId: string): Promise<AttendanceRow[]> {

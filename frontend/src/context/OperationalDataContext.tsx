@@ -34,7 +34,7 @@ interface OperationalDataContextValue {
   refreshAll: () => Promise<void>;
   refreshProjects: () => Promise<void>;
   refreshAttendance: () => Promise<void>;
-  refreshSalaries: () => Promise<void>;
+  
   handleSaveLogisticsData: (data: Record<string, unknown>) => Promise<'success' | 'unauthorized' | 'error'>;
   handleCreateTeam: (name: string, pmId: string, devIds: string[]) => Promise<void>;
   handleUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => Promise<void>;
@@ -75,7 +75,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [attendanceRows, setAttendanceRows] = useState<OperationalRawState['attendanceRows']>([]);
-  const [salaryRows, setSalaryRows] = useState<OperationalRawState['salaryRows']>([]);
+  
   const [workspaceSettingsBlob, setWorkspaceSettingsBlob] = useState<Record<string, unknown>>({});
   const [serverMetrics, setServerMetrics] = useState<{ deliveryConfidence: number; executionPressure: number; dailyFatigue: number; riskForecast: number; } | undefined>();
   const [loading, setLoading] = useState(true);
@@ -91,11 +91,11 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       teams,
       profiles,
       attendanceRows,
-      salaryRows,
+      
       workspaceSettingsBlob,
       allocationPeriods,
     }),
-    [projects, tasks, dependencies, teams, profiles, attendanceRows, salaryRows, workspaceSettingsBlob, allocationPeriods],
+    [projects, tasks, dependencies, teams, profiles, attendanceRows,  workspaceSettingsBlob, allocationPeriods],
   );
 
   const derived = useMemo(
@@ -106,14 +106,14 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
         teams,
         profiles,
         attendanceRows,
-        salaryRows,
+        
         workspaceSettingsBlob,
         userId: profile?.id || '',
         userRole: profile?.role || 'viewer',
         dependencies,
         serverMetrics,
       }),
-    [projects, tasks, dependencies, teams, profiles, attendanceRows, salaryRows, workspaceSettingsBlob, profile?.id, profile?.role, serverMetrics],
+    [projects, tasks, dependencies, teams, profiles, attendanceRows,  workspaceSettingsBlob, profile?.id, profile?.role, serverMetrics],
   );
 
   const decisions = useMemo(() => {
@@ -182,7 +182,6 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     setProfiles(snapshot.profiles);
     setTeams(snapshot.teams);
     setAttendanceRows(snapshot.attendanceRows);
-    setSalaryRows(snapshot.salaryRows);
     setWorkspaceSettingsBlob(snapshot.workspaceSettingsBlob);
     setServerMetrics(snapshot.serverMetrics);
     if (snapshot.allocationPeriods) setAllocationPeriods(snapshot.allocationPeriods);
@@ -199,12 +198,6 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     if (!workspace?.id) return;
     const partial = await refreshOperationalPartial(workspace.id, ['attendanceRows']);
     if (partial.attendanceRows) setAttendanceRows(partial.attendanceRows);
-  }, [workspace?.id]);
-
-  const refreshSalaries = useCallback(async () => {
-    if (!workspace?.id) return;
-    const partial = await refreshOperationalPartial(workspace.id, ['salaryRows']);
-    if (partial.salaryRows) setSalaryRows(partial.salaryRows);
   }, [workspace?.id]);
 
   const fetchNotifications = useCallback(async () => {
@@ -239,7 +232,6 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
         setTeams([]);
         setProfiles([]);
         setAttendanceRows([]);
-        setSalaryRows([]);
       }
       if (mounted) setLoading(false);
     };
@@ -314,7 +306,6 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 
       setWorkspaceSettingsBlob(prev => ({ ...prev, ...result.settingsPatch }));
       if (result.attendanceRows) setAttendanceRows(result.attendanceRows);
-      if (result.salaryRows) setSalaryRows(result.salaryRows);
       if (result.teamsPatch) setTeams(result.teamsPatch);
 
       if (result.persisted) {
@@ -492,7 +483,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       refreshAll,
       refreshProjects,
       refreshAttendance,
-      refreshSalaries,
+      
       handleSaveLogisticsData,
       handleCreateTeam,
       handleUpdateTeam,
@@ -512,7 +503,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       refreshAll,
       refreshProjects,
       refreshAttendance,
-      refreshSalaries,
+      
       handleSaveLogisticsData,
       handleCreateTeam,
       handleUpdateTeam,

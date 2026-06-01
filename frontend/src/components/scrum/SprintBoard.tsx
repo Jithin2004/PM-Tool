@@ -537,7 +537,7 @@ export function SprintBoard({
           <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
             <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Velocity Analytics</h3>
             {sprints.filter(s => s.status === 'completed').length === 0 ? (
-              <div className="py-12 text-center text-text-quaternary font-mono text-[9px] uppercase">No data — complete a sprint first</div>
+              <div className="py-12 text-center text-text-quaternary font-sans text-xs">Completed sprints will appear here</div>
             ) : (
               <div className="space-y-3">
                 {sprints.filter(s => s.status === 'completed').map(s => (

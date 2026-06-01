@@ -1411,3 +1411,240 @@ CREATE TRIGGER trigger_enforce_task_completion
   FOR EACH ROW
   EXECUTE FUNCTION enforce_task_completion_governance();
 
+- -   M I G R A T I O N _ D O J _ H R _ A U D I T . s q l  
+ - -   R u n   t h i s   s c r i p t   t o   m i g r a t e   t h e   d a t a b a s e   f o r   t h e   D O J   H R   A u d i t   u p d a t e .  
+  
+ - -   1 .   A d d   d a t e _ o f _ j o i n i n g   t o   i n v i t a t i o n s  
+ A L T E R   T A B L E   p u b l i c . i n v i t a t i o n s   A D D   C O L U M N   I F   N O T   E X I S T S   d a t e _ o f _ j o i n i n g   T I M E S T A M P   W I T H   T I M E   Z O N E ;  
+  
+ - -   2 .   C r e a t e   e m p l o y m e n t _ r e c o r d s   t a b l e  
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . e m p l o y m e n t _ r e c o r d s   (  
+         i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,  
+         p r o f i l e _ i d   U U I D   N O T   N U L L   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   C A S C A D E ,  
+         w o r k s p a c e _ i d   U U I D   R E F E R E N C E S   p u b l i c . w o r k s p a c e s ( i d )   O N   D E L E T E   S E T   N U L L ,  
+         d a t e _ o f _ j o i n i n g   T I M E S T A M P   W I T H   T I M E   Z O N E   N O T   N U L L ,  
+         e m p l o y m e n t _ s t a t u s   T E X T   N O T   N U L L   D E F A U L T   ' a c t i v e '   C H E C K   ( e m p l o y m e n t _ s t a t u s   I N   ( ' a c t i v e ' ,   ' r e s i g n e d ' ,   ' t e r m i n a t e d ' ) ) ,  
+         c r e a t e d _ a t   T I M E S T A M P   W I T H   T I M E   Z O N E   N O T   N U L L   D E F A U L T   n o w ( ) ,  
+         u p d a t e d _ a t   T I M E S T A M P   W I T H   T I M E   Z O N E   N O T   N U L L   D E F A U L T   n o w ( ) ,  
+         c r e a t e d _ b y   U U I D   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   S E T   N U L L ,  
+         u p d a t e d _ b y   U U I D   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   S E T   N U L L ,  
+         C O N S T R A I N T   u n i q u e _ p r o f i l e _ w o r k s p a c e _ e m p l o y m e n t   U N I Q U E   ( p r o f i l e _ i d ,   w o r k s p a c e _ i d )  
+ ) ;  
+  
+ - -   3 .   C r e a t e   e m p l o y m e n t _ c h a n g e _ l o g s   t a b l e  
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . e m p l o y m e n t _ c h a n g e _ l o g s   (  
+         i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,  
+         e m p l o y e e _ i d   U U I D   N O T   N U L L   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   C A S C A D E ,  
+         f i e l d _ c h a n g e d   T E X T   N O T   N U L L ,  
+         p r e v i o u s _ v a l u e   T E X T ,  
+         n e w _ v a l u e   T E X T ,  
+         c h a n g e d _ b y   U U I D   N O T   N U L L   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   C A S C A D E ,  
+         c h a n g e d _ a t   T I M E S T A M P   W I T H   T I M E   Z O N E   N O T   N U L L   D E F A U L T   n o w ( ) ,  
+         r e a s o n   T E X T   N O T   N U L L  
+ ) ;  
+  
+ - -   E n a b l e   R L S  
+ A L T E R   T A B L E   p u b l i c . e m p l o y m e n t _ r e c o r d s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+ A L T E R   T A B L E   p u b l i c . e m p l o y m e n t _ c h a n g e _ l o g s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+  
+ - -   R L S   P o l i c i e s   f o r   e m p l o y m e n t _ r e c o r d s  
+ - -   S u p e r   A d m i n s   c a n   d o   a n y t h i n g  
+ C R E A T E   P O L I C Y   " S u p e r   A d m i n s   h a v e   f u l l   a c c e s s   t o   e m p l o y m e n t _ r e c o r d s "   O N   p u b l i c . e m p l o y m e n t _ r e c o r d s  
+ F O R   A L L   U S I N G   (  
+     E X I S T S   (  
+         S E L E C T   1   F R O M   p u b l i c . u s e r s  
+         W H E R E   u s e r s . i d   =   a u t h . u i d ( )   A N D   u s e r s . r o l e   =   ' s u p e r _ a d m i n '  
+     )  
+ ) ;  
+  
+ - -   U s e r s   c a n   v i e w   t h e i r   o w n   r e c o r d  
+ C R E A T E   P O L I C Y   " U s e r s   c a n   v i e w   t h e i r   o w n   e m p l o y m e n t _ r e c o r d s "   O N   p u b l i c . e m p l o y m e n t _ r e c o r d s  
+ F O R   S E L E C T   U S I N G   (  
+     p r o f i l e _ i d   =   a u t h . u i d ( )  
+ ) ;  
+  
+ - -   P r o j e c t   M a n a g e r s   a n d   A d m i n s   c a n   v i e w   r e c o r d s   i n   t h e i r   w o r k s p a c e  
+ C R E A T E   P O L I C Y   " W o r k s p a c e   m a n a g e r s   c a n   v i e w   e m p l o y m e n t _ r e c o r d s "   O N   p u b l i c . e m p l o y m e n t _ r e c o r d s  
+ F O R   S E L E C T   U S I N G   (  
+     E X I S T S   (  
+         S E L E C T   1   F R O M   p u b l i c . u s e r s  
+         W H E R E   u s e r s . i d   =   a u t h . u i d ( )   A N D   u s e r s . w o r k s p a c e _ i d   =   e m p l o y m e n t _ r e c o r d s . w o r k s p a c e _ i d  
+         A N D   u s e r s . r o l e   I N   ( ' s u p e r _ a d m i n ' ,   ' a d m i n ' ,   ' m a n a g e r ' ,   ' e d i t o r ' )  
+     )  
+ ) ;  
+  
+ - -   R L S   P o l i c i e s   f o r   e m p l o y m e n t _ c h a n g e _ l o g s  
+ C R E A T E   P O L I C Y   " S u p e r   A d m i n s   h a v e   f u l l   a c c e s s   t o   e m p l o y m e n t _ c h a n g e _ l o g s "   O N   p u b l i c . e m p l o y m e n t _ c h a n g e _ l o g s  
+ F O R   A L L   U S I N G   (  
+     E X I S T S   (  
+         S E L E C T   1   F R O M   p u b l i c . u s e r s  
+         W H E R E   u s e r s . i d   =   a u t h . u i d ( )   A N D   u s e r s . r o l e   =   ' s u p e r _ a d m i n '  
+     )  
+ ) ;  
+  
+ C R E A T E   P O L I C Y   " U s e r s   c a n   v i e w   t h e i r   o w n   c h a n g e   l o g s "   O N   p u b l i c . e m p l o y m e n t _ c h a n g e _ l o g s  
+ F O R   S E L E C T   U S I N G   (  
+     e m p l o y e e _ i d   =   a u t h . u i d ( )  
+ ) ;  
+ I N S E R T   I N T O   p u b l i c . e m p l o y m e n t _ r e c o r d s   ( p r o f i l e _ i d ,   w o r k s p a c e _ i d ,   d a t e _ o f _ j o i n i n g ,   e m p l o y m e n t _ s t a t u s ,   c r e a t e d _ a t ,   u p d a t e d _ a t ) 
+ S E L E C T   i d ,   w o r k s p a c e _ i d ,   c r e a t e d _ a t ,   ' a c t i v e ' ,   n o w ( ) ,   n o w ( ) 
+ F R O M   p u b l i c . u s e r s 
+ W H E R E   w o r k s p a c e _ i d   I S   N O T   N U L L 
+ O N   C O N F L I C T   ( p r o f i l e _ i d ,   w o r k s p a c e _ i d )   D O   N O T H I N G ;  
+ 
+
+-- ========================================== 
+-- MERGED: HR ISOLATION AUDIT MIGRATION 
+-- ==========================================
+
+-- MIGRATION_DOJ_HR_AUDIT.sql
+-- Run this script to migrate the database for the DOJ HR Audit update.
+
+-- 1. Add date_of_joining to invitations
+ALTER TABLE public.invitations ADD COLUMN IF NOT EXISTS date_of_joining TIMESTAMP WITH TIME ZONE;
+
+-- 2. Create employment_records table
+CREATE TABLE IF NOT EXISTS public.employment_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    profile_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE SET NULL,
+    date_of_joining TIMESTAMP WITH TIME ZONE NOT NULL,
+    employment_status TEXT NOT NULL DEFAULT 'active' CHECK (employment_status IN ('active', 'resigned', 'terminated')),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    CONSTRAINT unique_profile_workspace_employment UNIQUE (profile_id, workspace_id)
+);
+
+-- 3. Create employment_change_logs table
+CREATE TABLE IF NOT EXISTS public.employment_change_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    employee_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    field_changed TEXT NOT NULL,
+    previous_value TEXT,
+    new_value TEXT,
+    changed_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    reason TEXT NOT NULL
+);
+
+-- Enable RLS
+ALTER TABLE public.employment_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.employment_change_logs ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for employment_records
+-- Super Admins can do anything
+DROP POLICY IF EXISTS "Super Admins have full access to employment_records" ON public.employment_records;
+CREATE POLICY "Super Admins have full access to employment_records" ON public.employment_records
+FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid() AND users.role = 'super_admin'
+  )
+);
+
+-- Users can view their own record
+DROP POLICY IF EXISTS "Users can view their own employment_records" ON public.employment_records;
+CREATE POLICY "Users can view their own employment_records" ON public.employment_records
+FOR SELECT USING (
+  profile_id = auth.uid()
+);
+
+-- Project Managers and Admins can view records in their workspace
+DROP POLICY IF EXISTS "Workspace managers can view employment_records" ON public.employment_records;
+CREATE POLICY "Workspace managers can view employment_records" ON public.employment_records
+FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid() AND users.workspace_id = employment_records.workspace_id
+    AND users.role IN ('super_admin', 'admin', 'manager', 'editor')
+  )
+);
+
+-- RLS Policies for employment_change_logs
+DROP POLICY IF EXISTS "Super Admins have full access to employment_change_logs" ON public.employment_change_logs;
+CREATE POLICY "Super Admins have full access to employment_change_logs" ON public.employment_change_logs
+FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid() AND users.role = 'super_admin'
+  )
+);
+
+DROP POLICY IF EXISTS "Users can view their own change logs" ON public.employment_change_logs;
+CREATE POLICY "Users can view their own change logs" ON public.employment_change_logs
+FOR SELECT USING (
+  employee_id = auth.uid()
+);
+
+-- 4. Backfill existing users into employment_records
+INSERT INTO public.employment_records (profile_id, workspace_id, date_of_joining, employment_status, created_at, updated_at)
+SELECT id, workspace_id, created_at, 'active', now(), now()
+FROM public.users
+WHERE workspace_id IS NOT NULL
+ON CONFLICT (profile_id, workspace_id) DO NOTHING;
+-- ==========================================
+-- HR DATA ISOLATION MIGRATION
+-- Moves sensitive salary data out of globally fetched operational structures
+-- and into strict 'compensation_records' with explicit Super Admin RLS.
+-- ==========================================
+
+-- 1. Drop existing table to ensure fresh schema
+DROP TABLE IF EXISTS public.compensation_records CASCADE;
+
+-- 2. Create compensation_records table
+CREATE TABLE public.compensation_records (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    employee_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    base_salary numeric NOT NULL DEFAULT 3000,
+    currency text NOT NULL DEFAULT 'USD',
+    effective_from timestamptz NOT NULL DEFAULT now(),
+    effective_to timestamptz DEFAULT NULL,
+    change_reason text,
+    created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    updated_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+-- 3. Create partial unique index to ensure only one active compensation record per employee
+CREATE UNIQUE INDEX IF NOT EXISTS compensation_records_active_idx 
+ON public.compensation_records (workspace_id, employee_id) 
+WHERE effective_to IS NULL;
+
+-- 4. Enable RLS on compensation_records
+ALTER TABLE public.compensation_records ENABLE ROW LEVEL SECURITY;
+
+-- 5. Super Admin Policy for compensation_records
+DROP POLICY IF EXISTS "Super Admins have full access to compensation_records" ON public.compensation_records;
+CREATE POLICY "Super Admins have full access to compensation_records"
+ON public.compensation_records
+FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = compensation_records.workspace_id
+      AND users.role = 'super_admin'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = compensation_records.workspace_id
+      AND users.role = 'super_admin'
+  )
+);
+
+-- 6. Migrate data from 'salaries' to 'compensation_records'
+INSERT INTO public.compensation_records (employee_id, workspace_id, base_salary, created_at)
+SELECT user_id, workspace_id, base_salary, created_at
+FROM public.salaries
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.compensation_records 
+  WHERE compensation_records.employee_id = salaries.user_id
+    AND compensation_records.workspace_id = salaries.workspace_id
+);

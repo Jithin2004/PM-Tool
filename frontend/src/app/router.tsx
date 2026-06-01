@@ -328,7 +328,7 @@ export function ResolveRouter() {
 
   // ── RESOURCES ──
 
-  if (pathname === '/resources') {
+  if (pathname === '/resources' || pathname === '/resources/attendance' || pathname === '/resources/payroll') {
     if (!guardRoute(role, '/resources')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
     return <RouteShell><LogisticsPanel /></RouteShell>;
   }

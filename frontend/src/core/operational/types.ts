@@ -8,7 +8,7 @@ export interface OperationalRawState {
   teams: Team[];
   profiles: Profile[];
   attendanceRows: AttendanceRow[];
-  salaryRows: SalaryRow[];
+  
   workspaceSettingsBlob: Record<string, unknown>;
   allocationPeriods?: any[]; // Phase 2A.1
 }
