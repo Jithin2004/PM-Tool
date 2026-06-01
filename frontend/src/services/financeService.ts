@@ -1,6 +1,19 @@
 import { supabase } from '../lib/supabase';
 import type { PostgrestError } from '@supabase/supabase-js';
 
+export interface CompanyBillingProfile {
+  id: string;
+  workspace_id: string;
+  legal_name: string;
+  gstin: string | null;
+  pan: string | null;
+  billing_address: string | null;
+  state: string;
+  country: string;
+  bank_details: any;
+  invoice_prefix: string;
+}
+
 export interface Client {
   id: string;
   workspace_id: string;
@@ -10,6 +23,20 @@ export interface Client {
   phone: string;
   billing_address: string;
   status: 'active' | 'inactive';
+  gstin?: string;
+  billing_state?: string;
+  billing_country?: string;
+  tax_type?: 'registered' | 'unregistered';
+}
+
+export interface InvoiceLineItem {
+  id: string;
+  invoice_id: string;
+  description: string;
+  quantity: number;
+  rate: number;
+  tax_percentage: number;
+  amount: number;
 }
 
 export interface Invoice {
@@ -18,13 +45,24 @@ export interface Invoice {
   client_id: string;
   project_id: string | null;
   invoice_number: string;
-  amount: number;
+  amount: number; // Legacy total amount
+  subtotal: number;
+  discount_amount: number;
+  taxable_amount: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  total_tax: number;
+  grand_total: number;
+  balance_due: number;
+  billing_state_snapshot: string | null;
   currency: string;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'partial';
   issue_date: string;
   due_date: string;
   paid_date: string | null;
   created_at: string;
+  line_items?: InvoiceLineItem[];
 }
 
 export interface Payment {
@@ -79,9 +117,10 @@ export interface FinancialAdjustment {
 }
 
 export async function fetchFinanceData(workspaceId: string) {
-  const [clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments] = await Promise.all([
+  const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments] = await Promise.all([
+    supabase.from('company_billing_profile').select('*').eq('workspace_id', workspaceId).maybeSingle(),
     supabase.from('clients').select('*').eq('workspace_id', workspaceId),
-    supabase.from('invoices').select('*').eq('workspace_id', workspaceId),
+    supabase.from('invoices').select('*, invoice_line_items(*)').eq('workspace_id', workspaceId),
     supabase.from('payments').select('*, invoices!inner(workspace_id)').eq('invoices.workspace_id', workspaceId),
     supabase.from('expenses').select('*').eq('workspace_id', workspaceId),
     supabase.from('salaries').select('base_salary').eq('workspace_id', workspaceId),
@@ -90,6 +129,7 @@ export async function fetchFinanceData(workspaceId: string) {
     supabase.from('financial_adjustments').select('*, financial_periods!inner(workspace_id)').eq('financial_periods.workspace_id', workspaceId)
   ]);
 
+  if (companyProfile.error && companyProfile.error.code !== 'PGRST116') throw companyProfile.error;
   if (clients.error) throw clients.error;
   if (invoices.error) throw invoices.error;
   if (payments.error) throw payments.error;
@@ -100,6 +140,7 @@ export async function fetchFinanceData(workspaceId: string) {
   if (adjustments.error && adjustments.error.code !== '42P01') throw adjustments.error;
 
   return {
+    companyProfile: companyProfile.data as CompanyBillingProfile | null,
     clients: clients.data as Client[],
     invoices: invoices.data as Invoice[],
     payments: payments.data as Payment[],
@@ -117,10 +158,33 @@ export async function createClient(workspaceId: string, client: Partial<Client>)
   return data;
 }
 
-export async function createInvoice(workspaceId: string, invoice: Partial<Invoice>) {
-  const { data, error } = await supabase.from('invoices').insert([{ ...invoice, workspace_id: workspaceId }]).select().single();
-  if (error) throw error;
-  return data;
+export async function generateInvoice(workspaceId: string, invoice: Partial<Invoice>, lineItems: Partial<InvoiceLineItem>[], prefix: string = 'RPM') {
+  // 1. Generate Invoice Number via RPC
+  const { data: invNumber, error: rpcError } = await supabase.rpc('generate_invoice_number', {
+    p_workspace_id: workspaceId,
+    p_prefix: prefix
+  });
+  if (rpcError) throw rpcError;
+
+  // 2. Insert Invoice
+  const { data: newInvoice, error: invError } = await supabase.from('invoices').insert([{ 
+    ...invoice, 
+    workspace_id: workspaceId,
+    invoice_number: invNumber 
+  }]).select().single();
+  
+  if (invError) throw invError;
+
+  // 3. Insert Line Items
+  if (lineItems && lineItems.length > 0) {
+    const itemsToInsert = lineItems.map(item => ({ ...item, invoice_id: newInvoice.id }));
+    const { error: lineItemsError } = await supabase.from('invoice_line_items').insert(itemsToInsert);
+    if (lineItemsError) {
+      console.error("Failed to insert line items", lineItemsError);
+    }
+  }
+
+  return newInvoice;
 }
 
 export async function recordPayment(payment: Partial<Payment>) {
