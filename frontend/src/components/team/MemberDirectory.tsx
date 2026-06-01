@@ -5,6 +5,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { Icon } from '../ui/Icon';
 import { supabase } from '../../lib/supabase';
+import { DocumentGeneratorDropdown } from '../hr/DocumentGeneratorDropdown';
 function getRoleLabel(role: string) {
   const labels: Record<string, string> = {
     super_admin: 'Super Admin',
@@ -109,6 +110,39 @@ export function MemberDirectory() {
               <div className="border border-white/10 rounded-lg p-4 bg-white/5">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-xs font-mono uppercase tracking-widest text-white/50">Employment Details</h4>
+                  
+                  <div className="flex gap-2">
+                    {workspace?.id && (
+                      <>
+                        <DocumentGeneratorDropdown
+                          workspaceId={workspace.id}
+                          type="offer_letter"
+                          companyName="Resolve PM"
+                          buttonText="Offer Letter"
+                          fileName={`Offer_Letter_${(selectedMemberDetails.full_name || 'User').replace(/\s+/g, '_')}`}
+                          data={{
+                            employee_name: selectedMemberDetails.full_name || 'User',
+                            role: getRoleLabel(selectedMemberDetails.role),
+                            salary: 'TBD',
+                            joining_date: selectedMemberDetails.date_of_joining ? new Date(selectedMemberDetails.date_of_joining).toLocaleDateString() : 'TBD'
+                          }}
+                        />
+                        <DocumentGeneratorDropdown
+                          workspaceId={workspace.id}
+                          type="experience_letter"
+                          companyName="Resolve PM"
+                          buttonText="Experience Letter"
+                          fileName={`Experience_Letter_${(selectedMemberDetails.full_name || 'User').replace(/\s+/g, '_')}`}
+                          data={{
+                            employee_name: selectedMemberDetails.full_name || 'User',
+                            role: getRoleLabel(selectedMemberDetails.role),
+                            start_date: selectedMemberDetails.date_of_joining ? new Date(selectedMemberDetails.date_of_joining).toLocaleDateString() : 'TBD',
+                            end_date: new Date().toLocaleDateString()
+                          }}
+                        />
+                      </>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">

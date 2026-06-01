@@ -6,6 +6,7 @@ import { hasCapability } from '../../core/auth/permissions';
 import { getLocalDateString } from '../../utils/timeUtils';
 import { MemberDirectory } from '../team/MemberDirectory';
 import { supabase } from '../../lib/supabase';
+import { DocumentGeneratorDropdown } from '../hr/DocumentGeneratorDropdown';
 
 export function LogisticsDashboard({
   profiles,
@@ -1329,13 +1330,13 @@ export function LogisticsDashboard({
                 </h3>
                 <span className="text-[10px] font-mono text-text-tertiary">Scope: {payrollMode === 'monthly' ? monthPrefix : `${customStartDate || 'TBD'} to ${customEndDate || 'TBD'}`}</span>
               </div>
-
-              <div>
+              <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse ">
                   <thead>
                     <tr className="border-b border-border bg-surface-3">
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">System Profile</th>
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-right">Base Salary ({activeSymbol.trim()})</th>
+                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center">Actions</th>
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center">Attendance Summary (Days)</th>
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center">Leaves / Exceeded Allowed</th>
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center font-bold text-signal-critical/90">Deductible Days</th>
@@ -1433,6 +1434,24 @@ export function LogisticsDashboard({
                                 </button>
                               </div>
                             )}
+                          </td>
+
+                          {/* HR Actions */}
+                          <td className="p-4 text-center">
+                            <DocumentGeneratorDropdown
+                              workspaceId={profile.workspace_id}
+                              type="salary_slip"
+                              companyName="Your Company"
+                              buttonText="Slip"
+                              fileName={`Salary_Slip_${profile.full_name.replace(/\s+/g, '_')}_${payrollMode === 'monthly' ? monthPrefix : 'Custom'}`}
+                              data={{
+                                employee_name: profile.full_name,
+                                month: payrollMode === 'monthly' ? monthPrefix : 'Custom Period',
+                                net_pay: netPayable.toLocaleString(),
+                                deductions: totalDeductions.toLocaleString(),
+                                base_salary: baseSalary.toLocaleString()
+                              }}
+                            />
                           </td>
 
                           {/* Attendance */}

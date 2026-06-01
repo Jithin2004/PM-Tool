@@ -108,6 +108,14 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     ]
   },
   {
+    id: 'finance',
+    label: 'Finance',
+    iconName: 'Wallet',
+    subsections: [
+      { label: 'Accounts', path: '/resources/finance', capability: 'manage_compensation' } // Using manage_compensation as proxy for finance access, or view_reports
+    ]
+  },
+  {
     id: 'insights',
     label: 'Insights',
     iconName: 'BarChart3',
@@ -125,6 +133,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
       { label: 'Settings', path: '/control/settings', capability: 'manage_settings' },
       { label: 'Integrations', path: '/control/connections', capability: 'manage_integrations' },
       { label: 'Audit Logs', path: '/control/audit', capability: 'view_audit_log' },
+      { label: 'Document Templates', path: '/control/document-templates', capability: 'manage_settings' },
       { label: 'Access Control', path: '/control/identity', capability: 'manage_settings' }
     ]
   }

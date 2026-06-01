@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save, Download } from 'lucide-react';
 import { Client, Invoice, InvoiceLineItem, generateInvoice, CompanyBillingProfile } from '../../services/financeService';
 import { generateInvoicePDF } from '../../services/invoicePdfService';
+import { fetchDocumentTemplates, DocumentTemplate } from '../../services/documentTemplateService';
+import { documentGenerator } from '../../services/documentGeneratorService';
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
@@ -20,6 +22,22 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
     { description: '', quantity: 1, rate: 0, tax_percentage: 18, amount: 0 }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('default');
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchDocumentTemplates(workspaceId).then(data => {
+        const invoiceTemplates = data.filter(t => t.type === 'invoice');
+        setTemplates(invoiceTemplates);
+        const defaultTemplate = invoiceTemplates.find(t => t.is_default);
+        if (defaultTemplate) {
+          setSelectedTemplateId(defaultTemplate.id);
+        }
+      });
+    }
+  }, [isOpen, workspaceId]);
 
   if (!isOpen) return null;
 
@@ -104,8 +122,31 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
 
       const newInvoice = await generateInvoice(workspaceId, invoiceData, lineItems, companyProfile.invoice_prefix);
       
-      // Auto-generate PDF
-      await generateInvoicePDF(companyProfile, client!, newInvoice as Invoice, lineItems as InvoiceLineItem[]);
+      if (selectedTemplateId === 'default') {
+        // Auto-generate PDF using hardcoded default
+        await generateInvoicePDF(companyProfile, client!, newInvoice as Invoice, lineItems as InvoiceLineItem[]);
+      } else {
+        // Auto-generate using custom template
+        const template = templates.find(t => t.id === selectedTemplateId);
+        if (template) {
+          const templateData = {
+            company_name: companyProfile.legal_name,
+            client_name: client?.company_name || '',
+            invoice_number: (newInvoice as Invoice).invoice_number,
+            amount: grand_total,
+            gst: total_tax,
+            date: issueDate,
+            signature: companyProfile.legal_name,
+          };
+          const blob = await documentGenerator(template, templateData);
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${(newInvoice as Invoice).invoice_number.replace(/\//g, '_')}_Invoice.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
       
       onSuccess();
       onClose();
@@ -164,6 +205,19 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                 onChange={e => setDueDate(e.target.value)}
                 className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none"
               />
+            </div>
+            <div className="space-y-1">
+              <label className="font-medium text-text-primary">Template</label>
+              <select 
+                value={selectedTemplateId}
+                onChange={e => setSelectedTemplateId(e.target.value)}
+                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none focus:border-accent-primary"
+              >
+                <option value="default">System Default PDF</option>
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} {t.is_default ? '(Default)' : ''}</option>
+                ))}
+              </select>
             </div>
           </div>
 
