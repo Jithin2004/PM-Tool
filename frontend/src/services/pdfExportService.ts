@@ -1,13 +1,15 @@
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { activityLogService } from './activityLogService';
 
 /**
  * Enterprise PDF Export Service
- * Simulates server-side generation via Edge Function / Puppeteer.
+ * Generates client-side PDF using jsPDF.
  */
 export const exportToPDF = async (
   workspaceId: string,
-  reportType: 'ExecutiveDigest' | 'PortfolioReport' | 'CapacityReport' | 'DeliveryHealth',
-  data: any
+  reportType: string,
+  dataRaw: any
 ) => {
   // Track in observability
   activityLogService.appendLog({
@@ -17,23 +19,32 @@ export const exportToPDF = async (
     metadata: { reportType }
   }).catch(() => {});
 
-  // Simulate network delay for server-side generation
-  await new Promise(resolve => setTimeout(resolve, 1500));
-
-  // In a real environment, this would call a Supabase Edge Function:
-  // const { data: pdfBlob, error } = await supabase.functions.invoke('generate-pdf', { body: { reportType, data } });
+  const doc = new jsPDF();
+  const title = `${reportType.replace(/_/g, ' ')}`;
   
-  // Here we mock a successful generation and trigger a download of a placeholder
-  const mockContent = `Mock PDF Content for ${reportType}\nData: ${JSON.stringify(data).substring(0, 50)}...`;
-  const blob = new Blob([mockContent], { type: 'application/pdf' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${reportType}_${new Date().toISOString().split('T')[0]}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
+  doc.setFontSize(18);
+  doc.text(title, 14, 22);
+  doc.setFontSize(11);
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+
+  const data = dataRaw?.data || dataRaw; // handle wrapper object if present
+
+  if (Array.isArray(data) && data.length > 0) {
+    const headers = Object.keys(data[0]);
+    const body = data.map(row => headers.map(h => String(row[h] || '')));
+    
+    (doc as any).autoTable({
+      startY: 40,
+      head: [headers],
+      body: body,
+      theme: 'grid',
+      headStyles: { fillColor: [31, 41, 55] }, // Dark header
+    });
+  } else {
+    doc.text('No data available for this report.', 14, 40);
+  }
+
+  doc.save(`${reportType}_${new Date().toISOString().split('T')[0]}.pdf`);
 
   // Track success
   activityLogService.appendLog({

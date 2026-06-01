@@ -139,11 +139,11 @@ export default function ReportsCenter() {
                   onChange={(e) => setSelectedReport(e.target.value)}
                   className="w-full bg-surface-highest border border-border p-3 rounded-lg text-sm font-medium text-text-primary focus:outline-none focus:border-accent-primary"
                 >
-                  <option value="project">Project Report</option>
-                  <option value="team">Team Report</option>
-                  <option value="sprint">Sprint Report</option>
-                  <option value="attendance">Attendance Report</option>
-                  {canManageCompensation && <option value="payroll">Payroll Report (Restricted)</option>}
+                  <option className="bg-surface-highest text-text-primary" value="project">Project Report</option>
+                  <option className="bg-surface-highest text-text-primary" value="team">Team Report</option>
+                  <option className="bg-surface-highest text-text-primary" value="sprint">Sprint Report</option>
+                  <option className="bg-surface-highest text-text-primary" value="attendance">Attendance Report</option>
+                  {canManageCompensation && <option className="bg-surface-highest text-text-primary" value="payroll">Payroll Report (Restricted)</option>}
                 </select>
               </div>
 
