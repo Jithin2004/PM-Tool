@@ -106,7 +106,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     iconName: 'Kanban',
     subsections: [
       { label: 'Board', path: '/execution', capability: 'view_tasks' },
-      { label: 'Timeline', path: '/execution/timeline', capability: 'view_scheduling' },
+      { label: 'Calendar', path: '/execution/timeline', capability: 'view_scheduling' },
       { label: 'Gantt', path: '/execution/gantt', capability: 'view_scheduling' },
       { label: 'Sprints', path: '/execution/sprints', capability: 'view_scheduling' }
     ]
@@ -327,7 +327,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
     // Fallback matching partial path
     for (const domain of visibleDomains) {
-      for (const sub of domain.subsections) {
+      const sortedSubs = [...domain.subsections].sort((a, b) => b.path.length - a.path.length);
+      for (const sub of sortedSubs) {
         if (routePath.startsWith(sub.path) && sub.path !== '/overview' && sub.path !== '/workspace') {
           return { activeDomain: domain, activeSubsection: sub };
         }
@@ -348,8 +349,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     const domain = visibleDomains.find(d => d.id === domainId);
     if (domain && domain.subsections.length > 0) {
       const firstSub = domain.subsections[0];
-      const targetPath = firstSub.tab ? `${firstSub.path}?tab=${firstSub.tab}` : firstSub.path;
-      navigateTo(targetPath);
+      navigateTo(firstSub.path);
     }
   };
 
@@ -1246,7 +1246,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </div>
 
             {/* Top bar center: Dynamic Subsections Pill Tabs */}
-            <div className="hidden sm:flex items-center gap-1 font-geist mx-auto flex-1 justify-center px-4 overflow-hidden">
+            <div className="flex items-center gap-1 font-geist mx-auto flex-1 justify-start sm:justify-center px-4 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {activeDomain?.subsections.map(sub => {
                 const isSubActive = activeSubsection === sub;
                 return (
