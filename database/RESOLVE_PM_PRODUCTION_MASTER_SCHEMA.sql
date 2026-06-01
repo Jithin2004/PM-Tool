@@ -1,5 +1,3 @@
-
-
 -- =============================================================
 -- RESOLVE PM — PRODUCTION MASTER DATABASE SCHEMA
 -- Version: 3.0.0 — Consolidated Canonical Deployment
@@ -10,7 +8,9 @@
 -- Apply this document once to a clean Supabase project.
 -- =============================================================
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- -------------------------------------------------------------
 -- Clean Drop Section (Reverse Dependency Order)

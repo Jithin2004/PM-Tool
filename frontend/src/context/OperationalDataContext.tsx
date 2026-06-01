@@ -22,6 +22,7 @@ import {
   loadWorkspaceNotifications,
   subscribeToWorkspaceNotifications,
 } from '../services/realtimeNotificationService';
+import { markAsRead } from '../services/notificationService';
 import type { Project, Profile, Team, UserRole, Notification } from '../types';
 
 interface OperationalDataContextValue {
@@ -215,7 +216,6 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const markNotificationRead = useCallback(
     async (notificationId: string) => {
       if (!workspace?.id) return;
-      const { markAsRead } = await import('../services/notificationService');
       const success = await markAsRead(notificationId, workspace.id);
       if (success) {
         setDbNotifications(prev =>
