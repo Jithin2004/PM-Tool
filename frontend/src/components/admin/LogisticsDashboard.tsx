@@ -294,7 +294,6 @@ export function LogisticsDashboard({
     }
 
     return profiles.map(profile => {
-      const baseSalary = compensationRecords[profile.id] ?? 3000;
       const rawDoj = profile.date_of_joining;
       const joiningDateStr = rawDoj ? getLocalDateString(new Date(rawDoj)) : '';
       
@@ -335,6 +334,10 @@ export function LogisticsDashboard({
         }
       });
 
+      const fullMonthlySalary = compensationRecords[profile.id] ?? 3000;
+      const dailyRate = fullMonthlySalary / 22;
+      const baseSalary = payrollMode === 'custom' ? dailyRate * expectedWorkingDaysForProfile : fullMonthlySalary;
+
       const totalDaysAccounted = Object.keys(attendanceRecords).reduce((acc, dateStr) => {
         if (isDateInRange(dateStr) && (!joiningDateStr || dateStr >= joiningDateStr) && attendanceRecords[dateStr]?.[profile.id]) {
           return acc + 1;
@@ -357,7 +360,6 @@ export function LogisticsDashboard({
         if (deductionMethod === 'fixed') {
           totalDeductions = totalUnpaidDays * unexcusedDeductionAmount;
         } else {
-          const dailyRate = baseSalary / 22;
           totalDeductions = totalUnpaidDays * dailyRate;
         }
       }
