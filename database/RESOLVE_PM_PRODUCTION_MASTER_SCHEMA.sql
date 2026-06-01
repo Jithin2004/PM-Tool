@@ -2509,20 +2509,11 @@ CREATE OR REPLACE FUNCTION log_recurring_task_activity()
 RETURNS trigger AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        INSERT INTO workspace_activity (
-            workspace_id, entity_type, entity_id, actor_id, action, details
-        ) VALUES (
-            NEW.workspace_id, 'project', NEW.project_id, NEW.created_by, 'recurring_task_created',
-            jsonb_build_object('title', NEW.title, 'type', NEW.recurrence_type)
-        );
+        INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
+            VALUES (NEW.workspace_id, NEW.created_by, 'recurring_task_created', jsonb_build_object('entity_type', 'project', 'entity_id', NEW.project_id) || jsonb_build_object('title', NEW.title, 'type', NEW.recurrence_type));
     ELSIF TG_OP = 'UPDATE' THEN
         IF NEW.is_active != OLD.is_active OR NEW.recurrence_type != OLD.recurrence_type THEN
-            INSERT INTO workspace_activity (
-                workspace_id, entity_type, entity_id, actor_id, action, details
-            ) VALUES (
-                NEW.workspace_id, 'project', NEW.project_id, COALESCE(auth.uid(), NEW.created_by), 'recurring_schedule_changed',
-                jsonb_build_object('title', NEW.title, 'type', NEW.recurrence_type, 'is_active', NEW.is_active)
-            );
+            INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata) VALUES (NEW.workspace_id, COALESCE(auth.uid(), NEW.created_by), 'recurring_schedule_changed', jsonb_build_object('entity_type', 'project', 'entity_id', NEW.project_id, 'title', NEW.title, 'type', NEW.recurrence_type, 'is_active', NEW.is_active));
         END IF;
     END IF;
     RETURN NEW;
@@ -2618,12 +2609,8 @@ BEGIN
         VALUES (t_record.id, new_task_id);
 
         -- Insert Activity Log for the generated task
-        INSERT INTO workspace_activity (
-            workspace_id, entity_type, entity_id, actor_id, action, details
-        ) VALUES (
-            t_record.workspace_id, 'project', t_record.project_id, t_record.created_by, 'recurring_task_generated',
-            jsonb_build_object('task_id', new_task_id, 'title', t_record.title)
-        );
+        INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
+            VALUES (t_record.workspace_id, t_record.created_by, 'recurring_task_generated', jsonb_build_object('entity_type', 'project', 'entity_id', t_record.project_id) || jsonb_build_object('task_id', new_task_id, 'title', t_record.title));
         
         -- Generate notification for assignment if assigned
         IF t_record.assigned_to IS NOT NULL THEN
@@ -2889,12 +2876,12 @@ RETURNS trigger AS $$
 BEGIN
     IF TG_TABLE_NAME = 'invoices' THEN
         IF TG_OP = 'INSERT' THEN
-            INSERT INTO public.workspace_activity (workspace_id, entity_type, entity_id, actor_id, action, details)
-            VALUES (NEW.workspace_id, 'invoice', NEW.id, NEW.created_by, 'invoice_created', jsonb_build_object('invoice_number', NEW.invoice_number, 'amount', NEW.amount));
+            INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
+            VALUES (NEW.workspace_id, NEW.created_by, 'invoice_created', jsonb_build_object('entity_type', 'invoice', 'entity_id', NEW.id) || jsonb_build_object('invoice_number', NEW.invoice_number, 'amount', NEW.amount));
         ELSIF TG_OP = 'UPDATE' THEN
             IF NEW.status != OLD.status THEN
-                INSERT INTO public.workspace_activity (workspace_id, entity_type, entity_id, actor_id, action, details)
-                VALUES (NEW.workspace_id, 'invoice', NEW.id, auth.uid(), 'invoice_status_changed', jsonb_build_object('old_status', OLD.status, 'new_status', NEW.status));
+                INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
+            VALUES (NEW.workspace_id, auth.uid(), 'invoice_status_changed', jsonb_build_object('entity_type', 'invoice', 'entity_id', NEW.id) || jsonb_build_object('old_status', OLD.status, 'new_status', NEW.status));
             END IF;
         END IF;
     ELSIF TG_TABLE_NAME = 'payments' THEN
@@ -2903,17 +2890,17 @@ BEGIN
                 v_workspace_id uuid;
             BEGIN
                 SELECT workspace_id INTO v_workspace_id FROM public.invoices WHERE id = NEW.invoice_id;
-                INSERT INTO public.workspace_activity (workspace_id, entity_type, entity_id, actor_id, action, details)
-                VALUES (v_workspace_id, 'payment', NEW.id, NEW.created_by, 'payment_received', jsonb_build_object('amount', NEW.amount, 'reference', NEW.reference_number));
+                INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
+            VALUES (v_workspace_id, NEW.created_by, 'payment_received', jsonb_build_object('entity_type', 'payment', 'entity_id', NEW.id) || jsonb_build_object('amount', NEW.amount, 'reference', NEW.reference_number));
             END;
         END IF;
     ELSIF TG_TABLE_NAME = 'expenses' THEN
         IF TG_OP = 'INSERT' THEN
-            INSERT INTO public.workspace_activity (workspace_id, entity_type, entity_id, actor_id, action, details)
-            VALUES (NEW.workspace_id, 'expense', NEW.id, NEW.created_by, 'expense_added', jsonb_build_object('amount', NEW.amount, 'category', NEW.category));
+            INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
+            VALUES (NEW.workspace_id, NEW.created_by, 'expense_added', jsonb_build_object('entity_type', 'expense', 'entity_id', NEW.id) || jsonb_build_object('amount', NEW.amount, 'category', NEW.category));
         ELSIF TG_OP = 'DELETE' THEN
-            INSERT INTO public.workspace_activity (workspace_id, entity_type, entity_id, actor_id, action, details)
-            VALUES (OLD.workspace_id, 'expense', OLD.id, auth.uid(), 'expense_deleted', jsonb_build_object('amount', OLD.amount, 'category', OLD.category));
+            INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
+            VALUES (OLD.workspace_id, auth.uid(), 'expense_deleted', jsonb_build_object('entity_type', 'expense', 'entity_id', OLD.id) || jsonb_build_object('amount', OLD.amount, 'category', OLD.category));
         END IF;
     END IF;
     RETURN NULL;
@@ -3131,8 +3118,8 @@ BEGIN
         project_count = EXCLUDED.project_count;
 
     -- Log activity
-    INSERT INTO public.workspace_activity (workspace_id, entity_type, entity_id, actor_id, action, details)
-    VALUES (p_workspace_id, 'financial_period', v_period_id, p_user_id, 'period_closed', jsonb_build_object('month', p_month, 'year', p_year));
+    INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
+            VALUES (p_workspace_id, p_user_id, 'period_closed', jsonb_build_object('entity_type', 'financial_period', 'entity_id', v_period_id) || jsonb_build_object('month', p_month, 'year', p_year));
 
     RETURN v_period_id;
 END;
@@ -3151,15 +3138,8 @@ DECLARE
 BEGIN
     SELECT workspace_id INTO v_workspace_id FROM public.financial_periods WHERE id = NEW.period_id;
     
-    INSERT INTO public.workspace_activity (workspace_id, entity_type, entity_id, actor_id, action, details)
-    VALUES (
-        v_workspace_id, 
-        'financial_adjustment', 
-        NEW.id, 
-        NEW.created_by, 
-        'adjustment_added', 
-        jsonb_build_object('type', NEW.type, 'amount', NEW.amount, 'reason', NEW.reason)
-    );
+    INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
+            VALUES (v_workspace_id, NEW.created_by, 'adjustment_added', jsonb_build_object('entity_type', 'financial_adjustment', 'entity_id', NEW.id) || jsonb_build_object('type', NEW.type, 'amount', NEW.amount, 'reason', NEW.reason));
     
     RETURN NEW;
 END;
@@ -3169,3 +3149,6 @@ DROP TRIGGER IF EXISTS trigger_log_financial_adjustment ON public.financial_adju
 CREATE TRIGGER trigger_log_financial_adjustment
 AFTER INSERT ON public.financial_adjustments
 FOR EACH ROW EXECUTE FUNCTION log_financial_adjustment();
+
+
+
