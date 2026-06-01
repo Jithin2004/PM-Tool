@@ -49,6 +49,7 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'audit', path: '/control/audit', label: 'Audit Log', iconName: 'Activity', capability: 'view_audit_log', group: 'resources', disclosureTier: 'platform' },
   
   // System routes
+  { id: 'document-templates', path: '/control/document-templates', label: 'Document Templates', iconName: 'FileText', capability: 'manage_settings', group: 'system', disclosureTier: 'platform' },
   { id: 'identity', path: '/control/identity', label: 'Admin & Identity', iconName: 'Shield', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
   { id: 'automations', path: '/control/automations', label: 'Automations', iconName: 'Zap', capability: 'manage_automations', group: 'system', disclosureTier: 'platform' },
   { id: 'mission-control', path: '/control/mission-control', label: 'Mission Control', iconName: 'Broadcast', capability: 'view_mission_control', group: 'intelligence', disclosureTier: 'platform' },
