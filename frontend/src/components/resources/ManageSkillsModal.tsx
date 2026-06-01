@@ -12,7 +12,7 @@ interface ManageSkillsModalProps {
 export function ManageSkillsModal({ onClose }: ManageSkillsModalProps) {
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
-  const { raw: { skills = [], userSkills = [], profiles = [] }, refresh } = useOperationalData();
+  const { raw: { skills = [], userSkills = [], profiles = [] }, refreshAll } = useOperationalData();
   const [activeTab, setActiveTab] = useState<'dictionary' | 'allocation'>('dictionary');
   
   const [newSkillName, setNewSkillName] = useState('');
@@ -30,7 +30,7 @@ export function ManageSkillsModal({ onClose }: ManageSkillsModalProps) {
       await createSkill(workspace.id, newSkillName, newSkillCategory || 'General');
       setNewSkillName('');
       setNewSkillCategory('');
-      await refresh();
+      await refreshAll();
     } catch (e: any) {
       alert(e.message || "Failed to create skill");
     } finally {
@@ -42,7 +42,7 @@ export function ManageSkillsModal({ onClose }: ManageSkillsModalProps) {
     if (!confirm('Are you sure? This will remove it from all users.')) return;
     try {
       await deleteSkill(skillId);
-      await refresh();
+      await refreshAll();
     } catch (e: any) {
       alert("Failed to delete skill");
     }
@@ -53,7 +53,7 @@ export function ManageSkillsModal({ onClose }: ManageSkillsModalProps) {
     setIsSubmitting(true);
     try {
       await upsertUserSkill(selectedUser, selectedSkill, selectedLevel, profile?.id);
-      await refresh();
+      await refreshAll();
       setSelectedSkill('');
     } catch (e: any) {
       alert("Failed to assign skill");
@@ -65,7 +65,7 @@ export function ManageSkillsModal({ onClose }: ManageSkillsModalProps) {
   const handleRemoveUserSkill = async (userId: string, skillId: string) => {
     try {
       await removeUserSkill(userId, skillId);
-      await refresh();
+      await refreshAll();
     } catch (e: any) {
       alert("Failed to remove skill");
     }

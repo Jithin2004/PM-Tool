@@ -10,7 +10,7 @@ export function SkillsMatrixView() {
   const { profile } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const canManageTeam = hasCapability(profile?.role, 'manage_team');
+  const canManageTeam = hasCapability(profile?.role, 'manage_teams');
 
   // Compute coverage: which skills exist, and how many people have them?
   const skillCoverage = useMemo(() => {
