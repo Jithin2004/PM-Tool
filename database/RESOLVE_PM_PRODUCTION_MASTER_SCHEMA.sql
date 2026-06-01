@@ -2926,3 +2926,246 @@ DROP TRIGGER IF EXISTS trigger_log_payment_activity ON public.payments;
 CREATE TRIGGER trigger_log_payment_activity AFTER INSERT ON public.payments FOR EACH ROW EXECUTE FUNCTION public.log_finance_activity();
 DROP TRIGGER IF EXISTS trigger_log_expense_activity ON public.expenses;
 CREATE TRIGGER trigger_log_expense_activity AFTER INSERT OR DELETE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.log_finance_activity();
+
+
+-- ==========================================
+-- APPENDED FROM: MIGRATION_FINANCE_HARDENING.sql
+-- ==========================================
+-- MIGRATION: Finance Historical Accuracy Hardening
+
+-- 1. Financial Periods
+CREATE TABLE IF NOT EXISTS public.financial_periods (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    month integer NOT NULL CHECK (month BETWEEN 1 AND 12),
+    year integer NOT NULL,
+    status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+    closed_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    closed_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE(workspace_id, month, year)
+);
+
+ALTER TABLE public.financial_periods ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read access for authorized users" 
+ON public.financial_periods FOR SELECT 
+USING (public.get_user_role(workspace_id) = 'super_admin');
+
+CREATE POLICY "Enable write access for authorized users" 
+ON public.financial_periods FOR ALL 
+USING (public.get_user_role(workspace_id) = 'super_admin');
+
+-- 2. Financial Snapshots
+CREATE TABLE IF NOT EXISTS public.financial_snapshots (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    period_id uuid NOT NULL REFERENCES public.financial_periods(id) ON DELETE CASCADE,
+    total_revenue numeric NOT NULL DEFAULT 0,
+    total_salary_expense numeric NOT NULL DEFAULT 0,
+    total_other_expenses numeric NOT NULL DEFAULT 0,
+    net_profit numeric NOT NULL DEFAULT 0,
+    employee_count integer NOT NULL DEFAULT 0,
+    client_count integer NOT NULL DEFAULT 0,
+    project_count integer NOT NULL DEFAULT 0,
+    snapshot_data jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE(period_id)
+);
+
+ALTER TABLE public.financial_snapshots ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read access for authorized users" 
+ON public.financial_snapshots FOR SELECT 
+USING (public.get_user_role(workspace_id) = 'super_admin');
+
+CREATE POLICY "Enable write access for authorized users" 
+ON public.financial_snapshots FOR ALL 
+USING (public.get_user_role(workspace_id) = 'super_admin');
+
+-- 3. Financial Adjustments
+CREATE TABLE IF NOT EXISTS public.financial_adjustments (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    period_id uuid NOT NULL REFERENCES public.financial_periods(id) ON DELETE CASCADE,
+    type text NOT NULL CHECK (type IN ('revenue', 'salary', 'expense')),
+    amount numeric NOT NULL,
+    reason text NOT NULL,
+    created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.financial_adjustments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read access for authorized users" 
+ON public.financial_adjustments FOR SELECT 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.financial_periods p 
+    WHERE p.id = period_id AND public.get_user_role(p.workspace_id) = 'super_admin'
+  )
+);
+
+CREATE POLICY "Enable write access for authorized users" 
+ON public.financial_adjustments FOR ALL 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.financial_periods p 
+    WHERE p.id = period_id AND public.get_user_role(p.workspace_id) = 'super_admin'
+  )
+);
+
+-- Locking rules via triggers
+CREATE OR REPLACE FUNCTION check_financial_period_lock()
+RETURNS trigger AS $$
+DECLARE
+    v_month integer;
+    v_year integer;
+    v_status text;
+    v_workspace_id uuid;
+    v_date date;
+BEGIN
+    -- Determine the date and workspace based on the operation
+    IF TG_TABLE_NAME = 'invoices' THEN
+        v_date := COALESCE(NEW.issue_date, OLD.issue_date, CURRENT_DATE);
+        v_workspace_id := COALESCE(NEW.workspace_id, OLD.workspace_id);
+    ELSIF TG_TABLE_NAME = 'payments' THEN
+        v_date := COALESCE(NEW.payment_date, OLD.payment_date, CURRENT_DATE);
+        IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+            SELECT workspace_id INTO v_workspace_id FROM invoices WHERE id = NEW.invoice_id;
+        ELSE
+            SELECT workspace_id INTO v_workspace_id FROM invoices WHERE id = OLD.invoice_id;
+        END IF;
+    ELSIF TG_TABLE_NAME = 'expenses' THEN
+        v_date := COALESCE(NEW.date, OLD.date, CURRENT_DATE);
+        v_workspace_id := COALESCE(NEW.workspace_id, OLD.workspace_id);
+    END IF;
+
+    -- Extract month and year
+    v_month := EXTRACT(MONTH FROM v_date);
+    v_year := EXTRACT(YEAR FROM v_date);
+
+    -- Check if period is closed
+    SELECT status INTO v_status FROM public.financial_periods 
+    WHERE workspace_id = v_workspace_id AND month = v_month AND year = v_year;
+
+    IF v_status = 'closed' THEN
+        RAISE EXCEPTION 'Cannot modify financial records in a closed period. Create a financial adjustment instead.';
+    END IF;
+
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Apply locking triggers
+DROP TRIGGER IF EXISTS enforce_invoice_lock ON public.invoices;
+CREATE TRIGGER enforce_invoice_lock BEFORE INSERT OR UPDATE OR DELETE ON public.invoices FOR EACH ROW EXECUTE FUNCTION check_financial_period_lock();
+
+DROP TRIGGER IF EXISTS enforce_payment_lock ON public.payments;
+CREATE TRIGGER enforce_payment_lock BEFORE INSERT OR UPDATE OR DELETE ON public.payments FOR EACH ROW EXECUTE FUNCTION check_financial_period_lock();
+
+DROP TRIGGER IF EXISTS enforce_expense_lock ON public.expenses;
+CREATE TRIGGER enforce_expense_lock BEFORE INSERT OR UPDATE OR DELETE ON public.expenses FOR EACH ROW EXECUTE FUNCTION check_financial_period_lock();
+
+-- Function to safely close a financial period and generate a snapshot
+CREATE OR REPLACE FUNCTION close_financial_period(p_workspace_id uuid, p_month integer, p_year integer, p_user_id uuid)
+RETURNS uuid AS $$
+DECLARE
+    v_period_id uuid;
+    v_total_revenue numeric := 0;
+    v_total_salary_expense numeric := 0;
+    v_total_other_expenses numeric := 0;
+    v_employee_count integer := 0;
+    v_client_count integer := 0;
+    v_project_count integer := 0;
+BEGIN
+    -- Check if already exists
+    SELECT id INTO v_period_id FROM public.financial_periods 
+    WHERE workspace_id = p_workspace_id AND month = p_month AND year = p_year;
+
+    IF v_period_id IS NULL THEN
+        INSERT INTO public.financial_periods (workspace_id, month, year, status, closed_by, closed_at)
+        VALUES (p_workspace_id, p_month, p_year, 'closed', p_user_id, now())
+        RETURNING id INTO v_period_id;
+    ELSE
+        UPDATE public.financial_periods 
+        SET status = 'closed', closed_by = p_user_id, closed_at = now()
+        WHERE id = v_period_id;
+    END IF;
+
+    -- Calculate Revenue (Payments in month)
+    SELECT COALESCE(SUM(amount), 0) INTO v_total_revenue 
+    FROM public.payments p
+    JOIN public.invoices i ON i.id = p.invoice_id
+    WHERE i.workspace_id = p_workspace_id AND EXTRACT(MONTH FROM p.payment_date) = p_month AND EXTRACT(YEAR FROM p.payment_date) = p_year;
+
+    -- Calculate Salary (Active employees from salaries table)
+    SELECT COALESCE(SUM(base_salary), 0), COUNT(id) INTO v_total_salary_expense, v_employee_count 
+    FROM public.salaries 
+    WHERE workspace_id = p_workspace_id;
+
+    -- Calculate Other Expenses
+    SELECT COALESCE(SUM(amount), 0) INTO v_total_other_expenses 
+    FROM public.expenses 
+    WHERE workspace_id = p_workspace_id AND EXTRACT(MONTH FROM date) = p_month AND EXTRACT(YEAR FROM date) = p_year;
+
+    -- Counters
+    SELECT COUNT(id) INTO v_client_count FROM public.clients WHERE workspace_id = p_workspace_id AND status = 'active';
+    SELECT COUNT(id) INTO v_project_count FROM public.projects WHERE workspace_id = p_workspace_id AND deleted_at IS NULL;
+
+    -- Store Snapshot
+    INSERT INTO public.financial_snapshots (
+        workspace_id, period_id, total_revenue, total_salary_expense, total_other_expenses, net_profit, 
+        employee_count, client_count, project_count
+    ) VALUES (
+        p_workspace_id, v_period_id, v_total_revenue, v_total_salary_expense, v_total_other_expenses, 
+        (v_total_revenue - v_total_salary_expense - v_total_other_expenses),
+        v_employee_count, v_client_count, v_project_count
+    )
+    ON CONFLICT (period_id) DO UPDATE SET 
+        total_revenue = EXCLUDED.total_revenue,
+        total_salary_expense = EXCLUDED.total_salary_expense,
+        total_other_expenses = EXCLUDED.total_other_expenses,
+        net_profit = EXCLUDED.net_profit,
+        employee_count = EXCLUDED.employee_count,
+        client_count = EXCLUDED.client_count,
+        project_count = EXCLUDED.project_count;
+
+    -- Log activity
+    INSERT INTO public.workspace_activity (workspace_id, entity_type, entity_id, actor_id, action, details)
+    VALUES (p_workspace_id, 'financial_period', v_period_id, p_user_id, 'period_closed', jsonb_build_object('month', p_month, 'year', p_year));
+
+    RETURN v_period_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+-- ==========================================
+-- APPENDED FROM: MIGRATION_FINANCE_ADJUSTMENTS.sql
+-- ==========================================
+-- MIGRATION: Finance Adjustment Auditing
+
+CREATE OR REPLACE FUNCTION log_financial_adjustment()
+RETURNS trigger AS $$
+DECLARE
+    v_workspace_id uuid;
+BEGIN
+    SELECT workspace_id INTO v_workspace_id FROM public.financial_periods WHERE id = NEW.period_id;
+    
+    INSERT INTO public.workspace_activity (workspace_id, entity_type, entity_id, actor_id, action, details)
+    VALUES (
+        v_workspace_id, 
+        'financial_adjustment', 
+        NEW.id, 
+        NEW.created_by, 
+        'adjustment_added', 
+        jsonb_build_object('type', NEW.type, 'amount', NEW.amount, 'reason', NEW.reason)
+    );
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_log_financial_adjustment ON public.financial_adjustments;
+CREATE TRIGGER trigger_log_financial_adjustment
+AFTER INSERT ON public.financial_adjustments
+FOR EACH ROW EXECUTE FUNCTION log_financial_adjustment();
