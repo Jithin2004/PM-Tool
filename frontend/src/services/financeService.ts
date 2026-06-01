@@ -27,6 +27,7 @@ export interface Client {
   billing_state?: string;
   billing_country?: string;
   tax_type?: 'registered' | 'unregistered';
+  currency?: string;
 }
 
 export interface InvoiceLineItem {
@@ -152,11 +153,17 @@ export async function fetchFinanceData(workspaceId: string) {
   };
 }
 
-export async function createClient(workspaceId: string, client: Partial<Client>) {
+export const createClient = async (workspaceId: string, client: Partial<Client>): Promise<Client> => {
   const { data, error } = await supabase.from('clients').insert([{ ...client, workspace_id: workspaceId }]).select().single();
   if (error) throw error;
-  return data;
-}
+  return data as Client;
+};
+
+export const fetchClients = async (workspaceId: string): Promise<Client[]> => {
+  const { data, error } = await supabase.from('clients').select('*').eq('workspace_id', workspaceId);
+  if (error) throw error;
+  return data as Client[];
+};
 
 export async function generateInvoice(workspaceId: string, invoice: Partial<Invoice>, lineItems: Partial<InvoiceLineItem>[], prefix: string = 'RPM') {
   // 1. Generate Invoice Number via RPC

@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { 
   fetchFinanceData, closeFinancialPeriod, createFinancialAdjustment, 
-  Client, Invoice, Payment, Expense, FinancialPeriod, FinancialSnapshot, FinancialAdjustment 
+  Client, Invoice, Payment, Expense, FinancialPeriod, FinancialSnapshot, FinancialAdjustment, CompanyBillingProfile, fetchClients
 } from '../../services/financeService';
 import { 
   Plus, Landmark, Receipt, CreditCard, TrendingUp, TrendingDown, 
@@ -12,6 +12,7 @@ import {
   AlertCircle, History, Download, X 
 } from 'lucide-react';
 import { CreateInvoiceModal } from '../../components/finance/CreateInvoiceModal';
+import { ManageClientsModal } from '../../components/finance/ManageClientsModal';
 import { generateInvoicePDF } from '../../services/invoicePdfService';
 
 export default function FinancePage() {
@@ -31,16 +32,20 @@ export default function FinancePage() {
     periods: FinancialPeriod[];
     snapshots: FinancialSnapshot[];
     adjustments: FinancialAdjustment[];
+    companyProfile: CompanyBillingProfile;
   } | null>(null);
 
+  const [clients, setClients] = useState<Client[]>([]);
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showManageClientsModal, setShowManageClientsModal] = useState(false);
   const [adjustmentForm, setAdjustmentForm] = useState({ type: 'expense', amount: '', reason: '' });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!workspace?.id) return;
     loadData();
+    fetchClients(workspace.id).then(setClients);
 
     // Realtime subscriptions
     const periodsSub = supabase.channel('financial_periods_changes')
@@ -70,7 +75,7 @@ export default function FinancePage() {
     try {
       if (!data) setLoading(true);
       const result = await fetchFinanceData(workspace!.id);
-      setData(result);
+      setData(result as any);
     } catch (err) {
       console.error('Failed to load finance data', err);
     } finally {
@@ -217,7 +222,9 @@ export default function FinancePage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium border"
+          <button 
+            onClick={() => setShowManageClientsModal(true)}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium border"
             style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
             <Building2 className="w-4 h-4" />
             Manage Clients
@@ -396,9 +403,7 @@ export default function FinancePage() {
                         onClick={async () => {
                           try {
                             const client = data.clients.find(c => c.id === inv.client_id);
-                            // Fetch company profile if not in state using a direct query, or use from state if loaded
-                            // Since we have data.companyProfile from loadData, we just use it:
-                            const comp = (data as any).companyProfile;
+                            const comp = data.companyProfile;
                             if (comp && client) {
                               await generateInvoicePDF(comp, client, inv, inv.line_items || []);
                             } else {
@@ -508,9 +513,20 @@ export default function FinancePage() {
           isOpen={showInvoiceModal}
           onClose={() => setShowInvoiceModal(false)}
           workspaceId={workspace.id}
-          clients={data.clients}
-          companyProfile={(data as any).companyProfile}
-          onSuccess={loadData}
+          clients={clients}
+          companyProfile={data.companyProfile}
+          onSuccess={() => { loadData(); fetchClients(workspace.id).then(setClients); }}
+        />
+      )}
+
+      {/* Manage Clients Modal */}
+      {workspace && (
+        <ManageClientsModal
+          isOpen={showManageClientsModal}
+          onClose={() => setShowManageClientsModal(false)}
+          workspaceId={workspace.id}
+          clients={clients}
+          onSuccess={() => { fetchClients(workspace.id).then(setClients); loadData(); }}
         />
       )}
     </div>
