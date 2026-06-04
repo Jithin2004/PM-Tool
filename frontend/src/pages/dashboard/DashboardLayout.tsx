@@ -90,7 +90,6 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     label: 'Work',
     iconName: 'Kanban',
     subsections: [
-      { label: 'My Work', path: '/overview', capability: 'view_tasks' },
       { label: 'Projects', path: '/workspace', capability: 'view_projects' },
       { label: 'Tasks', path: '/execution/board', capability: 'view_tasks' },
       { label: 'Gantt', path: '/execution/gantt', capability: 'view_scheduling' },
@@ -104,8 +103,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Members', path: '/resources/teams', capability: 'view_teams' },
       { label: 'Team Workload', path: '/resources/capacity', capability: 'view_reports' },
-      { label: 'Attendance', path: '/resources/attendance', capability: 'manage_logistics' },
-      { label: 'Payroll', path: '/resources/payroll', capability: 'manage_compensation' }
+      { label: 'Attendance', path: '/resources/attendance', capability: 'manage_logistics' }
     ]
   },
   {
@@ -113,7 +111,8 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     label: 'Finance',
     iconName: 'Landmark',
     subsections: [
-      { label: 'Accounts', path: '/resources/finance', capability: 'manage_compensation' }
+      { label: 'Accounts', path: '/resources/finance', capability: 'manage_compensation' },
+      { label: 'Payroll', path: '/resources/payroll', capability: 'manage_compensation' }
     ]
   },
   {

@@ -34,6 +34,7 @@ export function LogisticsDashboard({
   // systemData is passed from canonical DashboardContext
   const [activeTab, setActiveTab] = useState<'members' | 'attendance' | 'paySlab' | 'payroll' | 'workload'>(defaultTab || 'members');
   const canConfigurePaySlabs = hasCapability(role as UserRole | undefined, 'manage_compensation');
+  const isPayrollRoute = window.location.pathname.includes('payroll');
 
   // Attendance states
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
@@ -590,6 +591,8 @@ export function LogisticsDashboard({
         {/* Tab Selector */}
         {!hideTabs && (
         <div className="flex flex-wrap gap-2 bg-surface-3/50 backdrop-blur-md p-1.5 border border-border/50 rounded-xl w-full md:w-auto max-w-full shadow-sm" role="tablist" aria-label="Team Management sections">
+            {!isPayrollRoute && (
+              <>
             <button
               onClick={() => setActiveTab('members')}
               role="tab"
@@ -620,7 +623,9 @@ export function LogisticsDashboard({
           >
             Attendance
           </button>
-          {hasCapability(role, 'manage_compensation') && (
+              </>
+            )}
+          {hasCapability(role, 'manage_compensation') && isPayrollRoute && (
               <button
                 onClick={() => setActiveTab('paySlab')}
                 role="tab"
@@ -632,7 +637,7 @@ export function LogisticsDashboard({
                 Rules &amp; Slabs
               </button>
             )}
-            {hasCapability(role, 'manage_compensation') && (
+            {hasCapability(role, 'manage_compensation') && isPayrollRoute && (
             <button
               onClick={() => setActiveTab('payroll')}
               role="tab"
