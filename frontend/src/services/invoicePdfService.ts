@@ -135,3 +135,122 @@ export async function generateInvoicePDF(
   // Save the PDF
   doc.save(`${invoice.invoice_number.replace(/\//g, '_')}_Invoice.pdf`);
 }
+
+export async function generateClientStatementPDF(
+  company: CompanyBillingProfile,
+  client: Client,
+  invoices: Invoice[],
+  payments: any[],
+  creditNotes: any[],
+  advances: any[]
+) {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+  
+  // 1. Header
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('STATEMENT OF ACCOUNT', pageWidth / 2, 20, { align: 'center' });
+
+  // 2. Company Details
+  doc.setFontSize(12);
+  doc.text(company.legal_name, 14, 35);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 150, 35);
+  
+  // 3. Client Details
+  let startY = 50;
+  doc.setFont('helvetica', 'bold');
+  doc.text('BILL TO:', 14, startY);
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text(client.company_name, 14, startY + 7);
+  const clientAddressLines = doc.splitTextToSize(client.billing_address || '', 80);
+  doc.text(clientAddressLines, 14, startY + 14);
+
+  // 4. Ledger Table
+  const tableStartY = startY + 14 + (clientAddressLines.length * 5) + 10;
+  
+  const tableHead = [
+    ['Date', 'Reference', 'Type', 'Debit (Inv)', 'Credit (Pay/CN)', 'Balance']
+  ];
+  
+  // Combine and sort transactions by date
+  const transactions: any[] = [];
+  
+  invoices.forEach(inv => {
+    if (inv.status !== 'cancelled') {
+      transactions.push({
+        date: new Date(inv.issue_date),
+        ref: inv.invoice_number,
+        type: 'Invoice',
+        debit: inv.grand_total || inv.amount,
+        credit: 0
+      });
+    }
+  });
+  
+  payments.forEach(pay => {
+    transactions.push({
+      date: new Date(pay.payment_date),
+      ref: pay.reference_number || 'PAY',
+      type: pay.method || 'Payment',
+      debit: 0,
+      credit: pay.amount
+    });
+  });
+  
+  creditNotes.forEach(cn => {
+    transactions.push({
+      date: new Date(cn.issue_date),
+      ref: cn.credit_note_number,
+      type: 'Credit Note',
+      debit: 0,
+      credit: cn.amount
+    });
+  });
+
+  // Note: advances received are essentially client liabilities, they don't immediately affect the AR ledger until applied.
+  // The applied advances are logged as payments, so they are covered above.
+
+  transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+  
+  let runningBalance = 0;
+  const tableBody = transactions.map(t => {
+    runningBalance += (t.debit - t.credit);
+    return [
+      t.date.toLocaleDateString(),
+      t.ref,
+      t.type,
+      t.debit > 0 ? `₹${t.debit.toFixed(2)}` : '-',
+      t.credit > 0 ? `₹${t.credit.toFixed(2)}` : '-',
+      `₹${Math.max(0, runningBalance).toFixed(2)}`
+    ];
+  });
+
+  autoTable(doc, {
+    startY: tableStartY,
+    head: tableHead,
+    body: tableBody,
+    theme: 'striped',
+    headStyles: { fillColor: [41, 128, 185] },
+  });
+
+  // 5. Financial Summary
+  const finalY = (doc as any).lastAutoTable.finalY + 15;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total Outstanding Balance:', 130, finalY);
+  doc.text(`₹${Math.max(0, runningBalance).toFixed(2)}`, 180, finalY, { align: 'right' });
+  
+  const totalAdvance = client.advance_balance || 0;
+  if (totalAdvance > 0) {
+    doc.text('Available Advance Balance:', 130, finalY + 8);
+    doc.text(`₹${totalAdvance.toFixed(2)}`, 180, finalY + 8, { align: 'right' });
+  }
+
+  // Save the PDF
+  doc.save(`${client.company_name.replace(/\s+/g, '_')}_Statement.pdf`);
+}
+

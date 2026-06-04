@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Save, Edit2 } from 'lucide-react';
-import { Client } from '../../services/financeService';
+import { X, Plus, Trash2, Save, Edit2, Download } from 'lucide-react';
+import { Client, Invoice, Payment, ClientCredit } from '../../services/financeService';
 import { supabase } from '../../lib/supabase';
+import { Project } from '../../core/types/project';
 
 interface ManageClientsModalProps {
   isOpen: boolean;
@@ -14,6 +15,35 @@ interface ManageClientsModalProps {
 export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSuccess }: ManageClientsModalProps) {
   const [editingClient, setEditingClient] = useState<Partial<Client> | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+
+  React.useEffect(() => {
+    if (isOpen && workspaceId) {
+      Promise.all([
+        supabase.from('projects').select('*').eq('workspace_id', workspaceId),
+        supabase.from('invoices').select('*').eq('workspace_id', workspaceId),
+        supabase.from('payments').select('*').eq('workspace_id', workspaceId),
+      ]).then(([p, i, pay]) => {
+        if (p.data) setProjects(p.data as Project[]);
+        if (i.data) setInvoices(i.data as Invoice[]);
+        if (pay.data) setPayments(pay.data as Payment[]);
+      });
+    }
+  }, [isOpen, workspaceId]);
+
+  const clientProjects = projects.filter(p => p.client_id === editingClient?.id);
+  const totalContractValue = clientProjects.reduce((sum, p) => sum + (p.contract_value || 0), 0);
+  
+  const clientInvoices = invoices.filter(i => i.client_id === editingClient?.id);
+  const totalInvoiced = clientInvoices.reduce((sum, i) => sum + (i.grand_total || i.amount || 0), 0);
+  
+  const clientPayments = payments.filter(p => p.client_id === editingClient?.id || clientInvoices.some(i => i.id === p.invoice_id));
+  const totalPaid = clientPayments.reduce((sum, p) => sum + p.amount, 0);
+  
+  const outstanding = Math.max(0, totalInvoiced - totalPaid);
+
 
   if (!isOpen) return null;
 
@@ -32,6 +62,30 @@ export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSu
       alert(e.message || 'Failed to save client');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDownloadStatement = async () => {
+    if (!editingClient?.id) return;
+    try {
+      const { data: comp } = await supabase.from('company_billing_profile').select('*').eq('workspace_id', workspaceId).single();
+      if (!comp) return alert("Company billing profile not set up.");
+      
+      const { data: cns } = await supabase.from('credit_notes').select('*').eq('client_id', editingClient.id);
+      const { data: advances } = await supabase.from('client_credits').select('*').eq('client_id', editingClient.id);
+      
+      const { generateClientStatementPDF } = await import('../../services/invoicePdfService');
+      
+      await generateClientStatementPDF(
+        comp as any,
+        editingClient as Client,
+        clientInvoices,
+        clientPayments,
+        cns || [],
+        advances || []
+      );
+    } catch (e: any) {
+      alert("Failed to generate statement: " + e.message);
     }
   };
 
@@ -141,6 +195,43 @@ export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSu
                     <Save className="w-4 h-4" /> Save
                   </button>
                 </div>
+
+                {editingClient.id && (
+                  <div className="mt-8 pt-6 border-t border-[var(--pm-border)] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-[var(--pm-text)] uppercase tracking-wider">Client Finance Ledger</h4>
+                      <button onClick={handleDownloadStatement} className="px-3 py-1.5 text-xs bg-surface-3 hover:bg-[var(--pm-surface-hover)] border border-[var(--pm-border)] text-[var(--pm-text)] rounded flex items-center gap-1.5 transition-colors">
+                        <Download className="w-3.5 h-3.5" /> Statement
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="p-4 bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-lg">
+                        <div className="text-[10px] uppercase font-mono text-[var(--pm-text-tertiary)] mb-1">Total Projects</div>
+                        <div className="text-xl font-bold text-[var(--pm-text)]">{clientProjects.length}</div>
+                      </div>
+                      <div className="p-4 bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-lg">
+                        <div className="text-[10px] uppercase font-mono text-[var(--pm-text-tertiary)] mb-1">Contract Value</div>
+                        <div className="text-xl font-bold text-[var(--pm-text)]">{editingClient.currency || 'INR'} {totalContractValue.toLocaleString()}</div>
+                      </div>
+                      <div className="p-4 bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-lg">
+                        <div className="text-[10px] uppercase font-mono text-[var(--pm-text-tertiary)] mb-1">Total Invoiced</div>
+                        <div className="text-xl font-bold text-[var(--pm-text)]">{editingClient.currency || 'INR'} {totalInvoiced.toLocaleString()}</div>
+                      </div>
+                      <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                        <div className="text-[10px] uppercase font-mono text-emerald-400 mb-1">Total Paid</div>
+                        <div className="text-xl font-bold text-emerald-400">{editingClient.currency || 'INR'} {totalPaid.toLocaleString()}</div>
+                      </div>
+                      <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                        <div className="text-[10px] uppercase font-mono text-amber-400 mb-1">Outstanding</div>
+                        <div className="text-xl font-bold text-amber-400">{editingClient.currency || 'INR'} {outstanding.toLocaleString()}</div>
+                      </div>
+                      <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <div className="text-[10px] uppercase font-mono text-blue-400 mb-1">Advance Balance</div>
+                        <div className="text-xl font-bold text-blue-400">{editingClient.currency || 'INR'} {(editingClient.advance_balance || 0).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex-1 flex items-center justify-center text-[var(--pm-text-tertiary)] flex-col gap-2">

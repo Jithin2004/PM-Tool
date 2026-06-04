@@ -9,15 +9,6 @@ import {
 } from '../core/auth/postAuthRedirect';
 // AuthPage removed — unified to Login component (Bug 6 fix)
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
-import { AdminPanel } from '../pages/dashboard/AdminPanel';
-import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
-import { WorkspaceSetupWizard } from '../pages/onboarding/WorkspaceSetupWizard';
-import { ProjectCreationWizard } from '../pages/project/ProjectCreationWizard';
-import { LandingPage } from '../landing/LandingPage';
-import { PrivacyPage } from '../landing/PrivacyPage';
-import { TermsPage } from '../landing/TermsPage';
-import { CompliancePage } from '../landing/CompliancePage';
-import { SecurityPage } from '../landing/SecurityPage';
 import { Login } from '../components/auth/Login';
 import { ProductKeyGate } from '../components/auth/ProductKeyGate';
 import { isProductKeyVerified } from '../lib/productKey';
@@ -46,7 +37,17 @@ const withRetry = (componentImport: () => Promise<any>) => {
   });
 };
 
+const WorkspaceSetupWizard = withRetry(() => import('../pages/onboarding/WorkspaceSetupWizard').then(m => ({ default: m.WorkspaceSetupWizard })));
+const ProjectCreationWizard = withRetry(() => import('../pages/project/ProjectCreationWizard').then(m => ({ default: m.ProjectCreationWizard })));
+const LandingPage = withRetry(() => import('../landing/LandingPage').then(m => ({ default: m.LandingPage })));
+const PrivacyPage = withRetry(() => import('../landing/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
+const TermsPage = withRetry(() => import('../landing/TermsPage').then(m => ({ default: m.TermsPage })));
+const CompliancePage = withRetry(() => import('../landing/CompliancePage').then(m => ({ default: m.CompliancePage })));
+const SecurityPage = withRetry(() => import('../landing/SecurityPage').then(m => ({ default: m.SecurityPage })));
+
 const OverviewPage = withRetry(() => import('../pages/dashboard/OverviewPage'));
+const AdminPanel = withRetry(() => import('../pages/dashboard/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const LogisticsPanel = withRetry(() => import('../pages/dashboard/LogisticsPanel').then(m => ({ default: m.LogisticsPanel })));
 const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
 const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage'));
 const KnowledgePage = withRetry(() => import('../pages/workspace/KnowledgePage'));
@@ -89,8 +90,37 @@ const DEFAULT_AUTH_REDIRECT = '/overview';
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-white" />
+    <div className="flex min-h-[60vh] items-center justify-center font-geist text-[10px] uppercase tracking-widest text-text-tertiary">
+      <div className="flex items-center gap-3">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-400" />
+        Loading workspace...
+      </div>
+    </div>
+  );
+}
+
+function AccessRestricted() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] font-geist text-center px-4" style={{ color: 'var(--pm-on-surface)' }}>
+      <div className="w-16 h-16 rounded-full mb-6 flex items-center justify-center bg-red-500/10">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <h2 className="text-2xl font-bold mb-3 tracking-tight text-white">Access Restricted</h2>
+      <p className="text-sm max-w-md mx-auto mb-8 leading-relaxed text-white/60">
+        You don't have permission to view this area.<br/><br/>
+        If you believe you need access, contact your workspace administrator.
+      </p>
+      <div className="flex items-center gap-4">
+        <button onClick={() => window.history.back()} className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors border border-white/10 bg-white/5 hover:bg-white/10 text-white">
+          Go Back
+        </button>
+        <button onClick={() => redirectTo('/overview')} className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-500 hover:bg-indigo-600 text-white">
+          Return to Dashboard
+        </button>
+      </div>
     </div>
   );
 }
@@ -192,26 +222,59 @@ export function ResolveRouter() {
     */
   }, [pathname, workspace, user, role, workspaceLoading, authLoading, profileResolved, profileHydrating]);
 
+  const prefetchInitiated = useRef(false);
+
+  useEffect(() => {
+    if (prefetchInitiated.current) return;
+    if (workspaceLoading || authLoading || !profileResolved || profileHydrating) return;
+    if (!user || !profile || !workspace) return;
+
+    prefetchInitiated.current = true;
+
+    const prefetchRoutes = async () => {
+      // Small delay to let initial render settle before prefetching
+      await new Promise(r => setTimeout(r, 1000));
+      
+      const r = profile.role;
+      try {
+        if (r === 'super_admin') {
+          import('../pages/dashboard/OverviewPage');
+          import('../pages/resources/FinancePage');
+          import('../pages/resources/TeamsPage');
+          import('../pages/control/SettingsPage');
+        } else if (r === 'pm') {
+          import('../pages/workspace/ProjectsPage');
+          import('../pages/execution/BoardPage');
+          import('../pages/resources/TeamsPage');
+        } else if (r === 'developer' || r === 'viewer') {
+          import('../pages/execution/BoardPage');
+          import('../pages/execution/TimelinePage');
+        }
+      } catch (e) {
+        console.warn('Prefetch failed', e);
+      }
+    };
+    
+    prefetchRoutes();
+  }, [workspaceLoading, authLoading, profileResolved, profileHydrating, user, profile, workspace]);
+
   // ── Public routes ──
 
   if (pathname === '/') {
-    return <LandingPage />;
+    return <Suspense fallback={<RouteFallback />}><LandingPage /></Suspense>;
   }
 
   if (pathname === '/privacy') {
-    return <PrivacyPage />;
+    return <Suspense fallback={<RouteFallback />}><PrivacyPage /></Suspense>;
   }
-
   if (pathname === '/terms') {
-    return <TermsPage />;
+    return <Suspense fallback={<RouteFallback />}><TermsPage /></Suspense>;
   }
-
   if (pathname === '/compliance') {
-    return <CompliancePage />;
+    return <Suspense fallback={<RouteFallback />}><CompliancePage /></Suspense>;
   }
-
   if (pathname === '/security') {
-    return <SecurityPage />;
+    return <Suspense fallback={<RouteFallback />}><SecurityPage /></Suspense>;
   }
 
   if (pathname === '/activate') {
@@ -267,7 +330,7 @@ export function ResolveRouter() {
   // ── Legacy redirects ──
 
   if (rawPathname === '/projects/new' || pathname === '/projects/new') {
-    if (!guardRoute(role, '/projects/new')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/projects/new')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><ProjectCreationWizard /></RouteShell>;
   }
 
@@ -287,15 +350,15 @@ export function ResolveRouter() {
     return <RouteShell><ProjectsPage /></RouteShell>;
   }
   if (pathname === '/workspace/portfolio') {
-    if (!guardRoute(role, '/workspace/portfolio')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/workspace/portfolio')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><PortfolioPage /></RouteShell>;
   }
   if (pathname === '/workspace/executive') {
-    if (!guardRoute(role, '/workspace/executive')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/workspace/executive')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><ExecutiveOverview /></RouteShell>;
   }
   if (pathname === '/workspace/reports') {
-    if (!guardRoute(role, '/workspace/reports')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/workspace/reports')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><ReportsCenter /></RouteShell>;
   }
   if (pathname === '/workspace/knowledge') {
@@ -305,96 +368,96 @@ export function ResolveRouter() {
     return <RouteShell><DocumentView /></RouteShell>;
   }
   if (pathname === '/workspace/decisions') {
-    if (!guardRoute(role, '/workspace/decisions')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/workspace/decisions')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><DecisionsPage /></RouteShell>;
   }
 
   // ── EXECUTION ──
 
   if (pathname === '/execution' || pathname === '/execution/board') {
-    if (!guardRoute(role, '/execution')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/execution')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><BoardPage /></RouteShell>;
   }
   if (pathname === '/execution/timeline') {
-    if (!guardRoute(role, '/execution/timeline')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/execution/timeline')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><TimelinePage /></RouteShell>;
   }
   if (pathname === '/execution/gantt') {
-    if (!guardRoute(role, '/execution/gantt')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/execution/gantt')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><GanttPage /></RouteShell>;
   }
   if (pathname === '/execution/sprints') {
-    if (!guardRoute(role, '/execution/sprints')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/execution/sprints')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><SprintPage /></RouteShell>;
   }
 
   // ── RESOURCES ──
 
   if (pathname === '/resources' || pathname === '/resources/attendance' || pathname === '/resources/payroll') {
-    if (!guardRoute(role, '/resources')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/resources')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><LogisticsPanel /></RouteShell>;
   }
   if (pathname === '/resources/teams') {
-    if (!guardRoute(role, '/resources/teams')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/resources/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><TeamsPage /></RouteShell>;
   }
   if (pathname === '/resources/capacity') {
-    if (!guardRoute(role, '/resources/capacity')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/resources/capacity')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><CapacityPage /></RouteShell>;
   }
   if (pathname === '/resources/work-logs') {
-    if (!guardRoute(role, '/resources/work-logs')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/resources/work-logs')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><WorkLogsPage /></RouteShell>;
   }
   if (pathname === '/resources/finance') {
-    if (!guardRoute(role, '/resources/finance')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/resources/finance')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><FinancePage /></RouteShell>;
   }
 
   // ── CONTROL ──
 
   if (pathname === '/control' || pathname === '/control/identity') {
-    if (!guardRoute(role, '/control')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><AdminPanel /></RouteShell>;
   }
   if (pathname === '/control/analytics') {
-    if (!guardRoute(role, '/control/analytics')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control/analytics')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><AnalyticsPage /></RouteShell>;
   }
   if (pathname === '/control/audit') {
-    if (!guardRoute(role, '/control/audit')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control/audit')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><AuditPage /></RouteShell>;
   }
   if (pathname === '/control/document-templates') {
-    if (!guardRoute(role, '/control/document-templates')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control/document-templates')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><DocumentTemplatesPage /></RouteShell>;
   }
   if (pathname === '/control/system-health') {
-    if (!guardRoute(role, '/control')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><ObservabilityPanel /></RouteShell>;
   }
   if (pathname === '/control/automations' || pathname.startsWith('/control/automations/')) {
-    if (!guardRoute(role, '/control/automations')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control/automations')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><AutomationsPanel /></RouteShell>;
   }
-  if (pathname === '/control/connections' || pathname.startsWith('/control/connections/')) {
-    if (!guardRoute(role, '/control/connections')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
-    return <RouteShell><ConnectionsPanel /></RouteShell>;
-  }
+  // if (pathname === '/control/connections' || pathname.startsWith('/control/connections/')) {
+  //   if (!guardRoute(role, '/control/connections')) return <RouteShell><AccessRestricted /></RouteShell>;
+  //   return <RouteShell><ConnectionsPanel /></RouteShell>;
+  // }
   if (pathname === '/control/settings') {
-    if (!guardRoute(role, '/control/settings')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control/settings')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><SettingsPage /></RouteShell>;
   }
   if (pathname === '/control/settings/notifications') {
-    if (!guardRoute(role, '/control/settings/notifications')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control/settings/notifications')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><NotificationSettings /></RouteShell>;
   }
   if (pathname === '/control/settings/modes') {
-    if (!guardRoute(role, '/control/settings/modes')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control/settings/modes')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><ModeSettings /></RouteShell>;
   }
   if (pathname === '/control/mission-control') {
-    if (!guardRoute(role, '/control/mission-control')) return <Redirect to={DEFAULT_AUTH_REDIRECT} />;
+    if (!guardRoute(role, '/control/mission-control')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><MissionControlPage /></RouteShell>;
   }
 

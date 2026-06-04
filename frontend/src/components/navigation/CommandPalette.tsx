@@ -144,8 +144,13 @@ export function CommandPalette() {
                 </div>
               )}
               {filteredProjects.length === 0 && filteredTasks.length === 0 && skilledProfiles.length === 0 && (
-                <div className="p-8 text-center text-text-tertiary text-sm font-mono">
-                  No results found for "{query}"
+                <div className="p-8 text-center flex flex-col gap-2">
+                  <div className="text-text-secondary text-sm font-medium">
+                    No accessible results found for "{query}"
+                  </div>
+                  <div className="text-text-tertiary text-xs">
+                    Try another keyword or check if you have access to this information.
+                  </div>
                 </div>
               )}
             </>

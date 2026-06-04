@@ -10,6 +10,7 @@ import { evaluateTriggers } from '../services/automationEngine';
 import { useAuth } from '../context/AuthContext';
 import { sha256 } from '../utils/cryptoUtils';
 import { hasCapability, guardCapability } from '../core/auth/permissions';
+import { getFriendlyErrorMessage } from '../utils/errorUtils';
 
 export const wouldCreateCycle = (
   taskId: string,
@@ -435,7 +436,7 @@ export function useTasks(workspaceId?: string) {
       if (localDeps) {
         setDependencies(JSON.parse(localDeps));
       }
-      setError(err.message || 'Failed to fetch tasks');
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -583,7 +584,7 @@ export function useTasks(workspaceId?: string) {
           setTasks(prev => [localTask, ...prev]);
           return localTask;
         }
-        setError(insertError.message);
+        setError(getFriendlyErrorMessage(insertError));
         throw insertError;
       }
       
@@ -649,7 +650,7 @@ export function useTasks(workspaceId?: string) {
           setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
           return;
         }
-        setError(updateError.message);
+        setError(getFriendlyErrorMessage(updateError));
         throw updateError;
       }
       
@@ -721,7 +722,7 @@ export function useTasks(workspaceId?: string) {
           setTasks(prev => prev.map(t => t.id === taskId ? { ...t, start_date: startDate ?? undefined, deadline: deadline ?? undefined } : t));
           return;
         }
-        setError(updateError.message);
+        setError(getFriendlyErrorMessage(updateError));
         throw updateError;
       }
 
@@ -802,10 +803,10 @@ export function useTasks(workspaceId?: string) {
       if (updateError) {
         if (!navigator.onLine || updateError.message?.toLowerCase().includes('fetch')) {
           queueMutation('updateTask', { taskId, updates });
-          setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+          setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } as Task : t));
           return;
         }
-        setError(updateError.message);
+        setError(getFriendlyErrorMessage(updateError));
         throw updateError;
       }
       
@@ -861,7 +862,7 @@ export function useTasks(workspaceId?: string) {
           setTasks(prev => prev.filter(t => t.id !== taskId));
           return;
         }
-        setError(deleteError.message);
+        setError(getFriendlyErrorMessage(deleteError));
         throw deleteError;
       }
       

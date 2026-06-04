@@ -251,8 +251,8 @@ export default function PortfolioPage() {
 
       {/* List View */}
       {view === 'list' && (
-        <div className="rounded-xl overflow-hidden" style={{ background: 'var(--pm-surface-low)', border: '1px solid rgba(70,69,84,0.3)' }}>
-          <table className="w-full text-left executive-table">
+        <div className="rounded-xl overflow-x-auto" style={{ background: 'var(--pm-surface-low)', border: '1px solid rgba(70,69,84,0.3)' }}>
+          <table className="w-full text-left executive-table min-w-[800px]">
             <thead style={{ background: 'rgba(51,53,55,0.5)', borderBottom: '1px solid rgba(70,69,84,0.3)' }}>
               <tr>
                 {['Project', 'Status', 'Confidence', 'Tasks', 'Deadline'].map(h => (

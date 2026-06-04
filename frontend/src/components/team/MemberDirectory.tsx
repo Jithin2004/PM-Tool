@@ -27,14 +27,15 @@ export function MemberDirectory() {
   const { raw: { skills = [], userSkills = [] } } = useOperationalData();
   const { workspace } = useWorkspace();
   const [selectedMemberDetails, setSelectedMemberDetails] = useState<any | null>(null);
+  const [dojEditState, setDojEditState] = useState<{ active: boolean; newDoj: string; reason: string }>({ active: false, newDoj: '', reason: '' });
 
   const userCustomRoles = systemData.userCustomRoles || {};
   const activeProfiles = profiles.filter(p => p.role !== 'uninvited');
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl shadow-2xl" style={{ background: 'var(--pm-surface-low)', border: '1px solid rgba(70,69,84,0.3)' }}>
-        <table className="w-full text-left border-collapse">
+      <div className="rounded-xl shadow-2xl overflow-x-auto" style={{ background: 'var(--pm-surface-low)', border: '1px solid rgba(70,69,84,0.3)' }}>
+        <table className="w-full text-left border-collapse min-w-[600px]">
           <thead style={{ background: 'rgba(51,53,55,0.5)', borderBottom: '1px solid rgba(70,69,84,0.3)' }}>
             <tr>
               <th className="px-8 py-4 rounded-tl-xl text-[11px] font-mono uppercase tracking-widest text-text-tertiary">Member Directory</th>
@@ -161,45 +162,18 @@ export function MemberDirectory() {
                   <div>
                     <div className="text-[10px] uppercase text-white/50 font-mono mb-1">Date of Joining</div>
                     {currentUserProfile?.role === 'super_admin' ? (
-                      <input
-                        type="date"
-                        value={selectedMemberDetails.date_of_joining ? selectedMemberDetails.date_of_joining.split('T')[0] : ''}
-                        onChange={async (e) => {
-                          const newDoj = e.target.value;
-                          if (!newDoj) return;
-                          
-                          const reason = window.prompt("Enter reason for changing the Date of Joining (Required for HR Audit):");
-                          if (!reason || reason.trim() === '') {
-                            alert("Reason is required to change employment records.");
-                            return;
-                          }
-
-                          if (window.confirm(`Confirm action: Change DOJ for ${selectedMemberDetails.full_name || selectedMemberDetails.email}?`)) {
-                            const { error } = await supabase.from('employment_records')
-                              .update({ date_of_joining: new Date(newDoj).toISOString() })
-                              .eq('profile_id', selectedMemberDetails.id);
-                              
-                            if (!error) {
-                              await supabase.from('employment_change_logs').insert({
-                                employee_id: selectedMemberDetails.id,
-                                field_changed: 'date_of_joining',
-                                previous_value: selectedMemberDetails.date_of_joining || '',
-                                new_value: new Date(newDoj).toISOString(),
-                                changed_by: currentUserProfile?.id,
-                                reason: reason.trim()
-                              });
-                              alert("Date of Joining updated successfully.");
-                              setSelectedMemberDetails({ ...selectedMemberDetails, date_of_joining: new Date(newDoj).toISOString() });
-                              invalidateAll();
-                            } else {
-                              alert("Failed to update Date of Joining.");
-                            }
-                          }
-                        }}
-                        className="w-full border rounded text-xs font-mono px-2 py-1 outline-none mt-1"
-                        style={{ borderColor: 'rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: 'white' }}
-                        title="Edit Employment Details"
-                      />
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="font-medium text-white">
+                          {selectedMemberDetails.date_of_joining ? new Date(selectedMemberDetails.date_of_joining).toLocaleDateString() : 'N/A'}
+                        </div>
+                        <button 
+                          onClick={() => setDojEditState({ active: true, newDoj: selectedMemberDetails.date_of_joining ? selectedMemberDetails.date_of_joining.split('T')[0] : '', reason: '' })}
+                          className="p-1 rounded bg-white/5 hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+                          title="Edit Date of Joining"
+                        >
+                          <Icon name="pencil" size={12} />
+                        </button>
+                      </div>
                     ) : (
                       <div className="font-medium mt-1">
                         {selectedMemberDetails.date_of_joining ? new Date(selectedMemberDetails.date_of_joining).toLocaleDateString() : 'N/A'}
@@ -229,6 +203,70 @@ export function MemberDirectory() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dojEditState.active && selectedMemberDetails && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-[#1c1d1f] border border-white/10 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+              <h3 className="font-semibold text-white tracking-tight">Update Date of Joining</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-2">New DOJ</label>
+                <input
+                  type="date"
+                  value={dojEditState.newDoj}
+                  onChange={(e) => setDojEditState({ ...dojEditState, newDoj: e.target.value })}
+                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-2">Reason for change</label>
+                <textarea
+                  value={dojEditState.reason}
+                  onChange={(e) => setDojEditState({ ...dojEditState, reason: e.target.value })}
+                  placeholder="Required for HR Audit"
+                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 min-h-[80px]"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-white/10 flex justify-end gap-3 bg-black/10">
+              <button
+                onClick={() => setDojEditState({ active: false, newDoj: '', reason: '' })}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!dojEditState.reason.trim() || !dojEditState.newDoj}
+                onClick={async () => {
+                  const { newDoj, reason } = dojEditState;
+                  const { error } = await supabase.from('employment_records')
+                    .update({ date_of_joining: new Date(newDoj).toISOString() })
+                    .eq('profile_id', selectedMemberDetails.id);
+                    
+                  if (!error) {
+                    await supabase.from('employment_change_logs').insert({
+                      employee_id: selectedMemberDetails.id,
+                      field_changed: 'date_of_joining',
+                      previous_value: selectedMemberDetails.date_of_joining || '',
+                      new_value: new Date(newDoj).toISOString(),
+                      changed_by: currentUserProfile?.id,
+                      reason: reason.trim()
+                    });
+                    setSelectedMemberDetails({ ...selectedMemberDetails, date_of_joining: new Date(newDoj).toISOString() });
+                    invalidateAll();
+                    setDojEditState({ active: false, newDoj: '', reason: '' });
+                  }
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-500 text-white hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save Change
+              </button>
             </div>
           </div>
         </div>

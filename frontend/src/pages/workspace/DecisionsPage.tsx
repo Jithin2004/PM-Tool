@@ -99,97 +99,7 @@ export default function DecisionsPage() {
     return calculateCoordinationAnalytics(decisions, events, blockers.length);
   }, [decisions, events, blockers]);
 
-  // Seeding routine for simulation data
-  const handleBootstrapSimulation = async () => {
-    const mockDecisions: OperationalDecision[] = [
-      {
-        id: 'dec-mock-1',
-        workspaceId: (workspaceSettingsBlob?.workspace_id as string) || 'ws-default',
-        title: 'Scope Adjustment: Defer secondary reporting features',
-        type: 'scope_adjustment',
-        ownerId: userId,
-        ownerName: userName,
-        ownerRole: userRole,
-        affectedProjectIds: projects.slice(0, 1).map(p => p.id),
-        relatedBlockerIds: blockers.slice(0, 1).map(b => b.id),
-        rationale: 'Mitigate active database performance bottleneck affecting critical path.',
-        approvalStatus: 'approved',
-        approvalChain: {
-          id: 'ac-1',
-          steps: [
-            { role: 'pm', status: 'approved', approverName: 'Project Manager', timestamp: new Date().toISOString() },
-            { role: 'super_admin', status: 'approved', approverName: 'Super Admin', timestamp: new Date().toISOString() }
-          ],
-          currentStepIndex: 2
-        },
-        mitigationActions: [
-          {
-            id: 'mit-1',
-            ownerId: userId,
-            ownerName: userName,
-            description: 'Implement simplified analytics payload mock logic',
-            expectedResolution: new Date(Date.now() + 2 * 86400000).toISOString(),
-            status: 'completed',
-            actualResolution: new Date().toISOString()
-          }
-        ],
-        createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-        updatedAt: new Date().toISOString(),
-        participants: [userName, 'Lead Developer'],
-        downstreamImpactDesc: 'Stabilizes core app latency, shifts secondary report release to next sprint.'
-      },
-      {
-        id: 'dec-mock-2',
-        workspaceId: (workspaceSettingsBlob?.workspace_id as string) || 'ws-default',
-        title: 'Timeline Recalibration: Relocate API resources due to blocker propagation',
-        type: 'timeline_recalibration',
-        ownerId: userId,
-        ownerName: userName,
-        ownerRole: userRole,
-        affectedProjectIds: projects.slice(0, 1).map(p => p.id),
-        relatedBlockerIds: blockers.slice(1, 2).map(b => b.id),
-        rationale: 'Active deployment blocker blocks downstream validation cycles.',
-        approvalStatus: 'escalated',
-        escalationHistory: [
-          {
-            id: 'esc-1',
-            escalatedById: userId,
-            escalatedByName: userName,
-            escalatedToRole: 'super_admin',
-            timestamp: new Date().toISOString(),
-            status: 'active',
-            notes: 'Requires super-admin intervention for cross-sprint server allocation.'
-          }
-        ],
-        createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-        updatedAt: new Date().toISOString(),
-        participants: [userName],
-        downstreamImpactDesc: 'Extends integration deadline by 3 days but guarantees deployment access.'
-      }
-    ];
 
-    const mockEvents: CoordinationEvent[] = [
-      {
-        id: 'evt-mock-1',
-        workspaceId: (workspaceSettingsBlob?.workspace_id as string) || 'ws-default',
-        title: 'Urgent Triage & Resource Allocation Sync',
-        eventType: 'triage',
-        timestamp: new Date(Date.now() - 2 * 86400000).toISOString(),
-        durationMinutes: 45,
-        participants: [userName, 'Lead Developer', 'QA Lead'],
-        decisionIds: ['dec-mock-1'],
-        blockerIds: blockers.slice(0, 1).map(b => b.id),
-        notes: 'Reviewed current database performance parameters and aligned on mitigation strategy.',
-        latencyHours: 4,
-        operationalOutcome: 'Scope adjustment decision approved, mitigation action registered.'
-      }
-    ];
-
-    await updateWorkspaceSettings({
-      operational_decisions: mockDecisions,
-      coordination_events: mockEvents
-    });
-  };
 
   const handleSaveDecision = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -481,14 +391,7 @@ export default function DecisionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {decisions.length === 0 && (
-            <button
-              onClick={handleBootstrapSimulation}
-              className="px-3 py-1.5 bg-accent-primary/15 border border-accent-primary/25 rounded-lg text-[10px] font-bold uppercase tracking-wider text-accent-primary hover:bg-accent-primary/20 transition-all"
-            >
-              Seed Simulator Data
-            </button>
-          )}
+
           {canCoordinate && (
             <>
               <button

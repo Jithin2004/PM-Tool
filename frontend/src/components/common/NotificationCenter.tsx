@@ -15,15 +15,21 @@ export function NotificationCenter() {
   const unreadCount = activeNotifications.length;
 
   const getCategoryGroup = (n: any) => {
-    // Determine category based on 'type' or fallback to 'category'
     const type = n.type || n.category;
     
-    if (['approval', 'assignments', 'assigned_work'].includes(type)) return 'Needs Attention';
-    if (['mention'].includes(type)) return 'Mentions';
-    if (['comment', 'status_change', 'document_update', 'deadlines'].includes(type)) return 'Updates';
-    if (['risk', 'automation', 'capacity', 'system', 'attendance'].includes(type)) return 'System';
+    // Needs Action: important unread
+    if (!n.read_at && ['approval', 'assignments', 'assigned_work', 'mention', 'risk', 'capacity'].includes(type)) {
+      return 'Needs Action';
+    }
     
-    return 'Updates'; // Default
+    const createdDate = new Date(n.created_at);
+    const today = new Date();
+    const isToday = createdDate.getDate() === today.getDate() &&
+      createdDate.getMonth() === today.getMonth() &&
+      createdDate.getFullYear() === today.getFullYear();
+      
+    if (isToday) return 'Today';
+    return 'Earlier';
   };
 
   const categorized = dbNotifications.slice(0, 50).reduce((acc: any, n: any) => {
@@ -136,7 +142,7 @@ export function NotificationCenter() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 p-2">
-                  {['Needs Attention', 'Mentions', 'Updates', 'System'].map(group => {
+                  {['Needs Action', 'Today', 'Earlier'].map(group => {
                     const notes = categorized[group];
                     if (!notes || notes.length === 0) return null;
                     return (

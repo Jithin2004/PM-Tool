@@ -35,14 +35,14 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'board', path: '/execution', label: 'Tasks', iconName: 'Kanban', capability: 'view_tasks', group: 'core', disclosureTier: 'essential' },
   { id: 'scheduling', path: '/execution/timeline', label: 'Scheduling', iconName: 'Timeline', capability: 'view_scheduling', group: 'core', disclosureTier: 'operational' },
   
-  // Intelligence routes
+  // Reports routes
   { id: 'analytics', path: '/control/analytics', label: 'Analytics', iconName: 'ChartLineUp', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
   { id: 'decisions', path: '/workspace/decisions', label: 'Decision Center', iconName: 'Compass', capability: 'view_decision_center', group: 'intelligence', disclosureTier: 'intelligence' },
   
   // Resources routes
   { id: 'work-logs', path: '/resources/work-logs', label: 'Work Logs', iconName: 'Notebook', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
   { id: 'logistics', path: '/resources', label: 'Logistics', iconName: 'PhosphorGitBranch', capability: 'manage_logistics', group: 'resources', disclosureTier: 'operational' },
-  { id: 'finance', path: '/resources/finance', label: 'Accounts & Finance', iconName: 'Bank', capability: 'manage_finance', group: 'resources', disclosureTier: 'platform' },
+  { id: 'finance', path: '/resources/finance', label: 'Accounts & Finance', iconName: 'Landmark', capability: 'manage_finance', group: 'resources', disclosureTier: 'platform' },
   { id: 'teams', path: '/resources/teams', label: 'Team Roster', iconName: 'UsersThree', capability: 'view_teams', group: 'resources', disclosureTier: 'operational' },
   { id: 'capacity', path: '/resources/capacity', label: 'Capacity Forecast', iconName: 'BarChart3', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
   { id: 'portfolio', path: '/workspace/portfolio', label: 'Project Sponsors', iconName: 'Building2', capability: 'view_stakeholders', group: 'resources', disclosureTier: 'intelligence' },
@@ -50,12 +50,12 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   
   // System routes
   { id: 'document-templates', path: '/control/document-templates', label: 'Document Templates', iconName: 'FileText', capability: 'manage_settings', group: 'system', disclosureTier: 'platform' },
-  { id: 'identity', path: '/control/identity', label: 'Admin & Identity', iconName: 'Shield', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
+  { id: 'identity', path: '/control/identity', label: 'Access Control', iconName: 'Shield', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
   { id: 'automations', path: '/control/automations', label: 'Automations', iconName: 'Zap', capability: 'manage_automations', group: 'system', disclosureTier: 'platform' },
-  { id: 'mission-control', path: '/control/mission-control', label: 'Mission Control', iconName: 'Broadcast', capability: 'view_mission_control', group: 'intelligence', disclosureTier: 'platform' },
+  { id: 'mission-control', path: '/control/mission-control', label: 'Dashboard', iconName: 'LayoutDashboard', capability: 'view_mission_control', group: 'intelligence', disclosureTier: 'platform' },
   { id: 'system-health', path: '/control/system-health', label: 'System Health', iconName: 'Activity', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
   { id: 'settings', path: '/control/settings', label: 'Settings', iconName: 'Settings', capability: 'manage_settings', group: 'system', disclosureTier: 'operational' },
-  { id: 'integrations', path: '/control/connections', label: 'Integrations', iconName: 'Link2', capability: 'manage_integrations', group: 'system', disclosureTier: 'platform' },
+  // { id: 'integrations', path: '/control/connections', label: 'Integrations', iconName: 'Link2', capability: 'manage_integrations', group: 'system', disclosureTier: 'platform' },
 
   // Executive routes
   { id: 'executive', path: '/workspace/executive', label: 'Executive Overview', iconName: 'Binoculars', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },

@@ -8,7 +8,305 @@ import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { calculateExpectedTime, calculateVariance } from '../../utils/timeUtils';
 import { addWorkingHours, getDailyCapacity } from '../../utils/productivity';
 import { activityLogService } from '../../services/activityLogService';
+import { 
+  fetchFinanceData, Client, Invoice, Payment, Expense, BillingMilestone, ClientCredit, CompanyBillingProfile,
+  cancelInvoice, applyAdvanceToInvoice, createCreditNote
+} from '../../services/financeService';
 import { FilePanel } from '../common/FilePanel';
+import { CreateInvoiceModal } from '../finance/CreateInvoiceModal';
+
+function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; currentUserProfile?: any }) {
+  const [loading, setLoading] = useState(true);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [milestones, setMilestones] = useState<BillingMilestone[]>([]);
+  const [clientCredits, setClientCredits] = useState<ClientCredit[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<CompanyBillingProfile | null>(null);
+  
+  const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = useState(false);
+  const [prefillBillingType, setPrefillBillingType] = useState<string>('Final Settlement');
+
+  useEffect(() => {
+    fetchFinanceData(project.workspace_id).then(data => {
+      setInvoices(data.invoices.filter(i => i.project_id === project.id));
+      setPayments(data.payments);
+      setExpenses(data.expenses.filter(e => e.project_id === project.id));
+      setMilestones(data.billingMilestones?.filter(m => m.project_id === project.id) || []);
+      setClientCredits(data.clientCredits?.filter(c => c.client_id === project.client_id) || []);
+      setClients(data.clients);
+      setCompanyProfile(data.companyProfile);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [project.id, project.workspace_id]);
+
+  if (loading) {
+    return <div className="p-8 text-center text-xs font-mono text-text-tertiary">Loading financial data...</div>;
+  }
+
+  const totalInvoiced = invoices.reduce((sum, inv) => sum + (inv.grand_total || inv.amount || 0), 0);
+  
+  const projectPayments = payments.filter(p => invoices.some(i => i.id === p.invoice_id));
+  const totalReceived = projectPayments.reduce((sum, p) => sum + p.amount, 0);
+  
+  const totalPending = Math.max(0, totalInvoiced - totalReceived);
+  
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  
+  const profitEstimate = (project.contract_value || 0) - totalExpenses;
+  
+  const availableAdvance = clientCredits
+    .filter(c => c.status === 'active')
+    .reduce((sum, c) => sum + c.amount, 0);
+
+  const actualProfit = totalReceived - totalExpenses;
+
+  const refreshFinanceData = () => {
+    setLoading(true);
+    fetchFinanceData(project.workspace_id).then(data => {
+      setInvoices(data.invoices.filter(i => i.project_id === project.id));
+      setPayments(data.payments);
+      setExpenses(data.expenses.filter(e => e.project_id === project.id));
+      setMilestones(data.billingMilestones?.filter(m => m.project_id === project.id) || []);
+      setClientCredits(data.clientCredits?.filter(c => c.client_id === project.client_id) || []);
+      setLoading(false);
+    });
+  };
+
+  const handleCancelInvoiceAction = async (invoice: Invoice) => {
+    if (!confirm("Are you sure you want to cancel this invoice?")) return;
+    const reason = prompt("Reason for cancellation:");
+    if (!reason) return;
+    try {
+      await cancelInvoice(invoice, currentUserProfile?.id || 'unknown', reason);
+      alert("Invoice cancelled.");
+      refreshFinanceData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleApplyAdvanceAction = async (invoice: Invoice) => {
+    if (availableAdvance <= 0) return;
+    const amountToApply = Math.min(availableAdvance, invoice.grand_total || invoice.amount || 0);
+    if (!confirm(`Apply ${(project.billing_currency || 'INR')} ${amountToApply} from advance balance to this invoice?`)) return;
+    try {
+      await applyAdvanceToInvoice(project.workspace_id, project.client_id!, invoice.id, amountToApply, currentUserProfile?.id || 'unknown');
+      alert("Advance applied successfully.");
+      refreshFinanceData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleCreateCreditNoteAction = async (invoice: Invoice) => {
+    const maxAmount = invoice.grand_total || invoice.amount;
+    const amountStr = prompt(`Amount for Credit Note (max ${maxAmount}):`);
+    if (!amountStr) return;
+    const amount = Number(amountStr);
+    if (isNaN(amount) || amount <= 0 || amount > maxAmount) return alert("Invalid amount.");
+    const reason = prompt("Reason for Credit Note:");
+    if (!reason) return;
+    try {
+      await createCreditNote(project.workspace_id, {
+        client_id: project.client_id!,
+        invoice_id: invoice.id,
+        amount,
+        reason,
+        issue_date: new Date().toISOString().split('T')[0],
+        created_by: currentUserProfile?.id || 'unknown'
+      });
+      alert("Credit note created.");
+      refreshFinanceData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleCreateInvoice = (type: string) => {
+    setPrefillBillingType(type);
+    setIsCreateInvoiceOpen(true);
+  };
+
+  return (
+    <div className="space-y-6 mt-4">
+      {/* Finance Overview Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-4 bg-surface-3 border border-border rounded-xl">
+          <div className="text-[10px] uppercase font-mono text-text-tertiary mb-1">Contract Value</div>
+          <div className="text-xl font-bold text-text-primary">
+            {project.billing_currency || 'INR'} {(project.contract_value || 0).toLocaleString()}
+          </div>
+          <div className="text-[9px] font-mono text-text-tertiary mt-1">Model: {project.billing_model || 'Fixed Price'}</div>
+        </div>
+        
+        <div className="p-4 bg-surface-3 border border-border rounded-xl">
+          <div className="text-[10px] uppercase font-mono text-text-tertiary mb-1">Amount Invoiced</div>
+          <div className="text-xl font-bold text-text-primary">
+            {project.billing_currency || 'INR'} {totalInvoiced.toLocaleString()}
+          </div>
+        </div>
+
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+          <div className="text-[10px] uppercase font-mono text-emerald-400/70 mb-1">Received</div>
+          <div className="text-xl font-bold text-emerald-400">
+            {project.billing_currency || 'INR'} {totalReceived.toLocaleString()}
+          </div>
+        </div>
+
+        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+          <div className="text-[10px] uppercase font-mono text-amber-400/70 mb-1">Pending</div>
+          <div className="text-xl font-bold text-amber-400">
+            {project.billing_currency || 'INR'} {totalPending.toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <h4 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide">Project Expenses & Costs</h4>
+          <div className="p-4 bg-surface-3 border border-border rounded-xl flex items-center justify-between">
+            <span className="text-sm font-semibold text-text-secondary">Total Expenses Logged</span>
+            <span className="text-sm font-mono text-rose-400 font-bold">{project.billing_currency || 'INR'} {totalExpenses.toLocaleString()}</span>
+          </div>
+          <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm max-h-[160px] overflow-y-auto space-y-2">
+             {expenses.length === 0 ? (
+                <p className="text-[10px] font-mono text-text-tertiary italic text-center py-2">No expenses logged yet.</p>
+             ) : (
+                expenses.map(e => (
+                  <div key={e.id} className="flex justify-between items-center text-[10px] font-mono border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                    <div>
+                      <span className="text-text-secondary font-bold uppercase">{e.category}</span>
+                      <p className="text-text-tertiary mt-0.5">{e.description}</p>
+                    </div>
+                    <div className="text-right flex items-center justify-end gap-2">
+                       <span className="text-text-primary">{(project.billing_currency || 'INR')} {e.amount.toLocaleString()}</span>
+                       <span className={`text-[8px] px-1 py-0.5 rounded ${e.billable ? 'bg-emerald-500/20 text-emerald-400' : 'bg-surface-3 text-text-tertiary'}`}>{e.billable ? 'BILLABLE' : 'INTERNAL'}</span>
+                       {e.billable && (
+                         <button 
+                           onClick={() => handleCreateInvoice('Expense Reimbursement')} 
+                           title="Bill to Client"
+                           className="text-text-tertiary hover:text-emerald-400 transition-colors"
+                         >
+                           <Plus className="w-3 h-3" />
+                         </button>
+                       )}
+                    </div>
+                  </div>
+                ))
+             )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide">Profit Estimate</h4>
+          <div className="p-4 bg-surface-3 border border-border rounded-xl flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-text-secondary">Estimated Net</span>
+              <span className="text-[9px] text-text-tertiary">Contract - Expenses</span>
+            </div>
+            <span className={`text-sm font-mono font-bold ${profitEstimate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {project.billing_currency || 'INR'} {profitEstimate.toLocaleString()}
+            </span>
+          </div>
+          <div className="p-4 bg-surface-3 border border-border rounded-xl flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-text-secondary">Actual Profit</span>
+              <span className="text-[9px] text-text-tertiary">Recognized Revenue - Costs</span>
+            </div>
+            <span className={`text-sm font-mono font-bold ${actualProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {project.billing_currency || 'INR'} {actualProfit.toLocaleString()}
+            </span>
+          </div>
+          <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm max-h-[220px] overflow-y-auto space-y-2">
+            <h5 className="text-[10px] uppercase font-mono text-text-tertiary mb-2">Linked Invoices</h5>
+             {invoices.length === 0 ? (
+                <p className="text-[10px] font-mono text-text-tertiary italic text-center py-2">No invoices generated yet.</p>
+             ) : (
+                invoices.map(i => (
+                  <div key={i.id} className="flex justify-between items-center text-[10px] font-mono border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                    <div>
+                      <span className="text-text-secondary font-bold">{i.invoice_number}</span>
+                      <p className="text-text-tertiary mt-0.5 uppercase">{i.billing_type || 'Invoice'}</p>
+                      
+                      <div className="flex gap-2 mt-2">
+                        {i.status !== 'paid' && i.status !== 'cancelled' && (
+                          <button onClick={() => handleCancelInvoiceAction(i)} className="text-[9px] px-1.5 py-0.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded">Cancel</button>
+                        )}
+                        {i.status === 'paid' && (
+                          <button onClick={() => handleCreateCreditNoteAction(i)} className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 rounded">Credit Note</button>
+                        )}
+                        {i.status !== 'paid' && i.status !== 'cancelled' && availableAdvance > 0 && (
+                          <button onClick={() => handleApplyAdvanceAction(i)} className="text-[9px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded">Apply Advance</button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                       <span className="text-text-primary block">{(i.grand_total || i.amount || 0).toLocaleString()}</span>
+                       <span className={`text-[8px] px-1 py-0.5 rounded uppercase ${
+                          i.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                          i.status === 'partial' ? 'bg-amber-500/20 text-amber-400' :
+                          i.status === 'overdue' ? 'bg-rose-500/20 text-rose-400' :
+                          i.status === 'cancelled' ? 'bg-surface-3 text-text-tertiary' :
+                          'bg-blue-500/20 text-blue-400'
+                       }`}>{i.status}</span>
+                    </div>
+                  </div>
+                ))
+             )}
+          </div>
+          
+          <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm space-y-3">
+             <h5 className="text-[10px] uppercase font-mono text-text-tertiary mb-2">Client Advance Balance</h5>
+             <div className="flex justify-between items-center mb-2">
+               <span className="text-sm font-semibold text-text-secondary">Available Advance</span>
+               <span className="text-sm font-mono font-bold text-emerald-400">{project.billing_currency || 'INR'} {availableAdvance.toLocaleString()}</span>
+             </div>
+             <p className="text-[9px] font-mono text-text-tertiary mb-3 italic">Advances are tracked per client and can be applied during invoice finalization or generated via Advance Payment Invoices.</p>
+             <button 
+               onClick={() => handleCreateInvoice('Advance Payment')}
+               className="w-full bg-surface-3 hover:bg-surface-highest text-text-secondary h-8 rounded text-[10px] uppercase font-bold tracking-wide transition-all border border-border/50"
+             >
+               Request Advance
+             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Invoice Actions */}
+      <div className="flex justify-end pt-4 border-t border-border">
+        <button 
+          onClick={() => handleCreateInvoice('Final Settlement')}
+          className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 px-6 py-2.5 rounded-xl font-medium transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          Create Invoice
+        </button>
+      </div>
+
+      <CreateInvoiceModal
+        isOpen={isCreateInvoiceOpen}
+        onClose={() => setIsCreateInvoiceOpen(false)}
+        workspaceId={project.workspace_id}
+        clients={clients}
+        companyProfile={companyProfile}
+        prefillProject={project}
+        totalInvoicedForProject={totalInvoiced}
+        prefillBillingType={prefillBillingType}
+        currentUserIsSuperAdmin={true} // In real app, fetch from user profile
+        onSuccess={() => {
+          setIsCreateInvoiceOpen(false);
+            // Auto-refresh the component
+            refreshFinanceData();
+          }}
+        />
+    </div>
+  );
+}
 
 export function ProjectDetailsModal({
   project,
@@ -36,7 +334,7 @@ export function ProjectDetailsModal({
   const { tasks, updateWorkspaceSettings, projectFrictionMetrics = {}, timelineShiftLedger = [], notify, workspaceSettingsBlob = {} } = useDashboard();
   const hasTasks = tasks.some(t => t.project_id === project.id);
 
-  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance'>('general');
   const [deltaDays, setDeltaDays] = useState('5');
   const [blockerCategory, setBlockerCategory] = useState('Client IT Team');
   const [blockerOwnership, setBlockerOwnership] = useState('Client');
@@ -217,6 +515,7 @@ export function ProjectDetailsModal({
   }, [nowLive, etaCompletionDate, workWindow, productiveHoursPerDay, isPlanning]);
 
   const [changeReasonPrompt, setChangeReasonPrompt] = useState<{ changes: any, open: boolean }>({ changes: null, open: false });
+  const [pendingFinanceWarning, setPendingFinanceWarning] = useState<{ open: boolean; gap: number; currency: string; contractVal: number; totalInv: number } | null>(null);
   const [changeReason, setChangeReason] = useState('');
   const [showLogs, setShowLogs] = useState(false);
   const [dbLogs, setDbLogs] = useState<any[]>([]);
@@ -341,9 +640,7 @@ export function ProjectDetailsModal({
   }, [localLogs]);
 
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const executeSubmit = () => {
     const changes: string[] = [];
     if (status !== project.status) changes.push(`Status (${project.status} -> ${status})`);
     if (priority !== project.priority) changes.push(`Priority (${project.priority} -> ${priority})`);
@@ -378,6 +675,60 @@ export function ProjectDetailsModal({
       onUpdate(project.id, updates);
       onClose();
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (status === 'done' && project.status !== 'done') {
+      try {
+        const { supabase } = await import('../../lib/supabase');
+        const { data: invData } = await supabase.from('invoices').select('grand_total, amount').eq('project_id', project.id).neq('status', 'cancelled');
+        let totalInv = 0;
+        if (invData) {
+          totalInv = invData.reduce((sum, inv) => sum + (inv.grand_total || inv.amount || 0), 0);
+        }
+        const contractVal = project.contract_value || 0;
+        if (contractVal > totalInv) {
+          const gap = contractVal - totalInv;
+          const currency = project.billing_currency || 'INR';
+          setPendingFinanceWarning({
+            open: true,
+            gap,
+            currency,
+            contractVal,
+            totalInv
+          });
+          return; // Wait for modal action
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    executeSubmit();
+  };
+
+  const handleReviewFinance = () => {
+    setPendingFinanceWarning(null);
+    setStatus(project.status); // Revert status so project isn't stuck trying to save 'done'
+    setActiveTab('finance');
+  };
+
+  const handleCompleteAnyway = async () => {
+    if (pendingFinanceWarning) {
+      try {
+        const { supabase } = await import('../../lib/supabase');
+        await supabase.from('invoice_audit_logs').insert([{
+          workspace_id: project.workspace_id,
+          action: 'project_completed_with_pending_finance',
+          performed_by: currentUserProfile?.id || currentUserProfile?.email || 'unknown',
+          reason: `Pending amount: ${pendingFinanceWarning.currency} ${pendingFinanceWarning.gap.toLocaleString()}`
+        }]);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    setPendingFinanceWarning(null);
+    executeSubmit();
   };
 
   const handleConfirmChange = () => {
@@ -659,6 +1010,42 @@ export function ProjectDetailsModal({
           </div>
         )}
 
+        {pendingFinanceWarning?.open && (
+          <div className="absolute inset-0 z-[100] bg-surface backdrop-blur-sm flex items-center justify-center p-8">
+            <div className="w-full max-w-md bg-bg border border-amber-500/30 p-6 space-y-5 shadow-2xl">
+              <div className="flex flex-col gap-2 mb-2">
+                <div className="flex items-center gap-2 text-amber-400">
+                  <Activity className="w-5 h-5" />
+                  <h4 className="text-sm font-sans tracking-tight uppercase tracking-wide font-bold">Pending Billing Detected</h4>
+                </div>
+                <p className="text-[12px] font-mono text-text-secondary leading-relaxed mt-2">
+                  This project still has <strong className="text-amber-400">{pendingFinanceWarning.currency} {pendingFinanceWarning.gap.toLocaleString()}</strong> remaining uninvoiced.
+                </p>
+              </div>
+              
+              <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-sm grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-[9px] uppercase font-mono text-text-tertiary mb-1">Contract Value</span>
+                  <span className="block text-sm font-bold text-text-primary">{pendingFinanceWarning.currency} {pendingFinanceWarning.contractVal.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="block text-[9px] uppercase font-mono text-text-tertiary mb-1">Already Invoiced</span>
+                  <span className="block text-sm font-bold text-text-primary">{pendingFinanceWarning.currency} {pendingFinanceWarning.totalInv.toLocaleString()}</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={handleReviewFinance} className="flex-1 bg-amber-500 text-black text-[11px] uppercase font-bold py-2.5 hover:bg-amber-400 transition-colors tracking-wide">
+                  Review Finance
+                </button>
+                <button type="button" onClick={handleCompleteAnyway} className="flex-1 border border-border text-text-secondary text-[11px] uppercase font-mono py-2.5 hover:bg-[var(--pm-surface)]/5 tracking-wide transition-colors">
+                  Complete Anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="p-8">
           <div className="flex justify-between items-start mb-8">
             <div className="flex gap-4 items-center">
@@ -703,6 +1090,15 @@ export function ProjectDetailsModal({
               }`}
             >
               Files
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('finance')}
+              className={`px-4 py-2 text-xs font-mono uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+                activeTab === 'finance' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-text-tertiary hover:text-emerald-500/70'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" /> Finance
             </button>
           </div>
 
@@ -1170,6 +1566,8 @@ export function ProjectDetailsModal({
                 canEdit={true}
               />
             </div>
+          ) : activeTab === 'finance' ? (
+            <ProjectFinanceTab project={project} currentUserProfile={currentUserProfile} />
           ) : null}
         </div>
       </motion.div>

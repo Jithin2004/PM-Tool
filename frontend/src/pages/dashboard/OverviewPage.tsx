@@ -300,10 +300,10 @@ function DeveloperWorkspace({
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
-            Strategic Oversight
+            My Dashboard
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Tactical task delivery, active roadblocks, and release coordination.
+            Welcome {profile?.full_name?.split(' ')[0] || 'User'}. Your workspace is ready.
           </p>
         </div>
         <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
@@ -316,27 +316,29 @@ function DeveloperWorkspace({
       </div>
 
       {/* KPI metrics bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        {[
-          { label: 'My Open Tasks', value: devOpenTasks.length, sub: `${devCompletedTasks.length} completed`, icon: 'assignment', color: 'var(--pm-primary)' },
-          { label: 'Completed Weight', value: `${devCompletedWeight}h`, sub: 'Total effort delivered', icon: 'history', color: '#34d399' },
-          { label: 'Active Blockers', value: devBlockedTasks.length, sub: 'Blocked by dependencies', icon: 'lock', color: devBlockedTasks.length > 0 ? 'var(--pm-error)' : 'var(--pm-primary)' },
-          { label: 'My Completion Rate', value: `${devOpenTasks.length + devCompletedTasks.length > 0 ? Math.round((devCompletedTasks.length / (devOpenTasks.length + devCompletedTasks.length)) * 100) : 0}%`, sub: 'Personal throughput', icon: 'check_circle', color: '#34d399' }
-        ].map((kpi, i) => (
-          <div key={i} className="pm-card p-5 relative overflow-hidden group">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: `${kpi.color}18`, border: `1px solid ${kpi.color}30` }}>
-                <Icon name={kpi.icon} size={20} style={{ color: kpi.color }} />
+      {(devOpenTasks.length > 0 || devCompletedTasks.length > 0) && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          {[
+            { label: 'My Open Tasks', value: devOpenTasks.length, sub: `${devCompletedTasks.length} completed`, icon: 'assignment', color: 'var(--pm-primary)' },
+            { label: 'Completed Weight', value: `${devCompletedWeight}h`, sub: 'Total effort delivered', icon: 'history', color: '#34d399' },
+            { label: 'Active Blockers', value: devBlockedTasks.length, sub: 'Blocked by dependencies', icon: 'lock', color: devBlockedTasks.length > 0 ? 'var(--pm-error)' : 'var(--pm-primary)' },
+            { label: 'My Completion Rate', value: `${devOpenTasks.length + devCompletedTasks.length > 0 ? Math.round((devCompletedTasks.length / (devOpenTasks.length + devCompletedTasks.length)) * 100) : 0}%`, sub: 'Personal throughput', icon: 'check_circle', color: '#34d399' }
+          ].map((kpi, i) => (
+            <div key={i} className="pm-card p-5 relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: `${kpi.color}18`, border: `1px solid ${kpi.color}30` }}>
+                  <Icon name={kpi.icon} size={20} style={{ color: kpi.color }} />
+                </div>
+                <span className="font-mono-pm text-[9px] uppercase tracking-[0.2em]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>LIVE</span>
               </div>
-              <span className="font-mono-pm text-[9px] uppercase tracking-[0.2em]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>LIVE</span>
+              <div className="text-3xl font-bold tracking-tight" style={{ color: kpi.color }}>{kpi.value}</div>
+              <div className="text-[11px] font-semibold mt-1 mb-0.5" style={{ color: 'var(--pm-on-surface)' }}>{kpi.label}</div>
+              <div className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>{kpi.sub}</div>
             </div>
-            <div className="text-3xl font-bold tracking-tight" style={{ color: kpi.color }}>{kpi.value}</div>
-            <div className="text-[11px] font-semibold mt-1 mb-0.5" style={{ color: 'var(--pm-on-surface)' }}>{kpi.label}</div>
-            <div className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>{kpi.sub}</div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Primary Execution Workspace Grid ────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -427,8 +429,10 @@ function DeveloperWorkspace({
                 })
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 gap-3">
-                  <Icon name="check_circle" size={36} style={{ color: '#34d399', opacity: 0.5 }} />
-                  <p className="text-sm font-medium text-[var(--pm-on-surface-variant)]">All assigned work successfully delivered. Outstanding job!</p>
+                  <Icon name="assignment" size={36} style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.3 }} />
+                  <p className="text-sm font-medium text-[var(--pm-on-surface-variant)] text-center">
+                    No assigned tasks yet.<br/>Your work will appear here when your manager assigns tasks.
+                  </p>
                 </div>
               )}
             </div>
@@ -722,15 +726,15 @@ function PMOrchestrationSurface({
       {/* Header */}
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Strategic Oversight</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Manager Dashboard</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Execution coordination, roadblock resolution, and delivery velocity.
+            Project progress, team workload, and delivery metrics.
           </p>
         </div>
         <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
           style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 operational-pulse" />
-          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]">PM CONSOLE</span>
+          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]">MANAGER VIEW</span>
         </div>
       </div>
 
@@ -1005,15 +1009,15 @@ function SuperAdminGovernanceSurface({
       {/* Header */}
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Strategic Oversight</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Admin Dashboard</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Organizational status, threat/capacity alerts, and blockchain audit verification.
+            System health, user capacity, and security logs.
           </p>
         </div>
         <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
           style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 operational-pulse" />
-          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]">SUPER ADMIN</span>
+          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]">ADMIN</span>
         </div>
       </div>
 
@@ -1100,7 +1104,7 @@ function SuperAdminGovernanceSurface({
           </div>
         </div>
 
-        {/* Right Column: Security Telemetry (Blockchain Hashing) */}
+        {/* Right Column: Security Logs (Blockchain Hashing) */}
         <div className="lg:col-span-6 space-y-6">
           <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
             <h2 className="text-base font-semibold mb-4 text-indigo-300 flex items-center gap-2">

@@ -90,10 +90,11 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     label: 'Work',
     iconName: 'Kanban',
     subsections: [
+      { label: 'My Work', path: '/overview', capability: 'view_tasks' },
       { label: 'Projects', path: '/workspace', capability: 'view_projects' },
       { label: 'Tasks', path: '/execution/board', capability: 'view_tasks' },
-      { label: 'Calendar', path: '/execution/timeline', capability: 'view_scheduling' },
-      { label: 'Timeline', path: '/execution/gantt', capability: 'view_scheduling' }
+      { label: 'Gantt', path: '/execution/gantt', capability: 'view_scheduling' },
+      { label: 'Calendar', path: '/execution/timeline', capability: 'view_tasks' }
     ]
   },
   {
@@ -102,17 +103,17 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     iconName: 'Users',
     subsections: [
       { label: 'Members', path: '/resources/teams', capability: 'view_teams' },
+      { label: 'Team Workload', path: '/resources/capacity', capability: 'view_reports' },
       { label: 'Attendance', path: '/resources/attendance', capability: 'manage_logistics' },
-      { label: 'Workload', path: '/resources/capacity', capability: 'view_reports' },
       { label: 'Payroll', path: '/resources/payroll', capability: 'manage_compensation' }
     ]
   },
   {
     id: 'finance',
     label: 'Finance',
-    iconName: 'Wallet',
+    iconName: 'Landmark',
     subsections: [
-      { label: 'Accounts', path: '/resources/finance', capability: 'manage_compensation' } // Using manage_compensation as proxy for finance access, or view_reports
+      { label: 'Accounts', path: '/resources/finance', capability: 'manage_compensation' }
     ]
   },
   {
@@ -131,7 +132,6 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     iconName: 'Settings',
     subsections: [
       { label: 'Settings', path: '/control/settings', capability: 'manage_settings' },
-      { label: 'Integrations', path: '/control/connections', capability: 'manage_integrations' },
       { label: 'Audit Logs', path: '/control/audit', capability: 'view_audit_log' },
       { label: 'Document Templates', path: '/control/document-templates', capability: 'manage_settings' },
       { label: 'Access Control', path: '/control/identity', capability: 'manage_settings' }
@@ -140,23 +140,44 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
 ];
 
 const isPathAllowed = (path: string, role?: string): boolean => {
-  const isDev = hasCapability(role as UserRole, 'manage_tasks') && !hasCapability(role as UserRole, 'manage_projects');
-  const isView = hasCapability(role as UserRole, 'view_stakeholders') && !hasCapability(role as UserRole, 'manage_tasks');
+  const isDev = role === 'developer'; // Adjust role check as needed
+  const isView = role === 'viewer';
+  const isPM = role === 'manager';
+  const isAdmin = role === 'admin' || role === 'super_admin';
 
+  // For developer/employee
   if (isDev) {
-    const allowed = ['/overview', '/execution', '/execution/board', '/login', '/execution/timeline'];
+    const allowed = ['/overview', '/execution/board', '/execution/timeline', '/login'];
     if (!allowed.includes(path)) return false;
   }
+  
   if (isView) {
     const allowed = ['/workspace/portfolio', '/workspace/decisions', '/login'];
     if (!allowed.includes(path)) return false;
   }
+  
+  // If Manager, Gantt and Reports are allowed implicitly by capability checks in isSubsectionAllowed, but we must make sure path is allowed
   return true;
 };
 
 const isSubsectionAllowed = (sub: DomainSubsection, role?: string): boolean => {
-  if (sub.capability && !hasCapability(role as UserRole, sub.capability)) return false;
-  return isPathAllowed(sub.path, role);
+  // If the path isn't allowed at all for this role, hide it
+  if (!isPathAllowed(sub.path, role)) return false;
+  
+  const isDev = role === 'developer';
+  
+  // Employee special overrides for visibility
+  if (isDev) {
+    // Only these labels are shown to Employee
+    const devAllowedLabels = ['My Work', 'Tasks', 'Calendar', 'Files', 'Comments', 'Profile'];
+    if (!devAllowedLabels.includes(sub.label)) return false;
+  }
+  
+  if (sub.capability && !hasCapability(role as UserRole, sub.capability)) {
+    return false;
+  }
+  
+  return true;
 };
 
 export default function DashboardLayout({ children }: { children?: React.ReactNode }) {

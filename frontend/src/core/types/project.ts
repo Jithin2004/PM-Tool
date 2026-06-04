@@ -23,6 +23,7 @@ export type RiskLevel = 'low' | 'medium' | 'high';
 export interface Project {
   id: string;
   workspace_id: string;
+  client_id?: string;
   team_id?: string;
   owner_id?: string;
   name: string;
@@ -59,4 +60,7 @@ export interface Project {
     is_locked: boolean;
     system_signature: string;
   };
+  contract_value?: number;
+  billing_model?: 'Fixed Price' | 'Hourly' | 'Milestone Based' | 'Retainer' | 'Internal Project';
+  billing_currency?: string;
 }

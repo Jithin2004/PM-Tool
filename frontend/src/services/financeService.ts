@@ -28,6 +28,7 @@ export interface Client {
   billing_country?: string;
   tax_type?: 'registered' | 'unregistered';
   currency?: string;
+  advance_balance?: number;
 }
 
 export interface InvoiceLineItem {
@@ -64,6 +65,43 @@ export interface Invoice {
   paid_date: string | null;
   created_at: string;
   line_items?: InvoiceLineItem[];
+  task_id?: string | null;
+  billing_type?: string;
+  payment_terms?: string;
+  milestone_id?: string | null;
+}
+
+export interface BillingMilestone {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  name: string;
+  amount: number;
+  status: 'pending' | 'invoiced' | 'paid';
+  invoice_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientCredit {
+  id: string;
+  workspace_id: string;
+  client_id: string;
+  amount: number;
+  source_payment_id?: string | null;
+  status: 'active' | 'used';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceAuditLog {
+  id: string;
+  workspace_id: string;
+  invoice_id?: string | null;
+  action: string;
+  performed_by: string;
+  reason?: string | null;
+  created_at: string;
 }
 
 export interface Payment {
@@ -73,6 +111,8 @@ export interface Payment {
   payment_date: string;
   method: string;
   reference_number: string;
+  client_id?: string;
+  advance_payment?: boolean;
 }
 
 export interface Expense {
@@ -82,6 +122,10 @@ export interface Expense {
   amount: number;
   date: string;
   description: string;
+  project_id?: string | null;
+  task_id?: string | null;
+  billable?: boolean;
+  reimbursed_invoice_id?: string | null;
 }
 
 export interface FinancialPeriod {
@@ -117,17 +161,45 @@ export interface FinancialAdjustment {
   created_at: string;
 }
 
+export interface AdvanceApplication {
+  id: string;
+  workspace_id: string;
+  client_credit_id: string;
+  invoice_id: string;
+  amount_applied: number;
+  applied_by: string;
+  applied_at: string;
+  notes?: string;
+}
+
+export interface CreditNote {
+  id: string;
+  workspace_id: string;
+  client_id: string;
+  invoice_id: string | null;
+  credit_note_number: string;
+  amount: number;
+  reason: string;
+  issue_date: string;
+  created_by: string;
+  created_at: string;
+}
+
 export async function fetchFinanceData(workspaceId: string) {
-  const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments] = await Promise.all([
+  const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments, billingMilestones, clientCredits, advanceApplications, creditNotes] = await Promise.all([
     supabase.from('company_billing_profile').select('*').eq('workspace_id', workspaceId).maybeSingle(),
     supabase.from('clients').select('*').eq('workspace_id', workspaceId),
     supabase.from('invoices').select('*, invoice_line_items(*)').eq('workspace_id', workspaceId),
-    supabase.from('payments').select('*, invoices!inner(workspace_id)').eq('invoices.workspace_id', workspaceId),
+    supabase.from('payments').select('*').eq('workspace_id', workspaceId),
     supabase.from('expenses').select('*').eq('workspace_id', workspaceId),
     supabase.from('salaries').select('base_salary').eq('workspace_id', workspaceId),
     supabase.from('financial_periods').select('*').eq('workspace_id', workspaceId),
     supabase.from('financial_snapshots').select('*').eq('workspace_id', workspaceId),
-    supabase.from('financial_adjustments').select('*, financial_periods!inner(workspace_id)').eq('financial_periods.workspace_id', workspaceId)
+    supabase.from('financial_adjustments').select('*, financial_periods!inner(workspace_id)').eq('financial_periods.workspace_id', workspaceId),
+    supabase.from('billing_milestones').select('*').eq('workspace_id', workspaceId),
+    supabase.from('client_credits').select('*').eq('workspace_id', workspaceId),
+    supabase.from('advance_applications').select('*').eq('workspace_id', workspaceId),
+    supabase.from('credit_notes').select('*').eq('workspace_id', workspaceId)
   ]);
 
   if (companyProfile.error && companyProfile.error.code !== 'PGRST116') throw companyProfile.error;
@@ -140,6 +212,11 @@ export async function fetchFinanceData(workspaceId: string) {
   if (snapshots.error && snapshots.error.code !== '42P01') throw snapshots.error;
   if (adjustments.error && adjustments.error.code !== '42P01') throw adjustments.error;
 
+  if (billingMilestones.error && billingMilestones.error.code !== '42P01') throw billingMilestones.error;
+  if (clientCredits.error && clientCredits.error.code !== '42P01') throw clientCredits.error;
+  if (advanceApplications.error && advanceApplications.error.code !== '42P01') throw advanceApplications.error;
+  if (creditNotes.error && creditNotes.error.code !== '42P01') throw creditNotes.error;
+
   return {
     companyProfile: companyProfile.data as CompanyBillingProfile | null,
     clients: clients.data as Client[],
@@ -150,6 +227,10 @@ export async function fetchFinanceData(workspaceId: string) {
     periods: (periods.data || []) as FinancialPeriod[],
     snapshots: (snapshots.data || []) as FinancialSnapshot[],
     adjustments: (adjustments.data || []) as FinancialAdjustment[],
+    billingMilestones: (billingMilestones.data || []) as BillingMilestone[],
+    clientCredits: (clientCredits.data || []) as ClientCredit[],
+    advanceApplications: (advanceApplications.data || []) as AdvanceApplication[],
+    creditNotes: (creditNotes.data || []) as CreditNote[],
   };
 }
 
@@ -221,4 +302,109 @@ export async function createFinancialAdjustment(adjustment: Partial<FinancialAdj
   const { data, error } = await supabase.from('financial_adjustments').insert([adjustment]).select().single();
   if (error) throw error;
   return data;
+}
+
+export async function checkPeriodClosed(workspaceId: string, dateStr: string): Promise<boolean> {
+  const date = new Date(dateStr);
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+  const { data } = await supabase.from('financial_periods')
+    .select('status')
+    .eq('workspace_id', workspaceId)
+    .eq('month', month)
+    .eq('year', year)
+    .maybeSingle();
+  return data?.status === 'closed';
+}
+
+export async function cancelInvoice(invoice: Invoice, performedBy: string, reason: string) {
+  if (await checkPeriodClosed(invoice.workspace_id, invoice.issue_date)) {
+    throw new Error('Cannot cancel invoice in a closed financial period.');
+  }
+
+  const { error } = await supabase.from('invoices').update({ status: 'cancelled' }).eq('id', invoice.id);
+  if (error) throw error;
+
+  await supabase.from('invoice_audit_logs').insert([{
+    workspace_id: invoice.workspace_id,
+    invoice_id: invoice.id,
+    action: 'cancelled',
+    performed_by: performedBy,
+    reason: reason
+  }]);
+}
+
+export async function createCreditNote(workspaceId: string, creditNote: Partial<CreditNote>) {
+  if (creditNote.issue_date && await checkPeriodClosed(workspaceId, creditNote.issue_date)) {
+    throw new Error('Cannot issue credit note in a closed financial period. Use financial adjustment.');
+  }
+
+  // 1. Generate Credit Note Number via RPC or simple logic (assuming prefix CN-)
+  const { data: countData } = await supabase.from('credit_notes').select('id', { count: 'exact' }).eq('workspace_id', workspaceId);
+  const nextNum = (countData?.length || 0) + 1;
+  const cnNumber = `CN-${String(nextNum).padStart(4, '0')}`;
+
+  const { data, error } = await supabase.from('credit_notes').insert([{ 
+    ...creditNote, 
+    workspace_id: workspaceId,
+    credit_note_number: cnNumber
+  }]).select().single();
+  
+  if (error) throw error;
+  
+  await supabase.from('invoice_audit_logs').insert([{
+    workspace_id: workspaceId,
+    invoice_id: creditNote.invoice_id,
+    action: 'credit_note_issued',
+    performed_by: creditNote.created_by,
+    reason: `Credit note ${cnNumber} issued for ${creditNote.amount}`
+  }]);
+
+  return data;
+}
+
+export async function applyAdvanceToInvoice(workspaceId: string, clientId: string, invoiceId: string, amount: number, performedBy: string) {
+  // Get active client credits
+  const { data: credits } = await supabase.from('client_credits').select('*').eq('client_id', clientId).eq('status', 'active');
+  if (!credits || credits.length === 0) throw new Error("No active advances found.");
+
+  // For simplicity, we just log it against the first credit or an aggregate.
+  // We need a credit_id for advance_applications.
+  const creditId = credits[0].id;
+
+  const { error: appError } = await supabase.from('advance_applications').insert([{
+    workspace_id: workspaceId,
+    client_credit_id: creditId,
+    invoice_id: invoiceId,
+    amount_applied: amount,
+    applied_by: performedBy,
+    notes: 'Applied from advance balance'
+  }]);
+  if (appError) throw appError;
+
+  // Deduct from client advance_balance via RPC or simple update
+  const { data: client } = await supabase.from('clients').select('advance_balance').eq('id', clientId).single();
+  const currentAdvance = client?.advance_balance || 0;
+  if (currentAdvance < amount) throw new Error("Insufficient advance balance.");
+
+  await supabase.from('clients').update({ advance_balance: currentAdvance - amount }).eq('id', clientId);
+
+  // Record it as a payment
+  await recordPayment({
+    invoice_id: invoiceId,
+    amount: amount,
+    payment_date: new Date().toISOString().split('T')[0],
+    method: 'Advance Application',
+    reference_number: `ADV-${creditId.substring(0,6)}`,
+    client_id: clientId,
+    advance_payment: false
+  });
+
+  await supabase.from('invoice_audit_logs').insert([{
+    workspace_id: workspaceId,
+    invoice_id: invoiceId,
+    action: 'advance_applied',
+    performed_by: performedBy,
+    reason: `Applied advance of ${amount}`
+  }]);
 }

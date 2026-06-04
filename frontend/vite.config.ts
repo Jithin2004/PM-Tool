@@ -21,10 +21,11 @@ export default defineConfig(({mode}) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-window'],
-            'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-motion': ['motion/react', 'motion'],
-            'vendor-icons': ['lucide-react']
+            'react-vendor': ['react', 'react-dom', 'react-window'],
+            'ui-vendor': ['lucide-react', '@phosphor-icons/react', 'motion/react', 'motion'],
+            'supabase': ['@supabase/supabase-js'],
+            'reports-vendor': ['jspdf', 'jspdf-autotable'],
+            'ai-vendor': ['@google/genai']
           },
         },
       },

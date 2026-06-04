@@ -12,13 +12,23 @@ interface CreateInvoiceModalProps {
   clients: Client[];
   companyProfile: CompanyBillingProfile | null;
   onSuccess: () => void;
+  prefillProject?: any;
+  totalInvoicedForProject?: number;
+  currentUserIsSuperAdmin?: boolean;
+  prefillLineItems?: Partial<InvoiceLineItem>[];
+  prefillBillingType?: string;
 }
 
-export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, companyProfile, onSuccess }: CreateInvoiceModalProps) {
+export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, companyProfile, onSuccess, prefillProject, totalInvoicedForProject, currentUserIsSuperAdmin, prefillLineItems, prefillBillingType }: CreateInvoiceModalProps) {
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [lineItems, setLineItems] = useState<Partial<InvoiceLineItem>[]>([
+  const [billingType, setBillingType] = useState(prefillBillingType || 'Final Settlement');
+  const [paymentTerms, setPaymentTerms] = useState('Net 15');
+  const [overrideOverbill, setOverrideOverbill] = useState(false);
+  const [overrideReason, setOverrideReason] = useState('');
+
+  const [lineItems, setLineItems] = useState<Partial<InvoiceLineItem>[]>(prefillLineItems || [
     { description: '', quantity: 1, rate: 0, tax_percentage: 18, amount: 0 }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,6 +38,15 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
 
   useEffect(() => {
     if (isOpen) {
+      if (prefillProject && prefillProject.client_id) {
+        setSelectedClient(prefillProject.client_id);
+      }
+      if (prefillLineItems) {
+        setLineItems(prefillLineItems);
+      }
+      if (prefillBillingType) {
+        setBillingType(prefillBillingType);
+      }
       fetchDocumentTemplates(workspaceId).then(data => {
         const invoiceTemplates = data.filter(t => t.type === 'invoice');
         setTemplates(invoiceTemplates);
@@ -37,7 +56,24 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
         }
       });
     }
-  }, [isOpen, workspaceId]);
+  }, [isOpen, workspaceId, prefillProject, prefillLineItems, prefillBillingType]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const issueDateObj = new Date(issueDate);
+    if (paymentTerms === 'Due immediately') {
+      setDueDate(issueDateObj.toISOString().split('T')[0]);
+    } else if (paymentTerms === 'Net 7') {
+      issueDateObj.setDate(issueDateObj.getDate() + 7);
+      setDueDate(issueDateObj.toISOString().split('T')[0]);
+    } else if (paymentTerms === 'Net 15') {
+      issueDateObj.setDate(issueDateObj.getDate() + 15);
+      setDueDate(issueDateObj.toISOString().split('T')[0]);
+    } else if (paymentTerms === 'Net 30') {
+      issueDateObj.setDate(issueDateObj.getDate() + 30);
+      setDueDate(issueDateObj.toISOString().split('T')[0]);
+    }
+  }, [paymentTerms, issueDate, isOpen]);
 
   if (!isOpen) return null;
 
@@ -89,6 +125,8 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
   const total_tax = cgst_amount + sgst_amount + igst_amount;
   const grand_total = taxable_amount + total_tax;
 
+  const isOverbilled = prefillProject && prefillProject.contract_value > 0 && ((totalInvoicedForProject || 0) + grand_total > prefillProject.contract_value);
+
   const handleSubmit = async () => {
     if (!companyProfile) {
       alert("Company Billing Profile is missing. Please ask a Super Admin to configure it.");
@@ -96,6 +134,10 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
     }
     if (!selectedClient) {
       alert("Please select a client.");
+      return;
+    }
+    if (isOverbilled && !overrideOverbill) {
+      alert("This invoice exceeds the project contract value. Super Admin override is required to proceed.");
       return;
     }
 
@@ -118,6 +160,9 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
         status: 'sent',
         issue_date: issueDate,
         due_date: dueDate,
+        billing_type: billingType,
+        payment_terms: paymentTerms,
+        project_id: prefillProject?.id || null,
       };
 
       const newInvoice = await generateInvoice(workspaceId, invoiceData, lineItems, companyProfile.invoice_prefix);
@@ -198,13 +243,43 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
               />
             </div>
             <div className="space-y-1">
+              <label className="font-medium text-text-primary">Payment Terms</label>
+              <select 
+                value={paymentTerms} 
+                onChange={e => setPaymentTerms(e.target.value)}
+                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none focus:border-accent-primary"
+              >
+                <option value="Due immediately">Due immediately</option>
+                <option value="Net 7">Net 7</option>
+                <option value="Net 15">Net 15</option>
+                <option value="Net 30">Net 30</option>
+                <option value="Custom">Custom</option>
+              </select>
+            </div>
+            <div className="space-y-1">
               <label className="font-medium text-text-primary">Due Date</label>
               <input 
                 type="date" 
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
-                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none"
+                disabled={paymentTerms !== 'Custom'}
+                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none disabled:opacity-50"
               />
+            </div>
+            <div className="space-y-1">
+              <label className="font-medium text-text-primary">Billing Type</label>
+              <select 
+                value={billingType}
+                onChange={e => setBillingType(e.target.value)}
+                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none focus:border-accent-primary"
+              >
+                <option value="Advance Payment">Advance Payment</option>
+                <option value="Milestone Payment">Milestone Payment</option>
+                <option value="Task Billing">Task Billing</option>
+                <option value="Expense Reimbursement">Expense Reimbursement</option>
+                <option value="Final Settlement">Final Settlement</option>
+                <option value="Custom">Custom</option>
+              </select>
             </div>
             <div className="space-y-1">
               <label className="font-medium text-text-primary">Template</label>
@@ -308,6 +383,43 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
               </div>
             </div>
           </div>
+          
+          {/* Overbilling Warning */}
+          {isOverbilled && (
+            <div className="mt-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-rose-500/20 rounded-lg text-rose-500">
+                  <X className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-rose-500 mb-1">Contract Overbilling Alert</h4>
+                  <p className="text-xs text-rose-400/80 mb-3">
+                    This invoice (₹{grand_total.toFixed(2)}) plus previously invoiced amounts (₹{totalInvoicedForProject?.toFixed(2)}) exceeds the project contract value of ₹{prefillProject.contract_value?.toFixed(2)}.
+                  </p>
+                  {currentUserIsSuperAdmin ? (
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2 text-xs text-text-primary cursor-pointer">
+                        <input type="checkbox" checked={overrideOverbill} onChange={e => setOverrideOverbill(e.target.checked)} className="accent-rose-500" />
+                        Acknowledge & Override (Super Admin Only)
+                      </label>
+                      {overrideOverbill && (
+                        <input 
+                          type="text" 
+                          value={overrideReason} 
+                          onChange={e => setOverrideReason(e.target.value)} 
+                          placeholder="Reason for override..." 
+                          className="w-full bg-bg border border-rose-500/30 rounded px-3 py-1.5 text-xs outline-none"
+                          required
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-rose-400 font-bold">You do not have permission to override this limit. Contact a Super Admin.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
 
@@ -318,7 +430,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
           </button>
           <button 
             onClick={handleSubmit} 
-            disabled={isSubmitting || !selectedClient || subtotal <= 0}
+            disabled={isSubmitting || !selectedClient || subtotal <= 0 || (isOverbilled && (!overrideOverbill || !overrideReason))}
             className="flex items-center gap-2 px-6 py-2.5 bg-accent-primary text-black font-semibold rounded-lg text-sm transition-all hover:bg-emerald-400 disabled:opacity-50"
           >
             {isSubmitting ? 'Generating...' : (

@@ -329,9 +329,9 @@ export function AdminPanel() {
       {tab === 'identity' && (
         <div className="space-y-8">
           {/* Identity Table */}
-          <div className="rounded-xl shadow-2xl"
+          <div className="rounded-xl shadow-2xl overflow-x-auto"
             style={{ background: 'var(--pm-surface-low)', border: '1px solid rgba(70,69,84,0.3)' }}>
-            <table className="w-full text-left border-collapse executive-table">
+            <table className="w-full text-left border-collapse executive-table min-w-[800px]">
               <thead style={{ background: 'rgba(51,53,55,0.5)', borderBottom: '1px solid rgba(70,69,84,0.3)' }}>
                 <tr>
                   {['Member', 'Role', 'Permissions', 'Settings'].map((h, i, arr) => (
