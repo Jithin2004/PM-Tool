@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Download, ChevronDown } from 'lucide-react';
 import { fetchDocumentTemplates, DocumentTemplate, TemplateType } from '../../services/documentTemplateService';
 import { documentGenerator } from '../../services/documentGeneratorService';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 interface DocumentGeneratorDropdownProps {
   workspaceId: string;
@@ -42,7 +43,7 @@ export function DocumentGeneratorDropdown({ workspaceId, type, data, fileName, b
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e);
-      alert('Failed to generate document');
+      showAlert('Failed to generate document');
     } finally {
       setIsGenerating(false);
     }

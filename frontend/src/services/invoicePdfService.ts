@@ -62,19 +62,26 @@ export async function generateInvoicePDF(
     ['Description', 'Qty', 'Rate', 'Tax %', isInterState ? 'IGST' : 'CGST+SGST', 'Amount']
   ];
   
+  const currencyCode = invoice.invoice_currency || 'INR';
+  const currencySymbol = currencyCode === 'USD' ? '$' : currencyCode === 'EUR' ? '€' : currencyCode === 'GBP' ? '£' : currencyCode === 'AED' ? 'د.إ ' : '₹';
+  const exchangeRate = invoice.exchange_rate || 1;
+
   const tableBody = lineItems.map(item => {
     const taxAmt = item.amount * (item.tax_percentage / 100);
+    const convertedAmount = item.amount * exchangeRate;
+    const convertedTax = taxAmt * exchangeRate;
+
     const taxDisplay = isInterState 
-      ? `₹${taxAmt.toFixed(2)}` 
-      : `₹${(taxAmt/2).toFixed(2)} + ₹${(taxAmt/2).toFixed(2)}`;
+      ? `${currencySymbol}${convertedTax.toFixed(2)}` 
+      : `${currencySymbol}${(convertedTax/2).toFixed(2)} + ${currencySymbol}${(convertedTax/2).toFixed(2)}`;
       
     return [
       item.description,
       item.quantity.toString(),
-      `₹${item.rate.toFixed(2)}`,
+      `${currencySymbol}${(item.rate * exchangeRate).toFixed(2)}`,
       `${item.tax_percentage}%`,
       taxDisplay,
-      `₹${(item.amount + taxAmt).toFixed(2)}`
+      `${currencySymbol}${(convertedAmount + convertedTax).toFixed(2)}`
     ];
   });
 
@@ -91,34 +98,40 @@ export async function generateInvoicePDF(
   
   doc.setFont('helvetica', 'normal');
   doc.text('Subtotal:', 130, finalY);
-  doc.text(`₹${invoice.subtotal.toFixed(2)}`, 170, finalY, { align: 'right' });
+  doc.text(`${currencySymbol}${(invoice.subtotal * exchangeRate).toFixed(2)}`, 170, finalY, { align: 'right' });
   
   if (invoice.discount_amount > 0) {
     doc.text('Discount:', 130, finalY + 7);
-    doc.text(`-₹${invoice.discount_amount.toFixed(2)}`, 170, finalY + 7, { align: 'right' });
+    doc.text(`-${currencySymbol}${(invoice.discount_amount * exchangeRate).toFixed(2)}`, 170, finalY + 7, { align: 'right' });
   }
 
   const taxY = finalY + (invoice.discount_amount > 0 ? 14 : 7);
   
   if (isInterState) {
     doc.text('IGST:', 130, taxY);
-    doc.text(`₹${invoice.igst_amount.toFixed(2)}`, 170, taxY, { align: 'right' });
+    doc.text(`${currencySymbol}${(invoice.igst_amount * exchangeRate).toFixed(2)}`, 170, taxY, { align: 'right' });
   } else {
     doc.text('CGST:', 130, taxY);
-    doc.text(`₹${invoice.cgst_amount.toFixed(2)}`, 170, taxY, { align: 'right' });
+    doc.text(`${currencySymbol}${(invoice.cgst_amount * exchangeRate).toFixed(2)}`, 170, taxY, { align: 'right' });
     doc.text('SGST:', 130, taxY + 7);
-    doc.text(`₹${invoice.sgst_amount.toFixed(2)}`, 170, taxY + 7, { align: 'right' });
+    doc.text(`${currencySymbol}${(invoice.sgst_amount * exchangeRate).toFixed(2)}`, 170, taxY + 7, { align: 'right' });
   }
 
   doc.setFont('helvetica', 'bold');
   const grandY = taxY + (isInterState ? 10 : 17);
   doc.text('Grand Total:', 130, grandY);
-  doc.text(`₹${invoice.grand_total.toFixed(2)}`, 170, grandY, { align: 'right' });
+  doc.text(`${currencySymbol}${(invoice.converted_amount || (invoice.grand_total * exchangeRate)).toFixed(2)}`, 170, grandY, { align: 'right' });
   
   if (invoice.balance_due !== invoice.grand_total) {
     doc.setFont('helvetica', 'normal');
     doc.text('Balance Due:', 130, grandY + 7);
-    doc.text(`₹${invoice.balance_due.toFixed(2)}`, 170, grandY + 7, { align: 'right' });
+    doc.text(`${currencySymbol}${(invoice.balance_due * exchangeRate).toFixed(2)}`, 170, grandY + 7, { align: 'right' });
+  }
+
+  if (exchangeRate !== 1) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.text(`Exchange Rate Applied: 1 ${currencyCode} = ₹${(1/exchangeRate).toFixed(4)} (Base Amount: ₹${invoice.grand_total.toFixed(2)})`, 14, grandY + 7);
   }
 
   // 7. Bank Details & Footer

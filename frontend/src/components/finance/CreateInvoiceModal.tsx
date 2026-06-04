@@ -4,6 +4,7 @@ import { Client, Invoice, InvoiceLineItem, generateInvoice, CompanyBillingProfil
 import { generateInvoicePDF } from '../../services/invoicePdfService';
 import { fetchDocumentTemplates, DocumentTemplate } from '../../services/documentTemplateService';
 import { documentGenerator } from '../../services/documentGeneratorService';
+import { showConfirm, showAlert } from '../common/Dialogs';
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
@@ -27,6 +28,10 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
   const [paymentTerms, setPaymentTerms] = useState('Net 15');
   const [overrideOverbill, setOverrideOverbill] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
+  const [exchangeOverrideReason, setExchangeOverrideReason] = useState('');
+  const navigate = (path: string) => window.location.href = path;
+  const [invoiceCurrency, setInvoiceCurrency] = useState('USD');
+  const [exchangeRate, setExchangeRate] = useState(1);
 
   const [lineItems, setLineItems] = useState<Partial<InvoiceLineItem>[]>(prefillLineItems || [
     { description: '', quantity: 1, rate: 0, tax_percentage: 18, amount: 0 }
@@ -57,6 +62,19 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
       });
     }
   }, [isOpen, workspaceId, prefillProject, prefillLineItems, prefillBillingType]);
+
+  useEffect(() => {
+    if (selectedClient && clients) {
+      const client = clients.find(c => c.id === selectedClient);
+      if (prefillProject?.billing_currency) {
+        setInvoiceCurrency(prefillProject.billing_currency);
+      } else if (client?.default_currency) {
+        setInvoiceCurrency(client.default_currency);
+      } else if (client?.currency) {
+        setInvoiceCurrency(client.currency);
+      }
+    }
+  }, [selectedClient, clients, prefillProject]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -129,15 +147,27 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
 
   const handleSubmit = async () => {
     if (!companyProfile) {
-      alert("Company Billing Profile is missing. Please ask a Super Admin to configure it.");
+      const gotoSettings = await showConfirm("Complete your company billing details before generating GST invoices.", {
+        title: "Company Billing Profile Required",
+        confirmText: "Configure Now",
+        cancelText: "Cancel"
+      });
+      if (gotoSettings) {
+        onClose();
+        navigate('/control/settings');
+      }
       return;
     }
     if (!selectedClient) {
-      alert("Please select a client.");
+      await showAlert("Please select a client.", { type: "warning" });
       return;
     }
     if (isOverbilled && !overrideOverbill) {
-      alert("This invoice exceeds the project contract value. Super Admin override is required to proceed.");
+      await showAlert("This invoice exceeds the project contract value. Super Admin override is required to proceed.", { type: "warning" });
+      return;
+    }
+    if (exchangeRate !== 1 && !exchangeOverrideReason) {
+      await showAlert("You must provide a reason for overriding the default exchange rate.", { type: "warning" });
       return;
     }
 
@@ -156,7 +186,16 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
         grand_total,
         balance_due: grand_total,
         billing_state_snapshot: client?.billing_state || null,
-        currency: 'INR',
+        currency: 'INR', // Base currency (Legacy)
+        company_base_currency: 'INR',
+        base_amount: grand_total,
+        invoice_currency: invoiceCurrency,
+        invoice_amount: grand_total * exchangeRate,
+        exchange_rate: exchangeRate,
+        exchange_rate_locked: true,
+        exchange_override_reason: exchangeRate !== 1 ? exchangeOverrideReason : undefined,
+        converted_amount: grand_total * exchangeRate,
+        conversion_date: new Date().toISOString(),
         status: 'sent',
         issue_date: issueDate,
         due_date: dueDate,
@@ -167,6 +206,12 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
 
       const newInvoice = await generateInvoice(workspaceId, invoiceData, lineItems, companyProfile.invoice_prefix);
       
+      if (exchangeRate !== 1 && exchangeOverrideReason) {
+         // Audit the manual change (assuming previous rate was 1)
+         const { auditExchangeRateOverride } = await import('../../services/financeService');
+         await auditExchangeRateOverride((newInvoice as Invoice).id, workspaceId, 1, exchangeRate, 'system', exchangeOverrideReason);
+      }
+
       if (selectedTemplateId === 'default') {
         // Auto-generate PDF using hardcoded default
         await generateInvoicePDF(companyProfile, client!, newInvoice as Invoice, lineItems as InvoiceLineItem[]);
@@ -196,7 +241,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert(err.message || "Failed to generate invoice");
+      await showAlert(err.message || "Failed to generate invoice", { type: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -376,10 +421,60 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                   </div>
                 </>
               )}
-              
               <div className="border-t border-border/50 pt-3 flex justify-between font-bold text-lg text-text-primary">
                 <span>Grand Total:</span>
                 <span>₹{grand_total.toFixed(2)}</span>
+              </div>
+              
+              <div className="border-t border-border/50 pt-4 mt-4">
+                <h4 className="text-sm font-semibold mb-3">Client Currency Settings</h4>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs text-text-secondary mb-1">Invoice Currency</label>
+                    <select 
+                      value={invoiceCurrency}
+                      onChange={e => setInvoiceCurrency(e.target.value)}
+                      className="w-full bg-surface-highest border border-border rounded px-2 py-1.5 text-xs text-text-primary outline-none focus:border-accent-primary"
+                    >
+                      <option value="INR">INR (₹)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="AED">AED (د.إ)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-text-secondary mb-1">Exchange Rate (1 {invoiceCurrency} = ₹X)</label>
+                    <input 
+                      type="number"
+                      step="0.01"
+                      value={exchangeRate}
+                      onChange={e => setExchangeRate(Number(e.target.value))}
+                      className="w-full bg-surface-highest border border-border rounded px-2 py-1.5 text-xs text-text-primary outline-none focus:border-accent-primary disabled:opacity-50"
+                      disabled={invoiceCurrency === 'INR' || !currentUserIsSuperAdmin}
+                    />
+                  </div>
+                </div>
+                {exchangeRate !== 1 && (
+                  <div className="mb-3">
+                    <label className="block text-xs text-text-secondary mb-1 flex items-center gap-1">
+                      Exchange Rate Override Reason <span className="text-rose-500">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      value={exchangeOverrideReason} 
+                      onChange={e => setExchangeOverrideReason(e.target.value)} 
+                      placeholder="Required reason for audit..." 
+                      className="w-full bg-surface-highest border border-border rounded px-2 py-1.5 text-xs text-text-primary outline-none focus:border-accent-primary"
+                    />
+                  </div>
+                )}
+                {invoiceCurrency !== 'INR' && (
+                  <div className="flex justify-between items-center bg-accent-primary/10 border border-accent-primary/20 rounded p-2">
+                    <span className="text-xs text-text-secondary">Converted Amount:</span>
+                    <span className="font-bold text-accent-primary">{invoiceCurrency} {(grand_total / exchangeRate).toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

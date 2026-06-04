@@ -6,6 +6,7 @@ import { hasCapability } from '../../core/auth/permissions';
 import { FileText, Download, Activity, Calendar, Users, DollarSign } from 'lucide-react';
 import { exportToPDF, exportToCSV } from '../../services/pdfExportService';
 import { supabase } from '../../lib/supabase';
+import { showAlert } from '../../components/common/Dialogs';
 
 export default function ReportsCenter() {
   const { workspace } = useWorkspace();
@@ -27,15 +28,34 @@ export default function ReportsCenter() {
     setExporting(true);
     
     let reportData: any[] = [];
+    const isFinancial = ['payroll', 'invoices', 'gst', 'profit'].includes(selectedReport);
     
     try {
-      if (selectedReport === 'project') {
+      if (isFinancial) {
+        // 1. Check for existing snapshot for this exact period
+        const snapshotKey = `${dateStart}_${dateEnd}`;
+        const { data: existingSnapshot } = await supabase
+          .from('financial_report_snapshots')
+          .select('*')
+          .eq('workspace_id', workspace.id)
+          .eq('report_type', `${selectedReport}_${snapshotKey}`)
+          .single();
+
+        if (existingSnapshot && existingSnapshot.snapshot_data) {
+          reportData = existingSnapshot.snapshot_data;
+        }
+      }
+
+      if (reportData.length === 0) {
+        // Generate live data
+        if (selectedReport === 'project') {
         reportData = projects.map(p => {
           const pTasks = tasks.filter(t => t.project_id === p.id);
-          const completed = pTasks.filter(t => t.status === 'review').length;
-          const delayed = 0; // Simulation
+          const completed = pTasks.filter(t => t.status === 'done' || t.status === 'review').length;
+          const delayed = pTasks.filter(t => t.status !== 'done' && t.due_date && new Date(t.due_date) < new Date()).length;
           return {
             "Project Name": p.name,
+            "Owner": profiles.find(pr => pr.id === p.owner_id)?.full_name || 'Unassigned',
             "Status": p.status,
             "Total Tasks": pTasks.length,
             "Completed Tasks": completed,
@@ -45,26 +65,29 @@ export default function ReportsCenter() {
       } else if (selectedReport === 'team') {
         reportData = profiles.map(pr => {
           const userTasks = tasks.filter(t => t.assignee_id === pr.id);
-          const completed = userTasks.filter(t => t.status === 'review').length;
+          const completed = userTasks.filter(t => t.status === 'done' || t.status === 'review').length;
           return {
             "Member": pr.full_name || 'Unknown',
             "Assigned Workload": userTasks.length,
             "Completed Work": completed,
-            "Role": pr.role
+            "Role": pr.role,
+            "Active": "Yes"
           };
         });
       } else if (selectedReport === 'sprint') {
-        // Just simulating sprint velocity via tasks for now
-        reportData = tasks.map(t => ({
+        reportData = tasks.filter(t => t.sprint_id).map(t => ({
           "Task": t.name,
+          "Sprint ID": t.sprint_id,
           "Status": t.status,
           "Priority": t.priority,
-          "Story Points": t.story_points || 0
+          "Assignee": profiles.find(pr => pr.id === t.assignee_id)?.full_name || 'Unassigned'
         }));
       } else if (selectedReport === 'attendance') {
         reportData = attendanceRows.map(a => ({
           "User": profiles.find(p => p.id === a.user_id)?.full_name || a.user_id,
           "Date": a.date,
+          "Check In": 'N/A',
+          "Check Out": 'N/A',
           "Status": a.status,
           "Leave Type": a.leave_type || 'N/A'
         }));
@@ -72,11 +95,66 @@ export default function ReportsCenter() {
         if (!canManageCompensation) throw new Error("Unauthorized");
         const { data: comp } = await supabase.from('compensation_packages').select('*').eq('workspace_id', workspace.id);
         reportData = (comp || []).map((c: any) => ({
-          "User ID": c.user_id,
+          "User": profiles.find(pr => pr.id === c.user_id)?.full_name || c.user_id,
           "Currency": c.currency,
           "Base Salary": c.base_salary,
           "Type": c.employment_type
         }));
+      } else if (selectedReport === 'invoices') {
+        if (!canManageCompensation) throw new Error("Unauthorized");
+        const { data: invs } = await supabase.from('invoices').select('*').eq('workspace_id', workspace.id).gte('issue_date', dateStart || '1970-01-01').lte('issue_date', dateEnd || '2099-12-31');
+        reportData = (invs || []).map((i: any) => ({
+          "Invoice #": i.invoice_number,
+          "Date": i.issue_date,
+          "Status": i.status,
+          "Amount": i.invoice_amount || i.amount,
+          "Currency": i.invoice_currency || i.currency
+        }));
+      } else if (selectedReport === 'gst') {
+        if (!canManageCompensation) throw new Error("Unauthorized");
+        const { data: invs } = await supabase.from('invoices').select('*').eq('workspace_id', workspace.id).gte('issue_date', dateStart || '1970-01-01').lte('issue_date', dateEnd || '2099-12-31');
+        reportData = (invs || []).map((i: any) => ({
+          "Invoice #": i.invoice_number,
+          "Taxable": i.taxable_amount,
+          "CGST": i.cgst_amount,
+          "SGST": i.sgst_amount,
+          "IGST": i.igst_amount,
+          "Total Tax": i.total_tax
+        }));
+      } else if (selectedReport === 'profit') {
+        if (!canManageCompensation) throw new Error("Unauthorized");
+        const { data: invs } = await supabase.from('invoices').select('amount').eq('workspace_id', workspace.id).eq('status', 'paid');
+        const { data: exps } = await supabase.from('expenses').select('amount').eq('workspace_id', workspace.id).eq('status', 'approved');
+        const totalRev = (invs || []).reduce((sum, i) => sum + Number(i.amount), 0);
+        const totalExp = (exps || []).reduce((sum, e) => sum + Number(e.amount), 0);
+        reportData = [{
+          "Period Start": dateStart,
+          "Period End": dateEnd,
+          "Total Revenue": totalRev,
+          "Total Expenses": totalExp,
+          "Net Profit": totalRev - totalExp
+        }];
+      }
+
+      if (reportData.length > 0 && isFinancial) {
+        // Save snapshot so it's immutable for next time
+        const snapshotKey = `${dateStart}_${dateEnd}`;
+        const { data: existing } = await supabase.from('financial_report_snapshots').select('id').eq('workspace_id', workspace.id).eq('report_type', `${selectedReport}_${snapshotKey}`).single();
+        if (!existing) {
+          await supabase.from('financial_report_snapshots').insert({
+            workspace_id: workspace.id,
+            report_type: `${selectedReport}_${snapshotKey}`,
+            snapshot_data: reportData,
+            created_by: profile?.id
+          });
+        }
+      }
+    }
+
+      if (reportData.length === 0) {
+        await showAlert("No records found for selected filters.", { type: "info" });
+        setExporting(false);
+        return;
       }
 
       // 1. Generate Report
@@ -105,7 +183,7 @@ export default function ReportsCenter() {
       
     } catch (e: any) {
       console.error("Failed to generate report:", e);
-      alert(e.message || "Failed to generate report");
+      await showAlert(e.message || "Failed to generate report", { type: "error" });
     } finally {
       setExporting(false);
     }
@@ -154,7 +232,14 @@ export default function ReportsCenter() {
                   <option className="bg-surface-highest text-text-primary" value="team">Team Report</option>
                   <option className="bg-surface-highest text-text-primary" value="sprint">Sprint Report</option>
                   <option className="bg-surface-highest text-text-primary" value="attendance">Attendance Report</option>
-                  {canManageCompensation && <option className="bg-surface-highest text-text-primary" value="payroll">Payroll Report (Restricted)</option>}
+                  {canManageCompensation && (
+                    <>
+                      <option className="bg-surface-highest text-text-primary" value="payroll">Payroll Report (Restricted)</option>
+                      <option className="bg-surface-highest text-text-primary" value="invoices">Invoices Report</option>
+                      <option className="bg-surface-highest text-text-primary" value="gst">GST Report</option>
+                      <option className="bg-surface-highest text-text-primary" value="profit">Profit Report</option>
+                    </>
+                  )}
                 </select>
               </div>
 

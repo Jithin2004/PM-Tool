@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { activityLogService } from './activityLogService';
+import { supabase } from '../lib/supabase';
 
 /**
  * Enterprise PDF Export Service
@@ -22,10 +23,39 @@ export const exportToPDF = async (
   const doc = new jsPDF();
   const title = `${reportType.replace(/_/g, ' ')}`;
   
-  doc.setFontSize(18);
-  doc.text(title, 14, 22);
-  doc.setFontSize(11);
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+  // Fetch company branding
+  const { data: companyProfile } = await supabase
+    .from('company_billing_profiles')
+    .select('*')
+    .eq('workspace_id', workspaceId)
+    .single();
+
+  if (companyProfile) {
+    doc.setFontSize(22);
+    doc.setTextColor(31, 41, 55); // Dark gray
+    doc.text(companyProfile.legal_name, 14, 22);
+    doc.setFontSize(10);
+    doc.setTextColor(107, 114, 128); // Muted gray
+    doc.text(`${companyProfile.billing_address || ''}, ${companyProfile.state}, ${companyProfile.country}`, 14, 28);
+    if (companyProfile.gstin) {
+      doc.text(`GSTIN: ${companyProfile.gstin}`, 14, 33);
+    }
+    
+    doc.setDrawColor(229, 231, 235);
+    doc.line(14, 38, 196, 38);
+    
+    doc.setFontSize(16);
+    doc.setTextColor(17, 24, 39);
+    doc.text(title, 14, 48);
+    doc.setFontSize(9);
+    doc.setTextColor(156, 163, 175);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 53);
+  } else {
+    doc.setFontSize(18);
+    doc.text(title, 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+  }
 
   const data = dataRaw?.data || dataRaw; // handle wrapper object if present
 
@@ -34,14 +64,14 @@ export const exportToPDF = async (
     const body = data.map(row => headers.map(h => String(row[h] || '')));
     
     (doc as any).autoTable({
-      startY: 40,
+      startY: companyProfile ? 60 : 40,
       head: [headers],
       body: body,
       theme: 'grid',
       headStyles: { fillColor: [31, 41, 55] }, // Dark header
     });
   } else {
-    doc.text('No data available for this report.', 14, 40);
+    doc.text('No data available for this report.', 14, companyProfile ? 60 : 40);
   }
 
   doc.save(`${reportType}_${new Date().toISOString().split('T')[0]}.pdf`);

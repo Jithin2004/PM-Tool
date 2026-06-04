@@ -14,6 +14,7 @@ import {
 import { CreateInvoiceModal } from '../../components/finance/CreateInvoiceModal';
 import { ManageClientsModal } from '../../components/finance/ManageClientsModal';
 import { generateInvoicePDF } from '../../services/invoicePdfService';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 export default function FinancePage() {
   const { workspace } = useWorkspace();
@@ -85,7 +86,7 @@ export default function FinancePage() {
 
   const handleCloseMonth = async () => {
     if (!workspace?.id || !user?.id) return;
-    if (confirm(`Are you sure you want to close ${getMonthName(viewMonth)} ${viewYear}? This will lock records and store a permanent snapshot.`)) {
+    if (await showConfirm(`Are you sure you want to close ${getMonthName(viewMonth)} ${viewYear}? This will lock records and store a permanent snapshot.`)) {
       try {
         await closeFinancialPeriod(workspace.id, viewMonth, viewYear, user.id);
       } catch (err: any) {
@@ -108,7 +109,7 @@ export default function FinancePage() {
     if (!period || !user?.id) return;
 
     if (!adjustmentForm.amount || !adjustmentForm.reason) {
-      alert("Amount and Reason are required.");
+      showAlert("Amount and Reason are required.");
       return;
     }
 
@@ -407,7 +408,7 @@ export default function FinancePage() {
                             if (comp && client) {
                               await generateInvoicePDF(comp, client, inv, inv.line_items || []);
                             } else {
-                              alert("Missing company profile or client details.");
+                              showAlert("Missing company profile or client details.");
                             }
                           } catch(err) {
                             console.error(err);

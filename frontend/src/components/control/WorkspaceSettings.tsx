@@ -3,7 +3,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
-import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw, ChevronDown } from 'lucide-react';
+import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw, ChevronDown, Building2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { upsertCompanyBillingProfile } from '../../services/financeService';
 import { DemoWorkspaceManager } from '../workspace/DemoWorkspaceManager';
 import { PilotReadinessPanel } from '../workspace/PilotReadinessPanel';
 
@@ -23,6 +25,16 @@ export function WorkspaceSettings() {
     notifications: true,
   });
 
+  const [billingProfile, setBillingProfile] = useState({
+    legal_name: '',
+    gstin: '',
+    pan: '',
+    billing_address: '',
+    state: '',
+    country: 'India',
+    invoice_prefix: 'RPM'
+  });
+
   useEffect(() => {
     if (workspace?.settings) {
       setFormState({
@@ -34,7 +46,22 @@ export function WorkspaceSettings() {
         notifications: workspace.settings.notifications ?? true,
       });
     }
-  }, [workspace?.settings]);
+    if (workspace?.id) {
+      supabase.from('company_billing_profile').select('*').eq('workspace_id', workspace.id).maybeSingle().then(({ data }) => {
+        if (data) {
+          setBillingProfile({
+            legal_name: data.legal_name || '',
+            gstin: data.gstin || '',
+            pan: data.pan || '',
+            billing_address: data.billing_address || '',
+            state: data.state || '',
+            country: data.country || 'India',
+            invoice_prefix: data.invoice_prefix || 'RPM'
+          });
+        }
+      });
+    }
+  }, [workspace?.settings, workspace?.id]);
 
   const owner = useMemo(() => {
     if (!workspace?.ownerId || !profiles) return null;
@@ -53,6 +80,16 @@ export function WorkspaceSettings() {
         default_mode: formState.mode,
         auto_archive: formState.autoArchive,
         notifications: formState.notifications,
+      });
+      await upsertCompanyBillingProfile({
+        workspace_id: workspace!.id,
+        legal_name: billingProfile.legal_name || 'My Company',
+        gstin: billingProfile.gstin || null,
+        pan: billingProfile.pan || null,
+        billing_address: billingProfile.billing_address || null,
+        state: billingProfile.state || 'N/A',
+        country: billingProfile.country || 'India',
+        invoice_prefix: billingProfile.invoice_prefix || 'RPM'
       });
       notify('Settings saved successfully', 'success');
     } catch (err: any) {
@@ -179,8 +216,43 @@ export function WorkspaceSettings() {
           </div>
         </div>
       </div>
+      <div className="relative bg-surface/40 backdrop-blur-md border border-border/50 hover:border-emerald-500/30 rounded-2xl p-6 sm:p-8 transition-all duration-300 shadow-sm mt-8">
+        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent rounded-2xl pointer-events-none" />
+        <h3 className="text-xs font-bold tracking-widest uppercase text-text-secondary mb-6 flex items-center gap-2.5 relative z-10">
+          <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+            <Building2 className="w-4 h-4" />
+          </div>
+          Company Billing & Tax Profile
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
+          <div className="group/input">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">Legal Name</label>
+            <input value={billingProfile.legal_name} onChange={e => setBillingProfile(s => ({...s, legal_name: e.target.value}))} className="w-full bg-surface/50 border border-border/50 focus:border-emerald-500/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none" placeholder="Acme Corp" />
+          </div>
+          <div className="group/input">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">Invoice Prefix</label>
+            <input value={billingProfile.invoice_prefix} onChange={e => setBillingProfile(s => ({...s, invoice_prefix: e.target.value}))} className="w-full bg-surface/50 border border-border/50 focus:border-emerald-500/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none" placeholder="INV-" />
+          </div>
+          <div className="group/input">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">GSTIN / Tax ID</label>
+            <input value={billingProfile.gstin} onChange={e => setBillingProfile(s => ({...s, gstin: e.target.value}))} className="w-full bg-surface/50 border border-border/50 focus:border-emerald-500/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none" placeholder="22AAAAA0000A1Z5" />
+          </div>
+          <div className="group/input">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">PAN / Registration</label>
+            <input value={billingProfile.pan} onChange={e => setBillingProfile(s => ({...s, pan: e.target.value}))} className="w-full bg-surface/50 border border-border/50 focus:border-emerald-500/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none" placeholder="ABCDE1234F" />
+          </div>
+          <div className="group/input lg:col-span-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">Billing Address</label>
+            <input value={billingProfile.billing_address} onChange={e => setBillingProfile(s => ({...s, billing_address: e.target.value}))} className="w-full bg-surface/50 border border-border/50 focus:border-emerald-500/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none" placeholder="123 Business St, Suite 100" />
+          </div>
+          <div className="group/input">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">State / Region</label>
+            <input value={billingProfile.state} onChange={e => setBillingProfile(s => ({...s, state: e.target.value}))} className="w-full bg-surface/50 border border-border/50 focus:border-emerald-500/50 rounded-xl h-11 px-4 text-sm text-text-secondary transition-all outline-none" placeholder="California" />
+          </div>
+        </div>
+      </div>
 
-      <div className="relative bg-surface/40 backdrop-blur-md border border-border/50 hover:border-accent-secondary/30 rounded-2xl p-6 sm:p-8 transition-all duration-300 shadow-sm">
+      <div className="relative bg-surface/40 backdrop-blur-md border border-border/50 hover:border-accent-secondary/30 rounded-2xl p-6 sm:p-8 transition-all duration-300 shadow-sm mt-8">
         <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent rounded-2xl pointer-events-none" />
         <h3 className="text-xs font-bold tracking-widest uppercase text-text-secondary mb-6 flex items-center gap-2.5 relative z-10">
           <div className="p-1.5 rounded-lg bg-accent-secondary/10 text-accent-secondary">

@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Save, Edit2, Download } from 'lucide-react';
 import { Client, Invoice, Payment, ClientCredit } from '../../services/financeService';
 import { supabase } from '../../lib/supabase';
 import { Project } from '../../core/types/project';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 interface ManageClientsModalProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSu
       onSuccess();
       setEditingClient(null);
     } catch (e: any) {
-      alert(e.message || 'Failed to save client');
+      showAlert(e.message || 'Failed to save client');
     } finally {
       setIsSubmitting(false);
     }
@@ -69,7 +70,7 @@ export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSu
     if (!editingClient?.id) return;
     try {
       const { data: comp } = await supabase.from('company_billing_profile').select('*').eq('workspace_id', workspaceId).single();
-      if (!comp) return alert("Company billing profile not set up.");
+      if (!comp) return showAlert("Company billing profile not set up.");
       
       const { data: cns } = await supabase.from('credit_notes').select('*').eq('client_id', editingClient.id);
       const { data: advances } = await supabase.from('client_credits').select('*').eq('client_id', editingClient.id);
@@ -85,17 +86,17 @@ export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSu
         advances || []
       );
     } catch (e: any) {
-      alert("Failed to generate statement: " + e.message);
+      showAlert("Failed to generate statement: " + e.message);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this client?')) return;
+    if (!await showConfirm('Delete this client?')) return;
     try {
       await supabase.from('clients').delete().eq('id', id);
       onSuccess();
     } catch (e: any) {
-      alert(e.message || 'Failed to delete client');
+      showAlert(e.message || 'Failed to delete client');
     }
   };
 

@@ -14,6 +14,7 @@ import {
 } from '../../services/financeService';
 import { FilePanel } from '../common/FilePanel';
 import { CreateInvoiceModal } from '../finance/CreateInvoiceModal';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; currentUserProfile?: any }) {
   const [loading, setLoading] = useState(true);
@@ -78,38 +79,38 @@ function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; 
   };
 
   const handleCancelInvoiceAction = async (invoice: Invoice) => {
-    if (!confirm("Are you sure you want to cancel this invoice?")) return;
-    const reason = prompt("Reason for cancellation:");
+    if (!await showConfirm("Are you sure you want to cancel this invoice?")) return;
+    const reason = await showPrompt("Reason for cancellation:");
     if (!reason) return;
     try {
       await cancelInvoice(invoice, currentUserProfile?.id || 'unknown', reason);
-      alert("Invoice cancelled.");
+      showAlert("Invoice cancelled.");
       refreshFinanceData();
     } catch (err: any) {
-      alert(err.message);
+      showAlert(err.message);
     }
   };
 
   const handleApplyAdvanceAction = async (invoice: Invoice) => {
     if (availableAdvance <= 0) return;
     const amountToApply = Math.min(availableAdvance, invoice.grand_total || invoice.amount || 0);
-    if (!confirm(`Apply ${(project.billing_currency || 'INR')} ${amountToApply} from advance balance to this invoice?`)) return;
+    if (!await showConfirm(`Apply ${(project.billing_currency || 'INR')} ${amountToApply} from advance balance to this invoice?`)) return;
     try {
       await applyAdvanceToInvoice(project.workspace_id, project.client_id!, invoice.id, amountToApply, currentUserProfile?.id || 'unknown');
-      alert("Advance applied successfully.");
+      showAlert("Advance applied successfully.");
       refreshFinanceData();
     } catch (err: any) {
-      alert(err.message);
+      showAlert(err.message);
     }
   };
 
   const handleCreateCreditNoteAction = async (invoice: Invoice) => {
     const maxAmount = invoice.grand_total || invoice.amount;
-    const amountStr = prompt(`Amount for Credit Note (max ${maxAmount}):`);
+    const amountStr = await showPrompt(`Amount for Credit Note (max ${maxAmount}):`);
     if (!amountStr) return;
     const amount = Number(amountStr);
-    if (isNaN(amount) || amount <= 0 || amount > maxAmount) return alert("Invalid amount.");
-    const reason = prompt("Reason for Credit Note:");
+    if (isNaN(amount) || amount <= 0 || amount > maxAmount) return showAlert("Invalid amount.");
+    const reason = await showPrompt("Reason for Credit Note:");
     if (!reason) return;
     try {
       await createCreditNote(project.workspace_id, {
@@ -120,10 +121,10 @@ function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; 
         issue_date: new Date().toISOString().split('T')[0],
         created_by: currentUserProfile?.id || 'unknown'
       });
-      alert("Credit note created.");
+      showAlert("Credit note created.");
       refreshFinanceData();
     } catch (err: any) {
-      alert(err.message);
+      showAlert(err.message);
     }
   };
 

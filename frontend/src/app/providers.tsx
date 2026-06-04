@@ -3,6 +3,7 @@ import { WorkspaceProvider } from '../context/WorkspaceContext';
 import { AuthProvider } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
 const ObservabilityProvider = React.lazy(() => import('../core/observability/ObservabilityProvider').then(m => ({ default: m.ObservabilityProvider })));
+import { GlobalDialogs } from '../components/common/Dialogs';
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -14,7 +15,10 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ThemeProvider>
         <ObservabilityProvider>
           <AuthProvider>
-            <WorkspaceProvider>{children}</WorkspaceProvider>
+            <WorkspaceProvider>
+              {children}
+              <GlobalDialogs />
+            </WorkspaceProvider>
           </AuthProvider>
         </ObservabilityProvider>
       </ThemeProvider>

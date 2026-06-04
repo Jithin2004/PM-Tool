@@ -4,6 +4,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { createSkill, deleteSkill, upsertUserSkill, removeUserSkill } from '../../services/operationalDataService';
 import { useAuth } from '../../context/AuthContext';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 interface ManageSkillsModalProps {
   onClose: () => void;
@@ -32,19 +33,19 @@ export function ManageSkillsModal({ onClose }: ManageSkillsModalProps) {
       setNewSkillCategory('');
       await refreshAll();
     } catch (e: any) {
-      alert(e.message || "Failed to create skill");
+      showAlert(e.message || "Failed to create skill");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteSkill = async (skillId: string) => {
-    if (!confirm('Are you sure? This will remove it from all users.')) return;
+    if (!await showConfirm('Are you sure? This will remove it from all users.')) return;
     try {
       await deleteSkill(skillId);
       await refreshAll();
     } catch (e: any) {
-      alert("Failed to delete skill");
+      showAlert("Failed to delete skill");
     }
   };
 
@@ -56,7 +57,7 @@ export function ManageSkillsModal({ onClose }: ManageSkillsModalProps) {
       await refreshAll();
       setSelectedSkill('');
     } catch (e: any) {
-      alert("Failed to assign skill");
+      showAlert("Failed to assign skill");
     } finally {
       setIsSubmitting(false);
     }
@@ -67,7 +68,7 @@ export function ManageSkillsModal({ onClose }: ManageSkillsModalProps) {
       await removeUserSkill(userId, skillId);
       await refreshAll();
     } catch (e: any) {
-      alert("Failed to remove skill");
+      showAlert("Failed to remove skill");
     }
   };
 

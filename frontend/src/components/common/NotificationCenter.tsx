@@ -113,10 +113,10 @@ export function NotificationCenter() {
 
   return (
     <div className="relative">
-      <button onClick={toggleOpen} className="relative p-2 rounded-lg hover:bg-surface-2 transition-colors border border-transparent hover:border-[var(--pm-border)]">
-        <Bell className="w-5 h-5 text-text-secondary" />
+      <button onClick={toggleOpen} className="relative p-1.5 border border-border bg-surface-highest hover:bg-surface-3 rounded-md text-text-secondary hover:text-text-primary transition-all shadow-sm">
+        <Bell className="w-4 h-4" strokeWidth={2.5} />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-signal-critical rounded-full border border-[var(--pm-surface)] shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-signal-critical rounded-full border border-surface shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse" />
         )}
       </button>
 

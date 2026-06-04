@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User as UserIcon, Shield, Terminal, X, Lock, Activity, Users } from 'lucide-react';
 import { User, Profile } from '../../types';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 export function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: { profile: Profile, googleAvatar?: string | null, onClose: () => void, onUpdate: (updates: Partial<Profile>) => void }) {
   const [name, setName] = useState(profile.full_name || '');
@@ -18,7 +19,7 @@ export function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert("Image too large. Please select a file under 2MB.");
+        showAlert("Image too large. Please select a file under 2MB.");
         return;
       }
       const reader = new FileReader();

@@ -28,6 +28,7 @@ export interface Client {
   billing_country?: string;
   tax_type?: 'registered' | 'unregistered';
   currency?: string;
+  default_currency?: string;
   advance_balance?: number;
 }
 
@@ -58,7 +59,17 @@ export interface Invoice {
   grand_total: number;
   balance_due: number;
   billing_state_snapshot: string | null;
-  currency: string;
+  currency: string; // Base currency (Legacy)
+  company_base_currency?: string;
+  base_amount?: number;
+  invoice_currency?: string;
+  invoice_amount?: number;
+  converted_amount?: number; // Legacy
+  exchange_rate?: number;
+  exchange_rate_locked?: boolean;
+  exchange_locked_at?: string;
+  exchange_override_reason?: string;
+  conversion_date?: string;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'partial';
   issue_date: string;
   due_date: string;
@@ -253,6 +264,10 @@ export async function generateInvoice(workspaceId: string, invoice: Partial<Invo
     p_prefix: prefix
   });
   if (rpcError) throw rpcError;
+  
+  if (invoice.exchange_rate_locked) {
+    invoice.exchange_locked_at = new Date().toISOString();
+  }
 
   // 2. Insert Invoice
   const { data: newInvoice, error: invError } = await supabase.from('invoices').insert([{ 
@@ -273,6 +288,26 @@ export async function generateInvoice(workspaceId: string, invoice: Partial<Invo
   }
 
   return newInvoice;
+}
+
+export async function auditExchangeRateOverride(invoiceId: string, workspaceId: string, oldRate: number | null, newRate: number, changedBy: string, reason: string) {
+  const { error } = await supabase.from('exchange_rate_audits').insert([{
+    invoice_id: invoiceId,
+    workspace_id: workspaceId,
+    old_rate: oldRate,
+    new_rate: newRate,
+    changed_by: changedBy,
+    reason: reason
+  }]);
+  if (error) {
+    console.error('Failed to log exchange rate audit:', error);
+  }
+}
+
+export async function logPayment(workspaceId: string, payment: any) {
+  const { data, error } = await supabase.from('payments').insert([payment]).select().single();
+  if (error) throw error;
+  return data;
 }
 
 export async function recordPayment(payment: Partial<Payment>) {
@@ -408,3 +443,9 @@ export async function applyAdvanceToInvoice(workspaceId: string, clientId: strin
     reason: `Applied advance of ${amount}`
   }]);
 }
+
+export const upsertCompanyBillingProfile = async (profile: Partial<CompanyBillingProfile>) => {
+  const { data, error } = await supabase.from('company_billing_profile').upsert(profile, { onConflict: 'workspace_id' }).select().single();
+  if (error) throw error;
+  return data as CompanyBillingProfile;
+};

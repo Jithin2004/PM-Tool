@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { File, Upload, Download, Trash2, Clock, MoreHorizontal, FileText, Image as ImageIcon, Search, AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react';
 import { fileService, WorkspaceFile, FileVersion } from '../../services/fileService';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 interface FilePanelProps {
   entityType: string;
@@ -64,12 +65,12 @@ export function FilePanel({ entityType, entityId, currentUserId, canEdit }: File
 
   const validateFile = (file: File) => {
     if (file.size > MAX_FILE_SIZE) {
-      alert(`File size exceeds 50MB limit.`);
+      showAlert(`File size exceeds 50MB limit.`);
       return false;
     }
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
     if (BLOCKED_EXTENSIONS.includes(ext)) {
-      alert(`File type ${ext} is blocked for security reasons.`);
+      showAlert(`File type ${ext} is blocked for security reasons.`);
       return false;
     }
     return true;
@@ -85,7 +86,7 @@ export function FilePanel({ entityType, entityId, currentUserId, canEdit }: File
     }
 
     if (files.some(f => f.file_name.toLowerCase() === selectedFile.name.toLowerCase())) {
-      alert(`A file named "${selectedFile.name}" already exists. Please rename your file or use the "Upload New Version" button on the existing file.`);
+      showAlert(`A file named "${selectedFile.name}" already exists. Please rename your file or use the "Upload New Version" button on the existing file.`);
       if (e.target) e.target.value = '';
       return;
     }
@@ -150,7 +151,7 @@ export function FilePanel({ entityType, entityId, currentUserId, canEdit }: File
 
   const handleDelete = async (fileRec: WorkspaceFile) => {
     if (!canEdit) return;
-    if (window.confirm(`Are you sure you want to archive ${fileRec.file_name}?`)) {
+    if (await showConfirm(`Are you sure you want to archive ${fileRec.file_name}?`)) {
       const success = await fileService.deleteFile(fileRec, currentUserId);
       if (success) {
         setFiles(files.filter(f => f.id !== fileRec.id));
@@ -176,7 +177,7 @@ export function FilePanel({ entityType, entityId, currentUserId, canEdit }: File
 
   const handleRestoreVersion = async (fileRec: WorkspaceFile, versionRec: FileVersion) => {
     if (!canEdit) return;
-    if (window.confirm(`Are you sure you want to restore version ${versionRec.version_number}? This will create a new current version.`)) {
+    if (await showConfirm(`Are you sure you want to restore version ${versionRec.version_number}? This will create a new current version.`)) {
       setIsUploading(true);
       const result = await fileService.restoreVersion(fileRec, versionRec, currentUserId);
       setIsUploading(false);

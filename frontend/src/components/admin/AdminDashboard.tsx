@@ -5,6 +5,7 @@ import { Project, Team, User, Profile, UserRole } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { hasCapability } from '../../core/auth/permissions';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 export function AdminDashboard({
   profiles,
@@ -123,7 +124,7 @@ export function AdminDashboard({
     if (!newRoleName.trim()) return;
     const cleanRoleName = newRoleName.trim();
     if (customRoles.some(r => r.toLowerCase() === cleanRoleName.toLowerCase())) {
-      alert("This role designation already exists.");
+      showAlert("This role designation already exists.");
       return;
     }
     const updatedRoles = [...customRoles, cleanRoleName];
@@ -136,7 +137,7 @@ export function AdminDashboard({
 
   const handleDeleteCustomRole = async (roleToDelete: string) => {
     if (['viewer', 'developer', 'designer', 'qa engineer'].includes(roleToDelete.toLowerCase())) {
-      alert("Cannot delete system default designations.");
+      showAlert("Cannot delete system default designations.");
       return;
     }
 

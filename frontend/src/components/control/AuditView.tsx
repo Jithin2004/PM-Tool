@@ -6,6 +6,7 @@ import { hasCapability } from '../../core/auth/permissions';
 import { buildOperationalReplay, OperationalReplay } from '../../core/execution/resilienceEngine';
 import { activityLogService } from '../../services/activityLogService';
 import { DataGovernanceEngine } from '../../core/governance/dataGovernanceEngine';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 import { 
   Activity, 
   Shield, 
@@ -246,7 +247,7 @@ const AuditView = React.memo(function AuditView() {
                     const chain = await activityLogService.verifyHashChain(wsId);
                     setChainStatus({ status: chain.status, logCount: chain.logCount, message: chain.message });
                   } catch (e: any) {
-                    alert(e.message);
+                    showAlert(e.message);
                   }
                   setLogsLoading(false);
                 }}

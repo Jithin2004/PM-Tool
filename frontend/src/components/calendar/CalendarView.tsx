@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, Plus, Trash2, Edit2, X, RefreshCw, ChevronLef
 import { calendarService, CalendarEvent } from '../../services/calendarService';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 interface EventFormData {
   summary: string;
@@ -228,7 +229,7 @@ export function CalendarView() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    if (!await showConfirm('Are you sure you want to delete this event?')) return;
     setLoading(true);
     try {
       await calendarService.deleteEvent(id);
@@ -366,29 +367,7 @@ export function CalendarView() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
           
-          {isGoogleConnected ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium">
-                <Check className="w-4 h-4 text-emerald-400" />
-                Connected
-              </span>
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="px-4 py-2 bg-primary hover:bg-primary/90 text-on-primary rounded text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-                Sync
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleConnect}
-              className="px-4 py-2 border border-outline hover:bg-surface-container rounded text-sm font-medium text-on-surface transition-colors"
-            >
-              Connect Google Calendar
-            </button>
-          )}
+
 
           {profile?.role !== 'viewer' && (
             <button

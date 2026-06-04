@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, CheckCircle, XCircle, Loader, AlertCircle, KeyRound } from 'lucide-react';
 import { verifyProductKey } from '../../lib/productKey';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 interface ProductKeyGateProps {
   onVerified: () => void;
@@ -182,14 +183,14 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
           </p>
           <div className="flex flex-col gap-2">
             <button
-              onClick={() => alert('Access request workflow initiated (Demo)')}
+              onClick={() => showAlert('Access request workflow initiated (Demo)')}
               className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-[var(--pm-surface)]/5"
               style={{ color: 'var(--pm-primary)', border: '1px solid rgba(70,69,84,0.3)' }}
             >
               Request Access
             </button>
             <button
-              onClick={() => alert('Contacting workspace admin... (Demo)')}
+              onClick={() => showAlert('Contacting workspace admin... (Demo)')}
               className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-[var(--pm-surface)]/5"
               style={{ color: 'var(--pm-secondary)', border: '1px solid rgba(70,69,84,0.3)' }}
             >

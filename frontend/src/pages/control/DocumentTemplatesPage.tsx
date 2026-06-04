@@ -4,6 +4,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { fetchDocumentTemplates, createDocumentTemplate, updateDocumentTemplate, deleteDocumentTemplate, DocumentTemplate, TemplateType } from '../../services/documentTemplateService';
 import { documentGenerator } from '../../services/documentGeneratorService';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 const AVAILABLE_VARIABLES: Record<TemplateType | 'common', { name: string, desc: string }[]> = {
   common: [
@@ -100,7 +101,7 @@ export default function DocumentTemplatesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this template? Past generated PDFs will not be affected.')) {
+    if (await showConfirm('Are you sure you want to delete this template? Past generated PDFs will not be affected.')) {
       const success = await deleteDocumentTemplate(id);
       if (success) {
         setTemplates(templates.filter(t => t.id !== id));

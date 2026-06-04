@@ -7,6 +7,7 @@ import { getLocalDateString } from '../../utils/timeUtils';
 import { MemberDirectory } from '../team/MemberDirectory';
 import { supabase } from '../../lib/supabase';
 import { DocumentGeneratorDropdown } from '../hr/DocumentGeneratorDropdown';
+import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 
 export function LogisticsDashboard({
   profiles,
@@ -226,7 +227,7 @@ export function LogisticsDashboard({
     const underloadedDevs = executionNodes.filter(n => n.utilization < 70);
 
     if (overloadedDevs.length === 0 || underloadedDevs.length === 0) {
-      alert("System load balancing criteria optimal. No actions workloaded.");
+      showAlert("System load balancing criteria optimal. No actions workloaded.");
       return;
     }
 
@@ -239,7 +240,7 @@ export function LogisticsDashboard({
         balancedCount++;
       }
     }
-    alert(`workload complete: re-routed ${balancedCount} tasks to balance developer loads.`);
+    showAlert(`workload complete: re-routed ${balancedCount} tasks to balance developer loads.`);
   };
 
   const payrollData = useMemo(() => {
@@ -509,7 +510,7 @@ export function LogisticsDashboard({
         // Validation: Do not allow overlapping periods
         const active = activeRecords[0];
         if (effectiveFrom <= active.effective_from) {
-          alert('New compensation effective date must be after the current active compensation start date.');
+          showAlert('New compensation effective date must be after the current active compensation start date.');
           return;
         }
 

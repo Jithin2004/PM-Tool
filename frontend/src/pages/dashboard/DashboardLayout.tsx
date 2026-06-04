@@ -1224,8 +1224,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         <div id="tour-main-content" className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen" style={{ background: 'var(--pm-bg)' }}>
 
           {/* Top Bar — utility layer, breadcrumb, operational status */}
-          <header id="tour-topbar" className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-xl transition-colors duration-200"
-            style={{ background: 'color-mix(in srgb, var(--pm-bg) 92%, transparent)', borderColor: 'var(--pm-outline-variant)' }}>
+          <header id="tour-topbar" className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-2xl transition-colors duration-200 shadow-sm"
+            style={{ background: 'color-mix(in srgb, var(--pm-surface) 95%, transparent)', borderColor: 'var(--pm-border-subtle)' }}>
             {/* Mobile menu toggle */}
             <div className="flex items-center gap-3 lg:hidden">
               <button
@@ -1271,20 +1271,20 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               {/* Search */}
               <div
                 onClick={() => setCommandPaletteOpen(true)}
-                className="hidden md:flex items-center gap-2 bg-surface-3 hover:bg-surface-3 border border-border-subtle h-7 px-3 rounded-md text-text-quaternary cursor-pointer transition-all"
+                className="hidden md:flex items-center gap-2 bg-surface-highest hover:bg-surface-3 border border-border h-8 px-3 rounded-md text-text-secondary cursor-pointer transition-all shadow-sm focus-within:border-accent-primary focus-within:ring-1 focus-within:ring-accent-primary"
               >
-                <Search className="w-3 h-3" />
-                <span className="text-[10px] select-none font-mono">Search...</span>
-                <span className="ml-2 bg-surface-3 border border-border-subtle px-1 py-0.5 rounded text-[8px] font-mono tracking-tighter text-text-quaternary">⌘K</span>
+                <Search className="w-3.5 h-3.5 text-text-tertiary" />
+                <span className="text-[11px] select-none font-mono flex-1 text-left">Search...</span>
+                <span className="ml-2 bg-surface border border-border-subtle px-1.5 py-0.5 rounded text-[9px] font-mono tracking-tighter text-text-quaternary shadow-inner">⌘K</span>
               </div>
 
               {/* Theme */}
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-1.5 border border-border-subtle bg-surface-3 hover:bg-surface-3 rounded-md text-text-quaternary hover:text-text-tertiary transition-all shrink-0 cursor-pointer"
+                className="p-1.5 border border-border bg-surface-highest hover:bg-surface-3 rounded-md text-text-secondary hover:text-text-primary transition-all shrink-0 cursor-pointer shadow-sm"
                 title={theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
               >
-                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
 
               <NotificationCenter />
