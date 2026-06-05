@@ -9,7 +9,8 @@ export const sendNotification = async (
   category: NotificationCategory,
   title: string,
   body?: string,
-  userId?: string
+  userId?: string,
+  metadata?: Record<string, any>
 ): Promise<Notification | null> => {
   if (isSupabaseConfigured) {
     const { data, error } = await supabase
@@ -20,6 +21,7 @@ export const sendNotification = async (
         category,
         title,
         body,
+        metadata: metadata || {},
         created_at: new Date().toISOString()
       })
       .select()
@@ -39,6 +41,7 @@ export const sendNotification = async (
       category,
       title,
       body,
+      metadata: metadata || {},
       created_at: new Date().toISOString()
     };
     
@@ -48,7 +51,6 @@ export const sendNotification = async (
       cached.unshift(newNotif);
       localStorage.setItem(cacheKey, JSON.stringify(cached));
     } catch (e) {
-      console.warn("Failed to save offline notification:", e);
     }
     return newNotif;
   }

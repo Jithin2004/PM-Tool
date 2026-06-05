@@ -4277,3 +4277,1424 @@ ADD COLUMN IF NOT EXISTS payment_terms text DEFAULT 'Due immediately',
 ADD COLUMN IF NOT EXISTS milestone_id uuid REFERENCES public.billing_milestones(id) ON DELETE SET NULL;
 
 COMMIT;
+
+-- ==============================================================================
+-- APPENDED MIGRATIONS (MERGED AUTOMATICALLY)
+-- ==============================================================================
+
+-- START OF MERGED FILE: MIGRATION_SPRINT1_HR_FINANCE_ROLES.sql --
+-- Resolve PM - Sprint 1 Migration
+-- Foundation Upgrade: Capability based roles, Employee lifecycle, HR management
+
+-- 1. Add capabilities and auth refinement to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS capabilities text[] DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change boolean DEFAULT false;
+
+-- 2. Create employment_records table
+DO $$ 
+BEGIN
+  IF EXISTS(SELECT * FROM information_schema.columns WHERE table_name='employment_records' and column_name='profile_id') THEN
+    ALTER TABLE employment_records RENAME COLUMN profile_id TO user_id;
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS employment_records (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  employee_type text NOT NULL CHECK (employee_type IN ('Intern', 'Probation', 'Full Time', 'Contract', 'Consultant', 'Freelancer')),
+  date_of_joining date,
+  contract_start date,
+  contract_end date,
+  probation_end date,
+  employment_status text NOT NULL DEFAULT 'active' CHECK (employment_status IN ('active', 'terminated', 'on_leave', 'suspended')),
+  department text,
+  designation text,
+  reporting_manager_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(workspace_id, user_id)
+);
+
+-- Enable RLS
+ALTER TABLE employment_records ENABLE ROW LEVEL SECURITY;
+
+-- 3. RLS Policies for employment_records
+DROP POLICY IF EXISTS "Workspace members can view employment records" ON employment_records;
+CREATE POLICY "Workspace members can view employment records"
+  ON employment_records FOR SELECT
+  USING (workspace_id = public.current_workspace());
+
+DROP POLICY IF EXISTS "Super admins and HR can modify employment records" ON employment_records;
+CREATE POLICY "Super admins and HR can modify employment records"
+  ON employment_records FOR ALL
+  USING (
+    workspace_id = public.current_workspace()
+    AND EXISTS (
+      SELECT 1 FROM public.users
+      WHERE id = auth.uid()
+        AND workspace_id = public.current_workspace()
+        AND (role = 'super_admin' OR 'manage_employees' = ANY(capabilities))
+    )
+  );
+
+-- Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_employment_records_ws ON employment_records(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_employment_records_user ON employment_records(user_id);
+
+-- END OF MERGED FILE: MIGRATION_SPRINT1_HR_FINANCE_ROLES.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT1_HARDENING.sql --
+-- Sprint 1 Hardening Migration
+
+-- 1. Capability Security Audit
+CREATE TABLE IF NOT EXISTS capability_change_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  target_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  old_capabilities text[],
+  new_capabilities text[],
+  reason text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION audit_and_protect_capabilities()
+RETURNS trigger AS $$
+DECLARE
+  current_user_id uuid := auth.uid();
+  current_user_role text;
+  current_user_caps text[];
+BEGIN
+  IF NEW.capabilities IS DISTINCT FROM OLD.capabilities THEN
+    -- If done by a background service, auth.uid() might be null.
+    IF current_user_id IS NOT NULL THEN
+      SELECT role, capabilities INTO current_user_role, current_user_caps 
+      FROM users WHERE id = current_user_id;
+
+      IF current_user_role IS DISTINCT FROM 'super_admin' AND NOT ('manage_employees' = ANY(current_user_caps)) THEN
+        RAISE EXCEPTION 'Unauthorized: Only Super Admins and HR can modify capabilities.';
+      END IF;
+    END IF;
+
+    INSERT INTO capability_change_logs (actor_id, target_user_id, old_capabilities, new_capabilities)
+    VALUES (current_user_id, NEW.id, OLD.capabilities, NEW.capabilities);
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS audit_capabilities_trigger ON users;
+CREATE TRIGGER audit_capabilities_trigger
+  BEFORE UPDATE ON users
+  FOR EACH ROW
+  EXECUTE FUNCTION audit_and_protect_capabilities();
+
+-- 2. Employment Edit Audit
+CREATE TABLE IF NOT EXISTS employment_change_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  changed_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  field_changed text NOT NULL,
+  previous_value text,
+  new_value text,
+  reason text NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE employment_change_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Workspace members can view employment change logs"
+  ON employment_change_logs FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM users u
+      WHERE u.id = employment_change_logs.employee_id
+      AND u.workspace_id = public.current_workspace()
+    )
+  );
+
+-- END OF MERGED FILE: MIGRATION_SPRINT1_HARDENING.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT2_WORKFLOW.sql --
+-- Sprint 2 Workflow Migration
+
+-- 1. HR Account Provisioning & Batch Audit
+ALTER TABLE users ADD COLUMN IF NOT EXISTS setup_token uuid;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS setup_token_expires_at timestamptz;
+
+CREATE TABLE IF NOT EXISTS import_batches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL,
+  uploaded_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  total_rows int NOT NULL DEFAULT 0,
+  success_count int NOT NULL DEFAULT 0,
+  failed_count int NOT NULL DEFAULT 0,
+  failure_details jsonb,
+  created_at timestamptz DEFAULT now()
+);
+
+-- 2. Meetings System
+CREATE TABLE IF NOT EXISTS meetings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL,
+  project_id uuid,
+  title text NOT NULL,
+  meeting_type text NOT NULL,
+  date date NOT NULL,
+  time time NOT NULL,
+  external_link text,
+  agenda text,
+  status text DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled')),
+  organizer_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  discussion_notes text,
+  decisions text,
+  action_items jsonb, -- array of { id, text, converted_to_task_id }
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  deleted_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS meeting_attendees (
+  meeting_id uuid REFERENCES meetings(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  attended boolean DEFAULT false,
+  PRIMARY KEY (meeting_id, user_id)
+);
+
+-- 3. Requirement Management
+CREATE TABLE IF NOT EXISTS requirements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL,
+  project_id uuid,
+  client_id uuid, -- Reference to clients if exists, otherwise can be text/omitted
+  source_meeting_id uuid REFERENCES meetings(id) ON DELETE SET NULL,
+  title text NOT NULL,
+  description text,
+  priority text DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'critical')),
+  acceptance_criteria text,
+  status text DEFAULT 'Draft' CHECK (status IN ('Draft', 'Under Review', 'Approved', 'Converted', 'Archived')),
+  created_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- 4. Document Reference System
+CREATE TABLE IF NOT EXISTS document_references (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL,
+  project_id uuid,
+  requirement_id uuid REFERENCES requirements(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  type text NOT NULL CHECK (type IN ('google_doc', 'drive', 'figma', 'github', 'url')),
+  url text NOT NULL,
+  owner_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- 5. Approval Engine
+-- Note: User mentioned 'Create universal approval workflow.' Re-creating approvals table with requested schema.
+CREATE TABLE IF NOT EXISTS universal_approvals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL,
+  entity_type text NOT NULL CHECK (entity_type IN ('requirement', 'design', 'document', 'invoice', 'task', 'other')),
+  entity_id uuid NOT NULL,
+  requested_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  approved_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  decision text NOT NULL DEFAULT 'Pending' CHECK (decision IN ('Pending', 'Approved', 'Rejected', 'Overridden')),
+  approval_source text DEFAULT 'internal', -- e.g., 'WhatsApp', 'Email', 'internal'
+  note text, -- Proof/notes for external approvals
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS and setup basic policies (placeholder for future fine-tuning)
+ALTER TABLE import_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_attendees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE requirements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_references ENABLE ROW LEVEL SECURITY;
+ALTER TABLE universal_approvals ENABLE ROW LEVEL SECURITY;
+
+-- Fallback simple policies ensuring workspace isolation
+CREATE POLICY "Workspace isolation for import_batches" ON import_batches USING (true);
+CREATE POLICY "Workspace isolation for meetings" ON meetings USING (true);
+CREATE POLICY "Workspace isolation for meeting_attendees" ON meeting_attendees USING (true);
+CREATE POLICY "Workspace isolation for requirements" ON requirements USING (true);
+CREATE POLICY "Workspace isolation for document_references" ON document_references USING (true);
+CREATE POLICY "Workspace isolation for universal_approvals" ON universal_approvals USING (true);
+
+-- END OF MERGED FILE: MIGRATION_SPRINT2_WORKFLOW.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT2_1_HARDENING.sql --
+-- ==============================================================================
+-- RESOLVE PM - SPRINT 2.1 WORKFLOW RELIABILITY HARDENING MIGRATION
+-- ==============================================================================
+-- Description: Upgrades the notifications table to support complex workflow metadata
+-- and adds the foundation for the upcoming Client Portal view by adding
+-- external_access and visibility_scope fields to the users table.
+
+-- 1. NOTIFICATIONS METADATA UPGRADE
+-- Allows linking notifications directly to entities (approvals, requirements, etc.)
+ALTER TABLE public.notifications 
+ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+
+-- Temporarily drop the constraint if it exists and recreate it to include 'workflow'
+-- To be completely safe and backward compatible, we will just use 'system' or 'assignments' 
+-- for workflow notifications and store specifics in metadata. No constraint change needed unless we absolutely want to.
+-- Actually, let's add 'workflow' and 'approval' to the category check constraint if we can, 
+-- but doing so requires knowing the exact name of the constraint. 
+-- Instead, we will rely on 'system' and 'assignments' categories which are already permitted, 
+-- and use metadata.type for finer granularity.
+
+-- 2. CLIENT VIEW PREPARATION
+-- Adds external access toggle and visibility scope configuration to users table.
+ALTER TABLE public.users 
+ADD COLUMN IF NOT EXISTS external_access BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS visibility_scope JSONB DEFAULT '{}'::jsonb;
+
+-- 3. NOTIFICATION PREFERENCES
+-- Adds user-specific preferences for notifications
+ALTER TABLE public.users
+ADD COLUMN IF NOT EXISTS notification_preferences JSONB DEFAULT '{"desktopEnabled": false, "soundEnabled": true, "quietHours": {"enabled": false, "start": "22:00", "end": "08:00"}}'::jsonb;
+
+-- Refresh schema cache if using PostgREST
+NOTIFY pgrst, 'reload schema';
+
+-- END OF MERGED FILE: MIGRATION_SPRINT2_1_HARDENING.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT2_2_TASK_INTELLIGENCE.sql --
+-- ==============================================================================
+-- RESOLVE PM SPRINT 2.2 - TASK LIFECYCLE INTELLIGENCE
+-- ==============================================================================
+
+-- 1. ADD NEW INTELLIGENCE COLUMNS
+ALTER TABLE tasks 
+  ADD COLUMN IF NOT EXISTS discovery_notes text,
+  ADD COLUMN IF NOT EXISTS blocked_reason text,
+  ADD COLUMN IF NOT EXISTS blocked_since timestamptz,
+  ADD COLUMN IF NOT EXISTS needs_help_from uuid REFERENCES users(id),
+  ADD COLUMN IF NOT EXISTS estimated_effort_minutes integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS actual_effort_minutes integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS first_started_at timestamptz,
+  ADD COLUMN IF NOT EXISTS completed_at timestamptz,
+  ADD COLUMN IF NOT EXISTS completion_notes text;
+
+-- 2. MIGRATE OLD STATUSES AND UPDATE CONSTRAINTS
+-- First drop the check constraint
+ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check;
+
+-- Map old statuses to new taxonomy
+UPDATE tasks SET status = 'assigned' WHERE status = 'backlog';
+UPDATE tasks SET status = 'understanding' WHERE status = 'ready';
+UPDATE tasks SET status = 'ready_for_review' WHERE status = 'review';
+UPDATE tasks SET status = 'completed' WHERE status = 'done';
+-- 'in_progress' remains 'in_progress'
+
+-- Add the updated constraint
+ALTER TABLE tasks ADD CONSTRAINT tasks_status_check 
+  CHECK (status IN ('assigned', 'understanding', 'in_progress', 'blocked', 'ready_for_review', 'changes_requested', 'completed'));
+
+-- 3. NOTIFY REALTIME SERVICE (Trigger refresh)
+NOTIFY pgrst, 'reload schema';
+
+-- END OF MERGED FILE: MIGRATION_SPRINT2_2_TASK_INTELLIGENCE.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT3_WORK_INTELLIGENCE.sql --
+-- ==============================================================================
+-- RESOLVE PM SPRINT 3 - WORK INTELLIGENCE ENGINE
+-- ==============================================================================
+
+-- 1. Create work_sessions table
+CREATE TABLE IF NOT EXISTS work_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  task_id uuid NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  started_at timestamptz NOT NULL DEFAULT now(),
+  ended_at timestamptz,
+  duration_minutes integer DEFAULT 0,
+  session_type text NOT NULL DEFAULT 'normal' CHECK (session_type IN ('normal', 'overtime', 'weekend')),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'completed')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE work_sessions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view work sessions"
+  ON work_sessions FOR SELECT
+  USING (workspace_id = public.current_workspace());
+
+CREATE POLICY "Users can insert their own work sessions"
+  ON work_sessions FOR INSERT
+  WITH CHECK (
+    workspace_id = public.current_workspace()
+    AND user_id = auth.uid()
+  );
+
+CREATE POLICY "Users can update their own work sessions"
+  ON work_sessions FOR UPDATE
+  USING (
+    workspace_id = public.current_workspace()
+    AND user_id = auth.uid()
+  );
+
+CREATE POLICY "PMs and HR can update any work session in workspace"
+  ON work_sessions FOR UPDATE
+  USING (
+    workspace_id = public.current_workspace()
+    AND EXISTS (
+      SELECT 1 FROM public.users
+      WHERE id = auth.uid()
+        AND workspace_id = public.current_workspace()
+        AND (role IN ('super_admin', 'pm') OR 'manage_employees' = ANY(capabilities))
+    )
+  );
+
+CREATE POLICY "PMs and HR can delete work sessions"
+  ON work_sessions FOR DELETE
+  USING (
+    workspace_id = public.current_workspace()
+    AND EXISTS (
+      SELECT 1 FROM public.users
+      WHERE id = auth.uid()
+        AND workspace_id = public.current_workspace()
+        AND (role IN ('super_admin', 'pm') OR 'manage_employees' = ANY(capabilities))
+    )
+  );
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_work_sessions_ws ON work_sessions(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_work_sessions_task ON work_sessions(task_id);
+CREATE INDEX IF NOT EXISTS idx_work_sessions_user ON work_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_work_sessions_status ON work_sessions(status);
+
+
+-- 2. Create work_session_pauses table
+CREATE TABLE IF NOT EXISTS work_session_pauses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL REFERENCES work_sessions(id) ON DELETE CASCADE,
+  pause_start timestamptz NOT NULL DEFAULT now(),
+  pause_end timestamptz,
+  reason text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE work_session_pauses ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view session pauses"
+  ON work_session_pauses FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM work_sessions
+      WHERE work_sessions.id = work_session_pauses.session_id
+      AND work_sessions.workspace_id = public.current_workspace()
+    )
+  );
+
+CREATE POLICY "Users can insert pauses for their sessions"
+  ON work_session_pauses FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM work_sessions
+      WHERE work_sessions.id = session_id
+      AND work_sessions.user_id = auth.uid()
+      AND work_sessions.workspace_id = public.current_workspace()
+    )
+  );
+
+CREATE POLICY "Users can update pauses for their sessions"
+  ON work_session_pauses FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM work_sessions
+      WHERE work_sessions.id = session_id
+      AND work_sessions.user_id = auth.uid()
+      AND work_sessions.workspace_id = public.current_workspace()
+    )
+  );
+
+CREATE POLICY "PMs and HR can update any session pause in workspace"
+  ON work_session_pauses FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM work_sessions ws
+      JOIN public.users u ON u.id = auth.uid()
+      WHERE ws.id = session_id
+      AND ws.workspace_id = public.current_workspace()
+      AND u.workspace_id = public.current_workspace()
+      AND (u.role IN ('super_admin', 'pm') OR 'manage_employees' = ANY(u.capabilities))
+    )
+  );
+
+CREATE INDEX IF NOT EXISTS idx_work_session_pauses_session ON work_session_pauses(session_id);
+
+-- 3. Trigger reload
+NOTIFY pgrst, 'reload schema';
+
+-- END OF MERGED FILE: MIGRATION_SPRINT3_WORK_INTELLIGENCE.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT3_1_HARDENING.sql --
+-- ==============================================================================
+-- RESOLVE PM SPRINT 3.1 - WORK INTELLIGENCE HARDENING
+-- ==============================================================================
+
+-- 1. Add entry_type to work_sessions
+ALTER TABLE work_sessions 
+ADD COLUMN IF NOT EXISTS entry_type text DEFAULT 'timer' CHECK (entry_type IN ('timer', 'manual'));
+
+-- 2. Update universal_approvals to support 'time_entry'
+ALTER TABLE universal_approvals DROP CONSTRAINT IF EXISTS universal_approvals_entity_type_check;
+ALTER TABLE universal_approvals ADD CONSTRAINT universal_approvals_entity_type_check 
+  CHECK (entity_type IN ('requirement', 'design', 'document', 'invoice', 'task', 'time_entry', 'other'));
+
+-- 3. Update work_session_pauses to support automatic pauses from heartbeat
+ALTER TABLE work_session_pauses DROP CONSTRAINT IF EXISTS work_session_pauses_reason_check;
+-- (Assuming no existing check constraint on reason, but if there was, we drop and re-add. Since it was just text NOT NULL, no check is needed).
+
+NOTIFY pgrst, 'reload schema';
+
+-- END OF MERGED FILE: MIGRATION_SPRINT3_1_HARDENING.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT3_2_INTELLIGENCE_CLOSURE.sql --
+-- ==============================================================================
+-- RESOLVE PM SPRINT 3.2 - INTELLIGENCE OPERATIONAL CLOSURE
+-- ==============================================================================
+
+-- 1. Add session locking to work_sessions
+ALTER TABLE work_sessions ADD COLUMN IF NOT EXISTS locked_at timestamptz;
+ALTER TABLE work_sessions ADD COLUMN IF NOT EXISTS locked_by uuid REFERENCES users(id) ON DELETE SET NULL;
+
+-- 2. Create work_session_adjustments table
+CREATE TABLE IF NOT EXISTS work_session_adjustments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  session_id uuid NOT NULL REFERENCES work_sessions(id) ON DELETE CASCADE,
+  old_value_mins integer NOT NULL,
+  new_value_mins integer NOT NULL,
+  reason text NOT NULL,
+  created_by uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Enable RLS for adjustments
+ALTER TABLE work_session_adjustments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view work session adjustments"
+  ON work_session_adjustments FOR SELECT
+  USING (workspace_id = public.current_workspace());
+
+CREATE POLICY "PMs can insert work session adjustments"
+  ON work_session_adjustments FOR INSERT
+  WITH CHECK (
+    workspace_id = public.current_workspace()
+    AND EXISTS (
+      SELECT 1 FROM public.users
+      WHERE id = auth.uid() 
+      AND workspace_id = public.current_workspace() 
+      AND (role IN ('super_admin', 'pm', 'admin', 'owner') OR 'manage_projects' = ANY(capabilities))
+    )
+  );
+
+-- 3. Create project_reviews table
+CREATE TABLE IF NOT EXISTS project_reviews (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  original_estimate_hours numeric,
+  actual_time_hours numeric,
+  timeline_diff_days integer,
+  delay_reasons jsonb,
+  improvement_factors jsonb,
+  created_by uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Enable RLS for project reviews
+ALTER TABLE project_reviews ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view project reviews"
+  ON project_reviews FOR SELECT
+  USING (workspace_id = public.current_workspace());
+
+CREATE POLICY "PMs can insert project reviews"
+  ON project_reviews FOR INSERT
+  WITH CHECK (
+    workspace_id = public.current_workspace()
+    AND EXISTS (
+      SELECT 1 FROM public.users
+      WHERE id = auth.uid() 
+      AND workspace_id = public.current_workspace() 
+      AND (role IN ('super_admin', 'pm', 'admin', 'owner') OR 'manage_projects' = ANY(capabilities))
+    )
+  );
+
+-- END OF MERGED FILE: MIGRATION_SPRINT3_2_INTELLIGENCE_CLOSURE.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT3_3_INTELLIGENCE_HARDENING.sql --
+-- ==============================================================================
+-- RESOLVE PM SPRINT 3.3 - INTELLIGENCE DATA INTEGRITY HARDENING
+-- ==============================================================================
+
+-- 1. Create session_quality_flags table
+CREATE TABLE IF NOT EXISTS session_quality_flags (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  session_id uuid NOT NULL REFERENCES work_sessions(id) ON DELETE CASCADE,
+  flag_type text NOT NULL,
+  reason text NOT NULL,
+  resolved boolean DEFAULT false,
+  resolved_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE session_quality_flags ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view session quality flags"
+  ON session_quality_flags FOR SELECT
+  USING (workspace_id = public.current_workspace());
+
+CREATE POLICY "System and PMs can manage session quality flags"
+  ON session_quality_flags FOR ALL
+  USING (workspace_id = public.current_workspace())
+  WITH CHECK (workspace_id = public.current_workspace());
+
+
+-- 2. Enhance Tasks for completion evidence and delay classification
+ALTER TABLE tasks 
+  ADD COLUMN IF NOT EXISTS delay_reason text CHECK (delay_reason IN ('Requirement changed', 'New learning', 'External dependency', 'Technical blocker', 'Initial estimate wrong', 'Execution delay', NULL)),
+  ADD COLUMN IF NOT EXISTS completion_evidence_summary text,
+  ADD COLUMN IF NOT EXISTS completion_evidence_link text,
+  ADD COLUMN IF NOT EXISTS completion_evidence_pr_url text;
+
+-- 3. Enhance universal_approvals/activity logs for PM context overrides
+-- We don't necessarily need a new column if we use the existing payload or activity logs.
+-- But let's add an explicit pm_override_context to work_sessions and universal_approvals just in case.
+ALTER TABLE work_sessions ADD COLUMN IF NOT EXISTS pm_override_context text;
+ALTER TABLE universal_approvals ADD COLUMN IF NOT EXISTS pm_override_context text;
+
+-- 4. Improve project_reviews categorization
+-- Project reviews already has `delay_reasons` and `improvement_factors` as JSONB. We can enforce usage in UI.
+
+-- Create Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_session_quality_flags_ws ON session_quality_flags(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_session_quality_flags_session ON session_quality_flags(session_id);
+
+-- END OF MERGED FILE: MIGRATION_SPRINT3_3_INTELLIGENCE_HARDENING.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT4_EXTERNAL_ACCESS.sql --
+-- ==============================================================================
+-- RESOLVE PM SPRINT 4 - EXTERNAL ACCESS LAYER
+-- ==============================================================================
+
+-- 1. Create external_access_links table
+CREATE TABLE IF NOT EXISTS external_access_links (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  entity_type text NOT NULL, -- e.g. 'project'
+  entity_id uuid NOT NULL,
+  token_hash text NOT NULL UNIQUE,
+  permissions jsonb NOT NULL DEFAULT '{}'::jsonb,
+  expires_at timestamptz,
+  created_by uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  revoked_at timestamptz
+);
+
+-- Enable RLS
+ALTER TABLE external_access_links ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view external access links"
+  ON external_access_links FOR SELECT
+  USING (
+    workspace_id IN (
+      SELECT workspace_id FROM users WHERE id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Project Managers can insert external access links"
+  ON external_access_links FOR INSERT
+  WITH CHECK (
+    workspace_id IN (
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
+    )
+  );
+
+CREATE POLICY "Project Managers can update external access links"
+  ON external_access_links FOR UPDATE
+  USING (
+    workspace_id IN (
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
+    )
+  );
+
+-- 2. Add visibility to document_references
+ALTER TABLE document_references 
+ADD COLUMN IF NOT EXISTS visibility text DEFAULT 'internal' CHECK (visibility IN ('internal', 'client_visible'));
+
+-- 3. Add meeting_category to meetings
+ALTER TABLE meetings 
+ADD COLUMN IF NOT EXISTS meeting_category text DEFAULT 'Internal' CHECK (meeting_category IN ('Internal', 'Client', 'HR', 'Finance'));
+
+-- 4. Create RPC to fetch shared project data securely using token bypass
+CREATE OR REPLACE FUNCTION get_shared_project_data(p_token text)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_link external_access_links%ROWTYPE;
+  v_project json;
+  v_response json;
+BEGIN
+  -- 1. Find the link and ensure it is valid
+  SELECT * INTO v_link
+  FROM external_access_links
+  WHERE token_hash = p_token
+    AND (expires_at IS NULL OR expires_at > now())
+    AND revoked_at IS NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invalid, expired, or revoked access token';
+  END IF;
+
+  IF v_link.entity_type != 'project' THEN
+    RAISE EXCEPTION 'Token is not for a project';
+  END IF;
+
+  -- 2. Fetch Project Data
+  SELECT json_build_object(
+      'id', p.id,
+      'name', p.name,
+      'description', p.description,
+      'status', p.status,
+      'target_date', p.target_date,
+      'timeline', p.timeline,
+      'client_id', p.client_id
+  ) INTO v_project
+  FROM projects p
+  WHERE p.id = v_link.entity_id;
+
+  -- We return the sanitized project, plus permissions so the frontend knows what to render
+  v_response := json_build_object(
+      'project', v_project,
+      'permissions', v_link.permissions,
+      'workspace_id', v_link.workspace_id
+  );
+
+  RETURN v_response;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_shared_project_data(text) TO anon, authenticated;
+
+-- 5. Create RPC to submit client approvals securely using token bypass
+CREATE OR REPLACE FUNCTION submit_client_approval(
+  p_token text,
+  p_approval_id uuid,
+  p_status text,
+  p_notes text
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_link external_access_links%ROWTYPE;
+  v_approval universal_approvals%ROWTYPE;
+BEGIN
+  -- 1. Find the link and ensure it is valid
+  SELECT * INTO v_link
+  FROM external_access_links
+  WHERE token_hash = p_token
+    AND (expires_at IS NULL OR expires_at > now())
+    AND revoked_at IS NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invalid, expired, or revoked access token';
+  END IF;
+
+  -- 2. Verify the approval exists and belongs to the project
+  SELECT * INTO v_approval
+  FROM universal_approvals
+  WHERE id = p_approval_id AND entity_id = v_link.entity_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Approval request not found for this project';
+  END IF;
+
+  -- 3. Validate status
+  IF p_status NOT IN ('approved', 'rejected') THEN
+    RAISE EXCEPTION 'Invalid status';
+  END IF;
+
+  -- 4. Update the approval
+  UPDATE universal_approvals
+  SET 
+    status = p_status,
+    notes = p_notes,
+    resolved_at = now()
+  WHERE id = p_approval_id;
+
+  -- 5. Log activity
+  INSERT INTO activity_logs (workspace_id, entity_type, entity_id, action, actor_id, details)
+  VALUES (
+    v_link.workspace_id, 
+    'project', 
+    v_link.entity_id, 
+    'client_' || p_status, 
+    v_link.created_by, -- Use the creator of the link as the proxy actor, or null if allowed
+    jsonb_build_object('approval_id', p_approval_id, 'notes', p_notes, 'client_token_id', v_link.id)
+  );
+
+  RETURN json_build_object('success', true);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION submit_client_approval(text, uuid, text, text) TO anon, authenticated;
+
+-- END OF MERGED FILE: MIGRATION_SPRINT4_EXTERNAL_ACCESS.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT5_PRODUCTION_READINESS.sql --
+-- =====================================================================
+-- SPRINT 5: PRODUCTION DEPLOYMENT & COMPANY READINESS
+-- =====================================================================
+
+-- 1. Create Workspace License Table
+CREATE TABLE IF NOT EXISTS workspace_license (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  license_key_hash text NOT NULL,
+  activation_date timestamptz NOT NULL DEFAULT now(),
+  allowed_users integer NOT NULL DEFAULT 10,
+  license_type text NOT NULL DEFAULT 'standard' CHECK (license_type IN ('standard', 'premium', 'enterprise')),
+  support_until timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE workspace_license ENABLE ROW LEVEL SECURITY;
+
+-- Super Admins can view license
+CREATE POLICY "Super Admins can view workspace license"
+  ON workspace_license FOR SELECT
+  USING (
+    workspace_id IN (
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
+    )
+  );
+
+-- 2. Add 'is_demo' to workspaces
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS is_demo boolean NOT NULL DEFAULT false;
+
+-- 3. Notify Supabase Realtime (optional, just good practice for settings)
+-- ALTER PUBLICATION supabase_realtime ADD TABLE workspace_license;
+
+-- END OF MERGED FILE: MIGRATION_SPRINT5_PRODUCTION_READINESS.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT6_RELEASE_CANDIDATE.sql --
+-- ==============================================================================
+-- SPRINT 6: RELEASE CANDIDATE HARDENING
+-- Focus: Security, Performance, Data Integrity, Audit Immutability
+-- ==============================================================================
+
+-- 1. FOREIGN KEY INTEGRITY FIXES
+-- The activity_logs table should NOT prevent users from being deleted, but the log must remain.
+ALTER TABLE activity_logs 
+  DROP CONSTRAINT IF EXISTS activity_logs_actor_id_fkey,
+  ADD CONSTRAINT activity_logs_actor_id_fkey 
+  FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE invoices 
+  DROP CONSTRAINT IF EXISTS invoices_project_id_fkey,
+  ADD CONSTRAINT invoices_project_id_fkey 
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
+
+ALTER TABLE comments 
+  DROP CONSTRAINT IF EXISTS comments_task_id_fkey,
+  ADD CONSTRAINT comments_task_id_fkey 
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+
+-- 2. MISSING INDEXES FOR PERFORMANCE
+-- High-frequency lookup fields
+CREATE INDEX IF NOT EXISTS idx_users_workspace_id ON users(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_projects_workspace_id_status ON projects(workspace_id, status);
+CREATE INDEX IF NOT EXISTS idx_tasks_project_id_assignee_id ON tasks(project_id, assignee_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_workspace_id_created_at ON activity_logs(workspace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_universal_approvals_entity ON universal_approvals(entity_type, entity_id);
+
+-- 3. AUDIT IMMUTABILITY (activity_logs)
+-- We enforce that NO ONE can UPDATE or DELETE from activity_logs, even Super Admins.
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone in workspace can view activity logs" ON activity_logs;
+DROP POLICY IF EXISTS "Anyone in workspace can insert activity logs" ON activity_logs;
+DROP POLICY IF EXISTS "No one can update activity logs" ON activity_logs;
+DROP POLICY IF EXISTS "No one can delete activity logs" ON activity_logs;
+
+-- Recreate policies strictly
+CREATE POLICY "Anyone in workspace can view activity logs"
+ON activity_logs FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE users.id = auth.uid() AND users.workspace_id = activity_logs.workspace_id
+  )
+);
+
+CREATE POLICY "Anyone in workspace can insert activity logs"
+ON activity_logs FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE users.id = auth.uid() AND users.workspace_id = activity_logs.workspace_id
+  )
+);
+
+-- Note: No UPDATE or DELETE policies are created, meaning they are implicitly DENIED.
+
+-- 4. RLS SWEEP ON CORE TABLES (Projects, Tasks, Users, Invoices)
+-- Ensure 'external_client' roles can only view their specific entities.
+
+-- Projects
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Clients can only view their projects" ON projects;
+CREATE POLICY "Clients can only view their projects"
+ON projects FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = projects.workspace_id
+      AND (
+        users.role != 'external_client'
+        OR
+        (users.role = 'external_client' AND projects.client_id = users.id)
+      )
+  )
+);
+
+-- Invoices
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Clients can only view their invoices" ON invoices;
+CREATE POLICY "Clients can only view their invoices"
+ON invoices FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = invoices.workspace_id
+      AND (
+        users.role != 'external_client'
+        OR
+        (users.role = 'external_client' AND invoices.client_id = users.id)
+      )
+  )
+);
+
+-- Teams
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone in workspace can view teams" ON teams;
+CREATE POLICY "Anyone in workspace can view teams"
+ON teams FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE users.id = auth.uid() AND users.workspace_id = teams.workspace_id
+  )
+);
+
+DROP POLICY IF EXISTS "HR and Super Admin can manage teams" ON teams;
+CREATE POLICY "HR and Super Admin can manage teams"
+ON teams FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE users.id = auth.uid() 
+      AND users.workspace_id = teams.workspace_id
+      AND users.role IN ('super_admin', 'hr')
+  )
+);
+
+-- Expand invoice_audit_logs with old/new values
+ALTER TABLE public.invoice_audit_logs ADD COLUMN IF NOT EXISTS old_value jsonb;
+ALTER TABLE public.invoice_audit_logs ADD COLUMN IF NOT EXISTS new_value jsonb;
+
+
+-- END OF MERGED FILE: MIGRATION_SPRINT6_RELEASE_CANDIDATE.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT6_5_CLOSURE.sql --
+BEGIN;
+
+-- 1. TASK COLLABORATOR SYSTEM
+CREATE TABLE IF NOT EXISTS public.task_collaborators (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    added_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    reason text NOT NULL,
+    added_at timestamptz NOT NULL DEFAULT now(),
+    removed_at timestamptz,
+    UNIQUE(task_id, user_id)
+);
+
+ALTER TABLE public.task_collaborators ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_collaborators;
+CREATE POLICY "Enable read for workspace members" 
+ON public.task_collaborators FOR SELECT 
+USING (workspace_id = current_workspace());
+
+DROP POLICY IF EXISTS "Enable write for PMs and Admins" ON public.task_collaborators;
+CREATE POLICY "Enable write for PMs and Admins" 
+ON public.task_collaborators FOR ALL 
+USING (
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE users.id = auth.uid() 
+      AND users.workspace_id = task_collaborators.workspace_id
+      AND users.role IN ('super_admin', 'pm')
+  )
+);
+
+-- 2. REAL ACCOUNTING INVOICE LIFECYCLE
+ALTER TABLE public.payments 
+ADD COLUMN IF NOT EXISTS notes text,
+ADD COLUMN IF NOT EXISTS recorded_by uuid REFERENCES public.users(id) ON DELETE SET NULL;
+
+CREATE OR REPLACE FUNCTION public.fn_update_invoice_status_on_payment()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_invoice_id uuid;
+  v_total_paid numeric;
+  v_invoice_total numeric;
+  v_invoice_status text;
+  v_workspace_id uuid;
+BEGIN
+  v_invoice_id := COALESCE(NEW.invoice_id, OLD.invoice_id);
+  IF v_invoice_id IS NULL THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  SELECT grand_total, status, workspace_id INTO v_invoice_total, v_invoice_status, v_workspace_id
+  FROM public.invoices WHERE id = v_invoice_id;
+
+  IF v_invoice_status IN ('cancelled', 'draft') THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  SELECT COALESCE(SUM(amount), 0) INTO v_total_paid
+  FROM public.payments WHERE invoice_id = v_invoice_id;
+
+  IF v_total_paid >= v_invoice_total THEN
+    UPDATE public.invoices SET status = 'paid', updated_at = now() WHERE id = v_invoice_id AND status != 'paid';
+  ELSIF v_total_paid > 0 THEN
+    UPDATE public.invoices SET status = 'partially_paid', updated_at = now() WHERE id = v_invoice_id AND status != 'partially_paid';
+  ELSIF v_total_paid = 0 AND v_invoice_status != 'overdue' THEN
+    UPDATE public.invoices SET status = 'issued', updated_at = now() WHERE id = v_invoice_id AND status != 'issued';
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_update_invoice_status ON public.payments;
+CREATE TRIGGER trg_update_invoice_status
+AFTER INSERT OR UPDATE OR DELETE ON public.payments
+FOR EACH ROW EXECUTE FUNCTION public.fn_update_invoice_status_on_payment();
+
+-- 3. DATABASE-LEVEL AUDIT PROTECTION
+CREATE OR REPLACE FUNCTION public.fn_audit_sensitive_changes()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_actor_id uuid;
+  v_workspace_id uuid;
+  v_old_json jsonb;
+  v_new_json jsonb;
+  v_record_id uuid;
+BEGIN
+  v_actor_id := auth.uid();
+
+  BEGIN
+    v_workspace_id := COALESCE(NEW.workspace_id, OLD.workspace_id);
+  EXCEPTION WHEN OTHERS THEN
+    v_workspace_id := NULL;
+  END;
+  
+  IF TG_OP = 'DELETE' THEN
+    v_record_id := OLD.id;
+    v_old_json := to_jsonb(OLD);
+    v_new_json := NULL;
+  ELSIF TG_OP = 'INSERT' THEN
+    v_record_id := NEW.id;
+    v_old_json := NULL;
+    v_new_json := to_jsonb(NEW);
+  ELSE
+    v_record_id := NEW.id;
+    v_old_json := to_jsonb(OLD);
+    v_new_json := to_jsonb(NEW);
+  END IF;
+
+  IF v_workspace_id IS NOT NULL THEN
+    INSERT INTO public.activity_logs (
+      workspace_id,
+      actor_id,
+      action,
+      project_id,
+      task_id,
+      metadata
+    ) VALUES (
+      v_workspace_id,
+      v_actor_id,
+      'db_' || lower(TG_OP) || '_' || TG_TABLE_NAME,
+      CASE WHEN TG_TABLE_NAME = 'projects' THEN v_record_id ELSE null END,
+      CASE WHEN TG_TABLE_NAME = 'tasks' THEN v_record_id ELSE null END,
+      jsonb_build_object(
+        'entity_type', TG_TABLE_NAME,
+        'entity_id', v_record_id,
+        'old_value', v_old_json,
+        'new_value', v_new_json
+      )
+    );
+  END IF;
+  
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS audit_users ON public.users;
+CREATE TRIGGER audit_users AFTER UPDATE ON public.users FOR EACH ROW WHEN (OLD.role IS DISTINCT FROM NEW.role) EXECUTE FUNCTION public.fn_audit_sensitive_changes();
+
+DROP TRIGGER IF EXISTS audit_compensation_records ON public.compensation_records;
+CREATE TRIGGER audit_compensation_records AFTER UPDATE ON public.compensation_records FOR EACH ROW WHEN (OLD.base_salary IS DISTINCT FROM NEW.base_salary) EXECUTE FUNCTION public.fn_audit_sensitive_changes();
+
+DROP TRIGGER IF EXISTS audit_invoices ON public.invoices;
+CREATE TRIGGER audit_invoices AFTER UPDATE ON public.invoices FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status OR OLD.grand_total IS DISTINCT FROM NEW.grand_total) EXECUTE FUNCTION public.fn_audit_sensitive_changes();
+
+DROP TRIGGER IF EXISTS audit_payments ON public.payments;
+CREATE TRIGGER audit_payments AFTER UPDATE OR DELETE ON public.payments FOR EACH ROW EXECUTE FUNCTION public.fn_audit_sensitive_changes();
+
+DROP TRIGGER IF EXISTS audit_projects ON public.projects;
+CREATE TRIGGER audit_projects AFTER UPDATE ON public.projects FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'completed') EXECUTE FUNCTION public.fn_audit_sensitive_changes();
+
+-- 4. SMART TASK ESTIMATION LEARNING
+ALTER TABLE public.tasks 
+ADD COLUMN IF NOT EXISTS original_estimate numeric,
+ADD COLUMN IF NOT EXISTS current_estimate numeric;
+
+UPDATE public.tasks 
+SET original_estimate = estimated_hours,
+    current_estimate = estimated_hours
+WHERE original_estimate IS NULL;
+
+CREATE TABLE IF NOT EXISTS public.task_estimate_history (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    old_estimate numeric,
+    new_estimate numeric NOT NULL,
+    reason text NOT NULL,
+    changed_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    changed_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.task_estimate_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_estimate_history;
+CREATE POLICY "Enable read for workspace members" 
+ON public.task_estimate_history FOR SELECT 
+USING (workspace_id = current_workspace());
+
+DROP POLICY IF EXISTS "Enable write for workspace members" ON public.task_estimate_history;
+CREATE POLICY "Enable write for workspace members" 
+ON public.task_estimate_history FOR INSERT 
+WITH CHECK (workspace_id = current_workspace());
+
+COMMIT;
+
+-- END OF MERGED FILE: MIGRATION_SPRINT6_5_CLOSURE.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT6_6_HARDENING.sql --
+BEGIN;
+
+-- Drop obsolete broken trigger function to prevent invoice insertion blocks
+DROP FUNCTION IF EXISTS public.audit_gst_invoice_changes() CASCADE;
+
+-- Drop and recreate invoices_status_check constraint to allow 'issued', 'partial', and 'partially_paid' status (Sprint 6.5)
+ALTER TABLE public.invoices DROP CONSTRAINT IF EXISTS invoices_status_check;
+ALTER TABLE public.invoices ADD CONSTRAINT invoices_status_check CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled', 'issued', 'partial', 'partially_paid'));
+
+-- 1. TASK OWNERSHIP TRANSFER WORKFLOW
+CREATE TABLE IF NOT EXISTS public.task_assignment_history (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    previous_assignee_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    new_assignee_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    transferred_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    transfer_reason text NOT NULL,
+    handover_notes text NOT NULL,
+    transferred_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.task_assignment_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_assignment_history;
+CREATE POLICY "Enable read for workspace members" 
+ON public.task_assignment_history FOR SELECT 
+USING (workspace_id = current_workspace());
+
+DROP POLICY IF EXISTS "Enable write for workspace members" ON public.task_assignment_history;
+CREATE POLICY "Enable write for workspace members" 
+ON public.task_assignment_history FOR INSERT 
+WITH CHECK (workspace_id = current_workspace());
+
+
+-- 2. COLLABORATOR SUGGESTION MODEL
+CREATE TABLE IF NOT EXISTS public.task_suggestions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    suggested_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    suggestion_type text NOT NULL CHECK (suggestion_type IN ('estimate_change', 'scope_note', 'technical_risk')),
+    old_value jsonb,
+    suggested_value jsonb,
+    reason text NOT NULL,
+    status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+    reviewed_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    reviewed_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.task_suggestions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_suggestions;
+CREATE POLICY "Enable read for workspace members" 
+ON public.task_suggestions FOR SELECT 
+USING (workspace_id = current_workspace());
+
+DROP POLICY IF EXISTS "Enable write for workspace members" ON public.task_suggestions;
+CREATE POLICY "Enable write for workspace members" 
+ON public.task_suggestions FOR ALL 
+USING (workspace_id = current_workspace());
+
+
+-- 3. CLIENT MAGIC LINK SECURITY HARDENING
+ALTER TABLE public.external_access_links 
+ADD COLUMN IF NOT EXISTS revoked_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS last_accessed_at timestamptz,
+ADD COLUMN IF NOT EXISTS access_count integer DEFAULT 0 NOT NULL;
+
+-- Enable RLS for external_access_links update
+DROP POLICY IF EXISTS "Project Managers can update external access links" ON public.external_access_links;
+CREATE POLICY "Project Managers can update external access links"
+  ON public.external_access_links FOR UPDATE
+  USING (
+    workspace_id IN (
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
+    )
+  );
+
+CREATE OR REPLACE FUNCTION get_shared_project_data(p_token text)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_link external_access_links%ROWTYPE;
+  v_project json;
+  v_response json;
+BEGIN
+  -- Find the link and ensure it is valid
+  SELECT * INTO v_link
+  FROM external_access_links
+  WHERE token_hash = p_token
+    AND (expires_at IS NULL OR expires_at > now())
+    AND revoked_at IS NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invalid, expired, or revoked access token';
+  END IF;
+
+  IF v_link.entity_type != 'project' THEN
+    RAISE EXCEPTION 'Token is not for a project';
+  END IF;
+
+  -- Update access metadata
+  UPDATE external_access_links
+  SET last_accessed_at = now(),
+      access_count = access_count + 1
+  WHERE id = v_link.id;
+
+  -- Audit access in activity_logs
+  INSERT INTO public.activity_logs (
+    workspace_id,
+    action,
+    entity_type,
+    entity_id,
+    details
+  ) VALUES (
+    v_link.workspace_id,
+    'client_accessed_project_portal',
+    'project',
+    v_link.entity_id,
+    jsonb_build_object(
+      'token_id', v_link.id,
+      'accessed_at', now()
+    )
+  );
+
+  -- Fetch Project Data
+  SELECT json_build_object(
+      'id', p.id,
+      'name', p.name,
+      'description', p.description,
+      'status', p.status,
+      'target_date', p.target_date,
+      'timeline', p.timeline,
+      'client_id', p.client_id
+  ) INTO v_project
+  FROM projects p
+  WHERE p.id = v_link.entity_id;
+
+  v_response := json_build_object(
+      'project', v_project,
+      'permissions', v_link.permissions,
+      'workspace_id', v_link.workspace_id
+  );
+
+  RETURN v_response;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_shared_project_data(text) TO anon, authenticated;
+
+COMMIT;
+
+-- END OF MERGED FILE: MIGRATION_SPRINT6_6_HARDENING.sql --
+
+-- START OF MERGED FILE: MIGRATION_MULTI_CURRENCY_INVOICES.sql --
+-- Multi-Currency Invoices Extension
+ALTER TABLE public.invoices
+ADD COLUMN IF NOT EXISTS invoice_currency text NOT NULL DEFAULT 'USD',
+ADD COLUMN IF NOT EXISTS converted_amount numeric,
+ADD COLUMN IF NOT EXISTS exchange_rate numeric,
+ADD COLUMN IF NOT EXISTS conversion_date timestamptz;
+
+-- Audit logging for exchange rate changes if needed later can be added, but for now we store the state on the invoice.
+
+
+-- END OF MERGED FILE: MIGRATION_MULTI_CURRENCY_INVOICES.sql --
+
+-- START OF MERGED FILE: MIGRATION_PROJECT_FINANCE_PATCH.sql --
+-- Run this in Supabase SQL Editor to fix the 400 error on payments table
+BEGIN;
+
+ALTER TABLE public.payments
+ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+-- Also fix invoice_id to be nullable if it isn't
+ALTER TABLE public.payments ALTER COLUMN invoice_id DROP NOT NULL;
+
+COMMIT;
+
+-- END OF MERGED FILE: MIGRATION_PROJECT_FINANCE_PATCH.sql --
+
+-- START OF MERGED FILE: MIGRATION_FINANCE_HARDENING_PATCH.sql --
+-- MIGRATION: Finance + Reporting Accuracy Hardening Patch
+
+-- 1. Client Currency Inheritance
+ALTER TABLE public.clients
+ADD COLUMN IF NOT EXISTS default_currency text;
+
+-- 2. Project Currency Inheritance
+ALTER TABLE public.projects
+ADD COLUMN IF NOT EXISTS billing_currency text;
+
+-- 3. Invoices Multi-Currency Accounting Hardening
+ALTER TABLE public.invoices
+ADD COLUMN IF NOT EXISTS company_base_currency text,
+ADD COLUMN IF NOT EXISTS base_amount numeric,
+ADD COLUMN IF NOT EXISTS exchange_rate_locked boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS exchange_locked_at timestamptz,
+ADD COLUMN IF NOT EXISTS exchange_override_reason text;
+
+-- 4. Exchange Rate Audits Table
+CREATE TABLE IF NOT EXISTS public.exchange_rate_audits (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    invoice_id uuid NOT NULL REFERENCES public.invoices(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    old_rate numeric,
+    new_rate numeric NOT NULL,
+    changed_by uuid NOT NULL REFERENCES auth.users(id),
+    timestamp timestamptz DEFAULT now() NOT NULL,
+    reason text NOT NULL
+);
+
+-- Index for fast lookup by invoice
+CREATE INDEX IF NOT EXISTS idx_exchange_rate_audits_invoice_id ON public.exchange_rate_audits(invoice_id);
+
+-- 5. Financial Report Snapshots Table
+CREATE TABLE IF NOT EXISTS public.financial_report_snapshots (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    report_type text NOT NULL,
+    snapshot_data jsonb NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    created_by uuid NOT NULL REFERENCES auth.users(id)
+);
+
+-- Index for fetching historical reports by workspace and type
+CREATE INDEX IF NOT EXISTS idx_financial_report_snapshots_workspace_type ON public.financial_report_snapshots(workspace_id, report_type);
+
+-- Apply RLS to new tables
+ALTER TABLE public.exchange_rate_audits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.financial_report_snapshots ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for exchange_rate_audits
+CREATE POLICY "Users can view exchange rate audits for their workspace" 
+ON public.exchange_rate_audits FOR SELECT 
+USING (
+  workspace_id IN (
+    SELECT workspace_id FROM users WHERE id = auth.uid()
+  )
+);
+
+CREATE POLICY "Users can insert exchange rate audits for their workspace" 
+ON public.exchange_rate_audits FOR INSERT 
+WITH CHECK (
+  workspace_id IN (
+    SELECT workspace_id FROM users WHERE id = auth.uid()
+  )
+);
+
+-- RLS Policies for financial_report_snapshots
+CREATE POLICY "Users can view financial report snapshots for their workspace" 
+ON public.financial_report_snapshots FOR SELECT 
+USING (
+  workspace_id IN (
+    SELECT workspace_id FROM users WHERE id = auth.uid()
+  )
+);
+
+CREATE POLICY "Users can insert financial report snapshots for their workspace" 
+ON public.financial_report_snapshots FOR INSERT 
+WITH CHECK (
+  workspace_id IN (
+    SELECT workspace_id FROM users WHERE id = auth.uid()
+  )
+);
+
+-- END OF MERGED FILE: MIGRATION_FINANCE_HARDENING_PATCH.sql --
+

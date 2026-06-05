@@ -44,7 +44,6 @@ export const demoWorkspacesService = {
       });
 
     } catch (err) {
-      console.warn('Failed to inject demo data', err);
     }
   }
 };

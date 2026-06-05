@@ -40,12 +40,12 @@ export async function fetchWorkspaceProfiles(workspaceId: string): Promise<Profi
   if (users.length > 0) {
     const { data: empData, error: empError } = await supabase
       .from('employment_records')
-      .select('profile_id, date_of_joining, employment_status')
+      .select('user_id, date_of_joining, employment_status')
       .eq('workspace_id', workspaceId);
 
     if (!empError && empData) {
       const empMap = new Map();
-      empData.forEach((record: any) => empMap.set(record.profile_id, record));
+      empData.forEach((record: any) => empMap.set(record.user_id, record));
       users = users.map(u => {
         const emp = empMap.get(u.id);
         if (emp) {
@@ -72,7 +72,6 @@ export async function fetchWorkspaceAttendance(workspaceId: string): Promise<Att
       .eq('workspace_id', workspaceId);
     if (!error && data) return data as AttendanceRow[];
   } catch (err) {
-    console.warn('[operationalDataService] fetchWorkspaceAttendance:', err);
   }
   return [];
 }
@@ -86,7 +85,6 @@ export async function fetchWorkspaceSalaries(workspaceId: string): Promise<Salar
       .eq('workspace_id', workspaceId);
     if (!error && data) return data as SalaryRow[];
   } catch (err) {
-    console.warn('[operationalDataService] fetchWorkspaceSalaries:', err);
   }
   return [];
 }

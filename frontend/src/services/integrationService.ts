@@ -126,7 +126,6 @@ async function processQueue(): Promise<void> {
       metadata: { queue_id: item.id, service: item.service },
     }).catch(() => {});
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[IntegrationQueue] Processing ${item.service} (${item.id})`);
     }
     item.fn().then(result => {
       if (result.success) {
@@ -157,7 +156,6 @@ async function processQueue(): Promise<void> {
             metadata: { queue_id: item.id, service: item.service, attempt: item.attempt, backoff_ms: backoff, error: result.message },
           }).catch(() => {});
           if (process.env.NODE_ENV === 'development') {
-            console.log(`[IntegrationQueue] Retry ${item.service} attempt ${item.attempt} in ${backoff}ms`);
           }
           setTimeout(() => {
             item.state = 'queued';
@@ -214,7 +212,6 @@ export async function enqueueSync(
       }).catch(() => {});
       activityLogService.logJobCreated(workspaceId, id, service).catch(() => {});
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[IntegrationQueue] Queued ${service} (${id}) — queue length: ${inMemoryQueue.length}`);
       }
       processQueue();
     } catch {
@@ -259,7 +256,6 @@ export async function recoverJobs(): Promise<number> {
       recovered++;
     }
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[IntegrationQueue] Recovered ${recovered} jobs`);
     }
     processQueue();
     return recovered;
@@ -664,7 +660,6 @@ export async function getRecentActivity(workspaceId: string, service: string, li
 if (typeof window !== 'undefined' && isSupabaseConfigured) {
   recoverJobs().then(count => {
     if (process.env.NODE_ENV === 'development' && count > 0) {
-      console.log(`[IntegrationQueue] Auto-recovery: ${count} jobs re-queued`);
     }
   }).catch(() => {});
 }

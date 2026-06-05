@@ -38,7 +38,6 @@ async function callGeminiWithRetry<T>(fn: () => Promise<T>): Promise<T> {
         throw error;
       }
       if (isRateLimitError(error) && attempt <= maxAttempts) {
-        console.warn(`Gemini API rate-limited (429). Attempt ${attempt} of ${maxAttempts}. Retrying in ${delay}ms...`, error);
         await new Promise(resolve => setTimeout(resolve, delay));
         attempt++;
         delay *= 2; // double the duration (exponential backoff)
@@ -51,7 +50,6 @@ async function callGeminiWithRetry<T>(fn: () => Promise<T>): Promise<T> {
 
 export async function estimateProjectHours(name: string, description: string): Promise<number> {
   if (!process.env.GEMINI_API_KEY) {
-    console.warn("GEMINI_API_KEY not found. Returning default estimation.");
     return 8;
   }
 

@@ -39,7 +39,6 @@ async function callGeminiWithRetry<T>(fn: () => Promise<T>): Promise<T> {
         throw error;
       }
       if (isRateLimitError(error) && attempt <= maxAttempts) {
-        console.warn(`Gemini API rate-limited (429). Attempt ${attempt} of ${maxAttempts}. Retrying in ${delay}ms...`, error);
         await new Promise(resolve => setTimeout(resolve, delay));
         attempt++;
         delay *= 2; // double the duration (exponential backoff)
@@ -88,7 +87,6 @@ export function getLocalTelemetryInsight(stats: any): string {
 
 export async function estimateProject(description: string) {
   if (!ai || !apiKey) {
-    console.warn("GEMINI_API_KEY not configured. Defaulting to local PM estimation rules.");
     return {
       coreHours: 12,
       overheadMultiplier: 1.5,
@@ -151,7 +149,6 @@ export async function estimateProject(description: string) {
 
 export async function generateSystemInsight(stats: any) {
   if (!ai || !apiKey) {
-    console.warn("GEMINI_API_KEY not configured. Running high-fidelity local analytics analysis.");
     return getLocalTelemetryInsight(stats);
   }
 
@@ -175,7 +172,6 @@ export async function generateSystemInsight(stats: any) {
 
     return response.text?.trim() || getLocalTelemetryInsight(stats);
   } catch (error) {
-    console.warn("AI Insight generation rate-limited or failed, using high-fidelity local analytics analysis.");
     return getLocalTelemetryInsight(stats);
   }
 }

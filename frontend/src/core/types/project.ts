@@ -64,3 +64,16 @@ export interface Project {
   billing_model?: 'Fixed Price' | 'Hourly' | 'Milestone Based' | 'Retainer' | 'Internal Project';
   billing_currency?: string;
 }
+
+export interface ProjectReview {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  original_estimate_hours: number;
+  actual_time_hours: number;
+  timeline_diff_days: number;
+  delay_reasons: any; // jsonb
+  improvement_factors: any; // jsonb
+  created_by: string;
+  created_at: IsoDateTime;
+}

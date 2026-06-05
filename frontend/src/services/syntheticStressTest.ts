@@ -182,7 +182,6 @@ async function callService<T>(
   } catch (err: any) {
     caught = true;
     const norm = normalizeSupabaseError(err);
-    console.log('[service insert failed]', { service: serviceName, payload, error: norm.message, code: norm.code, details: norm.details, hint: norm.hint });
     report.failedOperations.push({ service: serviceName, payload, error: norm.message, code: norm.code, details: norm.details, hint: norm.hint, timestamp: nowISO() });
     report.partialFailure = true;
     report.generation.serviceFallbacks++;
@@ -419,7 +418,6 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
   if (existingLock) {
     if (force) {
       clearLock();
-      console.log('[stress] FORCE_UNLOCK', { cleared: existingLock.runId });
     } else {
       report.blocked = true;
       report.blockReason = `Concurrent stress test already running (runId: ${existingLock.runId}). Use force:true to override.`;
@@ -511,9 +509,6 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       report.endTime = nowISO(); report.durationMs = ms(t0);
       return report;
     }
-
-    console.log('[stress] RUN_STARTED', { runId, wsId, t: startTime });
-
     withTimeout(activityLogService.appendLog({
       workspace_id: wsId, actor_id: undefined,
       action: 'stress_test_started',
@@ -1042,30 +1037,21 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
     }
     withTimeout(activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_test_completed', metadata: stressMeta }), 5000).catch(() => {});
     withTimeout(activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_cleanup_completed', metadata: { run_id: runId, success: report.cleanup.success, orphan_count: report.cleanup.orphanCount, remaining, cleanup_ms: Math.round(report.cleanup.timeMs) } }), 5000).catch(() => {});
-
-    console.log('[stress] RUN_COMPLETED', { runId, success: report.cleanup.success });
-
   } catch (e: any) {
-    console.log('[stress] RUN_FAILED', { runId, error: e.message });
     report.recommendations.push(`FATAL: ${e.message}`);
     report.riskLevel = 'HIGH';
   } finally {
     clearLock();
-    console.log('[stress] LOCK_CLEARED', { runId });
-
     // Finalize: set endTime/durationMs FIRST, then persist
     report.endTime = nowISO();
     report.durationMs = ms(t0);
-    console.log('[stress] REPORT_BUILD', { runId });
     const validation = validateStressReport(report);
     if (!validation.valid) {
-      console.warn('[stress] REPORT_INVALID', validation.missingFields);
       persistMinimalReport(runId, report);
     } else {
       persistReport(report);
     }
     broadcastSyntheticCleanup();
-    console.log('[stress] REPORT_DONE', { runId, durationMs: report.durationMs, riskLevel: report.riskLevel });
   }
   return report;
 }
@@ -1223,8 +1209,6 @@ export async function cleanupAllSyntheticRuns(wsId?: string): Promise<{
   if (result.remainingCount > 0) {
     const audit = await cleanupAudit();
     if (audit.survivors.length > 0) {
-      console.warn('[Cleanup Forensic] Survivors detected after cleanup:', audit.survivors);
-      console.warn('[Cleanup Forensic] FK failures:', audit.fkFailures);
     }
   }
 
@@ -1536,14 +1520,12 @@ function persistMinimalReport(runId: string, report: any): void {
       missingFields: report ? validateStressReport(report).missingFields : ['report is null'],
     };
     localStorage.setItem(REPORT_STORAGE_KEY, JSON.stringify(payload));
-    console.log('[stress] REPORT_PERSIST_MINIMAL', payload.summary);
   } catch (err) {
     console.error('[stress] REPORT_PERSIST_MINIMAL_FAILED', err);
   }
 }
 
 function persistReport(report: StressReport): void {
-  console.log('[stress] REPORT_PERSIST_START', { runId: report.simulationRunId });
   try {
     const payload: Record<string, any> = {
       savedAt: Date.now(),
@@ -1595,7 +1577,6 @@ function persistReport(report: StressReport): void {
     // Checksum log
     const checksum = json.length;
     localStorage.setItem(REPORT_STORAGE_KEY, json);
-    console.log('[stress] REPORT_PERSIST_SUCCESS', { runId: report.simulationRunId, bytes: checksum });
   } catch (err) {
     console.error('[stress] REPORT_PERSIST_FAILED', err);
     // Fallback: try minimal
@@ -1607,16 +1588,13 @@ export function getLastStressReport(): Record<string, any> | null {
   try {
     const raw = localStorage.getItem(REPORT_STORAGE_KEY);
     if (!raw) {
-      console.log('[stress] REPORT_LOAD: no data in localStorage');
       return null;
     }
     const parsed = JSON.parse(raw);
     if (parsed.savedAt && Date.now() - parsed.savedAt > REPORT_EXPIRY_MS) {
-      console.log('[stress] REPORT_EXPIRED: removing', { savedAt: parsed.savedAt });
       localStorage.removeItem(REPORT_STORAGE_KEY);
       return null;
     }
-    console.log('[stress] REPORT_LOADED', { savedAt: parsed.savedAt, summary: parsed.summary });
     return parsed;
   } catch (err) {
     console.error('[stress] REPORT_LOAD_FAILED, purging corrupt data', err);
@@ -1628,7 +1606,6 @@ export function getLastStressReport(): Record<string, any> | null {
 export function clearLastStressReport(): void {
   try {
     localStorage.removeItem(REPORT_STORAGE_KEY);
-    console.log('[stress] REPORT_CLEARED');
   } catch { /* noop */ }
 }
 

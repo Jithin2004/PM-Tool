@@ -46,7 +46,6 @@ export function useSprints(workspaceId?: string, projectId?: string) {
         try {
           setSprints(JSON.parse(e.newValue));
         } catch (err) {
-          console.warn('Failed to sync sprints across tabs', err);
         }
       }
     };

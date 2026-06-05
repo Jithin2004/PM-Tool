@@ -1,8 +1,14 @@
 import React from 'react';
 import { TeamRosterView } from '../../components/resources/TeamRosterView';
 import { SkillsMatrixView } from '../../components/resources/SkillsMatrixView';
+import { WorkforceInsights } from '../../components/hr/WorkforceInsights';
+import { useAuth } from '../../context/AuthContext';
+import { hasCapability } from '../../core/auth/permissions';
 
 export default function TeamsPage() {
+  const { profile } = useAuth();
+  const isHR = hasCapability(profile?.role, 'manage_employees');
+  
   return (
     <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
       {/* Header */}
@@ -36,6 +42,15 @@ export default function TeamsPage() {
           <SkillsMatrixView />
         </div>
       </div>
+
+      {/* HR Insights Section */}
+      {isHR && (
+        <div className="grid grid-cols-1 gap-6 mt-8">
+          <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
+            <WorkforceInsights />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

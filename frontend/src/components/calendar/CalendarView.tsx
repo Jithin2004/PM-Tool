@@ -76,7 +76,6 @@ export function CalendarView() {
       const data = await fetchConnectedAccounts(workspace.id);
       setConnectedAccounts(data || []);
     } catch (e) {
-      console.warn("Failed to fetch connected accounts:", e);
     }
   };
 

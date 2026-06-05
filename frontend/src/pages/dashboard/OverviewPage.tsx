@@ -10,6 +10,8 @@ import { hasCapability } from '../../core/auth/permissions';
 import { activityLogService } from '../../services/activityLogService';
 import { GettingStartedHub } from '../../components/workspace/GettingStartedHub';
 import { ContextualHelp } from '../../components/common/ContextualHelp';
+import { PersonalWorkSummary } from '../../components/reports/PersonalWorkSummary';
+import { TeamCapacityView } from '../../components/reports/TeamCapacityView';
 
 export default function OverviewPage() {
   const { workspace } = useWorkspace() as any;
@@ -478,7 +480,7 @@ function DeveloperWorkspace({
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs py-4 text-center font-mono-pm text-text-tertiary">No developers waiting on your tasks.</p>
+                  <p className="text-xs py-4 text-center font-mono-pm text-text-tertiary">No employees waiting on your tasks.</p>
                 )}
               </div>
             </div>
@@ -578,6 +580,10 @@ function DeveloperWorkspace({
             )}
           </div>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <PersonalWorkSummary />
       </div>
     </div>
   );
@@ -937,6 +943,10 @@ function PMOrchestrationSurface({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <TeamCapacityView />
       </div>
     </div>
   );

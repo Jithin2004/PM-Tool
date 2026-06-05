@@ -26,11 +26,25 @@ export default function App() {
     window.addEventListener('error', handleError);
     window.addEventListener('unhandledrejection', handleRejection);
 
+    const handleOffline = () => {
+      window.dispatchEvent(new CustomEvent('notify-toast', {
+        detail: { message: 'You are offline. Changes will be saved locally and synced when you reconnect.', type: 'warning' },
+      }));
+    };
+
+    const handleOnline = () => {
+      window.dispatchEvent(new CustomEvent('notify-toast', {
+        detail: { message: 'Connection restored. Syncing changes...', type: 'success' },
+      }));
+    };
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
     registerDebugTools().then(() => {
       import('./services/syntheticStressTest').then(m => {
         m.recoverAbandonedStressRuns().then(r => {
           if (r.recovered) {
-            console.log('[Stress Recovery] Abandoned synthetic runs cleaned up:', r.details);
           }
         });
       });
@@ -39,6 +53,8 @@ export default function App() {
     return () => {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleRejection);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
     };
   }, []);
 

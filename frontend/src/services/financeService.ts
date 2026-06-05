@@ -70,7 +70,7 @@ export interface Invoice {
   exchange_locked_at?: string;
   exchange_override_reason?: string;
   conversion_date?: string;
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'partial';
+  status: 'draft' | 'sent' | 'issued' | 'paid' | 'overdue' | 'cancelled' | 'partial' | 'partially_paid';
   issue_date: string;
   due_date: string;
   paid_date: string | null;
@@ -353,6 +353,12 @@ export async function checkPeriodClosed(workspaceId: string, dateStr: string): P
 }
 
 export async function cancelInvoice(invoice: Invoice, performedBy: string, reason: string) {
+  if (invoice.status === 'paid') {
+    throw new Error('Cannot cancel a paid invoice. Please issue a credit note instead.');
+  }
+  if (invoice.status !== 'issued') {
+    throw new Error('Only issued invoices can be cancelled.');
+  }
   if (await checkPeriodClosed(invoice.workspace_id, invoice.issue_date)) {
     throw new Error('Cannot cancel invoice in a closed financial period.');
   }
@@ -365,7 +371,9 @@ export async function cancelInvoice(invoice: Invoice, performedBy: string, reaso
     invoice_id: invoice.id,
     action: 'cancelled',
     performed_by: performedBy,
-    reason: reason
+    reason: reason,
+    old_value: { status: invoice.status },
+    new_value: { status: 'cancelled' }
   }]);
 }
 
@@ -449,3 +457,35 @@ export const upsertCompanyBillingProfile = async (profile: Partial<CompanyBillin
   if (error) throw error;
   return data as CompanyBillingProfile;
 };
+
+export async function deleteInvoice(invoiceId: string, workspaceId: string, performedBy: string, reason: string) {
+  // We can only delete draft invoices
+  const { data: invoice } = await supabase.from('invoices').select('status').eq('id', invoiceId).single();
+  if (!invoice) throw new Error("Invoice not found.");
+  if (invoice.status !== 'draft') {
+    throw new Error("Only draft invoices can be completely deleted. Please cancel issued invoices instead.");
+  }
+
+  const { error } = await supabase.from('invoices').delete().eq('id', invoiceId);
+  if (error) throw error;
+
+  await supabase.from('invoice_audit_logs').insert([{
+    workspace_id: workspaceId,
+    invoice_id: invoiceId,
+    action: 'deleted',
+    performed_by: performedBy,
+    reason: reason,
+    old_value: { status: invoice.status },
+    new_value: null
+  }]);
+
+  await supabase.from('activity_logs').insert([{
+    workspace_id: workspaceId,
+    actor_id: performedBy,
+    action: 'deleted_invoice',
+    entity_type: 'invoice',
+    entity_id: invoiceId,
+    metadata: { reason }
+  }]);
+}
+

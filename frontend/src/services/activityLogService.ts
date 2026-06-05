@@ -182,14 +182,12 @@ export const activityLogService = {
   async appendLog(entry: Omit<ActivityLogEntry, 'hash' | 'previous_hash' | 'id' | 'created_at'>): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
     if (!entry.workspace_id) {
-      console.warn('ActivityLogService: appendLog skipped — no workspace_id');
       return false;
     }
 
     // Forensic preflight
     const access = await verifyActivityLogAccess(entry.workspace_id);
     if (isForensicDebugEnabled()) {
-      console.log('[appendLog forensic]', { access, entry: { ...entry, metadata: '...' } });
     }
 
     if (!access.canInsert) {
@@ -197,7 +195,6 @@ export const activityLogService = {
       this._startQueue();
       recordForensicAppend('queued');
       if (isForensicDebugEnabled() && !this._shouldThrottleRlsWarn(entry.workspace_id)) {
-        console.warn('[appendLog] blocked — queued:', access.reason);
       }
       return false;
     }
@@ -223,7 +220,6 @@ export const activityLogService = {
           this._startQueue();
           recordForensicAppend('queued');
           if (isForensicDebugEnabled() && !this._shouldThrottleRlsWarn(entry.workspace_id)) {
-            console.warn('[appendLog] RLS blocked — queued for retry:', error.message);
           }
           return false;
         }
@@ -254,7 +250,6 @@ export const activityLogService = {
       const { data, error } = await query;
       if (!error && data) return data as ActivityLogEntry[];
     } catch (e) {
-      console.warn('ActivityLogService: getLogs failed:', e);
     }
     return [];
   },
@@ -929,6 +924,5 @@ export function recordForensicAppend(outcome: 'success' | 'failed' | 'queued'): 
   if (isForensicDebugEnabled() && now - _lastForensicLog > FORENSIC_THROTTLE_MS) {
     _lastForensicLog = now;
     const rates = { ..._agg };
-    console.log('[appendLog forensic summary]', rates);
   }
 }

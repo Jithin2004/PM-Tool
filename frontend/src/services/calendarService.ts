@@ -33,7 +33,6 @@ const getHeaders = () => {
       token = session?.access_token || '';
     }
   } catch (e) {
-    console.warn(e);
   }
   
   return {
@@ -52,7 +51,6 @@ export const calendarService = {
         token = session?.access_token || '';
       }
     } catch (e) {
-      console.warn(e);
     }
     return `${CALENDAR_API_URL}/auth/google${token ? `?token=${token}` : ''}`;
   },
@@ -71,7 +69,6 @@ export const calendarService = {
         sourceKey: row.source_id || row.id
       }));
     } catch (e: any) {
-      console.warn('[calendarService] getEvents failed:', e);
       throw new Error(e.message || 'Failed to fetch events');
     }
   },
@@ -100,7 +97,6 @@ export const calendarService = {
         sourceKey: created.id
       };
     } catch (e: any) {
-      console.warn('[calendarService] createEvent failed:', e);
       throw e;
     }
   },
@@ -126,7 +122,6 @@ export const calendarService = {
         sourceKey: id
       };
     } catch (e: any) {
-      console.warn('[calendarService] updateEvent failed:', e);
       throw e;
     }
   },
@@ -138,7 +133,6 @@ export const calendarService = {
       // We will pass an empty string and the backend will just delete by ID.
       await calendarEventService.deleteEvent(id, '');
     } catch (e: any) {
-      console.warn('[calendarService] deleteEvent failed:', e);
       throw e;
     }
   },
@@ -170,7 +164,6 @@ export const calendarService = {
         sourceKey: data.source_id || data.id
       };
     } catch (e: any) {
-      console.warn('[calendarService] upsertEvent failed:', e);
       throw new Error(e.message || 'Failed to upsert event');
     }
   }

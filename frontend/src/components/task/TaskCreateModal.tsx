@@ -11,6 +11,8 @@ interface TaskCreateModalProps {
   users: any[];
   defaultStatus: TaskStatus;
   defaultProjectId?: string;
+  defaultSourceMeetingId?: string;
+  defaultSourceRequirementId?: string;
   mode?: 'task' | 'epic' | 'story';
   onSubmit: (task: {
     project_id: string;
@@ -21,6 +23,8 @@ interface TaskCreateModalProps {
     status: TaskStatus;
     priority: 'medium';
     recurrence_type?: string;
+    source_meeting_id?: string;
+    source_requirement_id?: string;
   }) => Promise<void>;
   notify: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
@@ -32,6 +36,8 @@ export function TaskCreateModal({
   users,
   defaultStatus,
   defaultProjectId,
+  defaultSourceMeetingId,
+  defaultSourceRequirementId,
   mode = 'task',
   onSubmit,
   notify
@@ -64,6 +70,8 @@ export function TaskCreateModal({
         status: defaultStatus,
         priority: 'medium',
         recurrence_type: recurrenceType,
+        source_meeting_id: defaultSourceMeetingId,
+        source_requirement_id: defaultSourceRequirementId
       });
       
       notify(`Task "${name}" queued successfully.`, "success");
@@ -156,7 +164,7 @@ export function TaskCreateModal({
             />
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 space-y-1.5">
               <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Weight (Hours)</label>
               <input

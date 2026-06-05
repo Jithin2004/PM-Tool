@@ -23,7 +23,7 @@ import { enableFullDisclosure } from '../../core/dashboard/progressiveDisclosure
 import { sha256 } from '../../utils/cryptoUtils';
 import { sendNotification } from '../../services/notificationService';
 import { activityLogService } from '../../services/activityLogService';
-import { CheckCircle2, XCircle, Info, AlertCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Info, AlertCircle, ChevronDown } from 'lucide-react';
 import { Login } from '../../components/auth/Login';
 import CommandPalette from '../../components/command/CommandPalette';
 import CommandAnalytics from '../../components/command/CommandAnalytics';
@@ -50,6 +50,7 @@ import {
   renderRouteIcon,
 } from '../../app/routeRegistry';
 import { GuidedTour, TourStep } from '../../components/onboarding/GuidedTour';
+import { WorkSessionManager } from '../../components/execution/WorkSessionManager';
 
 interface ConfirmState {
   isOpen: boolean;
@@ -188,7 +189,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 }
 
 function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
-  const { user, profile, logout, updateProfile } = useAuth();
+  const { user, profile, trueProfile, isSimulating, simulatedRole, setSimulatedRole, logout, updateProfile } = useAuth();
   const { workspace } = useWorkspace();
   const {
     raw,
@@ -359,7 +360,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         navigateTo('/overview');
         window.dispatchEvent(
           new CustomEvent('notify-toast', {
-            detail: { message: 'Developer role is restricted to the Execution Workspace, Board, and Scheduling.', type: 'warning' },
+            detail: { message: 'Employee role is restricted to the Execution Workspace, Board, and Scheduling.', type: 'warning' },
           }),
         );
       }
@@ -622,9 +623,22 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   const notify = (message: any, type: Notification['type'] = 'info') => {
     const id = Math.random().toString(36).substring(7);
-    const msgString = typeof message === 'object' && message !== null
+    let msgString = typeof message === 'object' && message !== null
       ? (message.message || JSON.stringify(message))
       : String(message);
+
+    // Sprint 5: Error Experience Refinement
+    if (type === 'error') {
+      const lowerMsg = msgString.toLowerCase();
+      if (lowerMsg.includes('rls') || lowerMsg.includes('policy') || lowerMsg.includes('permission denied') || lowerMsg.includes('new row violates')) {
+        msgString = "You don't have permission to perform this action.";
+      } else if (lowerMsg.includes('jwt') || lowerMsg.includes('token expired')) {
+        msgString = "Session expired. Please log in again.";
+      } else if (lowerMsg.includes('postgres') || lowerMsg.includes('duplicate key') || lowerMsg.includes('relation "')) {
+        msgString = "Internal system error occurred.";
+      }
+    }
+
     setNotifications(prev => [...prev, { id, message: msgString, type }]);
   };
 
@@ -701,7 +715,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           previous_hash: previousHash,
           hash: newHash
         });
-        console.log("Successfully saved change log in dedicated table.");
       } catch (e) {
         console.error("Failed to save change log in dedicated table:", e);
       }
@@ -1223,6 +1236,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         {/* Main Content Area */}
         <div id="tour-main-content" className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen" style={{ background: 'var(--pm-bg)' }}>
 
+          {workspace?.is_demo && (
+            <div className="bg-amber-500/20 border-b border-amber-500/30 text-amber-500 text-center py-1.5 text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Demo Data Environment — All changes are temporary
+            </div>
+          )}
           {/* Top Bar — utility layer, breadcrumb, operational status */}
           <header id="tour-topbar" className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-2xl transition-colors duration-200 shadow-sm"
             style={{ background: 'color-mix(in srgb, var(--pm-surface) 95%, transparent)', borderColor: 'var(--pm-border-subtle)' }}>
@@ -1277,6 +1296,30 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 <span className="text-[11px] select-none font-mono flex-1 text-left">Search...</span>
                 <span className="ml-2 bg-surface border border-border-subtle px-1.5 py-0.5 rounded text-[9px] font-mono tracking-tighter text-text-quaternary shadow-inner">⌘K</span>
               </div>
+
+              {/* View As Role Simulator */}
+              {trueProfile?.role === 'super_admin' && (
+                <div className="relative group flex items-center">
+                  <select
+                    value={simulatedRole || ''}
+                    onChange={(e) => setSimulatedRole(e.target.value ? (e.target.value as UserRole) : null)}
+                    className={`h-8 pl-3 pr-8 rounded-md text-[11px] font-medium border appearance-none cursor-pointer transition-all ${
+                      isSimulating 
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]' 
+                        : 'bg-surface-highest border-border text-text-secondary hover:bg-surface-3'
+                    }`}
+                    title="View As Role Simulator"
+                  >
+                    <option value="">View As: Super Admin</option>
+                    <option value="pm">Simulate: PM</option>
+                    <option value="developer">Simulate: Developer</option>
+                    <option value="external_client">Simulate: Client</option>
+                  </select>
+                  <div className={`absolute right-2 pointer-events-none ${isSimulating ? 'text-amber-500' : 'text-text-tertiary'}`}>
+                    <ChevronDown className="w-3 h-3" />
+                  </div>
+                </div>
+              )}
 
               {/* Theme */}
               <button
@@ -1363,6 +1406,10 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           onConfirm={confirmState.onConfirm}
           onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
         />
+
+        {workspace && profile && (
+          <WorkSessionManager workspace={workspace} currentUser={profile} notify={notify} />
+        )}
 
         <CommandPalette
           isOpen={commandPaletteOpen}

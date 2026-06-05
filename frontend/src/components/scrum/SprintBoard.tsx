@@ -60,7 +60,7 @@ export function SprintBoard({
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
 
   const handleStatusChange = async (taskId: string, status: Task['status']) => {
-    if (status === 'done') {
+    if (status === 'completed') {
       const task = tasks.find(t => t.id === taskId);
       if (task) {
         setPendingCompletionTask(task);
@@ -86,7 +86,7 @@ export function SprintBoard({
   const velocityData = useMemo(() => {
     if (!activeSprint) return { committed: 0, completed: 0, remaining: 0 };
     const committed = sprintTasks.reduce((sum, t) => sum + (t.story_points || 0), 0);
-    const completed = sprintTasks.filter(t => t.status === 'done').reduce((sum, t) => sum + (t.story_points || 0), 0);
+    const completed = sprintTasks.filter(t => t.status === 'completed').reduce((sum, t) => sum + (t.story_points || 0), 0);
     return { committed, completed, remaining: committed - completed };
   }, [sprintTasks, activeSprint]);
 
@@ -142,7 +142,7 @@ export function SprintBoard({
     // Team overload detection
     const assigneeHours = new Map<string, number>();
     sprintTasks.forEach(t => {
-      if (t.assignee_id && t.status !== 'done') {
+      if (t.assignee_id && t.status !== 'completed') {
         assigneeHours.set(t.assignee_id, (assigneeHours.get(t.assignee_id) || 0) + (t.estimated_hours || 0));
       }
     });
@@ -162,13 +162,13 @@ export function SprintBoard({
     // Dependency blockage detection
     const taskDepMap = new Map<string, string[]>();
     const sprintTaskIds = new Set(sprintTasks.map(t => t.id));
-    const incompleteIds = new Set(sprintTasks.filter(t => t.status !== 'done').map(t => t.id));
+    const incompleteIds = new Set(sprintTasks.filter(t => t.status !== 'completed').map(t => t.id));
     const blockedTasks: string[] = [];
     tasks.forEach(t => {
       if (t.sprint_id === activeSprint.id) {
         const deps = tasks.filter(d => d.id !== t.id && d.project_id === t.project_id);
         deps.forEach(d => {
-          if (d.status !== 'done' && sprintTaskIds.has(d.id)) {
+          if (d.status !== 'completed' && sprintTaskIds.has(d.id)) {
             blockedTasks.push(t.id);
           }
         });
@@ -453,7 +453,7 @@ export function SprintBoard({
               ) : (
                 tasks.filter(t => t.project_id === projectId && !t.sprint_id).map(task => (
                   <div key={task.id} className="flex items-center gap-3 p-3 bg-bg border border-border-subtle rounded-sm hover:border-border transition-colors">
-                    <div className={`w-2 h-2 rounded-full ${task.status === 'done' ? 'bg-emerald-400' : task.status === 'in_progress' ? 'bg-yellow-400' : 'bg-[var(--pm-surface)]/20'}`} />
+                    <div className={`w-2 h-2 rounded-full ${task.status === 'completed' ? 'bg-emerald-400' : task.status === 'in_progress' ? 'bg-yellow-400' : 'bg-[var(--pm-surface)]/20'}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-mono text-text-secondary truncate">{task.name}</p>
                       <p className="text-[8px] font-mono text-text-quaternary">{task.story_points ? `${task.story_points} SP` : ''} · {task.estimated_hours}h</p>
@@ -501,7 +501,7 @@ export function SprintBoard({
               ) : (
                 sprintTasks.map(task => (
                   <div key={task.id} className="flex items-center gap-3 p-3 bg-bg border border-border-subtle rounded-sm">
-                    <div className={`w-2 h-2 rounded-full ${task.status === 'done' ? 'bg-emerald-400' : task.status === 'in_progress' ? 'bg-yellow-400' : 'bg-[var(--pm-surface)]/20'}`} />
+                    <div className={`w-2 h-2 rounded-full ${task.status === 'completed' ? 'bg-emerald-400' : task.status === 'in_progress' ? 'bg-yellow-400' : 'bg-[var(--pm-surface)]/20'}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-mono text-text-secondary truncate">{task.name}</p>
                       <p className="text-[8px] font-mono text-text-quaternary">{task.status.replace('_', ' ')} · {task.story_points || '-'} SP</p>
@@ -605,7 +605,7 @@ export function SprintBoard({
 
         {/* Modals */}
         <AnimatePresence>
-          <TaskCreateModal isOpen={isAddingTask} onClose={() => setIsAddingTask(false)} projects={[project]} users={users} defaultStatus="backlog" defaultProjectId={project.id} onSubmit={onCreateTask} notify={notify} />
+          <TaskCreateModal isOpen={isAddingTask} onClose={() => setIsAddingTask(false)} projects={[project]} users={users} defaultStatus="assigned" defaultProjectId={project.id} onSubmit={onCreateTask} notify={notify} />
 
           {editingTask && (
             <TaskEditModal
@@ -677,11 +677,11 @@ export function SprintBoard({
                 deviation_reason: feedback.deviation_reason,
                 outcome: Math.abs(feedback.actual_effort - (pendingCompletionTask.estimated_hours || 0)) / Math.max(1, pendingCompletionTask.estimated_hours || 1) <= 0.2 ? 'accurate' : 'deviated'
               });
-              await onUpdateTaskStatus(pendingCompletionTask.id, 'done');
+              await onUpdateTaskStatus(pendingCompletionTask.id, 'completed');
               setPendingCompletionTask(null);
             }}
             onSkip={async () => {
-              await onUpdateTaskStatus(pendingCompletionTask.id, 'done');
+              await onUpdateTaskStatus(pendingCompletionTask.id, 'completed');
               setPendingCompletionTask(null);
             }}
             onClose={() => setPendingCompletionTask(null)}

@@ -31,8 +31,14 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   // Core routes
   { id: 'overview', path: '/overview', label: 'Overview', iconName: 'Radar', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
   { id: 'projects', path: '/workspace', label: 'Projects', iconName: 'TreeStructure', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
-  { id: 'knowledge', path: '/workspace/knowledge', label: 'Knowledge Hub', iconName: 'ArchiveBox', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
   { id: 'board', path: '/execution', label: 'Tasks', iconName: 'Kanban', capability: 'view_tasks', group: 'core', disclosureTier: 'essential' },
+  { id: 'meetings', path: '/workspace/meetings', label: 'Meetings', iconName: 'Users', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'requirements', path: '/workspace/requirements', label: 'Requirements', iconName: 'FileText', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'documents', path: '/workspace/documents', label: 'Documents', iconName: 'FolderOpen', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'approvals', path: '/workspace/approvals', label: 'Approvals', iconName: 'CheckCircle', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  
+  // Extra core (legacy/other)
+  { id: 'knowledge', path: '/workspace/knowledge', label: 'Knowledge Hub', iconName: 'ArchiveBox', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
   { id: 'scheduling', path: '/execution/timeline', label: 'Scheduling', iconName: 'Timeline', capability: 'view_scheduling', group: 'core', disclosureTier: 'operational' },
   
   // Reports routes

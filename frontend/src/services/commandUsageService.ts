@@ -148,7 +148,6 @@ function enqueueTelemetry(event: CommandUsageEvent): void {
   }
   if (!flushTimer) startFlushTimer();
   if (import.meta.env.DEV) {
-    console.log(`[telemetry] enqueued ${event.command_type}:${event.command_id} — queue ${queue.length}`);
   }
 }
 
@@ -195,7 +194,6 @@ async function flushTelemetry(): Promise<void> {
         if (entry.retryCount < MAX_RETRIES) failed.push(entry);
         stats.totalRetried++;
         if (import.meta.env.DEV) {
-          console.warn(`[telemetry] write failed (retry ${entry.retryCount}/${MAX_RETRIES}): ${entry.event.command_type}:${entry.event.command_id}`, error);
         }
       } else {
         flushed++;
@@ -239,7 +237,6 @@ async function flushTelemetry(): Promise<void> {
   }
 
   if (import.meta.env.DEV) {
-    console.log(`[telemetry] flushed ${flushed}, retried ${batch.length - flushed - failed.length}, failed ${failed.length} in ${stats.flushDurationMs}ms — queue ${queue.length}`);
   }
 
   isFlushing = false;
@@ -249,7 +246,6 @@ function drainQueue(): void {
   stopFlushTimer();
   if (queue.length > 0) {
     if (import.meta.env.DEV) {
-      console.log(`[telemetry] draining ${queue.length} events on session end`);
     }
     queue = [];
     stats.queueSize = 0;

@@ -69,10 +69,8 @@ export function DecisionCenterPanel() {
             });
           }
         } catch (logErr) {
-          console.warn('Failed to write preview history log:', logErr);
         }
       } catch (err) {
-        console.warn('Failed to create recommendation log:', err);
       }
     }
   };
@@ -97,7 +95,6 @@ export function DecisionCenterPanel() {
               body: `You have been assigned "${insight.simulation.taskName}" by the AI Decision Optimizer to balance workloads.`
             });
           } catch (notifErr) {
-            console.warn('Notification dispatch failed', notifErr);
           }
 
           notify(`Mitigation successful. Task offloaded to ${insight.simulation.toUserName}.`, 'success');
@@ -119,7 +116,6 @@ export function DecisionCenterPanel() {
       await aiRecommendationService.updateRecommendationStatus(workspace.id, activeRecommendationId, 'rejected');
       notify('AI suggestion dismissed.', 'info');
     } catch (err) {
-      console.warn('Failed to reject recommendation:', err);
     } finally {
       setSimulatingInsightId(null);
       setActiveRecommendationId(null);

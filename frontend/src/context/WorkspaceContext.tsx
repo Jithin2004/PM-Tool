@@ -42,7 +42,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const refreshWorkspace = useCallback(async () => {
     if (import.meta.env.DEV) {
-      console.log("WorkspaceContext: refreshWorkspace() called");
     }
     if (!isSupabaseConfigured || !profile?.workspace_id) {
       setWorkspace(null);
@@ -70,21 +69,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [profile?.workspace_id]);
 
   useEffect(() => {
-    // console.log("[WorkspaceContext useEffect TRIGGERED]: authLoading:", authLoading, "profile:", profile ? profile.email : "null");
     if (authLoading) {
       setLoading(true);
       return;
     }
 
     if (!isSupabaseConfigured) {
-      console.warn("[WorkspaceContext]: Supabase not configured, skipping");
       setWorkspace(null);
       setLoading(false);
       return;
     }
 
     if (!profile) {
-      console.log("[WorkspaceContext]: profile is null, resetting user/workspace and stopping load");
       setUser(null);
       setWorkspace(null);
       setLoading(false);
@@ -92,11 +88,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Align active user with profile identity
-    // console.log("[WorkspaceContext]: setting user to profile:", profile.email);
     setUser(profile as any);
 
     if (!profile.workspace_id) {
-      console.log("[WorkspaceContext]: profile has no workspace_id, stopping load");
       setWorkspace(null);
       setLoading(false);
       return;
@@ -131,7 +125,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || hasCapability(profile.role, 'manage_settings'))) {
             holidaySourceService.checkAndSyncNextYear(parsed.id, parsed.settings.country, parsed.settings.region || '', profile?.id).catch(() => {});
           } else if (parsed.settings?.country) {
-            console.log('[Calendar Sync] skipped: non-owner');
           }
 
           // Wave 8: Trigger Audit Integrity Verification

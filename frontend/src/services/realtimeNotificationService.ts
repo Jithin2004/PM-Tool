@@ -13,6 +13,8 @@ export async function loadWorkspaceNotifications(
   return fetchNotifications(workspaceId, userId);
 }
 
+import { handleIncomingNotification } from './notificationPreferenceService';
+
 export function subscribeToWorkspaceNotifications(
   workspaceId: string,
   userId: string | undefined,
@@ -29,6 +31,9 @@ export function subscribeToWorkspaceNotifications(
         const row = payload.new as NotificationRow;
         if (!row.user_id || row.user_id === userId) {
           onInsert(row);
+          if (userId) {
+            handleIncomingNotification(userId, row.title, row.body);
+          }
         }
       }
     }

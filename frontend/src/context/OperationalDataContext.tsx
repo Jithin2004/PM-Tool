@@ -52,6 +52,11 @@ interface OperationalDataContextValue {
     addTask: ReturnType<typeof useTasks>['addTask'];
     updateTaskStatus: ReturnType<typeof useTasks>['updateTaskStatus'];
     deleteTask: ReturnType<typeof useTasks>['deleteTask'];
+    addCollaborator: ReturnType<typeof useTasks>['addCollaborator'];
+    removeCollaborator: ReturnType<typeof useTasks>['removeCollaborator'];
+    transferTaskOwnership: ReturnType<typeof useTasks>['transferTaskOwnership'];
+    createTaskSuggestion: ReturnType<typeof useTasks>['createTaskSuggestion'];
+    reviewTaskSuggestion: ReturnType<typeof useTasks>['reviewTaskSuggestion'];
   };
 }
 
@@ -63,6 +68,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const {
     tasks,
     dependencies,
+    collaborators,
     addDependency,
     removeDependency,
     updateTaskDates,
@@ -70,6 +76,11 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     addTask,
     updateTaskStatus,
     deleteTask,
+    addCollaborator,
+    removeCollaborator,
+    transferTaskOwnership,
+    createTaskSuggestion,
+    reviewTaskSuggestion,
   } = useTasks(workspace?.id);
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -91,6 +102,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       projects,
       tasks,
       dependencies,
+      collaborators,
       teams,
       profiles,
       attendanceRows,
@@ -100,7 +112,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       skills,
       userSkills
     }),
-    [projects, tasks, dependencies, teams, profiles, attendanceRows, workspaceSettingsBlob, allocationPeriods, skills, userSkills]
+    [projects, tasks, dependencies, collaborators, teams, profiles, attendanceRows, workspaceSettingsBlob, allocationPeriods, skills, userSkills]
   );
 
   const derived = useMemo(
@@ -162,7 +174,6 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       const blockers = snapshot.workspaceSettingsBlob.execution_blockers as any[];
       DataGovernanceEngine.partitionBlockerHistory(workspace.id, blockers).then(result => {
         if (result.archivedCount > 0) {
-          console.log(`[DataGovernance] Archived ${result.archivedCount} blockers. Decomposing monolith.`);
           updateWorkspaceSettings({ execution_blockers: result.active });
         }
       }).catch(console.error);
@@ -273,7 +284,6 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           const next = JSON.parse(e.newValue);
           setWorkspaceSettingsBlob(next);
         } catch (err) {
-          console.warn('Failed to sync settings across tabs', err);
         }
       }
     };
@@ -472,10 +482,24 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 
   const handleUpdateRoleLocal = useCallback(
     async (id: string, role: UserRole) => {
+      const oldProfile = profiles.find(p => p.id === id);
+      const oldRole = oldProfile?.role;
+      
       await updateRole(id, role);
       setProfiles(prev => prev.map(p => (p.id === id ? { ...p, role } : p)));
+      
+      if (workspace?.id && user?.id && oldRole && oldRole !== role) {
+        supabase.from('activity_logs').insert([{
+          workspace_id: workspace.id,
+          actor_id: user.id,
+          action: 'role_changed',
+          entity_type: 'user',
+          entity_id: id,
+          metadata: { oldRole, newRole: role }
+        }]).then();
+      }
     },
-    [updateRole],
+    [updateRole, profiles, workspace?.id, user?.id],
   );
 
   const value = useMemo<OperationalDataContextValue>(
@@ -498,7 +522,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       markNotificationRead,
       fetchNotifications,
       updateWorkspaceSettings,
-      taskActions: { addDependency, removeDependency, updateTaskDates, updateTask, addTask, updateTaskStatus, deleteTask },
+      taskActions: { addDependency, removeDependency, updateTaskDates, updateTask, addTask, updateTaskStatus, deleteTask, addCollaborator, removeCollaborator, transferTaskOwnership, createTaskSuggestion, reviewTaskSuggestion },
     }),
     [
       raw,
@@ -522,6 +546,11 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       removeDependency,
       updateTaskDates,
       updateTask,
+      addCollaborator,
+      removeCollaborator,
+      transferTaskOwnership,
+      createTaskSuggestion,
+      reviewTaskSuggestion,
     ],
   );
 

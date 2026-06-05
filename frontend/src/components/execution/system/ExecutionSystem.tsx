@@ -34,7 +34,12 @@ import { useCalendarEvents } from '../../../hooks/useCalendarEvents';
 import { TaskCard } from '../../task/TaskCard';
 import { TaskCreateModal } from '../../task/TaskCreateModal';
 import { TaskEditModal } from '../../task/TaskEditModal';
+import { TaskConfidenceModal } from '../../task/TaskConfidenceModal';
+import { TaskBlockerModal } from '../../task/TaskBlockerModal';
+import { TaskReviewModal } from '../../task/TaskReviewModal';
 import { CompletionFeedbackModal } from '../../task/CompletionFeedbackModal';
+import { TaskEvidenceModal } from '../TaskEvidenceModal';
+import { TaskDelayReasonModal } from '../TaskDelayReasonModal';
 import { KANBAN_COLUMNS, SCRUM_COLUMNS } from '../../../constants/product';
 import { Task, Project, TaskStatus, CalendarEvent } from '../../../types';
 import { ExecutionHeader, ExecutionViewType } from './ExecutionHeader';
@@ -128,6 +133,12 @@ export function ExecutionSystem({
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
+
+  const [confidenceTask, setConfidenceTask] = useState<Task | null>(null);
+  const [blockerTask, setBlockerTask] = useState<Task | null>(null);
+  const [reviewTask, setReviewTask] = useState<{task: Task, action: 'completed' | 'changes_requested'} | null>(null);
+  const [evidenceTask, setEvidenceTask] = useState<Task | null>(null);
+  const [delayReasonTask, setDelayReasonTask] = useState<Task | null>(null);
 
   const role = currentUserProfile?.role || 'viewer';
   const hasWriteAccess = hasCapability(role, 'manage_tasks');
@@ -224,24 +235,7 @@ export function ExecutionSystem({
     for (const t of filteredTasks) {
       let key: string = t.status;
       if (groupBy === 'status') {
-        const sub = taskSubStates[t.id];
-        if (t.status === 'done') {
-          key = 'done';
-        } else if (!sub) {
-          key = t.status === 'in_progress' ? 'ACTIVE' : t.status === 'review' ? 'COORDINATION' : 'ACTIVE';
-        } else {
-          if (['EXECUTING', 'DEPLOYING', 'TESTING', 'VALIDATING'].includes(sub)) {
-            key = 'ACTIVE';
-          } else if (['WAITING_FOR_CLIENT', 'WAITING_FOR_DATA', 'WAITING_FOR_INFRASTRUCTURE', 'WAITING_FOR_APPROVAL'].includes(sub)) {
-            key = 'WAITING';
-          } else if (['BLOCKED_DEPENDENCY', 'BLOCKED_INFRASTRUCTURE', 'BLOCKED_ACCESS'].includes(sub)) {
-            key = 'BLOCKED';
-          } else if (['CLIENT_VERIFICATION', 'RELEASE_WINDOW_PENDING', 'INTERNAL_REVIEW'].includes(sub)) {
-            key = 'COORDINATION';
-          } else {
-            key = 'ACTIVE';
-          }
-        }
+        key = t.status;
       } else if (groupBy === 'assignee') {
         key = t.assignee_id || 'unassigned';
       } else if (groupBy === 'priority') {
@@ -272,10 +266,38 @@ export function ExecutionSystem({
        notify("Access Denied: You do not have permission to modify this task.", "error");
        return;
     }
-    if (targetStatus === 'done') {
+    if (targetStatus === 'in_progress') {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setConfidenceTask(task);
+        return;
+      }
+    } else if (targetStatus === 'blocked') {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setBlockerTask(task);
+        return;
+      }
+    } else if (targetStatus === 'completed' || targetStatus === 'changes_requested') {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        if (targetStatus === 'completed' && task.actual_effort_minutes && task.estimated_effort_minutes && task.actual_effort_minutes > task.estimated_effort_minutes * 1.2 && !task.delay_reason) {
+           setDelayReasonTask(task);
+           return;
+        }
+        setReviewTask({ task, action: targetStatus as 'completed' | 'changes_requested' });
+        return;
+      }
+    } else if (targetStatus === 'done') {
       const task = tasks.find(t => t.id === taskId);
       if (task) {
         setPendingCompletionTask(task);
+        return;
+      }
+    } else if (targetStatus === 'ready_for_review') {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setEvidenceTask(task);
         return;
       }
     }
@@ -483,6 +505,74 @@ export function ExecutionSystem({
       </div>
 
       <AnimatePresence>
+        <TaskConfidenceModal
+          isOpen={!!confidenceTask}
+          task={confidenceTask!}
+          onClose={() => setConfidenceTask(null)}
+          onSubmit={async (confidence, discoveryNotes, estimatedEffort) => {
+            if (!confidenceTask) return;
+            try {
+              await updateTask(confidenceTask.id, { 
+                confidence, 
+                discovery_notes: discoveryNotes, 
+                estimated_effort_minutes: estimatedEffort,
+                first_started_at: new Date().toISOString()
+              });
+              await updateTaskStatus(confidenceTask.id, 'in_progress');
+              notify(`Task "${confidenceTask.name}" moved to In Progress.`, "success");
+              onRecalibrateAnalytics();
+            } catch (err) {
+              notify("Failed to update task confidence.", "error");
+            }
+            setConfidenceTask(null);
+          }}
+        />
+
+        <TaskBlockerModal
+          isOpen={!!blockerTask}
+          task={blockerTask!}
+          users={users}
+          onClose={() => setBlockerTask(null)}
+          onSubmit={async (blockedReason, needsHelpFrom) => {
+            if (!blockerTask) return;
+            try {
+              await updateTask(blockerTask.id, { 
+                blocked_reason: blockedReason, 
+                needs_help_from: needsHelpFrom,
+                blocked_since: new Date().toISOString()
+              });
+              await updateTaskStatus(blockerTask.id, 'blocked');
+              notify(`Task marked as blocked.`, "warning");
+              onRecalibrateAnalytics();
+            } catch (err) {
+              notify("Failed to mark task as blocked.", "error");
+            }
+            setBlockerTask(null);
+          }}
+        />
+
+        <TaskReviewModal
+          isOpen={!!reviewTask}
+          task={reviewTask?.task!}
+          actionType={reviewTask?.action!}
+          onClose={() => setReviewTask(null)}
+          onSubmit={async (notes) => {
+            if (!reviewTask) return;
+            try {
+              await updateTask(reviewTask.task.id, { 
+                completion_notes: notes,
+                completed_at: reviewTask.action === 'completed' ? new Date().toISOString() : undefined
+              });
+              await updateTaskStatus(reviewTask.task.id, reviewTask.action);
+              notify(`Task status updated to ${reviewTask.action.replace('_', ' ')}.`, "success");
+              onRecalibrateAnalytics();
+            } catch (err) {
+              notify("Failed to update task review status.", "error");
+            }
+            setReviewTask(null);
+          }}
+        />
+
         {editingTask && (
           <TaskEditModal
             isOpen={!!editingTask}
@@ -516,18 +606,57 @@ export function ExecutionSystem({
           <CompletionFeedbackModal
             task={pendingCompletionTask}
             onSubmit={async (feedback) => {
-              await updateTaskStatus(pendingCompletionTask.id, 'done');
+              await updateTaskStatus(pendingCompletionTask.id, 'completed');
               setPendingCompletionTask(null);
               onRecalibrateAnalytics();
               notify("Task completed", "success");
             }}
             onSkip={async () => {
-              await updateTaskStatus(pendingCompletionTask.id, 'done');
+              await updateTaskStatus(pendingCompletionTask.id, 'completed');
               setPendingCompletionTask(null);
               onRecalibrateAnalytics();
               notify("Task completed", "success");
             }}
             onClose={() => setPendingCompletionTask(null)}
+          />
+        )}
+        {evidenceTask && (
+          <TaskEvidenceModal
+            task={evidenceTask}
+            isOpen={true}
+            onClose={() => setEvidenceTask(null)}
+            onSubmit={async (evidence) => {
+              try {
+                if (updateTask) {
+                  await updateTask(evidenceTask.id, { 
+                    status: 'ready_for_review',
+                    completion_evidence_summary: evidence.summary,
+                    completion_evidence_link: evidence.link,
+                    completion_evidence_pr_url: evidence.pr_url
+                  });
+                  notify('Task moved to review with evidence.', 'success');
+                }
+              } catch (error) {
+                notify('Failed to update task evidence.', 'error');
+              }
+            }}
+          />
+        )}
+        {delayReasonTask && (
+          <TaskDelayReasonModal
+            task={delayReasonTask}
+            isOpen={true}
+            onClose={() => setDelayReasonTask(null)}
+            onSubmit={async (reason) => {
+              try {
+                if (updateTask) {
+                  await updateTask(delayReasonTask.id, { delay_reason: reason as any });
+                  setReviewTask({ task: delayReasonTask, action: 'completed' });
+                }
+              } catch (error) {
+                notify('Failed to save delay reason.', 'error');
+              }
+            }}
           />
         )}
       </AnimatePresence>
@@ -554,11 +683,13 @@ function BoardView({
   let columns: any[] = [];
   if (groupBy === 'status') {
     columns = [
-      { id: 'BLOCKED', title: 'Blocked Flow', color: 'bg-rose-500' },
-      { id: 'WAITING', title: 'Waiting Flow', color: 'bg-amber-500' },
-      { id: 'ACTIVE', title: 'Active Flow', color: 'bg-indigo-500' },
-      { id: 'COORDINATION', title: 'Coordination Flow', color: 'bg-teal-500' },
-      { id: 'done', title: 'Completed', color: 'bg-emerald-500' }
+      { id: 'assigned', title: 'Assigned', color: 'bg-surface-3' },
+      { id: 'understanding', title: 'Understanding', color: 'bg-teal-500' },
+      { id: 'in_progress', title: 'In Progress', color: 'bg-indigo-500' },
+      { id: 'blocked', title: 'Blocked', color: 'bg-rose-500' },
+      { id: 'ready_for_review', title: 'Ready for Review', color: 'bg-amber-500' },
+      { id: 'changes_requested', title: 'Changes Requested', color: 'bg-orange-500' },
+      { id: 'completed', title: 'Completed', color: 'bg-emerald-500' }
     ];
   } else if (groupBy === 'priority') {
     columns = [

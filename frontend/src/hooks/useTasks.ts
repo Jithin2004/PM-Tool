@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { realtimeOrchestrator } from '../services/realtimeOrchestrator';
-import { Task, TaskStatus, TaskDependency } from '../types';
+import { Task, TaskStatus, TaskDependency, TaskCollaborator } from '../types';
 import { normalizeTaskFromRow, normalizeTasksFromRows, taskToDbRow } from '../core/types/normalize';
 import { sendNotification } from '../services/notificationService';
 import { predictionValidationService } from '../services/predictionValidationService';
@@ -48,6 +48,7 @@ export const wouldCreateCycle = (
 export function useTasks(workspaceId?: string) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [dependencies, setDependencies] = useState<TaskDependency[]>([]);
+  const [collaborators, setCollaborators] = useState<TaskCollaborator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -63,10 +64,13 @@ export function useTasks(workspaceId?: string) {
     return task?.assignee_id === user?.id;
   }, [tasks, user]);
 
+  const isCollaborator = useCallback((taskId: string) => {
+    return collaborators.some(c => c.task_id === taskId && c.user_id === user?.id);
+  }, [collaborators, user]);
+
   /** Fields developers are NOT allowed to modify */
   const DEVELOPER_PROTECTED_FIELDS = new Set([
-    'assignee_id', 'project_id', 'priority', 'confidence', 'risk',
-    'delay_drift_days', 'predicted_completion', 'workspace_id',
+    'assignee_id', 'project_id', 'priority', 'start_date', 'deadline', 'due_date', 'estimated_hours', 'original_estimate', 'workspace_id'
   ]);
 
   const insertTaskHistoryLog = useCallback(async (
@@ -166,7 +170,6 @@ export function useTasks(workspaceId?: string) {
 
     // Viewers cannot perform ANY task mutations — purge entire queue
     if (isCurrentlyViewer || !currentRole || !currentUserId) {
-      console.warn('[processQueue] User lacks mutation permissions — purging offline queue.');
       localStorage.removeItem(queueKey);
       return;
     }
@@ -202,7 +205,6 @@ export function useTasks(workspaceId?: string) {
 
         // Developers cannot: create tasks, delete tasks, manage dependencies
         if (isCurrentlyDeveloper && ['addTask', 'deleteTask', 'addDependency', 'removeDependency'].includes(op)) {
-          console.warn(`[processQueue] Developer blocked from replaying '${op}' — skipping.`);
           const cq = JSON.parse(localStorage.getItem(queueKey) || '[]');
           localStorage.setItem(queueKey, JSON.stringify(cq.filter((q: any) => q.timestamp !== item.timestamp)));
           continue;
@@ -213,7 +215,6 @@ export function useTasks(workspaceId?: string) {
           const targetTaskId = getRealId(item.payload.taskId);
           const targetTask = tasks.find(t => t.id === targetTaskId);
           if (targetTask && targetTask.assignee_id !== currentUserId) {
-            console.warn(`[processQueue] Developer blocked from replaying '${op}' on unassigned task — skipping.`);
             const cq = JSON.parse(localStorage.getItem(queueKey) || '[]');
             localStorage.setItem(queueKey, JSON.stringify(cq.filter((q: any) => q.timestamp !== item.timestamp)));
             continue;
@@ -332,8 +333,6 @@ export function useTasks(workspaceId?: string) {
           ObservabilityEngine.reportReplayAttempt(true, false, false);
         });
       } catch (err: any) {
-        console.warn('Sync failed for item:', item, err);
-        
         const isRejected = err?.code === '42501' || err?.message?.includes('RLS'); // Auth/RLS failure
         import('../core/observability/ObservabilityEngine').then(({ ObservabilityEngine }) => {
           ObservabilityEngine.reportReplayAttempt(false, isRejected, false);
@@ -384,6 +383,12 @@ export function useTasks(workspaceId?: string) {
       } else {
         setDependencies([]);
       }
+      const localCollabs = localStorage.getItem(`task_collaborators_${workspaceId}`);
+      if (localCollabs) {
+        setCollaborators(JSON.parse(localCollabs));
+      } else {
+        setCollaborators([]);
+      }
       setLoading(false);
       return;
     }
@@ -424,10 +429,21 @@ export function useTasks(workspaceId?: string) {
       if (abortSignal?.aborted) return;
       setDependencies(depData as TaskDependency[]);
 
+      // Fetch task collaborators
+      const collabQuery = supabase
+        .from('task_collaborators')
+        .select('*')
+        .eq('workspace_id', workspaceId);
+
+      if (abortSignal) collabQuery.abortSignal(abortSignal);
+      const { data: collabData, error: collabError } = await collabQuery;
+      if (collabError) throw collabError;
+      if (abortSignal?.aborted) return;
+      setCollaborators(collabData as TaskCollaborator[]);
+
       setError(null);
     } catch (err: any) {
       if (err.name === 'AbortError' || abortSignal?.aborted) return;
-      console.warn("Failed to load tasks/dependencies from Supabase, falling back to local cache:", err);
       const localTasks = localStorage.getItem(`tasks_${workspaceId}`);
       if (localTasks) {
         setTasks(JSON.parse(localTasks));
@@ -435,6 +451,10 @@ export function useTasks(workspaceId?: string) {
       const localDeps = localStorage.getItem(`task_dependencies_${workspaceId}`);
       if (localDeps) {
         setDependencies(JSON.parse(localDeps));
+      }
+      const localCollabs = localStorage.getItem(`task_collaborators_${workspaceId}`);
+      if (localCollabs) {
+        setCollaborators(JSON.parse(localCollabs));
       }
       setError(getFriendlyErrorMessage(err));
     } finally {
@@ -470,7 +490,6 @@ export function useTasks(workspaceId?: string) {
       setHasMore(count !== null ? (to + 1) < count : false);
       setError(null);
     } catch (err: any) {
-      console.warn("Failed to load more tasks:", err);
     } finally {
       setLoading(false);
     }
@@ -535,9 +554,27 @@ export function useTasks(workspaceId?: string) {
       }
     );
 
+    const unsubscribeCollabs = realtimeOrchestrator.subscribe(
+      `task-collaborators-changes-${workspaceId}`,
+      'task_collaborators',
+      `workspace_id=eq.${workspaceId}`,
+      (payload) => {
+        const { eventType, new: newRecord, old: oldRecord } = payload;
+        if (eventType === 'INSERT') {
+          setCollaborators(prev => {
+            if (prev.some(c => c.id === newRecord.id)) return prev;
+            return [...prev, newRecord as TaskCollaborator];
+          });
+        } else if (eventType === 'DELETE') {
+          setCollaborators(prev => prev.filter(c => c.id !== oldRecord.id));
+        }
+      }
+    );
+
     return () => {
       unsubscribeTasks();
       unsubscribeDeps();
+      unsubscribeCollabs();
     };
   }, [workspaceId]);
 
@@ -550,9 +587,10 @@ export function useTasks(workspaceId?: string) {
           setTasks(JSON.parse(e.newValue));
         } else if (e.key === `task_dependencies_${workspaceId}`) {
           setDependencies(JSON.parse(e.newValue));
+        } else if (e.key === `task_collaborators_${workspaceId}`) {
+          setCollaborators(JSON.parse(e.newValue));
         }
       } catch (err) {
-        console.warn('Failed to sync across tabs', err);
       }
     };
     window.addEventListener('storage', handleStorage);
@@ -592,6 +630,17 @@ export function useTasks(workspaceId?: string) {
 
       // Write canonical task history log
       if (data) {
+        if (data.assignee_id) {
+          sendNotification(
+            workspaceId,
+            'system',
+            'New Task Assigned',
+            `You have been assigned to task: ${data.name}`,
+            data.assignee_id,
+            { task_id: data.id, project_id: data.project_id }
+          ).catch(console.error);
+        }
+
         await insertTaskHistoryLog(
           data.id,
           'task',
@@ -629,9 +678,16 @@ export function useTasks(workspaceId?: string) {
   const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
     if (!workspaceId) return;
     guardCapability(profile?.role, 'manage_tasks', 'updateTaskStatus');
-    // Wave 7/9: Developers can only change status on their assigned tasks
-    if (isDeveloper && !isAssignedTo(taskId)) {
-      const msg = 'Unauthorized: You can only update tasks assigned to you.';
+    // Wave 7/9 + Sprint 6.5: Developers can only change status on assigned or collaborated tasks
+    if (isDeveloper && !isAssignedTo(taskId) && !isCollaborator(taskId)) {
+      const msg = 'Unauthorized: You can only update tasks assigned or collaborated by you.';
+      setError(msg);
+      throw new Error(msg);
+    }
+
+    // Sprint 2.2 restrictions
+    if (isDeveloper && (status === 'completed' || status === 'changes_requested')) {
+      const msg = 'Unauthorized: Only PMs can approve or request changes on tasks. Please use "Ready For Review" instead.';
       setError(msg);
       throw new Error(msg);
     }
@@ -672,7 +728,7 @@ export function useTasks(workspaceId?: string) {
         workspace_id: workspaceId, task_id: taskId, status, previous_status: oldStatus,
       }).catch(() => {});
 
-      if (status === 'done') {
+      if (status === 'completed') {
         const task = tasks.find(t => t.id === taskId);
         if (task) {
           await predictionValidationService.recordCompletion(task);
@@ -684,6 +740,29 @@ export function useTasks(workspaceId?: string) {
           workspace_id: workspaceId, task_id: taskId, task_name: task?.name,
         }).catch(() => {});
       }
+
+      // Sprint 2.2 Notifications
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        try {
+          if (status === 'ready_for_review') {
+            // Notify Project Manager (in a real app, query project owner, for now system broadcast to PM role or just generic)
+            await sendNotification(workspaceId, 'assignments', 'Task Ready for Review', `Task "${task.name}" is ready for PM review.`, undefined, { type: 'task_review', entity_id: taskId, deep_link: `/workspace/projects/${task.project_id}` });
+          } else if (status === 'blocked') {
+            await sendNotification(workspaceId, 'risk', 'Task Blocked', `Task "${task.name}" has been blocked.`, undefined, { type: 'task_blocked', entity_id: taskId, deep_link: `/workspace/projects/${task.project_id}` });
+          } else if (status === 'changes_requested') {
+            if (task.assignee_id) {
+              await sendNotification(workspaceId, 'assignments', 'Changes Requested', `Changes were requested on your task "${task.name}".`, task.assignee_id, { type: 'task_changes', entity_id: taskId, deep_link: `/workspace/projects/${task.project_id}` });
+            }
+          } else if (status === 'completed') {
+            if (task.assignee_id) {
+              await sendNotification(workspaceId, 'assignments', 'Task Approved', `Your task "${task.name}" was approved and marked completed.`, task.assignee_id, { type: 'task_approved', entity_id: taskId, deep_link: `/workspace/projects/${task.project_id}` });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to send task status notification", err);
+        }
+      }
     } else {
       const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, status } : t);
       setTasks(updatedTasks);
@@ -694,9 +773,9 @@ export function useTasks(workspaceId?: string) {
   const updateTaskDates = async (taskId: string, startDate: string | null, deadline: string | null) => {
     if (!workspaceId) return;
     guardCapability(profile?.role, 'manage_tasks', 'updateTaskDates');
-    // Wave 7/9: Developers can only change dates on their assigned tasks
-    if (isDeveloper && !isAssignedTo(taskId)) {
-      const msg = 'Unauthorized: You can only update dates for tasks assigned to you.';
+    // Wave 7/9: Developers cannot change dates directly
+    if (isDeveloper) {
+      const msg = 'Unauthorized: Only PMs and Admins can modify planning dates.';
       setError(msg);
       throw new Error(msg);
     }
@@ -757,7 +836,6 @@ export function useTasks(workspaceId?: string) {
           `Task "${task?.name.toUpperCase()}" timeline updated to: ${startDate || 'Unset'} - ${deadline || 'Unset'}`
         );
       } catch (err) {
-        console.warn("Could not dispatch reschedule notification:", err);
       }
     } else {
       const updatedTasks = tasks.map(t => 
@@ -776,12 +854,24 @@ export function useTasks(workspaceId?: string) {
 
     // Wave 7/9: Developer scope restrictions
     if (isDeveloper) {
-      // Developers can only update tasks assigned to them
-      if (!isAssignedTo(taskId)) {
-        const msg = 'Unauthorized: You can only update tasks assigned to you.';
+      // Developers can only update tasks assigned to them or if they are collaborators
+      if (!isAssignedTo(taskId) && !isCollaborator(taskId)) {
+        const msg = 'Unauthorized: You can only update tasks assigned or collaborated by you.';
         setError(msg);
         throw new Error(msg);
       }
+      
+      // Collaborators who are not primary assignees cannot directly edit description, name/scope, or estimate
+      if (isCollaborator(taskId) && !isAssignedTo(taskId)) {
+        const blockedFields = ['name', 'description', 'current_estimate', 'estimated_hours', 'original_estimate'];
+        const unauthorizedAttempts = Object.keys(updates).filter(k => blockedFields.includes(k));
+        if (unauthorizedAttempts.length > 0) {
+          const msg = `Unauthorized: Collaborators cannot modify: ${unauthorizedAttempts.join(', ')}. Please submit suggestions instead.`;
+          setError(msg);
+          throw new Error(msg);
+        }
+      }
+
       // Strip protected fields — developers cannot modify governance fields
       const protectedAttempts = Object.keys(updates).filter(k => DEVELOPER_PROTECTED_FIELDS.has(k));
       if (protectedAttempts.length > 0) {
@@ -793,10 +883,28 @@ export function useTasks(workspaceId?: string) {
     
     if (isSupabaseConfigured) {
       const originalTask = tasks.find(t => t.id === taskId);
+      
+      const reason = updates.estimate_reason as string;
+      const strippedUpdates = { ...updates };
+      delete (strippedUpdates as any).estimate_reason;
+
+      // Smart Task Estimation Learning enforcement
+      if (isDeveloper && strippedUpdates.current_estimate !== undefined && originalTask?.current_estimate !== strippedUpdates.current_estimate) {
+        if (!['in_progress', 'ready'].includes(originalTask?.status || '')) {
+          const msg = 'Unauthorized: Current estimate can only be updated during discovery/in progress phases.';
+          setError(msg);
+          throw new Error(msg);
+        }
+        if (!reason || reason.trim() === '') {
+          const msg = 'A reason is mandatory when updating the current estimate.';
+          setError(msg);
+          throw new Error(msg);
+        }
+      }
 
       const { error: updateError } = await supabase
         .from('tasks')
-        .update({ ...taskToDbRow(updates as Record<string, unknown>), updated_at: new Date().toISOString() })
+        .update({ ...taskToDbRow(strippedUpdates as Record<string, unknown>), updated_at: new Date().toISOString() })
         .eq('id', taskId)
         .eq('workspace_id', workspaceId);
         
@@ -814,7 +922,29 @@ export function useTasks(workspaceId?: string) {
 
       // Write canonical task history log for metadata updates
       if (originalTask) {
-        for (const [key, value] of Object.entries(updates)) {
+        if (updates.assignee_id && updates.assignee_id !== originalTask.assignee_id) {
+          sendNotification(
+            workspaceId,
+            'system',
+            'Task Reassigned',
+            `You have been assigned to task: ${updates.name || originalTask.name}`,
+            updates.assignee_id,
+            { task_id: taskId, project_id: originalTask.project_id }
+          ).catch(console.error);
+        }
+
+        if (strippedUpdates.current_estimate !== undefined && originalTask.current_estimate !== strippedUpdates.current_estimate) {
+          await supabase.from('task_estimate_history').insert({
+            workspace_id: workspaceId,
+            task_id: taskId,
+            old_estimate: originalTask.current_estimate || originalTask.estimated_hours,
+            new_estimate: strippedUpdates.current_estimate,
+            reason: reason || 'Updated by PM/Admin',
+            changed_by: user?.id
+          });
+        }
+
+        for (const [key, value] of Object.entries(strippedUpdates)) {
           if (key === 'updated_at' || key === 'id' || key === 'workspace_id') continue;
           const oldVal = (originalTask as any)[key];
           if (oldVal !== value) {
@@ -925,7 +1055,6 @@ export function useTasks(workspaceId?: string) {
           `Task "${taskA?.name.toUpperCase()}" is now linked to depend on "${taskB?.name.toUpperCase()}"`
         );
       } catch (err) {
-        console.warn("Could not dispatch dependency notification:", err);
       }
     } else {
       const newDep: TaskDependency = {
@@ -975,5 +1104,308 @@ export function useTasks(workspaceId?: string) {
     }
   };
 
-  return { tasks, dependencies, loading, error, page, hasMore, loadMore, fetchTasks, addTask, updateTask, updateTaskStatus, updateTaskDates, deleteTask, addDependency, removeDependency };
+  const addCollaborator = async (taskId: string, userId: string, reason: string) => {
+    if (!workspaceId || !user) return;
+    if (isDeveloper) {
+      const msg = 'Unauthorized: Only PMs and Admins can manage collaborators.';
+      setError(msg);
+      throw new Error(msg);
+    }
+    guardCapability(profile?.role, 'manage_tasks', 'addCollaborator');
+
+    if (isSupabaseConfigured) {
+      const { error: insertError } = await supabase
+        .from('task_collaborators')
+        .insert({
+          workspace_id: workspaceId,
+          task_id: taskId,
+          user_id: userId,
+          added_by: user.id,
+          reason: reason
+        });
+        
+      if (insertError) {
+        setError(insertError.message);
+        throw insertError;
+      }
+      // Notification handled via trigger or we can send it here
+      await sendNotification(
+        workspaceId,
+        'assignments',
+        'Added as Collaborator',
+        `You have been added as a collaborator to a task. Reason: ${reason}`,
+        userId,
+        { type: 'collaborator_added', entity_id: taskId }
+      ).catch(() => {});
+    }
+  };
+
+  const removeCollaborator = async (taskId: string, userId: string) => {
+    if (!workspaceId) return;
+    if (isDeveloper) {
+      const msg = 'Unauthorized: Only PMs and Admins can manage collaborators.';
+      setError(msg);
+      throw new Error(msg);
+    }
+    guardCapability(profile?.role, 'manage_tasks', 'removeCollaborator');
+
+    if (isSupabaseConfigured) {
+      const { error: deleteError } = await supabase
+        .from('task_collaborators')
+        .delete()
+        .eq('task_id', taskId)
+        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId);
+        
+      if (deleteError) {
+        setError(deleteError.message);
+        throw deleteError;
+      }
+    }
+  };
+
+  const transferTaskOwnership = async (
+    taskId: string,
+    newAssigneeId: string,
+    reason: string,
+    handoverNotes: string,
+    addAsCollaborator: boolean
+  ) => {
+    if (!workspaceId || !user) return;
+    if (isDeveloper) {
+      const msg = 'Unauthorized: Only PMs and Admins can transfer task ownership.';
+      setError(msg);
+      throw new Error(msg);
+    }
+    guardCapability(profile?.role, 'manage_tasks', 'transferTaskOwnership');
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) throw new Error('Task not found');
+    const oldAssigneeId = task.assignee_id;
+
+    if (isSupabaseConfigured) {
+      const { error: updateError } = await supabase
+        .from('tasks')
+        .update({ assignee_id: newAssigneeId || null, updated_at: new Date().toISOString() })
+        .eq('id', taskId)
+        .eq('workspace_id', workspaceId);
+
+      if (updateError) {
+        setError(getFriendlyErrorMessage(updateError));
+        throw updateError;
+      }
+
+      const { error: historyError } = await supabase
+        .from('task_assignment_history')
+        .insert({
+          workspace_id: workspaceId,
+          task_id: taskId,
+          previous_assignee_id: oldAssigneeId || null,
+          new_assignee_id: newAssigneeId || null,
+          transferred_by: user.id,
+          transfer_reason: reason,
+          handover_notes: handoverNotes
+        });
+
+      if (historyError) {
+        console.error("Failed to write task assignment history:", historyError.message);
+      }
+
+      if (addAsCollaborator && oldAssigneeId && oldAssigneeId !== newAssigneeId) {
+        try {
+          await supabase
+            .from('task_collaborators')
+            .insert({
+              workspace_id: workspaceId,
+              task_id: taskId,
+              user_id: oldAssigneeId,
+              added_by: user.id,
+              reason: `Handover collaborator: ${reason}`
+            });
+        } catch (e) {
+          console.error("Failed to add previous owner as collaborator:", e);
+        }
+      }
+
+      if (newAssigneeId) {
+        try {
+          await sendNotification(
+            workspaceId,
+            'assignments',
+            'Task Assigned (Handover)',
+            `Task "${task.name}" has been transferred to you. Handover Notes: ${handoverNotes}`,
+            newAssigneeId,
+            { task_id: taskId, project_id: task.project_id }
+          );
+        } catch (err) {
+          console.error("Failed to send notification:", err);
+        }
+      }
+
+      try {
+        await supabase.from('activity_logs').insert({
+          workspace_id: workspaceId,
+          actor_id: user.id,
+          action: 'task_ownership_transferred',
+          task_id: taskId,
+          project_id: task.project_id,
+          metadata: {
+            old_owner_id: oldAssigneeId,
+            new_owner_id: newAssigneeId,
+            reason: reason,
+            handover_notes: handoverNotes
+          }
+        });
+      } catch (err) {
+        console.error("Failed to write activity log:", err);
+      }
+
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, assignee_id: newAssigneeId || undefined } : t));
+    } else {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, assignee_id: newAssigneeId || undefined } : t));
+    }
+  };
+
+  const createTaskSuggestion = async (
+    taskId: string,
+    suggestionType: 'estimate_change' | 'scope_note' | 'technical_risk',
+    suggestedValue: any,
+    oldValue: any,
+    reason: string
+  ) => {
+    if (!workspaceId || !user) return;
+    
+    if (isSupabaseConfigured) {
+      const { data, error: insertError } = await supabase
+        .from('task_suggestions')
+        .insert({
+          workspace_id: workspaceId,
+          task_id: taskId,
+          suggested_by: user.id,
+          suggestion_type: suggestionType,
+          old_value: oldValue,
+          suggested_value: suggestedValue,
+          reason: reason,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        setError(getFriendlyErrorMessage(insertError));
+        throw insertError;
+      }
+
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        try {
+          await sendNotification(
+            workspaceId,
+            'system',
+            'New Task Suggestion',
+            `A collaborator suggested a change on task "${task.name}": ${reason}`,
+            undefined,
+            { task_id: taskId, project_id: task.project_id }
+          );
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      return data;
+    }
+  };
+
+  const reviewTaskSuggestion = async (
+    suggestionId: string,
+    status: 'accepted' | 'rejected'
+  ) => {
+    if (!workspaceId || !user) return;
+    if (isDeveloper) {
+      const msg = 'Unauthorized: Only PMs and Admins can review task suggestions.';
+      setError(msg);
+      throw new Error(msg);
+    }
+
+    if (isSupabaseConfigured) {
+      const { data: suggestion, error: fetchError } = await supabase
+        .from('task_suggestions')
+        .select('*')
+        .eq('id', suggestionId)
+        .single();
+
+      if (fetchError || !suggestion) throw new Error('Suggestion not found');
+
+      const { error: updateError } = await supabase
+        .from('task_suggestions')
+        .update({
+          status,
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', suggestionId);
+
+      if (updateError) throw updateError;
+
+      if (status === 'accepted') {
+        const taskId = suggestion.task_id;
+        const suggestedValue = suggestion.suggested_value;
+        
+        if (suggestion.suggestion_type === 'estimate_change' && suggestedValue) {
+          const task = tasks.find(t => t.id === taskId);
+          const oldEstimate = task?.current_estimate || task?.estimated_hours || 0;
+          const newEstimate = Number(suggestedValue);
+          
+          await supabase
+            .from('tasks')
+            .update({ current_estimate: newEstimate, updated_at: new Date().toISOString() })
+            .eq('id', taskId);
+
+          await supabase.from('task_estimate_history').insert({
+            workspace_id: workspaceId,
+            task_id: taskId,
+            old_estimate: oldEstimate,
+            new_estimate: newEstimate,
+            reason: `Accepted Suggestion: ${suggestion.reason}`,
+            changed_by: user.id
+          });
+
+          setTasks(prev => prev.map(t => t.id === taskId ? { ...t, current_estimate: newEstimate } : t));
+        }
+      }
+
+      if (suggestion.suggested_by) {
+        try {
+          await sendNotification(
+            workspaceId,
+            'system',
+            'Task Suggestion Reviewed',
+            `Your suggestion on task has been ${status}.`,
+            suggestion.suggested_by,
+            { task_id: suggestion.task_id }
+          );
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      try {
+        await supabase.from('activity_logs').insert({
+          workspace_id: workspaceId,
+          actor_id: user.id,
+          action: `task_suggestion_${status}`,
+          task_id: suggestion.task_id,
+          metadata: {
+            suggestion_id: suggestionId,
+            suggestion_type: suggestion.suggestion_type,
+            reason: suggestion.reason
+          }
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  return { tasks, dependencies, collaborators, loading, error, page, hasMore, loadMore, fetchTasks, addTask, updateTask, updateTaskStatus, updateTaskDates, deleteTask, addDependency, removeDependency, addCollaborator, removeCollaborator, transferTaskOwnership, createTaskSuggestion, reviewTaskSuggestion };
 }

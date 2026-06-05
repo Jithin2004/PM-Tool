@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, Users, X, Plus, Check, Video } from 'lucide-react';
 import type { Meeting, MeetingType, User } from '../../types';
 import { MEETING_TYPES } from '../../constants/product';
+import { useAuth } from '../../context/AuthContext';
+import { hasCapability } from '../../core/auth/permissions';
 
 interface MeetingSchedulerProps {
   workspaceId: string;
@@ -20,6 +22,10 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
+  const [meetingCategory, setMeetingCategory] = useState<'Internal' | 'Client' | 'HR' | 'Finance'>('Internal');
+  
+  const { profile } = useAuth();
+  const canCreateHRFinance = hasCapability(profile?.role, 'platform_governance');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +44,13 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
         title: title.trim(),
         description: description.trim() || null,
         meeting_type: meetingType,
+        meeting_category: meetingCategory,
         start_time: startTime,
         end_time: endTime,
         organizer_id: null
       });
       notify('Meeting scheduled.', 'success');
-      setTitle(''); setDescription(''); setStartTime(''); setEndTime(''); setSelectedAttendees([]);
+      setTitle(''); setDescription(''); setStartTime(''); setEndTime(''); setSelectedAttendees([]); setMeetingCategory('Internal');
       setIsOpen(false);
     } catch (err) {
       notify('Failed to schedule meeting.', 'error');
@@ -105,6 +112,16 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
                     <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5 flex items-center gap-1">{typeIcon} Type</label>
                     <div className="h-10 flex items-center px-3 text-xs font-mono text-text-tertiary capitalize">{meetingType}</div>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Visibility & Category</label>
+                  <select value={meetingCategory} onChange={e => setMeetingCategory(e.target.value as any)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none">
+                    <option value="Internal">Internal (Team Only)</option>
+                    <option value="Client">Client Facing</option>
+                    {canCreateHRFinance && <option value="HR">HR Review</option>}
+                    {canCreateHRFinance && <option value="Finance">Finance Review</option>}
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

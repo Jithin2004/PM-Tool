@@ -34,7 +34,6 @@ export async function refreshOperationalSnapshot(workspaceId: string): Promise<O
     try {
       return await promise;
     } catch (err) {
-      console.warn('[operationalSyncService] Partial failure caught:', err);
       return fallback;
     }
   };
@@ -72,7 +71,6 @@ export async function refreshOperationalPartial(
     try {
       return await promise;
     } catch (err) {
-      console.warn('[operationalSyncService] Partial failure caught:', err);
       return fallback;
     }
   };

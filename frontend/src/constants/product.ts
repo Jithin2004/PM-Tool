@@ -34,23 +34,28 @@ export const BUSINESS_TYPES = [
   'Other'
 ] as const;
 
-export const TASK_STATUSES = ['backlog', 'ready', 'in_progress', 'review', 'done'] as const;
+export const TASK_STATUSES = ['assigned', 'understanding', 'in_progress', 'blocked', 'ready_for_review', 'changes_requested', 'completed'] as const;
 
 export const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'HYBRID', 'SDLC', 'CUSTOM'] as const;
 
 export const KANBAN_COLUMNS = [
-  { id: 'backlog', title: 'Triage / Backlog', color: 'border-blue-500/20' },
-  { id: 'ready', title: 'Ready', color: 'border-cyan-500/20' },
-  { id: 'in_progress', title: 'In Flight', color: 'border-yellow-500/20' },
-  { id: 'review', title: 'Validation Roster', color: 'border-green-500/20' },
-  { id: 'done', title: 'Done', color: 'border-emerald-500/20' }
+  { id: 'assigned', title: 'Assigned', color: 'border-surface-3/50' },
+  { id: 'understanding', title: 'Understanding', color: 'border-teal-500/20' },
+  { id: 'in_progress', title: 'In Progress', color: 'border-indigo-500/20' },
+  { id: 'blocked', title: 'Blocked', color: 'border-rose-500/20' },
+  { id: 'ready_for_review', title: 'Ready for Review', color: 'border-amber-500/20' },
+  { id: 'changes_requested', title: 'Changes Requested', color: 'border-orange-500/20' },
+  { id: 'completed', title: 'Completed', color: 'border-emerald-500/20' }
 ];
 
 export const SCRUM_COLUMNS = [
-  { id: 'backlog', title: 'Sprint Backlog', color: 'border-purple-500/20' },
-  { id: 'in_progress', title: 'In Progress', color: 'border-yellow-500/20' },
-  { id: 'review', title: 'Code Review', color: 'border-orange-500/20' },
-  { id: 'done', title: 'Merged Releases', color: 'border-emerald-500/20' }
+  { id: 'assigned', title: 'Sprint Backlog', color: 'border-surface-3/50' },
+  { id: 'understanding', title: 'Understanding', color: 'border-teal-500/20' },
+  { id: 'in_progress', title: 'In Progress', color: 'border-indigo-500/20' },
+  { id: 'blocked', title: 'Blocked', color: 'border-rose-500/20' },
+  { id: 'ready_for_review', title: 'Review', color: 'border-amber-500/20' },
+  { id: 'changes_requested', title: 'Changes Requested', color: 'border-orange-500/20' },
+  { id: 'completed', title: 'Completed', color: 'border-emerald-500/20' }
 ];
 
 export const SDLC_PHASES = [

@@ -1,158 +1,157 @@
-import React from 'react';
-import { Shield, Lock, History, Search, Filter, Key, FileWarning, Fingerprint } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { useOperationalData } from '../../context/OperationalDataContext';
+import { Shield, Search, Filter, History } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 export default function AuditGovernance() {
+  const { workspace } = useWorkspace();
+  const { raw: { profiles } } = useOperationalData();
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [filters, setFilters] = useState({
+    user: '',
+    module: '',
+    date: ''
+  });
+
+  useEffect(() => {
+    if (!workspace?.id) return;
+    
+    const fetchLogs = async () => {
+      setLoading(true);
+      let query = supabase
+        .from('activity_logs')
+        .select('*')
+        .eq('workspace_id', workspace.id)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (filters.user) {
+        query = query.eq('actor_id', filters.user);
+      }
+      if (filters.module) {
+        query = query.eq('entity_type', filters.module);
+      }
+      if (filters.date) {
+        // Simple date filtering (exact day)
+        const start = new Date(filters.date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(filters.date);
+        end.setHours(23, 59, 59, 999);
+        query = query.gte('created_at', start.toISOString()).lte('created_at', end.toISOString());
+      }
+
+      const { data } = await query;
+      if (data) setLogs(data);
+      setLoading(false);
+    };
+
+    fetchLogs();
+  }, [workspace?.id, filters]);
+
+  const getUserName = (actorId: string) => {
+    if (!actorId) return 'System';
+    const profile = profiles?.find((p: any) => p.id === actorId);
+    return profile ? profile.full_name || profile.email : 'Unknown User';
+  };
+
+  const getModules = () => {
+    const modules = new Set(logs.map(l => l.entity_type));
+    return Array.from(modules).filter(Boolean);
+  };
+
   return (
-    <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
-      {/* Header */}
-      <div className="flex items-end justify-between px-1 pt-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
-            Audit & Governance
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Compliance, Approvals, Role Changes, Audit Trail, and Policy Verification.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
-          style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(251,113,133,0.5)' }} />
-          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]" style={{ color: 'var(--pm-on-surface-variant)' }}>
-             GOVERNANCE LEDGER
-          </span>
-        </div>
+    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-8 animate-fade-in font-geist pb-32">
+      <div className="relative">
+        <div className="absolute -inset-1 bg-gradient-to-r from-accent-primary/20 via-accent-secondary/20 to-transparent blur-2xl opacity-50 -z-10" />
+        <h2 className="text-4xl font-semibold tracking-tight text-text-primary mb-2">System Audit Ledger</h2>
+        <p className="text-sm text-text-tertiary tracking-wide max-w-2xl">Immutable record of all critical events and actions.</p>
       </div>
 
-      {/* KPI metrics bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        {[
-          { label: 'Security Policies', value: 14, sub: 'Active and enforced', icon: <Shield size={20} />, color: 'var(--pm-primary)' },
-          { label: 'Role Changes', value: 3, sub: 'Last 7 days', icon: <Key size={20} />, color: '#60a5fa' },
-          { label: 'Audit Logs', value: '45.2K', sub: 'Immutable records', icon: <History size={20} />, color: '#34d399' },
-          { label: 'Policy Violations', value: 0, sub: 'Requires immediate action', icon: <FileWarning size={20} />, color: '#fbbf24' }
-        ].map((kpi, i) => (
-          <div key={i} className="pm-card p-5 relative overflow-hidden group">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: `${kpi.color}18`, border: `1px solid ${kpi.color}30`, color: kpi.color }}>
-                {kpi.icon}
-              </div>
-              <span className="font-mono-pm text-[9px] uppercase tracking-[0.2em]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>ENFORCED</span>
+      <div className="bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl p-6 transition-all duration-300 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
+          <div className="flex gap-4 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
+            <div className="group/input flex-1 md:w-48">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">Filter by User</label>
+              <select value={filters.user} onChange={e => setFilters(s => ({ ...s, user: e.target.value }))} className="w-full bg-surface/50 border border-border/50 rounded-xl h-10 px-3 text-xs text-text-secondary outline-none">
+                <option value="">All Users</option>
+                {profiles?.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.full_name || p.email}</option>
+                ))}
+              </select>
             </div>
-            <div className="text-3xl font-bold tracking-tight" style={{ color: kpi.color }}>{kpi.value}</div>
-            <div className="text-[11px] font-semibold mt-1 mb-0.5" style={{ color: 'var(--pm-on-surface)' }}>{kpi.label}</div>
-            <div className="font-mono-pm text-[10px]" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>{kpi.sub}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Primary Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column - Audit Trail */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-[var(--pm-primary)]">Immutable Audit Trail</h2>
-              <div className="flex gap-2">
-                <div className="flex items-center gap-2 bg-surface-3 border border-border px-3 rounded-lg text-xs text-[var(--pm-on-surface-variant)] transition-colors focus-within:border-[var(--pm-primary)]">
-                  <Search size={14} />
-                  <input type="text" placeholder="Search event hash..." className="bg-transparent border-none outline-none py-1.5 w-32 text-[var(--pm-primary)]" />
-                </div>
-                <button className="p-1.5 rounded bg-surface-3 border border-border text-[var(--pm-on-surface-variant)] hover:text-[var(--pm-primary)] transition-colors cursor-pointer">
-                  <Filter size={14} />
-                </button>
-              </div>
+            <div className="group/input flex-1 md:w-40">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">Filter by Module</label>
+              <select value={filters.module} onChange={e => setFilters(s => ({ ...s, module: e.target.value }))} className="w-full bg-surface/50 border border-border/50 rounded-xl h-10 px-3 text-xs text-text-secondary outline-none">
+                <option value="">All Modules</option>
+                <option value="project">Project</option>
+                <option value="task">Task</option>
+                <option value="invoice">Finance</option>
+                <option value="system">System</option>
+              </select>
             </div>
-            <div className="space-y-4">
-              {/* Log Item 1 */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl transition-all gap-4 bg-surface-2 border border-border"
-                style={{ background: 'var(--pm-surface-high)', borderColor: 'rgba(70,69,84,0.3)' }}>
-                <div className="flex items-start gap-4">
-                  <div className="mt-1 p-2 bg-rose-500/10 text-rose-400 rounded border border-rose-500/20">
-                    <Key size={18} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Role Escalation Event</span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">ACCESS CONTROL</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)]">
-                      <span>ACTOR: <strong className="text-[var(--pm-primary)]">Super Admin</strong></span>
-                      <span>•</span>
-                      <span>TIMESTAMP: <strong className="text-[var(--pm-on-surface)]">2024-10-15 14:32:01 UTC</strong></span>
-                    </div>
-                    <p className="text-xs mt-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                      User ID 4892A was promoted to Project Manager for workspace 'Alpha'.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 shrink-0 self-start md:self-center">
-                  <button className="px-4 py-2 rounded-lg text-xs font-mono-pm uppercase tracking-widest bg-surface-3 hover:bg-surface-highest text-[var(--pm-on-surface)] border border-border transition-all cursor-pointer">
-                    Inspect Trace
-                  </button>
-                </div>
-              </div>
-
-              {/* Log Item 2 */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl transition-all gap-4 bg-surface-2 border border-border"
-                style={{ background: 'var(--pm-surface-high)', borderColor: 'rgba(70,69,84,0.3)' }}>
-                <div className="flex items-start gap-4">
-                  <div className="mt-1 p-2 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20">
-                    <Fingerprint size={18} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>System Integrity Verified</span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">SYSTEM HEALTH</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)]">
-                      <span>ACTOR: <strong className="text-[var(--pm-primary)]">System Automations</strong></span>
-                      <span>•</span>
-                      <span>TIMESTAMP: <strong className="text-[var(--pm-on-surface)]">2024-10-15 00:00:00 UTC</strong></span>
-                    </div>
-                    <p className="text-xs mt-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                      Daily scheduled cryptographic verification of the Governance Ledger completed successfully.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 shrink-0 self-start md:self-center">
-                  <button className="px-4 py-2 rounded-lg text-xs font-mono-pm uppercase tracking-widest bg-surface-3 hover:bg-surface-highest text-[var(--pm-on-surface)] border border-border transition-all cursor-pointer">
-                    Inspect Trace
-                  </button>
-                </div>
-              </div>
+            <div className="group/input flex-1 md:w-40">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">Filter by Date</label>
+              <input type="date" value={filters.date} onChange={e => setFilters(s => ({ ...s, date: e.target.value }))} className="w-full bg-surface/50 border border-border/50 rounded-xl h-10 px-3 text-xs text-text-secondary outline-none" />
             </div>
           </div>
         </div>
 
-        {/* Right Column - Intelligence Surface */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-[var(--pm-primary)]">Policy Verification</h2>
-              <Lock size={16} className="text-rose-400" />
-            </div>
-            
-            <div className="p-4 rounded-lg bg-surface-3 border border-border text-center flex flex-col items-center justify-center min-h-[150px] gap-3">
-               <Shield size={32} className="text-[var(--pm-on-surface-variant)] opacity-50" />
-               <p className="text-xs text-[var(--pm-on-surface-variant)]">System meets SOC2 and internal corporate compliance mandates.</p>
-               <span className="font-mono-pm text-[9px] uppercase text-emerald-400 tracking-widest border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded">COMPLIANT</span>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider font-mono-pm text-[var(--pm-on-surface-variant)] mb-2">Automated Checks</h3>
-              
-              <div className="flex items-center justify-between p-2 rounded hover:bg-surface-3 transition-colors text-xs border border-transparent hover:border-border cursor-pointer">
-                <span className="truncate max-w-[200px] text-[var(--pm-primary)]">RBAC Violation Scan</span>
-                <span className="text-[10px] text-emerald-400 font-mono-pm bg-emerald-500/10 border border-emerald-500/20 px-1.5 rounded">PASSED</span>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded hover:bg-surface-3 transition-colors text-xs border border-transparent hover:border-border cursor-pointer">
-                <span className="truncate max-w-[200px] text-[var(--pm-primary)]">Orphaned Resources Sweep</span>
-                <span className="text-[10px] text-amber-400 font-mono-pm bg-amber-500/10 border border-amber-500/20 px-1.5 rounded">WARNING</span>
-              </div>
-            </div>
+        {loading ? (
+          <div className="py-12 text-center text-text-tertiary text-xs font-mono uppercase tracking-widest animate-pulse">
+            Retrieving Audit Records...
           </div>
-        </div>
+        ) : logs.length === 0 ? (
+          <div className="py-12 text-center flex flex-col items-center">
+            <Shield className="w-8 h-8 text-text-quaternary mb-3" />
+            <p className="text-sm font-medium text-text-secondary">No audit records found.</p>
+            <p className="text-xs text-text-tertiary mt-1">Try adjusting your filters.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-border/50 bg-surface">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border/50 bg-surface-2 text-[10px] font-bold uppercase tracking-widest text-text-tertiary">
+                  <th className="px-4 py-3 whitespace-nowrap">Timestamp</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Actor (Who)</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Action (Did What)</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Module</th>
+                  <th className="px-4 py-3 min-w-[200px]">Reason / Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {logs.map(log => (
+                  <tr key={log.id} className="hover:bg-surface-2 transition-colors text-xs text-text-secondary">
+                    <td className="px-4 py-3 whitespace-nowrap font-mono text-[11px] text-text-tertiary">
+                      {new Date(log.created_at).toLocaleString('en-CA', { hour12: false }).replace(',', '')}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-text-primary flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-accent-primary/10 text-accent-primary flex items-center justify-center font-bold text-[10px]">
+                        {getUserName(log.actor_id).charAt(0).toUpperCase()}
+                      </div>
+                      {getUserName(log.actor_id)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="bg-surface-3 border border-border px-2 py-0.5 rounded font-mono text-[10px] uppercase text-text-secondary">
+                        {log.action.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="uppercase text-[9px] font-bold tracking-widest text-accent-secondary">
+                        {log.entity_type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-text-tertiary truncate max-w-xs" title={JSON.stringify(log.metadata)}>
+                      {log.metadata?.description || log.metadata?.reason || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

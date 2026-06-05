@@ -32,10 +32,20 @@ export interface Member {
   phone?: string;
   avatar_url?: string;
   role: UserRole;
+  capabilities?: string[];
   designation?: string;
+  department?: string;
   date_of_joining?: string;
-  employment_status?: 'active' | 'resigned' | 'terminated';
+  employee_type?: string;
+  contract_start?: string;
+  contract_end?: string;
+  probation_end?: string;
+  employment_status?: 'active' | 'resigned' | 'terminated' | 'on_leave' | 'suspended';
+  force_password_change?: boolean;
   availability_factor: number;
+  external_access?: boolean;
+  visibility_scope?: Record<string, any>;
+  notification_preferences?: Record<string, any>;
   created_at: string;
 }
 

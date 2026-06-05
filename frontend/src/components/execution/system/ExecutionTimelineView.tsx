@@ -43,7 +43,6 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
           }
         }
       } catch (err) {
-        console.warn("Failed to fetch task history logs:", err);
       } finally {
         if (active) {
           setLoadingLogs(false);

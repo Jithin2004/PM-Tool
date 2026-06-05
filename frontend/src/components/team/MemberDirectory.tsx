@@ -9,10 +9,12 @@ import { DocumentGeneratorDropdown } from '../hr/DocumentGeneratorDropdown';
 function getRoleLabel(role: string) {
   const labels: Record<string, string> = {
     super_admin: 'Super Admin',
-    admin:       'Admin',
+    admin:       'HR',
     manager:     'Project Manager',
-    editor:      'Developer',
-    viewer:      'Viewer'
+    pm:          'Project Manager',
+    editor:      'Employee',
+    developer:   'Employee',
+    viewer:      'External Access'
   };
   return labels[role] || 'Member';
 }
@@ -182,6 +184,31 @@ export function MemberDirectory() {
                   </div>
                 </div>
                 
+                {/* Employee Lifecycle Analytics */}
+                {selectedMemberDetails.date_of_joining && (
+                  <div className="mt-4 p-3 bg-black/20 border border-white/5 rounded-lg flex items-center justify-between text-sm">
+                    {selectedMemberDetails.employee_type === 'Full Time' && (
+                      <>
+                        <span className="text-white/60">Company Tenure</span>
+                        <span className="font-medium text-white">
+                          {Math.floor((new Date().getTime() - new Date(selectedMemberDetails.date_of_joining).getTime()) / (1000 * 3600 * 24 * 365))} years, 
+                          {Math.floor(((new Date().getTime() - new Date(selectedMemberDetails.date_of_joining).getTime()) / (1000 * 3600 * 24)) % 365 / 30)} months
+                        </span>
+                      </>
+                    )}
+                    {(selectedMemberDetails.employee_type === 'Intern' || selectedMemberDetails.employee_type === 'Contract') && (
+                      <>
+                        <span className="text-white/60">{selectedMemberDetails.employee_type === 'Intern' ? 'Internship Duration' : 'Contract Remaining'}</span>
+                        <span className="font-medium text-white">
+                          {selectedMemberDetails.contract_end ? (
+                            Math.max(0, Math.floor((new Date(selectedMemberDetails.contract_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24))) + ' days remaining'
+                          ) : 'End date not set'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+                
                 <div className="mt-4 pt-4 border-t border-[var(--pm-border)]">
                   <h4 className="text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)] mb-3">Professional Skills</h4>
                   <div className="space-y-2">
@@ -247,7 +274,7 @@ export function MemberDirectory() {
                   const { newDoj, reason } = dojEditState;
                   const { error } = await supabase.from('employment_records')
                     .update({ date_of_joining: new Date(newDoj).toISOString() })
-                    .eq('profile_id', selectedMemberDetails.id);
+                    .eq('user_id', selectedMemberDetails.id);
                     
                   if (!error) {
                     await supabase.from('employment_change_logs').insert({

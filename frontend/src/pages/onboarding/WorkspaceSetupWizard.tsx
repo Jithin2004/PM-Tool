@@ -23,11 +23,10 @@ export function WorkspaceSetupWizard() {
   
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [workingTimeFrom, setWorkingTimeFrom] = useState('09:00');
+  const [workingTimeTo, setWorkingTimeTo] = useState('17:00');
   const [members, setMembers] = useState<EmailChip[]>([]);
-  const [projects, setProjects] = useState<string[]>([]);
-  const [delivery, setDelivery] = useState('Agile');
-  const [policy, setPolicy] = useState('Flexible');
-  const [capacity, setCapacity] = useState('Standard');
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -41,9 +40,9 @@ export function WorkspaceSetupWizard() {
         name: name || 'My Workspace',
         settings: { 
           companyName: name || 'My Workspace',
-          deliveryMethod: delivery,
-          completionPolicy: policy,
-          capacityEnabled: capacity !== 'Basic'
+          departments: departments,
+          workingTimeFrom: workingTimeFrom,
+          workingTimeTo: workingTimeTo
         } as any
       });
       if (created) {
@@ -121,15 +120,17 @@ export function WorkspaceSetupWizard() {
           
           <div className="flex justify-between text-[10px] sm:text-xs font-mono uppercase tracking-widest text-[var(--pm-on-surface-variant)] mb-8 border-b border-border/50 pb-4">
             <div className="flex gap-2 sm:gap-4 flex-wrap">
-              <span className={step >= 1 ? "text-[var(--pm-primary)] font-bold" : ""}>Workspace {step > 1 ? '✓' : '○'}</span>
-              <span className={step >= 2 ? "text-[var(--pm-primary)] font-bold" : ""}>Team {step > 2 ? '✓' : '○'}</span>
-              <span className={step >= 3 ? "text-[var(--pm-primary)] font-bold" : ""}>Projects {step > 3 ? '✓' : '○'}</span>
-              <span className={step >= 4 ? "text-[var(--pm-primary)] font-bold" : ""}>Launch {step > 7 ? '✓' : '○'}</span>
+              <span className={step >= 1 ? "text-[var(--pm-primary)] font-bold" : ""}>Details {step > 1 ? '✓' : '○'}</span>
+              <span className={step >= 2 ? "text-[var(--pm-primary)] font-bold" : ""}>Departments {step > 2 ? '✓' : '○'}</span>
+              <span className={step >= 3 ? "text-[var(--pm-primary)] font-bold" : ""}>Hours {step > 3 ? '✓' : '○'}</span>
+              <span className={step >= 4 ? "text-[var(--pm-primary)] font-bold" : ""}>Team Import {step > 4 ? '✓' : '○'}</span>
+              <span className={step >= 5 ? "text-[var(--pm-primary)] font-bold" : ""}>Roles {step > 5 ? '✓' : '○'}</span>
+              <span className={step >= 6 ? "text-[var(--pm-primary)] font-bold" : ""}>Launch {step > 6 ? '✓' : '○'}</span>
             </div>
             <div className="text-right hidden sm:block shrink-0 pl-4">
               <span className="block opacity-50">Estimated setup time:</span>
               <span className="font-bold text-[var(--pm-on-surface)]">
-                {step === 1 ? '< 2 minutes' : step === 2 ? '~1.5 minutes' : step === 3 ? '~1 minute' : '< 30 seconds'}
+                {'< 2 minutes'}
               </span>
             </div>
           </div>
@@ -160,131 +161,79 @@ export function WorkspaceSetupWizard() {
           
           {step === 2 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-              <label className="block text-sm font-semibold">Step 2: Team Members</label>
-              <EmailChipsInput 
-                value={members} 
-                onChange={setMembers} 
-                placeholder="Emails, press Enter to add" 
+              <label className="block text-sm font-semibold">Step 2: Departments</label>
+              <ProjectChipsInput
+                value={departments}
+                onChange={setDepartments}
+                placeholder="E.g. Engineering, Sales (press Enter)"
               />
-              
-              {members.length > 0 && (
-                <div className="mt-4 p-4 border border-[var(--pm-primary)]/20 bg-[var(--pm-primary)]/5 rounded-lg text-sm text-[var(--pm-on-surface)] animate-in fade-in">
-                  <p className="font-semibold mb-2">Inviting {members.length} team member{members.length !== 1 ? 's' : ''}</p>
-                  <div className="text-xs text-[var(--pm-on-surface-variant)] space-y-1">
-                    <p className="font-mono uppercase tracking-wider mb-1">Roles:</p>
-                    <ul className="list-inside list-disc pl-1 text-[var(--pm-on-surface)]">
-                      {Object.entries(getRoleCounts()).map(([role, count]) => (
-                        <li key={role}>{count} {role}{count > 1 && role !== 'PM' ? 's' : count > 1 && role === 'PM' ? 's' : ''}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
+              <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic mt-2">Departments help organize teams and reports.</p>
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-              <label className="block text-sm font-semibold">Step 3: Initial Projects</label>
-              <ProjectChipsInput
-                value={projects}
-                onChange={setProjects}
-                placeholder="Project names, press Enter to add"
-              />
-              
-              {projects.length > 0 && (
-                <div className="mt-4 p-4 border border-[var(--pm-primary)]/20 bg-[var(--pm-primary)]/5 rounded-lg text-sm text-[var(--pm-on-surface)] animate-in fade-in">
-                  <p className="font-semibold mb-2">Projects to Create</p>
-                  <p className="text-xs text-[var(--pm-on-surface-variant)] mb-2">{projects.length} Project{projects.length !== 1 ? 's' : ''}</p>
-                  <ul className="text-xs text-[var(--pm-on-surface-variant)] space-y-1 list-inside list-disc pl-1">
-                    {projects.map((project, idx) => (
-                      <li key={idx} className="text-[var(--pm-on-surface)]">{project}</li>
-                    ))}
-                  </ul>
+              <label className="block text-sm font-semibold">Step 3: Company Working Hours</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1">Start Time</label>
+                  <input type="time" value={workingTimeFrom} onChange={e => setWorkingTimeFrom(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50 focus:border-[var(--pm-primary)] focus:outline-none" />
                 </div>
-              )}
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1">End Time</label>
+                  <input type="time" value={workingTimeTo} onChange={e => setWorkingTimeTo(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50 focus:border-[var(--pm-primary)] focus:outline-none" />
+                </div>
+              </div>
+              <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic mt-2">Used for capacity planning and availability tracking.</p>
             </div>
           )}
 
           {step === 4 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-              <label className="block text-sm font-semibold">Step 4: Delivery Method</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {['Agile', 'Hybrid', 'Waterfall'].map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setDelivery(opt)}
-                    aria-pressed={delivery === opt}
-                    className={`p-4 rounded-xl border text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] ${
-                      delivery === opt
-                        ? 'border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 ring-1 ring-[var(--pm-primary)]/50'
-                        : 'border-border/50 bg-surface-4 hover:border-[var(--pm-primary)]/50 hover:bg-surface-3'
-                    }`}
-                  >
-                    <span className={`block font-medium text-sm ${delivery === opt ? 'text-[var(--pm-primary)]' : 'text-[var(--pm-on-surface)]'}`}>
-                      {opt}
-                    </span>
-                  </button>
-                ))}
+              <label className="block text-sm font-semibold">Step 4: Import Employees</label>
+              <EmailChipsInput 
+                value={members} 
+                onChange={setMembers} 
+                placeholder="Emails, press Enter to add" 
+              />
+              <div className="p-4 mt-2 bg-surface-4 border border-border/50 rounded-lg text-sm text-[var(--pm-on-surface-variant)]">
+                <p><strong>Note:</strong> Bulk CSV import is also available later from the HR dashboard.</p>
               </div>
-              <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic mt-2">These can be changed later from Workspace Settings.</p>
             </div>
           )}
 
           {step === 5 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-              <label className="block text-sm font-semibold">Step 5: Completion Policy</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {['Flexible', 'Controlled', 'Strict', 'Enterprise'].map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setPolicy(opt)}
-                    aria-pressed={policy === opt}
-                    className={`p-4 rounded-xl border text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] ${
-                      policy === opt
-                        ? 'border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 ring-1 ring-[var(--pm-primary)]/50'
-                        : 'border-border/50 bg-surface-4 hover:border-[var(--pm-primary)]/50 hover:bg-surface-3'
-                    }`}
-                  >
-                    <span className={`block font-medium text-sm ${policy === opt ? 'text-[var(--pm-primary)]' : 'text-[var(--pm-on-surface)]'}`}>
-                      {opt}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic mt-2">These can be changed later from Workspace Settings.</p>
-            </div>
-          )}
-
-          {step === 6 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-              <label className="block text-sm font-semibold">Step 6: Capacity Planning</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {['Basic', 'Standard', 'Advanced'].map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setCapacity(opt)}
-                    aria-pressed={capacity === opt}
-                    className={`p-4 rounded-xl border text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] ${
-                      capacity === opt
-                        ? 'border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 ring-1 ring-[var(--pm-primary)]/50'
-                        : 'border-border/50 bg-surface-4 hover:border-[var(--pm-primary)]/50 hover:bg-surface-3'
-                    }`}
-                  >
-                    <span className={`block font-medium text-sm ${capacity === opt ? 'text-[var(--pm-primary)]' : 'text-[var(--pm-on-surface)]'}`}>
-                      {opt}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic mt-2">These can be changed later from Workspace Settings.</p>
+              <label className="block text-sm font-semibold">Step 5: Assign Roles</label>
+              {members.length === 0 ? (
+                <p className="text-sm text-[var(--pm-on-surface-variant)] italic">No team members added. You can skip this step.</p>
+              ) : (
+                <div className="max-h-60 overflow-y-auto space-y-2 border border-border/50 rounded-lg p-2 bg-surface-4">
+                  {members.map((m, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2 bg-surface-3 rounded border border-border/50">
+                      <span className="text-sm font-medium">{m.email}</span>
+                      <select 
+                        value={m.role}
+                        onChange={(e) => {
+                          const newMembers = [...members];
+                          newMembers[idx].role = e.target.value as any;
+                          setMembers(newMembers);
+                        }}
+                        className="bg-surface-4 border border-border/50 text-xs rounded px-2 py-1 outline-none"
+                      >
+                        <option value="Employee">Employee (Internal)</option>
+                        <option value="PM">Project Manager</option>
+                        <option value="HR">HR/Admin</option>
+                        <option value="External Access">External Access</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           
-          {step === 7 && (
+          {step === 6 && (
             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
               <div className="text-center">
                 <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -300,12 +249,12 @@ export function WorkspaceSetupWizard() {
                   <span className="font-semibold text-[var(--pm-on-surface)] truncate max-w-[150px] md:max-w-[200px]">{name || 'My Workspace'}</span>
                 </div>
                 
-                {projects.length > 0 && (
+                {departments.length > 0 && (
                   <div className="border-b border-border/50 pb-3">
-                    <span className="text-xs font-mono uppercase text-[var(--pm-on-surface-variant)] block mb-2">Projects</span>
+                    <span className="text-xs font-mono uppercase text-[var(--pm-on-surface-variant)] block mb-2">Departments</span>
                     <ul className="text-sm text-[var(--pm-on-surface)] space-y-1 list-inside list-disc pl-1">
-                      {projects.map((proj, idx) => (
-                        <li key={idx} className="truncate">{proj}</li>
+                      {departments.map((dep, idx) => (
+                        <li key={idx} className="truncate">{dep}</li>
                       ))}
                     </ul>
                   </div>
@@ -339,7 +288,7 @@ export function WorkspaceSetupWizard() {
 
           <div className="mt-8 flex justify-between">
             <button disabled={step === 1 || selectedTemplate !== null} onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded border border-border/50 disabled:opacity-50 transition-colors">Back</button>
-            {step < 7 ? (
+            {step < 6 ? (
               <button disabled={selectedTemplate !== null || (step === 1 && !name.trim())} onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded bg-[var(--pm-primary)] text-[var(--pm-text)] dark:text-white disabled:opacity-50 disabled:bg-surface-4 transition-colors">Next</button>
             ) : (
               <button onClick={handleFinish} disabled={loading || selectedTemplate !== null} className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-[var(--pm-text)] dark:text-white flex items-center gap-2 disabled:opacity-50 disabled:bg-surface-4 transition-colors font-medium">

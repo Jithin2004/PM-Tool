@@ -426,13 +426,11 @@ export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
       throw new Error('Web Workers not supported');
     }
   } catch (err) {
-    console.warn(`[timelineImpactEngine] Worker offload failed, falling back to local:`, err);
     result = await computeImpactLocal(input);
   }
 
   const durationMs = performance.now() - startMs;
   if (input.tasks.length >= 500) {
-    console.log(`[timelineImpactEngine] Processed ${input.tasks.length} tasks via ${executionLocation} in ${Math.round(durationMs)}ms`);
     import('./activityLogService').then(({ activityLogService }) => {
       activityLogService.appendLog({
         workspace_id: input.workspaceId,

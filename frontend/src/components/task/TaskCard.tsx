@@ -4,6 +4,9 @@ import { User, ArrowRight, ArrowUp, AlertTriangle, Clock, Users, Shield, Link2, 
 import { Task, Project } from '../../types';
 import { getTaskDeadline } from '../../core/types/temporal';
 import { calculateTaskCountdown } from '../../services/etaService';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAuth } from '../../context/AuthContext';
+import { TaskTimerUI } from './TaskTimerUI';
 
 interface TaskCardProps {
   task: Task;
@@ -42,6 +45,8 @@ export function TaskCard({
   blockers,
   onOpenWaitState
 }: TaskCardProps) {
+  const { workspace } = useWorkspace();
+  const { profile } = useAuth();
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 1000);
@@ -187,7 +192,7 @@ export function TaskCard({
             </span>
           )}
 
-          {drift > 0 && task.status !== 'done' && (
+          {drift > 0 && task.status !== 'completed' && (
             <span className="flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded text-signal-warning bg-signal-warning-bg/50" title={`Timeline drift of ${drift.toFixed(1)} days detected.`}>
               +{drift.toFixed(0)}d drift
             </span>
@@ -233,7 +238,7 @@ export function TaskCard({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {task.status !== 'done' && (
+            {task.status !== 'completed' && (
               <div className={`text-[10px] font-medium ${countdown.color === 'text-rose-400' ? 'text-signal-critical' : 'text-text-tertiary'}`}>
                 {countdown.text.replace('ETA: ', '')}
               </div>
@@ -289,7 +294,7 @@ export function TaskCard({
         </div>
 
         {/* Action Bar */}
-        {hasWriteAccess && onOpenWaitState && task.status !== 'done' && !isCompact && (
+        {hasWriteAccess && onOpenWaitState && task.status !== 'completed' && !isCompact && (
           <div className="mt-2 pt-2 border-t border-border-subtle flex justify-between items-center">
             <button
               onClick={(e) => {
@@ -301,6 +306,14 @@ export function TaskCard({
               <Clock className="w-3 h-3" />
               Log Delay
             </button>
+            {workspace && profile && (
+              <TaskTimerUI 
+                task={task as any} 
+                workspace={workspace} 
+                currentUser={profile} 
+                isCompact={isCompact} 
+              />
+            )}
           </div>
         )}
       </div>

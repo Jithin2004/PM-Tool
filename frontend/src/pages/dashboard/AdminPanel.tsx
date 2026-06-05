@@ -25,10 +25,12 @@ function getRoleColor(role: string) {
 function getRoleLabel(role: string) {
   const labels: Record<string, string> = {
     super_admin: 'Super Admin',
-    admin:       'Admin',
+    admin:       'HR',
     manager:     'Project Manager',
-    editor:      'Lead Analyst',
-    viewer:      'Observer',
+    pm:          'Project Manager',
+    editor:      'Employee',
+    developer:   'Employee',
+    viewer:      'External Access',
     member:      'Member',
   };
   return labels[role] || role?.replace('_', ' ') || 'Member';
@@ -57,7 +59,23 @@ export function AdminPanel() {
 
   const [tab, setTab] = useState<AdminTab>('identity');
   const [activeGearPopover, setActiveGearPopover] = useState<string | null>(null);
+  const [capabilityModal, setCapabilityModal] = useState({ isOpen: false, userId: '', userEmail: '', capabilities: [] as string[], reason: '', saving: false });
 
+  // Event listener for opening capability modal
+  useEffect(() => {
+    const handleOpen = (e: any) => {
+      setCapabilityModal({
+        isOpen: true,
+        userId: e.detail.userId,
+        userEmail: e.detail.userEmail,
+        capabilities: e.detail.currentCapabilities || [],
+        reason: '',
+        saving: false
+      });
+    };
+    window.addEventListener('open-capability-modal', handleOpen);
+    return () => window.removeEventListener('open-capability-modal', handleOpen);
+  }, []);
   const { workspace, user: currentUserProfile, updateWorkspaceSettings } = useWorkspace();
   const canGovernPlatform = hasCapability(profile?.role, 'platform_governance');
   const canViewCalendar = hasCapability(profile?.role, 'view_decision_center');
@@ -424,8 +442,8 @@ export function AdminPanel() {
                                       className="w-full border rounded text-[11px] font-mono-pm px-2 py-1.5 outline-none bg-bg"
                                       style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)', background: 'var(--pm-surface-lowest)' }}
                                     >
-                                      <option value="viewer">Viewer</option>
-                                      <option value="developer">Developer</option>
+                                      <option value="viewer">External Access</option>
+                                      <option value="developer">Employee</option>
                                       <option value="pm">Project Manager</option>
                                     </select>
                                   </div>
@@ -443,6 +461,21 @@ export function AdminPanel() {
                                     </select>
                                   </div>
                                 </div>
+                                {/* Manage Capabilities Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveGearPopover(null);
+                                    // Trigger capabilities modal event
+                                    window.dispatchEvent(new CustomEvent('open-capability-modal', { detail: { userId: p.id, userEmail: p.email, currentCapabilities: p.capabilities || [] } }));
+                                  }}
+                                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-[11px] font-mono-pm uppercase tracking-widest transition-all mb-3"
+                                  style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.2)' }}
+                                >
+                                  <Icon name="verified_user" size={14} />
+                                  Manage Capabilities
+                                </button>
+
                                 {/* Enable / Disable Account Button */}
                                 <button
                                   type="button"
@@ -646,9 +679,9 @@ export function AdminPanel() {
                         className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
                         style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
                       >
-                        <option value="developer">Developer</option>
+                        <option value="developer">Employee</option>
                         <option value="pm">Project Manager</option>
-                        <option value="viewer">Viewer</option>
+                        <option value="viewer">External Access</option>
                       </select>
                     </div>
                     <button
@@ -962,6 +995,99 @@ export function AdminPanel() {
       {tab === 'calendar' && (
         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(70,69,84,0.3)' }}>
           <CalendarIntelligencePanel />
+        </div>
+      )}
+      {/* Render Capability Edit Modal */}
+      {capabilityModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-[#1c1d1f] border border-white/10 rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-white tracking-tight">Manage Capabilities</h3>
+                <p className="text-xs text-white/50">{capabilityModal.userEmail}</p>
+              </div>
+              <button onClick={() => setCapabilityModal({ ...capabilityModal, isOpen: false })} className="text-white/50 hover:text-white">
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              <div className="space-y-3">
+                {['manage_finance', 'manage_employees', 'manage_projects', 'manage_tasks', 'platform_governance'].map(cap => (
+                  <label key={cap} className="flex items-center gap-3 p-3 border border-white/10 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
+                    <input 
+                      type="checkbox" 
+                      className="accent-indigo-500 w-4 h-4"
+                      checked={capabilityModal.capabilities.includes(cap)}
+                      onChange={(e) => {
+                        const newCaps = e.target.checked 
+                          ? [...capabilityModal.capabilities, cap] 
+                          : capabilityModal.capabilities.filter(c => c !== cap);
+                        setCapabilityModal({ ...capabilityModal, capabilities: newCaps });
+                      }}
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-white">{cap}</div>
+                      <div className="text-[10px] text-white/50 font-mono">Controls {cap.replace('_', ' ')} functionality</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              
+              <div className="pt-4 mt-2 border-t border-white/10">
+                <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-2">
+                  Reason for Change <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={capabilityModal.reason}
+                  onChange={(e) => setCapabilityModal({ ...capabilityModal, reason: e.target.value })}
+                  placeholder="e.g. Promoted to HR Manager"
+                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-white/10 flex justify-end gap-3 bg-white/5">
+              <button 
+                onClick={() => setCapabilityModal({ ...capabilityModal, isOpen: false })}
+                className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
+                disabled={capabilityModal.saving}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                  if (!capabilityModal.reason.trim()) {
+                    notify("A reason is required to change capabilities.", "error");
+                    return;
+                  }
+                  setCapabilityModal(prev => ({ ...prev, saving: true }));
+                  try {
+                    const { error } = await supabase.from('users').update({ capabilities: capabilityModal.capabilities }).eq('id', capabilityModal.userId);
+                    if (error) throw error;
+                    // Note: Activity log reason is handled by trigger natively (well, trigger logs it, but we can't pass reason directly to trigger. So we insert explicitly to activityLog or the capability_change_logs could be updated, but for now we rely on the trigger and maybe log reason via activityService).
+                    await import('../../services/activityLogService').then(m => 
+                      m.activityLogService.appendLog({
+                        workspace_id: activeProfiles[0]?.workspace_id || '',
+                        action: 'capability_changed',
+                        metadata: { target_user: capabilityModal.userId, capabilities: capabilityModal.capabilities, reason: capabilityModal.reason }
+                      })
+                    );
+                    notify("Capabilities updated successfully.", "success");
+                    setCapabilityModal({ ...capabilityModal, isOpen: false, saving: false });
+                    invalidateAll();
+                  } catch (err: any) {
+                    notify(err.message || "Failed to update capabilities.", "error");
+                    setCapabilityModal(prev => ({ ...prev, saving: false }));
+                  }
+                }}
+                disabled={capabilityModal.saving || !capabilityModal.reason.trim()}
+                className="px-5 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {capabilityModal.saving ? 'Saving...' : 'Save Capabilities'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

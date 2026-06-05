@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2, History, ShieldCheck, ShieldAlert, RefreshCw } from 'lucide-react';
+import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2, History, ShieldCheck, ShieldAlert, RefreshCw, TrendingUp, Share2 } from 'lucide-react';
 import { sha256 } from '../../utils/cryptoUtils';
 import { Project, Team, User, Profile } from '../../types';
 import { useDashboard } from '../../context/DashboardContext';
@@ -15,6 +15,10 @@ import {
 import { FilePanel } from '../common/FilePanel';
 import { CreateInvoiceModal } from '../finance/CreateInvoiceModal';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
+import { ProjectReviewModal } from './ProjectReviewModal';
+import { ProjectEffortSummary } from '../reports/ProjectEffortSummary';
+import { TeamCapacityView } from '../reports/TeamCapacityView';
+import { ProjectShareModal } from './ProjectShareModal';
 
 function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; currentUserProfile?: any }) {
   const [loading, setLoading] = useState(true);
@@ -335,7 +339,8 @@ export function ProjectDetailsModal({
   const { tasks, updateWorkspaceSettings, projectFrictionMetrics = {}, timelineShiftLedger = [], notify, workspaceSettingsBlob = {} } = useDashboard();
   const hasTasks = tasks.some(t => t.project_id === project.id);
 
-  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance' | 'insights'>('general');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [deltaDays, setDeltaDays] = useState('5');
   const [blockerCategory, setBlockerCategory] = useState('Client IT Team');
   const [blockerOwnership, setBlockerOwnership] = useState('Client');
@@ -525,6 +530,7 @@ export function ProjectDetailsModal({
   const [scanningIndex, setScanningIndex] = useState<number | null>(null);
   const [tamperedIndex, setTamperedIndex] = useState<number | null>(null);
   const [localLogs, setLocalLogs] = useState<any[]>([]);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -751,7 +757,12 @@ export function ProjectDetailsModal({
     });
 
     setChangeReasonPrompt({ changes: null, open: false });
-    onClose();
+    
+    if (finalUpdates.status === 'done' && project.status !== 'done') {
+      setIsReviewModalOpen(true);
+    } else {
+      onClose();
+    }
   };
 
   const deadlineVariance = deadline ? Math.floor((deadline.getTime() - etaCompletionDate.getTime()) / (1000 * 60 * 60 * 24)) : null;
@@ -1058,9 +1069,17 @@ export function ProjectDetailsModal({
                 <span className="text-[11px] font-bold text-text-tertiary uppercase tracking-widest">Project Overview</span>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
-              <Plus className="w-5 h-5 rotate-45" />
-            </button>
+            <div className="flex gap-2">
+              {(currentUserProfile?.role === 'pm' || currentUserProfile?.role === 'super_admin') && (
+                <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
+                  <Share2 className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Share</span>
+                </button>
+              )}
+              <button onClick={onClose} className="p-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
+                <Plus className="w-5 h-5 rotate-45" />
+              </button>
+            </div>
           </div>
 
           {/* Tab bar */}
@@ -1101,7 +1120,22 @@ export function ProjectDetailsModal({
             >
               <Activity className="w-3.5 h-3.5" /> Finance
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('insights')}
+              className={`px-4 py-2 text-xs font-mono uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+                activeTab === 'insights' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-text-tertiary hover:text-indigo-500/70'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" /> Delivery Insights
+            </button>
           </div>
+
+          {activeTab === 'insights' && (
+            <div className="animate-in fade-in duration-300">
+              <ProjectEffortSummary projectId={project.id} />
+            </div>
+          )}
 
           {activeTab === 'general' ? (
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1118,6 +1152,7 @@ export function ProjectDetailsModal({
                       <option value="in-progress">IN PROGRESS</option>
                       <option value="review">REVIEW</option>
                       <option value="deployed">DEPLOYED</option>
+                      <option value="done">DONE</option>
                     </select>
                   </div>
                   <div>
@@ -1572,6 +1607,26 @@ export function ProjectDetailsModal({
           ) : null}
         </div>
       </motion.div>
+
+      <ProjectReviewModal 
+        project={project}
+        workspaceId={project.workspace_id}
+        userId={currentUserProfile?.id || ''}
+        isOpen={isReviewModalOpen}
+        onClose={() => { setIsReviewModalOpen(false); onClose(); }}
+        onSuccess={() => { setIsReviewModalOpen(false); onClose(); }}
+        notify={notify}
+        estimatedHours={expectedRealHours}
+        actualHours={(Number(manActiveDays) + Number(manPassiveDays) + Number(manBlockedDays)) * 8}
+      />
+      
+      <ProjectShareModal 
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        projectId={project.id}
+        workspaceId={project.workspace_id}
+        notify={notify}
+      />
     </div>
   );
 }

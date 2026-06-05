@@ -70,6 +70,7 @@ export interface Notification {
   category: NotificationCategory;
   title: string;
   body?: string;
+  metadata?: Record<string, any>;
   read_at?: string;
   created_at: string;
 }
@@ -106,6 +107,7 @@ export interface Meeting {
   title: string;
   description?: string;
   meeting_type: MeetingType;
+  meeting_category?: 'Internal' | 'Client' | 'HR' | 'Finance';
   start_time: string;
   end_time: string;
   organizer_id?: string;
@@ -222,7 +224,10 @@ export interface ResourceProfile {
 
 /** Map persistence status string to domain ExecutionState (identity when valid). */
 export function toExecutionState(status: string | null | undefined): ExecutionState {
-  const allowed: ExecutionState[] = ['backlog', 'ready', 'in_progress', 'review', 'done'];
+  const allowed: ExecutionState[] = [
+    'backlog', 'ready', 'in_progress', 'review', 'done',
+    'blocked', 'completed', 'changes_requested', 'ready_for_review', 'assigned', 'cancelled',
+  ];
   if (status && allowed.includes(status as ExecutionState)) {
     return status as ExecutionState;
   }

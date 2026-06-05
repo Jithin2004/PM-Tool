@@ -26,6 +26,10 @@ interface AuthContextType {
   updateRole: (id: string, role: User['role']) => Promise<boolean>;
   updateProfile: (updates: Partial<User>) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
+  simulatedRole: User['role'] | null;
+  setSimulatedRole: (role: User['role'] | null) => void;
+  isSimulating: boolean;
+  trueProfile: User | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,6 +40,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profileResolved, setProfileResolved] = useState(false);
   const [profileHydrating, setProfileHydrating] = useState(false);
+  const [simulatedRole, setSimulatedRole] = useState<User['role'] | null>(null);
+
+  const effectiveProfile = React.useMemo(() => {
+    if (!profile) return null;
+    if (simulatedRole) return { ...profile, role: simulatedRole };
+    return profile;
+  }, [profile, simulatedRole]);
 
   // Refs to prevent stale closures in event listeners
   const loadingRef = React.useRef(loading);
@@ -72,7 +83,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // If we already synced this user and it's not a forced refresh, skip
     if (!force && lastSyncedUserIdRef.current === authUser.id) {
       if (import.meta.env.DEV) {
-        console.log("AuthContext: syncProfile() already completed for:", authUser.id);
       }
       return profileRef.current;
     }
@@ -80,7 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // If a sync for the same user is currently in progress, return the existing promise
     if (!force && syncUserRef.current === authUser.id && syncPromiseRef.current) {
       if (import.meta.env.DEV) {
-        console.log("AuthContext: syncProfile() already in progress for:", authUser.id);
       }
       return syncPromiseRef.current;
     }
@@ -88,8 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     syncUserRef.current = authUser.id;
 
     const promise = (async () => {
-      // console.log("[AuthContext syncProfile START]: user email:", authUser.email, "id:", authUser.id);
-
       try {
         const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
         const email = authUser.email;
@@ -333,21 +340,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
     safetyTimeoutRef.current = setTimeout(() => {
       if (safetyTimeoutRef.current) {
-        console.warn("[AuthContext safetyTimeout triggered!] forcing loading to false");
         setLoading(false);
         safetyTimeoutRef.current = null;
       }
     }, 15000);
-
-    // console.log("[AuthContext subscribing to onAuthStateChange]");
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // console.log("[AuthContext onAuthStateChange TRIGGERED]: event:", event, "session user:", session?.user?.email);
       if (!mounted) return;
       
       if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
         // Ignore initial dummy events during loading/initialization
         if (loadingRef.current) {
-          console.log("[AuthContext onAuthStateChange]: ignoring SIGNED_OUT during initial load");
           return;
         }
 
@@ -391,7 +393,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           table: 'users',
           filter: `id=eq.${userId}`
         }, async (payload) => {
-          // console.log("[AuthContext real-time] User profile updated:", payload.new);
           if (mounted && payload.new) {
              const updatedProfile = await syncProfile({ id: userId, email: payload.new.email } as any);
              if (updatedProfile) {
@@ -483,7 +484,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, syncProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, profileResolved, profileHydrating, needsWorkspaceSetup, logout, updateRole, updateProfile, refreshProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile: effectiveProfile, 
+      loading, 
+      profileResolved, 
+      profileHydrating, 
+      needsWorkspaceSetup, 
+      logout, 
+      updateRole, 
+      updateProfile, 
+      refreshProfile,
+      simulatedRole,
+      setSimulatedRole,
+      isSimulating: !!simulatedRole,
+      trueProfile: profile
+    }}>
       {children}
     </AuthContext.Provider>
   );

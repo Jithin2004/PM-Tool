@@ -101,11 +101,9 @@ export function NotificationCenter() {
   const handleNavigate = (n: any) => {
     if (n.route_path) {
       window.location.hash = `#${n.route_path}`;
-      console.log('Navigating to exact route:', n.route_path);
     } else if (n.source_entity_type && n.source_entity_id) {
       // Fallback navigation using source_entity fields
       window.location.hash = `#/${n.source_entity_type}/${n.source_entity_id}`;
-      console.log('Navigating to', n.source_entity_type, n.source_entity_id);
     }
     if (!n.read_at) markRead(n.id);
     if (!n.opened_at) markOpened(n.id);

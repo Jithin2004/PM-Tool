@@ -1,10 +1,11 @@
-import type { Project, Profile, Task, TaskDependency, Team, Stats } from '../../types';
+import type { Project, Profile, Task, TaskDependency, Team, Stats, TaskCollaborator } from '../../types';
 
 /** Canonical raw operational entities — persisted / fetched state only. */
 export interface OperationalRawState {
   projects: Project[];
   tasks: Task[];
   dependencies: TaskDependency[];
+  collaborators?: TaskCollaborator[];
   teams: Team[];
   profiles: Profile[];
   attendanceRows: AttendanceRow[];

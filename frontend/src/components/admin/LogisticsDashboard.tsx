@@ -497,6 +497,12 @@ export function LogisticsDashboard({
     const workspaceId = profiles[0]?.workspace_id;
     if (!workspaceId) return;
 
+    if (!await showConfirm(`Are you sure you want to update the salary to ${salaryValue}?`)) {
+      setEditingSalaryUserId(null);
+      setEditingSalaryReason('');
+      return;
+    }
+
     try {
       // Find currently active compensation
       const { data: activeRecords } = await supabase

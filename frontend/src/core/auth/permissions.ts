@@ -26,7 +26,19 @@ export type Capability =
   | 'platform_governance'
   | 'platform_security'
   | 'manage_finance'
-  | 'view_mission_control';
+  | 'view_mission_control'
+  // Sprint 1 HR & Finance Capabilities
+  | 'manage_employees'
+  | 'manage_attendance'
+  | 'manage_employment_records'
+  | 'manage_payroll'
+  | 'manage_invoice'
+  | 'manage_expenses'
+  | 'approve_work'
+  | 'assign_tasks'
+  | 'manage_meetings'
+  | 'manage_workspace'
+  | 'manage_roles';
 
 const VIEW_CAPABILITIES: Capability[] = [
   'view_projects',
@@ -105,9 +117,21 @@ const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
 import { ROUTE_CAPABILITY_MAP } from '../../app/routeRegistry';
 
 
-export function hasCapability(role: UserRole | undefined, capability: Capability): boolean {
-  if (!role) return false;
-  return ROLE_CAPABILITIES[role]?.includes(capability) ?? false;
+export function hasCapability(roleOrProfile: UserRole | any | undefined | null, capability: Capability): boolean {
+  if (!roleOrProfile) return false;
+  
+  let roleStr: UserRole;
+  let customCaps: Capability[] = [];
+  
+  if (typeof roleOrProfile === 'string') {
+    roleStr = roleOrProfile as UserRole;
+  } else {
+    roleStr = roleOrProfile.role;
+    customCaps = roleOrProfile.capabilities || [];
+  }
+  
+  if (customCaps.includes(capability)) return true;
+  return ROLE_CAPABILITIES[roleStr]?.includes(capability) ?? false;
 }
 
 export function isOperationalReadOnly(role: UserRole | undefined): boolean {
@@ -169,7 +193,6 @@ export function guardCapability(
     
     if (mutationTimestamps.length > MAX_MUTATIONS_PER_10S) {
       const msg = `Rate Limit Exceeded: Too many operational mutations requested. Please wait before retrying.`;
-      console.warn(`[Guard] ${msg}`);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: msg, type: 'error' } }));
       }

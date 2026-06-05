@@ -1,6 +1,6 @@
 import React from 'react';
-import AuditView from '../../components/control/AuditView';
+import AuditGovernance from './AuditGovernance';
 
 export default function AuditPage() {
-  return <AuditView />;
+  return <AuditGovernance />;
 }

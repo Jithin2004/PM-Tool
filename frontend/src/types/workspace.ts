@@ -28,12 +28,19 @@ export interface WorkspaceSettings {
   notifications?: boolean;
   companyName?: string;
   logoUrl?: string;
+  workingTimeFrom?: string;
+  workingTimeTo?: string;
+  departments?: string[];
+  passwordPolicy?: string;
+  magicLinkExpiry?: string;
+  baseCurrency?: string;
 }
 
 export interface Workspace {
   id: string;
   name: string;
   ownerId: string;
+  is_demo?: boolean;
   settings: WorkspaceSettings;
   createdAt: string;
   updatedAt?: string;

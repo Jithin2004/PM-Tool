@@ -33,9 +33,7 @@ export const aiRecommendationService = {
           .select()
           .single();
         if (!error && data) return data;
-        console.warn('ai_recommendations insert failed, using fallback:', error);
       } catch (err) {
-        console.warn('ai_recommendations insert exception:', err);
       }
     }
 
@@ -74,9 +72,7 @@ export const aiRecommendationService = {
           .update({ status })
           .eq('id', id);
         if (!error) return true;
-        console.warn('Update recommendation status failed, using fallback:', error);
       } catch (err) {
-        console.warn('Update recommendation status exception:', err);
       }
     }
 
@@ -119,7 +115,6 @@ export const aiRecommendationService = {
         if (!error && data) return data;
       } catch (err: any) {
         if (err.name === 'AbortError' || abortSignal?.aborted) return [];
-        console.warn('Fetch recommendations failed, using local cache:', err);
       }
     }
 

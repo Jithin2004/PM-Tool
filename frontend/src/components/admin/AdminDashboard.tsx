@@ -496,9 +496,9 @@ export function AdminDashboard({
                       className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
                       style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
                     >
-                      <option value="developer">Developer</option>
+                      <option value="developer">Employee</option>
                       <option value="pm">Project Manager</option>
-                      <option value="viewer">Viewer</option>
+                      <option value="viewer">External Access</option>
                     </select>
                   </div>
                   <button

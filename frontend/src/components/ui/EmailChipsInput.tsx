@@ -87,9 +87,9 @@ export function EmailChipsInput({ value, onChange, placeholder }: EmailChipsInpu
               className="text-[10px] uppercase font-semibold text-[var(--pm-primary)] bg-[var(--pm-primary)]/10 hover:bg-[var(--pm-primary)]/20 px-1.5 py-0.5 rounded-full ml-1 border-none outline-none cursor-pointer appearance-none text-center min-w-[70px] transition-colors focus:ring-1 focus:ring-[var(--pm-primary)]"
               aria-label={`Select role for ${chip.email}`}
             >
-              <option value="Developer" className="bg-surface-3 text-[var(--pm-text)] dark:text-white">Developer</option>
+              <option value="Developer" className="bg-surface-3 text-[var(--pm-text)] dark:text-white">Employee</option>
               <option value="PM" className="bg-surface-3 text-[var(--pm-text)] dark:text-white">PM</option>
-              <option value="Viewer" className="bg-surface-3 text-[var(--pm-text)] dark:text-white">Viewer</option>
+              <option value="Viewer" className="bg-surface-3 text-[var(--pm-text)] dark:text-white">External Access</option>
             </select>
             <button
               type="button"

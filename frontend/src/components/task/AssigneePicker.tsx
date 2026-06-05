@@ -22,7 +22,7 @@ import { useOperationalData } from '../../context/OperationalDataContext';
 export function AssigneePicker({ users, value, onChange, disabled, contextText = '' }: AssigneePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { raw: { skills = [], userSkills = [] } } = useOperationalData();
+  const { raw: { skills = [], userSkills = [], tasks = [] } } = useOperationalData();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -145,6 +145,19 @@ export function AssigneePicker({ users, value, onChange, disabled, contextText =
                         <span className="text-[10px] text-text-quaternary truncate">{user.email}</span>
                       )
                     )}
+                    {(() => {
+                      const userTasks = tasks.filter(t => t.assignee_id === user.id && t.status !== 'completed' && t.status !== 'cancelled');
+                      const loadHours = userTasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
+                      const utilization = Math.round((loadHours / 40) * 100);
+                      if (utilization > 100) {
+                        return (
+                          <span className="text-[10px] text-rose-400 truncate bg-rose-400/10 px-1 rounded mt-0.5">
+                            Warning: Dev is at {utilization}% capacity
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
                 {isSelected && <Check className="w-4 h-4 text-accent-primary shrink-0" />}

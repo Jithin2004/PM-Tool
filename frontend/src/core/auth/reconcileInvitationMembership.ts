@@ -113,18 +113,17 @@ async function upsertMemberFromInvitation(
     await markInvitationAccepted(invite.id);
   }
 
-  if (invite.date_of_joining) {
-    const { error: empError } = await supabase
-      .from('employment_records')
-      .insert({
-        profile_id: input.authUserId,
-        workspace_id: invite.workspace_id,
-        date_of_joining: invite.date_of_joining,
-        employment_status: 'active',
-      });
+    if (invite.date_of_joining) {
+      const { error: empError } = await supabase
+        .from('employment_records')
+        .insert({
+          user_id: input.authUserId,
+          workspace_id: invite.workspace_id,
+          date_of_joining: invite.date_of_joining,
+          employment_status: 'active',
+        });
       
     if (empError) {
-      console.warn('[reconcileInvitationMembership] employment record upsert failed:', empError);
     }
   }
 
@@ -235,7 +234,6 @@ export async function reconcileWorkspaceMembership(
   authUserId: string,
   email?: string,
 ): Promise<{ repaired: boolean; workspaceId: string | null; reason: string }> {
-  console.log("[reconcileWorkspaceMembership START]:", { authUserId, email });
   if (!isSupabaseConfigured) {
     return { repaired: false, workspaceId: null, reason: 'supabase_not_configured' };
   }
@@ -245,9 +243,6 @@ export async function reconcileWorkspaceMembership(
     .select('id')
     .eq('owner_id', authUserId)
     .limit(1);
-
-  console.log("[reconcileWorkspaceMembership] owned workspaces query:", { owned, ownedError });
-
   if (!ownedError && owned && owned.length > 0) {
     const wsId = owned[0].id;
     const { error: upsertError } = await supabase.from('users').upsert(
@@ -268,7 +263,6 @@ export async function reconcileWorkspaceMembership(
 
   if (email) {
     const invite = await findValidInvitation(email);
-    console.log("[reconcileWorkspaceMembership] findValidInvitation result:", invite);
     if (invite) {
       const { error: inviteUpsertError } = await supabase.from('users').upsert(
         {
@@ -287,13 +281,11 @@ export async function reconcileWorkspaceMembership(
         }
         return { repaired: true, workspaceId: invite.workspace_id, reason: 'invitation_repair' };
       }
-      console.warn("[reconcileWorkspaceMembership] inviteUpsertError:", inviteUpsertError);
       return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
     }
   }
 
   if (isProductKeyVerified()) {
-    console.log("[reconcileWorkspaceMembership] user has verified product key.");
     const { data: ws } = await supabase.from('workspaces').select('id').limit(1).maybeSingle();
     if (ws) {
       const { error: upsertError } = await supabase.from('users').upsert(
@@ -312,8 +304,6 @@ export async function reconcileWorkspaceMembership(
     }
     return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
   }
-
-  console.log("[reconcileWorkspaceMembership] user has no owned workspaces, no valid invites, and not first org member. ORPHANED.");
   return { repaired: false, workspaceId: null, reason: 'orphaned' };
 }
 

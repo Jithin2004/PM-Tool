@@ -3,13 +3,13 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { 
-  fetchFinanceData, closeFinancialPeriod, createFinancialAdjustment, 
+  fetchFinanceData, closeFinancialPeriod, createFinancialAdjustment, deleteInvoice, cancelInvoice,
   Client, Invoice, Payment, Expense, FinancialPeriod, FinancialSnapshot, FinancialAdjustment, CompanyBillingProfile, fetchClients
 } from '../../services/financeService';
 import { 
   Plus, Landmark, Receipt, CreditCard, TrendingUp, TrendingDown, 
   Wallet, Building2, ChevronLeft, ChevronRight, Lock, 
-  AlertCircle, History, Download, X 
+  AlertCircle, History, Download, X, Trash2
 } from 'lucide-react';
 import { CreateInvoiceModal } from '../../components/finance/CreateInvoiceModal';
 import { ManageClientsModal } from '../../components/finance/ManageClientsModal';
@@ -18,7 +18,7 @@ import { showAlert, showConfirm, showPrompt } from '../../components/common/Dial
 
 export default function FinancePage() {
   const { workspace } = useWorkspace();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   
   const [viewMonth, setViewMonth] = useState(new Date().getMonth() + 1); // 1-12
@@ -65,10 +65,17 @@ export default function FinancePage() {
         loadData();
       }).subscribe();
 
+    const clientsSub = supabase.channel('clients_changes_finance')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients', filter: `workspace_id=eq.${workspace.id}` }, () => {
+        fetchClients(workspace.id).then(setClients);
+        loadData();
+      }).subscribe();
+
     return () => {
       supabase.removeChannel(periodsSub);
       supabase.removeChannel(snapshotsSub);
       supabase.removeChannel(adjustmentsSub);
+      supabase.removeChannel(clientsSub);
     };
   }, [workspace?.id]);
 
@@ -215,14 +222,14 @@ export default function FinancePage() {
   return (
     <div className="space-y-8 pb-16 font-geist h-full overflow-y-auto p-6" style={{ color: 'var(--pm-on-surface)' }}>
       {/* Header */}
-      <div className="flex items-end justify-between px-1 pt-2">
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between px-1 pt-2 gap-4 md:gap-0">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Accounts & Finance</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
             Financial oversight and ledger management.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button 
             onClick={() => setShowManageClientsModal(true)}
             className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium border"
@@ -380,7 +387,11 @@ export default function FinancePage() {
           </div>
           <div className="p-0">
             {data.invoices.length === 0 ? (
-              <div className="p-8 text-center text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>No invoices created yet.</div>
+              <div className="p-8 text-center flex flex-col items-center">
+                <Receipt className="w-8 h-8 text-text-quaternary mb-3" />
+                <p className="text-sm font-medium text-text-secondary">No invoices created yet.</p>
+                <p className="text-xs text-text-tertiary mt-1">Generate your first invoice to start billing clients.</p>
+              </div>
             ) : (
               <div className="divide-y" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
                 {data.invoices.slice(0, 5).map(inv => (
@@ -389,37 +400,78 @@ export default function FinancePage() {
                       <div className="font-mono text-sm">{inv.invoice_number}</div>
                       <div className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>{new Date(inv.issue_date).toLocaleDateString()}</div>
                     </div>
-                    <div className="text-right flex items-center gap-4">
-                      <div>
-                        <div className="font-mono font-medium">${Number(inv.grand_total || inv.amount).toLocaleString()}</div>
-                        <div className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full inline-block mt-1
-                          ${inv.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' : 
-                            inv.status === 'overdue' ? 'bg-rose-500/10 text-rose-500' : 
-                            inv.status === 'partial' ? 'bg-blue-500/10 text-blue-500' :
-                            'bg-amber-500/10 text-amber-500'}`}>
-                          {inv.status}
+                      <div className="text-right flex items-center gap-2">
+                        <div>
+                          <div className="font-mono font-medium">${Number(inv.grand_total || inv.amount).toLocaleString()}</div>
+                          <div className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full inline-block mt-1
+                            ${inv.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' : 
+                              inv.status === 'overdue' ? 'bg-rose-500/10 text-rose-500' : 
+                              inv.status === 'partial' ? 'bg-blue-500/10 text-blue-500' :
+                              'bg-amber-500/10 text-amber-500'}`}>
+                            {inv.status}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={async () => {
+                              try {
+                                const client = data.clients.find(c => c.id === inv.client_id);
+                                const comp = data.companyProfile;
+                                if (comp && client) {
+                                  await generateInvoicePDF(comp, client, inv, inv.line_items || []);
+                                } else {
+                                  showAlert("Missing company profile or client details.");
+                                }
+                              } catch(err) {
+                                console.error(err);
+                              }
+                            }}
+                            className="p-1.5 text-text-tertiary hover:text-emerald-400 transition-colors"
+                            title="Download PDF"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          {inv.status === 'draft' && (
+                            <button 
+                              onClick={async () => {
+                                if (!workspace?.id || !profile?.id) return;
+                                if (await showConfirm(`Are you sure you want to completely delete draft invoice ${inv.invoice_number}?`)) {
+                                  try {
+                                    await deleteInvoice(inv.id, workspace.id, profile.id, 'User initiated deletion');
+                                    loadData();
+                                  } catch (e: any) {
+                                    showAlert(e.message || "Failed to delete invoice");
+                                  }
+                                }
+                              }}
+                              className="p-1.5 text-text-tertiary hover:text-rose-400 transition-colors"
+                              title="Delete Draft"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {inv.status === 'issued' && (
+                            <button 
+                              onClick={async () => {
+                                if (!workspace?.id || !profile?.id) return;
+                                const reason = await showPrompt('Why are you cancelling this invoice?', { title: 'Cancellation Reason' });
+                                if (reason) {
+                                  try {
+                                    await cancelInvoice(inv, profile.id, reason);
+                                    loadData();
+                                  } catch (e: any) {
+                                    showAlert(e.message || "Failed to cancel invoice");
+                                  }
+                                }
+                              }}
+                              className="p-1.5 text-text-tertiary hover:text-rose-400 transition-colors"
+                              title="Cancel Invoice"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <button 
-                        onClick={async () => {
-                          try {
-                            const client = data.clients.find(c => c.id === inv.client_id);
-                            const comp = data.companyProfile;
-                            if (comp && client) {
-                              await generateInvoicePDF(comp, client, inv, inv.line_items || []);
-                            } else {
-                              showAlert("Missing company profile or client details.");
-                            }
-                          } catch(err) {
-                            console.error(err);
-                          }
-                        }}
-                        className="p-1.5 text-text-tertiary hover:text-emerald-400 transition-colors"
-                        title="Download PDF"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </div>
                   </div>
                 ))}
               </div>
@@ -433,7 +485,11 @@ export default function FinancePage() {
           </div>
           <div className="p-0">
             {data.expenses.filter(e => isCurrentMonth(e.date)).length === 0 ? (
-              <div className="p-8 text-center text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>No expenses logged this month.</div>
+              <div className="p-8 text-center flex flex-col items-center">
+                <TrendingDown className="w-8 h-8 text-text-quaternary mb-3" />
+                <p className="text-sm font-medium text-text-secondary">No expenses logged this month.</p>
+                <p className="text-xs text-text-tertiary mt-1">Track outgoing costs to accurately monitor profitability.</p>
+              </div>
             ) : (
               <div className="divide-y" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
                 {data.expenses.filter(e => isCurrentMonth(e.date)).slice(0, 5).map(exp => (

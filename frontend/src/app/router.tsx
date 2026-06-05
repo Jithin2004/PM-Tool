@@ -23,7 +23,6 @@ const withRetry = (componentImport: () => Promise<any>) => {
       sessionStorage.removeItem('chunk_reload_count');
       return module;
     } catch (error: any) {
-      console.warn('Failed to load dynamic import:', error);
       if (error?.message?.includes('Failed to fetch dynamically imported module')) {
         const reloadCount = parseInt(sessionStorage.getItem('chunk_reload_count') || '0', 10);
         if (reloadCount < 2) {
@@ -52,6 +51,10 @@ const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
 const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage'));
 const KnowledgePage = withRetry(() => import('../pages/workspace/KnowledgePage'));
 const DecisionsPage = withRetry(() => import('../pages/workspace/DecisionsPage'));
+const MeetingsPage = withRetry(() => import('../pages/workspace/MeetingsPage'));
+const RequirementsPage = withRetry(() => import('../pages/workspace/RequirementsPage'));
+const DocumentsPage = withRetry(() => import('../pages/workspace/DocumentsPage'));
+const ApprovalsPage = withRetry(() => import('../pages/workspace/ApprovalsPage'));
 const ExecutiveOverview = withRetry(() => import('../pages/dashboard/ExecutiveOverview').then(m => ({ default: m.ExecutiveOverview })));
 
 const ProductAdoptionDashboard = withRetry(() => import('../pages/workspace/ProductAdoptionDashboard').then(m => ({ default: m.ProductAdoptionDashboard })));
@@ -85,6 +88,7 @@ const BacklogPage = withRetry(() => import('../pages/backlog/BacklogPage'));
 const ProjectBoardPage = withRetry(() => import('../pages/board/ProjectBoardPage'));
 const ProjectSprintPage = withRetry(() => import('../pages/sprints/ProjectSprintPage'));
 const ProjectTimelinePage = withRetry(() => import('../pages/timeline/ProjectTimelinePage'));
+const SharedProjectDashboard = withRetry(() => import('../pages/shared/SharedProjectDashboard').then(m => ({ default: m.SharedProjectDashboard })));
 
 const DEFAULT_AUTH_REDIRECT = '/overview';
 
@@ -154,7 +158,6 @@ function redirectTo(target: string): void {
 
 function Redirect({ to }: { to: string }) {
   useEffect(() => {
-    console.log("[Redirect component] redirecting to:", to, "from:", window.location.pathname);
     redirectTo(to);
   }, [to]);
   return null;
@@ -208,7 +211,7 @@ export function ResolveRouter() {
 
   useEffect(() => {
     /* 
-    console.log("[ResolveRouter START] Current state:", {
+//     console.log("[ResolveRouter START] Current state:", {
       pathname,
       workspaceId: workspace?.id,
       userId: user?.id,
@@ -251,7 +254,6 @@ export function ResolveRouter() {
           import('../pages/execution/TimelinePage');
         }
       } catch (e) {
-        console.warn('Prefetch failed', e);
       }
     };
     
@@ -277,6 +279,10 @@ export function ResolveRouter() {
     return <Suspense fallback={<RouteFallback />}><SecurityPage /></Suspense>;
   }
 
+  if (pathname.startsWith('/shared/project/')) {
+    return <Suspense fallback={<RouteFallback />}><SharedProjectDashboard /></Suspense>;
+  }
+
   if (pathname === '/activate') {
     return (
       <ProductKeyGate
@@ -289,8 +295,13 @@ export function ResolveRouter() {
   }
 
   if (pathname === '/login') {
-    console.log("[ResolveRouter] Routing to /login explicitly");
     return <Login />;
+  }
+
+  if (pathname === '/password-setup') {
+    // Dynamically load to avoid circular deps, or just mock inline for now
+    const PasswordSetup = lazy(() => import('../components/auth/PasswordSetup').then(m => ({ default: m.PasswordSetup })));
+    return <Suspense fallback={<RouteFallback />}><PasswordSetup /></Suspense>;
   }
 
   if (workspaceLoading || authLoading || !profileResolved || profileHydrating) {
@@ -310,6 +321,14 @@ export function ResolveRouter() {
 
   if (role === 'uninvited' || !role) {
     return <Redirect to="/login?error=uninvited" />;
+  }
+
+  if (profile?.force_password_change) {
+    if (pathname !== '/password-setup') {
+      return <Redirect to="/password-setup" />;
+    }
+  } else if (pathname === '/password-setup') {
+    return <Redirect to="/overview" />;
   }
 
   if (!workspace && role === 'pending-workspace-setup') {
@@ -370,6 +389,22 @@ export function ResolveRouter() {
   if (pathname === '/workspace/decisions') {
     if (!guardRoute(role, '/workspace/decisions')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><DecisionsPage /></RouteShell>;
+  }
+  if (pathname === '/workspace/meetings') {
+    if (!guardRoute(role, '/workspace/meetings')) return <RouteShell><AccessRestricted /></RouteShell>;
+    return <RouteShell><MeetingsPage /></RouteShell>;
+  }
+  if (pathname === '/workspace/requirements') {
+    if (!guardRoute(role, '/workspace/requirements')) return <RouteShell><AccessRestricted /></RouteShell>;
+    return <RouteShell><RequirementsPage /></RouteShell>;
+  }
+  if (pathname === '/workspace/documents') {
+    if (!guardRoute(role, '/workspace/documents')) return <RouteShell><AccessRestricted /></RouteShell>;
+    return <RouteShell><DocumentsPage /></RouteShell>;
+  }
+  if (pathname === '/workspace/approvals') {
+    if (!guardRoute(role, '/workspace/approvals')) return <RouteShell><AccessRestricted /></RouteShell>;
+    return <RouteShell><ApprovalsPage /></RouteShell>;
   }
 
   // ── EXECUTION ──
@@ -492,7 +527,6 @@ export function ResolveRouter() {
 
   // ── Fallback: unknown paths → overview (registered 404 behavior) ──
   if (import.meta.env.DEV && !isRegisteredPath(pathname)) {
-    console.warn(`[ResolveRouter] Unregistered path, falling back to overview: ${rawPathname}`);
   }
   return <RouteShell><OverviewPage /></RouteShell>;
 }

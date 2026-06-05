@@ -89,7 +89,6 @@ export function useProjects(workspaceId?: string) {
         const nextQueue = currentQueue.filter((qItem: any) => qItem.timestamp !== item.timestamp);
         localStorage.setItem(queueKey, JSON.stringify(nextQueue));
       } catch (err) {
-        console.warn('Sync failed for item:', item, err);
         // Fail: Increment retry_count and keep in queue
         const currentQueue = JSON.parse(localStorage.getItem(queueKey) || '[]');
         const nextQueue = currentQueue.map((qItem: any) => 
@@ -152,7 +151,6 @@ export function useProjects(workspaceId?: string) {
       setError(null);
     } catch (err: any) {
       if (err.name === 'AbortError' || abortSignal?.aborted) return;
-      console.warn("Failed to load projects from Supabase, falling back to local cache:", err);
       const localProjects = localStorage.getItem(`projects_${workspaceId}`);
       if (localProjects) {
         setProjects(JSON.parse(localProjects));
@@ -189,7 +187,6 @@ export function useProjects(workspaceId?: string) {
       setHasMore(count !== null ? (to + 1) < count : false);
       setError(null);
     } catch (err: any) {
-      console.warn("Failed to load more projects:", err);
     } finally {
       setLoading(false);
     }
@@ -242,7 +239,6 @@ export function useProjects(workspaceId?: string) {
         try {
           setProjects(JSON.parse(e.newValue));
         } catch (err) {
-          console.warn('Failed to sync projects across tabs', err);
         }
       }
     };

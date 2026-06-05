@@ -136,8 +136,6 @@ export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
 
 export async function getWorkspaceForUser(userId: string): Promise<Workspace | null> {
   if (import.meta.env.DEV) {
-    console.log("workspaceService: getWorkspaceForUser() started for user:", userId);
-    console.log("workspaceService: getWorkspaceForUser() querying users table...");
   }
   const { data: memberRow, error: memberError } = await supabase
     .from('users')
@@ -146,7 +144,6 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
     .maybeSingle();
 
   if (import.meta.env.DEV) {
-    console.log("workspaceService: getWorkspaceForUser() users query completed. error:", memberError, "data:", memberRow);
   }
   if (memberError) throw memberError;
 
@@ -156,7 +153,6 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
   }
 
   if (import.meta.env.DEV) {
-    console.log("workspaceService: getWorkspaceForUser() querying workspaces table for ID:", memberRow.workspace_id);
   }
   const { data: workspaceRow, error: workspaceError } = await supabase
     .from('workspaces')
@@ -165,7 +161,6 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
     .maybeSingle();
 
   if (import.meta.env.DEV) {
-    console.log("workspaceService: getWorkspaceForUser() workspaces query completed. error:", workspaceError, "data:", workspaceRow);
   }
   if (workspaceError) throw workspaceError;
   return workspaceRow ? rowToWorkspace(workspaceRow as WorkspaceRow) : null;
@@ -212,7 +207,6 @@ export async function createWorkspaceForUser({ name, settings, user, templateId,
 
   if (settings.country) {
     syncWorkspaceHolidays(workspaceRow.id, settings.country, settings.region || '').catch(err => {
-      console.warn("Failed to sync workspace holidays in background:", err);
     });
   }
 
@@ -246,7 +240,6 @@ export async function updateWorkspaceSettings(workspace: Workspace, settings: Pa
 
   if (settings.country !== undefined || settings.region !== undefined) {
     syncWorkspaceHolidays(workspace.id, nextSettings.country || '', nextSettings.region || '').catch(err => {
-      console.warn("Failed to sync workspace holidays in background:", err);
     });
   }
 

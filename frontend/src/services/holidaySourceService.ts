@@ -88,11 +88,9 @@ class HolidaySourceService {
         .eq('id', actorId)
         .maybeSingle();
       if (!actor || actor.workspace_id !== workspaceId) {
-        console.log('[Calendar Sync] skipped: non-member');
         return { imported: 0, skipped: 0, status: 'skipped' };
       }
       if (!hasCapability(actor.role as UserRole, 'manage_settings')) {
-        console.log('[Calendar Sync] skipped: non-owner');
         return { imported: 0, skipped: 0, status: 'skipped' };
       }
     }
@@ -257,7 +255,6 @@ class HolidaySourceService {
         hash
       });
     } catch (err) {
-      console.warn('Failed to append sync log:', err);
     }
   }
 
@@ -297,11 +294,9 @@ class HolidaySourceService {
         .eq('id', actorId)
         .maybeSingle();
       if (!actor || actor.workspace_id !== workspaceId) {
-        console.log('[Calendar Sync] skipped: non-member');
         return false;
       }
       if (!hasCapability(actor.role as UserRole, 'manage_settings')) {
-        console.log('[Calendar Sync] skipped: non-owner');
         return false;
       }
     }
@@ -337,7 +332,6 @@ class HolidaySourceService {
         return await calendarEventService.updateEvent(eventId, { deleted_at: new Date().toISOString() } as any);
       }
     } catch (err) {
-      console.warn('Failed to toggle holiday:', err);
       return false;
     }
   }
@@ -367,7 +361,6 @@ class HolidaySourceService {
       }, actorId);
       return true;
     } catch (err) {
-      console.warn('Failed to create organization event:', err);
       return false;
     }
   }
