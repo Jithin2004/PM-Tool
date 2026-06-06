@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { Task } from '../../types';
@@ -13,7 +13,15 @@ interface TaskConfidenceModalProps {
 export function TaskConfidenceModal({ task, isOpen, onClose, onSubmit }: TaskConfidenceModalProps) {
   const [confidenceLevel, setConfidenceLevel] = useState<'high' | 'medium' | 'low' | null>(null);
   const [discoveryNotes, setDiscoveryNotes] = useState('');
-  const [estimatedEffort, setEstimatedEffort] = useState(task.estimated_hours * 60 || 0);
+  const [estimatedEffort, setEstimatedEffort] = useState(task ? (task.estimated_hours || 0) * 60 : 0);
+
+  useEffect(() => {
+    if (task) {
+      setConfidenceLevel(null);
+      setDiscoveryNotes('');
+      setEstimatedEffort((task.estimated_hours || 0) * 60);
+    }
+  }, [task]);
 
   if (!isOpen) return null;
 
