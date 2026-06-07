@@ -75,7 +75,7 @@ export default function AuditGovernance() {
           <div className="flex gap-4 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
             <div className="group/input flex-1 md:w-48">
               <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">Filter by User</label>
-              <select value={filters.user} onChange={e => setFilters(s => ({ ...s, user: e.target.value }))} className="w-full bg-surface/50 border border-border/50 rounded-xl h-10 px-3 text-xs text-text-secondary outline-none">
+              <select value={filters.user} onChange={e => setFilters(s => ({ ...s, user: e.target.value }))} className="w-full input-premium h-10 px-3 text-xs outline-none">
                 <option value="">All Users</option>
                 {profiles?.map((p: any) => (
                   <option key={p.id} value={p.id}>{p.full_name || p.email}</option>
@@ -84,7 +84,7 @@ export default function AuditGovernance() {
             </div>
             <div className="group/input flex-1 md:w-40">
               <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">Filter by Module</label>
-              <select value={filters.module} onChange={e => setFilters(s => ({ ...s, module: e.target.value }))} className="w-full bg-surface/50 border border-border/50 rounded-xl h-10 px-3 text-xs text-text-secondary outline-none">
+              <select value={filters.module} onChange={e => setFilters(s => ({ ...s, module: e.target.value }))} className="w-full input-premium h-10 px-3 text-xs outline-none">
                 <option value="">All Modules</option>
                 <option value="project">Project</option>
                 <option value="task">Task</option>
@@ -94,7 +94,7 @@ export default function AuditGovernance() {
             </div>
             <div className="group/input flex-1 md:w-40">
               <label className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1.5 block">Filter by Date</label>
-              <input type="date" value={filters.date} onChange={e => setFilters(s => ({ ...s, date: e.target.value }))} className="w-full bg-surface/50 border border-border/50 rounded-xl h-10 px-3 text-xs text-text-secondary outline-none" />
+              <input type="date" value={filters.date} onChange={e => setFilters(s => ({ ...s, date: e.target.value }))} className="w-full input-premium h-10 px-3 text-xs outline-none" />
             </div>
           </div>
         </div>
@@ -110,10 +110,10 @@ export default function AuditGovernance() {
             <p className="text-xs text-text-tertiary mt-1">Try adjusting your filters.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-border/50 bg-surface">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto rounded-xl border border-border/50 bg-surface-3/10 backdrop-blur-md">
+            <table className="w-full text-left border-collapse table-premium">
               <thead>
-                <tr className="border-b border-border/50 bg-surface-2 text-[10px] font-bold uppercase tracking-widest text-text-tertiary">
+                <tr className="border-b border-border/50 text-[10px] font-bold uppercase tracking-widest text-text-tertiary">
                   <th className="px-4 py-3 whitespace-nowrap">Timestamp</th>
                   <th className="px-4 py-3 whitespace-nowrap">Actor (Who)</th>
                   <th className="px-4 py-3 whitespace-nowrap">Action (Did What)</th>

@@ -252,7 +252,7 @@ const AuditView = React.memo(function AuditView() {
                   setLogsLoading(false);
                 }}
                 disabled={logsLoading}
-                className="px-3 py-1.5 bg-signal-critical/10 text-signal-critical hover:bg-signal-critical hover:text-[var(--pm-text)] dark:text-white border border-signal-critical/20 rounded text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 bg-signal-critical/10 text-signal-critical hover:bg-signal-critical hover:text-[var(--pm-text)] text-[var(--text-primary)] border border-signal-critical/20 rounded text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
               >
                 {logsLoading ? 'Repairing...' : 'Repair Ledger'}
               </button>

@@ -21,9 +21,9 @@ const iconMap: Record<InsightType, LucideIcon> = {
 };
 
 const colorMap: Record<InsightType, string> = {
-  blocker: 'border-red-500/20 bg-signal-critical-bg',
+  blocker: 'border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 bg-signal-critical-bg',
   risk: 'border-border bg-signal-warning-bg',
-  overdue: 'border-red-500/20 bg-signal-critical-bg',
+  overdue: 'border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 bg-signal-critical-bg',
   suggestion: 'border-emerald-500/20 bg-emerald-500/5',
 };
 

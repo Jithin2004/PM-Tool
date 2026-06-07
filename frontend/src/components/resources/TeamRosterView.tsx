@@ -120,9 +120,9 @@ export function TeamRosterView() {
               {/* Roster Matrix View */}
               <div className="p-0">
                 <div>
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse table-premium">
                     <thead>
-                      <tr className="border-b border-border bg-surface-3/30 text-[9px] font-mono uppercase tracking-wider text-text-tertiary">
+                      <tr className="border-b border-border text-[9px] font-mono uppercase tracking-wider text-text-tertiary">
                         <th className="px-6 py-3 font-semibold">Team Role Allocation</th>
                         <th className="px-6 py-3 font-semibold">Assignment Metrics</th>
                         <th className="px-6 py-3 font-semibold">Allocated Load</th>

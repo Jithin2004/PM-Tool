@@ -51,7 +51,7 @@ export function ProjectChipsInput({ value, onChange, placeholder }: ProjectChips
   return (
     <div className="w-full">
       <div 
-        className={`flex flex-wrap items-center gap-2 p-2 min-h-[48px] rounded-lg bg-surface-4 border transition-colors cursor-text ${error ? 'border-red-500/50' : 'border-border/50 focus-within:border-[var(--pm-primary)] focus-within:ring-1 focus-within:ring-[var(--pm-primary)]/30'}`}
+        className={`flex flex-wrap items-center gap-2 p-2 min-h-[48px] rounded-lg bg-surface-4 border transition-colors cursor-text ${error ? 'border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/50' : 'border-border/50 focus-within:border-[var(--pm-primary)] focus-within:ring-1 focus-within:ring-[var(--pm-primary)]/30'}`}
         onClick={() => inputRef.current?.focus()}
       >
         {value.map((chip) => (

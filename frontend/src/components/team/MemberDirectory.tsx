@@ -6,6 +6,8 @@ import { useOperationalData } from '../../context/OperationalDataContext';
 import { Icon } from '../ui/Icon';
 import { supabase } from '../../lib/supabase';
 import { DocumentGeneratorDropdown } from '../hr/DocumentGeneratorDropdown';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
+
 function getRoleLabel(role: string) {
   const labels: Record<string, string> = {
     super_admin: 'Super Admin',
@@ -28,16 +30,20 @@ export function MemberDirectory() {
   const { profiles, invalidateAll, systemData } = useDashboard();
   const { raw: { skills = [], userSkills = [] } } = useOperationalData();
   const { workspace } = useWorkspace();
+  
   const [selectedMemberDetails, setSelectedMemberDetails] = useState<any | null>(null);
   const [dojEditState, setDojEditState] = useState<{ active: boolean; newDoj: string; reason: string }>({ active: false, newDoj: '', reason: '' });
+
+  useEscapeKey(!!selectedMemberDetails && !dojEditState.active, () => setSelectedMemberDetails(null));
+  useEscapeKey(dojEditState.active, () => setDojEditState({ active: false, newDoj: '', reason: '' }));
 
   const userCustomRoles = systemData.userCustomRoles || {};
   const activeProfiles = profiles.filter(p => p.role !== 'uninvited');
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl shadow-2xl overflow-x-auto" style={{ background: 'var(--pm-surface-low)', border: '1px solid rgba(70,69,84,0.3)' }}>
-        <table className="w-full text-left border-collapse min-w-[600px]">
+      <div className="rounded-xl shadow-2xl overflow-x-auto bg-surface-3/10 border border-border/50 backdrop-blur-md">
+        <table className="w-full text-left border-collapse min-w-[600px] table-premium">
           <thead style={{ background: 'rgba(51,53,55,0.5)', borderBottom: '1px solid rgba(70,69,84,0.3)' }}>
             <tr>
               <th className="px-8 py-4 rounded-tl-xl text-[11px] font-mono uppercase tracking-widest text-text-tertiary">Member Directory</th>
@@ -49,7 +55,7 @@ export function MemberDirectory() {
             {activeProfiles.map((p: any) => {
               const initials = getInitials(p.full_name || p.email || '');
               return (
-                <tr key={p.id} className="hover:bg-white/5 transition-colors cursor-pointer" onClick={() => setSelectedMemberDetails(p)}>
+                <tr key={p.id} className="hover:bg-[var(--surface-hover)] transition-colors cursor-pointer" onClick={() => setSelectedMemberDetails(p)}>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
@@ -83,11 +89,13 @@ export function MemberDirectory() {
       </div>
 
       {selectedMemberDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-xl rounded-xl shadow-2xl p-6 relative" style={{ background: 'var(--pm-surface)', border: '1px solid rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay-premium">
+          <div onClick={() => setSelectedMemberDetails(null)} className="absolute inset-0 z-0 cursor-pointer" />
+          <div className="relative modal-premium w-full max-w-xl rounded-2xl shadow-2xl p-6 z-10 animate-in fade-in zoom-in-95 duration-200 text-white max-h-[90vh] overflow-y-auto scrollbar-premium">
             <button 
               onClick={() => setSelectedMemberDetails(null)}
-              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/5 transition-colors"
+              aria-label="Close modal"
+              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
               style={{ color: 'var(--pm-on-surface-variant)' }}
             >
               <Icon name="close" size={20} />
@@ -96,23 +104,23 @@ export function MemberDirectory() {
 
             <div className="space-y-6">
               {/* Profile Information */}
-              <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-                <h4 className="text-xs font-mono uppercase tracking-widest text-white/50 mb-4">Profile Information</h4>
+              <div className="border border-[var(--border-soft)] rounded-lg p-4 bg-[var(--surface-glass)]">
+                <h4 className="text-xs font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-4">Profile Information</h4>
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
                     {getInitials(selectedMemberDetails.full_name || selectedMemberDetails.email || '')}
                   </div>
                   <div>
                     <div className="font-semibold text-lg">{selectedMemberDetails.full_name || 'Unknown User'}</div>
-                    <div className="text-sm text-white/60 font-mono mt-1">{selectedMemberDetails.email}</div>
+                    <div className="text-sm text-[var(--text-secondary)] font-mono mt-1">{selectedMemberDetails.email}</div>
                   </div>
                 </div>
               </div>
 
               {/* Employment Details */}
-              <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+              <div className="border border-[var(--border-soft)] rounded-lg p-4 bg-[var(--surface-glass)]">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-xs font-mono uppercase tracking-widest text-white/50">Employment Details</h4>
+                  <h4 className="text-xs font-mono uppercase tracking-widest text-[var(--text-secondary)]">Employment Details</h4>
                   
                   <div className="flex gap-2">
                     {workspace?.id && (
@@ -150,19 +158,19 @@ export function MemberDirectory() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-[10px] uppercase text-white/50 font-mono mb-1">Role</div>
+                    <div className="text-[10px] uppercase text-[var(--text-secondary)] font-mono mb-1">Role</div>
                     <div className="font-medium">{getRoleLabel(selectedMemberDetails.role)}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase text-white/50 font-mono mb-1">Department</div>
+                    <div className="text-[10px] uppercase text-[var(--text-secondary)] font-mono mb-1">Department</div>
                     <div className="font-medium">{userCustomRoles[selectedMemberDetails.id] || 'General'}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase text-white/50 font-mono mb-1">Employment Status</div>
+                    <div className="text-[10px] uppercase text-[var(--text-secondary)] font-mono mb-1">Employment Status</div>
                     <div className="font-medium capitalize">{selectedMemberDetails.employment_status || 'Active'}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase text-white/50 font-mono mb-1">Date of Joining</div>
+                    <div className="text-[10px] uppercase text-[var(--text-secondary)] font-mono mb-1">Date of Joining</div>
                     {currentUserProfile?.role === 'super_admin' ? (
                       <div className="flex items-center gap-2 mt-1">
                         <div className="font-medium text-white">
@@ -170,7 +178,7 @@ export function MemberDirectory() {
                         </div>
                         <button 
                           onClick={() => setDojEditState({ active: true, newDoj: selectedMemberDetails.date_of_joining ? selectedMemberDetails.date_of_joining.split('T')[0] : '', reason: '' })}
-                          className="p-1 rounded bg-white/5 hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+                          className="p-1 rounded bg-[var(--surface-glass)] hover:bg-[var(--surface-hover)] transition-colors text-[var(--text-secondary)] hover:text-white"
                           title="Edit Date of Joining"
                         >
                           <Icon name="pencil" size={12} />
@@ -186,10 +194,10 @@ export function MemberDirectory() {
                 
                 {/* Employee Lifecycle Analytics */}
                 {selectedMemberDetails.date_of_joining && (
-                  <div className="mt-4 p-3 bg-black/20 border border-white/5 rounded-lg flex items-center justify-between text-sm">
+                  <div className="mt-4 p-3 bg-black/20 border border-[var(--border-soft)] rounded-lg flex items-center justify-between text-sm">
                     {selectedMemberDetails.employee_type === 'Full Time' && (
                       <>
-                        <span className="text-white/60">Company Tenure</span>
+                        <span className="text-[var(--text-secondary)]">Company Tenure</span>
                         <span className="font-medium text-white">
                           {Math.floor((new Date().getTime() - new Date(selectedMemberDetails.date_of_joining).getTime()) / (1000 * 3600 * 24 * 365))} years, 
                           {Math.floor(((new Date().getTime() - new Date(selectedMemberDetails.date_of_joining).getTime()) / (1000 * 3600 * 24)) % 365 / 30)} months
@@ -198,7 +206,7 @@ export function MemberDirectory() {
                     )}
                     {(selectedMemberDetails.employee_type === 'Intern' || selectedMemberDetails.employee_type === 'Contract') && (
                       <>
-                        <span className="text-white/60">{selectedMemberDetails.employee_type === 'Intern' ? 'Internship Duration' : 'Contract Remaining'}</span>
+                        <span className="text-[var(--text-secondary)]">{selectedMemberDetails.employee_type === 'Intern' ? 'Internship Duration' : 'Contract Remaining'}</span>
                         <span className="font-medium text-white">
                           {selectedMemberDetails.contract_end ? (
                             Math.max(0, Math.floor((new Date(selectedMemberDetails.contract_end).getTime() - new Date().getTime()) / (1000 * 3600 * 24))) + ' days remaining'
@@ -236,9 +244,9 @@ export function MemberDirectory() {
       )}
 
       {dojEditState.active && selectedMemberDetails && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-[#1c1d1f] border border-white/10 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+        <div className="fixed inset-0 flex items-center justify-center z-[60] p-4 modal-overlay-premium">
+          <div className="relative modal-premium w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col text-white">
+            <div className="px-6 py-4 border-b border-[var(--border-soft)] flex items-center justify-between">
               <h3 className="font-semibold text-white tracking-tight">Update Date of Joining</h3>
             </div>
             <div className="p-6 space-y-4">
@@ -248,7 +256,7 @@ export function MemberDirectory() {
                   type="date"
                   value={dojEditState.newDoj}
                   onChange={(e) => setDojEditState({ ...dojEditState, newDoj: e.target.value })}
-                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
+                  className="w-full input-premium px-3 py-2 text-sm outline-none"
                 />
               </div>
               <div>
@@ -257,14 +265,14 @@ export function MemberDirectory() {
                   value={dojEditState.reason}
                   onChange={(e) => setDojEditState({ ...dojEditState, reason: e.target.value })}
                   placeholder="Required for HR Audit"
-                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 min-h-[80px]"
+                  className="w-full input-premium px-3 py-2 text-sm outline-none min-h-[80px]"
                 />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-white/10 flex justify-end gap-3 bg-black/10">
+            <div className="px-6 py-4 border-t border-[var(--border-soft)] flex justify-end gap-3 bg-black/10">
               <button
                 onClick={() => setDojEditState({ active: false, newDoj: '', reason: '' })}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary btn-premium-secondary rounded-lg"
               >
                 Cancel
               </button>
@@ -290,7 +298,7 @@ export function MemberDirectory() {
                     setDojEditState({ active: false, newDoj: '', reason: '' });
                   }
                 }}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-500 text-white hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-semibold btn-premium-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white"
               >
                 Save Change
               </button>

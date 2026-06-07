@@ -66,7 +66,7 @@ export default function DecisionCenter() {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Resource Allocation Override</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-red-500/10 text-red-400 border border-red-500/20">ESCALATION</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-red-500/10 text-red-400 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20">ESCALATION</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)]">
                     <span>INITIATOR: <strong className="text-[var(--pm-primary)]">John Doe</strong></span>
@@ -78,7 +78,7 @@ export default function DecisionCenter() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 shrink-0">
-                  <button className="px-4 py-2 rounded-lg text-xs font-mono-pm uppercase tracking-widest bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all cursor-pointer">
+                  <button className="px-4 py-2 rounded-lg text-xs font-mono-pm uppercase tracking-widest bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 transition-all cursor-pointer">
                     Review Request
                   </button>
                 </div>

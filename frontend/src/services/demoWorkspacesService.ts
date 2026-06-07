@@ -38,9 +38,9 @@ export const demoWorkspacesService = {
         target_id: proj.id,
         target_type: 'project',
         reason: 'Awaiting Vendor API Keys',
-        category: 'client_dependency',
-        status: 'active',
-        actor_id: actorId
+        category: 'vendor',
+        waiting_on: 'vendor',
+        status: 'active'
       });
 
     } catch (err) {

@@ -126,7 +126,7 @@ export default function KnowledgeHubPanel() {
           </div>
           {tab === 'active' && (
             <button onClick={() => setShowCreate(true)}
-              className="h-10 px-4 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white rounded-lg text-sm font-semibold tracking-wide transition-all shadow-[0_0_15px_rgba(var(--color-accent-primary-rgb),0.2)] hover:shadow-[0_0_20px_rgba(var(--color-accent-primary-rgb),0.4)] flex items-center gap-2 whitespace-nowrap">
+              className="h-10 px-4 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] text-[var(--text-primary)] rounded-lg text-sm font-semibold tracking-wide transition-all shadow-[0_0_15px_rgba(var(--color-accent-primary-rgb),0.2)] hover:shadow-[0_0_20px_rgba(var(--color-accent-primary-rgb),0.4)] flex items-center gap-2 whitespace-nowrap">
               <Plus className="w-4 h-4" /> New Doc
             </button>
           )}

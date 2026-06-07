@@ -123,7 +123,7 @@ export default function DocumentView() {
 
   if (loading) return (
     <div className="p-6">
-      <div className="text-[11px] font-mono text-text-quaternary">Loading document...</div>
+      <div className="text-[11px] font-mono text-text-quaternary"><span className="animate-pulse tracking-widest uppercase text-[10px] font-mono text-[var(--text-muted)]">Loading Document...</span></div>
     </div>
   );
 
@@ -149,7 +149,7 @@ export default function DocumentView() {
       <div className="flex gap-4 border-b border-border pb-3 mb-4">
         {(['view', 'history', 'annotations'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`text-[10px] font-mono uppercase tracking-wider ${tab === t ? 'text-text-primary border-b-2 border-white/40 pb-3' : 'text-text-quaternary hover:text-text-tertiary'}`}>
+            className={`text-[10px] font-mono uppercase tracking-wider ${tab === t ? 'text-text-primary border-b-2 border-[var(--border-soft)] pb-3' : 'text-text-quaternary hover:text-text-tertiary'}`}>
             {t === 'view' ? 'Document' : t === 'history' ? `History (${versions.length})` : `Annotations (${annotations.filter(a => !a.resolved).length})`}
           </button>
         ))}
@@ -192,7 +192,7 @@ export default function DocumentView() {
                     Edit
                   </button>
                   <button onClick={() => setShowVersionComment(true)}
-                    className="px-3 py-1.5 bg-[var(--pm-surface)]/5 border border-border text-text-tertiary text-[9px] font-mono hover:border-white/30">
+                    className="px-3 py-1.5 bg-[var(--pm-surface)]/5 border border-border text-text-tertiary text-[9px] font-mono hover:border-[var(--border-soft)]">
                     Create Version
                   </button>
                 </>

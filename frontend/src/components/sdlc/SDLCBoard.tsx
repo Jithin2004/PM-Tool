@@ -92,7 +92,7 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
             <button
               key={phase.id}
               onClick={() => setActivePhase(activePhase === phase.id ? null : phase.id)}
-              className={`flex flex-col items-center gap-1 p-2 border rounded-sm transition-all cursor-pointer ${activePhase === phase.id ? 'bg-emerald-900/30 border-emerald-500/40' : 'bg-surface-3 border-border-subtle hover:border-white/15'}`}
+              className={`flex flex-col items-center gap-1 p-2 border rounded-sm transition-all cursor-pointer ${activePhase === phase.id ? 'bg-emerald-900/30 border-emerald-500/40' : 'bg-surface-3 border-border-subtle hover:border-[var(--border-soft)]'}`}
             >
             <div className={`text-text-tertiary ${phase.progress === 100 ? 'text-emerald-400' : ''}`}>{PHASE_ICONS[phase.id]}</div>
             <span className="text-[7px] font-mono uppercase text-text-tertiary truncate w-full text-center">{phase.title}</span>

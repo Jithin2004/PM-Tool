@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Clock, AlertCircle } from 'lucide-react';
 import { Task } from '../../types';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface WaitStateModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export function WaitStateModal({ isOpen, onClose, task, onSubmit, notify }: Wait
   const [owner, setOwner] = useState('internal');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -39,15 +42,15 @@ export function WaitStateModal({ isOpen, onClose, task, onSubmit, notify }: Wait
   };
 
   return (
-    <div className="fixed inset-0 bg-[var(--pm-surface)] dark:bg-black/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 modal-overlay-premium z-[99999] flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="bg-surface border border-[var(--pm-border)] dark:border-white/10 p-8 rounded-2xl w-full max-w-md relative overflow-hidden shadow-2xl"
+        className="modal-premium p-8 rounded-2xl w-full max-w-md relative overflow-hidden shadow-2xl border border-[var(--border-soft)]"
       >
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500" />
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500" />
         
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-sm font-semibold tracking-wide uppercase text-text-primary flex items-center gap-2">
@@ -57,6 +60,7 @@ export function WaitStateModal({ isOpen, onClose, task, onSubmit, notify }: Wait
           <button
             onClick={onClose}
             className="p-1.5 rounded-md hover:bg-[var(--pm-surface)]/5 text-text-quaternary hover:text-text-primary transition-colors cursor-pointer"
+            aria-label="Close modal"
           >
             <X className="w-4 h-4" />
           </button>
@@ -64,14 +68,14 @@ export function WaitStateModal({ isOpen, onClose, task, onSubmit, notify }: Wait
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-text-tertiary">
               Why is work paused? <span className="text-signal-error">*</span>
             </label>
             <select
               required
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary focus:border-amber-500/70 focus:bg-surface-3 outline-none transition-all rounded-lg appearance-none cursor-pointer"
+              className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer"
             >
               <option value="">-- Select Reason --</option>
               <option value="WAITING_FOR_CLIENT">Waiting on Client</option>
@@ -85,13 +89,13 @@ export function WaitStateModal({ isOpen, onClose, task, onSubmit, notify }: Wait
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-text-tertiary">
               Who owns this delay?
             </label>
             <select
               value={owner}
               onChange={(e) => setOwner(e.target.value)}
-              className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary focus:border-amber-500/70 focus:bg-surface-3 outline-none transition-all rounded-lg appearance-none cursor-pointer"
+              className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer"
             >
               <option value="internal_team">Internal</option>
               <option value="client">Client</option>
@@ -101,7 +105,7 @@ export function WaitStateModal({ isOpen, onClose, task, onSubmit, notify }: Wait
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-text-tertiary">
               Notes (Optional)
             </label>
             <textarea
@@ -109,7 +113,7 @@ export function WaitStateModal({ isOpen, onClose, task, onSubmit, notify }: Wait
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Provide more details about this blocker..."
               rows={3}
-              className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary placeholder-white/20 focus:border-amber-500/70 focus:bg-surface-3 outline-none transition-all resize-none rounded-lg shadow-inner"
+              className="w-full input-premium p-4 text-sm outline-none resize-none"
             />
           </div>
 
@@ -120,18 +124,18 @@ export function WaitStateModal({ isOpen, onClose, task, onSubmit, notify }: Wait
             </p>
           </div>
 
-          <div className="pt-6 mt-4 flex justify-end gap-3 border-t border-[var(--pm-border)] dark:border-white/5">
+          <div className="pt-6 mt-4 flex justify-end gap-3 border-t border-[var(--border-soft)]">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-[var(--pm-surface)]/5 rounded-lg transition-all cursor-pointer"
+              className="btn-premium-secondary px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-[var(--pm-text)] dark:text-white text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] disabled:opacity-50 disabled:shadow-none cursor-pointer"
+              className="btn-premium-primary px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(124,58,237,0.2)]"
             >
               {isSubmitting ? 'Processing...' : 'Create Wait State'}
             </button>

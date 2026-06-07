@@ -412,7 +412,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
                             approval: 'bg-sky-500/30 border-sky-500/40 text-sky-200',
                             vendor: 'bg-teal-500/30 border-teal-500/40 text-teal-200',
                             access: 'bg-rose-500/30 border-rose-500/40 text-rose-200',
-                            dependency: 'bg-red-500/30 border-red-500/40 text-red-200'
+                            dependency: 'bg-red-500/30 border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/40 text-red-200'
                           };
                           const currentStyle = catConfig[wait.category] || catConfig.client;
 
@@ -455,7 +455,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
                           return (
                             <div
                               key={`cp-${cpIdx}`}
-                              className={`absolute w-2 h-2 rounded-full cursor-pointer group/cp border border-[var(--pm-border)] dark:border-white/50 -translate-x-1/2 z-20 hover:scale-125 transition-transform ${colorClass}`}
+                              className={`absolute w-2 h-2 rounded-full cursor-pointer group/cp border border-[var(--pm-border)] dark:border-[var(--border-soft)] -translate-x-1/2 z-20 hover:scale-125 transition-transform ${colorClass}`}
                               style={{ left: `${left}%` }}
                             >
                               <div className="absolute bottom-full mb-2 hidden group-hover/cp:block z-35 w-56 bg-surface border border-border p-2.5 rounded-lg shadow-xl text-left">

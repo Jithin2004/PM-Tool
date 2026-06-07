@@ -13,7 +13,7 @@ import {
   captureRedirectFromLocation,
   navigateTo,
 } from '../core/auth/postAuthRedirect';
-import { clearLicense } from '../lib/productKey';
+import { clearLicense, isProductKeyVerified, checkLicenseOnline } from '../lib/productKey';
 
 interface AuthContextType {
   user: any | null;
@@ -423,6 +423,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, [syncProfile, handleSessionExpiry]);
+
+  // Periodic background license verification
+  useEffect(() => {
+    if (!user) return;
+    
+    const verifyLicense = async () => {
+      // If the app is active and has no valid license, clear state and logout
+      if (!isProductKeyVerified()) {
+        await logout();
+        return;
+      }
+      
+      const res = await checkLicenseOnline();
+      if (!res.valid) {
+        window.dispatchEvent(new CustomEvent('notify-toast', {
+          detail: { message: res.error || 'License verification failed. Access revoked.', type: 'error' },
+        }));
+        await logout();
+      }
+    };
+    
+    // Initial verification check on mount
+    verifyLicense();
+    
+    // Re-verify every 10 minutes
+    const interval = setInterval(verifyLicense, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const logout = async () => {
     await handleSessionExpiry('expired');

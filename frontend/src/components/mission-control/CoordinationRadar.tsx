@@ -21,11 +21,11 @@ export function CoordinationRadar({ density, signals }: CoordinationRadarProps) 
       <div className="text-[10px] text-text-secondary uppercase tracking-wider font-semibold">coordination radar</div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="px-2 py-1.5 bg-[var(--pm-surface)]/5 rounded border border-[var(--pm-border)] dark:border-white/10">
+        <div className="px-2 py-1.5 bg-[var(--pm-surface)]/5 rounded border border-[var(--pm-border)] dark:border-[var(--border-soft)]">
           <span className="text-[18px] font-bold font-mono-pm text-text-primary">{total}</span>
           <span className="text-[10px] text-text-tertiary ml-1">signals</span>
         </div>
-        <div className="px-2 py-1.5 bg-[var(--pm-surface)]/5 rounded border border-[var(--pm-border)] dark:border-white/10">
+        <div className="px-2 py-1.5 bg-[var(--pm-surface)]/5 rounded border border-[var(--pm-border)] dark:border-[var(--border-soft)]">
           <span className="text-[18px] font-bold font-mono-pm text-text-primary">{density.uniqueIntents}</span>
           <span className="text-[10px] text-text-tertiary ml-1">intents</span>
         </div>
@@ -63,7 +63,7 @@ export function CoordinationRadar({ density, signals }: CoordinationRadarProps) 
       </div>
 
       {density.dominantIntent !== 'none' && (
-        <div className="text-[10px] text-text-tertiary pt-1 border-t border-[var(--pm-border)] dark:border-white/10">
+        <div className="text-[10px] text-text-tertiary pt-1 border-t border-[var(--pm-border)] dark:border-[var(--border-soft)]">
           dominant: {density.dominantIntent.replace(/_/g, ' ')}
         </div>
       )}

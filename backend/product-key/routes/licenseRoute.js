@@ -1,41 +1,35 @@
-// routes/activation.js
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const License = require('../models/License');
-const { addLicense } = require("../controller/license")
+const licenseController = require('../controller/license');
 
-router.post('/activate', async (req, res) => {
-  const { productKey } = req.body;
+// Admin protection middleware using LICENSE_SECRET
+const adminAuth = (req, res, next) => {
+    const adminSecret = process.env.LICENSE_SECRET;
+    if (!adminSecret) {
+        return res.status(500).json({ error: 'Administrative secret not configured on server' });
+    }
+    const clientSecret = req.headers['x-admin-secret'] || 
+        (req.headers.authorization && req.headers.authorization.startsWith('Bearer ') 
+            ? req.headers.authorization.split(' ')[1] 
+            : null);
 
-  try {
-    // 1. Find the key in the database
-    const license = await License.findOne({ key: productKey });
+    if (!clientSecret || clientSecret !== adminSecret) {
+        return res.status(403).json({ error: 'Unauthorized: Invalid administrative secret key' });
+    }
+    next();
+};
 
-    // 2. Check if it exists and is valid
-    if (!license) return res.status(404).json({ error: 'Invalid product key' });
-    if (!license.isActive) return res.status(403).json({ error: 'Key has been deactivated' });
-    if (license.isUsed) return res.status(403).json({ error: 'Key is already in use' });
+// ── Public Licensing Endpoints ──
+router.post('/activate', licenseController.activateLicense);
+router.get('/verify', licenseController.verifyLicense);
 
-    // 3. Mark as used
-    license.isUsed = true;
-    license.activatedAt = new Date();
-    await license.save();
+// Setup / Bootstrap helper
+router.get('/addLicense', licenseController.addLicense);
 
-    // 4. Generate an access token (JWT)
-    const token = jwt.sign(
-      { activated: true, keyId: license._id }, 
-      process.env.JWT_SECRET || 'fallback_secret_for_local_development', 
-      { expiresIn: '30d' } // Set an expiration based on your needs
-    );
-
-    res.json({ success: true, token });
-
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-router.route('/addLicense').get(addLicense)
+// ── Admin Hardened Endpoints ──
+router.post('/admin/license/generate', adminAuth, licenseController.adminGenerateKey);
+router.post('/admin/license/disable', adminAuth, licenseController.adminDisableKey);
+router.get('/admin/license/activations', adminAuth, licenseController.adminGetActivations);
+router.get('/admin/license/events', adminAuth, licenseController.adminGetEvents);
 
 module.exports = router;

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { activityLogService } from '../../services/activityLogService';
-import { Icon } from '../ui/Icon';
+import { X, Upload, Check, AlertCircle } from 'lucide-react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface EmployeeImportModalProps {
   workspaceId: string;
@@ -16,6 +17,8 @@ export function EmployeeImportModal({ workspaceId, isOpen, onClose, onSuccess }:
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [validationStats, setValidationStats] = useState({ total: 0, valid: 0, errors: 0 });
   const [isImporting, setIsImporting] = useState(false);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -101,12 +104,9 @@ export function EmployeeImportModal({ workspaceId, isOpen, onClose, onSuccess }:
     try {
       const validRows = previewData.filter(r => r.isValid);
       
-      // Real import logic would go here. We will just simulate and log for now since it requires inviting via Supabase edge functions or admin api.
-      // We will create the audit log.
-      
       const { data: userResp } = await supabase.auth.getUser();
       
-      const { data: batchData, error: batchError } = await supabase.from('import_batches').insert({
+      const { data: batchData } = await supabase.from('import_batches').insert({
         workspace_id: workspaceId,
         uploaded_by: userResp.user?.id,
         total_rows: previewData.length,
@@ -131,73 +131,81 @@ export function EmployeeImportModal({ workspaceId, isOpen, onClose, onSuccess }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#1c1d1f] p-6 rounded-xl shadow-2xl max-w-2xl w-full border border-white/10 text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay-premium p-4">
+      <div className="modal-premium p-8 rounded-2xl shadow-2xl max-w-2xl w-full border border-[var(--border-soft)] text-white flex flex-col relative overflow-hidden">
+        
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold tracking-tight">Import Employees</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 transition-colors text-white/50 hover:text-white">
-            <Icon name="close" size={20} />
+          <h2 className="text-xl font-semibold tracking-tight text-text-primary">Import Employees</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md hover:bg-[var(--pm-surface)]/5 text-text-quaternary hover:text-text-primary transition-colors cursor-pointer"
+            aria-label="Close modal"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
         
         {step === 'upload' && (
           <div className="space-y-6">
-            <p className="text-sm text-white/70">
+            <p className="text-sm text-text-secondary leading-relaxed">
               Download the template, fill it out, and upload it here to invite multiple team members.
             </p>
-            <button onClick={handleDownloadTemplate} className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-lg text-sm font-medium transition-colors border border-white/10">
+            <button
+              onClick={handleDownloadTemplate}
+              className="btn-premium-secondary w-full py-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+            >
               Download Template
             </button>
-            <div className="border-2 border-dashed border-indigo-500/30 bg-indigo-500/5 rounded-xl p-10 text-center transition-colors hover:bg-indigo-500/10">
-              <Icon name="upload" size={32} className="mx-auto mb-4 text-indigo-400" />
+            <div className="border-2 border-dashed border-accent-primary/30 bg-accent-primary/5 rounded-xl p-10 text-center transition-colors hover:bg-accent-primary/10 flex flex-col items-center justify-center">
+              <Upload className="w-8 h-8 mb-4 text-accent-primary" />
               <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" id="file-upload" />
-              <label htmlFor="file-upload" className="cursor-pointer text-sm font-medium text-indigo-400 hover:text-indigo-300">
+              <label htmlFor="file-upload" className="cursor-pointer text-sm font-medium text-accent-primary hover:text-accent-secondary transition-colors">
                 Click to browse CSV file
               </label>
-              <p className="text-xs text-white/40 mt-2">Only .csv files are supported</p>
+              <p className="text-xs text-text-tertiary mt-2">Only .csv files are supported</p>
             </div>
           </div>
         )}
 
         {step === 'preview' && (
           <div className="space-y-6">
-            <div className="flex gap-4 p-4 bg-black/20 rounded-lg border border-white/5">
+            <div className="flex gap-4 p-4 bg-[var(--pm-surface-lowest)]/30 rounded-xl border border-[var(--border-soft)] shadow-inner">
               <div className="flex-1 text-center">
-                <div className="text-2xl font-semibold text-white">{validationStats.total}</div>
-                <div className="text-[10px] uppercase tracking-wider text-white/50">Total Rows</div>
+                <div className="text-2xl font-bold text-text-primary">{validationStats.total}</div>
+                <div className="text-[9px] uppercase tracking-wider text-text-tertiary font-mono mt-0.5">Total Rows</div>
               </div>
-              <div className="w-px bg-white/10"></div>
+              <div className="w-px bg-[var(--surface-glass)]"></div>
               <div className="flex-1 text-center">
-                <div className="text-2xl font-semibold text-green-400">{validationStats.valid}</div>
-                <div className="text-[10px] uppercase tracking-wider text-white/50">Valid</div>
+                <div className="text-2xl font-bold text-emerald-400">{validationStats.valid}</div>
+                <div className="text-[9px] uppercase tracking-wider text-text-tertiary font-mono mt-0.5">Valid</div>
               </div>
-              <div className="w-px bg-white/10"></div>
+              <div className="w-px bg-[var(--surface-glass)]"></div>
               <div className="flex-1 text-center">
-                <div className="text-2xl font-semibold text-red-400">{validationStats.errors}</div>
-                <div className="text-[10px] uppercase tracking-wider text-white/50">Errors</div>
+                <div className="text-2xl font-bold text-rose-400">{validationStats.errors}</div>
+                <div className="text-[9px] uppercase tracking-wider text-text-tertiary font-mono mt-0.5">Errors</div>
               </div>
             </div>
 
-            <div className="max-h-60 overflow-y-auto rounded-lg border border-white/10 bg-black/20">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-white/5 sticky top-0">
+            <div className="max-h-60 overflow-y-auto rounded-xl border border-[var(--border-soft)] bg-[var(--pm-surface-lowest)]/20 scrollbar-premium">
+              <table className="w-full text-left text-sm table-premium">
+                <thead className="bg-[var(--pm-surface-lowest)]/50 sticky top-0 border-b border-[var(--border-soft)]">
                   <tr>
-                    <th className="px-4 py-2 font-medium text-white/70">Name</th>
-                    <th className="px-4 py-2 font-medium text-white/70">Email</th>
-                    <th className="px-4 py-2 font-medium text-white/70">Status</th>
+                    <th className="px-4 py-2 text-xs font-semibold text-text-secondary uppercase font-mono">Name</th>
+                    <th className="px-4 py-2 text-xs font-semibold text-text-secondary uppercase font-mono">Email</th>
+                    <th className="px-4 py-2 text-xs font-semibold text-text-secondary uppercase font-mono">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {previewData.map((row, i) => (
-                    <tr key={i} className="hover:bg-white/5">
-                      <td className="px-4 py-2">{row['name'] || '-'}</td>
-                      <td className="px-4 py-2">{row['email'] || '-'}</td>
+                    <tr key={i} className="hover:bg-[var(--surface-hover)]">
+                      <td className="px-4 py-2 text-text-primary">{row['name'] || '-'}</td>
+                      <td className="px-4 py-2 text-text-secondary">{row['email'] || '-'}</td>
                       <td className="px-4 py-2">
                         {row.isValid ? (
-                          <span className="text-green-400 text-xs flex items-center gap-1"><Icon name="check" size={12} /> Valid</span>
+                          <span className="text-emerald-400 text-xs flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Valid</span>
                         ) : (
-                          <span className="text-red-400 text-xs cursor-help" title={row.errors.join(', ')}>
-                            <Icon name="alert-circle" size={12} className="inline mr-1" />
+                          <span className="text-rose-400 text-xs cursor-help flex items-center gap-1" title={row.errors.join(', ')}>
+                            <AlertCircle className="w-3.5 h-3.5 inline" />
                             {row.errors[0]} {row.errors.length > 1 && `(+${row.errors.length - 1})`}
                           </span>
                         )}
@@ -208,10 +216,10 @@ export function EmployeeImportModal({ workspaceId, isOpen, onClose, onSuccess }:
               </table>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+            <div className="flex justify-end gap-3 pt-5 border-t border-[var(--border-soft)]">
               <button 
                 onClick={() => setStep('upload')} 
-                className="px-4 py-2 rounded-lg text-sm font-medium text-white/70 hover:bg-white/5"
+                className="btn-premium-secondary px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
                 disabled={isImporting}
               >
                 Back
@@ -219,7 +227,7 @@ export function EmployeeImportModal({ workspaceId, isOpen, onClose, onSuccess }:
               <button 
                 onClick={handleImport} 
                 disabled={validationStats.valid === 0 || isImporting}
-                className="px-6 py-2 rounded-lg text-sm font-medium bg-indigo-500 text-white hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="btn-premium-primary px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
               >
                 {isImporting ? 'Importing...' : `Import ${validationStats.valid} Employees`}
               </button>

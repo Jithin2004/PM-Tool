@@ -104,7 +104,7 @@ export function KanbanBootstrap({ projectId, workspaceId, onComplete, onSkip }: 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-4 py-2 bg-accent-primary text-[var(--pm-text)] dark:text-white text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm disabled:opacity-50 cursor-pointer"
+          className="px-4 py-2 bg-accent-primary text-[var(--pm-text)] text-[var(--text-primary)] text-[10px] font-medium uppercase tracking-wider hover:bg-accent-primary/90 transition-all rounded-sm disabled:opacity-50 cursor-pointer"
         >
           {saving ? 'Saving...' : 'Apply & Continue'}
         </button>

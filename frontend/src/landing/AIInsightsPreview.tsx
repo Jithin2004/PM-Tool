@@ -28,7 +28,7 @@ const INSIGHTS = [
 
 export function AIInsightsPreview() {
   return (
-    <section className="py-32 px-6 border-t border-white/[0.03]">
+    <section className="py-32 px-6 border-t border-[var(--border-soft)]">
       <div className="max-w-3xl mx-auto">
         <motion.div
           initial="hidden"
@@ -37,10 +37,10 @@ export function AIInsightsPreview() {
           variants={stagger(0.06)}
           className="text-center mb-14"
         >
-          <motion.p variants={slideUp} className="text-[10px] font-mono uppercase tracking-widest text-[var(--pm-text)] dark:text-white/30 mb-3">
+          <motion.p variants={slideUp} className="text-[10px] font-mono uppercase tracking-widest text-[var(--pm-text)] dark:text-[var(--text-secondary)] mb-3">
             Operational Intelligence
           </motion.p>
-          <motion.h2 variants={slideUp} className="text-2xl sm:text-3xl font-medium tracking-tight text-[var(--pm-text)] dark:text-white/80">
+          <motion.h2 variants={slideUp} className="text-2xl sm:text-3xl font-medium tracking-tight text-[var(--pm-text)] dark:text-[var(--text-secondary)]">
             Intelligence embedded, not bolted on
           </motion.h2>
         </motion.div>
@@ -56,18 +56,18 @@ export function AIInsightsPreview() {
             <motion.div
               key={insight.type}
               variants={slideUp}
-              className="group bg-[#FFFFFF] dark:bg-[#0c0c0c] border border-[var(--pm-border)] dark:border-white/10 hover:border-white/[0.15] transition-all p-5"
+              className="group bg-[#FFFFFF] dark:bg-[#0c0c0c] border border-[var(--pm-border)] dark:border-[var(--border-soft)] hover:border-[var(--border-soft)] transition-all p-5"
             >
               <div className="flex items-start gap-4">
                 {/* Icon */}
-                <div className="shrink-0 w-8 h-8 bg-[var(--pm-surface)]/[0.03] border border-white/[0.06] flex items-center justify-center">
-                  <insight.icon className="w-4 h-4 text-[var(--pm-text)] dark:text-white/40" />
+                <div className="shrink-0 w-8 h-8 bg-[var(--pm-surface)]/[0.03] border border-[var(--border-soft)] flex items-center justify-center">
+                  <insight.icon className="w-4 h-4 text-[var(--pm-text)] dark:text-[var(--text-secondary)]" />
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1.5">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--pm-text)] dark:text-white/40">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--pm-text)] dark:text-[var(--text-secondary)]">
                       {insight.label}
                     </span>
                     <span
@@ -80,14 +80,14 @@ export function AIInsightsPreview() {
                       {insight.confidence}
                     </span>
                   </div>
-                  <p className="text-[12px] font-mono text-[var(--pm-text)] dark:text-white/60 leading-relaxed">
+                  <p className="text-[12px] font-mono text-[var(--pm-text)] dark:text-[var(--text-secondary)] leading-relaxed">
                     {insight.message}
                   </p>
                 </div>
 
                 {/* Action hint */}
                 <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Sparkles className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white/20" />
+                  <Sparkles className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-[var(--text-secondary)]" />
                 </div>
               </div>
             </motion.div>
@@ -95,7 +95,7 @@ export function AIInsightsPreview() {
         </motion.div>
 
         {/* Sub-note */}
-        <p className="text-center mt-8 text-[10px] font-mono text-[var(--pm-text)] dark:text-white/20">
+        <p className="text-center mt-8 text-[10px] font-mono text-[var(--pm-text)] dark:text-[var(--text-secondary)]">
           No chatbot. No essays. Just operational intelligence.
         </p>
       </div>

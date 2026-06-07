@@ -1,6 +1,7 @@
+import { PremiumEmptyState } from '../components/ui/PremiumEmptyState';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutGrid, Layers, Plus, Shield, ChevronDown, X, Terminal, Send, Lock } from 'lucide-react';
+import { LayoutGrid, Layers, Plus, Shield, ChevronDown, X, Terminal, Send, Lock, ListTodo, BrainCircuit, Play, AlertTriangle, Edit2, Check } from 'lucide-react';
 import { List } from 'react-window';
 import { useOperationalData } from '../context/OperationalDataContext';
 import { TaskCard } from './task/TaskCard';
@@ -16,6 +17,90 @@ import { CompletionConfirmationModal } from './task/CompletionConfirmationModal'
 import { WaitStateModal } from './task/WaitStateModal';
 import { activityLogService } from '../services/activityLogService';
 import { WaitState } from '../core/types/collaboration';
+
+const STATUS_STYLES: Record<string, { bg: string, border: string, text: string, friendlyText: string, glow?: string }> = {
+  assigned: {
+    bg: 'rgba(59, 130, 246, 0.03)',
+    border: 'rgba(59, 130, 246, 0.12)',
+    glow: 'rgba(59, 130, 246, 0.1)',
+    text: '#60a5fa',
+    friendlyText: 'Tasks ready to be worked on will appear here.'
+  },
+  understanding: {
+    bg: 'rgba(16, 185, 129, 0.03)',
+    border: 'rgba(16, 185, 129, 0.12)',
+    glow: 'rgba(16, 185, 129, 0.1)',
+    text: '#34d399',
+    friendlyText: 'Tasks in design or understanding phase.'
+  },
+  in_progress: {
+    bg: 'rgba(124, 58, 237, 0.03)',
+    border: 'rgba(124, 58, 237, 0.12)',
+    glow: 'rgba(124, 58, 237, 0.1)',
+    text: '#a78bfa',
+    friendlyText: 'Tasks currently in development active progress.'
+  },
+  blocked: {
+    bg: 'rgba(239, 68, 68, 0.03)',
+    border: 'rgba(239, 68, 68, 0.12)',
+    glow: 'rgba(239, 68, 68, 0.1)',
+    text: '#f87171',
+    friendlyText: 'Blocked tasks awaiting dependency resolution.'
+  },
+  ready_for_review: {
+    bg: 'rgba(249, 115, 22, 0.03)',
+    border: 'rgba(249, 115, 22, 0.12)',
+    glow: 'rgba(249, 115, 22, 0.1)',
+    text: '#fb923c',
+    friendlyText: 'Tasks ready for supervisor or peer review.'
+  },
+  changes_requested: {
+    bg: 'rgba(245, 158, 11, 0.03)',
+    border: 'rgba(245, 158, 11, 0.12)',
+    glow: 'rgba(245, 158, 11, 0.1)',
+    text: '#fbbf24',
+    friendlyText: 'Tasks that require modifications or feedback fixes.'
+  },
+  completed: {
+    bg: 'rgba(34, 197, 94, 0.03)',
+    border: 'rgba(34, 197, 94, 0.12)',
+    glow: 'rgba(34, 197, 94, 0.1)',
+    text: '#4ade80',
+    friendlyText: 'Completed tasks verified in this workflow.'
+  }
+};
+
+const EmptyState = ({ statusId }: { statusId: string }) => {
+  const style = STATUS_STYLES[statusId] || STATUS_STYLES.assigned;
+  const IconComponent = ({
+    assigned: ListTodo,
+    understanding: BrainCircuit,
+    in_progress: Play,
+    blocked: AlertTriangle,
+    ready_for_review: Layers,
+    changes_requested: Edit2,
+    completed: Check
+  } as Record<string, any>)[statusId] || ListTodo;
+
+  return (
+    <div className="flex-grow flex flex-col items-center justify-center p-6 text-center min-h-[250px] border border-dashed border-border-subtle rounded-xl bg-black/10 select-none">
+      <div className="relative w-12 h-12 flex items-center justify-center mb-3">
+        <div className="absolute inset-0 rounded-full blur-md opacity-25"
+          style={{ background: style.text }} />
+        <div className="relative w-10 h-10 rounded-full flex items-center justify-center border"
+          style={{ borderColor: style.border, background: 'rgba(5, 7, 18, 0.6)' }}>
+          <IconComponent className="w-5 h-5" style={{ color: style.text }} />
+        </div>
+      </div>
+      <h4 className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-secondary)' }}>
+        No Tasks
+      </h4>
+      <p className="text-[10px] leading-relaxed max-w-[140px] mx-auto" style={{ color: 'var(--text-tertiary)' }}>
+        {style.friendlyText}
+      </p>
+    </div>
+  );
+};
 
 interface ExecutionBoardProps {
   projects: Project[];
@@ -288,7 +373,7 @@ export default function ExecutionBoard({
                       </span>
                       <button
                         onClick={() => setFilterByProject(isFiltered ? null : project.id)}
-                        className={`text-[8px] font-mono uppercase tracking-wider px-2 py-0.5 border rounded-sm transition-all cursor-pointer ${isFiltered ? 'bg-blue-600 border-border text-text-primary' : 'border-border text-text-quaternary hover:border-white/25'}`}
+                        className={`text-[8px] font-mono uppercase tracking-wider px-2 py-0.5 border rounded-sm transition-all cursor-pointer ${isFiltered ? 'bg-blue-600 border-border text-text-primary' : 'border-border text-text-quaternary hover:border-[var(--border-soft)]'}`}
                       >
                         {isFiltered ? 'Filtered ✓' : 'Filter'}
                       </button>
@@ -336,23 +421,30 @@ export default function ExecutionBoard({
             );
           };
 
+          const style = STATUS_STYLES[col.id] || STATUS_STYLES.assigned;
+
           return (
-            <div key={col.id} className="bg-[#1A1D21] border border-border-subtle rounded-xl p-4 flex flex-col min-h-[400px] max-h-[800px] transition-all shadow-sm">
-              <div className="flex justify-between items-center mb-3 pb-2 border-b border-border-subtle">
-                <span className="text-[13px] font-mono uppercase tracking-wider text-text-primary flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${col.color.replace('border', 'bg').replace('/20', '')}`} />
-                  {col.title}
+            <div key={col.id}
+              className="border rounded-xl p-4 flex flex-col min-h-[400px] max-h-[800px] transition-all duration-200 shadow-sm"
+              style={{
+                backgroundColor: style.bg,
+                borderColor: style.border,
+                boxShadow: `0 4px 20px rgba(0,0,0,0.15), 0 0 10px ${style.glow || 'transparent'}`
+              }}>
+              <div className="flex justify-between items-center mb-3 pb-2 border-b" style={{ borderColor: style.border }}>
+                <span className="text-[13px] font-semibold tracking-tight text-text-primary flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: style.text, boxShadow: `0 0 8px ${style.text}` }} />
+                  <span style={{ color: 'var(--text-primary)' }}>{col.title}</span>
                 </span>
-                <span className="px-2 py-0.5 bg-[var(--pm-surface)]/5 text-[9px] font-mono text-text-tertiary rounded-sm">
+                <span className="px-2 py-0.5 text-[9px] font-semibold rounded-full"
+                  style={{ background: 'rgba(255, 255, 255, 0.05)', color: style.text, border: `1px solid ${style.border}` }}>
                   {colTasks.length}
                 </span>
               </div>
 
               <div className="flex-1 flex flex-col overflow-hidden max-h-[450px]">
                 {colTasks.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-border-subtle rounded-sm p-6 text-center text-text-quaternary font-mono text-[9px] uppercase min-h-[350px]">
-                    Queue is empty
-                  </div>
+                  <EmptyState statusId={col.id} />
                 ) : colTasks.length > 20 ? (
                   <List
                     rowCount={colTasks.length}

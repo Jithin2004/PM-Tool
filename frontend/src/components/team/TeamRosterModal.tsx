@@ -4,6 +4,7 @@ import { List } from 'react-window';
 import { Users, Shield, Terminal, X, AlertTriangle, Activity, Lock, Layers, Search, ChevronRight, BrainCircuit, Plus, Clock } from 'lucide-react';
 import { Team, User, Profile, Project } from '../../types';
 import { calculateExpectedTime, getLocalDateString } from '../../utils/timeUtils';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export function TeamRosterModal({
   teams,
@@ -23,6 +24,8 @@ export function TeamRosterModal({
   onClose: () => void
 }) {
   // systemData is passed directly from parent (contains userCustomRoles, etc.)
+
+  useEscapeKey(true, onClose);
 
   const [activeSquadId, setActiveSquadId] = useState<string | null>(teams[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,7 +66,7 @@ export function TeamRosterModal({
       >
         <div className="flex justify-between items-start gap-2">
           <h4 className="text-sm font-semibold tracking-tight uppercase truncate">{team.name}</h4>
-          <span className={`text-[9px] font-mono px-2 py-0.5 border ${metrics.loadPercentage > 100 ? 'bg-signal-critical-bg text-signal-critical border-red-500/20' : metrics.loadPercentage >= 50 ? 'bg-surface-3 text-signal-info border-border' : 'bg-signal-safe-bg text-signal-safe border-border'}`}>
+          <span className={`text-[9px] font-mono px-2 py-0.5 border ${metrics.loadPercentage > 100 ? 'bg-signal-critical-bg text-signal-critical border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20' : metrics.loadPercentage >= 50 ? 'bg-surface-3 text-signal-info border-border' : 'bg-signal-safe-bg text-signal-safe border-border'}`}>
             {metrics.loadPercentage}% LOAD
           </span>
         </div>
@@ -259,19 +262,19 @@ export function TeamRosterModal({
   const activeSquadEngineers = selectedSquad ? ((selectedSquad.data as Record<string, unknown>)?.developer_ids as string[] || []).map((id: string) => profilesMap.get(id)).filter(Boolean) : [];
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-bg/80 backdrop-blur-md" />
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 modal-overlay-premium">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-transparent" />
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }} 
         animate={{ opacity: 1, scale: 1, y: 0 }} 
         exit={{ opacity: 0, scale: 0.95, y: 20 }} 
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="relative bg-surface/80 backdrop-blur-xl border border-border/50 w-full max-w-6xl overflow-hidden shadow-2xl shadow-black/50 rounded-2xl flex flex-col h-[90vh]"
+        className="relative modal-premium border border-[var(--border-soft)] w-full max-w-6xl overflow-hidden shadow-2xl rounded-2xl flex flex-col h-[90vh]"
       >
-        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 z-50" />
+        <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 z-50" />
 
         {/* Roster Header */}
-        <div className="p-6 border-b border-border/50 bg-surface-3/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+        <div className="p-6 border-b border-[var(--border-soft)] bg-[var(--pm-surface-lowest)]/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
           <div className="flex gap-4 items-center">
             <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center shadow-inner shrink-0">
               <Users className="w-6 h-6 text-blue-400" />
@@ -282,26 +285,30 @@ export function TeamRosterModal({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <div className="bg-surface-3/50 border border-border/50 rounded-xl px-4 py-2 text-center shrink-0 shadow-inner">
+            <div className="bg-[var(--pm-surface-lowest)]/50 border border-[var(--border-soft)] rounded-xl px-4 py-2 text-center shrink-0 shadow-inner">
               <p className="text-[9px] font-mono text-text-tertiary uppercase tracking-wide mb-0.5">Total Teams</p>
               <p className="text-sm font-bold font-mono">{teams.length}</p>
             </div>
-            <div className="bg-surface-3/50 border border-border/50 rounded-xl px-4 py-2 text-center shrink-0 shadow-inner">
+            <div className="bg-[var(--pm-surface-lowest)]/50 border border-[var(--border-soft)] rounded-xl px-4 py-2 text-center shrink-0 shadow-inner">
               <p className="text-[10px] font-bold tracking-widest text-text-tertiary uppercase mb-0.5">Average Load</p>
               <p className={`text-lg font-bold ${aggregateMetrics.avgLoad > 100 ? 'text-red-400' : 'text-blue-400'}`}>{aggregateMetrics.avgLoad}%</p>
             </div>
-            <div className="bg-surface-3/50 border border-border/50 rounded-xl px-4 py-2 text-center shrink-0 shadow-inner">
+            <div className="bg-[var(--pm-surface-lowest)]/50 border border-[var(--border-soft)] rounded-xl px-4 py-2 text-center shrink-0 shadow-inner">
               <p className="text-[10px] font-bold tracking-widest text-text-tertiary uppercase mb-0.5">Overloaded</p>
               <p className={`text-lg font-bold ${aggregateMetrics.overloadedCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{aggregateMetrics.overloadedCount} Units</p>
             </div>
-            <button onClick={onClose} className="p-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary shrink-0">
-              <Plus className="w-5 h-5 rotate-45 text-text-secondary" />
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-md hover:bg-[var(--pm-surface)]/5 text-text-quaternary hover:text-text-primary transition-colors cursor-pointer shrink-0"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="p-4 border-b border-border/50 bg-[var(--pm-panel)]/50 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="p-4 border-b border-[var(--border-soft)] bg-[var(--pm-surface-lowest)]/10 flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
             <input
@@ -309,7 +316,7 @@ export function TeamRosterModal({
               placeholder="Query name, email or team..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-surface-3/50 border border-border/50 h-10 pl-10 pr-4 text-sm rounded-xl focus:border-teal-500/50 outline-none transition-all placeholder:text-text-quaternary text-text-primary"
+              className="w-full input-premium h-11 pl-10 pr-4 text-sm outline-none placeholder:text-text-quaternary text-text-primary"
             />
           </div>
           <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
@@ -381,7 +388,7 @@ export function TeamRosterModal({
                     >
                       <div className="flex justify-between items-start gap-2">
                         <h4 className="text-sm font-semibold tracking-tight uppercase truncate">{team.name}</h4>
-                        <span className={`text-[9px] font-mono px-2 py-0.5 border ${metrics.loadPercentage > 100 ? 'bg-signal-critical-bg text-signal-critical border-red-500/20' : metrics.loadPercentage >= 50 ? 'bg-surface-3 text-signal-info border-border' : 'bg-signal-safe-bg text-signal-safe border-border'}`}>
+                        <span className={`text-[9px] font-mono px-2 py-0.5 border ${metrics.loadPercentage > 100 ? 'bg-signal-critical-bg text-signal-critical border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20' : metrics.loadPercentage >= 50 ? 'bg-surface-3 text-signal-info border-border' : 'bg-signal-safe-bg text-signal-safe border-border'}`}>
                           {metrics.loadPercentage}% LOAD
                         </span>
                       </div>
@@ -483,7 +490,7 @@ export function TeamRosterModal({
 
                 {/* Overloaded Banner if load exceeds 100% */}
                 {activeMetrics.loadPercentage > 100 && (
-                  <div className="bg-signal-critical-bg border border-red-500/20 p-4 flex items-start gap-3">
+                  <div className="bg-signal-critical-bg border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 p-4 flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-signal-critical shrink-0 mt-0.5 animate-bounce" />
                     <div>
                       <h5 className="text-xs font-sans tracking-tight text-signal-critical uppercase tracking-wide font-bold mb-1">Team Analytics Alert: Extreme Overload Detected</h5>
@@ -511,7 +518,7 @@ export function TeamRosterModal({
                             <div className="space-y-1">
                               <h5 className="text-sm font-semibold tracking-tight text-text-secondary">{project.name}</h5>
                               <div className="flex items-center gap-3 text-[10px] font-mono text-text-tertiary uppercase">
-                                <span className={`text-[9px] px-1.5 py-0.5 border ${project.priority === 'high' ? 'text-signal-critical border-red-500/20 bg-signal-critical-bg' : project.priority === 'medium' ? 'text-signal-info border-border bg-surface-3' : 'text-signal-safe border-border bg-signal-safe-bg'}`}>
+                                <span className={`text-[9px] px-1.5 py-0.5 border ${project.priority === 'high' ? 'text-signal-critical border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 bg-signal-critical-bg' : project.priority === 'medium' ? 'text-signal-info border-border bg-surface-3' : 'text-signal-safe border-border bg-signal-safe-bg'}`}>
                                   {project.priority}
                                 </span>
                                 <span>STATUS: <span className="text-signal-info">{project.status.replace('-', '_')}</span></span>
@@ -653,7 +660,7 @@ export function TeamRosterModal({
                         <p className="text-[8px] font-mono text-signal-warning/70 uppercase">HALF_DAY</p>
                         <p className="text-xl font-bold font-sans tracking-tight text-signal-warning mt-1">{selectedPersonnel.halfDays}</p>
                       </div>
-                      <div className="bg-surface border border-red-500/10 p-3 text-center">
+                      <div className="bg-surface border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/10 p-3 text-center">
                         <p className="text-[8px] font-mono text-signal-critical/70 uppercase">ABSENT</p>
                         <p className="text-xl font-bold font-sans tracking-tight text-signal-critical mt-1">{selectedPersonnel.absentDays}</p>
                       </div>

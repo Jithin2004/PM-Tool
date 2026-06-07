@@ -81,7 +81,7 @@ export function TimelineView({ projects, tasks, dependencies, profiles }: Timeli
         <div className="space-y-2">
           {schedulingInsights.map((insight, i) => (
             <div key={i} className={`flex items-center gap-3 px-4 py-3 border text-xs font-mono ${
-              insight.type === 'error' ? 'border-red-500/30 bg-signal-critical-bg text-red-300' :
+              insight.type === 'error' ? 'border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/30 bg-signal-critical-bg text-red-300' :
               insight.type === 'warning' ? 'border-yellow-500/30 bg-signal-warning-bg text-yellow-300' :
               'border-border bg-surface-3 text-blue-300'
             }`}>

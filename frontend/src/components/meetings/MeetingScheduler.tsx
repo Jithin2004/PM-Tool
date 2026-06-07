@@ -93,18 +93,18 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Title</label>
-                  <input value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" placeholder="Meeting title..." />
+                  <input value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-sm font-mono focus:border-[var(--border-soft)] outline-none" placeholder="Meeting title..." />
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Description</label>
-                  <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-white/30 outline-none" placeholder="Agenda..." />
+                  <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className="w-full bg-bg border border-border px-3 py-2 text-sm font-mono focus:border-[var(--border-soft)] outline-none" placeholder="Agenda..." />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Type</label>
-                    <select value={meetingType} onChange={e => setMeetingType(e.target.value as MeetingType)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none">
+                    <select value={meetingType} onChange={e => setMeetingType(e.target.value as MeetingType)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-[var(--border-soft)] outline-none">
                       {MEETING_TYPES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                     </select>
                   </div>
@@ -116,7 +116,7 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
 
                 <div>
                   <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Visibility & Category</label>
-                  <select value={meetingCategory} onChange={e => setMeetingCategory(e.target.value as any)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none">
+                  <select value={meetingCategory} onChange={e => setMeetingCategory(e.target.value as any)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-[var(--border-soft)] outline-none">
                     <option value="Internal">Internal (Team Only)</option>
                     <option value="Client">Client Facing</option>
                     {canCreateHRFinance && <option value="HR">HR Review</option>}
@@ -127,11 +127,11 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Start Time</label>
-                    <input type="datetime-local" value={startTime} onChange={e => setStartTime(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none" />
+                    <input type="datetime-local" value={startTime} onChange={e => setStartTime(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-[var(--border-soft)] outline-none" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">End Time</label>
-                    <input type="datetime-local" value={endTime} onChange={e => setEndTime(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none" />
+                    <input type="datetime-local" value={endTime} onChange={e => setEndTime(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-[var(--border-soft)] outline-none" />
                   </div>
                 </div>
 

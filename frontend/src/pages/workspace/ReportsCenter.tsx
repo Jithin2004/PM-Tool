@@ -226,7 +226,7 @@ export default function ReportsCenter() {
                 <select 
                   value={selectedReport}
                   onChange={(e) => setSelectedReport(e.target.value)}
-                  className="w-full bg-surface-highest border border-border p-3 rounded-lg text-sm font-medium text-text-primary focus:outline-none focus:border-accent-primary"
+                  className="w-full input-premium p-3 text-sm outline-none"
                 >
                   <option className="bg-surface-highest text-text-primary" value="project">Project Report</option>
                   <option className="bg-surface-highest text-text-primary" value="team">Team Report</option>
@@ -250,7 +250,7 @@ export default function ReportsCenter() {
                     type="date"
                     value={dateStart}
                     onChange={(e) => setDateStart(e.target.value)}
-                    className="w-full bg-surface-highest border border-border p-3 rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent-primary" 
+                    className="w-full input-premium p-3 text-sm outline-none" 
                   />
                 </div>
                 <div>
@@ -259,7 +259,7 @@ export default function ReportsCenter() {
                     type="date" 
                     value={dateEnd}
                     onChange={(e) => setDateEnd(e.target.value)}
-                    className="w-full bg-surface-highest border border-border p-3 rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent-primary" 
+                    className="w-full input-premium p-3 text-sm outline-none" 
                   />
                 </div>
               </div>
@@ -303,10 +303,10 @@ export default function ReportsCenter() {
           {previewData.length === 0 ? (
             <p className="text-sm text-text-tertiary">No data found for the selected criteria.</p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-border/50">
-              <table className="w-full text-left border-collapse whitespace-nowrap">
+            <div className="overflow-x-auto rounded-lg border border-border/50 bg-surface-3/10 backdrop-blur-md">
+              <table className="w-full text-left border-collapse whitespace-nowrap table-premium">
                 <thead>
-                  <tr className="bg-surface-highest border-b border-border/50">
+                  <tr className="border-b border-border/50">
                     {previewColumns.map((col, i) => (
                       <th key={i} className="p-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
                         {col}

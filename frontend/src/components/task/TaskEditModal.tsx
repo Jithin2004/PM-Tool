@@ -91,6 +91,17 @@ export function TaskEditModal({
     }
   }, [isOpen, task]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const isDeveloper = !hasCapability(currentUserProfile?.role, 'manage_projects');
@@ -222,14 +233,14 @@ export function TaskEditModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-bg backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 modal-overlay-premium z-[99999] flex items-center justify-center p-4">
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
+        initial={{ scale: 0.97, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-bg border border-border p-6 rounded-sm w-full max-w-md relative overflow-hidden"
+        exit={{ scale: 0.97, opacity: 0 }}
+        className="modal-premium p-6 rounded-sm w-full max-w-md relative overflow-hidden"
       >
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-primary to-accent-secondary" />
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-accent-primary to-accent-secondary" />
         
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-primary flex items-center gap-1.5">
@@ -248,6 +259,7 @@ export function TaskEditModal({
             <button
               onClick={onClose}
               className="text-text-quaternary hover:text-text-primary cursor-pointer"
+              aria-label="Close modal"
             >
               <X className="w-4 h-4" />
             </button>
@@ -292,7 +304,7 @@ export function TaskEditModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Implement Authentication"
-              className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`input-premium w-full h-9 px-3 text-xs outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
           </div>
 
@@ -303,7 +315,7 @@ export function TaskEditModal({
               disabled={isDeveloper}
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-              className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`input-premium w-full h-9 px-3 text-xs outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <option value="">-- SELECT PROJECT --</option>
               {projects.map(p => (
@@ -320,7 +332,7 @@ export function TaskEditModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Technical specs, links, etc."
               rows={3}
-              className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors resize-none ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`input-premium w-full p-3 text-xs outline-none transition-colors resize-none ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
           </div>
 
@@ -334,7 +346,7 @@ export function TaskEditModal({
                 disabled={isDeveloper}
                 value={originalEstimate}
                 onChange={(e) => setOriginalEstimate(Number(e.target.value))}
-                className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`input-premium w-full h-9 px-3 text-xs outline-none transition-colors ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
             </div>
             <div className="flex-1 space-y-2">
@@ -346,7 +358,7 @@ export function TaskEditModal({
                 disabled={isCollaboratorOnly && isDeveloper}
                 value={currentEstimate}
                 onChange={(e) => setCurrentEstimate(Number(e.target.value))}
-                className={`w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:border-border focus:outline-none transition-colors ${(isCollaboratorOnly && isDeveloper) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`input-premium w-full h-9 px-3 text-xs outline-none transition-colors ${(isCollaboratorOnly && isDeveloper) ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
             </div>
             <div className="flex-1">
@@ -370,7 +382,7 @@ export function TaskEditModal({
                 value={estimateReason}
                 onChange={(e) => setEstimateReason(e.target.value)}
                 placeholder="Why did the estimate change?"
-                className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary placeholder-white/20 focus:border-border focus:outline-none transition-colors"
+                className="input-premium w-full h-9 px-3 text-xs outline-none transition-colors placeholder:text-text-quaternary"
               />
             </div>
           )}
@@ -576,7 +588,7 @@ export function TaskEditModal({
                     type="button"
                     disabled={isSubmittingSuggestion}
                     onClick={handleSubmitSuggestion}
-                    className="px-2.5 py-1 bg-accent-primary text-[var(--pm-text)] dark:text-white text-[8px] font-bold uppercase tracking-wider rounded-sm hover:bg-accent-primary/95 transition-colors"
+                    className="px-2.5 py-1 bg-accent-primary text-[var(--pm-text)] text-[var(--text-primary)] text-[8px] font-bold uppercase tracking-wider rounded-sm hover:bg-accent-primary/95 transition-colors"
                   >
                     {isSubmittingSuggestion ? 'Submitting...' : 'Submit Suggestion'}
                   </button>
@@ -589,14 +601,14 @@ export function TaskEditModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-[9px] font-medium uppercase tracking-wide text-text-tertiary hover:text-text-primary transition-colors"
+              className="btn-premium-secondary px-4 py-2 text-[9px] font-medium uppercase tracking-wide transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !canSave}
-              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white text-[9px] font-medium uppercase tracking-wide transition-colors shadow-sm disabled:opacity-50"
+              className="btn-premium-primary px-4 py-2 text-[9px] font-medium uppercase tracking-wide transition-colors disabled:opacity-50"
             >
               {isSubmitting ? 'Processing...' : 'Save Changes'}
             </button>
@@ -650,7 +662,7 @@ export function TaskEditModal({
                   required
                   value={transferReason}
                   onChange={(e) => setTransferReason(e.target.value)}
-                  className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:outline-none"
+                  className="input-premium w-full h-9 px-3 text-xs outline-none"
                 >
                   <option value="">-- SELECT REASON --</option>
                   <option value="Employee moved to another priority project">Employee moved to another priority project</option>
@@ -669,7 +681,7 @@ export function TaskEditModal({
                   value={handoverNotes}
                   onChange={(e) => setHandoverNotes(e.target.value)}
                   placeholder="Describe remaining tasks, current code state, and test configurations..."
-                  className="w-full bg-bg border border-border p-2 text-xs font-mono text-text-primary focus:outline-none resize-none"
+                  className="input-premium w-full p-3 text-xs outline-none resize-none"
                 />
               </div>
 
@@ -699,7 +711,7 @@ export function TaskEditModal({
                 type="button"
                 onClick={handleConfirmTransfer}
                 disabled={isSubmitting}
-                className="px-4 py-1.5 bg-accent-primary text-[var(--pm-text)] dark:text-white text-[10px] font-mono uppercase tracking-wide rounded-sm cursor-pointer"
+                className="px-4 py-1.5 bg-accent-primary text-[var(--pm-text)] text-[var(--text-primary)] text-[10px] font-mono uppercase tracking-wide rounded-sm cursor-pointer"
               >
                 Confirm Transfer
               </button>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2, History, ShieldCheck, ShieldAlert, RefreshCw, TrendingUp, Share2 } from 'lucide-react';
 import { sha256 } from '../../utils/cryptoUtils';
 import { Project, Team, User, Profile } from '../../types';
@@ -337,6 +338,7 @@ export function ProjectDetailsModal({
   workingTimeTo?: string
 }) {
   const { tasks, updateWorkspaceSettings, projectFrictionMetrics = {}, timelineShiftLedger = [], notify, workspaceSettingsBlob = {} } = useDashboard();
+  useEscapeKey(true, onClose);
   const hasTasks = tasks.some(t => t.project_id === project.id);
 
   const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance' | 'insights'>('general');
@@ -769,13 +771,13 @@ export function ProjectDetailsModal({
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-bg/80 backdrop-blur-md" />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 modal-overlay-premium" />
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }} 
         animate={{ opacity: 1, scale: 1, y: 0 }} 
         exit={{ opacity: 0, scale: 0.95, y: 20 }} 
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="relative bg-surface/80 backdrop-blur-xl border border-border/50 w-full max-w-2xl overflow-y-auto max-h-[90vh] md:max-h-none shadow-2xl shadow-black/50 rounded-2xl my-auto"
+        className="relative modal-premium w-full max-w-2xl overflow-y-auto max-h-[90vh] md:max-h-none rounded-2xl my-auto scrollbar-premium"
       >
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 z-50" />
 
@@ -818,7 +820,7 @@ export function ProjectDetailsModal({
                       </div>
                     )}
                     {verificationState === 'TAMPERED' && (
-                      <div className="p-3 bg-signal-critical-bg border border-red-500/20 text-signal-critical animate-bounce">
+                      <div className="p-3 bg-signal-critical-bg border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 text-signal-critical animate-bounce">
                         <ShieldAlert className="w-6 h-6" />
                       </div>
                     )}
@@ -848,7 +850,7 @@ export function ProjectDetailsModal({
                           verificationState === 'SECURED'
                             ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/20'
                             : verificationState === 'TAMPERED'
-                            ? 'bg-signal-critical-bg border-red-500/35 text-signal-critical hover:bg-signal-critical-bg'
+                            ? 'bg-signal-critical-bg border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/35 text-signal-critical hover:bg-signal-critical-bg'
                             : 'bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] border-transparent hover:opacity-90'
                         }`}
                       >
@@ -860,7 +862,7 @@ export function ProjectDetailsModal({
                         type="button"
                         onClick={simulateTampering}
                         disabled={verificationState === 'VERIFYING'}
-                        className="px-4 py-2 text-[10px] uppercase font-medium tracking-wide border border-red-500/20 text-signal-critical/90 hover:bg-signal-critical-bg transition-all"
+                        className="px-4 py-2 text-[10px] uppercase font-medium tracking-wide border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 text-signal-critical/90 hover:bg-signal-critical-bg transition-all"
                         title="Mutate local block state to trigger warning UI"
                       >
                         Simulate Tamper
@@ -908,7 +910,7 @@ export function ProjectDetailsModal({
                           isScanning
                             ? 'border-yellow-500 bg-yellow-500/[0.02] shadow-sm'
                             : isTamperedBlock
-                            ? 'border-red-500 bg-red-500/[0.04] shadow-sm'
+                            ? 'border-[var(--signal-critical)] bg-[var(--signal-critical-bg)] bg-red-500/[0.04] shadow-sm'
                             : isSecuredBlock
                             ? 'border-emerald-500/20 bg-emerald-500/[0.01]'
                             : 'border-border bg-[var(--pm-surface)]/5'
@@ -929,7 +931,7 @@ export function ProjectDetailsModal({
                               </span>
                             )}
                             {isTamperedBlock && (
-                              <span className="bg-signal-critical-bg border border-red-500/40 text-signal-critical px-2 py-0.5 rounded-sm uppercase tracking-wider text-[8px] font-bold transition-opacity duration-300">
+                              <span className="bg-signal-critical-bg border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/40 text-signal-critical px-2 py-0.5 rounded-sm uppercase tracking-wider text-[8px] font-bold transition-opacity duration-300">
                                 TAMPER DETECTED
                               </span>
                             )}
@@ -964,7 +966,7 @@ export function ProjectDetailsModal({
                             <span className="text-text-quaternary uppercase tracking-tighter">HASH:</span>
                             <span className={`px-2 py-0.5 border rounded-sm font-mono tracking-tight transition-colors ${
                               isTamperedBlock
-                                ? 'bg-signal-critical-bg border-red-500/30 text-signal-critical'
+                                ? 'bg-signal-critical-bg border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/30 text-signal-critical'
                                 : 'bg-bg border-border text-text-secondary'
                             }`} title={log.hash}>
                               {log.hash ? `0x${log.hash.substring(0, 8)}...` : 'None'}
@@ -1076,19 +1078,19 @@ export function ProjectDetailsModal({
                   <span className="text-xs font-bold uppercase tracking-wider">Share</span>
                 </button>
               )}
-              <button onClick={onClose} className="p-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
+              <button onClick={onClose} aria-label="Close modal" className="p-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
                 <Plus className="w-5 h-5 rotate-45" />
               </button>
             </div>
           </div>
 
           {/* Tab bar */}
-          <div className="flex border-b border-border mb-6">
+          <div className="flex premium-segmented-control mb-6 w-full">
             <button
               type="button"
               onClick={() => setActiveTab('general')}
-              className={`px-4 py-2 text-xs font-mono uppercase tracking-wider border-b-2 transition-all ${
-                activeTab === 'general' ? 'border-text-primary text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${
+                activeTab === 'general' ? 'active' : ''
               }`}
             >
               Scope & PERT
@@ -1096,17 +1098,17 @@ export function ProjectDetailsModal({
             <button
               type="button"
               onClick={() => setActiveTab('friction')}
-              className={`px-4 py-2 text-xs font-mono uppercase tracking-wider border-b-2 transition-all ${
-                activeTab === 'friction' ? 'border-text-primary text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${
+                activeTab === 'friction' ? 'active' : ''
               }`}
             >
-              Delivery Friction & Shifts
+              Friction & Shifts
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('files')}
-              className={`px-4 py-2 text-xs font-mono uppercase tracking-wider border-b-2 transition-all ${
-                activeTab === 'files' ? 'border-text-primary text-text-primary' : 'border-transparent text-text-tertiary hover:text-text-secondary'
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${
+                activeTab === 'files' ? 'active' : ''
               }`}
             >
               Files
@@ -1114,8 +1116,8 @@ export function ProjectDetailsModal({
             <button
               type="button"
               onClick={() => setActiveTab('finance')}
-              className={`px-4 py-2 text-xs font-mono uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
-                activeTab === 'finance' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-text-tertiary hover:text-emerald-500/70'
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${
+                activeTab === 'finance' ? 'active text-emerald-400' : ''
               }`}
             >
               <Activity className="w-3.5 h-3.5" /> Finance
@@ -1123,11 +1125,11 @@ export function ProjectDetailsModal({
             <button
               type="button"
               onClick={() => setActiveTab('insights')}
-              className={`px-4 py-2 text-xs font-mono uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
-                activeTab === 'insights' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-text-tertiary hover:text-indigo-500/70'
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${
+                activeTab === 'insights' ? 'active text-indigo-400' : ''
               }`}
             >
-              <TrendingUp className="w-3.5 h-3.5" /> Delivery Insights
+              <TrendingUp className="w-3.5 h-3.5" /> Insights
             </button>
           </div>
 
@@ -1206,7 +1208,7 @@ export function ProjectDetailsModal({
                         required
                         value={deleteReason}
                         onChange={e => setDeleteReason(e.target.value)}
-                        className="w-full bg-bg border border-red-500/30 p-3 font-mono text-xs focus:border-red-500 outline-none min-h-[80px]"
+                        className="w-full bg-bg border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/30 p-3 font-mono text-xs focus:border-[var(--signal-critical)] bg-[var(--signal-critical-bg)] outline-none min-h-[80px]"
                         placeholder="Specify reason..."
                       />
                       <div className="flex gap-2">
@@ -1240,17 +1242,17 @@ export function ProjectDetailsModal({
                       <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
                         <div className="bg-surface-3/50 p-4 rounded-xl border border-border/30">
                           <p className="text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-2">Total Real Hours</p>
-                          <p className="text-2xl font-bold tracking-tight text-[var(--pm-text)] dark:text-white">{expectedRealHours.toFixed(1)}<span className="text-sm text-text-tertiary ml-1">h</span></p>
+                          <p className="text-2xl font-bold tracking-tight text-[var(--pm-text)] text-[var(--text-primary)]">{expectedRealHours.toFixed(1)}<span className="text-sm text-text-tertiary ml-1">h</span></p>
                         </div>
                         <div className="bg-surface-3/50 p-4 rounded-xl border border-border/30">
                           <p className="text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-2">Working Days</p>
-                          <p className="text-2xl font-bold tracking-tight text-[var(--pm-text)] dark:text-white">{calendarExpected}<span className="text-sm text-text-tertiary ml-1">d</span></p>
+                          <p className="text-2xl font-bold tracking-tight text-[var(--pm-text)] text-[var(--text-primary)]">{calendarExpected}<span className="text-sm text-text-tertiary ml-1">d</span></p>
                         </div>
                         <div className="bg-blue-500/10 p-4 rounded-xl border border-blue-500/20">
                           <p className="text-[10px] font-bold tracking-widest text-blue-400 uppercase mb-2">Remaining ETA</p>
                           <p className="text-2xl font-bold tracking-tight text-blue-300">{etaRemainingDays.toFixed(1)}<span className="text-sm text-blue-400/50 ml-1">d</span></p>
                         </div>
-                        <div className={`p-4 rounded-xl border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+                        <div className={`p-4 rounded-xl border ${deadlineVariance !== null && deadlineVariance < 0 ? 'bg-red-500/10 border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
                           <p className={`text-[10px] font-bold tracking-widest uppercase mb-2 ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-400' : 'text-emerald-400'}`}>Variance</p>
                           <p className={`text-xl font-bold ${deadlineVariance !== null && deadlineVariance < 0 ? 'text-red-300' : 'text-emerald-300'}`}>
                             {deadlineVariance !== null ? `${Math.abs(deadlineVariance)}d ${deadlineVariance < 0 ? 'behind' : 'ahead'}` : 'N/A'}
@@ -1398,7 +1400,7 @@ export function ProjectDetailsModal({
                         min="0"
                         value={manActiveDays}
                         onChange={e => setManActiveDays(e.target.value)}
-                        className="bg-bg border border-border text-right px-2 py-1 w-20 font-mono text-[10px] focus:border-white/40 outline-none"
+                        className="bg-bg border border-border text-right px-2 py-1 w-20 font-mono text-[10px] focus:border-[var(--border-soft)] outline-none"
                       />
                     </div>
                     <div className="flex items-center justify-between gap-4">
@@ -1409,7 +1411,7 @@ export function ProjectDetailsModal({
                         min="0"
                         value={manPassiveDays}
                         onChange={e => setManPassiveDays(e.target.value)}
-                        className="bg-bg border border-border text-right px-2 py-1 w-20 font-mono text-[10px] focus:border-white/40 outline-none"
+                        className="bg-bg border border-border text-right px-2 py-1 w-20 font-mono text-[10px] focus:border-[var(--border-soft)] outline-none"
                       />
                     </div>
                     <div className="flex items-center justify-between gap-4">
@@ -1420,7 +1422,7 @@ export function ProjectDetailsModal({
                         min="0"
                         value={manBlockedDays}
                         onChange={e => setManBlockedDays(e.target.value)}
-                        className="bg-bg border border-border text-right px-2 py-1 w-20 font-mono text-[10px] focus:border-white/40 outline-none"
+                        className="bg-bg border border-border text-right px-2 py-1 w-20 font-mono text-[10px] focus:border-[var(--border-soft)] outline-none"
                       />
                     </div>
                   </div>
@@ -1534,7 +1536,7 @@ export function ProjectDetailsModal({
                         required
                         value={deltaDays}
                         onChange={e => setDeltaDays(e.target.value)}
-                        className="w-full bg-bg border border-border h-8 px-2 font-mono text-xs focus:border-white/40 outline-none"
+                        className="w-full bg-bg border border-border h-8 px-2 font-mono text-xs focus:border-[var(--border-soft)] outline-none"
                       />
                     </div>
                     <div>
@@ -1542,7 +1544,7 @@ export function ProjectDetailsModal({
                       <select
                         value={blockerOwnership}
                         onChange={e => setBlockerOwnership(e.target.value)}
-                        className="w-full bg-bg border border-border h-8 px-2 font-mono text-xs focus:border-white/40 outline-none"
+                        className="w-full bg-bg border border-border h-8 px-2 font-mono text-xs focus:border-[var(--border-soft)] outline-none"
                       >
                         <option value="Client">Client</option>
                         <option value="Internal">Internal</option>
@@ -1556,7 +1558,7 @@ export function ProjectDetailsModal({
                     <select
                       value={blockerCategory}
                       onChange={e => setBlockerCategory(e.target.value)}
-                      className="w-full bg-bg border border-border h-8 px-2 font-mono text-xs focus:border-white/40 outline-none"
+                      className="w-full bg-bg border border-border h-8 px-2 font-mono text-xs focus:border-[var(--border-soft)] outline-none"
                     >
                       <option value="Client IT Team">Client IT Team</option>
                       <option value="Infrastructure Readiness">Infrastructure Readiness</option>
@@ -1573,7 +1575,7 @@ export function ProjectDetailsModal({
                       required
                       value={blockerReason}
                       onChange={e => setBlockerReason(e.target.value)}
-                      className="w-full bg-bg border border-border p-2 font-mono text-xs focus:border-white/40 outline-none min-h-[60px]"
+                      className="w-full bg-bg border border-border p-2 font-mono text-xs focus:border-[var(--border-soft)] outline-none min-h-[60px]"
                       placeholder="Specify reasoning for defensive audit records..."
                     />
                   </div>

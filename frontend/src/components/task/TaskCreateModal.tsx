@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Terminal } from 'lucide-react';
 import { Project, TaskStatus } from '../../types';
@@ -50,6 +50,17 @@ export function TaskCreateModal({
   const [recurrenceType, setRecurrenceType] = useState('none');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,13 +101,13 @@ export function TaskCreateModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-[var(--pm-surface)] dark:bg-black/60 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 modal-overlay-premium z-[99999] flex items-center justify-center p-4">
       <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        initial={{ scale: 0.97, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.97, opacity: 0 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="bg-surface border border-[var(--pm-border)] dark:border-white/10 p-8 rounded-2xl w-full max-w-md relative overflow-hidden shadow-2xl"
+        className="modal-premium p-8 rounded-2xl w-full max-w-md relative overflow-hidden shadow-2xl"
       >
         {/* Visual glow accent */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-accent-primary via-accent-secondary to-accent-primary" />
@@ -104,12 +115,13 @@ export function TaskCreateModal({
         
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-sm font-semibold tracking-wide uppercase text-text-primary flex items-center gap-2">
-            <Terminal className="w-5 h-5 text-accent-primary drop-shadow-[0_0_8px_rgba(var(--color-accent-primary-rgb),0.5)]" />
+            <Terminal className="w-5 h-5 text-accent-primary" />
             {mode === 'epic' ? 'Add Epic' : mode === 'story' ? 'Add Story' : 'Add Task'}
           </h3>
           <button
             onClick={onClose}
             className="p-1.5 rounded-md hover:bg-[var(--pm-surface)]/5 text-text-quaternary hover:text-text-primary transition-colors cursor-pointer"
+            aria-label="Close modal"
           >
             <X className="w-4 h-4" />
           </button>
@@ -126,7 +138,7 @@ export function TaskCreateModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Implement Authentication"
-              className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary placeholder-white/20 focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all rounded-lg shadow-inner"
+              className="input-premium w-full h-11 px-4 text-sm outline-none transition-all placeholder:text-text-quaternary"
             />
           </div>
 
@@ -143,7 +155,7 @@ export function TaskCreateModal({
                 required
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all rounded-lg appearance-none cursor-pointer"
+                className="input-premium w-full h-11 px-4 text-sm outline-none transition-all cursor-pointer"
               >
                 <option value="">-- SELECT PROJECT --</option>
                 {projects.map(p => (
@@ -160,7 +172,7 @@ export function TaskCreateModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Technical specs, links, etc."
               rows={3}
-              className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary placeholder-white/20 focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all resize-none rounded-lg shadow-inner"
+              className="input-premium w-full p-4 text-sm outline-none transition-all resize-none"
             />
           </div>
 
@@ -173,7 +185,7 @@ export function TaskCreateModal({
                 step="0.5"
                 value={estimatedHours}
                 onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all rounded-lg shadow-inner"
+                className="input-premium w-full h-11 px-4 text-sm outline-none transition-all"
               />
             </div>
             <div className="flex-1 space-y-1.5">
@@ -191,7 +203,7 @@ export function TaskCreateModal({
                 <select
                   value={recurrenceType}
                   onChange={(e) => setRecurrenceType(e.target.value)}
-                  className="w-full bg-surface-2 border border-border/50 p-2.5 text-sm font-medium text-text-primary focus:border-accent-primary/70 focus:bg-surface-3 outline-none transition-all rounded-lg appearance-none cursor-pointer"
+                  className="input-premium w-full h-11 px-4 text-sm outline-none transition-all cursor-pointer"
                 >
                   <option value="none">Never</option>
                   <option value="daily">Daily</option>
@@ -204,18 +216,18 @@ export function TaskCreateModal({
             )}
           </div>
 
-          <div className="pt-6 mt-4 flex justify-end gap-3 border-t border-[var(--pm-border)] dark:border-white/5">
+          <div className="pt-6 mt-4 flex justify-end gap-3 border-t border-[var(--pm-border)] dark:border-[var(--border-soft)]">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest text-text-tertiary hover:text-text-primary hover:bg-[var(--pm-surface)]/5 rounded-lg transition-all"
+              className="btn-premium-secondary px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all shadow-[0_0_15px_rgba(var(--color-accent-primary-rgb),0.3)] hover:shadow-[0_0_20px_rgba(var(--color-accent-primary-rgb),0.5)] disabled:opacity-50 disabled:shadow-none"
+              className="btn-premium-primary px-6 py-2.5 text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all disabled:opacity-50"
             >
               {isSubmitting ? 'Processing...' : mode === 'epic' ? 'Create Epic' : mode === 'story' ? 'Create Story' : 'Create Task'}
             </button>

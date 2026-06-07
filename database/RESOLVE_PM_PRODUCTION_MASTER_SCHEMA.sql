@@ -2478,7 +2478,7 @@ CREATE TABLE IF NOT EXISTS public.recurring_task_templates (
     title text NOT NULL,
     description text,
     
-    created_by uuid NOT NULL REFERENCES public.users(id) ON DELETE SET NULL,
+    created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
     assigned_to uuid REFERENCES public.users(id) ON DELETE SET NULL,
     
     recurrence_type text NOT NULL CHECK (recurrence_type IN ('daily', 'weekly', 'monthly', 'yearly', 'custom')),
@@ -2649,7 +2649,7 @@ CREATE TABLE IF NOT EXISTS public.generated_reports (
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
     
     report_type text NOT NULL CHECK (report_type IN ('project', 'team', 'sprint', 'attendance', 'payroll')),
-    generated_by uuid NOT NULL REFERENCES public.users(id) ON DELETE SET NULL,
+    generated_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
     
     file_path text NOT NULL,
     

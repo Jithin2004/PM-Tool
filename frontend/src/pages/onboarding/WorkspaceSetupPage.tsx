@@ -237,7 +237,7 @@ export function WorkspaceSetupPage() {
           </div>
 
           {(localError || error) && (
-            <div className="mb-6 border border-red-500/20 bg-signal-critical-bg/30 p-4 text-xs font-mono-pm text-red-200 rounded-lg flex items-center gap-2">
+            <div className="mb-6 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 bg-signal-critical-bg/30 p-4 text-xs font-mono-pm text-red-200 rounded-lg flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
               <span>{localError || error}</span>
             </div>
@@ -422,7 +422,7 @@ export function WorkspaceSetupPage() {
                       <button
                         key={day.value}
                         onClick={() => toggleWorkday(day.value)}
-                        className={`h-10 border rounded-lg text-xs transition-all font-mono-pm ${active ? '!border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 text-[var(--pm-on-surface)] shadow-sm' : 'bg-[var(--pm-surface-low)] text-[var(--pm-on-surface-variant)] hover:border-[var(--pm-border)] dark:border-white/20'}`}
+                        className={`h-10 border rounded-lg text-xs transition-all font-mono-pm ${active ? '!border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 text-[var(--pm-on-surface)] shadow-sm' : 'bg-[var(--pm-surface-low)] text-[var(--pm-on-surface-variant)] hover:border-[var(--pm-border)] dark:border-[var(--border-soft)]'}`}
                         style={{ borderColor: active ? '' : 'rgba(70,69,84,0.2)' }}
                       >
                         {day.label}
@@ -459,7 +459,7 @@ export function WorkspaceSetupPage() {
 
               {previewLoading && (
                 <div className="flex items-center gap-3 py-12 text-xs font-mono-pm text-[var(--pm-on-surface-variant)] justify-center">
-                  <div className="h-4 w-4 animate-spin rounded-full border border-white/30 border-t-white" />
+                  <div className="h-4 w-4 animate-spin rounded-full border border-[var(--border-soft)] border-t-white" />
                   Calibrating holiday registries...
                 </div>
               )}

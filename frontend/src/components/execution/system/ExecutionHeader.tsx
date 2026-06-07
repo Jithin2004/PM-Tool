@@ -152,7 +152,7 @@ export function ExecutionHeader({
           {canAddTask && (
             <button
               onClick={onAddTask}
-              className="flex items-center gap-1.5 px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white rounded-lg text-[13px] font-semibold shadow-sm transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] text-[var(--text-primary)] rounded-lg text-[13px] font-semibold shadow-sm transition-all active:scale-95"
             >
               <Plus className="w-4 h-4" />
               Add Task

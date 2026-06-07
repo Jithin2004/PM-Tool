@@ -51,18 +51,18 @@ export default function DocumentsPage() {
       case 'google_doc': return <div className="text-blue-400"><Icon name="description" size={24} /></div>;
       case 'drive': return <div className="text-green-400"><Icon name="folder_open" size={24} /></div>;
       case 'figma': return <div className="text-pink-400"><Icon name="draw" size={24} /></div>;
-      case 'github': return <div className="text-gray-300"><Icon name="code" size={24} /></div>;
+      case 'github': return <div className="text-[var(--text-muted)]"><Icon name="code" size={24} /></div>;
       default: return <div className="text-indigo-400"><Icon name="link" size={24} /></div>;
     }
   };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#111827] text-white overflow-hidden">
-      <div className="flex-none p-6 border-b border-white/10">
+      <div className="flex-none p-6 border-b border-[var(--border-soft)]">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Document References</h1>
-            <p className="text-sm text-gray-400 mt-1">Centralize your external resources and links.</p>
+            <p className="text-sm text-[var(--text-muted)] mt-1">Centralize your external resources and links.</p>
           </div>
           <button 
             onClick={() => setIsCreateModalOpen(true)}
@@ -80,7 +80,7 @@ export default function DocumentsPage() {
             <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
           </div>
         ) : documents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+          <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)]">
             <Icon name="folder_off" size={48} className="mb-4 opacity-50" />
             <p>No document references yet. Keep your tools connected.</p>
           </div>
@@ -92,7 +92,7 @@ export default function DocumentsPage() {
                 href={doc.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-white/5 border border-white/10 rounded-xl p-5 hover:bg-white/10 transition-colors flex flex-col group"
+                className="bg-[var(--surface-glass)] border border-[var(--border-soft)] rounded-xl p-5 hover:bg-[var(--surface-hover)] transition-colors flex flex-col group"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -105,12 +105,12 @@ export default function DocumentsPage() {
                       e.stopPropagation();
                       setDocumentToDelete(doc);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-400 transition-colors"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-muted)] hover:text-red-400 transition-colors"
                   >
                     <Icon name="delete" size={16} />
                   </button>
                 </div>
-                <div className="mt-auto pt-3 border-t border-white/5 text-xs text-gray-500 truncate">
+                <div className="mt-auto pt-3 border-t border-[var(--border-soft)] text-xs text-[var(--text-muted)] truncate">
                   {doc.url}
                 </div>
               </a>

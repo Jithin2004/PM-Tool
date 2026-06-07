@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import type { ExecutionMode } from '../../types';
 import { TransitionImpactPreview } from './TransitionImpactPreview';
 import { ExecutionMigrationPlanner } from './ExecutionMigrationPlanner';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { X } from 'lucide-react';
 
 interface ExecutionModeTransitionModalProps {
   projectId: string;
@@ -32,6 +34,8 @@ export function ExecutionModeTransitionModal({
   const [targetMode, setTargetMode] = useState<ExecutionMode>(currentMode);
   const [step, setStep] = useState<'select' | 'preview'>('select');
 
+  useEscapeKey(true, onClose);
+
   const availableModes = useMemo(
     () => EXECUTION_MODES.filter(m => m.value !== currentMode),
     [currentMode],
@@ -43,11 +47,20 @@ export function ExecutionModeTransitionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg" onClick={onClose}>
-      <div className="bg-surface border border-border w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold text-text-primary">Execution Mode Transition</h2>
-          <p className="text-[10px] font-mono text-text-quaternary mt-0.5">{projectName}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay-premium p-4" onClick={onClose}>
+      <div className="modal-premium w-full max-w-lg rounded-2xl shadow-2xl relative overflow-hidden flex flex-col border border-[var(--border-soft)]" onClick={e => e.stopPropagation()}>
+        <div className="px-6 py-5 border-b border-[var(--border-soft)] flex justify-between items-center">
+          <div>
+            <h2 className="text-sm font-semibold text-text-primary">Execution Mode Transition</h2>
+            <p className="text-[10px] font-mono text-text-quaternary mt-0.5">{projectName}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md hover:bg-[var(--pm-surface)]/5 text-text-quaternary hover:text-text-primary transition-colors cursor-pointer"
+            aria-label="Close modal"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
@@ -65,7 +78,7 @@ export function ExecutionModeTransitionModal({
                   <button
                     key={mode.value}
                     onClick={() => { setTargetMode(mode.value); setStep('preview'); }}
-                    className="w-full flex items-center justify-between px-3 py-2 bg-surface-3 border border-border hover:border-white/30 transition-colors text-left"
+                    className="w-full flex items-center justify-between px-3 py-2 bg-surface-3 border border-border hover:border-[var(--border-soft)] transition-colors text-left"
                   >
                     <div>
                       <span className="text-xs font-mono text-text-secondary">{mode.label}</span>

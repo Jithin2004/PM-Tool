@@ -5,6 +5,7 @@ import { generateInvoicePDF } from '../../services/invoicePdfService';
 import { fetchDocumentTemplates, DocumentTemplate } from '../../services/documentTemplateService';
 import { documentGenerator } from '../../services/documentGeneratorService';
 import { showConfirm, showAlert } from '../common/Dialogs';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface CreateInvoiceModalProps {
 }
 
 export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, companyProfile, onSuccess, prefillProject, totalInvoicedForProject, currentUserIsSuperAdmin, prefillLineItems, prefillBillingType }: CreateInvoiceModalProps) {
+  useEscapeKey(isOpen, onClose);
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
@@ -248,24 +250,28 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col font-geist">
-        <div className="flex justify-between items-center p-6 border-b border-border/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay-premium">
+      <div className="modal-premium border border-[var(--border-soft)] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col font-geist">
+        <div className="flex justify-between items-center p-6 border-b border-[var(--border-soft)]">
           <h2 className="text-xl font-semibold text-text-primary">Create GST Invoice</h2>
-          <button onClick={onClose} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md hover:bg-[var(--pm-surface)]/5 text-text-quaternary hover:text-text-primary transition-colors cursor-pointer"
+            aria-label="Close modal"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 space-y-6 text-sm text-text-secondary">
+        <div className="p-6 overflow-y-auto flex-1 space-y-6 text-sm text-text-secondary scrollbar-premium">
           {/* Client & Dates */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-1 md:col-span-1">
+            <div className="space-y-1.5 md:col-span-1">
               <label className="font-medium text-text-primary">Client</label>
               <select 
                 value={selectedClient} 
                 onChange={e => setSelectedClient(e.target.value)}
-                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none focus:border-accent-primary"
+                className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer"
               >
                 <option value="">Select a client...</option>
                 {clients.map(c => (
@@ -278,21 +284,21 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                 </div>
               )}
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="font-medium text-text-primary">Issue Date</label>
               <input 
                 type="date" 
                 value={issueDate}
                 onChange={e => setIssueDate(e.target.value)}
-                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none"
+                className="w-full input-premium h-11 px-4 text-sm outline-none"
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="font-medium text-text-primary">Payment Terms</label>
               <select 
                 value={paymentTerms} 
                 onChange={e => setPaymentTerms(e.target.value)}
-                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none focus:border-accent-primary"
+                className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer"
               >
                 <option value="Due immediately">Due immediately</option>
                 <option value="Net 7">Net 7</option>
@@ -301,22 +307,22 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                 <option value="Custom">Custom</option>
               </select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="font-medium text-text-primary">Due Date</label>
               <input 
                 type="date" 
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
                 disabled={paymentTerms !== 'Custom'}
-                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none disabled:opacity-50"
+                className="w-full input-premium h-11 px-4 text-sm outline-none disabled:opacity-50"
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="font-medium text-text-primary">Billing Type</label>
               <select 
                 value={billingType}
                 onChange={e => setBillingType(e.target.value)}
-                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none focus:border-accent-primary"
+                className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer"
               >
                 <option value="Advance Payment">Advance Payment</option>
                 <option value="Milestone Payment">Milestone Payment</option>
@@ -326,12 +332,12 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                 <option value="Custom">Custom</option>
               </select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="font-medium text-text-primary">Template</label>
               <select 
                 value={selectedTemplateId}
                 onChange={e => setSelectedTemplateId(e.target.value)}
-                className="w-full bg-surface-highest border border-border/50 rounded-lg px-4 py-2.5 outline-none focus:border-accent-primary"
+                className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer"
               >
                 <option value="default">System Default PDF</option>
                 {templates.map(t => (
@@ -350,9 +356,9 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
               </button>
             </div>
             
-            <div className="border border-border/50 rounded-lg overflow-hidden">
-              <table className="w-full text-left whitespace-nowrap">
-                <thead className="bg-surface-highest border-b border-border/50 text-xs text-text-tertiary uppercase tracking-wider">
+            <div className="border border-border/50 rounded-lg overflow-hidden bg-surface-3/10 backdrop-blur-md">
+              <table className="w-full text-left whitespace-nowrap table-premium">
+                <thead className="border-b border-border/50 text-xs text-text-tertiary uppercase tracking-wider">
                   <tr>
                     <th className="px-4 py-3 w-1/2">Description</th>
                     <th className="px-4 py-3 w-20">Qty</th>
@@ -434,7 +440,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                     <select 
                       value={invoiceCurrency}
                       onChange={e => setInvoiceCurrency(e.target.value)}
-                      className="w-full bg-surface-highest border border-border rounded px-2 py-1.5 text-xs text-text-primary outline-none focus:border-accent-primary"
+                      className="w-full input-premium p-2 text-xs outline-none cursor-pointer"
                     >
                       <option value="INR">INR (₹)</option>
                       <option value="USD">USD ($)</option>
@@ -450,7 +456,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                       step="0.01"
                       value={exchangeRate}
                       onChange={e => setExchangeRate(Number(e.target.value))}
-                      className="w-full bg-surface-highest border border-border rounded px-2 py-1.5 text-xs text-text-primary outline-none focus:border-accent-primary disabled:opacity-50"
+                      className="w-full input-premium p-2 text-xs outline-none disabled:opacity-50"
                       disabled={invoiceCurrency === 'INR' || !currentUserIsSuperAdmin}
                     />
                   </div>
@@ -465,7 +471,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                       value={exchangeOverrideReason} 
                       onChange={e => setExchangeOverrideReason(e.target.value)} 
                       placeholder="Required reason for audit..." 
-                      className="w-full bg-surface-highest border border-border rounded px-2 py-1.5 text-xs text-text-primary outline-none focus:border-accent-primary"
+                      className="w-full input-premium p-2 text-xs outline-none"
                     />
                   </div>
                 )}
@@ -503,7 +509,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                           value={overrideReason} 
                           onChange={e => setOverrideReason(e.target.value)} 
                           placeholder="Reason for override..." 
-                          className="w-full bg-bg border border-rose-500/30 rounded px-3 py-1.5 text-xs outline-none"
+                          className="w-full input-premium p-2 text-xs outline-none border-rose-500/30 focus:border-rose-500"
                           required
                         />
                       )}
@@ -519,14 +525,14 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-border/50 bg-surface-highest/50 flex justify-end gap-3">
-          <button onClick={onClose} className="px-6 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary transition-colors">
+        <div className="p-6 border-t border-[var(--border-soft)] bg-[var(--pm-surface-lowest)]/30 flex justify-end gap-3">
+          <button onClick={onClose} className="btn-premium-secondary px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all">
             Cancel
           </button>
           <button 
             onClick={handleSubmit} 
             disabled={isSubmitting || !selectedClient || subtotal <= 0 || (isOverbilled && (!overrideOverbill || !overrideReason))}
-            className="flex items-center gap-2 px-6 py-2.5 bg-accent-primary text-black font-semibold rounded-lg text-sm transition-all hover:bg-emerald-400 disabled:opacity-50"
+            className="btn-premium-primary flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
           >
             {isSubmitting ? 'Generating...' : (
               <>

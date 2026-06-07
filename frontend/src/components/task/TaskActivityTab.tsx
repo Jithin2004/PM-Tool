@@ -35,7 +35,7 @@ export function TaskActivityTab({ taskId }: TaskActivityTabProps) {
   };
 
   if (loading) {
-    return <div className="text-[10px] text-text-quaternary font-mono text-center mt-10">Loading activity...</div>;
+    return <div className="text-[10px] text-text-quaternary font-mono text-center mt-10"><span className="animate-pulse tracking-widest uppercase text-[10px] font-mono text-[var(--text-muted)]">Loading Activity...</span></div>;
   }
 
   if (logs.length === 0) {

@@ -892,7 +892,7 @@ export function LogisticsDashboard({
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full bg-bg border border-border h-11 pl-10 pr-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none transition-all"
+                    className="w-full bg-bg border border-border h-11 pl-10 pr-4 text-sm font-mono text-text-primary focus:border-[var(--border-soft)] outline-none transition-all"
                   />
                 </div>
               </div>
@@ -906,7 +906,7 @@ export function LogisticsDashboard({
                     placeholder="Search name or email..."
                     value={attendanceSearch}
                     onChange={(e) => setAttendanceSearch(e.target.value)}
-                    className="w-full bg-bg border border-border h-11 pl-10 pr-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none transition-all placeholder:text-text-quaternary"
+                    className="w-full bg-bg border border-border h-11 pl-10 pr-4 text-sm font-mono text-text-primary focus:border-[var(--border-soft)] outline-none transition-all placeholder:text-text-quaternary"
                   />
                 </div>
               </div>
@@ -1090,7 +1090,7 @@ export function LogisticsDashboard({
                       onChange={(e) => setAllowedCasualLeaves(Number(e.target.value))}
                       min={0}
                       max={31}
-                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-[var(--border-soft)] outline-none"
                     />
                     <p className="text-[9px] font-mono text-text-quaternary italic">Allocated paid leave allowance per user. Exceeding days trigger deductions.</p>
                   </div>
@@ -1105,7 +1105,7 @@ export function LogisticsDashboard({
                       onChange={(e) => setAllowedMedicalLeaves(Number(e.target.value))}
                       min={0}
                       max={31}
-                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-[var(--border-soft)] outline-none"
                     />
                     <p className="text-[9px] font-mono text-text-quaternary italic">Allocated paid sick/medical leave. Excess days trigger deductions.</p>
                   </div>
@@ -1120,7 +1120,7 @@ export function LogisticsDashboard({
                       onChange={(e) => setHalfDayRule(Number(e.target.value))}
                       min={1}
                       max={10}
-                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-[var(--border-soft)] outline-none"
                     />
                     <p className="text-[9px] font-mono text-text-quaternary italic">Specify how many marked Half-Day absences equal 1 Full-Day leave (e.g. 2 half-days = 1 full day).</p>
                   </div>
@@ -1149,7 +1149,7 @@ export function LogisticsDashboard({
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value as any)}
-                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-[var(--border-soft)] outline-none"
                     >
                       <option value="USD">USD ($) - US Dollar</option>
                       <option value="INR">INR (₹) - Indian Rupee</option>
@@ -1166,7 +1166,7 @@ export function LogisticsDashboard({
                     <select
                       value={deductionMethod}
                       onChange={(e) => setDeductionMethod(e.target.value as any)}
-                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
+                      className="w-full bg-bg border border-border h-11 px-4 text-sm font-mono text-text-primary focus:border-[var(--border-soft)] outline-none"
                     >
                       <option value="fixed">Fixed Currency Value per Leave Day</option>
                       <option value="pro_rata">Daily Pro-Rata (Base Monthly Salary / 22 Working Days)</option>
@@ -1186,7 +1186,7 @@ export function LogisticsDashboard({
                           value={unexcusedDeductionAmount}
                           onChange={(e) => setUnexcusedDeductionAmount(Number(e.target.value))}
                           min={0}
-                          className="w-full bg-bg border border-border h-11 pl-10 pr-4 text-sm font-mono text-text-primary focus:border-white/30 outline-none"
+                          className="w-full bg-bg border border-border h-11 pl-10 pr-4 text-sm font-mono text-text-primary focus:border-[var(--border-soft)] outline-none"
                         />
                       </div>
                       <p className="text-[9px] font-mono text-text-quaternary italic">Configured deduction amount deducted from the user's monthly payload for each exceeding unexcused day.</p>
@@ -1261,7 +1261,7 @@ export function LogisticsDashboard({
                 <select
                   value={payrollMode}
                   onChange={(e) => setPayrollMode(e.target.value as any)}
-                  className="bg-bg border border-border h-10 px-4 text-xs font-mono text-text-primary focus:border-white/30 outline-none"
+                  className="bg-bg border border-border h-10 px-4 text-xs font-mono text-text-primary focus:border-[var(--border-soft)] outline-none"
                 >
                   <option value="monthly">Monthly Cycle</option>
                   <option value="custom">Custom Range</option>
@@ -1272,7 +1272,7 @@ export function LogisticsDashboard({
                     <select
                       value={selectedMonth}
                       onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="bg-bg border border-border h-10 px-4 text-xs font-mono text-text-primary focus:border-white/30 outline-none"
+                      className="bg-bg border border-border h-10 px-4 text-xs font-mono text-text-primary focus:border-[var(--border-soft)] outline-none"
                     >
                       <option value="01">January</option>
                       <option value="02">February</option>
@@ -1291,7 +1291,7 @@ export function LogisticsDashboard({
                     <select
                       value={selectedYear}
                       onChange={(e) => setSelectedYear(e.target.value)}
-                      className="bg-bg border border-border h-10 px-4 text-xs font-mono text-text-primary focus:border-white/30 outline-none"
+                      className="bg-bg border border-border h-10 px-4 text-xs font-mono text-text-primary focus:border-[var(--border-soft)] outline-none"
                     >
                       <option value="2025">2025</option>
                       <option value="2026">2026</option>
@@ -1300,9 +1300,9 @@ export function LogisticsDashboard({
                   </>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} className="bg-bg border border-border h-10 px-2 text-xs font-mono text-text-primary focus:border-white/30 outline-none" />
+                    <input type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} className="bg-bg border border-border h-10 px-2 text-xs font-mono text-text-primary focus:border-[var(--border-soft)] outline-none" />
                     <span className="text-text-tertiary text-xs font-mono">to</span>
-                    <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="bg-bg border border-border h-10 px-2 text-xs font-mono text-text-primary focus:border-white/30 outline-none" />
+                    <input type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} className="bg-bg border border-border h-10 px-2 text-xs font-mono text-text-primary focus:border-[var(--border-soft)] outline-none" />
                   </div>
                 )}
 
@@ -1322,7 +1322,7 @@ export function LogisticsDashboard({
                 <p className="text-[10px] font-mono uppercase text-text-tertiary tracking-wide mb-2 relative z-10">Total Gross Liability</p>
                 <p className="text-2xl font-sans tracking-tight text-text-primary font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.baseSalary, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
-              <div className="bg-surface border border-red-500/20 p-6 flex flex-col justify-center relative overflow-hidden">
+              <div className="bg-surface border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 p-6 flex flex-col justify-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10 text-signal-critical"><TrendingDown className="w-16 h-16" /></div>
                 <p className="text-[10px] font-mono uppercase text-signal-critical/80 tracking-wide mb-2 relative z-10">Total Deductions</p>
                 <p className="text-2xl font-sans tracking-tight text-signal-critical font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.totalDeductions, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -1472,7 +1472,7 @@ export function LogisticsDashboard({
                               <div className="flex items-center justify-center gap-2 text-[10px]">
                                 <span className="bg-signal-safe-bg text-signal-safe px-2 py-0.5 border border-border" title="Present Days">P: {presentCount}</span>
                                 <span className="bg-signal-warning-bg text-signal-warning px-2 py-0.5 border border-yellow-500/15" title="Half Days">HD: {halfDayCount}</span>
-                                <span className="bg-signal-critical-bg text-signal-critical px-2 py-0.5 border border-red-500/15" title="Unexcused Absences">UU: {uuCount}</span>
+                                <span className="bg-signal-critical-bg text-signal-critical px-2 py-0.5 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/15" title="Unexcused Absences">UU: {uuCount}</span>
                               </div>
                               <span className="text-[8px] text-text-quaternary uppercase tracking-wider">Bandwidth: {expectedWorkingDays} working days</span>
                             </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface ProjectReviewModalProps {
   project: any;
@@ -16,6 +17,8 @@ interface ProjectReviewModalProps {
 }
 
 export function ProjectReviewModal({ project, workspaceId, userId, isOpen, onClose, onSuccess, notify, estimatedHours, actualHours }: ProjectReviewModalProps) {
+  useEscapeKey(isOpen, onClose);
+  
   const [delayReasons, setDelayReasons] = useState<string[]>([]);
   const [newDelayReason, setNewDelayReason] = useState('');
   
@@ -72,19 +75,19 @@ export function ProjectReviewModal({ project, workspaceId, userId, isOpen, onClo
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay-premium">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-surface border border-border rounded-lg shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+          className="modal-premium w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] rounded-2xl"
         >
           <div className="flex items-center justify-between p-4 border-b border-border flex-none">
             <h2 className="text-lg font-semibold flex items-center gap-2 text-text-primary tracking-tight">
               <CheckCircle2 className="w-5 h-5 text-emerald-500" />
               Project Completion Review
             </h2>
-            <button onClick={onClose} className="p-1 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-2 transition-colors">
+            <button onClick={onClose} aria-label="Close modal" className="p-1 text-text-secondary hover:text-text-primary rounded-full hover:bg-surface-2 transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -146,9 +149,9 @@ export function ProjectReviewModal({ project, workspaceId, userId, isOpen, onClo
                     onChange={(e) => setNewImprovement(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addImprovement(); } }}
                     placeholder="e.g. Clear requirements, good test coverage..."
-                    className="flex-1 bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                    className="flex-1 input-premium px-3 py-2 text-sm"
                   />
-                  <button type="button" onClick={addImprovement} className="px-3 py-2 bg-surface-3 hover:bg-surface-4 text-text-primary text-sm font-medium rounded border border-border">Add</button>
+                  <button type="button" onClick={addImprovement} className="px-3 py-2 btn-premium-secondary text-text-primary text-sm font-medium rounded border border-border">Add</button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {improvementFactors.map(r => (
@@ -168,10 +171,10 @@ export function ProjectReviewModal({ project, workspaceId, userId, isOpen, onClo
           </div>
 
           <div className="p-4 border-t border-border flex justify-end gap-3 flex-none">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary btn-premium-secondary rounded-lg">
               Skip
             </button>
-            <button type="submit" form="review-form" disabled={loading} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-sm font-medium flex items-center gap-2 disabled:opacity-50">
+            <button type="submit" form="review-form" disabled={loading} className="px-4 py-2 btn-premium-success rounded text-sm font-medium flex items-center gap-2 disabled:opacity-50">
               <Save className="w-4 h-4" />
               {loading ? 'Saving...' : 'Save Learnings'}
             </button>

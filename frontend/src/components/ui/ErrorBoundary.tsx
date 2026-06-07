@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="min-h-[400px] w-full flex items-center justify-center p-6 bg-surface">
-          <div className="max-w-md w-full bg-surface-2 border border-red-500/30 rounded-2xl p-8 text-center shadow-2xl relative overflow-hidden">
+          <div className="max-w-md w-full bg-surface-2 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/30 rounded-2xl p-8 text-center shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-orange-500" />
             
             <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -64,7 +64,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   this.setState({ hasError: false, error: null });
                   window.location.href = '/workspace';
                 }}
-                className="w-full sm:w-auto px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-lg shadow-accent-primary/20 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] text-[var(--text-primary)] text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-lg shadow-accent-primary/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Home className="w-4 h-4" /> Return Home
               </button>

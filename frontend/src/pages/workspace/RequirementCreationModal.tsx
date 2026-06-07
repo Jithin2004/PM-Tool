@@ -4,11 +4,15 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { Icon } from '../../components/ui/Icon';
 import { activityLogService } from '../../services/activityLogService';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export function RequirementCreationModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
   const { workspace } = useWorkspace();
   const { projects } = useDashboard();
   const [loading, setLoading] = useState(false);
+  
+  useEscapeKey(true, onClose);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -54,28 +58,28 @@ export function RequirementCreationModal({ onClose, onSuccess }: { onClose: () =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#1c1d1f] p-6 rounded-xl shadow-2xl max-w-lg w-full border border-white/10 text-white max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay-premium">
+      <div className="relative modal-premium p-6 rounded-2xl max-w-lg w-full text-white max-h-[90vh] flex flex-col scrollbar-premium animate-in fade-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center mb-4 flex-none">
-          <h2 className="text-xl font-semibold tracking-tight">New Requirement</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 transition-colors text-white/50 hover:text-white">
+          <h2 className="text-xl font-semibold tracking-tight text-text-primary">New Requirement</h2>
+          <button onClick={onClose} aria-label="Close modal" className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors text-[var(--text-secondary)] hover:text-white">
             <Icon name="close" size={20} />
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2 space-y-4">
+        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2 space-y-4 scrollbar-premium">
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-gray-400 mb-1">Title</label>
-            <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Title</label>
+            <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none" />
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-gray-400 mb-1">Client (Optional)</label>
-            <input type="text" value={formData.client_name} onChange={e => setFormData({...formData, client_name: e.target.value})} placeholder="Client name..." className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Client (Optional)</label>
+            <input type="text" value={formData.client_name} onChange={e => setFormData({...formData, client_name: e.target.value})} placeholder="Client name..." className="w-full input-premium px-3 py-2 text-sm outline-none" />
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-[11px] font-mono uppercase tracking-widest text-gray-400 mb-1">Project (Optional)</label>
-              <select value={formData.project_id} onChange={e => setFormData({...formData, project_id: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Project (Optional)</label>
+              <select value={formData.project_id} onChange={e => setFormData({...formData, project_id: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none">
                 <option value="">-- None --</option>
                 {projects.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -83,8 +87,8 @@ export function RequirementCreationModal({ onClose, onSuccess }: { onClose: () =
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-[11px] font-mono uppercase tracking-widest text-gray-400 mb-1">Priority</label>
-              <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Priority</label>
+              <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none">
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -93,17 +97,17 @@ export function RequirementCreationModal({ onClose, onSuccess }: { onClose: () =
             </div>
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-gray-400 mb-1">Description</label>
-            <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 min-h-[80px]" />
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Description</label>
+            <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none min-h-[80px]" />
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-gray-400 mb-1">Acceptance Criteria</label>
-            <textarea value={formData.acceptance_criteria} onChange={e => setFormData({...formData, acceptance_criteria: e.target.value})} placeholder="- System must handle 10k RPS..." className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 min-h-[80px]" />
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Acceptance Criteria</label>
+            <textarea value={formData.acceptance_criteria} onChange={e => setFormData({...formData, acceptance_criteria: e.target.value})} placeholder="- System must handle 10k RPS..." className="w-full input-premium px-3 py-2 text-sm outline-none min-h-[80px]" />
           </div>
           
-          <div className="pt-4 border-t border-white/10 flex justify-end gap-3 mt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white">Cancel</button>
-            <button type="submit" disabled={loading} className="px-5 py-2 rounded-lg text-sm font-medium bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white">
+          <div className="pt-4 border-t border-[var(--border-soft)] flex justify-end gap-3 mt-4">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary btn-premium-secondary rounded-lg">Cancel</button>
+            <button type="submit" disabled={loading} className="px-5 py-2 text-sm font-medium btn-premium-primary rounded-lg disabled:opacity-50 text-white">
               {loading ? 'Creating...' : 'Create Draft'}
             </button>
           </div>

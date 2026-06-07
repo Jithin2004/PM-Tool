@@ -111,7 +111,7 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
 
 export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
   const meta = {
-    businessType: settings.businessType,
+    businessType: settings.businessType || 'Software',
     saturdayRule: settings.saturdayRule || 'off',
     country: settings.country || '',
     region: settings.region || '',
@@ -121,16 +121,19 @@ export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
     shutdowns: settings.shutdowns || []
   };
 
+  const workStart = settings.workStart || settings.workingTimeFrom || '09:00';
+  const workEnd = settings.workEnd || settings.workingTimeTo || '17:00';
+
   return {
     business_type: JSON.stringify(meta),
-    work_start: settings.workStart,
-    work_end: settings.workEnd,
-    lunch_duration: settings.lunchDuration,
-    workdays: settings.workingDays,
-    timezone: settings.timezone,
-    attendance_enabled: settings.attendanceEnabled,
-    payroll_enabled: settings.payrollEnabled,
-    productivity_factor: settings.productivityFactor
+    work_start: workStart,
+    work_end: workEnd,
+    lunch_duration: settings.lunchDuration !== undefined ? settings.lunchDuration : 60,
+    workdays: settings.workingDays || [1, 2, 3, 4, 5],
+    timezone: settings.timezone || 'UTC',
+    attendance_enabled: settings.attendanceEnabled !== undefined ? settings.attendanceEnabled : true,
+    payroll_enabled: settings.payrollEnabled !== undefined ? settings.payrollEnabled : false,
+    productivity_factor: settings.productivityFactor !== undefined ? settings.productivityFactor : 0.8
   };
 }
 

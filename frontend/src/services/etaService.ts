@@ -246,7 +246,7 @@ export function calculateTaskCountdown(
   }
 
   if (status === 'backlog') {
-    return { text: 'WAITING', color: 'text-[var(--pm-text)] dark:text-white/40 font-mono', pulse: 'bg-[var(--pm-surface)]/10' };
+    return { text: 'WAITING', color: 'text-[var(--pm-text)] dark:text-[var(--text-secondary)] font-mono', pulse: 'bg-[var(--pm-surface)]/10' };
   }
 
   if (status === 'ready' || status === 'todo') {
@@ -254,7 +254,7 @@ export function calculateTaskCountdown(
   }
 
   if (!weightHours || weightHours <= 0) {
-    return { text: 'No task estimates available', color: 'text-[var(--pm-text)] dark:text-white/30 font-mono', pulse: 'bg-[var(--pm-surface)]/10' };
+    return { text: 'No task estimates available', color: 'text-[var(--pm-text)] dark:text-[var(--text-secondary)] font-mono', pulse: 'bg-[var(--pm-surface)]/10' };
   }
 
   if (!workWindow) {

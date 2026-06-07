@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { supabase } from '../../lib/supabase';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
@@ -9,6 +10,7 @@ import { sendNotification } from '../../services/notificationService';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 
 export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approval: any, onClose: () => void, onUpdate: () => void }) {
+  useEscapeKey(true, onClose);
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
   const { notify } = useDashboard();
@@ -133,39 +135,40 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#1c1d1f] p-6 rounded-xl shadow-2xl max-w-md w-full border border-white/10 text-white max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <div className="absolute inset-0 modal-overlay-premium" />
+      <div className="relative modal-premium p-6 rounded-2xl max-w-md w-full text-white max-h-[90vh] flex flex-col scrollbar-premium">
         <div className="flex justify-between items-center mb-4 flex-none">
-          <h2 className="text-xl font-semibold tracking-tight">Approval Request</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 transition-colors text-white/50 hover:text-white">
+          <h2 className="text-lg font-bold tracking-tight">Approval Request</h2>
+          <button onClick={onClose} aria-label="Close modal" className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors text-[var(--text-secondary)] hover:text-white">
             <Icon name="close" size={20} />
           </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-          <div className="bg-black/20 p-4 rounded-lg border border-white/5 text-sm space-y-2">
+        <div className="flex-1 overflow-y-auto pr-2 space-y-6 scrollbar-premium">
+          <div className="bg-black/20 p-4 rounded-xl border border-[var(--border-soft)] text-sm space-y-2">
             <div className="flex justify-between">
-              <span className="text-gray-400">Entity Type</span>
+              <span className="text-[var(--text-secondary)]">Entity Type</span>
               <span className="font-mono uppercase tracking-wider text-indigo-400">{approval.entity_type}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Requested By</span>
-              <span>{approval.requested_by_user?.email || 'Unknown'}</span>
+              <span className="text-[var(--text-secondary)]">Requested By</span>
+              <span className="font-mono text-[var(--text-secondary)]">{approval.requested_by_user?.email || 'Unknown'}</span>
             </div>
             {approval.entity_type === 'time_entry' && approval.note && (
-              <div className="mt-2 pt-2 border-t border-white/10 space-y-2">
+              <div className="mt-2 pt-2 border-t border-[var(--border-soft)] space-y-2">
                 {(() => {
                   try {
                     const p = JSON.parse(approval.note);
                     return (
                       <>
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Duration</span>
+                          <span className="text-[var(--text-secondary)]">Duration</span>
                           <span className="font-mono text-emerald-400">{p.duration_minutes} mins ({(p.duration_minutes / 60).toFixed(1)} hrs)</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-gray-400">Employee Reason</span>
-                          <span className="text-white bg-black/40 p-2 rounded">{p.reason}</span>
+                          <span className="text-[var(--text-secondary)]">Employee Reason</span>
+                          <span className="text-[var(--text-secondary)] bg-black/40 p-2.5 rounded border border-[var(--border-soft)]">{p.reason}</span>
                         </div>
                       </>
                     );
@@ -177,16 +180,16 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
             )}
           </div>
 
-          <div className="flex gap-2 p-1 bg-black/40 rounded-lg">
+          <div className="flex premium-segmented-control">
             <button 
               onClick={() => setView('decision')}
-              className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${view === 'decision' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${view === 'decision' ? 'active' : ''}`}
             >
               Direct Decision
             </button>
             <button 
               onClick={() => setView('external')}
-              className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${view === 'external' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${view === 'external' ? 'active' : ''}`}
             >
               External Approval
             </button>
@@ -195,8 +198,8 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
           {view === 'decision' ? (
             <div className="space-y-4">
               {approval.entity_type === 'time_entry' || approval.entity_type === 'time_entry_edit' ? (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-amber-500 mb-1">System Observation</h4>
+                <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1">System Observation</h4>
                   <p className="text-xs text-amber-200/80">
                     {approval.entity_type === 'time_entry_edit' 
                       ? "This session was edited after the same-day window closed."
@@ -206,19 +209,19 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
               ) : null}
 
               <div>
-                <label className="block text-[11px] font-mono uppercase tracking-widest text-gray-400 mb-1">Notes / Reason (Required for Rejection)</label>
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-2">Notes / Reason (Required for Rejection)</label>
                 <textarea 
                   value={decisionNotes} 
                   onChange={e => setDecisionNotes(e.target.value)} 
                   placeholder="Provide context for your decision..."
-                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 min-h-[80px]" 
+                  className="w-full input-premium px-3 py-2.5 text-sm outline-none min-h-[95px]" 
                 />
               </div>
               <div className="flex flex-col gap-2 pt-2">
                 <button 
                   onClick={() => executeDecision('Approved', 'internal', decisionNotes)}
                   disabled={loading}
-                  className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="w-full btn-premium-success py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider active:scale-[0.98]"
                 >
                   Approve Request
                 </button>
@@ -232,14 +235,14 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
                     setIsRejectConfirmOpen(true);
                   }}
                   disabled={loading}
-                  className="w-full py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
+                  className="w-full btn-premium-danger py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider active:scale-[0.98]"
                 >
                   Reject Request
                 </button>
                 <button 
                   onClick={() => executeDecision('Rejected', 'internal', "Requesting Changes: " + decisionNotes)}
                   disabled={loading}
-                  className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium transition-colors"
+                  className="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl text-xs font-bold uppercase tracking-wider active:scale-[0.98] transition-colors"
                 >
                   Request Changes
                 </button>
@@ -247,12 +250,12 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-xs text-indigo-200">
+              <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs text-indigo-200">
                 Use this to log an approval that occurred outside the platform (e.g., Client WhatsApp, Email, Phone Call).
               </div>
               <div>
-                <label className="block text-[11px] font-mono uppercase tracking-widest text-gray-400 mb-1">External Source</label>
-                <select value={externalSource} onChange={e => setExternalSource(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-2">External Source</label>
+                <select value={externalSource} onChange={e => setExternalSource(e.target.value)} className="w-full input-premium px-3 py-2.5 text-sm outline-none">
                   <option value="Email">Email</option>
                   <option value="WhatsApp">WhatsApp</option>
                   <option value="Phone Call">Phone Call</option>
@@ -261,19 +264,19 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-mono uppercase tracking-widest text-gray-400 mb-1">Proof / Notes (Required)</label>
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-2">Proof / Notes (Required)</label>
                 <textarea 
                   value={decisionNotes} 
                   onChange={e => setDecisionNotes(e.target.value)} 
                   placeholder="Paste snippet or link to email..."
-                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 min-h-[80px]" 
+                  className="w-full input-premium px-3 py-2.5 text-sm outline-none min-h-[95px]" 
                 />
               </div>
               <div className="pt-2">
                 <button 
                   onClick={() => executeDecision('Overridden', externalSource, decisionNotes)}
                   disabled={loading}
-                  className="w-full py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  className="w-full btn-premium-primary py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider active:scale-[0.98]"
                 >
                   Mark Externally Approved
                 </button>

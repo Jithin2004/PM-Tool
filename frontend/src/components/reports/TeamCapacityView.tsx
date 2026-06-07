@@ -127,7 +127,7 @@ export function TeamCapacityView({ projectId }: { projectId?: string }) {
                 
                 <div className="flex gap-2">
                   {isOverloaded && (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-red-500/20 text-red-400 rounded text-[10px] font-bold uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 text-red-400 rounded text-[10px] font-bold uppercase tracking-wider">
                       <ShieldAlert className="w-3 h-3" />
                       Timeline Risk
                     </div>

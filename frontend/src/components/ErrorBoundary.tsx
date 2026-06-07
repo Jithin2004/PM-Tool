@@ -41,7 +41,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       if (this.props.fallback) return this.props.fallback;
       return (
         <div className="flex-1 flex items-center justify-center p-8" role="alert">
-          <div className="border border-red-500/25 bg-signal-critical-bg p-6 max-w-md text-center rounded">
+          <div className="border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/25 bg-signal-critical-bg p-6 max-w-md text-center rounded">
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center bg-signal-critical-bg text-signal-critical rounded-full">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01" />

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Link as LinkIcon, Copy, Check, Shield, Trash2, Calendar, Eye } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface ProjectShareModalProps {
   projectId: string;
@@ -19,6 +20,8 @@ export function ProjectShareModal({ projectId, workspaceId, isOpen, onClose, not
   const [copied, setCopied] = useState(false);
   const [existingLinks, setExistingLinks] = useState<any[]>([]);
   
+  useEscapeKey(isOpen, onClose);
+
   const [permissions, setPermissions] = useState({
     can_view_tasks: true,
     can_view_documents: true,
@@ -118,14 +121,14 @@ export function ProjectShareModal({ projectId, workspaceId, isOpen, onClose, not
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-surface border border-border w-full max-w-lg p-6 rounded-sm shadow-xl relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay-premium">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="modal-premium w-full max-w-lg p-6 rounded-2xl relative max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary flex items-center gap-2">
             <Shield className="w-4 h-4 text-cyan-400" />
             Client Access Link
           </h3>
-          <button onClick={onClose} className="p-1.5 border border-border hover:bg-[var(--pm-surface)]/5 transition-colors cursor-pointer">
+          <button onClick={onClose} aria-label="Close modal" className="p-1.5 border border-border hover:bg-[var(--pm-surface)]/5 transition-colors cursor-pointer">
             <X className="w-3.5 h-3.5 text-text-tertiary" />
           </button>
         </div>
@@ -163,7 +166,7 @@ export function ProjectShareModal({ projectId, workspaceId, isOpen, onClose, not
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Expiration</label>
-                <select value={expiresInDays} onChange={e => setExpiresInDays(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none">
+                <select value={expiresInDays} onChange={e => setExpiresInDays(e.target.value)} className="w-full input-premium h-10 px-3 text-xs font-mono outline-none">
                   <option value="1">24 Hours</option>
                   <option value="7">7 Days</option>
                   <option value="30">30 Days</option>
@@ -212,7 +215,7 @@ export function ProjectShareModal({ projectId, workspaceId, isOpen, onClose, not
                               <button onClick={() => copyLinkValue(link.token_hash)} className="p-1 border border-border hover:bg-surface text-text-secondary rounded-sm transition-colors cursor-pointer" title="Copy Link">
                                 <Copy className="w-3 h-3" />
                               </button>
-                              <button onClick={() => handleRevoke(link.id)} className="p-1 border border-border hover:bg-red-500/20 hover:border-red-500/30 text-red-400 rounded-sm transition-colors cursor-pointer" title="Revoke Access">
+                              <button onClick={() => handleRevoke(link.id)} className="p-1 border border-border hover:bg-red-500/20 hover:border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/30 text-red-400 rounded-sm transition-colors cursor-pointer" title="Revoke Access">
                                 <Trash2 className="w-3 h-3" />
                               </button>
                             </>

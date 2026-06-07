@@ -266,7 +266,7 @@ export function CompletionReadinessPanel({
                 <div className="space-y-4">
                   <h4 className="font-bold text-on-surface">Step 3: Request Approvals & Signoff</h4>
                   {missingSignoffs ? (
-                    <button onClick={onRequestSignoff} className="px-4 py-2 bg-cyan-500 text-[var(--pm-text)] dark:text-white font-bold rounded">Request Signoff</button>
+                    <button onClick={onRequestSignoff} className="px-4 py-2 bg-cyan-500 text-[var(--pm-text)] text-[var(--text-primary)] font-bold rounded">Request Signoff</button>
                   ) : (
                     <p className="text-emerald-400">Signoff completed!</p>
                   )}
@@ -281,7 +281,7 @@ export function CompletionReadinessPanel({
           {/* Action Row */}
           <div className="flex flex-wrap gap-4 pt-4 border-t border-surface-border">
             {!readiness.isBlocker && !guidedMode && (
-              <button className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-[var(--pm-text)] dark:text-white font-bold rounded-md shadow-lg shadow-emerald-500/20 transition-all">
+              <button className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-[var(--pm-text)] text-[var(--text-primary)] font-bold rounded-md shadow-lg shadow-emerald-500/20 transition-all">
                 Complete Project
               </button>
             )}
@@ -298,7 +298,7 @@ export function CompletionReadinessPanel({
             {policy === 'enterprise' && missingSignoffs && !guidedMode && (
               <button 
                 onClick={onRequestSignoff}
-                className="px-6 py-2 bg-cyan-500 hover:bg-cyan-600 text-[var(--pm-text)] dark:text-white font-bold rounded-md shadow-lg shadow-cyan-500/20 transition-all"
+                className="px-6 py-2 bg-cyan-500 hover:bg-cyan-600 text-[var(--pm-text)] text-[var(--text-primary)] font-bold rounded-md shadow-lg shadow-cyan-500/20 transition-all"
               >
                 Request Signoff
               </button>
@@ -311,7 +311,7 @@ export function CompletionReadinessPanel({
                     <span className="text-xs text-rose-400 animate-pulse">This action will be audited.</span>
                     <button 
                       onClick={onOverride}
-                      className="px-4 py-2 border border-rose-500/50 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-[var(--pm-text)] dark:text-white text-sm font-bold rounded transition-all"
+                      className="px-4 py-2 border border-rose-500/50 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-[var(--pm-text)] text-[var(--text-primary)] text-sm font-bold rounded transition-all"
                     >
                       Confirm Override
                     </button>

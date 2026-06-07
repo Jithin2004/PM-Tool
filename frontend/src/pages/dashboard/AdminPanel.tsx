@@ -773,7 +773,7 @@ export function AdminPanel() {
                           type="text"
                           value={newCustomDesignation}
                           onChange={e => setNewCustomDesignation(e.target.value)}
-                          className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none focus:border-white/40 transition-all text-text-primary bg-bg"
+                          className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none focus:border-[var(--border-soft)] transition-all text-text-primary bg-bg"
                           style={{ borderColor: 'rgba(70,69,84,0.3)' }}
                           placeholder="e.g. Lead QA Engineer"
                         />
@@ -1000,20 +1000,20 @@ export function AdminPanel() {
       {/* Render Capability Edit Modal */}
       {capabilityModal.isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-[#1c1d1f] border border-white/10 rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+          <div className="bg-[#1c1d1f] border border-[var(--border-soft)] rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-[var(--border-soft)] flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-white tracking-tight">Manage Capabilities</h3>
-                <p className="text-xs text-white/50">{capabilityModal.userEmail}</p>
+                <p className="text-xs text-[var(--text-secondary)]">{capabilityModal.userEmail}</p>
               </div>
-              <button onClick={() => setCapabilityModal({ ...capabilityModal, isOpen: false })} className="text-white/50 hover:text-white">
+              <button onClick={() => setCapabilityModal({ ...capabilityModal, isOpen: false })} className="text-[var(--text-secondary)] hover:text-white">
                 <Icon name="close" size={20} />
               </button>
             </div>
             <div className="p-6 overflow-y-auto space-y-4 flex-1">
               <div className="space-y-3">
                 {['manage_finance', 'manage_employees', 'manage_projects', 'manage_tasks', 'platform_governance'].map(cap => (
-                  <label key={cap} className="flex items-center gap-3 p-3 border border-white/10 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
+                  <label key={cap} className="flex items-center gap-3 p-3 border border-[var(--border-soft)] rounded-lg hover:bg-[var(--surface-hover)] cursor-pointer transition-colors">
                     <input 
                       type="checkbox" 
                       className="accent-indigo-500 w-4 h-4"
@@ -1027,13 +1027,13 @@ export function AdminPanel() {
                     />
                     <div>
                       <div className="text-sm font-medium text-white">{cap}</div>
-                      <div className="text-[10px] text-white/50 font-mono">Controls {cap.replace('_', ' ')} functionality</div>
+                      <div className="text-[10px] text-[var(--text-secondary)] font-mono">Controls {cap.replace('_', ' ')} functionality</div>
                     </div>
                   </label>
                 ))}
               </div>
               
-              <div className="pt-4 mt-2 border-t border-white/10">
+              <div className="pt-4 mt-2 border-t border-[var(--border-soft)]">
                 <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-2">
                   Reason for Change <span className="text-red-400">*</span>
                 </label>
@@ -1043,14 +1043,14 @@ export function AdminPanel() {
                   value={capabilityModal.reason}
                   onChange={(e) => setCapabilityModal({ ...capabilityModal, reason: e.target.value })}
                   placeholder="e.g. Promoted to HR Manager"
-                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
+                  className="w-full bg-black/20 border border-[var(--border-soft)] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
                 />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-white/10 flex justify-end gap-3 bg-white/5">
+            <div className="px-6 py-4 border-t border-[var(--border-soft)] flex justify-end gap-3 bg-[var(--surface-glass)]">
               <button 
                 onClick={() => setCapabilityModal({ ...capabilityModal, isOpen: false })}
-                className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-white transition-colors"
                 disabled={capabilityModal.saving}
               >
                 Cancel

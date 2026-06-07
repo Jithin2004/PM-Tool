@@ -113,12 +113,12 @@ function AccessRestricted() {
         </svg>
       </div>
       <h2 className="text-2xl font-bold mb-3 tracking-tight text-white">Access Restricted</h2>
-      <p className="text-sm max-w-md mx-auto mb-8 leading-relaxed text-white/60">
+      <p className="text-sm max-w-md mx-auto mb-8 leading-relaxed text-[var(--text-secondary)]">
         You don't have permission to view this area.<br/><br/>
         If you believe you need access, contact your workspace administrator.
       </p>
       <div className="flex items-center gap-4">
-        <button onClick={() => window.history.back()} className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors border border-white/10 bg-white/5 hover:bg-white/10 text-white">
+        <button onClick={() => window.history.back()} className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors border border-[var(--border-soft)] bg-[var(--surface-glass)] hover:bg-[var(--surface-hover)] text-white">
           Go Back
         </button>
         <button onClick={() => redirectTo('/overview')} className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-500 hover:bg-indigo-600 text-white">
@@ -318,6 +318,10 @@ export function ResolveRouter() {
   // and then be validated by the reconcileInvitationMembership core logic.
 
   if (!user) return <Login />;
+
+  if (!isProductKeyVerified() && pathname !== '/activate') {
+    return <Redirect to="/activate" />;
+  }
 
   if (role === 'uninvited' || !role) {
     return <Redirect to="/login?error=uninvited" />;

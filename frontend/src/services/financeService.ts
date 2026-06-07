@@ -356,8 +356,8 @@ export async function cancelInvoice(invoice: Invoice, performedBy: string, reaso
   if (invoice.status === 'paid') {
     throw new Error('Cannot cancel a paid invoice. Please issue a credit note instead.');
   }
-  if (invoice.status !== 'issued') {
-    throw new Error('Only issued invoices can be cancelled.');
+  if (invoice.status !== 'issued' && invoice.status !== 'sent') {
+    throw new Error('Only issued or sent invoices can be cancelled.');
   }
   if (await checkPeriodClosed(invoice.workspace_id, invoice.issue_date)) {
     throw new Error('Cannot cancel invoice in a closed financial period.');

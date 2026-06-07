@@ -144,7 +144,7 @@ export default function ProjectWorkspace() {
               
               <div className="flex items-center justify-between p-2 rounded hover:bg-surface-3 transition-colors text-xs border border-transparent hover:border-border cursor-pointer">
                 <span className="truncate max-w-[200px] text-[var(--pm-primary)]">Legacy API Deprecation</span>
-                <span className="text-[10px] text-red-400 font-mono-pm bg-red-500/10 border border-red-500/20 px-1.5 rounded">BLOCKED</span>
+                <span className="text-[10px] text-red-400 font-mono-pm bg-red-500/10 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 px-1.5 rounded">BLOCKED</span>
               </div>
               <div className="flex items-center justify-between p-2 rounded hover:bg-surface-3 transition-colors text-xs border border-transparent hover:border-border cursor-pointer">
                 <span className="truncate max-w-[200px] text-[var(--pm-primary)]">Security Audit Sign-off</span>

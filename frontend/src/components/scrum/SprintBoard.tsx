@@ -6,6 +6,7 @@ import {
   LayoutList, Layers, FileText
 } from 'lucide-react';
 import { FilePanel } from '../common/FilePanel';
+import { PremiumEmptyState } from '../common/PremiumEmptyState';
 import type { Sprint, Task, User, Epic, Project, CalendarEvent } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { TaskCard } from '../task/TaskCard';
@@ -270,42 +271,40 @@ export function SprintBoard({
         </p>
       </div>
 
-      <div className="hidden md:block w-full bg-bg border border-border-subtle rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-500/80 via-pink-500/80 to-orange-500/80" />
+      <div className="hidden md:block w-full premium-panel rounded-2xl p-4 sm:p-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-500/80 via-pink-500/80 to-orange-500/80 animate-pulse" />
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 border-b border-border-subtle pb-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 border-b border-[var(--border-soft)] pb-4">
           <div className="flex items-center gap-3">
-            <Shield className="w-4 h-4 text-accent-secondary" />
-            <h2 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">Scrum Board</h2>
+            <Shield className="w-4 h-4 text-purple-400" />
+            <h2 className="text-sm font-sans tracking-tight uppercase tracking-wide text-white">Scrum Board</h2>
             {onConvertToScrum && (
-              <button onClick={() => setIsAddingExisting(true)} className="px-2 py-1 bg-signal-warning-bg hover:bg-signal-warning-bg text-amber-300 text-[8px] font-mono uppercase tracking-wider rounded-sm border border-border transition-all cursor-pointer">
+              <button onClick={() => setIsAddingExisting(true)} className="px-2 py-1 btn-premium-secondary text-[8px] font-mono uppercase tracking-wider rounded-lg border border-[var(--border-soft)] transition-all cursor-pointer">
                 <Plus className="w-2.5 h-2.5 inline mr-1" />Add Existing Project
               </button>
             )}
           </div>
           <div className="flex items-center gap-2">
             {hasWriteAccess && (
-              <button onClick={() => setIsCreatingSprint(true)} className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-text-primary text-[9px] font-mono uppercase tracking-wide rounded-sm transition-all cursor-pointer">
+              <button onClick={() => setIsCreatingSprint(true)} className="px-3.5 py-1.5 btn-premium-primary text-[9px] font-mono uppercase tracking-wide rounded-lg transition-all cursor-pointer">
                 <Plus className="w-3 h-3 inline mr-1" /> New Sprint
               </button>
             )}
             {hasWriteAccess && (
-              <button onClick={() => setIsAddingTask(true)} className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-text-primary text-[9px] font-mono uppercase tracking-wide rounded-sm cursor-pointer">
-                <Plus className="w-3.5 h-3.5" /> Queue Story
+              <button onClick={() => setIsAddingTask(true)} className="px-3.5 py-1.5 btn-premium-secondary text-[9px] font-mono uppercase tracking-wide rounded-lg cursor-pointer border border-[var(--border-soft)]">
+                <Plus className="w-3.5 h-3.5 inline mr-1" /> Queue Story
               </button>
             )}
           </div>
         </div>
 
-        {/* Sprint selector */}
         <div className="flex items-center gap-3 mb-4 flex-wrap">
-          <select value={activeSprintId || ''} onChange={e => setActiveSprintId(e.target.value || null)} className="bg-bg border border-border h-8 px-3 text-[10px] font-mono focus:border-white/30 outline-none">
+          <select value={activeSprintId || ''} onChange={e => setActiveSprintId(e.target.value || null)} className="input-premium h-8 px-3 text-[10px] focus:border-[var(--border-soft)] outline-none rounded-lg">
             <option value="">All Tasks (No Sprint)</option>
             {sprints.map(s => <option key={s.id} value={s.id}>{s.name} ({s.status})</option>)}
           </select>
           {sprints.filter(s => s.status === 'planned').map(s => (
-            <button key={s.id} onClick={() => handleStartSprint(s.id)} className="px-2 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 text-[8px] font-mono uppercase rounded-sm border border-emerald-500/20 transition-all cursor-pointer">
+            <button key={s.id} onClick={() => handleStartSprint(s.id)} className="px-2.5 py-1 bg-emerald-500/25 hover:bg-emerald-500/40 text-emerald-300 text-[8px] font-mono uppercase rounded-lg border border-emerald-500/20 transition-all cursor-pointer">
               Start {s.name}
             </button>
           ))}
@@ -328,12 +327,12 @@ export function SprintBoard({
         )}
 
         {/* Tab navigation */}
-        <div className="flex border-b border-border-subtle mb-4 overflow-x-auto">
+        <div className="flex premium-segmented-control mb-5 overflow-x-auto max-w-max">
           {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-3 py-2 text-[9px] font-mono uppercase tracking-wider border-b-2 transition-all cursor-pointer shrink-0 ${
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer shrink-0 premium-segmented-control-btn ${
               activeTab === tab.id
-                ? 'border-border text-purple-300 bg-surface-3'
-                : 'border-transparent text-text-quaternary hover:text-text-secondary'
+                ? 'active'
+                : ''
             }`}>
               {tab.icon}
               {tab.label}
@@ -409,17 +408,28 @@ export function SprintBoard({
                   return true;
                 });
                 return (
-                  <div key={col.id} className="bg-surface-3 border border-border-subtle rounded-sm p-3 flex flex-col min-h-[350px]">
-                    <div className="flex justify-between items-center mb-3 pb-2 border-b border-border-subtle">
-                      <span className="text-[10px] font-mono uppercase tracking-wide text-text-secondary font-semibold flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${col.color.replace('border', 'bg').replace('/20', '')}`} />
+                  <div key={col.id} className="premium-panel rounded-2xl p-4 flex flex-col min-h-[400px]">
+                    <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-[var(--border-soft)]">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] font-semibold flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          col.id === 'todo' ? 'bg-[var(--surface-glass)]' :
+                          col.id === 'in_progress' ? 'bg-amber-500 shadow-[0_0_6px_#f59e0b]' :
+                          col.id === 'review' ? 'bg-purple-500 shadow-[0_0_6px_#a78bfa]' :
+                          'bg-emerald-500 shadow-[0_0_6px_#10b981]'
+                        }`} />
                         {col.title}
                       </span>
-                      <span className="px-2 py-0.5 bg-[var(--pm-surface)]/5 text-[9px] font-mono text-text-tertiary rounded-sm">{colTasks.length}</span>
+                      <span className="px-2 py-0.5 bg-[var(--surface-glass)] text-[9px] font-mono text-[var(--text-secondary)] rounded-full border border-[var(--border-soft)]">{colTasks.length}</span>
                     </div>
                     <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1 max-h-[450px]">
                       {colTasks.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-border-subtle rounded-sm p-6 text-center text-text-quaternary font-mono text-[9px] uppercase">Empty</div>
+                        <div className="flex-1 flex flex-col items-center justify-center p-2 text-center">
+                          <PremiumEmptyState
+                            icon={Layers}
+                            title="No Tasks"
+                            description="This stage is empty."
+                          />
+                        </div>
                       ) : (
                         colTasks.map(task => (
                           <TaskCard
@@ -497,7 +507,7 @@ export function SprintBoard({
             <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Sprint Backlog</h3>
             <div className="space-y-2">
               {sprintTasks.length === 0 ? (
-                <div className="py-12 text-center text-text-quaternary font-mono text-[9px] uppercase">No tasks in current sprint backlog</div>
+                <div className="py-12 text-center text-text-quaternary font-mono text-[9px] uppercase"><span className="text-[11px] text-[var(--text-muted)] font-mono">Sprint backlog is empty.</span></div>
               ) : (
                 sprintTasks.map(task => (
                   <div key={task.id} className="flex items-center gap-3 p-3 bg-bg border border-border-subtle rounded-sm">
@@ -625,21 +635,21 @@ export function SprintBoard({
 
           {isCreatingSprint && (
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCreatingSprint(false)} className="absolute inset-0 bg-bg backdrop-blur-sm" />
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-surface border border-border w-full max-w-md p-6 rounded-sm">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCreatingSprint(false)} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative modal-premium w-full max-w-md p-6 rounded-2xl">
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">Create Sprint</h3>
-                  <button onClick={() => setIsCreatingSprint(false)} className="p-1.5 border border-border hover:bg-[var(--pm-surface)]/5 cursor-pointer"><X className="w-3.5 h-3.5 text-text-tertiary" /></button>
+                  <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-white">Create Sprint</h3>
+                  <button onClick={() => setIsCreatingSprint(false)} className="p-1.5 hover:bg-[var(--surface-hover)] rounded-md cursor-pointer"><X className="w-3.5 h-3.5 text-[var(--text-secondary)]" /></button>
                 </div>
                 <form onSubmit={handleCreateSprint} className="space-y-4">
-                  <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Name</label><input value={sprintName} onChange={e => setSprintName(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" placeholder="Sprint 1..." /></div>
-                  <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Goal</label><input value={sprintGoal} onChange={e => setSprintGoal(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" placeholder="Sprint goal..." /></div>
+                  <div><label className="block text-[10px] font-mono uppercase text-[var(--text-secondary)] mb-1.5">Name</label><input value={sprintName} onChange={e => setSprintName(e.target.value)} className="w-full input-premium h-10 px-3 text-sm" placeholder="Sprint 1..." /></div>
+                  <div><label className="block text-[10px] font-mono uppercase text-[var(--text-secondary)] mb-1.5">Goal</label><input value={sprintGoal} onChange={e => setSprintGoal(e.target.value)} className="w-full input-premium h-10 px-3 text-sm" placeholder="Sprint goal..." /></div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Start</label><input type="date" value={sprintStart} onChange={e => setSprintStart(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none" /></div>
-                    <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">End</label><input type="date" value={sprintEnd} onChange={e => setSprintEnd(e.target.value)} className="w-full bg-bg border border-border h-10 px-3 text-xs font-mono focus:border-white/30 outline-none" /></div>
+                    <div><label className="block text-[10px] font-mono uppercase text-[var(--text-secondary)] mb-1.5">Start</label><input type="date" value={sprintStart} onChange={e => setSprintStart(e.target.value)} className="w-full input-premium h-10 px-3 text-xs" /></div>
+                    <div><label className="block text-[10px] font-mono uppercase text-[var(--text-secondary)] mb-1.5">End</label><input type="date" value={sprintEnd} onChange={e => setSprintEnd(e.target.value)} className="w-full input-premium h-10 px-3 text-xs" /></div>
                   </div>
-                  <div><label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1.5">Committed Velocity (SP)</label><input type="number" value={sprintVelocity} onChange={e => setSprintVelocity(Number(e.target.value))} className="w-full bg-bg border border-border h-10 px-3 text-sm font-mono focus:border-white/30 outline-none" /></div>
-                  <button type="submit" className="w-full bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] h-10 font-semibold uppercase tracking-wide text-[10px] hover:opacity-90 transition-all cursor-pointer">Create Sprint</button>
+                  <div><label className="block text-[10px] font-mono uppercase text-[var(--text-secondary)] mb-1.5">Committed Velocity (SP)</label><input type="number" value={sprintVelocity} onChange={e => setSprintVelocity(Number(e.target.value))} className="w-full input-premium h-10 px-3 text-sm" /></div>
+                  <button type="submit" className="w-full btn-premium-primary h-10 font-semibold uppercase tracking-wide text-[10px] rounded-lg">Create Sprint</button>
                 </form>
               </motion.div>
             </div>
@@ -647,16 +657,16 @@ export function SprintBoard({
 
           {isAddingExisting && allKanbanProjects && (
             <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddingExisting(false)} className="absolute inset-0 bg-bg backdrop-blur-sm" />
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-surface border border-border w-full max-w-md p-6 rounded-sm">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddingExisting(false)} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative modal-premium w-full max-w-md p-6 rounded-2xl">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">Add Existing Project</h3>
-                  <button onClick={() => setIsAddingExisting(false)} className="p-1.5 border border-border hover:bg-[var(--pm-surface)]/5 cursor-pointer"><X className="w-3.5 h-3.5 text-text-tertiary" /></button>
+                  <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-white">Add Existing Project</h3>
+                  <button onClick={() => setIsAddingExisting(false)} className="p-1.5 hover:bg-[var(--surface-hover)] rounded-md cursor-pointer"><X className="w-3.5 h-3.5 text-[var(--text-secondary)]" /></button>
                 </div>
-                <p className="text-[9px] font-mono text-text-tertiary mb-4">Convert a Kanban project to Scrum. It will be removed from the Kanban board.</p>
+                <p className="text-[9px] font-mono text-[var(--text-secondary)] mb-4">Convert a Kanban project to Scrum. It will be removed from the Kanban board.</p>
                 <div className="space-y-1 max-h-64 overflow-y-auto">
                   {allKanbanProjects.filter(p => p.id !== projectId).map(p => (
-                    <button key={p.id} onClick={() => handleAddExistingProject(p.id)} className="w-full text-left p-3 border border-border hover:border-border rounded-sm text-[10px] font-mono text-text-secondary hover:bg-[var(--pm-surface-hover)] transition-all cursor-pointer">
+                    <button key={p.id} onClick={() => handleAddExistingProject(p.id)} className="w-full text-left p-3 border border-[var(--border-soft)] hover:border-purple-500/50 rounded-lg text-[10px] font-mono text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition-all cursor-pointer">
                       {p.name}
                     </button>
                   ))}

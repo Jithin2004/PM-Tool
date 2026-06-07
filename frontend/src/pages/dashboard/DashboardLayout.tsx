@@ -23,6 +23,7 @@ import { enableFullDisclosure } from '../../core/dashboard/progressiveDisclosure
 import { sha256 } from '../../utils/cryptoUtils';
 import { sendNotification } from '../../services/notificationService';
 import { activityLogService } from '../../services/activityLogService';
+import { getLicenseInfo } from '../../lib/productKey';
 import { CheckCircle2, XCircle, Info, AlertCircle, ChevronDown } from 'lucide-react';
 import { Login } from '../../components/auth/Login';
 import CommandPalette from '../../components/command/CommandPalette';
@@ -955,8 +956,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-5 font-geist"
-        style={{ background: 'var(--pm-bg)' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-5 font-geist ">
         <div className="relative w-12 h-12">
           <div className="absolute inset-0 rounded-full border-2 border-t-transparent animate-spin"
             style={{ borderColor: 'rgba(192,193,255,0.15)', borderTopColor: 'var(--pm-primary)' }} />
@@ -998,12 +998,16 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         updateExecutionMode,
       }}
     >
-      <div className={`min-h-screen font-geist selection:bg-accent-primary selection:text-text-primary transition-colors duration-200 ${theme === 'light' ? 'light' : ''}`}
-        style={{ background: 'var(--pm-bg)', color: 'var(--pm-on-surface)' }}>
+      <div className={`flex-1 flex flex-col font-geist selection:bg-accent-primary selection:text-text-primary transition-colors duration-200`}
+        style={{ color: 'var(--pm-on-surface)' }}>
 
         {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
-        <aside id="tour-sidebar" className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 ${isSidebarCollapsed ? 'lg:w-[4.5rem]' : 'lg:w-[15.5rem]'} border-r z-30 transition-all duration-300`}
-          style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+        <aside id="tour-sidebar" className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 ${isSidebarCollapsed ? 'lg:w-[4.5rem] sidebar-collapsed-premium' : 'lg:w-[15.5rem]'} border-r z-30 transition-[transform,opacity] duration-200 user-interface`}
+          style={{ 
+            background: isSidebarCollapsed ? 'rgba(8,12,25,0.85)' : 'rgba(5,7,18,0.7)', 
+            borderColor: 'rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(16px)'
+          }}>
           {/* Sidebar Brand */}
           <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} h-16 px-4 border-b shrink-0`}
             style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
@@ -1012,7 +1016,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
               </div>
               {!isSidebarCollapsed && (
-                <div className="whitespace-nowrap flex-1 overflow-hidden">
+                <div className="whitespace-nowrap flex-1 overflow-hidden premium-fade-in">
                   <h1 className="font-semibold tracking-tight text-[13px] font-geist truncate" style={{ color: 'var(--pm-primary)' }}>
                     Resolve PM {workspace?.settings?.companyName ? `| ${workspace.settings.companyName}` : ''}
                   </h1>
@@ -1044,20 +1048,38 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   key={domain.id}
                   title={isSidebarCollapsed ? domain.label : undefined}
                   onClick={() => handleDomainClick(domain.id)}
-                  className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-lg text-[12px] font-medium transition-all duration-150`}
-                  style={isActive ? {
-                    background: 'var(--pm-surface-high)',
-                    color: activeColor,
-                    borderLeft: isSidebarCollapsed ? '' : `3px solid ${activeColor}`,
-                    paddingLeft: isSidebarCollapsed ? '' : '9px',
-                  } : {
-                    color: 'var(--pm-on-surface-variant)',
+                  className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-0 h-10 w-10 mx-auto' : 'w-full gap-3 px-3 py-2.5'} rounded-lg text-[12px] font-medium transition-all duration-200`}
+                  style={isActive ? (
+                    isSidebarCollapsed ? {
+                      background: 'rgba(124, 58, 237, 0.18)',
+                      color: '#a78bfa',
+                      boxShadow: '0 0 12px rgba(124, 58, 237, 0.35)',
+                    } : {
+                      background: 'var(--pm-surface-high)',
+                      color: activeColor,
+                      borderLeft: `3px solid ${activeColor}`,
+                      paddingLeft: '9px',
+                    }
+                  ) : {
+                    color: 'rgba(156, 163, 175, 0.7)',
                   }}
-                  onMouseEnter={e => { if (!isActive) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; } }}
-                  onMouseLeave={e => { if (!isActive) { (e.currentTarget as any).style.background = ''; (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; } }}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      (e.currentTarget as any).style.background = 'rgba(255, 255, 255, 0.03)';
+                      (e.currentTarget as any).style.color = 'var(--pm-on-surface)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      (e.currentTarget as any).style.background = '';
+                      (e.currentTarget as any).style.color = 'rgba(156, 163, 175, 0.7)';
+                    }
+                  }}
                 >
-                  {renderRouteIcon(domain.iconName)}
-                  {!isSidebarCollapsed && <span className="whitespace-nowrap">{domain.label}</span>}
+                  <div className={`flex items-center justify-center ${isSidebarCollapsed ? 'w-8 h-8 rounded-lg' : ''}`}>
+                    {renderRouteIcon(domain.iconName)}
+                  </div>
+                  {!isSidebarCollapsed && <span className="whitespace-nowrap premium-fade-in">{domain.label}</span>}
                 </button>
               );
             })}
@@ -1073,36 +1095,37 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           )}
 
           {/* Bottom utility strip */}
-          <div className="shrink-0 border-t" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+          <div className="shrink-0 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
             <button
               onClick={() => (window as any).startOnboardingTour?.()}
-              className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-5'} py-2.5 transition-colors text-[11px] font-geist`}
+              className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 h-10 mx-auto' : 'w-full gap-2.5 px-5 py-2.5'} transition-colors text-[11px] font-geist`}
               style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}
               onMouseEnter={e => { (e.currentTarget as any).style.opacity = '1'; }}
               onMouseLeave={e => { (e.currentTarget as any).style.opacity = '0.5'; }}
               title={isSidebarCollapsed ? 'Help & Documentation' : undefined}
             >
               <HelpCircle className="w-3.5 h-3.5 shrink-0" />
-              {!isSidebarCollapsed && 'Help & Documentation'}
+              {!isSidebarCollapsed && <span className="premium-fade-in whitespace-nowrap">Help & Documentation</span>}
             </button>
 
             {/* User identity strip */}
-            <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center flex-col gap-2' : 'gap-3'} px-4 py-3 border-t`} style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+            <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center flex-col gap-2.5 px-2' : 'gap-3 px-4'} py-3 border-t`} style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
               <div
                 onClick={() => setIsProfileOpen(true)}
-                className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden shrink-0 cursor-pointer transition-all"
+                className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden shrink-0 cursor-pointer transition-all hover:scale-105"
                 style={{ background: 'rgba(192,193,255,0.08)', border: '1px solid rgba(192,193,255,0.2)' }}
+                title="View Profile"
               >
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : profile?.full_name ? (
-                  <span className="text-[10px] font-bold" style={{ color: 'var(--pm-primary)' }}>{profile.full_name.substring(0, 2).toUpperCase()}</span>
+                  <span className="text-[10px] font-bold text-white">{profile.full_name.substring(0, 2).toUpperCase()}</span>
                 ) : (
-                  <Users className="w-3.5 h-3.5" style={{ color: 'var(--pm-primary)' }} />
+                  <Users className="w-3.5 h-3.5 text-white" />
                 )}
               </div>
               {!isSidebarCollapsed && (
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 premium-fade-in">
                   <p className="text-[12px] font-medium truncate font-geist" style={{ color: 'var(--pm-on-surface)' }}>
                     {profile?.full_name || user.email?.split('@')[0]}
                   </p>
@@ -1111,26 +1134,28 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   </p>
                 </div>
               )}
-              <button
-                onClick={handleLogout}
-                className="p-1.5 rounded-md transition-colors cursor-pointer"
-                style={{ color: 'var(--pm-on-surface-variant)' }}
-                onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-error)'; (e.currentTarget as any).style.background = 'rgba(255,180,171,0.08)'; }}
-                onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
-                title="Sign Out"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => navigateTo('/control/settings')}
-                className="p-1.5 rounded-md transition-colors cursor-pointer ml-1"
-                style={{ color: 'var(--pm-on-surface-variant)' }}
-                onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
-                onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
-                title="Settings"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
+              <div className={`flex ${isSidebarCollapsed ? 'flex-col gap-1' : 'items-center'}`}>
+                <button
+                  onClick={handleLogout}
+                  className="p-1.5 rounded-md transition-colors cursor-pointer"
+                  style={{ color: 'var(--pm-on-surface-variant)' }}
+                  onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-color-error, #f87171)'; (e.currentTarget as any).style.background = 'rgba(255,180,171,0.08)'; }}
+                  onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
+                  title="Sign Out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => navigateTo('/control/settings')}
+                  className={`p-1.5 rounded-md transition-colors cursor-pointer ${isSidebarCollapsed ? '' : 'ml-1'}`}
+                  style={{ color: 'var(--pm-on-surface-variant)' }}
+                  onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
+                  onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
+                  title="Settings"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         </aside>
@@ -1234,7 +1259,14 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <div id="tour-main-content" className="lg:pl-[15.5rem] flex flex-col flex-1 min-h-screen" style={{ background: 'var(--pm-bg)' }}>
+        <div id="tour-main-content" className={`flex flex-col flex-1 min-h-screen transition-[transform,opacity] duration-200 ${isSidebarCollapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-[15.5rem]'}`} style={{ background: 'transparent' }}>
+
+          {getLicenseInfo()?.offlineVerified && (
+            <div className="bg-rose-500/20 border-b border-rose-500/30 text-rose-400 text-center py-1.5 text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+              Unable to verify license. Last verified: {new Date(getLicenseInfo()?.verifiedAt || 0).toLocaleString()}
+            </div>
+          )}
 
           {workspace?.is_demo && (
             <div className="bg-amber-500/20 border-b border-amber-500/30 text-amber-500 text-center py-1.5 text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2">
@@ -1242,8 +1274,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               Demo Data Environment — All changes are temporary
             </div>
           )}
-          {/* Top Bar — utility layer, breadcrumb, operational status */}
-          <header id="tour-topbar" className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-2xl transition-colors duration-200 shadow-sm"
+          {/* Top Bar — utility layer, operational status */}
+          <header id="tour-topbar" className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-2xl transition-colors duration-200 shadow-sm user-interface"
             style={{ background: 'color-mix(in srgb, var(--pm-surface) 95%, transparent)', borderColor: 'var(--pm-border-subtle)' }}>
             {/* Mobile menu toggle */}
             <div className="flex items-center gap-3 lg:hidden">
@@ -1369,14 +1401,14 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           )}
 
           {/* Dynamic Page Routing Slot */}
-          <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-6 relative">
+          <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-6 relative user-content">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>
           </main>
 
           {/* Status Footer */}
-          <footer className="bg-[#0b0c12] border-t border-border-subtle px-5 py-3 flex justify-between items-center pointer-events-none z-20 shrink-0">
+          <footer className="bg-[#0b0c12] border-t border-border-subtle px-5 py-3 flex justify-between items-center pointer-events-none z-20 shrink-0 user-interface">
             <div className="flex items-center gap-4 text-[9px] font-mono text-text-quaternary uppercase tracking-wide">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/50 transition-opacity duration-300" />
@@ -1522,7 +1554,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       <div className="absolute left-0 top-0 w-1 h-full bg-blue-500" />
                       <div>
                         <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">AI Suggestion</p>
-                        <p className="text-xs text-text-secondary">Team <strong className="text-[var(--pm-text)] dark:text-white">{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
+                        <p className="text-xs text-text-secondary">Team <strong className="text-[var(--pm-text)] text-[var(--text-primary)]">{getSuggestedTeam()?.name}</strong> has optimal bandwidth availability.</p>
                       </div>
                       <button
                         type="button"
@@ -1563,21 +1595,21 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     <div className="space-y-3">
                       <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionInfra ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
-                          {frictionInfra && <svg className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {frictionInfra && <svg className="w-3.5 h-3.5 text-[var(--pm-text)] text-[var(--text-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" checked={frictionInfra} onChange={e => setFrictionInfra(e.target.checked)} className="hidden" />
                         <span>Client Infrastructure Access Lag</span>
                       </label>
                       <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionData ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
-                          {frictionData && <svg className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {frictionData && <svg className="w-3.5 h-3.5 text-[var(--pm-text)] text-[var(--text-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" checked={frictionData} onChange={e => setFrictionData(e.target.checked)} className="hidden" />
                         <span>External Data Provisioning Delay</span>
                       </label>
                       <label className="flex items-center gap-3 text-sm text-text-secondary cursor-pointer select-none hover:text-text-primary transition-colors group">
                         <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${frictionSla ? 'bg-teal-500 border-teal-500' : 'bg-surface-3 border-border/50 group-hover:border-teal-500/50'}`}>
-                          {frictionSla && <svg className="w-3.5 h-3.5 text-[var(--pm-text)] dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          {frictionSla && <svg className="w-3.5 h-3.5 text-[var(--pm-text)] text-[var(--text-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <input type="checkbox" checked={frictionSla} onChange={e => setFrictionSla(e.target.checked)} className="hidden" />
                         <span>Third-Party SLA / Compliance Review</span>
@@ -1610,7 +1642,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   <div className="flex gap-4 pt-4">
                     <button
                       type="submit"
-                      className="flex-[2] bg-teal-500 text-[var(--pm-text)] dark:text-white h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-teal-400 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(20,184,166,0.3)]"
+                      className="flex-[2] bg-teal-500 text-[var(--pm-text)] text-[var(--text-primary)] h-12 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-teal-400 transition-all active:scale-[0.98] shadow-[0_0_20px_rgba(20,184,166,0.3)]"
                     >
                       Commit Project
                     </button>

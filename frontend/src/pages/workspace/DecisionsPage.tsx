@@ -396,7 +396,7 @@ export default function DecisionsPage() {
             <>
               <button
                 onClick={() => setIsDecisionModalOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-500 rounded-xl text-xs font-bold uppercase tracking-wider text-[var(--pm-text)] dark:text-white hover:from-blue-500 hover:to-teal-400 shadow-lg hover:shadow-teal-500/25 transition-all"
+                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-500 rounded-xl text-xs font-bold uppercase tracking-wider text-[var(--pm-text)] text-[var(--text-primary)] hover:from-blue-500 hover:to-teal-400 shadow-lg hover:shadow-teal-500/25 transition-all"
               >
                 <Plus className="w-4 h-4" /> Register Decision
               </button>
@@ -546,7 +546,7 @@ export default function DecisionsPage() {
                           {isPending && isCurrentStep && userHasAuthority && canCoordinate && (
                             <button
                               onClick={() => handleApproveStep(selectedDecision.id, idx)}
-                              className="px-2 py-1 bg-signal-safe text-[var(--pm-text)] dark:text-white text-[9px] font-bold uppercase rounded hover:brightness-115"
+                              className="px-2 py-1 bg-signal-safe text-[var(--pm-text)] text-[var(--text-primary)] text-[9px] font-bold uppercase rounded hover:brightness-115"
                             >
                               Approve
                             </button>
@@ -587,7 +587,7 @@ export default function DecisionsPage() {
                           handleAddOwnershipTransition(selectedDecision.id, projectTasks[0].id);
                         }
                       }}
-                      className="px-3 py-1 bg-accent-primary text-[var(--pm-text)] dark:text-white text-[9px] font-bold uppercase rounded hover:brightness-110"
+                      className="px-3 py-1 bg-accent-primary text-[var(--pm-text)] text-[var(--text-primary)] text-[9px] font-bold uppercase rounded hover:brightness-110"
                     >
                       Reassign
                     </button>
@@ -628,7 +628,7 @@ export default function DecisionsPage() {
                     </select>
                     <button
                       onClick={() => handleAddMitigation(selectedDecision.id)}
-                      className="px-3 py-1 bg-accent-primary text-[var(--pm-text)] dark:text-white text-[9px] font-bold uppercase rounded hover:brightness-110"
+                      className="px-3 py-1 bg-accent-primary text-[var(--pm-text)] text-[var(--text-primary)] text-[9px] font-bold uppercase rounded hover:brightness-110"
                     >
                       Add Action
                     </button>
@@ -656,13 +656,13 @@ export default function DecisionsPage() {
                             <div className="flex gap-1">
                               <button
                                 onClick={() => handleResolveMitigation(selectedDecision.id, mit.id, true)}
-                                className="p-1 bg-signal-safe rounded text-[var(--pm-text)] dark:text-white"
+                                className="p-1 bg-signal-safe rounded text-[var(--pm-text)] text-[var(--text-primary)]"
                               >
                                 <Check className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleResolveMitigation(selectedDecision.id, mit.id, false)}
-                                className="p-1 bg-signal-critical rounded text-[var(--pm-text)] dark:text-white"
+                                className="p-1 bg-signal-critical rounded text-[var(--pm-text)] text-[var(--text-primary)]"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -689,7 +689,7 @@ export default function DecisionsPage() {
                     />
                     <button
                       onClick={() => handleTriggerEscalation(selectedDecision.id)}
-                      className="px-3 py-1 bg-rose-500 text-[var(--pm-text)] dark:text-white text-[9px] font-bold uppercase rounded hover:brightness-110"
+                      className="px-3 py-1 bg-rose-500 text-[var(--pm-text)] text-[var(--text-primary)] text-[9px] font-bold uppercase rounded hover:brightness-110"
                     >
                       Escalate
                     </button>
@@ -736,7 +736,7 @@ export default function DecisionsPage() {
                       <span className="text-xs font-bold text-accent-primary">{newInterventionImpact}</span>
                       <button
                         onClick={() => handleAddIntervention(selectedDecision.id)}
-                        className="px-3 py-1.5 bg-purple-600 text-[var(--pm-text)] dark:text-white text-[9px] font-bold uppercase rounded hover:brightness-110"
+                        className="px-3 py-1.5 bg-purple-600 text-[var(--pm-text)] text-[var(--text-primary)] text-[9px] font-bold uppercase rounded hover:brightness-110"
                       >
                         Intervene
                       </button>
@@ -939,7 +939,7 @@ export default function DecisionsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-accent-primary text-[var(--pm-text)] dark:text-white text-xs font-bold uppercase rounded-lg hover:brightness-110"
+                  className="px-4 py-2 bg-accent-primary text-[var(--pm-text)] text-[var(--text-primary)] text-xs font-bold uppercase rounded-lg hover:brightness-110"
                 >
                   Save Decision
                 </button>
@@ -1063,7 +1063,7 @@ export default function DecisionsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-accent-primary text-[var(--pm-text)] dark:text-white text-xs font-bold uppercase rounded-lg hover:brightness-110"
+                  className="px-4 py-2 bg-accent-primary text-[var(--pm-text)] text-[var(--text-primary)] text-xs font-bold uppercase rounded-lg hover:brightness-110"
                 >
                   Log Meeting
                 </button>

@@ -56,9 +56,9 @@ export function DocumentGeneratorDropdown({ workspaceId, type, data, fileName, b
       <button 
         onClick={() => handleGenerate(templates[0])}
         disabled={isGenerating}
-        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 rounded transition-colors whitespace-nowrap"
+        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] bg-[var(--surface-glass)] border border-[var(--border-soft)] hover:bg-[var(--surface-hover)] rounded-lg transition-all active:scale-[0.98] whitespace-nowrap"
       >
-        <Download className="w-3 h-3" />
+        <Download className="w-3 h-3 text-purple-400" />
         {isGenerating ? 'Wait...' : buttonText || 'Download'}
       </button>
     );
@@ -69,25 +69,25 @@ export function DocumentGeneratorDropdown({ workspaceId, type, data, fileName, b
       <button 
         onClick={() => setIsOpen(!isOpen)}
         disabled={isGenerating}
-        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 rounded transition-colors whitespace-nowrap"
+        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] bg-[var(--surface-glass)] border border-[var(--border-soft)] hover:bg-[var(--surface-hover)] rounded-lg transition-all active:scale-[0.98] whitespace-nowrap"
       >
-        <Download className="w-3 h-3" />
+        <Download className="w-3 h-3 text-purple-400" />
         {isGenerating ? 'Wait...' : buttonText || 'Download'}
-        <ChevronDown className="w-3 h-3" />
+        <ChevronDown className="w-3 h-3 text-[var(--text-secondary)]" />
       </button>
 
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 shadow-lg rounded-md z-20 py-1">
+          <div className="absolute right-0 mt-1 w-48 premium-panel rounded-xl z-20 py-1.5 backdrop-blur-xl border border-[var(--border-soft)] shadow-xl shadow-purple-950/20">
             {templates.map(t => (
               <button
                 key={t.id}
                 onClick={() => handleGenerate(t)}
-                className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                className="w-full text-left px-4 py-2 text-xs text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-white flex items-center gap-2 transition-colors"
               >
-                <FileText className="w-3 h-3" />
-                {t.name} {t.is_default && '(Default)'}
+                <FileText className="w-3 h-3 text-purple-400" />
+                <span>{t.name} {t.is_default && '(Default)'}</span>
               </button>
             ))}
           </div>

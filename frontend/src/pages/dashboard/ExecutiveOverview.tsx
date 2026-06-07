@@ -212,7 +212,7 @@ export function ExecutiveOverview() {
             </div>
             <div className="p-5 space-y-4">
               {briefData.delayedItems > 0 ? (
-                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500">
+                <div className="p-4 rounded-lg bg-red-500/10 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 text-red-500">
                   <div className="flex items-center gap-2 font-medium mb-1">
                     <AlertTriangle className="w-4 h-4" />
                     Action Required

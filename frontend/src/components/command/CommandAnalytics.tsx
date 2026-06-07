@@ -107,7 +107,7 @@ export default function CommandAnalytics({ isOpen, onClose, role, workspaceId, p
             className="fixed inset-0 z-[301] flex items-start justify-center pt-[6vh] px-4 pointer-events-none"
           >
             <div
-              className="w-full max-w-2xl max-h-[82vh] overflow-y-auto bg-surface border border-white/15 shadow-2xl pointer-events-auto"
+              className="w-full max-w-2xl max-h-[82vh] overflow-y-auto bg-surface border border-[var(--border-soft)] shadow-2xl pointer-events-auto"
               onClick={e => e.stopPropagation()}
             >
               {/* Header */}
@@ -128,7 +128,7 @@ export default function CommandAnalytics({ isOpen, onClose, role, workspaceId, p
 
                 {loading && (
                   <div className="flex items-center justify-center py-12">
-                    <div className="w-4 h-4 border border-white/30 border-t-transparent animate-spin" />
+                    <div className="w-4 h-4 border border-[var(--border-soft)] border-t-transparent animate-spin" />
                     <span className="ml-3 text-[10px] font-mono text-text-quaternary uppercase">Loading intelligence...</span>
                   </div>
                 )}

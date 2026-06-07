@@ -31,11 +31,11 @@ export function LandingHero({ verified }: LandingHeroProps) {
           className="mb-8"
         >
           <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-14 h-14 border border-[var(--pm-border)] dark:border-white/20 bg-[var(--pm-surface)]/5 flex items-center justify-center overflow-hidden">
+            <div className="w-14 h-14 premium-panel flex items-center justify-center overflow-hidden rounded-xl">
               <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-cover scale-110" />
             </div>
           </div>
-          <p className="text-[11px] font-mono uppercase tracking-widest text-[var(--pm-text)] dark:text-white/50">Resolve PM</p>
+          <p className="text-[11px] font-mono uppercase tracking-widest text-[var(--pm-text)] dark:text-[var(--text-secondary)]">Resolve PM</p>
         </motion.div>
 
         {/* Headline */}
@@ -43,11 +43,11 @@ export function LandingHero({ verified }: LandingHeroProps) {
           variants={slideUp}
           initial="hidden"
           animate="visible"
-          className="text-4xl sm:text-5xl md:text-6xl font-medium tracking-tight text-[var(--pm-text)] dark:text-white/90 leading-[1.1] mb-6"
+          className="text-4xl sm:text-5xl md:text-6xl font-medium tracking-tight text-[var(--pm-text)] dark:text-[var(--text-secondary)] leading-[1.1] mb-6"
         >
           Real-time coordination for
           <br />
-          <span className="text-[var(--pm-text)] dark:text-white/50">execution-focused teams</span>
+          <span className="text-[var(--pm-text)] dark:text-[var(--text-secondary)]">execution-focused teams</span>
         </motion.h1>
 
         {/* Subtitle */}
@@ -55,7 +55,7 @@ export function LandingHero({ verified }: LandingHeroProps) {
           variants={slideUp}
           initial="hidden"
           animate="visible"
-          className="text-sm font-mono text-[var(--pm-text)] dark:text-white/40 leading-relaxed max-w-xl mx-auto mb-10"
+          className="text-sm font-mono text-[var(--pm-text)] dark:text-[var(--text-secondary)] leading-relaxed max-w-xl mx-auto mb-10"
         >
           Intelligent workflows. Operational clarity. Realtime awareness.
           <br />
@@ -67,12 +67,12 @@ export function LandingHero({ verified }: LandingHeroProps) {
           variants={slideUp}
           initial="hidden"
           animate="visible"
-          className="flex flex-col sm:flex-row items-center justify-center gap-3"
+          className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           {verified ? (
             <a
               href="/workspace"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--pm-surface)]/10 text-[var(--pm-text)] dark:text-white/90 border border-[var(--pm-border)] dark:border-white/10 hover:bg-[var(--pm-surface)]/15 transition-all text-[12px] font-mono uppercase tracking-wider"
+              className="inline-flex items-center gap-2 px-6 py-3 btn-premium-primary transition-all text-[12px] font-mono uppercase tracking-wider rounded-lg"
             >
               Launch Workspace
               <ArrowRight className="w-3.5 h-3.5" />
@@ -81,15 +81,15 @@ export function LandingHero({ verified }: LandingHeroProps) {
             <>
               <a
                 href="/activate"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--pm-surface)]/10 text-[var(--pm-text)] dark:text-white/90 border border-[var(--pm-border)] dark:border-white/10 hover:bg-[var(--pm-surface)]/15 transition-all text-[12px] font-mono uppercase tracking-wider"
+                className="inline-flex items-center gap-2 px-6 py-3 btn-premium-primary transition-all text-[12px] font-mono uppercase tracking-wider rounded-lg"
               >
                 Activate Product Key
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
-              <span className="text-[10px] font-mono text-[var(--pm-text)] dark:text-white/20 px-2 hidden sm:inline">or</span>
+              <span className="text-[10px] font-mono text-[var(--text-secondary)] px-2 hidden sm:inline">or</span>
               <a
                 href="/activate"
-                className="inline-flex items-center gap-2 px-6 py-3 text-[var(--pm-text)] dark:text-white/50 border border-white/[0.06] hover:border-white/[0.12] hover:text-[var(--pm-text)] dark:text-white/70 transition-all text-[12px] font-mono uppercase tracking-wider"
+                className="inline-flex items-center gap-2 px-6 py-3 btn-premium-secondary transition-all text-[12px] font-mono uppercase tracking-wider rounded-lg"
               >
                 Request Access
               </a>
@@ -106,7 +106,7 @@ export function LandingHero({ verified }: LandingHeroProps) {
         >
           <a
             href="/login"
-            className="inline-flex items-center gap-2 text-[11px] font-mono text-[var(--pm-text)] dark:text-white/30 hover:text-[var(--pm-text)] dark:text-white/60 transition-colors"
+            className="inline-flex items-center gap-2 text-[11px] font-mono text-[var(--pm-text)] dark:text-[var(--text-secondary)] hover:text-[var(--pm-text)] dark:text-[var(--text-secondary)] transition-colors"
           >
             Already invited?
             <span className="underline underline-offset-2">Login</span>
@@ -121,7 +121,7 @@ export function LandingHero({ verified }: LandingHeroProps) {
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5, duration: 0.6 }}
       >
-        <ChevronDown className="w-4 h-4 text-[var(--pm-text)] dark:text-white/20 animate-bounce" />
+        <ChevronDown className="w-4 h-4 text-[var(--pm-text)] dark:text-[var(--text-secondary)] animate-bounce" />
       </motion.div>
     </section>
   );

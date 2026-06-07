@@ -806,7 +806,7 @@ export default function CommandPalette(props: Props) {
             className="fixed inset-0 z-[201] flex items-start justify-center pt-[15vh] px-4 pointer-events-none"
           >
             <div
-              className="w-full max-w-xl bg-surface border border-white/15 shadow-2xl pointer-events-auto overflow-hidden"
+              className="w-full max-w-xl bg-surface border border-[var(--border-soft)] shadow-2xl pointer-events-auto overflow-hidden"
               onClick={e => e.stopPropagation()}
               role="dialog"
               aria-label="Command palette"

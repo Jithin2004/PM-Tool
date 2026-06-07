@@ -9,6 +9,7 @@ import { createTask } from '../../services/taskService';
 import { sendNotification } from '../../services/notificationService';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 import { useAuth } from '../../context/AuthContext';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: any, onClose: () => void, onUpdate: () => void }) {
   const { workspace } = useWorkspace();
@@ -16,6 +17,8 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
   const { profiles, projects, notify } = useDashboard();
   const [loading, setLoading] = useState(false);
   
+  useEscapeKey(true, onClose);
+
   const [discussionNotes, setDiscussionNotes] = useState(meeting.discussion_notes || '');
   const [decisions, setDecisions] = useState(meeting.decisions || '');
   const [actionItems, setActionItems] = useState<{id: string, text: string, converted_to_task_id?: string}[]>(meeting.action_items || []);
@@ -116,22 +119,23 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#1c1d1f] p-6 rounded-xl shadow-2xl max-w-4xl w-full border border-white/10 text-white max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay-premium">
+      <div onClick={onClose} className="absolute inset-0 z-0 cursor-pointer" />
+      <div className="relative modal-premium p-6 rounded-2xl max-w-4xl w-full text-white max-h-[90vh] flex flex-col scrollbar-premium z-10 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center mb-4 flex-none">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight">{meeting.title}</h2>
-            <p className="text-xs text-gray-400 mt-1">{new Date(meeting.date).toLocaleDateString()} at {meeting.time} • {meeting.meeting_type}</p>
+            <h2 className="text-xl font-semibold tracking-tight text-text-primary">{meeting.title}</h2>
+            <p className="text-xs text-text-tertiary mt-1">{new Date(meeting.date).toLocaleDateString()} at {meeting.time} • {meeting.meeting_type}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 transition-colors text-white/50 hover:text-white">
+          <button onClick={onClose} aria-label="Close modal" className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors text-[var(--text-secondary)] hover:text-white">
             <Icon name="close" size={20} />
           </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-          <div className="bg-black/20 p-4 rounded-lg border border-white/5 text-sm">
-            <h4 className="font-semibold mb-2 text-gray-300">Agenda</h4>
-            <p className="whitespace-pre-wrap">{meeting.agenda || "No agenda provided."}</p>
+        <div className="flex-1 overflow-y-auto pr-2 space-y-6 scrollbar-premium">
+          <div className="bg-black/20 p-4 rounded-lg border border-[var(--border-soft)] text-sm">
+            <h4 className="font-semibold mb-2 text-text-secondary">Agenda</h4>
+            <p className="whitespace-pre-wrap text-text-primary">{meeting.agenda || "No agenda provided."}</p>
           </div>
 
           <div>
@@ -142,7 +146,7 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
               value={discussionNotes} 
               onChange={e => setDiscussionNotes(e.target.value)} 
               placeholder="Record main discussion points..." 
-              className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 min-h-[120px]" 
+              className="w-full input-premium px-4 py-3 text-sm outline-none min-h-[120px]" 
             />
           </div>
 
@@ -154,7 +158,7 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
               value={decisions} 
               onChange={e => setDecisions(e.target.value)} 
               placeholder="Record finalized decisions..." 
-              className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 min-h-[100px]" 
+              className="w-full input-premium px-4 py-3 text-sm outline-none min-h-[100px]" 
             />
           </div>
 
@@ -165,7 +169,7 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
             
             <div className="space-y-2 mb-3">
               {actionItems.map((item, idx) => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-black/20 border border-white/10 rounded-lg">
+                <div key={item.id} className="flex items-center justify-between p-3 bg-black/20 border border-[var(--border-soft)] rounded-lg">
                   <span className="text-sm">{idx + 1}. {item.text}</span>
                   {item.converted_to_task_id ? (
                     <span className="text-xs px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-md flex items-center gap-1">
@@ -182,7 +186,7 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
                 </div>
               ))}
               {actionItems.length === 0 && (
-                <p className="text-xs text-gray-500 italic">No action items recorded.</p>
+                <p className="text-xs text-text-tertiary italic">No action items recorded.</p>
               )}
             </div>
 
@@ -193,11 +197,11 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
                 onChange={e => setNewItemText(e.target.value)} 
                 onKeyDown={e => e.key === 'Enter' && handleAddActionItem()}
                 placeholder="New action item..." 
-                className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500" 
+                className="flex-1 input-premium px-3 py-2 text-sm outline-none" 
               />
               <button 
                 onClick={handleAddActionItem}
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-sm font-medium transition-colors"
+                className="px-4 py-2 bg-[var(--surface-glass)] hover:bg-[var(--surface-hover)] text-white rounded-lg text-sm font-medium transition-colors"
               >
                 Add Item
               </button>
@@ -205,7 +209,7 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
           </div>
         </div>
         
-        <div className="pt-4 border-t border-white/10 flex justify-between items-center flex-none mt-4">
+        <div className="pt-4 border-t border-[var(--border-soft)] flex justify-between items-center flex-none mt-4">
           <div className="flex gap-2">
             <button 
               onClick={async () => {
@@ -215,20 +219,20 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
                   onClose();
                 }
               }}
-              className="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              className="px-4 py-2 btn-premium-success rounded-lg text-sm font-medium flex items-center gap-2"
             >
               <Icon name="done_all" size={16} /> Mark Completed
             </button>
             <button 
               onClick={() => setIsCancelModalOpen(true)}
-              className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              className="px-4 py-2 btn-premium-danger rounded-lg text-sm font-medium flex items-center gap-2"
             >
               <Icon name="close" size={16} /> Cancel Meeting
             </button>
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white">Close</button>
-            <button onClick={handleSave} disabled={loading} className="px-5 py-2 rounded-lg text-sm font-medium bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white flex items-center gap-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary btn-premium-secondary rounded-lg">Close</button>
+            <button onClick={handleSave} disabled={loading} className="px-5 py-2 text-sm font-medium btn-premium-primary rounded-lg disabled:opacity-50 text-white flex items-center gap-2">
               <Icon name="save" size={16} />
               {loading ? 'Saving...' : 'Save Notes'}
             </button>

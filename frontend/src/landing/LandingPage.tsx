@@ -86,14 +86,15 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="font-body-md text-body-md overflow-x-hidden min-h-screen bg-[#121416] text-[#e2e2e5]">
+    <div className="font-body-md text-body-md overflow-x-hidden min-h-screen  text-[#e2e2e5]">
       <style>{`
         html { scroll-behavior: smooth; }
         .glass-panel {
-            background: rgba(45, 46, 50, 0.4);
-            backdrop-filter: blur(12px);
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -125,7 +126,7 @@ export function LandingPage() {
       `}</style>
 
       {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding h-16 bg-surface/80 backdrop-blur-md border-b border-[var(--pm-border)] dark:border-white/5 shadow-sm">
+      <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding h-16 bg-[#050712]/70 backdrop-blur-md border-b border-[var(--border-soft)] shadow-sm">
         <div className="flex items-center gap-stack-gap-lg">
           <span className="font-headline-md text-headline-md font-bold text-on-surface">Resolve PM</span>
           <div className="hidden md:flex items-center gap-stack-gap-md ml-8">
@@ -136,7 +137,7 @@ export function LandingPage() {
           </div>
         </div>
         <div className="flex items-center gap-stack-gap-md">
-          <a href="/login" className="px-5 py-2 rounded bg-primary text-on-primary font-body-md text-body-md font-semibold hover:opacity-90 transition-opacity">Login</a>
+          <a href="/login" className="btn-premium-primary px-5 py-2.5 rounded font-body-md text-body-md font-semibold">Login</a>
         </div>
       </nav>
 
@@ -155,8 +156,8 @@ export function LandingPage() {
               Keep your team on track by identifying bottlenecks before they cause delays. Track external dependencies, maintain project safety, and forecast your completion dates with real-world data.
             </p>
             <div className="flex flex-wrap gap-stack-gap-md mt-4">
-              <a href={verified ? "/login" : "/activate"} className="px-8 py-3 rounded bg-primary text-on-primary font-headline-sm text-headline-sm font-semibold hover:opacity-90 transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)]">Get Started</a>
-              <a href="/activate" className="px-8 py-3 rounded border border-outline-variant text-on-surface font-headline-sm text-headline-sm hover:bg-surface-variant transition-all">Request Access</a>
+              <a href={verified ? "/login" : "/activate"} className="btn-premium-primary px-8 py-3.5 rounded font-headline-sm text-headline-sm font-semibold">Get Started</a>
+              <a href="/activate" className="btn-premium-secondary px-8 py-3.5 rounded font-headline-sm text-headline-sm">Request Access</a>
             </div>
             <div className="mt-4">
               <a className="text-body-sm text-on-surface-variant hover:text-primary transition-colors underline decoration-dotted" href="/login">Already a member? Login</a>
@@ -164,7 +165,7 @@ export function LandingPage() {
           </div>
           <div className="lg:col-span-5 hidden lg:block relative">
             <div className="absolute -inset-10 bg-primary/5 blur-3xl rounded-full"></div>
-            <div className="glass-panel p-6 rounded-xl relative border border-[var(--pm-border)] dark:border-white/5">
+            <div className="glass-panel p-6 rounded-xl relative border border-[var(--pm-border)] dark:border-[var(--border-soft)]">
               <div className="flex items-center justify-between mb-6">
                 <span className="font-mono-label text-mono-label text-on-surface-variant uppercase">System Health</span>
                 <span className="flex items-center gap-1.5 font-mono-label text-mono-label text-green-400">
@@ -179,15 +180,15 @@ export function LandingPage() {
                   <div className="h-1 flex-1 bg-[var(--pm-surface)]/10 rounded-full"></div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 bg-surface-container-low rounded border border-[var(--pm-border)] dark:border-white/5">
+                  <div className="p-3 bg-surface-container-low rounded border border-[var(--pm-border)] dark:border-[var(--border-soft)]">
                     <span className="font-mono-label text-[10px] text-on-surface-variant block mb-1 uppercase text-xs">SPEED</span>
                     <span className="font-mono-data text-mono-data text-on-surface">{systemSpeed}%</span>
                   </div>
-                  <div className="p-3 bg-surface-container-low rounded border border-[var(--pm-border)] dark:border-white/5">
+                  <div className="p-3 bg-surface-container-low rounded border border-[var(--pm-border)] dark:border-[var(--border-soft)]">
                     <span className="font-mono-label text-[10px] text-on-surface-variant block mb-1 uppercase text-xs">STABILITY</span>
                     <span className="font-mono-data text-mono-data text-on-surface text-xs">±0.002</span>
                   </div>
-                  <div className="p-3 bg-surface-container-low rounded border border-[var(--pm-border)] dark:border-white/5">
+                  <div className="p-3 bg-surface-container-low rounded border border-[var(--pm-border)] dark:border-[var(--border-soft)]">
                     <span className="font-mono-label text-[10px] text-on-surface-variant block mb-1 uppercase text-xs">ACTIVE ID</span>
                     <span className="font-mono-data text-mono-data text-primary text-xs">#42-99</span>
                   </div>
@@ -198,7 +199,7 @@ export function LandingPage() {
         </section>
 
         {/* Section 1: How It Works */}
-        <section id="how-it-works" className="bg-surface-container-lowest py-32 border-y border-[var(--pm-border)] dark:border-white/5 scroll-mt-16">
+        <section id="how-it-works" className="bg-surface-container-lowest py-32 border-y border-[var(--pm-border)] dark:border-[var(--border-soft)] scroll-mt-16">
           <div className="max-w-7xl mx-auto px-container-padding">
             <div className="mb-24 md:mb-32">
               <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">Execution Orchestration</h2>
@@ -215,26 +216,26 @@ export function LandingPage() {
                 {/* Step 1 & 2 */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 relative">
                   <div className="md:col-span-5 flex gap-6">
-                    <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-surface-container-highest border border-[var(--pm-border)] dark:border-white/10 flex items-center justify-center text-on-surface font-mono-label shadow-lg">01</div>
+                    <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-surface-container-highest border border-[var(--pm-border)] dark:border-[var(--border-soft)] flex items-center justify-center text-on-surface font-mono-label shadow-lg">01</div>
                     <div>
                       <h3 className="text-xl font-semibold text-on-surface mb-3">Onboard & Configure</h3>
                       <p className="text-on-surface-variant leading-relaxed text-sm">Map your entire initiative structure before execution begins. Define the critical path, infrastructure requirements, and expected operational blocks.</p>
                     </div>
                   </div>
                   <div className="md:col-span-7">
-                    <div className="glass-panel p-6 rounded-xl border border-[var(--pm-border)] dark:border-white/5">
+                    <div className="glass-panel p-6 rounded-xl border border-[var(--pm-border)] dark:border-[var(--border-soft)]">
                       <div className="h-4 w-1/4 bg-[var(--pm-surface)]/10 rounded mb-6"></div>
                       <div className="space-y-3">
-                        <div className="h-8 w-full bg-surface-container-low border border-[var(--pm-border)] dark:border-white/5 rounded flex items-center px-4 gap-3">
+                        <div className="h-8 w-full bg-surface-container-low border border-[var(--pm-border)] dark:border-[var(--border-soft)] rounded flex items-center px-4 gap-3">
                           <span className="material-symbols-outlined text-[14px] text-primary">check_circle</span>
                           <span className="h-2 w-1/3 bg-[var(--pm-surface)]/10 rounded"></span>
                         </div>
-                        <div className="h-8 w-full bg-surface-container-low border border-[var(--pm-border)] dark:border-white/5 rounded flex items-center px-4 gap-3">
-                          <span className="material-symbols-outlined text-[14px] text-[var(--pm-text)] dark:text-white/20">radio_button_unchecked</span>
+                        <div className="h-8 w-full bg-surface-container-low border border-[var(--pm-border)] dark:border-[var(--border-soft)] rounded flex items-center px-4 gap-3">
+                          <span className="material-symbols-outlined text-[14px] text-[var(--pm-text)] dark:text-[var(--text-secondary)]">radio_button_unchecked</span>
                           <span className="h-2 w-1/2 bg-[var(--pm-surface)]/10 rounded"></span>
                         </div>
-                        <div className="h-8 w-3/4 bg-surface-container-low border border-[var(--pm-border)] dark:border-white/5 rounded flex items-center px-4 gap-3">
-                          <span className="material-symbols-outlined text-[14px] text-[var(--pm-text)] dark:text-white/20">radio_button_unchecked</span>
+                        <div className="h-8 w-3/4 bg-surface-container-low border border-[var(--pm-border)] dark:border-[var(--border-soft)] rounded flex items-center px-4 gap-3">
+                          <span className="material-symbols-outlined text-[14px] text-[var(--pm-text)] dark:text-[var(--text-secondary)]">radio_button_unchecked</span>
                           <span className="h-2 w-1/4 bg-[var(--pm-surface)]/10 rounded"></span>
                         </div>
                       </div>
@@ -252,13 +253,13 @@ export function LandingPage() {
                     </div>
                   </div>
                   <div className="md:col-span-7">
-                    <div className="glass-panel p-6 rounded-xl flex flex-col gap-4 border border-[var(--pm-border)] dark:border-white/5">
+                    <div className="glass-panel p-6 rounded-xl flex flex-col gap-4 border border-[var(--pm-border)] dark:border-[var(--border-soft)]">
                       <div className="flex items-center gap-4">
-                        <div className="flex-1 h-12 bg-surface-container-high rounded border border-[var(--pm-border)] dark:border-white/5 flex items-center px-4">
+                        <div className="flex-1 h-12 bg-surface-container-high rounded border border-[var(--pm-border)] dark:border-[var(--border-soft)] flex items-center px-4">
                           <span className="w-2 h-2 rounded-full bg-primary/50 mr-3"></span>
                           <span className="text-xs font-mono text-on-surface-variant">Core API</span>
                         </div>
-                        <span className="material-symbols-outlined text-[var(--pm-text)] dark:text-white/20">arrow_forward</span>
+                        <span className="material-symbols-outlined text-[var(--pm-text)] dark:text-[var(--text-secondary)]">arrow_forward</span>
                         <div className="flex-1 h-12 bg-surface-container-high rounded border border-primary/20 flex items-center px-4 relative overflow-hidden">
                           <div className="absolute inset-0 bg-primary/5 pointer-events-none"></div>
                           <span className="w-2 h-2 rounded-full bg-primary animate-pulse mr-3"></span>
@@ -275,14 +276,14 @@ export function LandingPage() {
                 {/* Step 4 & 5 */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 relative">
                   <div className="md:col-span-5 flex gap-6">
-                    <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-surface-container-highest border border-[var(--pm-border)] dark:border-white/10 flex items-center justify-center text-on-surface font-mono-label shadow-lg">03</div>
+                    <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-surface-container-highest border border-[var(--pm-border)] dark:border-[var(--border-soft)] flex items-center justify-center text-on-surface font-mono-label shadow-lg">03</div>
                     <div>
                       <h3 className="text-xl font-semibold text-on-surface mb-3">Track & Monitor Health</h3>
                       <p className="text-on-surface-variant leading-relaxed text-sm">Real-time visibility into operational drift. Automatically distinguish between internal progress and external blockers with an immutable timeline ledger.</p>
                     </div>
                   </div>
                   <div className="md:col-span-7">
-                    <div className="glass-panel p-6 rounded-xl border border-[var(--pm-border)] dark:border-white/5 border-l-4 border-l-primary/50">
+                    <div className="glass-panel p-6 rounded-xl border border-[var(--pm-border)] dark:border-[var(--border-soft)] border-l-4 border-l-primary/50">
                       <div className="flex justify-between items-center mb-4">
                         <span className="text-[10px] font-mono text-on-surface-variant uppercase tracking-wider">Drift Detected</span>
                         <span className="text-[10px] text-error font-mono bg-error/10 border border-error/20 px-2 py-1 rounded">+2.4 Days</span>
@@ -315,7 +316,7 @@ export function LandingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Block 1 */}
-              <div className="glass-panel rounded-2xl p-8 md:p-12 border border-[var(--pm-border)] dark:border-white/5 hover:border-primary/20 transition-colors">
+              <div className="glass-panel rounded-2xl p-8 md:p-12 border border-[var(--pm-border)] dark:border-[var(--border-soft)] hover:border-primary/20 transition-colors">
                 <div className="flex justify-between items-start mb-12">
                   <h3 className="text-lg font-medium text-on-surface">Execution Pressure</h3>
                   <span className="material-symbols-outlined text-primary">monitoring</span>
@@ -338,7 +339,7 @@ export function LandingPage() {
                     <div className="h-1.5 w-full bg-[var(--pm-surface)]/5 rounded-full overflow-hidden">
                       <div className="h-full bg-error/60 w-[68%] rounded-full"></div>
                     </div>
-                    <p className="mt-6 text-sm text-on-surface-variant/80 leading-relaxed border-t border-[var(--pm-border)] dark:border-white/5 pt-6">
+                    <p className="mt-6 text-sm text-on-surface-variant/80 leading-relaxed border-t border-[var(--pm-border)] dark:border-[var(--border-soft)] pt-6">
                       Project has spent the majority of its lifecycle waiting on external infrastructure provisioning and client compliance reviews.
                     </p>
                   </div>
@@ -346,7 +347,7 @@ export function LandingPage() {
               </div>
 
               {/* Block 2 */}
-              <div className="glass-panel rounded-2xl p-8 md:p-12 border border-[var(--pm-border)] dark:border-white/5 hover:border-primary/20 transition-colors flex flex-col">
+              <div className="glass-panel rounded-2xl p-8 md:p-12 border border-[var(--pm-border)] dark:border-[var(--border-soft)] hover:border-primary/20 transition-colors flex flex-col">
                 <div className="flex justify-between items-start mb-12">
                   <h3 className="text-lg font-medium text-on-surface">Release Confidence</h3>
                   <span className="material-symbols-outlined text-primary">tune</span>
@@ -361,7 +362,7 @@ export function LandingPage() {
                   </div>
                   <div className="w-1/6 bg-[var(--pm-surface)]/5 rounded-t-sm h-[30%] hover:bg-[var(--pm-surface)]/10 transition-colors"></div>
                 </div>
-                <p className="text-sm text-on-surface-variant/80 leading-relaxed border-t border-[var(--pm-border)] dark:border-white/5 pt-6 mt-auto">
+                <p className="text-sm text-on-surface-variant/80 leading-relaxed border-t border-[var(--pm-border)] dark:border-[var(--border-soft)] pt-6 mt-auto">
                   Deterministic forecasting based on historical wait states predicts a 95% probability of on-time delivery for the Q3 release window.
                 </p>
               </div>
@@ -370,7 +371,7 @@ export function LandingPage() {
         </section>
 
         {/* Section 3: Trust */}
-        <section id="trust" className="bg-surface-container-lowest py-32 border-y border-[var(--pm-border)] dark:border-white/5 scroll-mt-16">
+        <section id="trust" className="bg-surface-container-lowest py-32 border-y border-[var(--pm-border)] dark:border-[var(--border-soft)] scroll-mt-16">
           <div className="max-w-7xl mx-auto px-container-padding">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
               <div>
@@ -382,7 +383,7 @@ export function LandingPage() {
                   <p>
                     Every state change, block, and approval is written to a permanent audit ledger, ensuring absolute operational clarity and accountability across massive organizations.
                   </p>
-                  <ul className="space-y-4 mt-8 pt-4 border-t border-[var(--pm-border)] dark:border-white/5">
+                  <ul className="space-y-4 mt-8 pt-4 border-t border-[var(--pm-border)] dark:border-[var(--border-soft)]">
                     <li className="flex items-center gap-3">
                       <span className="material-symbols-outlined text-primary text-sm">lock</span>
                       <span className="text-sm font-mono text-on-surface">Capability-driven governance</span>
@@ -399,12 +400,12 @@ export function LandingPage() {
                 </div>
               </div>
 
-              <div className="glass-panel p-6 rounded-2xl border border-[var(--pm-border)] dark:border-white/5 shadow-2xl relative overflow-hidden">
+              <div className="glass-panel p-6 rounded-2xl border border-[var(--pm-border)] dark:border-[var(--border-soft)] shadow-2xl relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
                 
                 {/* Mock Ledger */}
                 <div className="space-y-1 relative z-10">
-                  <div className="grid grid-cols-4 gap-4 px-4 py-3 border-b border-[var(--pm-border)] dark:border-white/10 text-[10px] font-mono text-on-surface-variant uppercase tracking-wider mb-2">
+                  <div className="grid grid-cols-4 gap-4 px-4 py-3 border-b border-[var(--pm-border)] dark:border-[var(--border-soft)] text-[10px] font-mono text-on-surface-variant uppercase tracking-wider mb-2">
                     <span>Timestamp</span>
                     <span>Actor</span>
                     <span>Action</span>
@@ -432,13 +433,13 @@ export function LandingPage() {
 
         {/* CTA Section */}
         <section className="max-w-7xl mx-auto px-container-padding py-32">
-          <div className="glass-panel p-12 rounded-2xl border border-[var(--pm-border)] dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-stack-gap-lg">
+          <div className="glass-panel p-12 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-stack-gap-lg">
             <div className="flex-1 text-center md:text-left">
               <h2 className="font-headline-md text-3xl text-on-surface mb-2 tracking-tight">Ready for better project visibility?</h2>
               <p className="font-body-md text-lg text-on-surface-variant">Work with our team to set up your custom project tracking environment.</p>
             </div>
             <div className="flex flex-col items-center gap-stack-gap-md shrink-0">
-              <a href="/activate" className="px-8 py-3 rounded bg-primary text-on-primary font-headline-sm text-sm font-semibold hover:opacity-90 tracking-wide transition-opacity shadow-[0_0_15px_rgba(99,102,241,0.15)]">Start Setup</a>
+              <a href="/activate" className="btn-premium-primary px-8 py-3.5 rounded font-headline-sm text-sm font-semibold">Start Setup</a>
               <a className="text-xs font-mono text-on-surface-variant hover:text-primary transition-colors underline decoration-dotted" href="/login">Already have an invite? Login</a>
             </div>
           </div>
@@ -446,7 +447,7 @@ export function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-stack-gap-lg px-container-padding flex flex-col md:flex-row justify-between items-center border-t border-[var(--pm-border)] dark:border-white/5">
+      <footer className="w-full py-stack-gap-lg px-container-padding flex flex-col md:flex-row justify-between items-center border-t border-[var(--pm-border)] dark:border-[var(--border-soft)]">
         <div className="flex flex-col items-center md:items-start gap-2 mb-6 md:mb-0">
           <span className="font-headline-sm text-headline-sm font-semibold text-on-surface">Resolve PM</span>
           <p className="font-body-sm text-body-sm text-on-surface-variant opacity-60">© 2026 Resolve PM. All rights reserved. Registered Enterprise Systems.</p>

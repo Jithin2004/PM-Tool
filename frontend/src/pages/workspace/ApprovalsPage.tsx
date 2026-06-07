@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { ShieldAlert, CheckSquare, FileText, UserCheck, Calendar } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
 import { ApprovalDecisionModal } from './ApprovalDecisionModal';
+import { PremiumEmptyState } from '../../components/common/PremiumEmptyState';
 
 export default function ApprovalsPage() {
   const { workspace } = useWorkspace();
@@ -20,9 +22,6 @@ export default function ApprovalsPage() {
     let query = supabase.from('universal_approvals').select('*, requested_by_user:users!requested_by(email), approved_by_user:users!approved_by(email)').eq('workspace_id', workspace.id);
     
     if (filter === 'needs_me') {
-      // Typically, there's logic indicating WHO it's assigned to.
-      // For now, if we are simulating this, we might fetch all Pending or those assigned to me if there's an 'assigned_to' column.
-      // The schema only has requested_by, approved_by. We'll show all Pending if user has permission, or ones lacking approved_by.
       query = query.eq('decision', 'Pending');
     } else if (filter === 'requested_by_me') {
       query = query.eq('requested_by', profile.id);
@@ -43,17 +42,17 @@ export default function ApprovalsPage() {
   }, [workspace?.id, profile?.id, filter]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#111827] text-white overflow-hidden">
-      <div className="flex-none p-6 border-b border-white/10">
-        <h1 className="text-2xl font-bold">Approval Center</h1>
-        <p className="text-sm text-gray-400 mt-1">Review, approve, and track universal entity approvals.</p>
+    <div className="flex-1 flex flex-col h-full bg-transparent text-white overflow-hidden premium-fade-in-up">
+      <div className="flex-none p-6 border-b border-[var(--border-soft)]">
+        <h1 className="text-2xl font-bold tracking-tight text-white">Approval Center</h1>
+        <p className="text-xs text-[var(--text-secondary)] mt-1">Review, approve, and track universal entity approvals.</p>
         
-        <div className="mt-6 flex gap-2">
+        <div className="mt-6 flex premium-segmented-control max-w-md">
           {['needs_me', 'requested_by_me', 'completed'].map(f => (
             <button
               key={f}
               onClick={() => setFilter(f as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === f ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${filter === f ? 'active' : ''}`}
             >
               {f.replace(/_/g, ' ')}
             </button>
@@ -61,54 +60,120 @@ export default function ApprovalsPage() {
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-6 overflow-y-auto scrollbar-premium">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-64">
             <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
           </div>
         ) : approvals.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <Icon name="verified" size={48} className="mb-4 opacity-50" />
-            <p>You're all caught up! No pending approvals found.</p>
+          <div className="max-w-md mx-auto mt-12">
+            <PremiumEmptyState
+              icon={CheckSquare}
+              title="All caught up!"
+              description="No approvals match your current filter selection. Rest easy."
+              accentColor="#a78bfa"
+            />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl">
             {approvals.map(approval => (
               <div 
                 key={approval.id} 
-                className="bg-white/5 border border-white/10 rounded-xl p-5 hover:bg-white/10 transition-colors flex flex-col"
+                className="premium-panel premium-hover-lift rounded-2xl p-6 border border-[var(--border-soft)] flex flex-col justify-between"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <span className="text-[10px] uppercase tracking-wider font-mono px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded">
-                    {approval.entity_type}
-                  </span>
-                  <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded
-                    ${approval.decision === 'Approved' || approval.decision === 'Overridden' ? 'bg-emerald-500/20 text-emerald-400' :
-                      approval.decision === 'Rejected' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                    {approval.decision}
-                  </span>
-                </div>
-                <div className="flex-1 space-y-3 mt-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-300">
-                    <Icon name="person" size={16} className="text-gray-500" />
-                    <span className="truncate">{approval.requested_by_user?.email || 'System'}</span>
+                <div>
+                  {/* Document Header Bar */}
+                  <div className="flex items-center justify-between pb-3 border-b border-[var(--border-soft)] mb-4">
+                    <span className="text-[10px] uppercase tracking-widest font-mono text-indigo-400 font-semibold bg-indigo-500/10 border border-indigo-500/15 px-2.5 py-0.5 rounded">
+                      {approval.entity_type.replace(/_/g, ' ')}
+                    </span>
+                    <span className={`text-[10px] uppercase tracking-widest font-mono px-2 py-0.5 rounded border ${
+                      approval.decision === 'Approved' || approval.decision === 'Overridden'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15'
+                        : approval.decision === 'Rejected'
+                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/15'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/15 animate-pulse'
+                    }`}>
+                      {approval.decision}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <Icon name="calendar_today" size={14} />
-                    {new Date(approval.created_at).toLocaleDateString()}
+
+                  {/* Decision Timeline Details */}
+                  <div className="space-y-4">
+                    {/* Step 1: Request Init */}
+                    <div className="flex gap-3 items-start relative">
+                      <div className="absolute left-2.5 top-5 bottom-0 w-0.5 bg-[var(--surface-glass)]" />
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/35 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      </div>
+                      <div className="text-xs">
+                        <span className="block text-[var(--text-secondary)] text-[9px] uppercase font-mono tracking-wider">Init Request</span>
+                        <span className="text-[var(--text-secondary)] font-mono block truncate max-w-[200px]">{approval.requested_by_user?.email || 'System'}</span>
+                        <span className="text-[var(--text-secondary)] text-[9px] block mt-0.5">{new Date(approval.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Step 2: System Evaluation */}
+                    <div className="flex gap-3 items-start relative">
+                      <div className="absolute left-2.5 top-5 bottom-0 w-0.5 bg-[var(--surface-glass)]" />
+                      <div className="w-5 h-5 rounded-full bg-indigo-500/10 border border-indigo-500/35 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                      </div>
+                      <div className="text-xs">
+                        <span className="block text-[var(--text-secondary)] text-[9px] uppercase font-mono tracking-wider">Security Check</span>
+                        <span className="text-emerald-400/80 font-mono block">Compliant</span>
+                      </div>
+                    </div>
+
+                    {/* Step 3: Executive Review */}
+                    <div className="flex gap-3 items-start">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 border ${
+                        approval.decision === 'Pending' 
+                          ? 'bg-amber-500/10 border-amber-500/35' 
+                          : approval.decision === 'Rejected' 
+                          ? 'bg-rose-500/10 border-rose-500/35'
+                          : 'bg-emerald-500/10 border-emerald-500/35'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          approval.decision === 'Pending' 
+                            ? 'bg-amber-400 animate-pulse' 
+                            : approval.decision === 'Rejected' 
+                            ? 'bg-rose-400'
+                            : 'bg-emerald-400'
+                        }`} />
+                      </div>
+                      <div className="text-xs">
+                        <span className="block text-[var(--text-secondary)] text-[9px] uppercase font-mono tracking-wider">Executive Review</span>
+                        {approval.decision === 'Pending' ? (
+                          <span className="text-amber-400 font-mono">Awaiting Decision</span>
+                        ) : (
+                          <div>
+                            <span className="text-[var(--text-secondary)] font-mono block truncate max-w-[200px]">Audited by {approval.approved_by_user?.email || 'Authorized Role'}</span>
+                            {approval.note && (
+                              <p className="text-[10px] text-[var(--text-secondary)] bg-[var(--surface-glass)] p-2 rounded border border-[var(--border-soft)] mt-1.5 italic max-w-full truncate" title={approval.note}>{approval.note}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                
+
+                {/* Review Action */}
                 {filter === 'needs_me' && (
-                  <div className="mt-4 pt-4 border-t border-white/10 flex gap-2">
-                    <button onClick={() => setSelectedApproval(approval)} className="flex-1 px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium rounded-lg transition-colors">
-                      Review Request
+                  <div className="mt-6 pt-4 border-t border-[var(--border-soft)]">
+                    <button 
+                      onClick={() => setSelectedApproval(approval)} 
+                      className="w-full py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/25 text-xs font-bold uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                    >
+                      Review Document
                     </button>
                   </div>
                 )}
                 {approval.decision !== 'Pending' && (
-                  <div className="mt-4 pt-4 border-t border-white/10 text-xs text-gray-400">
-                    Handled via {approval.approval_source}
+                  <div className="mt-6 pt-4 border-t border-[var(--border-soft)] text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-wider flex justify-between">
+                    <span>Source: {approval.approval_source}</span>
+                    <span>ID: {approval.id.substring(0, 8)}</span>
                   </div>
                 )}
               </div>

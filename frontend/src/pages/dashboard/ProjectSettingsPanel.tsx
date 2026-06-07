@@ -95,7 +95,7 @@ export default function ProjectSettingsPanel({ projectId, onClose }: Props) {
           <button onClick={onClose} className="text-text-quaternary hover:text-text-secondary text-[10px] font-medium">Close</button>
         </div>
         <div className="flex gap-4 mb-6 border-b border-border pb-3">
-          <span className={`text-[10px] font-mono uppercase tracking-wider text-text-primary border-b-2 border-white/40 pb-3`}>Integrations</span>
+          <span className={`text-[10px] font-mono uppercase tracking-wider text-text-primary border-b-2 border-[var(--border-soft)] pb-3`}>Integrations</span>
         </div>
         <div className="space-y-4">
           {INTEGRATIONS.map(svc => {

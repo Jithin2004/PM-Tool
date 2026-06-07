@@ -108,12 +108,12 @@ export default function ConnectionsPanel() {
           <div className="flex flex-col items-end gap-2 shrink-0">
             {!hasAccount ? (
               <button onClick={() => handleConnect(ch.key)}
-                className="px-6 py-2 bg-accent-primary/10 border border-accent-primary/30 text-accent-primary text-[10px] font-bold uppercase tracking-wider hover:bg-accent-primary hover:text-[var(--pm-text)] dark:text-white rounded-lg transition-all active:scale-95 shadow-sm">
+                className="px-6 py-2 bg-accent-primary/10 border border-accent-primary/30 text-accent-primary text-[10px] font-bold uppercase tracking-wider hover:bg-accent-primary hover:text-[var(--pm-text)] text-[var(--text-primary)] rounded-lg transition-all active:scale-95 shadow-sm">
                 Authorize
               </button>
             ) : (
               <button onClick={() => handleDisconnect(ch.key)}
-                className="px-6 py-2 bg-signal-critical/10 border border-signal-critical/30 text-signal-critical text-[10px] font-bold uppercase tracking-wider hover:bg-signal-critical hover:text-[var(--pm-text)] dark:text-white rounded-lg transition-all active:scale-95 shadow-sm">
+                className="px-6 py-2 bg-signal-critical/10 border border-signal-critical/30 text-signal-critical text-[10px] font-bold uppercase tracking-wider hover:bg-signal-critical hover:text-[var(--pm-text)] text-[var(--text-primary)] rounded-lg transition-all active:scale-95 shadow-sm">
                 Disconnect
               </button>
             )}

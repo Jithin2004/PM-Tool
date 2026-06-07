@@ -41,21 +41,40 @@ export function WorkspaceSetupWizard() {
         settings: { 
           companyName: name || 'My Workspace',
           departments: departments,
-          workingTimeFrom: workingTimeFrom,
-          workingTimeTo: workingTimeTo
+          workStart: workingTimeFrom,
+          workEnd: workingTimeTo,
+          workingTimeFrom: workingTimeFrom, // Keep for backward compatibility
+          workingTimeTo: workingTimeTo, // Keep for backward compatibility
+          workingDays: [1, 2, 3, 4, 5],
+          lunchDuration: 60,
+          timezone: 'UTC',
+          attendanceEnabled: true,
+          payrollEnabled: false,
+          productivityFactor: 0.8,
+          businessType: 'Software'
         } as any
       });
       if (created) {
         if (members.length > 0) {
+          const roleMap: Record<string, string> = {
+            'employee': 'developer',
+            'pm': 'pm',
+            'hr': 'super_admin',
+            'external access': 'viewer'
+          };
           const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-          const inserts = members.map(m => ({
-            email: m.email,
-            workspace_id: created.id,
-            role: m.role.toLowerCase(),
-            status: 'pending',
-            invited_by: user?.id,
-            expires_at: expiresAt
-          }));
+          const inserts = members.map(m => {
+            const rawRole = m.role.toLowerCase();
+            const mappedRole = roleMap[rawRole] || 'developer';
+            return {
+              email: m.email,
+              workspace_id: created.id,
+              role: mappedRole,
+              status: 'pending',
+              invited_by: user?.id,
+              expires_at: expiresAt
+            };
+          });
           await supabase.from('invitations').insert(inserts);
         }
         clearLicense();
@@ -116,7 +135,7 @@ export function WorkspaceSetupWizard() {
   return (
     <ResolveLayout eyebrow="Onboarding">
       <div className="grid gap-8 lg:grid-cols-2 max-w-5xl mx-auto items-start">
-        <section className="bg-surface-3 border border-border/50 rounded-2xl p-8 shadow-sm font-geist">
+        <section className="premium-panel rounded-2xl p-8 font-geist">
           
           <div className="flex justify-between text-[10px] sm:text-xs font-mono uppercase tracking-widest text-[var(--pm-on-surface-variant)] mb-8 border-b border-border/50 pb-4">
             <div className="flex gap-2 sm:gap-4 flex-wrap">
@@ -138,7 +157,7 @@ export function WorkspaceSetupWizard() {
           <h2 className="text-2xl font-bold mb-6 text-[var(--pm-on-surface)]">Guided Setup</h2>
           
           {dbError && (
-            <div className="mb-6 p-4 border border-red-500/50 bg-red-500/10 rounded-lg animate-in fade-in">
+            <div className="mb-6 p-4 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/50 bg-red-500/10 rounded-lg animate-in fade-in">
               <h3 className="text-red-400 font-bold mb-2 flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">!</span>
                 Database Missing
@@ -155,7 +174,7 @@ export function WorkspaceSetupWizard() {
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
               <label className="block text-sm font-semibold">Step 1: Workspace Name</label>
-              <input value={name} onChange={e => setName(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50 focus:border-[var(--pm-primary)] focus:outline-none transition-colors" placeholder="e.g. Acme Corp" />
+              <input value={name} onChange={e => setName(e.target.value)} className="w-full p-3 input-premium" placeholder="e.g. Acme Corp" />
             </div>
           )}
           
@@ -177,11 +196,11 @@ export function WorkspaceSetupWizard() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1">Start Time</label>
-                  <input type="time" value={workingTimeFrom} onChange={e => setWorkingTimeFrom(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50 focus:border-[var(--pm-primary)] focus:outline-none" />
+                  <input type="time" value={workingTimeFrom} onChange={e => setWorkingTimeFrom(e.target.value)} className="w-full p-3 input-premium" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-mono uppercase text-text-tertiary mb-1">End Time</label>
-                  <input type="time" value={workingTimeTo} onChange={e => setWorkingTimeTo(e.target.value)} className="w-full p-3 rounded bg-surface-4 border border-border/50 focus:border-[var(--pm-primary)] focus:outline-none" />
+                  <input type="time" value={workingTimeTo} onChange={e => setWorkingTimeTo(e.target.value)} className="w-full p-3 input-premium" />
                 </div>
               </div>
               <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic mt-2">Used for capacity planning and availability tracking.</p>
@@ -219,7 +238,7 @@ export function WorkspaceSetupWizard() {
                           newMembers[idx].role = e.target.value as any;
                           setMembers(newMembers);
                         }}
-                        className="bg-surface-4 border border-border/50 text-xs rounded px-2 py-1 outline-none"
+                        className="input-premium text-xs rounded px-2 py-1 outline-none"
                       >
                         <option value="Employee">Employee (Internal)</option>
                         <option value="PM">Project Manager</option>
@@ -287,18 +306,18 @@ export function WorkspaceSetupWizard() {
           )}
 
           <div className="mt-8 flex justify-between">
-            <button disabled={step === 1 || selectedTemplate !== null} onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded border border-border/50 disabled:opacity-50 transition-colors">Back</button>
+            <button disabled={step === 1 || selectedTemplate !== null} onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded btn-premium-secondary disabled:opacity-50 transition-colors">Back</button>
             {step < 6 ? (
-              <button disabled={selectedTemplate !== null || (step === 1 && !name.trim())} onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded bg-[var(--pm-primary)] text-[var(--pm-text)] dark:text-white disabled:opacity-50 disabled:bg-surface-4 transition-colors">Next</button>
+              <button disabled={selectedTemplate !== null || (step === 1 && !name.trim())} onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded btn-premium-primary disabled:opacity-50 transition-colors">Next</button>
             ) : (
-              <button onClick={handleFinish} disabled={loading || selectedTemplate !== null} className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-[var(--pm-text)] dark:text-white flex items-center gap-2 disabled:opacity-50 disabled:bg-surface-4 transition-colors font-medium">
-                {loading ? 'Building...' : 'Complete Setup'} <Zap className="w-4 h-4 fill-white text-[var(--pm-text)] dark:text-white" />
+              <button onClick={handleFinish} disabled={loading || selectedTemplate !== null} className="px-4 py-2 rounded btn-premium-success flex items-center gap-2 disabled:opacity-50 transition-colors font-medium">
+                {loading ? 'Building...' : 'Complete Setup'} <Zap className="w-4 h-4 fill-white text-white" />
               </button>
             )}
           </div>
         </section>
 
-        <aside className="bg-surface-3 border border-border/50 rounded-2xl p-8 shadow-sm font-geist h-fit space-y-6 lg:sticky top-8">
+        <aside className="premium-panel rounded-2xl p-8 font-geist h-fit space-y-6 lg:sticky top-8">
           <h3 className="font-semibold text-[var(--pm-on-surface)] flex items-center gap-2"><Zap className="w-4 h-4 text-amber-400"/> Instant Demo Workspaces</h3>
           <p className="text-xs text-[var(--pm-on-surface-variant)]">Bypass manual configuration and instantiate a fully-loaded enterprise simulator.</p>
           
@@ -312,10 +331,10 @@ export function WorkspaceSetupWizard() {
                   key={type} 
                   onClick={() => toggleTemplate(type)} 
                   disabled={demoLoading} 
-                  className={`w-full p-4 border rounded-xl text-left flex flex-col group transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--pm-primary)] focus:ring-offset-2 focus:ring-offset-surface-3 ${
+                  className={`w-full p-4 border rounded-xl text-left flex flex-col group transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-[#080c19] ${
                     isSelected 
-                      ? 'border-[var(--pm-primary)] bg-[var(--pm-primary)]/10 shadow-sm ring-1 ring-[var(--pm-primary)]/50' 
-                      : 'border-border/50 hover:border-[var(--pm-primary)]/70 bg-surface-2 hover:bg-surface-3'
+                      ? 'border-purple-500 bg-purple-500/10 shadow-sm ring-1 ring-purple-500/50' 
+                      : 'border-[var(--border-soft)] hover:border-purple-500/70 bg-[var(--surface-glass)] hover:bg-[var(--surface-hover)]'
                   }`}
                   aria-pressed={isSelected}
                 >
@@ -340,19 +359,19 @@ export function WorkspaceSetupWizard() {
                       <div className="grid grid-cols-2 gap-y-3 gap-x-2">
                         <div className="text-xs">
                            <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Projects</div>
-                           <div className="font-semibold text-[var(--pm-text)] dark:text-white mt-0.5">{summary.projects}</div>
+                           <div className="font-semibold text-[var(--pm-text)] text-[var(--text-primary)] mt-0.5">{summary.projects}</div>
                         </div>
                         <div className="text-xs">
                            <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Milestones</div>
-                           <div className="font-semibold text-[var(--pm-text)] dark:text-white mt-0.5">{summary.milestones}</div>
+                           <div className="font-semibold text-[var(--pm-text)] text-[var(--text-primary)] mt-0.5">{summary.milestones}</div>
                         </div>
                         <div className="text-xs">
                            <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Tasks</div>
-                           <div className="font-semibold text-[var(--pm-text)] dark:text-white mt-0.5">{summary.tasks}</div>
+                           <div className="font-semibold text-[var(--pm-text)] text-[var(--text-primary)] mt-0.5">{summary.tasks}</div>
                         </div>
                         <div className="text-xs">
                            <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Team Members</div>
-                           <div className="font-semibold text-[var(--pm-text)] dark:text-white mt-0.5">{summary.members}</div>
+                           <div className="font-semibold text-[var(--pm-text)] text-[var(--text-primary)] mt-0.5">{summary.members}</div>
                         </div>
                       </div>
                     </div>
@@ -366,10 +385,10 @@ export function WorkspaceSetupWizard() {
             <button 
               onClick={handleDemo}
               disabled={!selectedTemplate || demoLoading}
-              className={`w-full p-3.5 rounded-xl font-medium text-sm flex justify-center items-center gap-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-surface-3 ${
+              className={`w-full p-3.5 rounded-xl font-semibold text-sm flex justify-center items-center gap-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-[#080c19] ${
                 selectedTemplate 
-                  ? 'bg-[var(--pm-tertiary)] text-[var(--pm-on-tertiary)] hover:opacity-90 shadow-md' 
-                  : 'bg-surface-4 text-[var(--pm-on-surface-variant)] border border-border/50 cursor-not-allowed'
+                  ? 'btn-premium-primary cursor-pointer' 
+                  : 'bg-[var(--surface-glass)] text-[var(--text-secondary)] border border-[var(--border-soft)] cursor-not-allowed'
               }`}
             >
               {demoLoading ? (
@@ -386,7 +405,7 @@ export function WorkspaceSetupWizard() {
               <button
                 onClick={() => { setSelectedTemplate(null); setName(''); }}
                 disabled={demoLoading}
-                className="w-full p-3 rounded-xl font-medium text-sm text-[var(--pm-on-surface-variant)] hover:text-[var(--pm-text)] dark:text-white hover:bg-surface-4 border border-transparent transition-colors flex justify-center items-center gap-2"
+                className="w-full p-3 rounded-xl font-medium text-sm text-[var(--pm-on-surface-variant)] hover:text-[var(--pm-text)] text-[var(--text-primary)] hover:bg-surface-4 border border-transparent transition-colors flex justify-center items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" /> Return to Manual Setup
               </button>

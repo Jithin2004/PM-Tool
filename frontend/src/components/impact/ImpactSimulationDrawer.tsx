@@ -14,7 +14,7 @@ const severityColors: Record<SimulationSeverity, string> = {
   LOW: 'text-signal-info border-border bg-surface-3',
   MEDIUM: 'text-signal-warning border-border bg-signal-warning-bg',
   HIGH: 'text-rose-400 border-rose-500/30 bg-rose-500/10',
-  CRITICAL: 'text-signal-critical border-red-500/30 bg-signal-critical-bg'
+  CRITICAL: 'text-signal-critical border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/30 bg-signal-critical-bg'
 };
 
 export function ImpactSimulationDrawer({ simulation, onApply, onDismiss, onApplyMitigation, onClose }: Props) {
@@ -155,7 +155,7 @@ export function ImpactSimulationDrawer({ simulation, onApply, onDismiss, onApply
       </div>
 
       <div className="flex items-center gap-2 px-4 py-3 border-t border-border bg-[#07080e]/50">
-        <button onClick={handleDismiss} disabled={dismissing || isInactive} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-medium uppercase tracking-wider border border-white/15 text-text-tertiary rounded-md hover:text-text-secondary hover:border-white/30 transition-all cursor-pointer disabled:opacity-40">
+        <button onClick={handleDismiss} disabled={dismissing || isInactive} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-medium uppercase tracking-wider border border-[var(--border-soft)] text-text-tertiary rounded-md hover:text-text-secondary hover:border-[var(--border-soft)] transition-all cursor-pointer disabled:opacity-40">
           <X className="w-3 h-3" />
           {isInactive ? 'Close' : 'Ignore'}
         </button>

@@ -1136,7 +1136,7 @@ function ListView({ tasks, projectMap, userMap, hasWriteAccess, onTransitionTask
         <div className="col-span-2">Status</div>
       </div>
       {tasks.length === 0 ? (
-        <div className="p-8 text-center text-text-quaternary text-xs font-mono uppercase">No tasks found</div>
+        <div className="p-8 text-center text-text-quaternary text-xs font-mono uppercase"><span className="text-[11px] text-[var(--text-muted)] font-mono">Your workspace is clear</span></div>
       ) : (
         tasks.map((task: any) => {
           const project = projectMap.get(task.project_id);

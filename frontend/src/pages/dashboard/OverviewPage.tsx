@@ -367,10 +367,10 @@ function DeveloperWorkspace({
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>{t.name}</span>
                           {t.risk === 'high' && (
-                            <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm">HIGH RISK</span>
+                            <span className="bg-red-500/10 text-red-400 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm">HIGH RISK</span>
                           )}
                           {isBlocked && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-red-500/10 text-red-400 border border-red-500/20">BLOCKED</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-red-500/10 text-red-400 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20">BLOCKED</span>
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)]">
@@ -421,7 +421,7 @@ function DeveloperWorkspace({
                         
                         <button
                           onClick={() => setSelectedUnblockTask(t)}
-                          className="px-3 py-2 rounded-lg text-[10px] font-mono-pm uppercase tracking-wider bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all cursor-pointer self-end"
+                          className="px-3 py-2 rounded-lg text-[10px] font-mono-pm uppercase tracking-wider bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 transition-all cursor-pointer self-end"
                         >
                           Unblock Request
                         </button>
@@ -1138,7 +1138,7 @@ function SuperAdminGovernanceSurface({
               
               {!verifyingChain && chainIntegrity && (
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${
-                  chainIntegrity.status === 'Valid' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
+                  chainIntegrity.status === 'Valid' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 text-red-400'
                 }`}>
                   <Icon name={chainIntegrity.status === 'Valid' ? 'check_circle' : 'warning'} size={20} />
                 </div>

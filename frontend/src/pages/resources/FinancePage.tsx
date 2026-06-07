@@ -1,3 +1,4 @@
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 import React, { useState, useEffect } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -6,11 +7,9 @@ import {
   fetchFinanceData, closeFinancialPeriod, createFinancialAdjustment, deleteInvoice, cancelInvoice,
   Client, Invoice, Payment, Expense, FinancialPeriod, FinancialSnapshot, FinancialAdjustment, CompanyBillingProfile, fetchClients
 } from '../../services/financeService';
-import { 
-  Plus, Landmark, Receipt, CreditCard, TrendingUp, TrendingDown, 
+import { Plus, Landmark, Receipt, CreditCard, TrendingUp, TrendingDown, 
   Wallet, Building2, ChevronLeft, ChevronRight, Lock, 
-  AlertCircle, History, Download, X, Trash2
-} from 'lucide-react';
+  AlertCircle, History, Download, X, Trash2, FileText } from 'lucide-react';
 import { CreateInvoiceModal } from '../../components/finance/CreateInvoiceModal';
 import { ManageClientsModal } from '../../components/finance/ManageClientsModal';
 import { generateInvoicePDF } from '../../services/invoicePdfService';
@@ -220,30 +219,36 @@ export default function FinancePage() {
   };
 
   return (
-    <div className="space-y-8 pb-16 font-geist h-full overflow-y-auto p-6" style={{ color: 'var(--pm-on-surface)' }}>
+    <div className="space-y-8 pb-16 h-full overflow-y-auto p-6 scrollbar-premium premium-fade-in-up">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between px-1 pt-2 gap-4 md:gap-0">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Accounts & Finance</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Accounts & Finance</h1>
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
             Financial oversight and ledger management.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button 
             onClick={() => setShowManageClientsModal(true)}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium border"
-            style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-            <Building2 className="w-4 h-4" />
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border border-[var(--border-soft)] bg-[var(--surface-glass)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-white transition-all active:scale-[0.98]"
+          >
+            <Building2 className="w-4 h-4 text-indigo-400" />
             Manage Clients
           </button>
           {!isClosed ? (
-            <button onClick={() => setShowInvoiceModal(true)} className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={() => setShowInvoiceModal(true)} 
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-700 transition-all active:scale-[0.98]"
+            >
               <Plus className="w-4 h-4" />
               New Invoice
             </button>
           ) : (
-            <button onClick={() => setShowAdjustmentModal(true)} className="flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 transition-colors">
+            <button 
+              onClick={() => setShowAdjustmentModal(true)} 
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-amber-600 hover:bg-amber-700 transition-all active:scale-[0.98]"
+            >
               <Plus className="w-4 h-4" />
               Add Adjustment
             </button>
@@ -252,34 +257,34 @@ export default function FinancePage() {
       </div>
 
       {errorMsg && (
-        <div className="px-4 py-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-lg flex items-center gap-3 mx-1">
+        <div className="px-4 py-3 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-xl flex items-center gap-3 mx-1">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span className="text-sm font-medium">{errorMsg}</span>
         </div>
       )}
 
       {/* Period Selector */}
-      <div className="flex items-center justify-between px-1 bg-black/5 p-3 rounded-xl border" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+      <div className="flex items-center justify-between p-4 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-glass)] backdrop-blur-md">
         <div className="flex items-center gap-4">
-          <button onClick={prevMonth} className="p-1 hover:bg-black/10 rounded-full transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-          <div className="text-lg font-semibold w-40 text-center">
+          <button onClick={prevMonth} className="p-1 hover:bg-[var(--surface-hover)] rounded-full transition-colors"><ChevronLeft className="w-5 h-5" /></button>
+          <div className="text-lg font-semibold w-40 text-center text-white">
             {getMonthName(viewMonth)} {viewYear}
           </div>
-          <button onClick={nextMonth} className="p-1 hover:bg-black/10 rounded-full transition-colors"><ChevronRight className="w-5 h-5" /></button>
+          <button onClick={nextMonth} className="p-1 hover:bg-[var(--surface-hover)] rounded-full transition-colors"><ChevronRight className="w-5 h-5" /></button>
         </div>
         <div className="flex items-center gap-3">
           {isClosed ? (
-            <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-xs font-semibold uppercase tracking-wider">
+            <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-xs font-semibold uppercase tracking-wider border border-amber-500/15">
               <Lock className="w-3.5 h-3.5" />
               Closed Period
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-xs font-semibold uppercase tracking-wider">
+            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-semibold uppercase tracking-wider border border-emerald-500/15">
               Open Period
             </div>
           )}
           {!isClosed && (
-            <button onClick={handleCloseMonth} className="px-3 py-1.5 text-sm font-medium rounded-md bg-black/80 hover:bg-black text-white transition-colors">
+            <button onClick={handleCloseMonth} className="btn-premium-primary px-3 py-1.5 text-xs font-bold uppercase tracking-wider">
               Close Month
             </button>
           )}
@@ -288,61 +293,61 @@ export default function FinancePage() {
       
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-1">
-        <div className="p-5 rounded-xl border relative overflow-hidden" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            <TrendingUp className="text-emerald-500 w-4 h-4" />
+        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">
+            <TrendingUp className="text-emerald-400 w-4 h-4" />
             <span>Revenue</span>
           </div>
-          <div className="text-2xl font-bold font-mono tracking-tight mt-2 flex items-baseline gap-2">
+          <div className="text-2xl font-bold font-mono tracking-tight mt-2 flex items-baseline gap-2 text-white">
             ${revenueThisMonth.toLocaleString()}
             {adjRevenue !== 0 && (
-              <span className={`text-xs font-medium ${adjRevenue > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              <span className={`text-xs font-medium ${adjRevenue > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 ({adjRevenue > 0 ? '+' : ''}{adjRevenue.toLocaleString()})
               </span>
             )}
           </div>
         </div>
         
-        <div className="p-5 rounded-xl border relative overflow-hidden" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            <Receipt className="text-amber-500 w-4 h-4" />
+        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">
+            <Receipt className="text-amber-400 w-4 h-4" />
             <span>Pending Receivables</span>
           </div>
-          <div className="text-2xl font-bold font-mono tracking-tight mt-2 flex items-baseline gap-2">
+          <div className="text-2xl font-bold font-mono tracking-tight mt-2 flex items-baseline gap-2 text-white">
             ${pendingInvoicesAmount.toLocaleString()}
           </div>
           {!isClosed && baseGST > 0 && (
-            <div className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-              (GST Collected: ${baseGST.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})
+            <div className="text-[10px] mt-1 text-[var(--text-secondary)] italic">
+              (GST: ${baseGST.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})
             </div>
           )}
         </div>
-
-        <div className="p-5 rounded-xl border relative overflow-hidden" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            <TrendingDown className="text-rose-500 w-4 h-4" />
+ 
+        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">
+            <TrendingDown className="text-rose-400 w-4 h-4" />
             <span>Salary Cost</span>
           </div>
-          <div className="text-2xl font-bold font-mono tracking-tight mt-2 flex items-baseline gap-2">
+          <div className="text-2xl font-bold font-mono tracking-tight mt-2 flex items-baseline gap-2 text-white">
             ${salaryExpenses.toLocaleString()}
             {adjSalary !== 0 && (
-              <span className={`text-xs font-medium ${adjSalary > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+              <span className={`text-xs font-medium ${adjSalary > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                 ({adjSalary > 0 ? '+' : ''}{adjSalary.toLocaleString()})
               </span>
             )}
           </div>
         </div>
-
-        <div className="p-5 rounded-xl border relative overflow-hidden" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            <Wallet className={netProfit >= 0 ? "text-emerald-500 w-4 h-4" : "text-rose-500 w-4 h-4"} />
+ 
+        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">
+            <Wallet className={netProfit >= 0 ? "text-emerald-400 w-4 h-4" : "text-rose-400 w-4 h-4"} />
             <span>Net Profit</span>
           </div>
-          <div className={`text-2xl font-bold font-mono tracking-tight mt-2 ${netProfit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+          <div className={`text-2xl font-bold font-mono tracking-tight mt-2 ${netProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()}
           </div>
           {isClosed && (adjRevenue !== 0 || adjSalary !== 0 || adjOther !== 0) && (
-            <div className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
+            <div className="text-[10px] mt-1 text-[var(--text-secondary)] italic">
               Orig: ${snapshot?.net_profit?.toLocaleString() || 0}
             </div>
           )}
@@ -354,36 +359,43 @@ export default function FinancePage() {
         
         {/* Adjustments Section - visible if closed and adjustments exist */}
         {isClosed && periodAdjustments.length > 0 ? (
-          <div className="rounded-xl border flex flex-col col-span-1 lg:col-span-2" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-            <div className="px-5 py-4 border-b flex justify-between items-center" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+          <div className="premium-panel rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)]">
+            <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-amber-500" />
-                <h3 className="font-semibold text-sm">Adjustment History</h3>
+                <History className="w-4 h-4 text-amber-400" />
+                <h3 className="font-semibold text-sm text-white">Adjustment History</h3>
               </div>
             </div>
-            <div className="divide-y" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-              {periodAdjustments.map(adj => (
-                <div key={adj.id} className="p-4 flex items-center justify-between hover:bg-black/5 transition-colors">
-                  <div>
-                    <div className="text-sm font-medium">{adj.reason}</div>
-                    <div className="text-xs mt-1 capitalize" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                      {adj.type} Correction • {new Date(adj.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`font-mono font-medium ${adj.amount >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {adj.amount >= 0 ? '+' : ''}{Number(adj.amount).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse table-premium">
+                <thead>
+                  <tr>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Reason</th>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Type Correction</th>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Date</th>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)] text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {periodAdjustments.map(adj => (
+                    <tr key={adj.id}>
+                      <td className="text-xs font-semibold text-[var(--text-secondary)]">{adj.reason}</td>
+                      <td className="text-xs text-[var(--text-secondary)] capitalize font-mono text-[10px]">{adj.type}</td>
+                      <td className="text-xs text-[var(--text-secondary)]">{new Date(adj.created_at).toLocaleDateString()}</td>
+                      <td className={`text-right font-mono text-xs font-bold ${adj.amount >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {adj.amount >= 0 ? '+' : ''}{Number(adj.amount).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         ) : null}
-
-        <div className="rounded-xl border flex flex-col" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-          <div className="px-5 py-4 border-b flex justify-between items-center" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-            <h3 className="font-semibold text-sm">Recent Invoices</h3>
+ 
+        <div className="premium-panel rounded-2xl flex flex-col border border-[var(--border-soft)]">
+          <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center">
+            <h3 className="font-semibold text-sm text-white">Recent Invoices</h3>
           </div>
           <div className="p-0">
             {data.invoices.length === 0 ? (
@@ -393,95 +405,106 @@ export default function FinancePage() {
                 <p className="text-xs text-text-tertiary mt-1">Generate your first invoice to start billing clients.</p>
               </div>
             ) : (
-              <div className="divide-y" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-                {data.invoices.slice(0, 5).map(inv => (
-                  <div key={inv.id} className="p-4 flex items-center justify-between hover:bg-black/5 transition-colors">
-                    <div>
-                      <div className="font-mono text-sm">{inv.invoice_number}</div>
-                      <div className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>{new Date(inv.issue_date).toLocaleDateString()}</div>
-                    </div>
-                      <div className="text-right flex items-center gap-2">
-                        <div>
-                          <div className="font-mono font-medium">${Number(inv.grand_total || inv.amount).toLocaleString()}</div>
-                          <div className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full inline-block mt-1
-                            ${inv.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' : 
-                              inv.status === 'overdue' ? 'bg-rose-500/10 text-rose-500' : 
-                              inv.status === 'partial' ? 'bg-blue-500/10 text-blue-500' :
-                              'bg-amber-500/10 text-amber-500'}`}>
+              <div className="overflow-x-auto scrollbar-premium">
+                <table className="w-full text-left border-collapse table-premium">
+                  <thead>
+                    <tr>
+                      <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Invoice #</th>
+                      <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Date</th>
+                      <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Amount</th>
+                      <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Status</th>
+                      <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)] text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.invoices.slice(0, 5).map(inv => (
+                      <tr key={inv.id}>
+                        <td className="font-mono text-xs text-[var(--text-secondary)] font-medium">{inv.invoice_number}</td>
+                        <td className="text-xs text-[var(--text-secondary)]">{new Date(inv.issue_date).toLocaleDateString()}</td>
+                        <td className="font-mono text-xs text-[var(--text-secondary)] font-bold">${Number(inv.grand_total || inv.amount).toLocaleString()}</td>
+                        <td>
+                          <span className={`text-[9px] uppercase tracking-widest font-mono font-bold px-2 py-0.5 rounded border ${
+                            inv.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15' : 
+                            inv.status === 'overdue' ? 'bg-rose-500/10 text-rose-400 border-rose-500/15' : 
+                            inv.status === 'partial' ? 'bg-blue-500/10 text-blue-400 border-blue-500/15' :
+                            'bg-amber-500/10 text-amber-400 border-amber-500/15 animate-pulse'}`}>
                             {inv.status}
+                          </span>
+                        </td>
+                        <td className="text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button 
+                              onClick={async () => {
+                                try {
+                                  const client = data.clients.find(c => c.id === inv.client_id);
+                                  const comp = data.companyProfile;
+                                  if (comp && client) {
+                                    await generateInvoicePDF(comp, client, inv, inv.line_items || []);
+                                  } else {
+                                    showAlert("Missing company profile or client details.");
+                                  }
+                                } catch(err) {
+                                  console.error(err);
+                                }
+                              }}
+                              className="p-1.5 text-[var(--text-secondary)] hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all"
+                              title="Download PDF"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+                            {inv.status === 'draft' && (
+                              <button 
+                                onClick={async () => {
+                                  if (!workspace?.id || !profile?.id) return;
+                                  if (await showConfirm(`Are you sure you want to completely delete draft invoice ${inv.invoice_number}?`)) {
+                                    try {
+                                      await deleteInvoice(inv.id, workspace.id, profile.id, 'User initiated deletion');
+                                      loadData();
+                                    } catch (e: any) {
+                                      showAlert(e.message || "Failed to delete invoice");
+                                    }
+                                  }
+                                }}
+                                className="p-1.5 text-[var(--text-secondary)] hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                                title="Delete Draft"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {(inv.status === 'issued' || inv.status === 'sent') && (
+                              <button 
+                                onClick={async () => {
+                                  if (!workspace?.id || !profile?.id) return;
+                                  const reason = await showPrompt('Why are you cancelling this invoice?', { title: 'Cancellation Reason' });
+                                  if (reason) {
+                                    try {
+                                      await cancelInvoice(inv, profile.id, reason);
+                                      loadData();
+                                    } catch (e: any) {
+                                      showAlert(e.message || "Failed to cancel invoice");
+                                    }
+                                  }
+                                }}
+                                className="p-1.5 text-[var(--text-secondary)] hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                                title="Cancel Invoice"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button 
-                            onClick={async () => {
-                              try {
-                                const client = data.clients.find(c => c.id === inv.client_id);
-                                const comp = data.companyProfile;
-                                if (comp && client) {
-                                  await generateInvoicePDF(comp, client, inv, inv.line_items || []);
-                                } else {
-                                  showAlert("Missing company profile or client details.");
-                                }
-                              } catch(err) {
-                                console.error(err);
-                              }
-                            }}
-                            className="p-1.5 text-text-tertiary hover:text-emerald-400 transition-colors"
-                            title="Download PDF"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          {inv.status === 'draft' && (
-                            <button 
-                              onClick={async () => {
-                                if (!workspace?.id || !profile?.id) return;
-                                if (await showConfirm(`Are you sure you want to completely delete draft invoice ${inv.invoice_number}?`)) {
-                                  try {
-                                    await deleteInvoice(inv.id, workspace.id, profile.id, 'User initiated deletion');
-                                    loadData();
-                                  } catch (e: any) {
-                                    showAlert(e.message || "Failed to delete invoice");
-                                  }
-                                }
-                              }}
-                              className="p-1.5 text-text-tertiary hover:text-rose-400 transition-colors"
-                              title="Delete Draft"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                          {inv.status === 'issued' && (
-                            <button 
-                              onClick={async () => {
-                                if (!workspace?.id || !profile?.id) return;
-                                const reason = await showPrompt('Why are you cancelling this invoice?', { title: 'Cancellation Reason' });
-                                if (reason) {
-                                  try {
-                                    await cancelInvoice(inv, profile.id, reason);
-                                    loadData();
-                                  } catch (e: any) {
-                                    showAlert(e.message || "Failed to cancel invoice");
-                                  }
-                                }
-                              }}
-                              className="p-1.5 text-text-tertiary hover:text-rose-400 transition-colors"
-                              title="Cancel Invoice"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                  </div>
-                ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </div>
-
-        <div className="rounded-xl border flex flex-col" style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-          <div className="px-5 py-4 border-b flex justify-between items-center" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-            <h3 className="font-semibold text-sm">Expenses (This Month)</h3>
+ 
+        <div className="premium-panel rounded-2xl flex flex-col border border-[var(--border-soft)]">
+          <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center">
+            <h3 className="font-semibold text-sm text-white">Expenses (This Month)</h3>
           </div>
           <div className="p-0">
             {data.expenses.filter(e => isCurrentMonth(e.date)).length === 0 ? (
@@ -491,41 +514,51 @@ export default function FinancePage() {
                 <p className="text-xs text-text-tertiary mt-1">Track outgoing costs to accurately monitor profitability.</p>
               </div>
             ) : (
-              <div className="divide-y" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-                {data.expenses.filter(e => isCurrentMonth(e.date)).slice(0, 5).map(exp => (
-                  <div key={exp.id} className="p-4 flex items-center justify-between hover:bg-black/5 transition-colors">
-                    <div>
-                      <div className="text-sm font-medium">{exp.description}</div>
-                      <div className="text-xs mt-1 capitalize" style={{ color: 'var(--pm-on-surface-variant)' }}>{exp.category} • {new Date(exp.date).toLocaleDateString()}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono font-medium text-rose-500">-${Number(exp.amount).toLocaleString()}</div>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto scrollbar-premium">
+                <table className="w-full text-left border-collapse table-premium">
+                  <thead>
+                    <tr>
+                      <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Description</th>
+                      <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Category</th>
+                      <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Date</th>
+                      <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)] text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.expenses.filter(e => isCurrentMonth(e.date)).slice(0, 5).map(exp => (
+                      <tr key={exp.id}>
+                        <td className="text-xs font-semibold text-[var(--text-secondary)]">{exp.description}</td>
+                        <td className="text-xs text-[var(--text-secondary)] uppercase tracking-wide font-mono text-[10px]">{exp.category}</td>
+                        <td className="text-xs text-[var(--text-secondary)]">{new Date(exp.date).toLocaleDateString()}</td>
+                        <td className="text-right font-mono text-xs font-bold text-rose-400">-${Number(exp.amount).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </div>
       </div>
-
+ 
       {/* Adjustment Modal */}
       {showAdjustmentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-surface border border-border rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b border-border/50">
-              <h2 className="text-lg font-semibold text-[var(--pm-on-surface)]">Add Adjustment</h2>
-              <button onClick={() => setShowAdjustmentModal(false)} className="text-[var(--pm-on-surface-variant)] hover:text-white transition-colors">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div onClick={() => setShowAdjustmentModal(false)} className="absolute inset-0 modal-overlay-premium" />
+          <div className="relative modal-premium p-6 rounded-2xl max-w-md w-full text-white max-h-[90vh] flex flex-col scrollbar-premium">
+            <div className="flex justify-between items-center mb-4 flex-none">
+              <h2 className="text-lg font-bold tracking-tight text-white">Add Adjustment</h2>
+              <button onClick={() => setShowAdjustmentModal(false)} className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors text-[var(--text-secondary)] hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto space-y-4 scrollbar-premium">
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>Type</label>
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-2">Type</label>
                 <select 
                   value={adjustmentForm.type} 
                   onChange={e => setAdjustmentForm({ ...adjustmentForm, type: e.target.value })}
-                  className="w-full bg-surface-highest border border-border rounded-lg px-3 py-2 text-sm outline-none"
+                  className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-white cursor-pointer transition-colors"
                 >
                   <option value="revenue">Revenue</option>
                   <option value="salary">Salary</option>
@@ -533,29 +566,29 @@ export default function FinancePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>Amount ($)</label>
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-2">Amount ($)</label>
                 <input 
                   type="number" 
                   value={adjustmentForm.amount} 
                   onChange={e => setAdjustmentForm({ ...adjustmentForm, amount: e.target.value })}
                   placeholder="e.g. -500 or 1200"
-                  className="w-full bg-surface-highest border border-border rounded-lg px-3 py-2 text-sm outline-none"
+                  className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-white transition-all focus:bg-black/50"
                 />
-                <p className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Use negative values for deductions.</p>
+                <p className="text-[10px] mt-1 text-[var(--text-secondary)] italic">Use negative values for deductions.</p>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>Reason</label>
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-2">Reason</label>
                 <input 
                   type="text" 
                   value={adjustmentForm.reason} 
                   onChange={e => setAdjustmentForm({ ...adjustmentForm, reason: e.target.value })}
                   placeholder="e.g. Server Cost Correction"
-                  className="w-full bg-surface-highest border border-border rounded-lg px-3 py-2 text-sm outline-none"
+                  className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-white transition-all focus:bg-black/50"
                 />
               </div>
               <button 
                 onClick={submitAdjustment}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors mt-4"
+                className="w-full btn-premium-primary py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider active:scale-[0.98] mt-4"
               >
                 Submit
               </button>
@@ -563,7 +596,7 @@ export default function FinancePage() {
           </div>
         </div>
       )}
-
+ 
       {/* Invoice Modal */}
       {workspace && (
         <CreateInvoiceModal 
@@ -575,7 +608,7 @@ export default function FinancePage() {
           onSuccess={() => { loadData(); fetchClients(workspace.id).then(setClients); }}
         />
       )}
-
+ 
       {/* Manage Clients Modal */}
       {workspace && (
         <ManageClientsModal

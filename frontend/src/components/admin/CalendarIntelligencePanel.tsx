@@ -7,6 +7,7 @@ import { holidaySourceService } from '../../services/holidaySourceService';
 import { supabase } from '../../lib/supabase';
 import type { SyncLogEntry } from '../../services/holidaySourceService';
 import { hasCapability } from '../../core/auth/permissions';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAY_HEADERS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -33,6 +34,8 @@ export function CalendarIntelligencePanel() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newEvent, setNewEvent] = useState({ title: '', start_date: '', end_date: '', event_type: 'company' as const, capacity_impact: 1, description: '' });
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
+
+  useEscapeKey(showCreateForm, () => setShowCreateForm(false));
 
   const loadData = async () => {
     if (!workspace?.id) return;
@@ -132,14 +135,14 @@ export function CalendarIntelligencePanel() {
               const token = session?.access_token;
               window.open(`${import.meta.env.VITE_CALENDAR_API_URL}/auth/google?token=${token}`, '_blank', 'width=600,height=700');
             }}
-            className="px-4 py-2 bg-[#4285F4] hover:bg-[#3367D6] text-[var(--pm-text)] dark:text-white rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
+            className="px-4 py-2 bg-[#4285F4] hover:bg-[#3367D6] text-[var(--pm-text)] text-[var(--text-primary)] rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
           >
             <CalendarDays className="w-4 h-4" /> Connect Google Calendar
           </button>
           {canManageCalendar && (
             <button 
               onClick={() => setShowCreateForm(true)} 
-              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] dark:text-white rounded-lg text-[12px] font-semibold shadow-sm transition-all flex items-center gap-2"
+              className="px-4 py-2 btn-premium-primary rounded-lg text-[12px] font-semibold flex items-center gap-2"
             >
               <Plus className="w-4 h-4" /> Add Event
             </button>
@@ -183,7 +186,7 @@ export function CalendarIntelligencePanel() {
                     <div key={ci} className="aspect-square flex items-center justify-center text-[11px] font-bold relative group">
                       {cell && (
                         <div className={`w-full h-full flex items-center justify-center rounded-lg transition-all ${
-                          cell.events.length > 0 ? 'bg-accent-primary text-[var(--pm-text)] dark:text-white shadow-sm' : 'text-text-tertiary hover:bg-surface-3 hover:text-text-primary'
+                          cell.events.length > 0 ? 'bg-accent-primary text-[var(--pm-text)] text-[var(--text-primary)] shadow-sm' : 'text-text-tertiary hover:bg-surface-3 hover:text-text-primary'
                         }`}>
                           {cell.day}
                         </div>
@@ -276,60 +279,60 @@ export function CalendarIntelligencePanel() {
         </div>
       )}
 
-          {showCreateForm && canManageCalendar && (
-            <div className="fixed inset-0 bg-bg backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowCreateForm(false)}>
-              <div className="bg-surface border border-border w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide">Create Organization Event</h3>
-                  <button onClick={() => setShowCreateForm(false)}><X className="w-4 h-4 text-text-tertiary hover:text-text-primary" /></button>
+      {showCreateForm && canManageCalendar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay-premium">
+          <div className="relative modal-premium w-full max-w-md p-6 rounded-2xl shadow-2xl flex flex-col text-white animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">Create Organization Event</h3>
+              <button onClick={() => setShowCreateForm(false)} aria-label="Close modal"><X className="w-4 h-4 text-text-tertiary hover:text-text-primary" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Title</label>
+                <input value={newEvent.title} onChange={e => setNewEvent(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Company Retreat, Flood Closure" className="w-full input-premium h-10 px-3 text-xs outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Start Date</label>
+                  <input type="date" value={newEvent.start_date} onChange={e => setNewEvent(prev => ({ ...prev, start_date: e.target.value }))} className="w-full input-premium h-10 px-3 text-xs outline-none" />
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Title</label>
-                    <input value={newEvent.title} onChange={e => setNewEvent(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Company Retreat, Flood Closure" className="w-full h-10 bg-bg border border-border px-3 text-xs font-mono text-text-primary outline-none focus:border-white/40" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Start Date</label>
-                      <input type="date" value={newEvent.start_date} onChange={e => setNewEvent(prev => ({ ...prev, start_date: e.target.value }))} className="w-full h-10 bg-bg border border-border px-3 text-xs font-mono text-text-primary outline-none focus:border-white/40" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">End Date</label>
-                      <input type="date" value={newEvent.end_date} onChange={e => setNewEvent(prev => ({ ...prev, end_date: e.target.value }))} className="w-full h-10 bg-bg border border-border px-3 text-xs font-mono text-text-primary outline-none focus:border-white/40" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 py-2">
-                    <input 
-                      type="checkbox" 
-                      id="isLeave" 
-                      checked={newEvent.capacity_impact === 1}
-                      onChange={e => setNewEvent(prev => ({ ...prev, capacity_impact: e.target.checked ? 1 : 0 }))}
-                      className="w-4 h-4 rounded border-border bg-bg text-accent-primary focus:ring-accent-primary"
-                    />
-                    <label htmlFor="isLeave" className="text-xs font-mono text-text-primary cursor-pointer">
-                      Mark as non-working day (Leave/Off)
-                    </label>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Description</label>
-                    <textarea value={newEvent.description} onChange={e => setNewEvent(prev => ({ ...prev, description: e.target.value }))} rows={2} className="w-full bg-bg border border-border px-3 py-2 text-xs font-mono text-text-primary outline-none focus:border-white/40" />
-                  </div>
-                  <button onClick={handleCreateEvent} disabled={!newEvent.title || !newEvent.start_date} className="w-full bg-[var(--pm-surface)] text-[var(--pm-text)] h-10 font-semibold hover:bg-neutral-200 transition-colors uppercase text-xs tracking-wide disabled:opacity-50">
-                    Create Event
-                  </button>
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">End Date</label>
+                  <input type="date" value={newEvent.end_date} onChange={e => setNewEvent(prev => ({ ...prev, end_date: e.target.value }))} className="w-full input-premium h-10 px-3 text-xs outline-none" />
                 </div>
               </div>
+              <div className="flex items-center gap-2 py-2">
+                <input 
+                  type="checkbox" 
+                  id="isLeave" 
+                  checked={newEvent.capacity_impact === 1}
+                  onChange={e => setNewEvent(prev => ({ ...prev, capacity_impact: e.target.checked ? 1 : 0 }))}
+                  className="w-4 h-4 rounded border-border bg-bg text-accent-primary focus:ring-accent-primary"
+                />
+                <label htmlFor="isLeave" className="text-xs font-mono text-text-primary cursor-pointer">
+                  Mark as non-working day (Leave/Off)
+                </label>
+              </div>
+              <div>
+                <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Description</label>
+                <textarea value={newEvent.description} onChange={e => setNewEvent(prev => ({ ...prev, description: e.target.value }))} rows={2} className="w-full input-premium px-3 py-2 text-xs outline-none" />
+              </div>
+              <button onClick={handleCreateEvent} disabled={!newEvent.title || !newEvent.start_date} className="w-full btn-premium-primary h-10 font-semibold uppercase text-xs tracking-wide disabled:opacity-50 text-white rounded-lg">
+                Create Event
+              </button>
             </div>
-          )}
+          </div>
+        </div>
+      )}
       {tab === 'history' && (
-        <div className="border border-border bg-surface p-6">
+        <div className="border border-border bg-surface-3/10 backdrop-blur-md rounded-2xl p-6 shadow-sm overflow-x-auto">
           <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide mb-4 flex items-center gap-2">
             <History className="w-4 h-4" /> Sync History ({syncLogs.length})
           </h3>
           <div>
-            <table className="w-full text-left border-collapse ">
+            <table className="w-full text-left border-collapse table-premium">
               <thead>
-                <tr className="bg-[var(--pm-surface)]/5 border-b border-border">
+                <tr className="border-b border-border">
                   <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Date</th>
                   <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Provider</th>
                   <th className="px-4 py-3 text-[9px] font-mono uppercase tracking-wide text-text-tertiary">Country</th>
@@ -350,7 +353,7 @@ export function CalendarIntelligencePanel() {
                     <td className="px-4 py-3 text-[10px] font-mono text-text-secondary">{log.holidays_found}</td>
                     <td className="px-4 py-3 text-[10px] font-mono text-text-secondary">{log.holidays_imported}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${log.status === 'success' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' : log.status === 'partial' ? 'border-border text-signal-warning bg-signal-warning-bg' : log.status === 'failed' ? 'border-red-500/30 text-signal-critical bg-signal-critical-bg' : 'border-border text-text-tertiary bg-[var(--pm-surface)]/5'}`}>{log.status}</span>
+                      <span className={`text-[9px] font-mono uppercase px-2 py-0.5 border ${log.status === 'success' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' : log.status === 'partial' ? 'border-border text-signal-warning bg-signal-warning-bg' : log.status === 'failed' ? 'border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/30 text-signal-critical bg-signal-critical-bg' : 'border-border text-text-tertiary bg-[var(--pm-surface)]/5'}`}>{log.status}</span>
                     </td>
                   </tr>
                 ))}

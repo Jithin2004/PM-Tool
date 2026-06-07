@@ -86,9 +86,9 @@ export function SkillsMatrixView() {
       {/* Team Capability Overview */}
       <div className="mt-8 space-y-4">
         <h3 className="text-sm font-semibold uppercase tracking-widest text-text-tertiary">Team Capability Overview</h3>
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-left text-sm bg-surface-highest">
-            <thead className="bg-surface-3 border-b border-border">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface-3/10 backdrop-blur-md">
+          <table className="w-full text-left text-sm table-premium">
+            <thead className="border-b border-border">
               <tr>
                 <th className="px-4 py-3 font-medium text-text-secondary">Team Member</th>
                 <th className="px-4 py-3 font-medium text-text-secondary">Top Skills</th>

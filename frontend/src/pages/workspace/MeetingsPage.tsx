@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Calendar, Users, Clock, PlusCircle, Video } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -6,6 +7,7 @@ import { hasCapability } from '../../core/auth/permissions';
 import { Icon } from '../../components/ui/Icon';
 import { MeetingCreationModal } from './MeetingCreationModal';
 import { MeetingDetailsModal } from './MeetingDetailsModal';
+import { PremiumEmptyState } from '../../components/common/PremiumEmptyState';
 
 export default function MeetingsPage() {
   const { workspace } = useWorkspace();
@@ -20,17 +22,12 @@ export default function MeetingsPage() {
     if (!workspace?.id) return;
     setLoading(true);
     
-    // In a real query, we'd filter by user access, but for Sprint 2 scaffolding, we'll fetch all workspace meetings
-    // and filter them down based on capability in the UI or a strict RLS policy.
     let query = supabase.from('meetings').select('*, meeting_attendees(user_id, attended)').eq('workspace_id', workspace.id);
     
     if (filter === 'upcoming') {
       query = query.in('status', ['scheduled', 'in_progress']);
     } else if (filter === 'completed') {
       query = query.eq('status', 'completed');
-    } else if (filter === 'my') {
-      // Need to filter where I am organizer OR I am in attendees. Supabase complex query or local filter.
-      // We will do local filter for simplicity in this sprint setup.
     }
     
     const { data, error } = await query.order('date', { ascending: filter === 'upcoming' });
@@ -53,30 +50,30 @@ export default function MeetingsPage() {
   const canCreateMeetings = hasCapability(profile?.role, 'manage_projects') || hasCapability(profile?.role, 'manage_employees') || hasCapability(profile?.role, 'manage_finance');
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#111827] text-white overflow-hidden">
-      <div className="flex-none p-6 border-b border-white/10">
+    <div className="flex-1 flex flex-col h-full bg-transparent text-white overflow-hidden premium-fade-in-up">
+      <div className="flex-none p-6 border-b border-[var(--border-soft)]">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
           <div>
-            <h1 className="text-2xl font-bold">Meetings Hub</h1>
-            <p className="text-sm text-gray-400 mt-1">Coordinate, track, and execute structured discussions.</p>
+            <h1 className="text-2xl font-bold tracking-tight text-white">Meetings Hub</h1>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">Coordinate, track, and execute structured discussions.</p>
           </div>
           {canCreateMeetings && (
             <button 
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+              className="btn-premium-primary px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2"
             >
-              <Icon name="add" size={18} />
+              <PlusCircle className="w-4 h-4" />
               Schedule Meeting
             </button>
           )}
         </div>
         
-        <div className="mt-6 flex gap-2">
+        <div className="mt-6 flex premium-segmented-control max-w-sm">
           {['upcoming', 'completed', 'my'].map(f => (
             <button
               key={f}
               onClick={() => setFilter(f as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${filter === f ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${filter === f ? 'active' : ''}`}
             >
               {f === 'my' ? 'My Meetings' : f}
             </button>
@@ -84,40 +81,98 @@ export default function MeetingsPage() {
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-6 overflow-y-auto scrollbar-premium">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-64">
             <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
           </div>
         ) : meetings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <Icon name="event" size={48} className="mb-4 opacity-50" />
-            <p>Schedule your first meeting to begin tracking discussions.</p>
+          <div className="max-w-md mx-auto mt-12">
+            <PremiumEmptyState
+              icon={Calendar}
+              title={`No ${filter} meetings`}
+              description={`There are currently no ${filter} meetings registered in this workspace.`}
+              actionLabel={canCreateMeetings ? "Schedule Meeting" : undefined}
+              onAction={canCreateMeetings ? () => setIsCreateModalOpen(true) : undefined}
+              accentColor="#818cf8"
+            />
+          </div>
+        ) : filter === 'upcoming' ? (
+          /* Premium Vertical Timeline Style */
+          <div className="relative border-l border-[var(--border-soft)] pl-8 ml-4 mr-4 space-y-6 max-w-4xl">
+            {meetings.map((meeting) => (
+              <div key={meeting.id} className="relative group">
+                {/* Timeline node/point */}
+                <div className="absolute -left-[41px] top-1.5 w-5 h-5 rounded-full bg-[#050712] border border-indigo-500/40 flex items-center justify-center shadow-[0_0_12px_rgba(129,140,248,0.2)] group-hover:border-indigo-400 group-hover:scale-110 transition-all duration-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                </div>
+                
+                {/* Timeline Card */}
+                <div 
+                  onClick={() => setSelectedMeeting(meeting)}
+                  className="premium-panel premium-hover-lift rounded-2xl p-5 cursor-pointer transition-all duration-200 border border-[var(--border-soft)]"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-widest font-mono px-2 py-0.5 bg-indigo-500/10 text-indigo-300 rounded border border-indigo-500/15">
+                        {meeting.meeting_type}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 bg-cyan-500/10 text-cyan-400 rounded border border-cyan-500/15">
+                        {meeting.status}
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-mono text-[var(--text-secondary)] flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-indigo-400/50" />
+                      {new Date(meeting.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} at {meeting.time}
+                    </div>
+                  </div>
+                  
+                  <h3 className="font-semibold text-lg text-white group-hover:text-indigo-400 transition-colors mb-2">{meeting.title}</h3>
+                  {meeting.agenda && (
+                    <p className="text-xs text-[var(--text-secondary)] mb-4 line-clamp-2 leading-relaxed">{meeting.agenda}</p>
+                  )}
+                  
+                  <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-secondary)] pt-3 border-t border-[var(--border-soft)]">
+                    <div className="flex items-center gap-1.5">
+                      <Video className="w-3.5 h-3.5 text-indigo-400/50" />
+                      <span>Remote Space</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-indigo-400/50" />
+                      <span>{meeting.meeting_attendees?.length || 0} participants</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          /* Standard Cards Grid for Completed/My meetings */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl">
             {meetings.map(meeting => (
               <div 
                 key={meeting.id} 
                 onClick={() => setSelectedMeeting(meeting)}
-                className="bg-white/5 border border-white/10 rounded-xl p-5 hover:bg-white/10 transition-colors cursor-pointer"
+                className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)] cursor-pointer transition-all duration-200"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <span className="text-[10px] uppercase tracking-wider font-mono px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded">
+                <div className="flex items-start justify-between mb-4">
+                  <span className="text-[10px] uppercase tracking-widest font-mono px-2 py-0.5 bg-indigo-500/10 text-indigo-300 rounded border border-indigo-500/15">
                     {meeting.meeting_type}
                   </span>
-                  <span className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded ${meeting.status === 'completed' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                  <span className={`text-[10px] uppercase tracking-widest px-2 py-0.5 rounded border ${
+                    meeting.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/15'
+                  }`}>
                     {meeting.status}
                   </span>
                 </div>
-                <h3 className="font-semibold text-lg mb-2">{meeting.title}</h3>
-                <div className="space-y-2 text-sm text-gray-400">
+                <h3 className="font-semibold text-base text-white group-hover:text-indigo-400 transition-colors mb-3">{meeting.title}</h3>
+                <div className="space-y-2 text-[11px] font-mono text-[var(--text-secondary)]">
                   <div className="flex items-center gap-2">
-                    <Icon name="calendar_today" size={14} />
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400/50" />
                     {new Date(meeting.date).toLocaleDateString()} at {meeting.time}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Icon name="group" size={14} />
+                    <Users className="w-3.5 h-3.5 text-indigo-400/50" />
                     {meeting.meeting_attendees?.length || 0} participants
                   </div>
                 </div>

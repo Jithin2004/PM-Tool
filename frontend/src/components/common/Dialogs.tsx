@@ -70,43 +70,46 @@ export function GlobalDialogs() {
   };
 
   return (
-    <div className='fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4'>
-      {dialogs.map((d, index) => (
-        <div key={d.id} className='bg-surface-highest w-full max-w-sm rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in duration-200' style={{ zIndex: 10000 + index }}>
-          <div className='p-6 flex flex-col gap-4'>
-            <div className='flex items-start gap-4'>
-              {d.type === 'error' ? <AlertTriangle className='w-6 h-6 text-rose-500 shrink-0' /> :
-               d.type === 'warning' ? <AlertTriangle className='w-6 h-6 text-amber-500 shrink-0' /> :
-               d.type === 'success' ? <CheckCircle className='w-6 h-6 text-emerald-500 shrink-0' /> :
-               <Info className='w-6 h-6 text-blue-500 shrink-0' />}
-              <div className='flex-1'>
-                <h3 className='font-semibold text-text-primary mb-1'>{d.title || (d.dialogType === 'confirm' ? 'Confirm Action' : d.dialogType === 'prompt' ? 'Input Required' : 'Notification')}</h3>
-                <p className='text-sm text-text-secondary'>{d.message}</p>
+    <div className='fixed inset-0 z-[9999] flex items-center justify-center modal-overlay-premium p-4'>
+      {dialogs.map((d, index) => {
+        const isDestructive = d.type === 'error' || d.confirmText?.toLowerCase() === 'delete' || d.confirmText?.toLowerCase() === 'remove' || d.confirmText?.toLowerCase() === 'cancel';
+        return (
+          <div key={d.id} className='modal-premium w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl relative flex flex-col' style={{ zIndex: 10000 + index }}>
+            <div className='p-6 flex flex-col gap-4'>
+              <div className='flex items-start gap-4'>
+                {d.type === 'error' ? <AlertTriangle className='w-6 h-6 text-rose-500 shrink-0' /> :
+                 d.type === 'warning' ? <AlertTriangle className='w-6 h-6 text-amber-500 shrink-0' /> :
+                 d.type === 'success' ? <CheckCircle className='w-6 h-6 text-emerald-500 shrink-0' /> :
+                 <Info className='w-6 h-6 text-blue-500 shrink-0' />}
+                <div className='flex-1'>
+                  <h3 className='font-semibold text-text-primary mb-1'>{d.title || (d.dialogType === 'confirm' ? 'Confirm Action' : d.dialogType === 'prompt' ? 'Input Required' : 'Notification')}</h3>
+                  <p className='text-sm text-text-secondary'>{d.message}</p>
+                </div>
               </div>
+              {d.dialogType === 'prompt' && (
+                <input id={'prompt-input-' + d.id} type='text' defaultValue={d.defaultValue} className='w-full input-premium h-11 px-4 text-sm outline-none transition-all placeholder:text-text-quaternary mt-2' autoFocus />
+              )}
             </div>
-            {d.dialogType === 'prompt' && (
-              <input id={'prompt-input-' + d.id} type='text' defaultValue={d.defaultValue} className='w-full bg-surface border border-border rounded-lg p-2.5 text-sm text-text-primary focus:border-accent-primary outline-none mt-2' autoFocus />
-            )}
-          </div>
-          <div className='p-4 bg-surface flex justify-end gap-3 border-t border-border'>
-            {d.dialogType !== 'alert' && (
-              <button onClick={() => handleResolve(d.id, null)} className='px-4 py-2 hover:bg-surface-highest rounded-lg text-sm font-medium text-text-primary transition-colors'>
-                {d.cancelText || 'Cancel'}
+            <div className='p-4 bg-[var(--pm-surface-lowest)]/30 flex justify-end gap-3 border-t border-[var(--border-soft)]'>
+              {d.dialogType !== 'alert' && (
+                <button onClick={() => handleResolve(d.id, null)} className='btn-premium-secondary px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all'>
+                  {d.cancelText || 'Cancel'}
+                </button>
+              )}
+              <button onClick={() => {
+                if (d.dialogType === 'prompt') {
+                  const val = (document.getElementById('prompt-input-' + d.id) as HTMLInputElement)?.value || '';
+                  handleResolve(d.id, val);
+                } else {
+                  handleResolve(d.id, true);
+                }
+              }} className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${isDestructive ? 'btn-premium-danger' : 'btn-premium-primary'}`}>
+                {d.confirmText || 'OK'}
               </button>
-            )}
-            <button onClick={() => {
-              if (d.dialogType === 'prompt') {
-                const val = (document.getElementById('prompt-input-' + d.id) as HTMLInputElement)?.value || '';
-                handleResolve(d.id, val);
-              } else {
-                handleResolve(d.id, true);
-              }
-            }} className='px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 rounded-lg text-sm font-medium text-black transition-colors'>
-              {d.confirmText || 'OK'}
-            </button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
