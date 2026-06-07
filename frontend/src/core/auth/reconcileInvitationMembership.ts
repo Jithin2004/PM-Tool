@@ -133,11 +133,8 @@ async function upsertMemberFromInvitation(
 async function upsertSuperAdmin(
   input: ReconcileInvitationInput,
 ): Promise<{ userRow: Record<string, unknown> | null; workspaceId: string | null; role: UserRole }> {
-  // Check if a workspace already exists
-  const { data: ws } = await supabase.from('workspaces').select('id').limit(1).maybeSingle();
-  
-  const targetWorkspaceId = ws ? ws.id : null;
-  const targetRole = ws ? 'super_admin' : 'pending-workspace-setup';
+  const targetWorkspaceId = null;
+  const targetRole = 'pending-workspace-setup';
 
   const { data, error } = await supabase
     .from('users')
@@ -174,6 +171,20 @@ export async function reconcileInvitationMembership(
 
   if (input.existingUserRow) {
     const role = input.existingUserRow.role as UserRole;
+    
+    // If they have the product key but are currently uninvited, upgrade them
+    if (role === 'uninvited' && isProductKeyVerified()) {
+      const { userRow, workspaceId, role: newRole } = await upsertSuperAdmin(input);
+      if (userRow) {
+        return {
+          outcome: 'product_key_override',
+          userRow,
+          workspaceId,
+          role: newRole,
+        };
+      }
+    }
+
     return {
       outcome: 'existing_member',
       userRow: input.existingUserRow,
