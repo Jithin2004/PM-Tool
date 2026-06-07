@@ -203,6 +203,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setNeedsWorkspaceSetup(false);
       return;
     }
+    if (currentProfile.role === 'pending-workspace-setup') {
+      setNeedsWorkspaceSetup(true);
+      return;
+    }
 
     const result = await repairUserWorkspace(authUser.id, authUser.email);
 
