@@ -19,14 +19,14 @@ export async function exportWorkspace(wsId: string): Promise<WorkspaceExport | n
   if (!isSupabaseConfigured || !wsId) return null;
 
   const [projects, tasks, users, teams, webhooks, integrations, activityLogs, taskDependencies] = await Promise.all([
-    supabase.from('projects').select('*').eq('workspace_id', wsId),
-    supabase.from('tasks').select('*').eq('workspace_id', wsId),
-    supabase.from('users').select('*').eq('workspace_id', wsId),
-    supabase.from('teams').select('*').eq('workspace_id', wsId),
-    supabase.from('webhooks').select('*').eq('workspace_id', wsId),
-    supabase.from('connected_accounts').select('*').eq('workspace_id', wsId),
-    supabase.from('activity_logs').select('*').eq('workspace_id', wsId),
-    supabase.from('task_dependencies').select('*').eq('workspace_id', wsId),
+    supabase.from('projects').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('tasks').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('users').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('teams').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('webhooks').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('connected_accounts').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('activity_logs').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('task_dependencies').select('*').limit(50).eq('workspace_id', wsId),
   ]);
 
   const pack: WorkspaceExport = {

@@ -20,7 +20,7 @@ export function useOptimistic<T>(initialData: T) {
       setState({ data: server, error: null, pending: false });
       return server;
     } catch (err: any) {
-      setState({ data: rollbackRef.current, error: err?.message || 'We couldn't update this. Check your access.', pending: false });
+      setState({ data: rollbackRef.current, error: err?.message || "We couldn't update this. Check your access.", pending: false });
       return rollbackRef.current;
     }
   }, [state.data]);

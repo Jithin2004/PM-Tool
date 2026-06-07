@@ -131,7 +131,7 @@ export async function saveLogisticsData(input: SaveLogisticsInput): Promise<Save
   if (isSupabaseConfigured) {
     const { data: existingWorkspaceSettings, error: findWorkspaceError } = await supabase
       .from('workspace_settings')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', input.workspaceId)
       .maybeSingle();
 

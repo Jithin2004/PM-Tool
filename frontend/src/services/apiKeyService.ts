@@ -53,7 +53,7 @@ export async function fetchApiKeys(workspaceId: string): Promise<ApiKey[]> {
   try {
     const { data } = await supabase
       .from('api_keys')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId)
       .eq('revoked', false)
       .order('created_at', { ascending: false });

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { Icon } from '../../components/ui/Icon';
 import { supabase } from '../../lib/supabase';
+import { employeeLifecycleService, LifecycleAlert } from '../../services/employeeLifecycleService';
 import { useOperationalDerived, useOperationalData } from '../../context/OperationalDataContext';
 import { buildVisibilityContext, filterVisibleTasks } from '../../utils/visibilityFilter';
 import { hasCapability } from '../../core/auth/permissions';

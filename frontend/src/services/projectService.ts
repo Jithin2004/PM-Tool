@@ -41,6 +41,43 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
   return null;
 }
 
+export async function updateProject(
+  projectId: string,
+  updates: Record<string, any>,
+  userRole: string,
+  workspaceId: string
+): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  
+  if (userRole === 'developer') {
+    const restrictedFields = ['deadline', 'budget', 'priority', 'status', 'eta_override', 'assigned_team', 'client_deadline'];
+    const attemptedRestricted = restrictedFields.some(field => field in updates);
+    if (attemptedRestricted) {
+      throw new Error("Developers are not permitted to modify project-level constraints (deadline, budget, priority, status, etc.).");
+    }
+  }
+
+  try {
+    const { error } = await supabase
+      .from('projects')
+      .update(updates)
+      .eq('id', projectId)
+      .eq('workspace_id', workspaceId);
+      
+    if (error) throw error;
+    
+    await activityLogService.appendLog({
+      workspace_id: workspaceId,
+      action: 'project_updated',
+      metadata: { project_id: projectId, updates },
+    });
+    return true;
+  } catch (err) {
+    logServiceFailure('updateProject', { projectId, updates }, err);
+    throw err;
+  }
+}
+
 export async function archiveProject(projectId: string, workspaceId: string, actorId: string): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
   try {

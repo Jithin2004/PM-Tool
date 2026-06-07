@@ -22,7 +22,7 @@ export async function fetchWebhooks(workspaceId: string): Promise<Webhook[]> {
   try {
     const { data } = await supabase
       .from('webhooks')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false });
     if (data) return data as Webhook[];
@@ -60,7 +60,7 @@ export async function fireEventWebhooks(event: string, workspaceId: string, payl
   try {
     const { data: webhooks } = await supabase
       .from('webhooks')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId)
       .eq('enabled', true)
       .contains('events', [event]);

@@ -284,7 +284,7 @@ export const impactSimulationService = {
 
     const { data: row, error: fetchError } = await supabase
       .from('impact_simulations')
-      .select('*')
+      .select('*').limit(50)
       .eq('id', simulationId)
       .single();
 
@@ -492,7 +492,7 @@ export const impactSimulationService = {
     if (!isSupabaseConfigured) return null;
     const { data, error } = await supabase
       .from('impact_simulations')
-      .select('*')
+      .select('*').limit(50)
       .eq('id', id)
       .single();
     if (error || !data) return null;
@@ -503,7 +503,7 @@ export const impactSimulationService = {
     if (!isSupabaseConfigured) return [];
     const { data, error } = await supabase
       .from('impact_simulations')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId)
       .eq('status', 'pending')
       .eq('stale', false)
@@ -530,7 +530,7 @@ export const impactSimulationService = {
   ): Promise<ImpactSimulation | null> {
     const { data: existing } = await supabase
       .from('impact_simulations')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', input.workspaceId)
       .eq('trigger_type', input.triggerEntityType)
       .eq('trigger_id', input.triggerEntityId || '')

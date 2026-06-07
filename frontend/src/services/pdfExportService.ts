@@ -26,7 +26,7 @@ export const exportToPDF = async (
   // Fetch company branding
   const { data: companyProfile } = await supabase
     .from('company_billing_profiles')
-    .select('*')
+    .select('*').limit(50)
     .eq('workspace_id', workspaceId)
     .single();
 

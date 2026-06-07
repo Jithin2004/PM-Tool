@@ -159,7 +159,7 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
   }
   const { data: workspaceRow, error: workspaceError } = await supabase
     .from('workspaces')
-    .select('*')
+    .select('*').limit(50)
     .eq('id', memberRow.workspace_id)
     .maybeSingle();
 

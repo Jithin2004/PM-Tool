@@ -66,7 +66,7 @@ export const fetchNotifications = async (
   if (isSupabaseConfigured) {
     let query = supabase
       .from('notifications')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false });
 

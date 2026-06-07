@@ -198,19 +198,19 @@ export interface CreditNote {
 
 export async function fetchFinanceData(workspaceId: string) {
   const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments, billingMilestones, clientCredits, advanceApplications, creditNotes] = await Promise.all([
-    supabase.from('company_billing_profile').select('*').eq('workspace_id', workspaceId).maybeSingle(),
-    supabase.from('clients').select('*').eq('workspace_id', workspaceId),
+    supabase.from('company_billing_profile').select('*').limit(50).eq('workspace_id', workspaceId).maybeSingle(),
+    supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('invoices').select('*, invoice_line_items(*)').eq('workspace_id', workspaceId),
-    supabase.from('payments').select('*').eq('workspace_id', workspaceId),
-    supabase.from('expenses').select('*').eq('workspace_id', workspaceId),
+    supabase.from('payments').select('*').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('expenses').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('salaries').select('base_salary').eq('workspace_id', workspaceId),
-    supabase.from('financial_periods').select('*').eq('workspace_id', workspaceId),
-    supabase.from('financial_snapshots').select('*').eq('workspace_id', workspaceId),
+    supabase.from('financial_periods').select('*').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('financial_snapshots').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('financial_adjustments').select('*, financial_periods!inner(workspace_id)').eq('financial_periods.workspace_id', workspaceId),
-    supabase.from('billing_milestones').select('*').eq('workspace_id', workspaceId),
-    supabase.from('client_credits').select('*').eq('workspace_id', workspaceId),
-    supabase.from('advance_applications').select('*').eq('workspace_id', workspaceId),
-    supabase.from('credit_notes').select('*').eq('workspace_id', workspaceId)
+    supabase.from('billing_milestones').select('*').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('client_credits').select('*').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('advance_applications').select('*').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('credit_notes').select('*').limit(50).eq('workspace_id', workspaceId)
   ]);
 
   if (companyProfile.error && companyProfile.error.code !== 'PGRST116') throw companyProfile.error;
@@ -252,7 +252,7 @@ export const createClient = async (workspaceId: string, client: Partial<Client>)
 };
 
 export const fetchClients = async (workspaceId: string): Promise<Client[]> => {
-  const { data, error } = await supabase.from('clients').select('*').eq('workspace_id', workspaceId);
+  const { data, error } = await supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId);
   if (error) throw error;
   return data as Client[];
 };
@@ -408,7 +408,7 @@ export async function createCreditNote(workspaceId: string, creditNote: Partial<
 
 export async function applyAdvanceToInvoice(workspaceId: string, clientId: string, invoiceId: string, amount: number, performedBy: string) {
   // Get active client credits
-  const { data: credits } = await supabase.from('client_credits').select('*').eq('client_id', clientId).eq('status', 'active');
+  const { data: credits } = await supabase.from('client_credits').select('*').limit(50).eq('client_id', clientId).eq('status', 'active');
   if (!credits || credits.length === 0) throw new Error("No active advances found.");
 
   // For simplicity, we just log it against the first credit or an aggregate.

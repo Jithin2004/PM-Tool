@@ -456,7 +456,7 @@ export default function FinancePage() {
                               <button 
                                 onClick={async () => {
                                   if (!workspace?.id || !profile?.id) return;
-                                  if (await showConfirm(`Are you sure you want to completely delete draft invoice ${inv.invoice_number}?`)) {
+                                  if (await showConfirm(`Are you sure you want to completely delete draft invoice ${inv.invoice_number}? This action is irreversible.`)) {
                                     try {
                                       await deleteInvoice(inv.id, workspace.id, profile.id, 'User initiated deletion');
                                       loadData();

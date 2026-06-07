@@ -63,10 +63,17 @@ export function WorkspaceSetupWizard() {
             'external access': 'viewer'
           };
           const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-          const inserts = members.map(m => {
+          
+          let imported = 0;
+          let failed = 0;
+          let skipped = 0;
+          let failReasons: string[] = [];
+
+          for (const m of members) {
             const rawRole = m.role.toLowerCase();
             const mappedRole = roleMap[rawRole] || 'developer';
-            return {
+            
+            const insertPayload = {
               email: m.email,
               workspace_id: created.id,
               role: mappedRole,
@@ -74,8 +81,30 @@ export function WorkspaceSetupWizard() {
               invited_by: user?.id,
               expires_at: expiresAt
             };
-          });
-          await supabase.from('invitations').insert(inserts);
+            
+            try {
+              const { error: inviteError } = await supabase.from('invitations').insert(insertPayload);
+              if (inviteError) {
+                if (inviteError.message?.includes('duplicate key') || inviteError.code === '23505') {
+                  skipped++;
+                  failReasons.push(`${m.email}: This employee already exists. Try inviting them instead.`);
+                } else {
+                  failed++;
+                  failReasons.push(`${m.email}: Failed to invite.`);
+                }
+              } else {
+                imported++;
+              }
+            } catch (innerErr) {
+              failed++;
+              failReasons.push(`${m.email}: Unexpected error.`);
+            }
+          }
+          
+          // Optionally show summary before redirect if there are failures
+          if (failed > 0 || skipped > 0) {
+            alert(`Import Summary:\nImported: ${imported}\nSkipped: ${skipped}\nFailed: ${failed}\n\nReasons:\n${failReasons.join('\\n')}`);
+          }
         }
         clearLicense();
         await refreshProfile();

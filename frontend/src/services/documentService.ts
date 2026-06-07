@@ -70,7 +70,7 @@ export function clearSoftDeleteCache(): void { _sd = null; }
 export async function fetchDocuments(workspaceId: string, projectId?: string): Promise<Document[]> {
   if (!isSupabaseConfigured || !workspaceId) return [];
   return await trySd(async (sd) => {
-    let q = supabase.from('documents').select('*').eq('workspace_id', workspaceId);
+    let q = supabase.from('documents').select('*').limit(50).eq('workspace_id', workspaceId);
     if (sd) q = q.is('deleted_at', null);
     q = q.order('updated_at', { ascending: false });
     if (projectId) q = q.eq('project_id', projectId);
@@ -81,7 +81,7 @@ export async function fetchDocuments(workspaceId: string, projectId?: string): P
 export async function searchDocuments(workspaceId: string, queryText: string): Promise<Document[]> {
   if (!isSupabaseConfigured || !workspaceId || !queryText.trim()) return [];
   return await trySd(async (sd) => {
-    let q = supabase.from('documents').select('*').eq('workspace_id', workspaceId)
+    let q = supabase.from('documents').select('*').limit(50).eq('workspace_id', workspaceId)
       .or(`title.ilike.%${queryText}%,content.ilike.%${queryText}%`);
     if (sd) q = q.is('deleted_at', null);
     const { data } = await q.order('updated_at', { ascending: false }).limit(20);
@@ -92,7 +92,7 @@ export async function searchDocuments(workspaceId: string, queryText: string): P
 export async function fetchDocument(docId: string): Promise<Document | null> {
   if (!isSupabaseConfigured) return null;
   return await trySd(async (sd) => {
-    let q = supabase.from('documents').select('*').eq('id', docId);
+    let q = supabase.from('documents').select('*').limit(50).eq('id', docId);
     if (sd) q = q.is('deleted_at', null);
     const { data } = await q.maybeSingle();
     return (data || null) as Document | null;
@@ -101,14 +101,14 @@ export async function fetchDocument(docId: string): Promise<Document | null> {
 
 export async function fetchDocumentIncludingDeleted(docId: string): Promise<Document | null> {
   if (!isSupabaseConfigured) return null;
-  try { const { data } = await supabase.from('documents').select('*').eq('id', docId).maybeSingle(); return data as Document | null; }
+  try { const { data } = await supabase.from('documents').select('*').limit(50).eq('id', docId).maybeSingle(); return data as Document | null; }
   catch { return null; }
 }
 
 export async function fetchArchivedDocuments(workspaceId: string): Promise<Document[]> {
   if (!isSupabaseConfigured || !workspaceId) return [];
   try {
-    const { data } = await supabase.from('documents').select('*').eq('workspace_id', workspaceId)
+    const { data } = await supabase.from('documents').select('*').limit(50).eq('workspace_id', workspaceId)
       .not('deleted_at', 'is', null).order('deleted_at', { ascending: false });
     return (data || []) as Document[];
   } catch { return []; }
@@ -146,7 +146,7 @@ export async function updateDocument(docId: string, updates: Partial<Document>):
   try {
     const { data: current } = await supabase
       .from('documents')
-      .select('*')
+      .select('*').limit(50)
       .eq('id', docId)
       .maybeSingle();
     if (!current) return false;
@@ -236,7 +236,7 @@ export async function fetchVersions(docId: string): Promise<DocVersion[]> {
   try {
     const { data } = await supabase
       .from('doc_versions')
-      .select('*')
+      .select('*').limit(50)
       .eq('doc_id', docId)
       .order('version', { ascending: false });
     if (data) return data as DocVersion[];
@@ -268,7 +268,7 @@ export async function fetchAnnotations(docId: string): Promise<DocAnnotation[]> 
   try {
     const { data } = await supabase
       .from('doc_annotations')
-      .select('*')
+      .select('*').limit(50)
       .eq('doc_id', docId)
       .order('created_at', { ascending: true });
     if (data) return data as DocAnnotation[];

@@ -165,6 +165,11 @@ export function SharedProjectDashboard() {
         </div>
         
         <div className="flex items-center gap-4">
+          {project.client_view_budget && project.budget && (
+            <div className="px-3 py-1 bg-[var(--surface-glass)] border border-[var(--border-soft)] text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-wider rounded-lg">
+              Budget: <span className="text-white">${project.budget.toLocaleString()}</span>
+            </div>
+          )}
           <div className="px-3 py-1 bg-[var(--surface-glass)] border border-[var(--border-soft)] text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-wider rounded-lg">
             Status: <span className="text-white capitalize">{project.status}</span>
           </div>

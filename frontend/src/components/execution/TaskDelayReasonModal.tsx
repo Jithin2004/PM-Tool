@@ -13,11 +13,12 @@ interface TaskDelayReasonModalProps {
 
 const VALID_REASONS = [
   'Requirement changed',
-  'New learning',
-  'External dependency',
   'Technical blocker',
-  'Initial estimate wrong',
-  'Execution delay'
+  'External dependency',
+  'Learning curve',
+  'Wrong initial estimate',
+  'Unexpected complexity',
+  'Other'
 ];
 
 export function TaskDelayReasonModal({ task, isOpen, onClose, onSubmit }: TaskDelayReasonModalProps) {

@@ -104,7 +104,7 @@ export const aiRecommendationService = {
       try {
         const query = supabase
           .from('ai_recommendations')
-          .select('*')
+          .select('*').limit(50)
           .eq('workspace_id', workspaceId)
           .order('created_at', { ascending: false });
           

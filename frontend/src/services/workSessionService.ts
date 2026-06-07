@@ -10,7 +10,7 @@ export const workSessionService = {
     try {
       const { data, error } = await supabase
         .from('work_sessions')
-        .select('*')
+        .select('*').limit(50)
         .eq('user_id', userId)
         .in('status', ['active', 'paused'])
         .maybeSingle();
@@ -29,7 +29,7 @@ export const workSessionService = {
     try {
       const { data, error } = await supabase
         .from('work_session_pauses')
-        .select('*')
+        .select('*').limit(50)
         .eq('session_id', sessionId)
         .order('pause_start', { ascending: true });
       if (error) { logServiceFailure('getSessionPauses', { sessionId }, error); return []; }
@@ -83,7 +83,7 @@ export const workSessionService = {
           session_type: sessionType,
           status: 'active'
         })
-        .select('*')
+        .select('*').limit(50)
         .single();
         
       if (error) { logServiceFailure('startSession', { taskId, userId }, error); return null; }
@@ -130,7 +130,7 @@ export const workSessionService = {
       // Find open pause
       const { data: pauses } = await supabase
         .from('work_session_pauses')
-        .select('*')
+        .select('*').limit(50)
         .eq('session_id', sessionId)
         .is('pause_end', null)
         .order('pause_start', { ascending: false })
@@ -153,61 +153,24 @@ export const workSessionService = {
   async stopSession(sessionId: string, workspaceId: string, userId: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
     try {
-      const now = new Date();
-      // Find open pause and close it if any
-      const { data: pauses } = await supabase
-        .from('work_session_pauses')
-        .select('*')
-        .eq('session_id', sessionId)
-        .is('pause_end', null)
-        .order('pause_start', { ascending: false })
-        .limit(1);
-
-      if (pauses && pauses.length > 0) {
-        await supabase
-          .from('work_session_pauses')
-          .update({ pause_end: now.toISOString() })
-          .eq('id', pauses[0].id);
-      }
-
-      // Calculate total duration using DB side or simple difference logic
-      // In a real app we might do this via DB trigger, but for now we let it be rough or handled by sync engine
-      // We will just mark it completed and let the time calculation happen securely
-      const { data: sessionData } = await supabase.from('work_sessions').select('started_at').eq('id', sessionId).single();
-      let durationMins = 0;
-      if (sessionData) {
-        durationMins = Math.floor((now.getTime() - new Date(sessionData.started_at).getTime()) / 60000);
-      }
-
-      // Note: A true time calculation would subtract paused time. We will do this here:
-      const allPauses = await this.getSessionPauses(sessionId);
-      let pausedTimeMs = 0;
-      allPauses.forEach(p => {
-        const pStart = new Date(p.pause_start).getTime();
-        const pEnd = p.pause_end ? new Date(p.pause_end).getTime() : now.getTime();
-        pausedTimeMs += Math.max(0, pEnd - pStart);
+      // Sprint 9 Security: Duration is now computed SERVER-SIDE via PostgreSQL RPC.
+      // This prevents client-side manipulation of hours, started_at, or duration_minutes.
+      const { data, error } = await supabase.rpc('complete_work_session', {
+        p_session_id: sessionId
       });
-      durationMins -= Math.floor(pausedTimeMs / 60000);
 
-      const { error } = await supabase
-        .from('work_sessions')
-        .update({ 
-          status: 'completed', 
-          ended_at: now.toISOString(),
-          duration_minutes: Math.max(0, durationMins),
-          updated_at: now.toISOString() 
-        })
-        .eq('id', sessionId);
-        
       if (error) { logServiceFailure('stopSession', { sessionId }, error); return false; }
-      
-      await activityLogService.appendLog({
-        workspace_id: workspaceId,
-        actor_id: userId,
-        action: 'work_session_stopped',
-        project_id: null,
-        metadata: { session_id: sessionId, duration_minutes: Math.max(0, durationMins) }
-      });
+
+      const result = data as { success: boolean; duration_minutes?: number; requires_review?: boolean; error?: string };
+
+      if (!result?.success) {
+        logServiceFailure('stopSession', { sessionId }, new Error(result?.error || 'Server rejected session completion'));
+        return false;
+      }
+
+      // Activity log is now written server-side by the RPC function.
+      // No need for a separate client-side log entry.
+
       return true;
     } catch (e) {
       return false;
@@ -217,7 +180,7 @@ export const workSessionService = {
   async editSession(sessionId: string, workspaceId: string, userId: string, updates: Partial<WorkSession>, reason: string): Promise<{ success: boolean; requiresApproval: boolean }> {
     if (!isSupabaseConfigured) return { success: false, requiresApproval: false };
     try {
-      const { data: oldSession } = await supabase.from('work_sessions').select('*').eq('id', sessionId).single();
+      const { data: oldSession } = await supabase.from('work_sessions').select('*').limit(50).eq('id', sessionId).single();
       if (!oldSession) return { success: false, requiresApproval: false };
 
       if (oldSession.locked_at) {
@@ -368,7 +331,7 @@ export const workSessionService = {
   async adjustSession(sessionId: string, workspaceId: string, userId: string, newValueMins: number, reason: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
     try {
-      const { data: session } = await supabase.from('work_sessions').select('*').eq('id', sessionId).single();
+      const { data: session } = await supabase.from('work_sessions').select('*').limit(50).eq('id', sessionId).single();
       if (!session) return false;
 
       const oldValueMins = session.duration_minutes || 0;

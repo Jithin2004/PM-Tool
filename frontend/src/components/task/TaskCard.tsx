@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, ArrowRight, ArrowUp, AlertTriangle, Clock, Users, Shield, Link2, MoreHorizontal, Edit2 } from 'lucide-react';
+import { formatUserName } from '../../utils/userFormatting';
 import { Task, Project } from '../../types';
 import { getTaskDeadline } from '../../core/types/temporal';
 import { calculateTaskCountdown } from '../../services/etaService';
@@ -251,8 +252,8 @@ export function TaskCard({
                   </div>
                 )}
                 {!isCompact && (
-                  <span className="text-[10px] font-medium text-[var(--text-secondary)] truncate max-w-[80px]">
-                    {assigneeProfile.full_name?.split(' ')[0] || assigneeProfile.email?.split('@')[0]}
+                  <span className="text-[10px] font-medium text-[var(--text-secondary)] truncate max-w-[120px]">
+                    {formatUserName(assigneeProfile)}
                   </span>
                 )}
               </div>

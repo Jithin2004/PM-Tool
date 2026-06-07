@@ -43,7 +43,7 @@ export async function fetchAutomationRules(workspaceId: string): Promise<Automat
   try {
     const { data } = await supabase
       .from('automation_rules')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false });
     if (data) return data as AutomationRule[];
@@ -90,7 +90,7 @@ export async function deleteAutomationRule(ruleId: string): Promise<boolean> {
 export async function fetchTemplates(): Promise<AutomationTemplate[]> {
   if (!isSupabaseConfigured) return BUILTIN_TEMPLATES;
   try {
-    const { data } = await supabase.from('automation_templates').select('*').order('category');
+    const { data } = await supabase.from('automation_templates').select('*').limit(50).order('category');
     if (data && data.length > 0) {
       const seen = new Set<string>();
       for (const t of BUILTIN_TEMPLATES) { seen.add(t.id); }
@@ -198,7 +198,7 @@ export async function evaluateTriggers(
     setTimeout(() => processedEvents.delete(key), EVENT_DEDUP_TTL);
     const { data: rules } = await supabase
       .from('automation_rules')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId)
       .eq('trigger_event', event)
       .eq('enabled', true);
@@ -222,7 +222,7 @@ export async function executeAutomationRule(
   workspaceId: string, ruleId: string, event: string, payload: Record<string, any>
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const { data: rule } = await supabase.from('automation_rules').select('*').eq('id', ruleId).maybeSingle();
+    const { data: rule } = await supabase.from('automation_rules').select('*').limit(50).eq('id', ruleId).maybeSingle();
     if (!rule) return { success: false, message: 'Rule not found' };
     for (const action of rule.actions) {
       await executeAction(action, workspaceId, { ...payload, trigger_event: event });

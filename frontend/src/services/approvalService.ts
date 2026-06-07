@@ -43,7 +43,7 @@ export async function fetchApprovalChains(workspaceId: string): Promise<Approval
   try {
     const { data } = await supabase
       .from('approval_chains')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false });
     if (data) return data as ApprovalChain[];
@@ -89,7 +89,7 @@ export async function fetchApprovalSteps(chainId: string): Promise<ApprovalStep[
   try {
     const { data } = await supabase
       .from('approval_steps')
-      .select('*')
+      .select('*').limit(50)
       .eq('chain_id', chainId)
       .order('step_order', { ascending: true });
     if (data) return data as ApprovalStep[];
@@ -170,7 +170,7 @@ export async function approveStep(instanceId: string, stepOrder: number, _userId
       .eq('id', instanceId).single();
     if (!instance) return false;
     const { data: steps } = await supabase
-      .from('approval_steps').select('*')
+      .from('approval_steps').select('*').limit(50)
       .eq('chain_id', instance.chain_id)
       .order('step_order', { ascending: true });
     const totalSteps = steps?.length || 0;
@@ -201,7 +201,7 @@ export async function rejectStep(instanceId: string, _stepOrder: number, _userId
   if (!isSupabaseConfigured) return false;
   try {
     const { data: instance } = await supabase
-      .from('approval_instances').select('*').eq('id', instanceId).single();
+      .from('approval_instances').select('*').limit(50).eq('id', instanceId).single();
     if (!instance) return false;
     await supabase.from('approval_instances').update({
       status: 'rejected', completed_at: new Date().toISOString(),

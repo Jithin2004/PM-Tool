@@ -25,7 +25,7 @@ export const waitStateEngine = {
   async fetchWaitStates(workspaceId: string, targetType?: WaitStateTargetType, targetId?: string): Promise<WaitState[]> {
     if (!isSupabaseConfigured) return [];
     try {
-      let query = supabase.from('wait_states').select('*').eq('workspace_id', workspaceId).is('deleted_at', null);
+      let query = supabase.from('wait_states').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null);
       if (targetType) query = query.eq('target_type', targetType);
       if (targetId) query = query.eq('target_id', targetId);
       
@@ -71,7 +71,7 @@ export const waitStateEngine = {
       const now = new Date();
       
       // Fetch current to calculate duration
-      const { data: current } = await supabase.from('wait_states').select('*').eq('id', params.waitStateId).single();
+      const { data: current } = await supabase.from('wait_states').select('*').limit(50).eq('id', params.waitStateId).single();
       if (!current) return false;
 
       const startedAt = new Date(current.started_at);

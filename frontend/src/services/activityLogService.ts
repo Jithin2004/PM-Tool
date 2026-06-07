@@ -241,7 +241,7 @@ export const activityLogService = {
     try {
       let query = supabase
         .from('activity_logs')
-        .select('*')
+        .select('*').limit(50)
         .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: true })
         .order('id', { ascending: true });

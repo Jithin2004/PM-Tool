@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
-import { Users, Shield, Zap, Activity, Clock, Briefcase, Layers } from 'lucide-react';
+import { Users, Shield, Zap, Activity, Clock, Briefcase, Layers, User } from 'lucide-react';
+import { formatUserName } from '../../utils/userFormatting';
 
 export function TeamRosterView() {
   const { profile } = useAuth();
@@ -74,9 +75,10 @@ export function TeamRosterView() {
                   <div>
                     <h3 className="text-base font-semibold text-text-primary uppercase tracking-tight">{team.name}</h3>
                     <div className="flex items-center gap-3 mt-1 text-[11px] font-mono text-text-tertiary">
-                      <span>STAFF: <strong className="text-text-secondary">{team.members.length + (team.pm ? 1 : 0)} Units</strong></span>
-                      <span>•</span>
-                      <span>LEAD: <strong className="text-text-secondary">{team.pm ? (team.pm.full_name || team.pm.email) : 'Unallocated'}</strong></span>
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono bg-purple-500/10 text-purple-400 px-2 py-1 rounded">
+                        <User className="w-3 h-3" />
+                        <span>LEAD: <strong className="text-text-secondary">{team.pm ? formatUserName(team.pm) : 'Unallocated'}</strong></span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -138,8 +140,8 @@ export function TeamRosterView() {
                               <div className="w-8 h-8 border border-border bg-surface-3 flex items-center justify-center rounded-md shrink-0 text-text-secondary text-[10px] font-mono font-bold">
                                 <Shield className="w-4 h-4 text-text-secondary" />
                               </div>
-                              <div>
-                                <p className="font-semibold text-text-primary">{team.pm.full_name || team.pm.email}</p>
+                              <div className="ml-3">
+                                <p className="font-semibold text-text-primary">{formatUserName(team.pm)}</p>
                                 <p className="text-[9px] font-mono text-text-tertiary uppercase">Squad Lead</p>
                               </div>
                             </div>
@@ -192,7 +194,7 @@ export function TeamRosterView() {
                                   {(member.full_name || member.email).charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                  <p className="font-semibold text-text-primary">{member.full_name || member.email}</p>
+                                  <p className="font-semibold text-text-primary">{formatUserName(member)}</p>
                                   <p className="text-[9px] font-mono text-text-tertiary uppercase">Developer</p>
                                 </div>
                               </div>

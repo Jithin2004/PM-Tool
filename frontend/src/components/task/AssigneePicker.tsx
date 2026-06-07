@@ -7,6 +7,7 @@ interface UserProfile {
   full_name?: string;
   avatar_url?: string;
   role?: string;
+  employment_status?: string;
 }
 
 interface AssigneePickerProps {
@@ -18,6 +19,7 @@ interface AssigneePickerProps {
 }
 
 import { useOperationalData } from '../../context/OperationalDataContext';
+import { formatUserName, isUserArchived } from '../../utils/userFormatting';
 
 export function AssigneePicker({ users, value, onChange, disabled, contextText = '' }: AssigneePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -57,12 +59,14 @@ export function AssigneePicker({ users, value, onChange, disabled, contextText =
     });
   }
 
-  // Sort users so that matched users appear first
-  const sortedUsers = [...users].sort((a, b) => {
-    const aMatch = userSkillMatchMap.has(a.id) ? 1 : 0;
-    const bMatch = userSkillMatchMap.has(b.id) ? 1 : 0;
-    return bMatch - aMatch;
-  });
+  // Sort users so that matched users appear first, and filter out archived users unless currently selected
+  const sortedUsers = [...users]
+    .filter(u => !isUserArchived(u) || u.id === value)
+    .sort((a, b) => {
+      const aMatch = userSkillMatchMap.has(a.id) ? 1 : 0;
+      const bMatch = userSkillMatchMap.has(b.id) ? 1 : 0;
+      return bMatch - aMatch;
+    });
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -83,7 +87,7 @@ export function AssigneePicker({ users, value, onChange, disabled, contextText =
                 </div>
               )}
               <span className="truncate">
-                {selectedUser.full_name || selectedUser.email.split('@')[0]}
+                {formatUserName(selectedUser)}
               </span>
             </>
           ) : (
@@ -134,7 +138,7 @@ export function AssigneePicker({ users, value, onChange, disabled, contextText =
                   )}
                   <div className="flex flex-col items-start truncate">
                     <span className={`truncate ${isSelected ? 'text-accent-primary font-semibold' : 'text-text-primary'}`}>
-                      {user.full_name || user.email.split('@')[0]}
+                      {formatUserName(user)}
                     </span>
                     {matches && matches.length > 0 ? (
                       <span className="text-[10px] text-emerald-400 truncate bg-emerald-400/10 px-1 rounded">

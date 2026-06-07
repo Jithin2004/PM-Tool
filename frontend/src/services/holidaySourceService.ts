@@ -229,7 +229,7 @@ class HolidaySourceService {
 
       const { data: logs } = await supabase
         .from('calendar_sync_logs')
-        .select('*')
+        .select('*').limit(50)
         .eq('workspace_id', workspaceId)
         .eq('year', year)
         .order('created_at', { ascending: false })
@@ -261,7 +261,7 @@ class HolidaySourceService {
   async getSyncLogs(workspaceId: string, limit = 20): Promise<SyncLogEntry[]> {
     const { data } = await supabase
       .from('calendar_sync_logs')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
       .limit(limit);

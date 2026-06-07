@@ -7,7 +7,7 @@ import type { AttendanceRow, SalaryRow } from '../core/operational/types';
 export async function fetchProjects(workspaceId: string): Promise<Project[]> {
   const { data, error } = await supabase
     .from('projects')
-    .select('*')
+    .select('*').limit(50)
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
 
@@ -24,14 +24,14 @@ export const fetchWorkspaceProjects = fetchProjects;
 export async function fetchWorkspaceProfiles(workspaceId: string): Promise<Profile[]> {
   const { data, error } = await supabase
     .from('users')
-    .select('*')
+    .select('*').limit(50)
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: true });
 
   let users = (!error && data) ? (data as Profile[]) : [];
   
   if (users.length === 0) {
-    const { data: fallback, error: fallbackErr } = await supabase.from('profiles').select('*');
+    const { data: fallback, error: fallbackErr } = await supabase.from('profiles').select('*').limit(50);
     if (!fallbackErr && fallback) {
       users = fallback as Profile[];
     }
@@ -40,7 +40,7 @@ export async function fetchWorkspaceProfiles(workspaceId: string): Promise<Profi
   if (users.length > 0) {
     const { data: empData, error: empError } = await supabase
       .from('employment_records')
-      .select('user_id, date_of_joining, employment_status')
+      .select('user_id, date_of_joining, employment_status, left_at')
       .eq('workspace_id', workspaceId);
 
     if (!empError && empData) {
@@ -53,6 +53,7 @@ export async function fetchWorkspaceProfiles(workspaceId: string): Promise<Profi
             ...u,
             date_of_joining: emp.date_of_joining,
             employment_status: emp.employment_status,
+            left_at: emp.left_at,
           };
         }
         return u;
@@ -68,7 +69,7 @@ export async function fetchWorkspaceAttendance(workspaceId: string): Promise<Att
   try {
     const { data, error } = await supabase
       .from('attendance')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId);
     if (!error && data) return data as AttendanceRow[];
   } catch (err) {
@@ -81,7 +82,7 @@ export async function fetchWorkspaceSalaries(workspaceId: string): Promise<Salar
   try {
     const { data, error } = await supabase
       .from('salaries')
-      .select('*')
+      .select('*').limit(50)
       .eq('workspace_id', workspaceId);
     if (!error && data) return data as SalaryRow[];
   } catch (err) {
@@ -92,7 +93,7 @@ export async function fetchWorkspaceSalaries(workspaceId: string): Promise<Salar
 export async function fetchWorkspaceTeams(workspaceId: string): Promise<Team[]> {
   const { data: teamsData, error: teamsError } = await supabase
     .from('teams')
-    .select('*')
+    .select('*').limit(50)
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
 
@@ -114,7 +115,7 @@ export async function fetchWorkspaceTeams(workspaceId: string): Promise<Team[]> 
 
   const { data: membersData, error: membersError } = await supabase
     .from('team_members')
-    .select('*')
+    .select('*').limit(50)
     .eq('workspace_id', workspaceId);
 
   const membersList = !membersError && membersData ? membersData : [];
@@ -187,7 +188,7 @@ export async function fetchWorkspaceSettingsBlob(workspaceId: string): Promise<R
 }
 
 export async function fetchSkills(workspaceId: string) {
-  const { data } = await supabase.from('skills').select('*').eq('workspace_id', workspaceId);
+  const { data } = await supabase.from('skills').select('*').limit(50).eq('workspace_id', workspaceId);
   return data || [];
 }
 
@@ -198,7 +199,7 @@ export async function fetchUserSkills(workspaceId: string) {
   
   if (userIds.length === 0) return [];
   
-  const { data: userSkills } = await supabase.from('user_skills').select('*').in('user_id', userIds);
+  const { data: userSkills } = await supabase.from('user_skills').select('*').limit(50).in('user_id', userIds);
   return userSkills || [];
 }
 export async function createSkill(workspaceId: string, name: string, category: string = 'General') {
