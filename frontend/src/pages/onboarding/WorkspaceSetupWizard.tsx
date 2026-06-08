@@ -106,7 +106,6 @@ export function WorkspaceSetupWizard() {
             alert(`Import Summary:\nImported: ${imported}\nSkipped: ${skipped}\nFailed: ${failed}\n\nReasons:\n${failReasons.join('\\n')}`);
           }
         }
-        clearLicense();
         await refreshProfile();
         window.location.href = '/overview';
       }
@@ -130,7 +129,6 @@ export function WorkspaceSetupWizard() {
       });
       if (ws) {
         await demoWorkspacesService.injectDemoData(ws.id, profile!.id, selectedTemplate);
-        clearLicense();
         await refreshProfile();
         window.location.href = '/overview';
       }
