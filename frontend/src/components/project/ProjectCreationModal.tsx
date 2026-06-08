@@ -56,6 +56,11 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
   const [allocUser, setAllocUser] = useState('');
   const [allocPercent, setAllocPercent] = useState(100);
 
+  // Derived available users (non-archived)
+  const availableUsers = useMemo(() => {
+    return (profiles || []).filter((p: any) => p.status !== 'archived');
+  }, [profiles]);
+
   if (!isOpen) return null;
 
   const handleUpdate = (field: keyof CreateProjectInput, value: any) => {
@@ -130,10 +135,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     tabs.push({ id: 'finance', label: 'Finance', icon: DollarSign });
   }
 
-  // Derived available users (non-archived)
-  const availableUsers = useMemo(() => {
-    return (profiles || []).filter((p: any) => p.status !== 'archived');
-  }, [profiles]);
+
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-bg/90 backdrop-blur-sm p-4 overflow-y-auto">
