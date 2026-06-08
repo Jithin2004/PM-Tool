@@ -991,7 +991,7 @@ export async function runSyntheticStressTest(options?: StressTestOptions): Promi
       stressMeta.service_fallbacks = report.generation.serviceFallbacks;
     }
     withTimeout(activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_test_completed', metadata: stressMeta }), 5000).catch(() => {});
-    withTimeout(activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_cleanup_completed', metadata: { run_id: runId, success: report.cleanup.success, orphan_count: report.cleanup.orphanCount, remaining, cleanup_ms: Math.round(report.cleanup.timeMs) } }), 5000).catch(() => {});
+    withTimeout(activityLogService.appendLog({ workspace_id: wsId, actor_id: undefined, action: 'stress_cleanup_completed', metadata: { run_id: runId, success: report.cleanup.success, orphan_count: report.cleanup.orphanCount, cleanup_ms: Math.round(report.cleanup.timeMs) } }), 5000).catch(() => {});
   } catch (e: any) {
     report.recommendations.push(`FATAL: ${e.message}`);
     report.riskLevel = 'HIGH';
