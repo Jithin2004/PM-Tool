@@ -473,9 +473,9 @@ export function ProjectDetailsModal({
   const [status, setStatus] = useState(project.status);
   const [priority, setPriority] = useState(project.priority);
   const [teamId, setTeamId] = useState(project.team_id || '');
-  const [pBest, setPBest] = useState(project.pert_best.toString());
-  const [pLikely, setPLikely] = useState(project.pert_likely.toString());
-  const [pWorst, setPWorst] = useState(project.pert_worst.toString());
+  const [pBest, setPBest] = useState(project.pert_best?.toString() || '');
+  const [pLikely, setPLikely] = useState(project.pert_likely?.toString() || '');
+  const [pWorst, setPWorst] = useState(project.pert_worst?.toString() || '');
   const [proposedStartDate, setProposedStartDate] = useState(project.proposed_start_date?.substring(0, 10) || '');
   const [clientDeadline, setClientDeadline] = useState(project.client_deadline?.substring(0, 10) || '');
   const [deleteReason, setDeleteReason] = useState('');
