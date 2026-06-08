@@ -749,7 +749,7 @@ function PMOrchestrationSurface({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {[
           { 
-            label: 'Active Initiatives', value: activeProjectsCount, sub: `+${completedProjectsCount} deployed`, icon: 'inventory_2', color: 'var(--pm-primary)',
+            label: 'Active Projects', value: activeProjectsCount, sub: `+${completedProjectsCount} deployed`, icon: 'inventory_2', color: 'var(--pm-primary)',
             explanation: 'Count of projects currently in execution phase. Deployed projects are archived.'
           },
           { 
@@ -1035,7 +1035,7 @@ function SuperAdminGovernanceSurface({
       {/* Admin KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          { label: 'Active Sprints/Initiatives', value: activeProjectsCount, sub: `Across ${projects?.length || 0} total`, icon: 'inventory_2', color: 'var(--pm-primary)' },
+          { label: 'Active Sprints/Projects', value: activeProjectsCount, sub: `Across ${projects?.length || 0} total`, icon: 'inventory_2', color: 'var(--pm-primary)' },
           { label: 'Total Platform Tasks', value: totalTasks, sub: 'System-wide scope', icon: 'assignment', color: 'var(--pm-primary)' },
           { label: 'Managed Contributor Profiles', value: userCount, sub: 'Assigned bandwidth', icon: 'groups', color: '#34d399' },
           { label: 'Active Alerts', value: overloadedOperators.length + riskBreaches.length, sub: 'Unresolved risks', icon: 'warning', color: (overloadedOperators.length + riskBreaches.length) > 0 ? 'var(--pm-error)' : '#34d399' }

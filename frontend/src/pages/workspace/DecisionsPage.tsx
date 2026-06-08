@@ -444,7 +444,7 @@ export default function DecisionsPage() {
 
             {decisions.length === 0 ? (
               <div className="text-center py-12 text-text-quaternary text-xs font-mono uppercase">
-                No active decisions registered. Click simulator or create above.
+                No active decisions registered. Click demo or create above.
               </div>
             ) : (
               <div className="space-y-4">

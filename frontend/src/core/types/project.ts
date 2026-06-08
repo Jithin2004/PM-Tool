@@ -26,6 +26,7 @@ export interface Project {
   client_id?: string;
   team_id?: string;
   owner_id?: string;
+  department_id?: string;
   name: string;
   description?: string;
   /** Persistence field — semantic alias: ProjectLifecycleState */
@@ -63,6 +64,9 @@ export interface Project {
   contract_value?: number;
   billing_model?: 'Fixed Price' | 'Hourly' | 'Milestone Based' | 'Retainer' | 'Internal Project';
   billing_currency?: string;
+  budget?: number;
+  approval_workflow?: 'standard' | 'strict' | 'none';
+  pert_enabled?: boolean;
 }
 
 export interface ProjectReview {

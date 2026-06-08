@@ -684,7 +684,7 @@ export function WorkspaceSetupPage() {
           </div>
           
           <div className="border border-border/50 rounded-xl p-5 space-y-1 text-center bg-surface-3/50">
-            <span className="block text-[9px] font-mono-pm uppercase" style={{ color: 'var(--pm-on-surface-variant)' }}>40h Initiative Completion</span>
+            <span className="block text-[9px] font-mono-pm uppercase" style={{ color: 'var(--pm-on-surface-variant)' }}>40h Project Completion</span>
             <span className="block mt-1 text-2xl font-bold tracking-tight" style={{ color: 'var(--pm-tertiary)' }}>{preview.predictedCompletion.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
           </div>
 

@@ -346,7 +346,7 @@ export function WorkspaceSetupWizard() {
 
         <aside className="premium-panel rounded-2xl p-8 font-geist h-fit space-y-6 lg:sticky top-8">
           <h3 className="font-semibold text-[var(--pm-on-surface)] flex items-center gap-2"><Zap className="w-4 h-4 text-amber-400"/> Instant Demo Workspaces</h3>
-          <p className="text-xs text-[var(--pm-on-surface-variant)]">Bypass manual configuration and instantiate a fully-loaded enterprise simulator.</p>
+          <p className="text-xs text-[var(--pm-on-surface-variant)]">Bypass manual configuration and instantiate a fully-loaded enterprise demo environment.</p>
           
           <div className="space-y-3">
             {Object.keys(TEMPLATE_SUMMARIES).map(type => {
@@ -419,7 +419,7 @@ export function WorkspaceSetupWizard() {
               }`}
             >
               {demoLoading ? (
-                <>Building Simulator...</>
+                <>Building Environment...</>
               ) : (
                 <>
                   Create Demo Workspace <Zap className={`w-4 h-4 ${selectedTemplate ? 'text-[var(--pm-text)]' : 'opacity-50'}`} />

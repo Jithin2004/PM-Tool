@@ -90,7 +90,7 @@ export function ProjectWorkspace() {
               className="bg-text-primary text-bg px-4 py-2 rounded-md font-medium text-xs flex items-center gap-2 hover:bg-neutral-200 transition-colors shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              <span>New Initiative</span>
+              <span>New Project</span>
             </button>
           )}
         </div>

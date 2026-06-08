@@ -219,7 +219,7 @@ export function LandingPage() {
                     <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-surface-container-highest border border-[var(--pm-border)] dark:border-[var(--border-soft)] flex items-center justify-center text-on-surface font-mono-label shadow-lg">01</div>
                     <div>
                       <h3 className="text-xl font-semibold text-on-surface mb-3">Onboard & Configure</h3>
-                      <p className="text-on-surface-variant leading-relaxed text-sm">Map your entire initiative structure before execution begins. Define the critical path, infrastructure requirements, and expected operational blocks.</p>
+                      <p className="text-on-surface-variant leading-relaxed text-sm">Map your entire project structure before execution begins. Define the critical path, infrastructure requirements, and expected operational blocks.</p>
                     </div>
                   </div>
                   <div className="md:col-span-7">

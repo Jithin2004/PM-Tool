@@ -47,7 +47,7 @@ export function PortfolioAnalytics() {
     const groups: Record<string, typeof projects> = {
       'Enterprise SLA Portfolio': [],
       'Public Sector Accounts': [],
-      'Internal R&D Initiatives': []
+      'Internal R&D Projects': []
     };
 
     projects.forEach((proj: any) => {
@@ -56,7 +56,7 @@ export function PortfolioAnalytics() {
       } else if (proj.tags?.includes('PUBLIC')) {
         groups['Public Sector Accounts'].push(proj);
       } else if (proj.tags?.includes('R&D') || proj.tags?.includes('NEW')) {
-        groups['Internal R&D Initiatives'].push(proj);
+        groups['Internal R&D Projects'].push(proj);
       } else {
         // Fallback round-robin based on name length for mock variation
         if (proj.name.length % 3 === 0) {
@@ -64,7 +64,7 @@ export function PortfolioAnalytics() {
         } else if (proj.name.length % 3 === 1) {
           groups['Public Sector Accounts'].push(proj);
         } else {
-          groups['Internal R&D Initiatives'].push(proj);
+          groups['Internal R&D Projects'].push(proj);
         }
       }
     });

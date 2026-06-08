@@ -434,7 +434,7 @@ export function ProjectDetailsModal({
       project_state_durations: projectDurations,
     });
     
-    if (notify) notify(`Initiative state transitioned to: ${newState.toUpperCase()}`, "success");
+    if (notify) notify(`Project state transitioned to: ${newState.toUpperCase()}`, "success");
   };
 
   const handleAddShiftEvent = async (e: React.FormEvent) => {

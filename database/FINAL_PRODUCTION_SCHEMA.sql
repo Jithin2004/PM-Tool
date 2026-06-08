@@ -1,4 +1,4 @@
-﻿-- =============================================================
+-- =============================================================
 -- RESOLVE PM Ã¢â‚¬â€ PRODUCTION MASTER DATABASE SCHEMA
 -- Version: 3.0.0 Ã¢â‚¬â€ Consolidated Canonical Deployment
 -- Generated: 2026-05-27
@@ -2776,7 +2776,12 @@ USING (public.get_user_role(workspace_id) = 'super_admin');
 
 -- Alter projects to link to client
 ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE,
-ADD COLUMN IF NOT EXISTS client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL;
+ADD COLUMN IF NOT EXISTS client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS department_id uuid REFERENCES public.departments(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS budget numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS billing_currency text DEFAULT 'USD',
+ADD COLUMN IF NOT EXISTS approval_workflow text DEFAULT 'standard' CHECK (approval_workflow IN ('standard', 'strict', 'none')),
+ADD COLUMN IF NOT EXISTS pert_enabled boolean DEFAULT true;
 
 -- 2. Invoices Table
 CREATE TABLE IF NOT EXISTS public.invoices (

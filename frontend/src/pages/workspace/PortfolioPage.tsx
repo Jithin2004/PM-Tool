@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
 import { hasCapability } from '../../core/auth/permissions';
 import { useOperationalDerived, useOperationalData } from '../../context/OperationalDataContext';
+import { useDashboard } from '../../context/DashboardContext';
 
 type ViewMode = 'grid' | 'list' | 'timeline';
 type StatusFilter = 'all' | 'active' | 'deployed' | 'planning';
@@ -30,6 +31,7 @@ export default function PortfolioPage() {
   const { raw: { tasks } } = useOperationalData();
   const { profile } = useAuth();
   const { projectFrictionMetrics } = useOperationalDerived();
+  const { setIsAdding } = useDashboard();
 
   const [view, setView] = useState<ViewMode>('grid');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -65,10 +67,10 @@ export default function PortfolioPage() {
           </p>
         </div>
         {hasCapability(profile?.role, 'manage_projects') && (
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all active:scale-95"
+          <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all active:scale-95"
             style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}>
             <Icon name="add" size={18} />
-            New Initiative
+            New Project
           </button>
         )}
       </div>
@@ -232,7 +234,7 @@ export default function PortfolioPage() {
 
           {/* New initiative slot */}
           {hasCapability(profile?.role, 'manage_projects') && (
-            <button className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer group"
+            <button onClick={() => setIsAdding(true)} className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer group"
               style={{ border: '2px dashed rgba(70,69,84,0.4)' }}
               onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(192,193,255,0.4)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.03)'; }}
               onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = ''; }}>
@@ -242,7 +244,7 @@ export default function PortfolioPage() {
                 Initiate Project
               </span>
               <span className="text-xs" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>
-                Draft a new strategic initiative
+                Configure a new project
               </span>
             </button>
           )}

@@ -409,7 +409,7 @@ export default function DocumentTemplatesPage() {
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-fade-in">
           <div className="premium-panel w-full max-w-4xl h-full flex flex-col rounded-2xl overflow-hidden border border-[var(--border-soft)] shadow-2xl animate-scale-up">
             <div className="px-4 py-3 border-b border-[var(--border-soft)] flex items-center justify-between bg-[var(--surface-glass)]">
-              <h3 className="font-semibold flex items-center gap-2 text-white"><Eye className="w-4 h-4 text-purple-400"/> PDF Preview Simulator</h3>
+              <h3 className="font-semibold flex items-center gap-2 text-white"><Eye className="w-4 h-4 text-purple-400"/> PDF Preview Tool</h3>
               <button 
                 onClick={() => { setIsPreviewing(false); setPreviewPdfUrl(null); }} 
                 className="p-1.5 hover:bg-[var(--surface-hover)] rounded-lg text-[var(--text-secondary)] hover:text-white transition-colors"

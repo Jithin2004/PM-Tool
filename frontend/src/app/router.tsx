@@ -37,7 +37,6 @@ const withRetry = (componentImport: () => Promise<any>) => {
 };
 
 const WorkspaceSetupWizard = withRetry(() => import('../pages/onboarding/WorkspaceSetupWizard').then(m => ({ default: m.WorkspaceSetupWizard })));
-const ProjectCreationWizard = withRetry(() => import('../pages/project/ProjectCreationWizard').then(m => ({ default: m.ProjectCreationWizard })));
 const LandingPage = withRetry(() => import('../landing/LandingPage').then(m => ({ default: m.LandingPage })));
 const PrivacyPage = withRetry(() => import('../landing/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
 const TermsPage = withRetry(() => import('../landing/TermsPage').then(m => ({ default: m.TermsPage })));
@@ -357,8 +356,7 @@ export function ResolveRouter() {
   // ── Legacy redirects ──
 
   if (rawPathname === '/projects/new' || pathname === '/projects/new') {
-    if (!guardRoute(role, '/projects/new')) return <RouteShell><AccessRestricted /></RouteShell>;
-    return <RouteShell><ProjectCreationWizard /></RouteShell>;
+    return <Redirect to="/workspace/portfolio" />;
   }
 
   if (pathname === '/onboarding/workspace') {
