@@ -196,15 +196,15 @@ export async function createWorkspaceForUser({ name, settings, user, templateId,
 
   const { error: userError } = await supabase
     .from('users')
-    .upsert({
-      id: user.id,
+    .update({
       workspace_id: workspaceRow.id,
       email,
       full_name: fullName,
       avatar_url: avatarUrl,
       role: 'super_admin',
       availability_factor: 1
-    });
+    })
+    .eq('id', user.id);
 
   if (userError) throw userError;
 
