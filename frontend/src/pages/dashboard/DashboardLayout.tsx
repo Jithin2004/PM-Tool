@@ -104,9 +104,10 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     label: 'Team',
     iconName: 'Users',
     subsections: [
-      { label: 'Members', path: '/resources/teams', capability: 'view_teams' },
-      { label: 'Team Workload', path: '/resources/capacity', capability: 'view_reports' },
-      { label: 'Attendance', path: '/resources/attendance', capability: 'manage_logistics' }
+      { label: 'Employees', path: '/resources/teams', capability: 'view_teams' },
+      { label: 'Departments', path: '/resources/teams?tab=departments', capability: 'view_teams' },
+      { label: 'Capacity', path: '/resources/capacity', capability: 'view_reports' },
+      { label: 'Skills', path: '/resources/teams?tab=skills', capability: 'view_teams' }
     ]
   },
   {
@@ -114,8 +115,9 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     label: 'Finance',
     iconName: 'Landmark',
     subsections: [
-      { label: 'Accounts', path: '/resources/finance', capability: 'manage_compensation' },
-      { label: 'Payroll', path: '/resources/payroll', capability: 'manage_compensation' }
+      { label: 'Invoices', path: '/resources/finance?tab=invoices', capability: 'manage_finance' },
+      { label: 'Budgets', path: '/resources/finance?tab=budgets', capability: 'manage_finance' },
+      { label: 'Payroll', path: '/resources/finance?tab=payroll', capability: 'manage_finance' }
     ]
   },
   {
@@ -123,9 +125,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     label: 'Insights',
     iconName: 'BarChart3',
     subsections: [
-      { label: 'Analytics', path: '/control/analytics', capability: 'view_analytics' },
-      { label: 'Reports', path: '/workspace/reports', capability: 'view_reports' },
-      { label: 'Decisions', path: '/workspace/decisions', capability: 'view_decision_center' }
+      { label: 'Analytics', path: '/control/analytics', capability: 'view_analytics' }
     ]
   },
   {
@@ -133,10 +133,11 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     label: 'Admin',
     iconName: 'Settings',
     subsections: [
-      { label: 'Settings', path: '/control/settings', capability: 'manage_settings' },
-      { label: 'Audit Logs', path: '/control/audit', capability: 'view_audit_log' },
-      { label: 'Document Templates', path: '/control/document-templates', capability: 'manage_settings' },
-      { label: 'Access Control', path: '/control/identity', capability: 'manage_settings' }
+      { label: 'Workspace Settings', path: '/control/settings', capability: 'manage_settings' },
+      { label: 'Roles', path: '/control/identity?tab=roles', capability: 'manage_settings' },
+      { label: 'Capabilities', path: '/control/identity?tab=capabilities', capability: 'manage_settings' },
+      { label: 'Product Licensing', path: '/control/settings?tab=licensing', capability: 'manage_settings' },
+      { label: 'Audit Logs', path: '/control/audit', capability: 'view_audit_log' }
     ]
   }
 ];

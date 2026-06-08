@@ -430,7 +430,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
             Cancel
           </button>
           <button form="project-form" type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-teal-500 hover:bg-teal-400 text-[var(--pm-text)] text-[var(--text-primary)] rounded-lg text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-[0_0_15px_rgba(20,184,166,0.3)]">
-            {isSubmitting ? <span className="animate-pulse">Committing...</span> : 'Initiate Project'}
+            {isSubmitting ? <span className="animate-pulse">Committing...</span> : 'Create Project'}
           </button>
         </div>
       </motion.div>

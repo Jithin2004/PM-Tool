@@ -173,7 +173,7 @@ export function ProjectWorkspace() {
               title="No projects created yet"
               description="Create your first project to start tracking work and managing your team."
               actionLabel="Create Project"
-              onAction={() => window.location.href='/projects/new'}
+              onAction={() => setIsAdding(true)}
             />
           </div>
         )}

@@ -11,7 +11,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export function RequirementDetailsModal({ requirement, onClose, onUpdate }: { requirement: any, onClose: () => void, onUpdate: () => void }) {
   const { workspace } = useWorkspace();
-  const { profiles, projects, notify } = useDashboard();
+  const { profiles, projects, notify, setIsAdding } = useDashboard();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(requirement.status);
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -63,7 +63,8 @@ export function RequirementDetailsModal({ requirement, onClose, onUpdate }: { re
   };
 
   const handleCreateProject = () => {
-    window.location.href = `/projects/new?source_requirement_id=${requirement.id}`;
+    setIsAdding(true);
+    onClose();
   };
 
   return (

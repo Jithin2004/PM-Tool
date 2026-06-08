@@ -188,7 +188,8 @@ const NAV_ITEMS: { label: string; path: string; icon: React.ReactNode }[] = CANO
 const ACTION_ITEMS: { label: string; icon: React.ReactNode; capability: Capability; onSelect: (props: Props) => void }[] = [
   { label: 'Create Project', icon: <PlusCircle className="w-3.5 h-3.5" />, capability: 'manage_projects', onSelect: (p) => p.setIsAdding?.(true) },
   { label: 'Create Sprint', icon: <GitFork className="w-3.5 h-3.5" />, capability: 'manage_scheduling', onSelect: (p) => p.onNavigate('/execution/sprints') },
-  { label: 'Invite Member', icon: <UserPlus className="w-3.5 h-3.5" />, capability: 'platform_governance', onSelect: (p) => p.onNavigate('/control') },
+  { label: 'Invite User', icon: <UserPlus className="w-3.5 h-3.5" />, capability: 'platform_governance', onSelect: (p) => p.onNavigate('/control/identity?action=invite') },
+  { label: 'Settings', icon: <SettingsIcon className="w-3.5 h-3.5" />, capability: 'manage_settings', onSelect: (p) => p.onNavigate('/control/settings') },
   { label: 'Create Epic', icon: <BookOpen className="w-3.5 h-3.5" />, capability: 'manage_tasks', onSelect: (p) => p.onNavigate('/execution') },
   { label: 'Create Story', icon: <BookOpen className="w-3.5 h-3.5" />, capability: 'manage_tasks', onSelect: (p) => p.onNavigate('/execution') },
   { label: 'Create Work Item', icon: <PlusCircle className="w-3.5 h-3.5" />, capability: 'manage_tasks', onSelect: (p) => p.onNavigate('/execution') },

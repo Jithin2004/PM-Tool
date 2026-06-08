@@ -246,7 +246,7 @@ export const calendarEventService = {
       const events = await res.json() as CalendarEvent[];
       return this.expandRecurringEventsInRange(events, startDate, endDate);
     } catch (e) {
-      console.error('getEventsInRange error:', e);
+      // Optional calendar backend: fail silently on network errors
       return [];
     }
   },

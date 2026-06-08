@@ -241,7 +241,7 @@ export default function PortfolioPage() {
               <Icon name="add_circle" size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
               <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em] font-bold"
                 style={{ color: 'var(--pm-on-surface-variant)' }}>
-                Initiate Project
+                Create Project
               </span>
               <span className="text-xs" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>
                 Configure a new project
