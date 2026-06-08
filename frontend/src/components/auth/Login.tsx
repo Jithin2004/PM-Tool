@@ -16,8 +16,9 @@ export function Login() {
     const err = getErrorParam();
     if (err === 'uninvited') {
       setError('Your account is not invited. Ask your admin to invite you.');
-      // Keep the URL as /login?error=uninvited so it survives remounts
-      // Sign out to prevent having a lingering unauthorized session
+      supabase.auth.signOut().catch(console.error);
+    } else if (err === 'access_denied') {
+      setError('Your account has been deactivated. Please contact HR.');
       supabase.auth.signOut().catch(console.error);
     }
   }, []);
@@ -61,7 +62,9 @@ export function Login() {
               <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
               <h2 className="text-base font-semibold text-white">Access Denied</h2>
               <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed mb-4">
-                You do not have an active invitation to this workspace.
+                {error === 'Your account is not invited. Ask your admin to invite you.'
+                  ? 'You do not have an active invitation to this workspace.'
+                  : error}
               </p>
               
               <div className="flex flex-col gap-3">

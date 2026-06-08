@@ -220,10 +220,10 @@ export async function reconcileInvitationMembership(
     };
   }
 
-  const uninvitedProfile = rowToProfile({
+  const pendingProfile = rowToProfile({
     id: input.authUserId,
     email: input.email,
-    role: 'uninvited',
+    role: 'pending-workspace-setup',
     full_name: input.fullName,
     avatar_url: input.avatarUrl ?? null,
     workspace_id: null,
@@ -233,8 +233,8 @@ export async function reconcileInvitationMembership(
     outcome: 'uninvited',
     userRow: null,
     workspaceId: null,
-    role: 'uninvited',
-    uninvitedProfile,
+    role: 'pending-workspace-setup',
+    uninvitedProfile: pendingProfile,
   };
 }
 

@@ -319,7 +319,11 @@ export function ResolveRouter() {
 
   if (!user) return <Login />;
 
-  if (!isProductKeyVerified() && pathname !== '/activate') {
+  if (profile?.employment_status && ['terminated', 'resigned', 'suspended'].includes(profile.employment_status)) {
+    return <Redirect to="/login?error=access_denied" />;
+  }
+
+  if (role === 'pending-workspace-setup' && !isProductKeyVerified() && pathname !== '/activate') {
     return <Redirect to="/activate" />;
   }
 

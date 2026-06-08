@@ -433,11 +433,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     
     const verifyLicense = async () => {
+      // If the user is fully onboarded, skip product key check
+      if (profileRef.current?.workspace_id) return;
+      
       // If the app is active and has no valid license, clear state and logout
-      if (!isProductKeyVerified()) {
-        await logout();
-        return;
-      }
+      if (!isProductKeyVerified()) return;
       
       const res = await checkLicenseOnline();
       if (!res.valid) {
