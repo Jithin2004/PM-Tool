@@ -124,7 +124,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
           // Auto-fetch next year's holidays in background (owner / super_admin only)
           if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || hasCapability(profile.role, 'manage_settings'))) {
-            holidaySourceService.checkAndSyncNextYear(parsed.id, parsed.settings.country, parsed.settings.region || '', profile?.id).catch(() => {});
+            holidaySourceService.checkAndSyncNextYear(parsed.id, parsed.settings.country, parsed.settings.region || '', profile?.id).catch(() => { });
           } else if (parsed.settings?.country) {
           }
 
@@ -153,9 +153,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     // Bulletproof fallback to absolutely prevent infinite loading screens
     // Extended to 15s to support cold starts and network delays on reload.
     const safetyTimeout = setTimeout(() => {
-       if (active) {
-         setLoading(false);
-       }
+      if (active) {
+        setLoading(false);
+      }
     }, 15000);
 
     return () => {
@@ -227,10 +227,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     refreshWorkspace,
     createWorkspace,
     updateWorkspaceSettings,
-    //signInWithGoogle,
     signOut,
     t
-  }), [user, workspace, loading, error, refreshWorkspace, createWorkspace, updateWorkspaceSettings, signInWithGoogle, signOut, t]);
+  }), [user, workspace, loading, error, refreshWorkspace, createWorkspace, updateWorkspaceSettings, signOut, t]);
 
   return (
     <WorkspaceContext.Provider value={value}>
