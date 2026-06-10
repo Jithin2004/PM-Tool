@@ -91,21 +91,32 @@ interface ExecutiveDomain {
 
 const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   {
-    id: 'dashboard',
-    label: 'Command Center',
+    id: 'overview',
+    label: 'Overview',
     iconName: 'Radar',
     subsections: [
-      { label: 'Overview', path: '/overview', capability: 'view_projects' }
+      { label: 'Metrics', path: '/overview', capability: 'view_projects' },
+      { label: 'Executive Insights', path: '/workspace/executive', capability: 'view_analytics' },
+      { label: 'Activity', path: '/workspace/reports', capability: 'view_reports' }
     ]
   },
   {
-    id: 'work',
-    label: 'Work',
+    id: 'projects',
+    label: 'Projects',
+    iconName: 'TreeStructure',
+    subsections: [
+      { label: 'Project List', path: '/workspace', capability: 'view_projects' },
+      { label: 'Requirements', path: '/workspace/requirements', capability: 'view_projects' },
+      { label: 'Approvals', path: '/workspace/approvals', capability: 'view_projects' }
+    ]
+  },
+  {
+    id: 'tasks',
+    label: 'Tasks',
     iconName: 'Kanban',
     subsections: [
-      { label: 'Projects', path: '/workspace', capability: 'view_projects' },
-      { label: 'Tasks', path: '/execution/board', capability: 'view_tasks' },
-      { label: 'Gantt', path: '/execution/gantt', capability: 'view_scheduling' },
+      { label: 'Task Board', path: '/execution/board', capability: 'view_tasks' },
+      { label: 'Gantt Chart', path: '/execution/gantt', capability: 'view_scheduling' },
       { label: 'Calendar', path: '/execution/timeline', capability: 'view_tasks' }
     ]
   },
@@ -116,8 +127,16 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Employees', path: '/resources/teams', capability: 'view_teams' },
       { label: 'Departments', path: '/resources/teams?tab=departments', capability: 'view_teams' },
-      { label: 'Capacity', path: '/resources/capacity', capability: 'view_reports' },
-      { label: 'Skills', path: '/resources/teams?tab=skills', capability: 'view_teams' }
+      { label: 'Workload Planning', path: '/resources/capacity', capability: 'view_reports' },
+      { label: 'Skills Matrix', path: '/resources/teams?tab=skills', capability: 'view_teams' }
+    ]
+  },
+  {
+    id: 'clients',
+    label: 'Clients',
+    iconName: 'Building2',
+    subsections: [
+      { label: 'Client Profiles', path: '/workspace/portfolio', capability: 'view_stakeholders' }
     ]
   },
   {
@@ -125,17 +144,45 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     label: 'Finance',
     iconName: 'Landmark',
     subsections: [
-      { label: 'Invoices', path: '/resources/finance?tab=invoices', capability: 'manage_finance' },
-      { label: 'Budgets', path: '/resources/finance?tab=budgets', capability: 'manage_finance' },
-      { label: 'Payroll', path: '/resources/finance?tab=payroll', capability: 'manage_finance' }
+      { label: 'Payroll & Salaries', path: '/resources/finance?tab=payroll', capability: 'manage_finance' },
+      { label: 'Expenses & Budgets', path: '/resources/finance?tab=budgets', capability: 'manage_finance' },
+      { label: 'Invoices & Billing', path: '/resources/finance?tab=invoices', capability: 'manage_finance' },
+      { label: 'Financial Reports', path: '/resources/finance', capability: 'manage_finance' }
     ]
   },
   {
-    id: 'insights',
-    label: 'Insights',
-    iconName: 'BarChart3',
+    id: 'people',
+    label: 'People Operations',
+    iconName: 'UserCog',
     subsections: [
-      { label: 'Analytics', path: '/control/analytics', capability: 'view_analytics' }
+      { label: 'Attendance & Leave', path: '/resources', capability: 'manage_logistics' }
+    ]
+  },
+  {
+    id: 'documents',
+    label: 'Documents',
+    iconName: 'FolderOpen',
+    subsections: [
+      { label: 'Files & Documents', path: '/workspace/documents', capability: 'view_projects' },
+      { label: 'Templates', path: '/control/document-templates', capability: 'manage_settings' },
+      { label: 'Knowledge Hub', path: '/workspace/knowledge', capability: 'view_projects' }
+    ]
+  },
+  {
+    id: 'automation',
+    label: 'Automation / AI',
+    iconName: 'Sparkles',
+    subsections: [
+      { label: 'AI Recommendations', path: '/workspace/decisions', capability: 'view_decision_center' },
+      { label: 'Automations & Rules', path: '/control/automations', capability: 'manage_automations' }
+    ]
+  },
+  {
+    id: 'integrations',
+    label: 'Integrations',
+    iconName: 'Link2',
+    subsections: [
+      { label: 'Connected Accounts', path: '/control/connections', capability: 'manage_integrations' }
     ]
   },
   {
@@ -144,52 +191,17 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     iconName: 'Settings',
     subsections: [
       { label: 'Workspace Settings', path: '/control/settings', capability: 'manage_settings' },
-      { label: 'Roles', path: '/control/identity?tab=roles', capability: 'manage_settings' },
-      { label: 'Capabilities', path: '/control/identity?tab=capabilities', capability: 'manage_settings' },
-      { label: 'Product Licensing', path: '/control/settings?tab=licensing', capability: 'manage_settings' },
-      { label: 'Audit Logs', path: '/control/audit', capability: 'view_audit_log' }
+      { label: 'Roles & Permissions', path: '/control/identity?tab=roles', capability: 'manage_settings' },
+      { label: 'Audit Logs', path: '/control/audit', capability: 'view_audit_log' },
+      { label: 'System Health', path: '/control/system-health', capability: 'platform_governance' }
     ]
   }
 ];
 
-const isPathAllowed = (path: string, role?: string): boolean => {
-  const isDev = role === 'developer'; // Adjust role check as needed
-  const isView = role === 'viewer';
-  const isPM = role === 'manager';
-  const isAdmin = role === 'admin' || role === 'super_admin';
-
-  // For developer/employee
-  if (isDev) {
-    const allowed = ['/overview', '/execution/board', '/execution/timeline', '/login'];
-    if (!allowed.includes(path)) return false;
-  }
-  
-  if (isView) {
-    const allowed = ['/workspace/portfolio', '/workspace/decisions', '/login'];
-    if (!allowed.includes(path)) return false;
-  }
-  
-  // If Manager, Gantt and Reports are allowed implicitly by capability checks in isSubsectionAllowed, but we must make sure path is allowed
-  return true;
-};
-
 const isSubsectionAllowed = (sub: DomainSubsection, role?: string): boolean => {
-  // If the path isn't allowed at all for this role, hide it
-  if (!isPathAllowed(sub.path, role)) return false;
-  
-  const isDev = role === 'developer';
-  
-  // Employee special overrides for visibility
-  if (isDev) {
-    // Only these labels are shown to Employee
-    const devAllowedLabels = ['My Work', 'Tasks', 'Calendar', 'Files', 'Comments', 'Profile'];
-    if (!devAllowedLabels.includes(sub.label)) return false;
-  }
-  
   if (sub.capability && !hasCapability(role as UserRole, sub.capability)) {
     return false;
   }
-  
   return true;
 };
 

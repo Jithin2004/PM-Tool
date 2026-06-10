@@ -48,11 +48,11 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   
   // Resources routes
   { id: 'work-logs', path: '/resources/work-logs', label: 'Work Logs', iconName: 'Notebook', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
-  { id: 'logistics', path: '/resources', label: 'Logistics', iconName: 'PhosphorGitBranch', capability: 'manage_logistics', group: 'resources', disclosureTier: 'operational' },
+  { id: 'logistics', path: '/resources', label: 'Attendance & Leave', iconName: 'UserCog', capability: 'manage_logistics', group: 'resources', disclosureTier: 'operational' },
   { id: 'finance', path: '/resources/finance', label: 'Accounts & Finance', iconName: 'Landmark', capability: 'manage_finance', group: 'resources', disclosureTier: 'platform' },
-  { id: 'teams', path: '/resources/teams', label: 'Team Roster', iconName: 'UsersThree', capability: 'view_teams', group: 'resources', disclosureTier: 'operational' },
+  { id: 'teams', path: '/resources/teams', label: 'Employees & Departments', iconName: 'UsersThree', capability: 'view_teams', group: 'resources', disclosureTier: 'operational' },
   { id: 'capacity', path: '/resources/capacity', label: 'Capacity Forecast', iconName: 'BarChart3', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
-  { id: 'portfolio', path: '/workspace/portfolio', label: 'Project Sponsors', iconName: 'Building2', capability: 'view_stakeholders', group: 'resources', disclosureTier: 'intelligence' },
+  { id: 'portfolio', path: '/workspace/portfolio', label: 'Client Profiles', iconName: 'Building2', capability: 'view_stakeholders', group: 'resources', disclosureTier: 'intelligence' },
   { id: 'audit', path: '/control/audit', label: 'Audit Log', iconName: 'Activity', capability: 'view_audit_log', group: 'resources', disclosureTier: 'platform' },
   
   // System routes
@@ -62,7 +62,7 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'mission-control', path: '/control/mission-control', label: 'Dashboard', iconName: 'LayoutDashboard', capability: 'view_mission_control', group: 'intelligence', disclosureTier: 'platform' },
   { id: 'system-health', path: '/control/system-health', label: 'System Health', iconName: 'Activity', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
   { id: 'settings', path: '/control/settings', label: 'Settings', iconName: 'Settings', capability: 'manage_settings', group: 'system', disclosureTier: 'operational' },
-  // { id: 'integrations', path: '/control/connections', label: 'Integrations', iconName: 'Link2', capability: 'manage_integrations', group: 'system', disclosureTier: 'platform' },
+  { id: 'integrations', path: '/control/connections', label: 'Connected Accounts', iconName: 'Link2', capability: 'manage_integrations', group: 'system', disclosureTier: 'platform' },
 
   // Executive routes
   { id: 'executive', path: '/workspace/executive', label: 'Executive Overview', iconName: 'Binoculars', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },

@@ -186,7 +186,7 @@ exports.verifyLicense = async (req, res) => {
                 device_hash: fingerprint || 'unknown',
                 license_key: key || 'unknown'
             });
-            return res.status(401).json({ valid: false, error: 'License validation failed' });
+            return res.status(401).json({ valid: false, message: 'Invalid or expired license' });
         }
 
         // Update verification time in the background
@@ -195,13 +195,16 @@ exports.verifyLicense = async (req, res) => {
 
         res.json({
             valid: true,
+            activated: true,
+            keyId: license.key,
+            message: 'License verified',
             plan: license.plan,
             features: getFeaturesForPlan(license.plan)
         });
 
     } catch (error) {
         console.error('Verification error:', error);
-        return res.status(401).json({ valid: false, error: 'Token verification failed' });
+        return res.status(401).json({ valid: false, message: 'Invalid or expired license' });
     }
 };
 

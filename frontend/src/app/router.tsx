@@ -43,7 +43,7 @@ const TermsPage = withRetry(() => import('../landing/TermsPage').then(m => ({ de
 const CompliancePage = withRetry(() => import('../landing/CompliancePage').then(m => ({ default: m.CompliancePage })));
 const SecurityPage = withRetry(() => import('../landing/SecurityPage').then(m => ({ default: m.SecurityPage })));
 
-const RoleHomeRouter = withRetry(() => import('./RoleHomeRouter').then(m => ({ default: m.RoleHomeRouter })));
+const DailyCommandCenter = withRetry(() => import('../components/overview/DailyCommandCenter').then(m => ({ default: m.DailyCommandCenter })));
 
 const AdminPanel = withRetry(() => import('../pages/dashboard/AdminPanel').then(m => ({ default: m.AdminPanel })));
 const LogisticsPanel = withRetry(() => import('../pages/dashboard/LogisticsPanel').then(m => ({ default: m.LogisticsPanel })));
@@ -56,7 +56,7 @@ const RequirementsPage = withRetry(() => import('../pages/workspace/Requirements
 const DocumentsPage = withRetry(() => import('../pages/workspace/DocumentsPage'));
 const ApprovalsPage = withRetry(() => import('../pages/workspace/ApprovalsPage'));
 const EmployeeStartCenter = withRetry(() => import('../components/onboarding/EmployeeStartCenter').then(m => ({ default: m.EmployeeStartCenter })));
-const ExecutiveOverview = withRetry(() => import('../pages/dashboard/ExecutiveOverview').then(m => ({ default: m.ExecutiveOverview })));
+
 
 const ProductAdoptionDashboard = withRetry(() => import('../pages/workspace/ProductAdoptionDashboard').then(m => ({ default: m.ProductAdoptionDashboard })));
 const ReportsCenter = withRetry(() => import('../pages/workspace/ReportsCenter'));
@@ -354,7 +354,7 @@ export function ResolveRouter() {
   // ── OVERVIEW ──
 
   if (pathname === '/overview') {
-    return <RouteShell><RoleHomeRouter /></RouteShell>;
+    return <RouteShell><DailyCommandCenter /></RouteShell>;
   }
 
   // ── WORKSPACE ──
