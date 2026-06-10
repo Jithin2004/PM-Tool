@@ -6,7 +6,7 @@ const FINGERPRINT_KEY = 'resolve-device-fingerprint';
 const API_BASE_URL = (import.meta as any).env.VITE_PRODUCT_KEY_API_URL || 'http://localhost:5000';
 const ACTIVATE_URL = `${API_BASE_URL}/activate`;
 const VERIFY_URL = `${API_BASE_URL}/verify`;
-const TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = 30_000;
 const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // ── Embedded Public Verification Key (JWK) ───────────────────────────────────

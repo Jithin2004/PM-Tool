@@ -147,7 +147,7 @@ export function LandingPage() {
           <div className="lg:col-span-7 flex flex-col gap-stack-gap-lg">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit">
               <span className="material-symbols-outlined text-[14px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>visibility</span>
-              <span className="font-mono-label text-mono-label text-primary uppercase tracking-widest">For Software Agencies (20-200 Employees)</span>
+              <span className="font-mono-label text-mono-label text-primary uppercase tracking-widest">For Software Agencies</span>
             </div>
             <h1 className="font-display-lg text-display-lg text-on-surface leading-tight">
               Stop wondering why<br/>development is slow.
