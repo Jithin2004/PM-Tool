@@ -5962,6 +5962,223 @@ BEGIN
 END;
 $$;
 
+-- ============================================================
+-- RESOLVE PM v1.3 SCHEMA RECONCILIATION
+-- Restored production tables detected from live database audit
+-- ============================================================
+
+
+-- ============================================================
+-- AI RECOMMENDATIONS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.ai_recommendations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+
+    recommendation_type text NOT NULL,
+
+    task_id uuid REFERENCES public.tasks(id) ON DELETE CASCADE,
+
+    original_assignee_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    suggested_assignee_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+
+    predicted_eta_improvement numeric,
+    risk_delta integer,
+    confidence_delta numeric,
+
+    status text NOT NULL DEFAULT 'pending',
+
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_workspace
+ON public.ai_recommendations(workspace_id);
+
+
+
+-- ============================================================
+-- EPICS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.epics (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+
+    name text NOT NULL,
+    description text,
+
+    status text NOT NULL DEFAULT 'backlog',
+    priority text NOT NULL DEFAULT 'medium',
+
+    start_date timestamptz,
+    deadline timestamptz,
+
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_epics_project
+ON public.epics(project_id);
+
+
+
+-- ============================================================
+-- MILESTONES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.milestones (
+
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+
+    project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+
+    sprint_id uuid REFERENCES public.sprints(id) ON DELETE SET NULL,
+
+    title text NOT NULL,
+    description text,
+
+    target_date timestamptz NOT NULL,
+
+    status text NOT NULL DEFAULT 'pending',
+
+    owner_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+
+    predicted_completion timestamptz,
+
+    deleted_at timestamptz,
+
+    deleted_by uuid REFERENCES public.users(id),
+
+    created_at timestamptz NOT NULL DEFAULT now(),
+
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_milestones_project
+ON public.milestones(project_id);
+
+
+
+-- ============================================================
+-- DOCUMENT VERSIONS
+-- ============================================================
+
+
+CREATE TABLE IF NOT EXISTS public.doc_versions (
+
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    doc_id uuid NOT NULL REFERENCES public.documents(id) ON DELETE CASCADE,
+
+    version integer NOT NULL,
+
+    content text NOT NULL,
+
+    author_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+
+    change_summary text,
+
+    hash text NOT NULL,
+
+    created_at timestamptz NOT NULL DEFAULT now()
+
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_doc_versions_doc
+ON public.doc_versions(doc_id, version DESC);
+
+
+
+-- ============================================================
+-- INTEGRATION CONFIGS
+-- ============================================================
+
+
+CREATE TABLE IF NOT EXISTS public.integration_configs (
+
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+
+    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
+
+    service text NOT NULL,
+
+    config jsonb NOT NULL DEFAULT '{}'::jsonb,
+
+    enabled boolean DEFAULT true,
+
+    created_at timestamptz NOT NULL DEFAULT now(),
+
+    updated_at timestamptz NOT NULL DEFAULT now()
+
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_integration_configs_project
+ON public.integration_configs(workspace_id, project_id);
+
+
+
+-- ============================================================
+-- TASK HISTORY LOGS
+-- ============================================================
+
+
+CREATE TABLE IF NOT EXISTS public.task_history_logs (
+
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    task_id text NOT NULL,
+
+    timestamp timestamptz DEFAULT now(),
+
+    author_id text,
+
+    author_name text NOT NULL,
+
+    author_role text NOT NULL,
+
+    field_name text NOT NULL,
+
+    old_value text,
+
+    new_value text,
+
+    telemetry_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
+
+    previous_hash text,
+
+    hash text
+
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_task_history_logs_task
+ON public.task_history_logs(task_id);
+
+
+
+-- ============================================================
+-- ENABLE RLS
+-- ============================================================
+
+
+ALTER TABLE public.ai_recommendations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.epics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.doc_versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.integration_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_history_logs ENABLE ROW LEVEL SECURITY;
 
 -- ##############################################################################
 -- PHASE 1: MISSING TABLES RECONCILIATION
@@ -7056,36 +7273,12 @@ CREATE TABLE IF NOT EXISTS departments (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(workspace_id, name)
 );
-
-CREATE TABLE IF NOT EXISTS employee_contracts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  employee_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  contract_type text NOT NULL CHECK (contract_type IN ('full-time', 'part-time', 'contractor', 'intern')),
-  start_date date NOT NULL,
-  end_date date,
-  salary numeric,
-  currency text,
-  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'terminated')),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+
 
 -- -------------------------------------------------------------
 -- 3. TASK HANDOFF WORKFLOW
 -- -------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS task_handoff_requests (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  task_id uuid NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  requested_by uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  requested_assignee uuid REFERENCES users(id) ON DELETE CASCADE,
-  reason text NOT NULL,
-  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  pm_id uuid REFERENCES users(id) ON DELETE SET NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+
 
 -- -------------------------------------------------------------
 -- 4. EMPLOYEE LIFECYCLE FINALIZATION
@@ -7186,8 +7379,8 @@ DECLARE
     'financial_snapshots', 'financial_adjustments', 'billing_milestones', 
     'client_credits', 'advance_applications', 'credit_notes', 
     'invoice_audit_logs', 'exchange_rate_audits', 'requirements', 
-    'external_access_links', 'departments', 'employee_contracts', 
-    'task_handoff_requests'
+    'external_access_links', 'departments',  
+    
   ];
 BEGIN
   FOREACH t IN ARRAY tables
