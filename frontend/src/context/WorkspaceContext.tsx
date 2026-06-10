@@ -5,7 +5,7 @@ import { createWorkspaceForUser, getWorkspaceForUser, updateWorkspaceSettings as
 import type { Workspace, WorkspaceSettings } from '../types/workspace';
 import { useAuth } from './AuthContext';
 import { hasCapability } from '../core/auth/permissions';
-import { buildOAuthRedirectUrl, setRedirectToAfterAuth } from '../core/auth/postAuthRedirect';
+//import { buildOAuthRedirectUrl, setRedirectToAfterAuth } from '../core/auth/postAuthRedirect';
 import { holidaySourceService } from '../services/holidaySourceService';
 
 interface WorkspaceContextValue {
@@ -17,7 +17,7 @@ interface WorkspaceContextValue {
   refreshWorkspace: () => Promise<void>;
   createWorkspace: (input: CreateWorkspaceInput) => Promise<Workspace>;
   updateWorkspaceSettings: (settings: Partial<WorkspaceSettings>) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  //signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   t: (key: string, fallback?: string) => string;
 }
@@ -191,7 +191,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [workspace, profile?.id]);
 
-  const signInWithGoogle = useCallback(async () => {
+  /* const signInWithGoogle = useCallback(async () => {
     setRedirectToAfterAuth('/overview');
 
     const { error: signInError } = await supabase.auth.signInWithOAuth({
@@ -205,7 +205,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setError(signInError.message);
       throw signInError;
     }
-  }, []);
+  }, []);*/
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
@@ -227,7 +227,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     refreshWorkspace,
     createWorkspace,
     updateWorkspaceSettings,
-    signInWithGoogle,
+    //signInWithGoogle,
     signOut,
     t
   }), [user, workspace, loading, error, refreshWorkspace, createWorkspace, updateWorkspaceSettings, signInWithGoogle, signOut, t]);
