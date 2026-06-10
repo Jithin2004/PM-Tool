@@ -1,0 +1,95 @@
+# Resolve PM v1.3 - GitHub Pages Deployment Workflow
+#
+# Triggered: push to main branch, or manual workflow_dispatch
+# Builds the Vite frontend and deploys to GitHub Pages.
+#
+# SETUP REQUIRED (one-time):
+#   1. Go to repo Settings -> Pages -> Source -> set to "GitHub Actions"
+#   2. Add secrets in Settings -> Secrets -> Actions:
+#      - VITE_SUPABASE_URL
+#      - VITE_SUPABASE_ANON_KEY
+#      - VITE_PRODUCT_KEY_API_URL  (optional, defaults to localhost:5000)
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# CRITICAL: These three permissions fix the 401 "Requires authentication" error.
+# Without pages:write + id-token:write the deploy-pages action cannot authenticate.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; cancel any in-progress run on new push
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # ------------------------------------------------------------------
+  # Job 1: Build
+  # ------------------------------------------------------------------
+  build:
+    name: Build Vite App
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # configure-pages outputs base_path (e.g. /resolve-pm/) so Vite
+      # can prefix all asset URLs correctly for the Pages sub-path.
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_PRODUCT_KEY_API_URL: ${{ secrets.VITE_PRODUCT_KEY_API_URL }}
+          VITE_APP_VERSION: "1.3.0-internal-stable"
+          VITE_BUILD_ENV: "production"
+          VITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./frontend/dist
+
+  # ------------------------------------------------------------------
+  # Job 2: Deploy
+  # ------------------------------------------------------------------
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Links this job to the GitHub Pages deployment environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

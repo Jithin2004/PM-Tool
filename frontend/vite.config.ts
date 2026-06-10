@@ -6,7 +6,13 @@ import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
+
+  // GitHub Pages serves from /{repo-name}/ — use the base path injected by
+  // actions/configure-pages, or '/' for local dev / Docker deployments.
+  const base = env.VITE_BASE_PATH || '/';
+
   return {
+    base,
     plugins: [react(), tailwindcss(), visualizer({ open: false, filename: 'stats.html' })],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
