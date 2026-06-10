@@ -17,7 +17,6 @@ interface WorkspaceContextValue {
   refreshWorkspace: () => Promise<void>;
   createWorkspace: (input: CreateWorkspaceInput) => Promise<Workspace>;
   updateWorkspaceSettings: (settings: Partial<WorkspaceSettings>) => Promise<void>;
-  //signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   t: (key: string, fallback?: string) => string;
 }
@@ -191,21 +190,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [workspace, profile?.id]);
 
-  /* const signInWithGoogle = useCallback(async () => {
-    setRedirectToAfterAuth('/overview');
-
-    const { error: signInError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: buildOAuthRedirectUrl(),
-      },
-    });
-
-    if (signInError) {
-      setError(signInError.message);
-      throw signInError;
-    }
-  }, []);*/
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();

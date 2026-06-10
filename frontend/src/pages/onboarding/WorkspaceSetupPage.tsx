@@ -156,30 +156,35 @@ export function WorkspaceSetupPage() {
     setSaving(true);
     try {
       if (workspace?.id) {
-        const { error: inviteError } = await supabase
-          .from('invitations')
-          .insert({
-            email,
-            workspace_id: workspace.id,
-            role: 'developer', // Default invited role
-            status: 'pending',
-            invited_by: user?.id,
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            date_of_joining: new Date(inviteDoj).toISOString()
-          });
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
 
-        if (inviteError) {
-          if (inviteError.code === '23505') {
-            throw new Error("This email is already invited.");
-          }
-          throw inviteError;
+        const res = await fetch('http://localhost:5001/api/provision-employee', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            email,
+            role: 'developer', // Default invited role
+            date_of_joining: new Date(inviteDoj).toISOString()
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to provision employee.');
         }
+
+        alert(`Employee provisioned successfully.\nEmail: ${email}\nTemp Password: ${data.tempPassword}\n\nPlease share this password with the employee.`);
       }
       setInvites(prev => [...prev, { email, doj: inviteDoj }]);
       setInviteEmail('');
       setInviteDoj(new Date().toISOString().split('T')[0]);
     } catch (err: any) {
-      setLocalError(err?.message || "Failed to save invitation.");
+      setLocalError(err?.message || "Failed to provision employee.");
     } finally {
       setSaving(false);
     }

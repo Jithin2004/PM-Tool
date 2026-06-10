@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Zap, AlertTriangle } from 'lucide-react';
+import { Activity, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { buildOAuthRedirectUrl, setRedirectToAfterAuth } from '../../core/auth/postAuthRedirect';
+import { loginWithPassword } from '../../services/authService';
 
 function getErrorParam(): string | null {
   const params = new URLSearchParams(window.location.search);
@@ -11,6 +11,9 @@ function getErrorParam(): string | null {
 
 export function Login() {
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const err = getErrorParam();
@@ -23,17 +26,25 @@ export function Login() {
     }
   }, []);
 
-  const handleGoogleLogin = async () => {
-    const returnPath = window.location.pathname === '/login' ? '/overview' : window.location.pathname;
-    setRedirectToAfterAuth(returnPath);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
 
-    const { error: signInError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: buildOAuthRedirectUrl(),
-      },
-    });
-    if (signInError) console.error('Auth error:', signInError);
+    setLoading(true);
+    setError(null);
+    try {
+      const { error: signInError } = await loginWithPassword(email, password);
+      if (signInError) {
+        setError(signInError.message);
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during login.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,7 +71,7 @@ export function Login() {
           {error ? (
             <div className="flex flex-col gap-4 p-5 rounded-xl border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 bg-red-500/5 text-center">
               <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-              <h2 className="text-base font-semibold text-white">Access Denied</h2>
+              <h2 className="text-base font-semibold text-white">Access Denied / Error</h2>
               <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed mb-4">
                 {error === 'Your account is not invited. Ask your admin to invite you.'
                   ? 'You do not have an active invitation to this workspace.'
@@ -68,9 +79,9 @@ export function Login() {
               </p>
               
               <div className="flex flex-col gap-3">
-                <a href="/activate" className="w-full btn-premium-primary h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all shadow-sm">
-                  Enter Product Key
-                </a>
+                <button onClick={() => setError(null)} className="w-full btn-premium-primary h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all shadow-sm">
+                  Try Again
+                </button>
                 <button onClick={() => window.location.href = 'mailto:admin@example.com?subject=Request Access'} className="w-full btn-premium-secondary text-white border border-[var(--border-soft)] h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all">
                   Request Invitation
                 </button>
@@ -86,14 +97,38 @@ export function Login() {
                 <p>Sign in to access your workspace, manage projects, and collaborate with your team.</p>
               </div>
 
-              <button
-                onClick={handleGoogleLogin}
-                className="w-full rounded-xl h-12 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs transition-all active:scale-[0.98] shadow-sm hover:shadow-md btn-premium-primary"
-                id="google-login-btn"
-              >
-                <Zap className="w-4 h-4" />
-                Sign In with Google
-              </button>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full h-12 bg-[var(--surface-glass)] border border-[var(--border-soft)] rounded-xl px-4 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                    placeholder="Enter your email"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-12 bg-[var(--surface-glass)] border border-[var(--border-soft)] rounded-xl px-4 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl h-12 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs transition-all active:scale-[0.98] shadow-sm hover:shadow-md btn-premium-primary disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign In'}
+                </button>
+              </form>
 
               <div className="flex items-center justify-center gap-1.5 text-xs text-[var(--text-secondary)] font-mono mt-4">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>

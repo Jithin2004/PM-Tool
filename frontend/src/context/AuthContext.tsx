@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const syncProfile = useCallback(async (authUser: any, force = false) => {
     if (!isSupabaseConfigured) return;
-    
+
     // If we already synced this user and it's not a forced refresh, skip
     if (!force && lastSyncedUserIdRef.current === authUser.id) {
       if (import.meta.env.DEV) {
@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const promise = (async () => {
       try {
-        const googleAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
+        const providerAvatar = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
         const email = authUser.email;
         const fullName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email?.split('@')[0] || 'User';
 
@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             authUserId: authUser.id,
             email: email || '',
             fullName,
-            avatarUrl: googleAvatar,
+            avatarUrl: providerAvatar,
           });
 
           if (reconciliation.outcome === 'uninvited' && reconciliation.uninvitedProfile) {
@@ -156,10 +156,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        if (data && !data.avatar_url && googleAvatar) {
+        if (data && !data.avatar_url && providerAvatar) {
           const { data: updatedUser } = await supabase
             .from('users')
-            .update({ avatar_url: googleAvatar })
+            .update({ avatar_url: providerAvatar })
             .eq('id', authUser.id)
             .select()
             .maybeSingle();
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (ws) {
             await activityLogService.logSessionExpired(ws, userRef.current.id, reason);
           }
-        } catch {}
+        } catch { }
       }
       await flushNow();
       clearSession();
@@ -255,9 +255,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (key && (
-            key.startsWith('tasks_') || 
-            key.startsWith('projects_') || 
-            key.startsWith('offline_task_queue_') || 
+            key.startsWith('tasks_') ||
+            key.startsWith('projects_') ||
+            key.startsWith('offline_task_queue_') ||
             key.startsWith('task_dependencies_') ||
             key.startsWith('id_map_') ||
             key.startsWith('workspace_settings_') ||
@@ -311,7 +311,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!mounted) return;
-        
+
         setUser(session?.user || null);
         if (session?.user) {
           const syncedProfile = await syncProfile(session.user);
@@ -350,14 +350,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 15000);
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      
+
       if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
         // Ignore initial dummy events during loading/initialization
         if (loadingRef.current) {
           return;
         }
 
-        handleSessionExpiry(event === 'SIGNED_OUT' ? 'expired' : 'refresh_failed').catch(() => {});
+        handleSessionExpiry(event === 'SIGNED_OUT' ? 'expired' : 'refresh_failed').catch(() => { });
         return;
       } else {
         // Handle all other events, including INITIAL_SESSION
@@ -385,11 +385,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Real-time listener for profile/role updates
     let userSubscription: any = null;
-    
+
     // We set up the real-time listener inside a wrapper to handle dynamic user changes
     const setupRealtimeUser = (userId: string) => {
       if (userSubscription) supabase.removeChannel(userSubscription);
-      
+
       userSubscription = supabase.channel(`public:users:id=eq.${userId}`)
         .on('postgres_changes', {
           event: 'UPDATE',
@@ -398,13 +398,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           filter: `id=eq.${userId}`
         }, async (payload) => {
           if (mounted && payload.new) {
-             const updatedProfile = await syncProfile({ id: userId, email: payload.new.email } as any);
-             if (updatedProfile) {
-                // Check if they lost workspace access
-                if (!updatedProfile.workspace_id && profileRef.current?.workspace_id) {
-                    handleSessionExpiry('workspace_revoked').catch(() => {});
-                }
-             }
+            const updatedProfile = await syncProfile({ id: userId, email: payload.new.email } as any);
+            if (updatedProfile) {
+              // Check if they lost workspace access
+              if (!updatedProfile.workspace_id && profileRef.current?.workspace_id) {
+                handleSessionExpiry('workspace_revoked').catch(() => { });
+              }
+            }
           }
         })
         .subscribe();
@@ -412,9 +412,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Set up the listener if we already have a user from initial load
     setTimeout(() => {
-       if (userRef.current) {
-          setupRealtimeUser(userRef.current.id);
-       }
+      if (userRef.current) {
+        setupRealtimeUser(userRef.current.id);
+      }
     }, 1000);
 
     return () => {
@@ -431,14 +431,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Periodic background license verification
   useEffect(() => {
     if (!user) return;
-    
+
     const verifyLicense = async () => {
       // If the user is fully onboarded, skip product key check
       if (profileRef.current?.workspace_id) return;
-      
+
       // If the app is active and has no valid license, clear state and logout
       if (!isProductKeyVerified()) return;
-      
+
       const res = await checkLicenseOnline();
       if (!res.valid) {
         window.dispatchEvent(new CustomEvent('notify-toast', {
@@ -447,10 +447,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await logout();
       }
     };
-    
+
     // Initial verification check on mount
     verifyLicense();
-    
+
     // Re-verify every 10 minutes
     const interval = setInterval(verifyLicense, 10 * 60 * 1000);
     return () => clearInterval(interval);
@@ -516,16 +516,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, syncProfile]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      profile: effectiveProfile, 
-      loading, 
-      profileResolved, 
-      profileHydrating, 
-      needsWorkspaceSetup, 
-      logout, 
-      updateRole, 
-      updateProfile, 
+    <AuthContext.Provider value={{
+      user,
+      profile: effectiveProfile,
+      loading,
+      profileResolved,
+      profileHydrating,
+      needsWorkspaceSetup,
+      logout,
+      updateRole,
+      updateProfile,
       refreshProfile,
       simulatedRole,
       setSimulatedRole,

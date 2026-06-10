@@ -77,28 +77,36 @@ export function AdminDashboard({
       if (!workspace?.id) throw new Error("Could not locate active workspace.");
       if (!currentUserProfile?.id) throw new Error("No active user profile.");
 
-      const { error: insertError } = await supabase
-        .from('invitations')
-        .insert({
-          email,
-          workspace_id: workspace.id,
-          role: inviteRole,
-          status: 'pending',
-          invited_by: currentUserProfile.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
 
-      if (insertError) {
-        if (insertError.code === '23505') {
-          throw new Error("This email is already invited.");
-        }
-        throw insertError;
+      // Provision user via backend API
+      const res = await fetch('http://localhost:5001/api/provision-employee', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email,
+          role: inviteRole
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to provision employee.');
       }
+
+      // Also record it in invitations for tracking purposes if needed, but not strictly required
+      // We will just show the temp password to the admin
+      showAlert(`Employee provisioned successfully.\nEmail: ${email}\nTemp Password: ${data.tempPassword}\n\nPlease share this password with the employee.`);
 
       setInviteEmail('');
       fetchInvitations();
     } catch (err: any) {
-      setInviteError(err?.message || "Failed to send invitation.");
+      setInviteError(err?.message || "Failed to provision employee.");
     } finally {
       setInviting(false);
     }
