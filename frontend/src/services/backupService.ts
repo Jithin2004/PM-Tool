@@ -13,12 +13,16 @@ interface WorkspaceExport {
   integrations: any[];
   activityLogs: any[];
   taskDependencies: any[];
+  clients?: any[];
+  requirements?: any[];
+  milestones?: any[];
+  invoices?: any[];
 }
 
 export async function exportWorkspace(wsId: string): Promise<WorkspaceExport | null> {
   if (!isSupabaseConfigured || !wsId) return null;
 
-  const [projects, tasks, users, teams, webhooks, integrations, activityLogs, taskDependencies] = await Promise.all([
+  const [projects, tasks, users, teams, webhooks, integrations, activityLogs, taskDependencies, clients, requirements, milestones, invoices] = await Promise.all([
     supabase.from('projects').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('tasks').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('users').select('*').limit(50).eq('workspace_id', wsId),
@@ -27,6 +31,10 @@ export async function exportWorkspace(wsId: string): Promise<WorkspaceExport | n
     supabase.from('connected_accounts').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('activity_logs').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('task_dependencies').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('clients').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('requirements').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('milestones').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('invoices').select('*').limit(50).eq('workspace_id', wsId),
   ]);
 
   const pack: WorkspaceExport = {
@@ -41,6 +49,10 @@ export async function exportWorkspace(wsId: string): Promise<WorkspaceExport | n
     integrations: integrations.data || [],
     activityLogs: activityLogs.data || [],
     taskDependencies: taskDependencies.data || [],
+    clients: clients?.data || [],
+    requirements: requirements?.data || [],
+    milestones: milestones?.data || [],
+    invoices: invoices?.data || [],
   };
 
   await activityLogService.appendLog({
@@ -68,7 +80,11 @@ export function validateExport(data: unknown): data is WorkspaceExport {
     Array.isArray(p.webhooks) &&
     Array.isArray(p.integrations) &&
     Array.isArray(p.activityLogs) &&
-    Array.isArray(p.taskDependencies)
+    Array.isArray(p.taskDependencies) &&
+    (!p.clients || Array.isArray(p.clients)) &&
+    (!p.requirements || Array.isArray(p.requirements)) &&
+    (!p.milestones || Array.isArray(p.milestones)) &&
+    (!p.invoices || Array.isArray(p.invoices))
   );
 }
 
@@ -117,6 +133,29 @@ export async function importWorkspace(data: unknown): Promise<{ success: boolean
       const { error } = await supabase.from('task_dependencies').upsert(pack.taskDependencies, upsertConfig);
       if (error) result.errors.push(`task_dependencies: ${error.message}`);
       else result.imported += pack.taskDependencies.length;
+    }
+
+    if (pack.clients && pack.clients.length) {
+      const { error } = await supabase.from('clients').upsert(pack.clients, upsertConfig);
+      if (error) result.errors.push(`clients: ${error.message}`);
+      else result.imported += pack.clients.length;
+    }
+
+    if (pack.requirements && pack.requirements.length) {
+      const { error } = await supabase.from('requirements').upsert(pack.requirements, upsertConfig);
+      if (error) result.errors.push(`requirements: ${error.message}`);
+      else result.imported += pack.requirements.length;
+    }
+
+    if (pack.milestones && pack.milestones.length) {
+      const { error } = await supabase.from('milestones').upsert(pack.milestones, upsertConfig);
+      if (error) result.errors.push(`milestones: ${error.message}`);
+      else result.imported += pack.milestones.length;
+    }
+    
+    // Invoices are read-only and immutable for compliance
+    if (pack.invoices && pack.invoices.length) {
+      // Intentionally omitting invoices upsert to preserve compliance rules
     }
 
     if (pack.webhooks.length) {

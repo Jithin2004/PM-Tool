@@ -7,8 +7,12 @@ import { CalendarIntelligencePanel } from '../../components/admin/CalendarIntell
 import { hasCapability } from '../../core/auth/permissions';
 import { Icon } from '../../components/ui/Icon';
 import { supabase } from '../../lib/supabase';
-
-type AdminTab = 'general' | 'identity' | 'calendar' | 'teams';
+import { EnterpriseImportCenter } from './EnterpriseImportCenter';
+import { SystemInfoPanel } from '../../components/admin/SystemInfoPanel';
+import { SystemHealthPanel } from '../../components/admin/SystemHealthPanel';
+import { BackupRestorePanel } from '../../components/admin/BackupRestorePanel';
+import { BillingSettings } from '../../components/control/BillingSettings';
+type AdminTab = 'general' | 'identity' | 'calendar' | 'teams' | 'health' | 'import' | 'system_info' | 'backups' | 'license' | 'workspaces';
 
 function getInitials(name: string) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -101,6 +105,157 @@ export function AdminPanel() {
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [showDesignations, setShowDesignations] = useState(false);
   const [newCustomDesignation, setNewCustomDesignation] = useState('');
+
+  // Workspaces Registry Management state and handlers
+  const [workspacesList, setWorkspacesList] = useState<any[]>([]);
+  const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
+
+  const loadWorkspacesData = async () => {
+    setLoadingWorkspaces(true);
+    try {
+      const { data: wsData, error: wsError } = await supabase.from('workspaces').select('*');
+      if (wsError) throw wsError;
+      
+      const { data: userData, error: userError } = await supabase.from('users').select('id, workspace_id');
+      if (userError) throw userError;
+      
+      const { data: projData, error: projError } = await supabase.from('projects').select('id, workspace_id').is('deleted_at', null);
+      if (projError) throw projError;
+      
+      const { data: taskData, error: taskError } = await supabase.from('tasks').select('workspace_id, updated_at').order('updated_at', { ascending: false });
+      if (taskError) throw taskError;
+
+      const compiled = (wsData || []).map((ws: any) => {
+        const wsUsers = (userData || []).filter((u: any) => u.workspace_id === ws.id);
+        const wsProjects = (projData || []).filter((p: any) => p.workspace_id === ws.id);
+        const wsTasks = (taskData || []).filter((t: any) => t.workspace_id === ws.id);
+        
+        let lastActivity = ws.created_at;
+        if (wsTasks.length > 0 && wsTasks[0].updated_at) {
+          lastActivity = wsTasks[0].updated_at;
+        }
+
+        return {
+          ...ws,
+          userCount: wsUsers.length,
+          projectCount: wsProjects.length,
+          lastActivityDate: lastActivity
+        };
+      });
+
+      setWorkspacesList(compiled);
+    } catch (err: any) {
+      notify(err.message || "Failed to load workspaces data", "error");
+    } finally {
+      setLoadingWorkspaces(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'workspaces') {
+      loadWorkspacesData();
+    }
+  }, [tab]);
+
+  const handleArchiveWorkspace = async (workspaceId: string) => {
+    askConfirmation("Archive Workspace", "Are you sure you want to archive/retire this workspace? Tasks updates will be disabled.", async () => {
+      const { error } = await supabase
+        .from('workspaces')
+        .update({ status: 'retired' })
+        .eq('id', workspaceId);
+      if (error) {
+        notify("Failed to archive workspace: " + error.message, "error");
+      } else {
+        notify("Workspace status set to retired.", "success");
+        loadWorkspacesData();
+      }
+    }, "Archive");
+  };
+
+  const handleResetSandbox = async (workspaceId: string) => {
+    askConfirmation("Reset Sandbox Workspace", "Are you sure you want to purge all projects, tasks, collaborators, and dependencies from this sandbox? This cannot be undone.", async () => {
+      try {
+        await supabase.from('task_collaborators').delete().eq('workspace_id', workspaceId);
+        await supabase.from('task_dependencies').delete().eq('workspace_id', workspaceId);
+        await supabase.from('tasks').delete().eq('workspace_id', workspaceId);
+        await supabase.from('projects').delete().eq('workspace_id', workspaceId);
+        notify("Sandbox workspace successfully reset.", "success");
+        loadWorkspacesData();
+      } catch (err: any) {
+        notify("Failed to reset sandbox: " + err.message, "error");
+      }
+    }, "Reset");
+  };
+
+  const handleDeleteSandbox = async (workspaceId: string) => {
+    askConfirmation("Deactivate Sandbox", "Are you sure you want to set this sandbox workspace status to inactive?", async () => {
+      const { error } = await supabase
+        .from('workspaces')
+        .update({ status: 'inactive' })
+        .eq('id', workspaceId);
+      if (error) {
+        notify("Failed to deactivate sandbox: " + error.message, "error");
+      } else {
+        notify("Sandbox set to inactive.", "success");
+        loadWorkspacesData();
+      }
+    }, "Deactivate");
+  };
+
+  const handleRestoreWorkspace = async (workspaceId: string) => {
+    askConfirmation("Restore Workspace", "Are you sure you want to restore this workspace to active status?", async () => {
+      const { error } = await supabase
+        .from('workspaces')
+        .update({ status: 'active' })
+        .eq('id', workspaceId);
+      if (error) {
+        notify("Failed to restore workspace: " + error.message, "error");
+      } else {
+        notify("Workspace status set to active.", "success");
+        loadWorkspacesData();
+      }
+    }, "Restore");
+  };
+
+  const handleExportWorkspace = async (ws: any) => {
+    notify("Preparing export data...", "info");
+    try {
+      const [projectsRes, tasksRes, teamsRes, depsRes, collabsRes] = await Promise.all([
+        supabase.from('projects').select('*').eq('workspace_id', ws.id),
+        supabase.from('tasks').select('*').eq('workspace_id', ws.id),
+        supabase.from('teams').select('*').eq('workspace_id', ws.id),
+        supabase.from('task_dependencies').select('*').eq('workspace_id', ws.id),
+        supabase.from('task_collaborators').select('*').eq('workspace_id', ws.id),
+      ]);
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        workspace: {
+          id: ws.id,
+          name: ws.name,
+          status: ws.status,
+          metadata: ws.metadata,
+          created_at: ws.created_at,
+        },
+        projects: projectsRes.data || [],
+        tasks: tasksRes.data || [],
+        teams: teamsRes.data || [],
+        dependencies: depsRes.data || [],
+        collaborators: collabsRes.data || [],
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `workspace_export_${ws.name.replace(/\s+/g, '_')}_${ws.id}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      notify("Workspace data exported successfully.", "success");
+    } catch (err: any) {
+      notify("Export failed: " + err.message, "error");
+    }
+  };
 
   const pms = profiles.filter(p => hasCapability(p.role as UserRole, 'manage_projects'));
   const devs = profiles.filter(p => !hasCapability(p.role as UserRole, 'manage_projects'));
@@ -262,6 +417,12 @@ export function AdminPanel() {
     { id: 'identity', label: 'Workspace Access', icon: 'groups' },
     { id: 'teams', label: 'Delivery Units', icon: 'hub' },
     ...(canViewCalendar ? [{ id: 'calendar' as AdminTab, label: 'Calendar Intelligence', icon: 'calendar_month' }] : []),
+    { id: 'import' as AdminTab, label: 'Data Import', icon: 'cloud_upload' },
+    { id: 'system_info', label: 'System Info', icon: 'memory' },
+    { id: 'health', label: 'Health & Diagnostics', icon: 'monitor_heart' },
+    { id: 'backups', label: 'Disaster Recovery', icon: 'settings_backup_restore' },
+    { id: 'license', label: 'License & Coverage', icon: 'verified_user' },
+    { id: 'workspaces', label: 'Workspace Registry', icon: 'dns' },
   ];
 
   return (
@@ -997,6 +1158,232 @@ export function AdminPanel() {
           <CalendarIntelligencePanel />
         </div>
       )}
+
+      {/* ── Data Import Tab ───────────────────────────── */}
+      {tab === 'import' && (
+        <div className="rounded-xl overflow-hidden">
+          <EnterpriseImportCenter />
+        </div>
+      )}
+
+      {/* ── System Info Tab ───────────────────────────── */}
+      {tab === 'system_info' && (
+        <div className="rounded-xl overflow-hidden">
+          <SystemInfoPanel />
+        </div>
+      )}
+
+      {/* ── Health & Diagnostics Tab ──────────────────── */}
+      {tab === 'health' && (
+        <div className="rounded-xl overflow-hidden h-[600px]">
+          <SystemHealthPanel />
+        </div>
+      )}
+
+      {/* ── Disaster Recovery Tab ─────────────────────── */}
+      {tab === 'backups' && (
+        <div className="rounded-xl overflow-hidden">
+          <BackupRestorePanel />
+        </div>
+      )}
+
+      {/* ── License & Coverage Tab ────────────────────── */}
+      {tab === 'license' && (
+        <div className="rounded-xl overflow-hidden">
+          <BillingSettings />
+        </div>
+      )}
+
+      {/* ── Workspace Registry Tab ─────────────────────────── */}
+      {tab === 'workspaces' && (
+        <div className="space-y-8">
+          {loadingWorkspaces ? (
+            <div className="text-center py-12 text-sm text-[var(--pm-on-surface-variant)]">
+              Loading workspace registry data...
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* Active Workspaces Section */}
+              <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-white">
+                  <Icon name="check_circle" size={18} style={{ color: 'var(--pm-primary)' }} />
+                  Active Workspaces &amp; Onboarding
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[700px]">
+                    <thead>
+                      <tr className="border-b" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Workspace Name</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Status</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Members</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Active Projects</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Last Activity</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)] text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {workspacesList.filter(w => w.status === 'active' || w.status === 'onboarding' || !w.status).map((ws: any) => (
+                        <tr key={ws.id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="py-4 text-sm font-medium text-white">{ws.name}</td>
+                          <td className="py-4">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+                              {ws.status || 'active'}
+                            </span>
+                          </td>
+                          <td className="py-4 text-sm text-[var(--pm-on-surface-variant)]">{ws.userCount}</td>
+                          <td className="py-4 text-sm text-[var(--pm-on-surface-variant)]">{ws.projectCount}</td>
+                          <td className="py-4 text-sm text-[var(--pm-on-surface-variant)] font-mono-pm">{new Date(ws.lastActivityDate).toLocaleDateString()}</td>
+                          <td className="py-4 text-right">
+                            <button
+                              onClick={() => handleArchiveWorkspace(ws.id)}
+                              className="px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
+                              style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', color: 'var(--pm-secondary)' }}
+                              onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(245,158,11,0.18)'; }}
+                              onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(245,158,11,0.1)'; }}
+                            >
+                              Archive
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {workspacesList.filter(w => w.status === 'active' || w.status === 'onboarding' || !w.status).length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center py-6 text-xs italic text-[var(--pm-on-surface-variant)]">No active workspaces.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Sandbox Environments Section */}
+              <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-white">
+                  <Icon name="science" size={18} style={{ color: 'var(--pm-secondary)' }} />
+                  Sandbox Environments
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[700px]">
+                    <thead>
+                      <tr className="border-b" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Workspace Name</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Status</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Members</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Active Projects</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Last Activity</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)] text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {workspacesList.filter(w => w.status === 'sandbox').map((ws: any) => (
+                        <tr key={ws.id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="py-4 text-sm font-medium text-white">{ws.name}</td>
+                          <td className="py-4">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/25">
+                              sandbox
+                            </span>
+                          </td>
+                          <td className="py-4 text-sm text-[var(--pm-on-surface-variant)]">{ws.userCount}</td>
+                          <td className="py-4 text-sm text-[var(--pm-on-surface-variant)]">{ws.projectCount}</td>
+                          <td className="py-4 text-sm text-[var(--pm-on-surface-variant)] font-mono-pm">{new Date(ws.lastActivityDate).toLocaleDateString()}</td>
+                          <td className="py-4 text-right space-x-2">
+                            <button
+                              onClick={() => handleResetSandbox(ws.id)}
+                              className="px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
+                              style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#3b82f6' }}
+                              onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(59,130,246,0.18)'; }}
+                              onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(59,130,246,0.1)'; }}
+                            >
+                              Reset
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSandbox(ws.id)}
+                              className="px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
+                              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--pm-error)' }}
+                              onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.18)'; }}
+                              onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.1)'; }}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {workspacesList.filter(w => w.status === 'sandbox').length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center py-6 text-xs italic text-[var(--pm-on-surface-variant)]">No sandbox environments.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Retired/Inactive Archives Section */}
+              <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
+                <h3 className="font-semibold mb-4 flex items-center gap-2 text-white">
+                  <Icon name="archive" size={18} style={{ color: 'var(--pm-on-surface-variant)' }} />
+                  Retired Archives &amp; Inactive Workspaces
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[700px]">
+                    <thead>
+                      <tr className="border-b" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Workspace Name</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Status</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Members</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Active Projects</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Last Activity</th>
+                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)] text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {workspacesList.filter(w => w.status === 'retired' || w.status === 'inactive').map((ws: any) => (
+                        <tr key={ws.id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="py-4 text-sm font-medium text-white">{ws.name}</td>
+                          <td className="py-4">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${ws.status === 'retired' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25' : 'bg-red-500/10 text-red-400 border border-red-500/25'}`}>
+                              {ws.status}
+                            </span>
+                          </td>
+                          <td className="py-4 text-sm text-[var(--pm-on-surface-variant)]">{ws.userCount}</td>
+                          <td className="py-4 text-sm text-[var(--pm-on-surface-variant)]">{ws.projectCount}</td>
+                          <td className="py-4 text-sm text-[var(--pm-on-surface-variant)] font-mono-pm">{new Date(ws.lastActivityDate).toLocaleDateString()}</td>
+                          <td className="py-4 text-right space-x-2">
+                            <button
+                              onClick={() => handleRestoreWorkspace(ws.id)}
+                              className="px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
+                              style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: 'var(--pm-primary)' }}
+                              onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(52,211,153,0.18)'; }}
+                              onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(52,211,153,0.1)'; }}
+                            >
+                              Restore
+                            </button>
+                            <button
+                              onClick={() => handleExportWorkspace(ws)}
+                              className="px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
+                              style={{ background: 'rgba(192,193,255,0.1)', border: '1px solid rgba(192,193,255,0.2)', color: 'var(--pm-primary)' }}
+                              onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.18)'; }}
+                              onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
+                            >
+                              Export
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {workspacesList.filter(w => w.status === 'retired' || w.status === 'inactive').length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center py-6 text-xs italic text-[var(--pm-on-surface-variant)]">No retired or inactive archives.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Render Capability Edit Modal */}
       {capabilityModal.isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">

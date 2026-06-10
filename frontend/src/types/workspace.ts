@@ -36,11 +36,17 @@ export interface WorkspaceSettings {
   baseCurrency?: string;
 }
 
+export type WorkspaceStatus = 'active' | 'onboarding' | 'inactive' | 'retired' | 'sandbox';
+
 export interface Workspace {
   id: string;
   name: string;
   ownerId: string;
   is_demo?: boolean;
+  is_sandbox?: boolean;
+  parent_workspace_id?: string;
+  status?: WorkspaceStatus;
+  metadata?: Record<string, any>;
   settings: WorkspaceSettings;
   createdAt: string;
   updatedAt?: string;

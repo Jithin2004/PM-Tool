@@ -1,20 +1,25 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Shield, CheckCircle, XCircle, Loader, AlertCircle, KeyRound } from 'lucide-react';
-import { verifyProductKey } from '../../lib/productKey';
-import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
+import { Shield, CheckCircle, XCircle, Loader, AlertCircle, KeyRound, Upload, FileCheck } from 'lucide-react';
+import { verifyProductKey, verifyLicenseFile } from '../../lib/productKey';
+import { showAlert } from '../../components/common/Dialogs';
 
 interface ProductKeyGateProps {
   onVerified: () => void;
 }
 
 type GateState = 'input' | 'verifying' | 'success' | 'error';
+type GateMode = 'key' | 'file';
 
 export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
+  const [mode, setMode] = useState<GateMode>('key');
   const [key, setKey] = useState('');
   const [state, setState] = useState<GateState>('input');
   const [errorMsg, setErrorMsg] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -25,13 +30,15 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
   }, []);
 
   useEffect(() => {
-    if (state === 'error' && key) {
+    if (state === 'error' && (key || uploadedFile)) {
       setState('input');
       setErrorMsg('');
     }
-  }, [key, state]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, uploadedFile]);
 
-  const handleVerify = useCallback(async () => {
+  // ── Product key verification ──────────────────────────────
+  const handleVerifyKey = useCallback(async () => {
     if (!key.trim()) return;
     setState('verifying');
     setErrorMsg('');
@@ -47,9 +54,52 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     }
   }, [key, onVerified]);
 
+  // ── License file verification ─────────────────────────────
+  const handleVerifyFile = useCallback(async (file: File) => {
+    if (!file) return;
+    setState('verifying');
+    setErrorMsg('');
+
+    const result = await verifyLicenseFile(file);
+
+    if (result.success) {
+      setState('success');
+      setTimeout(() => onVerified(), 800);
+    } else {
+      setErrorMsg(result.error || 'License file verification failed.');
+      setState('error');
+    }
+  }, [onVerified]);
+
+  const handleFileSelected = useCallback((file: File) => {
+    if (!file.name.endsWith('.json')) {
+      setErrorMsg('Please select a valid license.json file.');
+      setState('error');
+      return;
+    }
+    setUploadedFile(file);
+    handleVerifyFile(file);
+  }, [handleVerifyFile]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelected(file);
+  }, [handleFileSelected]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleVerify();
-  }, [handleVerify]);
+    if (e.key === 'Enter') handleVerifyKey();
+  }, [handleVerifyKey]);
+
+  const switchMode = (next: GateMode) => {
+    setMode(next);
+    setState('input');
+    setErrorMsg('');
+    setUploadedFile(null);
+    setKey('');
+    if (next === 'key') setTimeout(() => inputRef.current?.focus(), 100);
+  };
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center p-6 relative overflow-hidden font-geist">
@@ -65,7 +115,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
         className="w-full max-w-md pm-card p-10 relative z-10"
       >
         {/* Branding */}
-        <div className="flex flex-col items-center text-center mb-10">
+        <div className="flex flex-col items-center text-center mb-8">
           <div className="w-16 h-16 bg-[var(--pm-surface-elevated)]/5 border flex items-center justify-center rounded-xl mb-6 shadow-sm"
                style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
             <Shield className="w-8 h-8" style={{ color: 'var(--pm-primary)' }} />
@@ -74,17 +124,30 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
           <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Product Activation</p>
         </div>
 
-        {/* Gate Card */}
+        {/* Mode Switcher Tabs */}
+        <div className="flex rounded-xl overflow-hidden border mb-6" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+          {(['key', 'file'] as GateMode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => switchMode(m)}
+              className="flex-1 h-9 text-xs font-semibold uppercase tracking-wide transition-all"
+              style={{
+                background: mode === m ? 'var(--pm-primary)' : 'transparent',
+                color: mode === m ? 'white' : 'var(--pm-on-surface-variant)',
+              }}
+            >
+              {m === 'key' ? '🔑 Product Key' : '📄 License File'}
+            </button>
+          ))}
+        </div>
+
+        {/* Gate Content */}
         <div>
           <AnimatePresence mode="wait">
-            {state === 'input' && (
-              <motion.div
-                key="input"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-5"
-              >
+
+            {/* ── Product Key Input ── */}
+            {mode === 'key' && state === 'input' && (
+              <motion.div key="key-input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl border"
                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
                   <KeyRound className="w-4 h-4 shrink-0" style={{ color: 'var(--pm-on-surface-variant)' }} />
@@ -110,13 +173,9 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                 )}
 
                 <button
-                  onClick={handleVerify}
+                  onClick={handleVerifyKey}
                   disabled={!key.trim()}
-                  className={`w-full rounded-xl h-12 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs transition-all active:scale-[0.98] shadow-sm hover:shadow-md ${
-                    key.trim()
-                      ? 'opacity-100'
-                      : 'opacity-50 cursor-not-allowed'
-                  }`}
+                  className={`w-full rounded-xl h-12 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs transition-all active:scale-[0.98] shadow-sm hover:shadow-md ${key.trim() ? 'opacity-100' : 'opacity-50 cursor-not-allowed'}`}
                   style={{ background: 'var(--pm-primary)', color: 'white' }}
                 >
                   Activate License
@@ -124,19 +183,60 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
               </motion.div>
             )}
 
-            {state === 'verifying' && (
-              <motion.div
-                key="verifying"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-center py-6"
-              >
-                <Loader className="w-8 h-8 mx-auto mb-4 animate-spin" style={{ color: 'var(--pm-primary)' }} />
-                <p className="text-sm font-medium" style={{ color: 'var(--pm-on-surface-variant)' }}>Verifying product key...</p>
+            {/* ── License File Drop Zone ── */}
+            {mode === 'file' && state === 'input' && (
+              <motion.div key="file-input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
+                <div
+                  className="rounded-xl border-2 border-dashed p-8 text-center transition-all cursor-pointer"
+                  style={{
+                    borderColor: dragOver ? 'var(--pm-primary)' : 'rgba(70,69,84,0.4)',
+                    background: dragOver ? 'var(--pm-primary-container)/10' : 'var(--pm-surface-lowest)',
+                  }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelected(f); }}
+                  />
+                  <Upload className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--pm-on-surface-variant)' }} />
+                  <p className="text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>
+                    Drop your <span className="font-mono text-xs">license.json</span> here
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                    or click to browse files
+                  </p>
+                </div>
+
+                {errorMsg && (
+                  <div className="flex items-start gap-2 text-sm" style={{ color: 'var(--pm-error)' }}>
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
+
+                <p className="text-xs text-center" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                  Offline activation — no internet required
+                </p>
               </motion.div>
             )}
 
+            {/* ── Verifying ── */}
+            {state === 'verifying' && (
+              <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-6">
+                <Loader className="w-8 h-8 mx-auto mb-4 animate-spin" style={{ color: 'var(--pm-primary)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                  {mode === 'file' ? 'Verifying license file signature...' : 'Verifying product key...'}
+                </p>
+              </motion.div>
+            )}
+
+            {/* ── Success ── */}
             {state === 'success' && (
               <motion.div
                 key="success"
@@ -146,40 +246,42 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                 transition={{ duration: 0.3 }}
                 className="text-center py-6"
               >
-                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
+                {mode === 'file'
+                  ? <FileCheck className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
+                  : <CheckCircle className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
+                }
                 <p className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Activation successful</p>
                 <p className="text-sm mt-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Initializing workspace...</p>
               </motion.div>
             )}
 
+            {/* ── Error (with retry) ── */}
             {state === 'error' && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-5"
-              >
+              <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
                 <div className="text-center py-4">
                   <XCircle className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--pm-error)' }} />
-                  <p className="text-sm font-medium" style={{ color: 'var(--pm-error)' }}>Verification failed</p>
+                  <p className="text-sm font-medium mb-1" style={{ color: 'var(--pm-error)' }}>Verification failed</p>
+                  {errorMsg && (
+                    <p className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>{errorMsg}</p>
+                  )}
                 </div>
                 <button
-                  onClick={handleVerify}
+                  onClick={() => { setState('input'); setErrorMsg(''); setUploadedFile(null); }}
                   className="w-full rounded-xl h-12 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs transition-all active:scale-[0.98]"
                   style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface)', border: '1px solid rgba(70,69,84,0.3)' }}
                 >
-                  Retry
+                  Try Again
                 </button>
               </motion.div>
             )}
+
           </AnimatePresence>
         </div>
 
-        {/* Empty State Options */}
+        {/* Bottom Options */}
         <div className="mt-8 pt-6 border-t" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
           <p className="text-xs text-center font-medium mb-4" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Don't have a product key?
+            Don't have a license?
           </p>
           <div className="flex flex-col gap-2">
             <button

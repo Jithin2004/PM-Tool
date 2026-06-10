@@ -4,6 +4,8 @@ import {
   CheckCircle2, GitPullRequest, GitMerge, Layout, Focus
 } from 'lucide-react';
 import { Project, Team, Profile } from '../../types';
+import { calculateProjectTimeMetrics } from '../../core/execution/projectTimeEngine';
+import { ContextHelp } from '../ui/ContextHelp';
 
 export function ProjectCard({ 
   project, 
@@ -45,6 +47,22 @@ export function ProjectCard({
   // Visual state mapping
   const isHealthy = highRiskTasks.length === 0;
   const isCritical = highRiskTasks.length > 3;
+
+  const timeStats = project.client_deadline || project.deadline ? calculateProjectTimeMetrics(
+    project.created_at, 
+    project.client_deadline || project.deadline, 
+    tasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0)
+  ) : null;
+
+  const teamMembersCount = tasks.reduce((acc, t) => {
+    if (t.assignee_id && !acc.includes(t.assignee_id)) {
+      acc.push(t.assignee_id);
+    }
+    return acc;
+  }, [] as string[]).length;
+
+  const blockers = tasks.filter(t => t.status === 'blocked');
+  const currentBlocker = blockers.length > 0 ? blockers[0] : null;
 
   return (
     <div
@@ -118,26 +136,39 @@ export function ProjectCard({
           </div>
  
           {/* Metric Grid */}
-          <div className="grid grid-cols-3 gap-2 py-2 border-y border-[var(--border-soft)]">
+          <div className="grid grid-cols-2 gap-2 py-2 border-y border-[var(--border-soft)]">
             <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-wider text-[var(--text-secondary)] mb-0.5 font-mono">Tasks</span>
-              <span className="text-xs font-mono font-medium text-[var(--text-secondary)]">{completedTasks}/{totalTasks}</span>
+              <span className="text-[9px] uppercase tracking-wider text-[var(--text-secondary)] mb-0.5 font-mono">Running</span>
+              <span className="text-xs font-mono font-medium text-white">{timeStats ? timeStats.calendarAgeDays : 0} days</span>
             </div>
             <div className="flex flex-col border-l border-[var(--border-soft)] pl-2">
-              <span className="text-[9px] uppercase tracking-wider text-[var(--text-secondary)] mb-0.5 font-mono">Confidence</span>
-              <span className={`text-xs font-mono font-medium ${
-                confidence > 80 ? 'text-emerald-400' : confidence > 50 ? 'text-amber-400' : 'text-rose-400'
-              }`}>
-                {confidence}%
-              </span>
-            </div>
-            <div className="flex flex-col border-l border-[var(--border-soft)] pl-2">
-              <span className="text-[9px] uppercase tracking-wider text-[var(--text-secondary)] mb-0.5 font-mono">Blockers</span>
-              <span className={`text-xs font-mono font-medium ${highRiskTasks.length > 0 ? 'text-rose-400' : 'text-[var(--text-secondary)]'}`}>
-                {highRiskTasks.length}
-              </span>
+              <div className="flex items-center">
+                <span className="text-[9px] uppercase tracking-wider text-[var(--text-secondary)] mb-0.5 font-mono">ETA</span>
+                <ContextHelp text="Estimated Time of Arrival calculated dynamically based on tasks remaining and developer velocity." />
+              </div>
+              {timeStats ? (
+                <span className={`text-xs font-mono font-medium ${
+                  timeStats.isDelayed ? 'text-rose-400' : 'text-emerald-400'
+                }`}>
+                  {timeStats.isDelayed ? `Over by ${timeStats.overEtaDays}d` : `${timeStats.remainingDays} days left`}
+                </span>
+              ) : (
+                <span className="text-xs font-mono font-medium text-amber-400">
+                  No Deadline
+                </span>
+              )}
             </div>
           </div>
+
+          {currentBlocker && (
+            <div className="flex items-start gap-2 bg-rose-500/10 border border-rose-500/20 p-2 rounded-lg">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+              <div className="flex flex-col">
+                <span className="text-[9px] uppercase tracking-wider text-rose-400 mb-0.5 font-mono">Current Blocker</span>
+                <span className="text-[10px] text-rose-300 line-clamp-1">{currentBlocker.name}</span>
+              </div>
+            </div>
+          )}
         </div>
  
         {/* Footer: Team & Forecast Action */}
@@ -153,7 +184,9 @@ export function ProjectCard({
                 <img src={creator.avatar_url} className="w-5 h-5 rounded-full border border-[var(--border-soft)] object-cover" alt="Owner" />
               ) : null}
             </div>
-            <span className="text-[10px] font-medium text-[var(--text-secondary)]">{teamName}</span>
+            <span className="text-[10px] font-medium text-[var(--text-secondary)]">
+              {teamMembersCount > 0 ? `${teamMembersCount} members` : teamName}
+            </span>
           </div>
           
           <button className="flex items-center gap-1 text-[10px] uppercase font-medium text-[var(--text-secondary)] group-hover:text-purple-400 transition-all font-mono">

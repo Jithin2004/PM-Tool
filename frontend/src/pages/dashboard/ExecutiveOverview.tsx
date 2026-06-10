@@ -4,7 +4,7 @@ import { useOperationalData } from '../../context/OperationalDataContext';
 import { FileText, ChevronRight, AlertTriangle, TrendingUp, Shield, Clock, Users, CheckCircle2 } from 'lucide-react';
 
 export function ExecutiveOverview() {
-  const { workspace, projects } = useWorkspace() as any;
+  const { workspace, projects, t } = useWorkspace() as any;
   const { raw: { tasks, profiles, attendanceRows } } = useOperationalData();
 
   const activeProjects = useMemo(() => projects?.filter((p: any) => p.status !== 'deployed' && p.status !== 'archived') || [], [projects]);
@@ -52,12 +52,20 @@ export function ExecutiveOverview() {
 
     const completionRate = totalTasks ? Math.round((totalDone / totalTasks) * 100) : 0;
 
+    const recentChanges = tasks?.filter((t: any) => t.updated_at && (Date.now() - new Date(t.updated_at).getTime()) < 3 * 86400000).length || 0;
+    const pendingApprovals = tasks?.filter((t: any) => t.status === 'in_review').length || 0;
+    const pendingDecisions = projects?.filter((p: any) => p.status === 'paused' || p.risk === 'high').length || 0;
+
     return {
       activeProjectsCount: activeProjects.length,
       completionRate,
       teamCapacity: capacityScore,
       delayedItems: totalDelayed,
-      projects: projectSummaries
+      projects: projectSummaries,
+      recentChanges,
+      newDelays: totalDelayed,
+      pendingApprovals,
+      pendingDecisions
     };
   }, [activeProjects, tasks, profiles, attendanceRows]);
 
@@ -85,7 +93,7 @@ export function ExecutiveOverview() {
             Executive Brief
           </h1>
           <p className="text-base mt-2 text-[var(--pm-text-secondary)]">
-            Live summary of all active projects, team capacity, and execution risks.
+            Live summary of all active {t('projects', 'projects')}, team capacity, and execution risks.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -95,11 +103,37 @@ export function ExecutiveOverview() {
         </div>
       </div>
 
+      {/* Monday Morning Brief */}
+      <div className="bg-[var(--pm-surface-elevated)] rounded-xl border border-[var(--pm-border)] p-6 shadow-sm mb-6">
+        <h2 className="text-lg font-semibold mb-4 text-[var(--pm-text)] flex items-center gap-2">
+          <Clock className="w-5 h-5 text-indigo-500" />
+          Monday Morning Brief
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:divide-x divide-[var(--pm-border)]/50">
+          <div className="p-2">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)] mb-2">What changed?</h3>
+            <p className="text-sm font-medium text-[var(--pm-text)]"><span className="text-emerald-500 font-bold">{briefData.recentChanges} items</span> progressed.</p>
+          </div>
+          <div className="p-2 md:pl-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)] mb-2">What got worse?</h3>
+            <p className="text-sm font-medium text-[var(--pm-risk)]"><span className="font-bold">{briefData.newDelays} new delays</span> identified.</p>
+          </div>
+          <div className="p-2 md:pl-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)] mb-2">What needs approval?</h3>
+            <p className="text-sm font-medium text-[var(--pm-warning)]"><span className="font-bold">{briefData.pendingApprovals} items</span> blocked waiting on you.</p>
+          </div>
+          <div className="p-2 md:pl-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)] mb-2">Decisions Waiting</h3>
+            <p className="text-sm font-medium text-[var(--pm-primary)]"><span className="font-bold">{briefData.pendingDecisions} executive decisions</span> required.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Top KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[var(--pm-surface-elevated)] rounded-xl border border-[var(--pm-border)] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-medium text-[var(--pm-text-secondary)]">Active Projects</div>
+            <div className="text-sm font-medium text-[var(--pm-text-secondary)]">Active {t('projects', 'Projects')}</div>
             <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
               <Shield className="w-4 h-4 text-blue-500" />
             </div>
@@ -148,10 +182,10 @@ export function ExecutiveOverview() {
               <h2 className="text-lg font-semibold text-[var(--pm-text)]">Delivery Summary</h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
+              <table className="w-full text-sm text-left table-premium executive-table min-w-[800px]">
                 <thead className="bg-[var(--pm-surface)]/30 text-[var(--pm-text-secondary)] text-xs border-b border-[var(--pm-border)]">
                   <tr>
-                    <th className="px-5 py-3 font-medium">Project</th>
+                    <th className="px-5 py-3 font-medium">{t('project', 'Project')}</th>
                     <th className="px-5 py-3 font-medium">Owner</th>
                     <th className="px-5 py-3 font-medium">Status</th>
                     <th className="px-5 py-3 font-medium">Completion</th>
@@ -161,7 +195,7 @@ export function ExecutiveOverview() {
                 <tbody className="divide-y divide-[var(--pm-border)]/50">
                   {briefData.projects.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-[var(--pm-text-secondary)]">No active projects to display.</td>
+                      <td colSpan={5} className="px-5 py-8 text-center text-[var(--pm-text-secondary)]">No active {t('projects', 'projects')} to display.</td>
                     </tr>
                   ) : (
                     briefData.projects.map((item: any) => {

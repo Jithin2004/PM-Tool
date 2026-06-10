@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
@@ -8,6 +8,9 @@ import { sendNotification } from '../../services/notificationService';
 import { hasCapability } from '../../core/auth/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useOperationalData } from '../../context/OperationalDataContext';
+import { AsyncUpdateEngine } from '../../core/system/AsyncUpdateEngine';
+import { AlertCircle, CheckCircle, Info, Calendar } from 'lucide-react';
 
 export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
   const { workspace } = useWorkspace();
@@ -16,6 +19,9 @@ export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => vo
   const [loading, setLoading] = useState(false);
   
   useEscapeKey(true, onClose);
+
+  const { raw: { tasks = [], projects = [], workspaceSettingsBlob } } = useOperationalData();
+  const decisions = (workspaceSettingsBlob?.operational_decisions as any[]) || [];
 
   const [formData, setFormData] = useState({
     title: '',
@@ -26,6 +32,15 @@ export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => vo
     agenda: '',
     participants: [] as string[]
   });
+
+  const meetingReport = useMemo(() => {
+    return AsyncUpdateEngine.generateMeetingReport(
+      formData.participants,
+      tasks,
+      projects,
+      decisions
+    );
+  }, [formData.participants, tasks, projects, decisions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +109,89 @@ export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => vo
         </div>
         
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2 space-y-4 scrollbar-premium">
+          {/* Async Update & Meeting Replacement Checker */}
+          <div className="bg-surface-2/60 border border-[var(--border-soft)] rounded-xl p-4 mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 font-mono-pm mb-3 flex items-center gap-1.5">
+              <Info className="w-4 h-4" /> Before you schedule a meeting...
+            </h3>
+            
+            <div className="space-y-2.5 text-xs">
+              <div>
+                <span className="font-semibold text-text-secondary">Already Known (Recent Progress):</span>
+                {meetingReport.completedTasks.length === 0 ? (
+                  <div className="text-[10px] text-text-quaternary italic pl-3 mt-0.5">No tasks completed in the last 7 days.</div>
+                ) : (
+                  <ul className="list-disc pl-6 text-[10px] text-text-tertiary mt-0.5 space-y-0.5">
+                    {meetingReport.completedTasks.slice(0, 3).map(t => (
+                      <li key={t.id}>Completed: {t.name}</li>
+                    ))}
+                    {meetingReport.completedTasks.length > 3 && <li>And {meetingReport.completedTasks.length - 3} more...</li>}
+                  </ul>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 pt-2 border-t border-[var(--border-soft)]">
+                <div>
+                  <span className="font-semibold text-text-secondary">Blocked Items:</span>
+                  {meetingReport.blockedTasks.length === 0 ? (
+                    <div className="text-[10px] text-text-quaternary italic pl-3 mt-0.5">0 blocked tasks.</div>
+                  ) : (
+                    <ul className="list-disc pl-6 text-[10px] text-rose-400/80 mt-0.5 space-y-0.5">
+                      {meetingReport.blockedTasks.map(t => (
+                        <li key={t.id}>Blocked: {t.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="mt-1">
+                  <span className="font-semibold text-text-secondary">Waiting Items:</span>
+                  {meetingReport.waitingTasks.length === 0 ? (
+                    <div className="text-[10px] text-text-quaternary italic pl-3 mt-0.5">0 waiting tasks.</div>
+                  ) : (
+                    <ul className="list-disc pl-6 text-[10px] text-amber-400/80 mt-0.5 space-y-0.5">
+                      {meetingReport.waitingTasks.map(t => (
+                        <li key={t.id}>Waiting: {t.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="mt-1">
+                  <span className="font-semibold text-text-secondary">Decisions Needed:</span>
+                  {meetingReport.pendingDecisions.length === 0 ? (
+                    <div className="text-[10px] text-text-quaternary italic pl-3 mt-0.5">0 pending decisions.</div>
+                  ) : (
+                    <ul className="list-disc pl-6 text-[10px] text-cyan-400/80 mt-0.5 space-y-0.5">
+                      {meetingReport.pendingDecisions.map(d => (
+                        <li key={d.id}>Pending decision: {d.title || d.metadata?.decision_title}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Recommendation */}
+              <div className={`mt-3 p-3 rounded-lg border flex gap-2 items-start ${
+                meetingReport.shouldBlockMeeting 
+                  ? 'bg-rose-950/20 border-rose-500/30 text-rose-200' 
+                  : 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200'
+              }`}>
+                {meetingReport.shouldBlockMeeting ? (
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                )}
+                <div>
+                  <div className="font-bold text-[10px] uppercase tracking-wider">
+                    {meetingReport.shouldBlockMeeting ? 'Resolve these first' : 'All Clear'}
+                  </div>
+                  <div className="text-[10px] mt-0.5 leading-relaxed">{meetingReport.suggestion}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Title</label>
             <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none" />

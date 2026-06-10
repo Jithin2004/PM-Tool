@@ -11,27 +11,33 @@ export function getFriendlyErrorMessage(err: any): string {
 
   // Not Found
   if (code === 'PGRST116') {
-    return "The requested record could not be found.";
+    return "The requested item could not be found.";
   }
 
   // Unique constraint violation
   if (code === '23505') {
-    return "This record already exists.";
+    return "This item already exists.";
   }
 
   // Foreign key violation
   if (code === '23503') {
-    return "This record cannot be deleted because it is referenced elsewhere.";
+    return "This item cannot be deleted because it is currently in use.";
   }
 
   // Network errors
   if (message.toLowerCase().includes('fetch') || message.toLowerCase().includes('network')) {
-    return "Network connection lost. Please check your connection and try again.";
+    return "Connection issue. Please check your internet and try again.";
   }
   
   if (message.includes('JWT') || code === '401') {
     return "Your session has expired. Please log in again.";
   }
 
-  return message || 'An unexpected error occurred.';
+  // Catch backend technical leaks
+  const msgLower = message.toLowerCase();
+  if (msgLower.includes('rpc') || msgLower.includes('mutation') || msgLower.includes('schema') || msgLower.includes('payload') || msgLower.includes('entity') || msgLower.includes('failed request')) {
+    return "Could not save changes. Please try again.";
+  }
+
+  return message || 'Update failed. Please try again.';
 }

@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { showAlert, showPrompt } from '../../components/common/Dialogs';
 import { PremiumLoader } from '../../components/common/PremiumLoader';
 
-export function SharedProjectDashboard() {
+export function SharedProjectDashboard({ previewToken }: { previewToken?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
@@ -15,9 +15,9 @@ export function SharedProjectDashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [submittingApproval, setSubmittingApproval] = useState<string | null>(null);
 
-  // Extract token from path
+  // Extract token from path or use prop
   const pathParts = window.location.pathname.split('/');
-  const token = pathParts[pathParts.length - 1];
+  const token = previewToken || pathParts[pathParts.length - 1];
 
   useEffect(() => {
     const fetchSharedData = async () => {

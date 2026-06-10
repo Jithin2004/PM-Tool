@@ -1,3 +1,4 @@
+import { trackSupabaseOperation } from '../../core/observability/telemetry';
 import React, { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -83,7 +84,7 @@ export function WorkspaceSetupWizard() {
             };
             
             try {
-              const { error: inviteError } = await supabase.from('invitations').insert(insertPayload);
+              const { error: inviteError } = await trackSupabaseOperation('supabase_from_invitations', () => supabase.from('invitations').insert(insertPayload));
               if (inviteError) {
                 if (inviteError.message?.includes('duplicate key') || inviteError.code === '23505') {
                   skipped++;
@@ -103,7 +104,12 @@ export function WorkspaceSetupWizard() {
           
           // Optionally show summary before redirect if there are failures
           if (failed > 0 || skipped > 0) {
-            alert(`Import Summary:\nImported: ${imported}\nSkipped: ${skipped}\nFailed: ${failed}\n\nReasons:\n${failReasons.join('\\n')}`);
+            window.dispatchEvent(new CustomEvent('notify-toast', {
+              detail: { 
+                message: `Import Summary:\nImported: ${imported}\nSkipped: ${skipped}\nFailed: ${failed}\n\nReasons:\n${failReasons.join('\n')}`, 
+                type: 'warning' 
+              }
+            }));
           }
         }
         await refreshProfile();
@@ -286,7 +292,7 @@ export function WorkspaceSetupWizard() {
                   <Check className="w-8 h-8" />
                 </div>
                 <h3 className="text-xl font-bold text-[var(--pm-on-surface)]">Ready for Launch</h3>
-                <p className="text-sm text-[var(--pm-on-surface-variant)] mt-1">Please review your workspace configuration.</p>
+                <p className="text-sm text-[var(--pm-on-surface-variant)] mt-1">Review your company setup. Once created, you can immediately begin inviting your team and tracking projects.</p>
               </div>
               
               <div className="bg-surface-4 rounded-xl p-5 border border-border/50 space-y-4">

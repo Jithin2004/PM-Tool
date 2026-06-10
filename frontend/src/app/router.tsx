@@ -43,7 +43,8 @@ const TermsPage = withRetry(() => import('../landing/TermsPage').then(m => ({ de
 const CompliancePage = withRetry(() => import('../landing/CompliancePage').then(m => ({ default: m.CompliancePage })));
 const SecurityPage = withRetry(() => import('../landing/SecurityPage').then(m => ({ default: m.SecurityPage })));
 
-const OverviewPage = withRetry(() => import('../pages/dashboard/OverviewPage'));
+const RoleHomeRouter = withRetry(() => import('./RoleHomeRouter').then(m => ({ default: m.RoleHomeRouter })));
+
 const AdminPanel = withRetry(() => import('../pages/dashboard/AdminPanel').then(m => ({ default: m.AdminPanel })));
 const LogisticsPanel = withRetry(() => import('../pages/dashboard/LogisticsPanel').then(m => ({ default: m.LogisticsPanel })));
 const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
@@ -54,6 +55,7 @@ const MeetingsPage = withRetry(() => import('../pages/workspace/MeetingsPage'));
 const RequirementsPage = withRetry(() => import('../pages/workspace/RequirementsPage'));
 const DocumentsPage = withRetry(() => import('../pages/workspace/DocumentsPage'));
 const ApprovalsPage = withRetry(() => import('../pages/workspace/ApprovalsPage'));
+const EmployeeStartCenter = withRetry(() => import('../components/onboarding/EmployeeStartCenter').then(m => ({ default: m.EmployeeStartCenter })));
 const ExecutiveOverview = withRetry(() => import('../pages/dashboard/ExecutiveOverview').then(m => ({ default: m.ExecutiveOverview })));
 
 const ProductAdoptionDashboard = withRetry(() => import('../pages/workspace/ProductAdoptionDashboard').then(m => ({ default: m.ProductAdoptionDashboard })));
@@ -209,19 +211,6 @@ export function ResolveRouter() {
   ]);
 
   useEffect(() => {
-    /* 
-//     console.log("[ResolveRouter START] Current state:", {
-      pathname,
-      workspaceId: workspace?.id,
-      userId: user?.id,
-      role,
-      workspaceLoading,
-      authLoading,
-      profileResolved,
-      profileHydrating,
-      productKeyVerified: isProductKeyVerified()
-    });
-    */
   }, [pathname, workspace, user, role, workspaceLoading, authLoading, profileResolved, profileHydrating]);
 
   const prefetchInitiated = useRef(false);
@@ -240,7 +229,6 @@ export function ResolveRouter() {
       const r = profile.role;
       try {
         if (r === 'super_admin') {
-          import('../pages/dashboard/OverviewPage');
           import('../pages/resources/FinancePage');
           import('../pages/resources/TeamsPage');
           import('../pages/control/SettingsPage');
@@ -366,7 +354,7 @@ export function ResolveRouter() {
   // ── OVERVIEW ──
 
   if (pathname === '/overview') {
-    return <RouteShell><OverviewPage /></RouteShell>;
+    return <RouteShell><RoleHomeRouter /></RouteShell>;
   }
 
   // ── WORKSPACE ──
@@ -411,6 +399,10 @@ export function ResolveRouter() {
   if (pathname === '/workspace/approvals') {
     if (!guardRoute(role, '/workspace/approvals')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><ApprovalsPage /></RouteShell>;
+  }
+  if (pathname === '/workspace/onboarding') {
+    if (!guardRoute(role, '/workspace/onboarding')) return <RouteShell><AccessRestricted /></RouteShell>;
+    return <RouteShell><EmployeeStartCenter /></RouteShell>;
   }
 
   // ── EXECUTION ──
@@ -534,5 +526,5 @@ export function ResolveRouter() {
   // ── Fallback: unknown paths → overview (registered 404 behavior) ──
   if (import.meta.env.DEV && !isRegisteredPath(pathname)) {
   }
-  return <RouteShell><OverviewPage /></RouteShell>;
+  return <Redirect to="/overview" />;
 }

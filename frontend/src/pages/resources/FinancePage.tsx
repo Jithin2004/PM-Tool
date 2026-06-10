@@ -1,4 +1,4 @@
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+
 import React, { useState, useEffect } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -14,6 +14,7 @@ import { CreateInvoiceModal } from '../../components/finance/CreateInvoiceModal'
 import { ManageClientsModal } from '../../components/finance/ManageClientsModal';
 import { generateInvoicePDF } from '../../services/invoicePdfService';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 
 export default function FinancePage() {
   const { workspace } = useWorkspace();
@@ -399,11 +400,16 @@ export default function FinancePage() {
           </div>
           <div className="p-0">
             {data.invoices.length === 0 ? (
-              <div className="p-8 text-center flex flex-col items-center">
-                <Receipt className="w-8 h-8 text-text-quaternary mb-3" />
-                <p className="text-sm font-medium text-text-secondary">No invoices created yet.</p>
-                <p className="text-xs text-text-tertiary mt-1">Generate your first invoice to start billing clients.</p>
-              </div>
+              <PremiumEmptyState 
+                icon={Receipt} 
+                title="No Invoices Issued" 
+                description="Billing history and outstanding invoices will appear here once you generate an invoice for client work."
+                action={(
+                  <button onClick={() => setShowInvoiceModal(true)} className="btn-premium-primary px-4 py-2 rounded text-xs mt-2">
+                    Generate First Invoice
+                  </button>
+                )}
+              />
             ) : (
               <div className="overflow-x-auto scrollbar-premium">
                 <table className="w-full text-left border-collapse table-premium">

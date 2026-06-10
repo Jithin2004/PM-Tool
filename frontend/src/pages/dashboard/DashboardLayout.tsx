@@ -7,7 +7,10 @@ import {
   Calculator, TrendingDown, Banknote, Download, Menu, X,
   Sun, Moon, Layers, ListOrdered, Kanban, Play,
   Briefcase, ListTodo, FileText, Link2, Bell, HelpCircle, LayoutDashboard,
-  Truck, Route, GitBranch, Building2, Radar, Shield, BookOpen
+  Truck, Route, GitBranch, Building2, Radar, Shield, BookOpen,
+  Sparkles, MessageSquare, Terminal, Globe, Command, Sunset,
+  Archive, UserCog, Mail, WifiOff, RefreshCw, AlertCircle, ChevronDown,
+  Link as LinkIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
@@ -15,6 +18,7 @@ import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { OperationalDataProvider, useOperationalData } from '../../context/OperationalDataContext';
+import { RealtimeProvider } from '../../context/RealtimeProvider';
 import { useTheme } from '../../context/ThemeContext';
 import { DashboardDataBridge } from '../../components/dashboard/DashboardDataBridge';
 import { ProgressiveUnlockHint } from '../../components/dashboard/ProgressiveUnlockHint';
@@ -24,7 +28,8 @@ import { sha256 } from '../../utils/cryptoUtils';
 import { sendNotification } from '../../services/notificationService';
 import { activityLogService } from '../../services/activityLogService';
 import { getLicenseInfo } from '../../lib/productKey';
-import { CheckCircle2, XCircle, Info, AlertCircle, ChevronDown } from 'lucide-react';
+// Lucide imports merged above
+import { UniversalWorkInbox } from '../../components/inbox/UniversalWorkInbox';
 import { Login } from '../../components/auth/Login';
 import CommandPalette from '../../components/command/CommandPalette';
 import CommandAnalytics from '../../components/command/CommandAnalytics';
@@ -41,6 +46,8 @@ import { ProjectDetailsModal } from '../../components/project/ProjectDetailsModa
 import { ProjectCreationModal } from '../../components/project/ProjectCreationModal';
 import { TeamRosterModal } from '../../components/team/TeamRosterModal';
 import { UserProfileModal } from '../../components/user/UserProfileModal';
+import { WelcomeCenter } from '../../components/onboarding/WelcomeCenter';
+import { SupportEscalationModal } from '../../components/support/SupportEscalationModal';
 import { calculateExpectedTime, calculateVariance, calculateHoursFromRange, getLocalDateString, getRelativeTime } from '../../utils/timeUtils';
 import { hasCapability, Capability } from '../../core/auth/permissions';
 import { Project, Team, Profile, User, UserRole } from '../../types';
@@ -53,6 +60,9 @@ import {
 } from '../../app/routeRegistry';
 import { GuidedTour, TourStep } from '../../components/onboarding/GuidedTour';
 import { WorkSessionManager } from '../../components/execution/WorkSessionManager';
+import { cloneWorkspaceToSandbox } from '../../services/workspaceService';
+import { EndOfDayModal } from '../../components/execution/EndOfDayModal';
+// Sunset imported above
 
 interface ConfirmState {
   isOpen: boolean;
@@ -82,7 +92,7 @@ interface ExecutiveDomain {
 const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Command Center',
     iconName: 'Radar',
     subsections: [
       { label: 'Overview', path: '/overview', capability: 'view_projects' }
@@ -186,7 +196,9 @@ const isSubsectionAllowed = (sub: DomainSubsection, role?: string): boolean => {
 export default function DashboardLayout({ children }: { children?: React.ReactNode }) {
   return (
     <OperationalDataProvider>
-      <DashboardLayoutShell>{children}</DashboardLayoutShell>
+      <RealtimeProvider>
+        <DashboardLayoutShell>{children}</DashboardLayoutShell>
+      </RealtimeProvider>
     </OperationalDataProvider>
   );
 }
@@ -415,6 +427,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isRosterOpen, setIsRosterOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isEndOfDayModalOpen, setIsEndOfDayModalOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'dashboard' | 'active' | 'completed' | 'intelligence'>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -425,6 +438,28 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const [feedbackComment, setFeedbackComment] = useState('');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [commandAnalyticsOpen, setCommandAnalyticsOpen] = useState(false);
+  const [isSandboxMode, setIsSandboxMode] = useState(() => localStorage.getItem('resolve-sandbox-mode') === 'true');
+  const [isSandboxTransitioning, setIsSandboxTransitioning] = useState(false);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
+
+  // --- OFFLINE STATE ---
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    const handleOffline = () => setIsOffline(true);
+    const handleOnline = () => {
+      setIsOffline(false);
+      setSyncing(true);
+      setTimeout(() => setSyncing(false), 2000); // Simulate sync delay
+    };
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -447,108 +482,69 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     const role = profile?.role || 'viewer';
 
     if (hasCapability(role, 'platform_governance')) {
+      // FOUNDER / EXECUTIVE TOUR
       return [
         {
-          title: "Initialize Delivery Unit",
-          description: "Step into your high-fidelity Resolve PM workspace. This guide will brief you on all administrative and scheduling tools at your disposal.",
+          title: "Executive Command Center",
+          description: "Welcome to Resolve PM. This view gives you full visibility into company health, adoption rates, and high-level strategy.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/overview')
         },
         {
-          title: "Tactical Navigation Console",
-          description: "Use the Sidebar to access different areas. 'Team' contains Team Management and Roster, while 'Admin' houses your global Settings.",
-          targetSelector: "#tour-sidebar",
-          actionBefore: () => navigateTo('/overview')
-        },
-        {
-          title: "AI-Powered Strategy Analytics",
-          description: "Monitor 'Decision Center' for strategic recommendations or 'Analytics' for a deep dive into delivery velocity and team bandwidth.",
+          title: "Decision Center",
+          description: "Monitor project health and review AI-powered strategic decisions here.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace/decisions')
         },
         {
-          title: "Project Workspace Grid",
-          description: "Your primary project workspace. Click the 'New Project' button in the Top Bar to add projects. Click 'Details' on any card to view PERT estimates.",
-          targetSelector: "#tour-topbar",
-          actionBefore: () => navigateTo('/workspace')
-        },
-        {
-          title: "Task Board & Execution",
-          description: "Explore the premium, tactical Board. Shift lenses, track task lanes, and observe live clock-synced ETAs.",
-          targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/execution/board')
-        },
-        {
-          title: "Calibrated & Ready!",
-          description: "Your console is fully synced to the operational database. Use the Sun/Moon button in the Top Bar to switch themes anytime.",
-          targetSelector: "#tour-topbar",
-          actionBefore: () => navigateTo('/overview')
+          title: "Reporting & ROI",
+          description: "Check the Customer Success Dashboard to view business value, time saved, and adoption metrics.",
+          targetSelector: "#tour-sidebar",
+          actionBefore: () => navigateTo('/workspace/reports')
         }
       ];
     } else if (hasCapability(role, 'manage_projects')) {
+      // PM TOUR
       return [
         {
-          title: "Welcome, Project Manager!",
-          description: "Step into your allocation workspace. This guide will brief you on how to coordinate teams and track client deadlines.",
+          title: "Project Manager Workspace",
+          description: "Welcome to your allocation workspace. Keep track of deadlines and manage client commitments.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace')
         },
         {
-          title: "Tactical Control",
-          description: "Monitor team bandwidth and delivery confidence from the 'Decision Center'.",
-          targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/decisions')
-        },
-        {
-          title: "Project Management Grid",
-          description: "Click 'New Project' in the Top Bar to set deadlines. Click 'Details' on any card to edit its proposed start.",
-          targetSelector: "#tour-topbar",
-          actionBefore: () => navigateTo('/workspace')
-        },
-        {
-          title: "Execution Board",
-          description: "Track task progression, visualize Kanban/Scrum lanes, and inspect live clock-synced ETAs.",
+          title: "Managing Blockers",
+          description: "Head to the Board to review team impediments and unblock your developers efficiently.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/execution/board')
         },
         {
-          title: "Calibrated & Ready!",
-          description: "Keep timelines on target! Use the Top Bar utilities to switch themes or search across the platform.",
-          targetSelector: "#tour-topbar",
-          actionBefore: () => navigateTo('/overview')
+          title: "Approvals & Risks",
+          description: "Review risks and approve changes before they impact the delivery timeline.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/workspace/approvals')
         }
       ];
     } else {
+      // DEVELOPER / EMPLOYEE TOUR
       return [
         {
-          title: "Entity Identity Initialized",
-          description: "This workspace displays live engineering allocations, delivery schedules, and historical project logs in Read-Only mode.",
+          title: "Welcome to Resolve PM",
+          description: "Your daily hub for finding tasks and collaborating with the team.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/overview')
         },
         {
-          title: "Strategy & Intelligence",
-          description: "Monitor project health and AI Strategy briefings right from the 'Decision Center'.",
-          targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/decisions')
-        },
-        {
-          title: "Project Grid",
-          description: "View active projects and their current status. Click 'Details' on cards to view PERT estimates and past audit logs.",
-          targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace')
-        },
-        {
-          title: "Execution Board",
-          description: "View real-time task progression lanes and live clock-synced ETAs in premium Read-Only mode.",
+          title: "Finding Tasks",
+          description: "Access the Execution Board to find your assigned tasks and move them across lanes.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/execution/board')
         },
         {
-          title: "All Calibrated!",
-          description: "You are fully up to date with live team activities. Keep track of project updates as developers coordinate tasks!",
+          title: "Updating Progress",
+          description: "Start timers, log work, and communicate progress directly on task cards.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/overview')
+          actionBefore: () => navigateTo('/execution/board')
         }
       ];
     }
@@ -1262,6 +1258,20 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
         {/* Main Content Area */}
         <div id="tour-main-content" className={`flex flex-col flex-1 min-h-screen transition-[transform,opacity] duration-200 ${isSidebarCollapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-[15.5rem]'}`} style={{ background: 'transparent' }}>
+          
+          {/* OFFLINE / SYNC BANNER */}
+          <AnimatePresence>
+            {isOffline && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-red-500 text-white text-xs font-medium px-4 py-1.5 flex items-center justify-center gap-2 z-50">
+                <WifiOff className="w-3.5 h-3.5" /> Connection lost — Changes waiting to sync
+              </motion.div>
+            )}
+            {!isOffline && syncing && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-emerald-500 text-white text-xs font-medium px-4 py-1.5 flex items-center justify-center gap-2 z-50">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Synced successfully
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {getLicenseInfo()?.offlineVerified && (
             <div className="bg-rose-500/20 border-b border-rose-500/30 text-rose-400 text-center py-1.5 text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2">
@@ -1270,10 +1280,17 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             </div>
           )}
 
-          {workspace?.is_demo && (
+          {workspace?.status === 'sandbox' && (
             <div className="bg-amber-500/20 border-b border-amber-500/30 text-amber-500 text-center py-1.5 text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2">
               <AlertCircle className="w-3.5 h-3.5" />
-              Demo Data Environment — All changes are temporary
+              Sandbox Environment — All changes are temporary
+            </div>
+          )}
+
+          {isSandboxMode && (
+            <div className="bg-blue-500/20 border-b border-blue-500/30 text-blue-400 text-center py-1.5 text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2">
+              <Shield className="w-3.5 h-3.5" />
+              Sandbox Training Mode Active — Database Writes Isolated
             </div>
           )}
           {/* Top Bar — utility layer, operational status */}
@@ -1328,7 +1345,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               >
                 <Search className="w-3.5 h-3.5 text-text-tertiary" />
                 <span className="text-[11px] select-none font-mono flex-1 text-left">Search...</span>
-                <span className="ml-2 bg-surface border border-border-subtle px-1.5 py-0.5 rounded text-[9px] font-mono tracking-tighter text-text-quaternary shadow-inner">⌘K</span>
+                <span className="ml-2 bg-surface border border-border-subtle px-1.5 py-0.5 rounded text-[9px] font-mono tracking-tighter text-text-quaternary shadow-inner">Cmd/Ctrl + K</span>
               </div>
 
               {/* View As Role Tool */}
@@ -1355,6 +1372,50 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 </div>
               )}
 
+              {/* Sandbox Toggle */}
+              {profile?.role === 'super_admin' && (
+                <button
+                  onClick={async () => {
+                    if (!workspace || !user) return;
+                    setIsSandboxTransitioning(true);
+                    notify('Transitioning environment...', 'info');
+                    try {
+                      if (!isSandboxMode) {
+                        // Enter Sandbox
+                        await cloneWorkspaceToSandbox(workspace.id, user.id);
+                        setIsSandboxMode(true);
+                        localStorage.setItem('resolve-sandbox-mode', 'true');
+                        notify('Sandbox Mode Activated - Data isolated.', 'success');
+                        setTimeout(() => window.location.reload(), 1000);
+                      } else {
+                        // Exit Sandbox (Return to Parent Workspace)
+                        if (workspace.parent_workspace_id) {
+                          await supabase.from('users').update({ workspace_id: workspace.parent_workspace_id }).eq('id', user.id);
+                        }
+                        setIsSandboxMode(false);
+                        localStorage.setItem('resolve-sandbox-mode', 'false');
+                        notify('Exited Sandbox - Returning to Production.', 'success');
+                        setTimeout(() => window.location.reload(), 1000);
+                      }
+                    } catch (err: any) {
+                      notify('Failed to transition sandbox: ' + err.message, 'error');
+                    } finally {
+                      setIsSandboxTransitioning(false);
+                    }
+                  }}
+                  disabled={isSandboxTransitioning}
+                  className={`p-1.5 border rounded-md transition-all shrink-0 cursor-pointer shadow-sm flex items-center gap-1 px-2 ${
+                    isSandboxMode 
+                      ? 'bg-blue-500/20 border-blue-500/50 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]' 
+                      : 'border-border bg-surface-highest hover:bg-surface-3 text-text-secondary hover:text-text-primary'
+                  } ${isSandboxTransitioning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title="Toggle Sandbox Training Mode"
+                >
+                  <Shield className={`w-3.5 h-3.5 ${isSandboxTransitioning ? 'animate-spin' : ''}`} />
+                  <span className="text-[10px] font-bold tracking-wider uppercase hidden sm:inline">Sandbox</span>
+                </button>
+              )}
+
               {/* Theme */}
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -1364,7 +1425,25 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
 
-              <NotificationCenter />
+              {/* End Day */}
+              <button
+                onClick={() => setIsEndOfDayModalOpen(true)}
+                className="p-1.5 border border-border bg-surface-highest hover:bg-surface-3 rounded-md text-indigo-400 hover:text-indigo-300 transition-all shrink-0 cursor-pointer shadow-sm"
+                title="Finish My Day"
+              >
+                <Sunset className="w-4 h-4" />
+              </button>
+
+              {/* Help Escalation */}
+              <button
+                onClick={() => setSupportModalOpen(true)}
+                className="p-1.5 border border-border bg-surface-highest hover:bg-surface-3 rounded-md text-indigo-400 hover:text-indigo-300 transition-all shrink-0 cursor-pointer shadow-sm"
+                title="Support Escalation"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+
+              <UniversalWorkInbox />
 
               {/* New Project CTA */}
               {profile && hasCapability(profile.role, 'manage_projects') && (
@@ -1405,6 +1484,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           {/* Dynamic Page Routing Slot */}
           <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-6 relative user-content">
             <ErrorBoundary>
+              {profile?.role === 'super_admin' && window.location.pathname === '/workspace' && (
+                <WelcomeCenter />
+              )}
               {children}
             </ErrorBoundary>
           </main>
@@ -1470,6 +1552,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           currentRoute={window.location.pathname}
         />
 
+        <SupportEscalationModal
+          isOpen={supportModalOpen}
+          onClose={() => setSupportModalOpen(false)}
+          notify={notify}
+        />
+
         {/* --- Overlay Components --- */}
 
         <AnimatePresence>
@@ -1518,11 +1606,18 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           {isProfileOpen && profile && (
             <UserProfileModal
               profile={profile}
-              googleAvatar={user?.user_metadata?.avatar_url || user?.user_metadata?.picture}
               onClose={() => setIsProfileOpen(false)}
               onUpdate={handleUpdateProfile}
             />
           )}
+
+          <EndOfDayModal
+            isOpen={isEndOfDayModalOpen}
+            onClose={() => setIsEndOfDayModalOpen(false)}
+            currentUser={profile}
+            workspaceId={workspace.id}
+            notify={notify}
+          />
         </AnimatePresence>
 
 

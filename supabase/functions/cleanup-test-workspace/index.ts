@@ -106,6 +106,31 @@ serve(async (req: Request) => {
     )
   } catch (error: any) {
     console.error(`Error in cleanup-test-workspace:`, error.message);
+    
+    // Attempt telemetry logging to system_events
+    try {
+      const logClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      
+      // Parse out workspace_id if we failed before doing so safely, but try to read req again? No, req is read.
+      // We don't have workspace_id guaranteed if json parsing failed, but we do our best.
+      await logClient.from('system_events').insert({
+        event_type: 'edge_function_failure',
+        severity: 'error',
+        source: 'edge_function',
+        message: `cleanup-test-workspace failed: ${error.message}`,
+        metadata: {
+          function: 'cleanup-test-workspace',
+          reason: error.message
+        },
+        stack_trace: error.stack
+      });
+    } catch (telemetryError) {
+      console.error(`Failed to log telemetry:`, telemetryError);
+    }
+
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }

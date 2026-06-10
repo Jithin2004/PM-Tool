@@ -3,6 +3,7 @@ import { File, Upload, Download, Trash2, Clock, MoreHorizontal, FileText, Image 
 import { fileService, WorkspaceFile, FileVersion } from '../../services/fileService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
+import { WorkspaceFileEngine } from '../../core/system/WorkspaceFileEngine';
 
 interface FilePanelProps {
   entityType: string;
@@ -85,22 +86,16 @@ export function FilePanel({ entityType, entityId, currentUserId, canEdit }: File
       return;
     }
 
-    if (files.some(f => f.file_name.toLowerCase() === selectedFile.name.toLowerCase())) {
-      showAlert(`A file named "${selectedFile.name}" already exists. Please rename your file or use the "Upload New Version" button on the existing file.`);
-      if (e.target) e.target.value = '';
-      return;
-    }
-
     setIsUploading(true);
-    setUploadProgress(10); // Mock progress
+    setUploadProgress(20);
 
-    const result = await fileService.uploadFile(
+    const result = await WorkspaceFileEngine.handleUpload(
       workspace.id,
       entityType,
       entityId,
       selectedFile,
       currentUserId,
-      (p) => setUploadProgress(p)
+      files
     );
 
     setIsUploading(false);
@@ -109,7 +104,17 @@ export function FilePanel({ entityType, entityId, currentUserId, canEdit }: File
     if (e.target) e.target.value = ''; // Reset input
 
     if (result) {
-      setFiles([result, ...files]);
+      setFiles(prev => {
+        const index = prev.findIndex(f => f.id === result.id);
+        if (index > -1) {
+          return prev.map(f => f.id === result.id ? result : f);
+        } else {
+          return [result, ...prev];
+        }
+      });
+      if (viewingVersionsFor === result.id) {
+        loadVersions(result.id);
+      }
     }
   };
 
@@ -366,9 +371,9 @@ export function FilePanel({ entityType, entityId, currentUserId, canEdit }: File
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <span className={`text-xs font-semibold ${i === 0 ? 'text-text-primary' : 'text-text-secondary'}`}>
-                                  Version {v.version_number}
+                                  v{v.version_number} {i === 0 ? 'Current' : v.version_number === 1 ? 'Original' : 'Previous'}
                                 </span>
-                                {i === 0 && <span className="bg-accent-primary/10 text-accent-primary text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Current</span>}
+                                {i === 0 && <span className="bg-accent-primary/10 text-accent-primary text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Latest</span>}
                               </div>
                                 <button 
                                   onClick={() => handleDownload(v.storage_path, f.file_name)}

@@ -274,7 +274,7 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
               <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${
                 timeline.driftDays > 5 ? 'text-signal-critical border-signal-critical/20 bg-signal-critical/5' : 'text-signal-warning border-signal-warning/20 bg-signal-warning/5'
               }`}>
-                Drifting
+                Project Slipped
               </span>
             ) : (
               <span className="text-[9px] font-bold px-2 py-0.5 rounded border border-signal-safe/20 bg-signal-safe/5 text-signal-safe uppercase tracking-wider">
@@ -286,7 +286,15 @@ export default function TimelineView({ tasks, projects, dependencies, users }: a
             <span className="text-3xl font-extrabold text-text-primary">+{timeline.driftDays}</span>
             <span className="text-sm font-bold text-text-primary">Days</span>
           </div>
-          <p className="text-[10px] text-text-quaternary mt-2">Actual active duration vs estimated days of progress.</p>
+          <p className="text-[10px] text-text-quaternary mt-2 mb-2">Actual active duration vs estimated days of progress.</p>
+          {timeline.driftDays > 0 && (
+            <div className="bg-signal-critical/5 border border-signal-critical/10 rounded p-2 mt-2">
+              <span className="text-[9px] font-bold text-signal-critical uppercase block mb-1">Why project slipped?</span>
+              <span className="text-[10px] text-text-secondary leading-tight line-clamp-2">
+                {timeline.flows.reduce((s: number, f: any) => s + f.interruptionCount, 0)} external pauses and {timeline.totalWaitHours.toFixed(1)}h of wait-states contributed to this delay.
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Wait-State Latency Card */}

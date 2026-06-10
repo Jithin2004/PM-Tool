@@ -15,6 +15,12 @@ export interface OperationalRawState {
 
   skills?: Skill[];
   userSkills?: UserSkill[];
+  workSessions?: any[];
+  activityLogs?: any[];
+  blockers?: any[];
+  invoices?: any[];
+  contracts?: any[];
+  leaves?: any[];
 }
 
 export interface AttendanceRow {

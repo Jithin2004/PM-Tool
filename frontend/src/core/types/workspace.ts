@@ -4,7 +4,10 @@ export type UserRole =
   | 'developer'
   | 'viewer'
   | 'uninvited'
-  | 'pending-workspace-setup';
+  | 'pending-workspace-setup'
+  | 'hr'
+  | 'finance'
+  | 'client';
 
 export interface Workspace {
   id: string;

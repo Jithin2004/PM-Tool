@@ -1343,7 +1343,7 @@ export function LogisticsDashboard({
                 <span className="text-[10px] font-mono text-text-tertiary">Scope: {payrollMode === 'monthly' ? monthPrefix : `${customStartDate || 'TBD'} to ${customEndDate || 'TBD'}`}</span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse ">
+                <table className="w-full text-left border-collapse table-premium executive-table min-w-[800px]">
                   <thead>
                     <tr className="border-b border-border bg-surface-3">
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">System Profile</th>

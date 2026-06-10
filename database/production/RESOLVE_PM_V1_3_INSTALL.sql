@@ -1,12 +1,23 @@
--- =============================================================
--- RESOLVE PM Ã¢â‚¬â€ PRODUCTION MASTER DATABASE SCHEMA
--- Version: 3.0.0 Ã¢â‚¬â€ Consolidated Canonical Deployment
--- Generated: 2026-05-27
+﻿-- =============================================================================
+-- RESOLVE PM v1.3.0-internal-stable -- PRODUCTION DATABASE INSTALLER
+-- =============================================================================
+-- Release Date : June 10, 2026
+-- Sprint       : Sprint 22 -- Production Freeze
+-- Consolidates : Sprints 1 through 21 (all migrations merged)
 --
--- This is the SINGLE SOURCE OF TRUTH for the Resolve PM database.
--- Do NOT run individual MIGRATION_*.sql files alongside this file.
--- Apply this document once to a clean Supabase project.
--- =============================================================
+-- SINGLE SOURCE OF TRUTH for the Resolve PM v1.3 database schema.
+-- Run this file ONCE on a clean PostgreSQL 15+ / Supabase project.
+-- Do NOT run any individual MIGRATION_*.sql files -- they have been
+-- permanently deleted and superseded by this installer.
+--
+-- Includes:
+--   - All core tables, indexes, foreign keys, triggers
+--   - Row Level Security policies (workspace-scoped)
+--   - Sandbox isolation (clone_workspace_to_sandbox RPC)
+--   - Soft-delete rules (workspaces, users, projects)
+--   - follow_ups, system_migrations, system_events tables
+--   - All Sprint 11-21 schema additions
+-- =============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -22,7 +33,6 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- Functions
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 DROP FUNCTION IF EXISTS current_workspace() CASCADE;
-DROP FUNCTION IF EXISTS get_operational_intelligence(UUID) CASCADE;
 
 -- Tables (children before parents)
 DROP TABLE IF EXISTS system_audit_ledger CASCADE;
@@ -60,6 +70,10 @@ DROP TABLE IF EXISTS profiles CASCADE;
 -- 1. workspaces
 --    Root of all data isolation. Every table references this via workspace_id.
 CREATE TABLE workspaces (
+  is_sandbox          boolean     NOT NULL DEFAULT false,
+  parent_workspace_id uuid        REFERENCES workspaces(id) ON DELETE CASCADE,
+  status              text        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'onboarding', 'inactive', 'retired', 'sandbox')),
+  metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   name                text        NOT NULL,
   owner_id            uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -95,7 +109,7 @@ CREATE TABLE users (
   phone               text,
   avatar_url          text,
   role                text        NOT NULL DEFAULT 'viewer'
-                                  CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer', 'pending-workspace-setup')),
+                                  CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer', 'uninvited', 'pending-workspace-setup', 'hr', 'finance', 'client')),
   designation         text,
   availability_factor numeric     NOT NULL DEFAULT 1,
   created_at          timestamptz NOT NULL DEFAULT now(),
@@ -118,7 +132,7 @@ CREATE TABLE teams (
 
 
 -- 4. team_members
---    Explicit join table for many-to-many team Ã¢â€ â€ user relations.
+--    Explicit join table for many-to-many team ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â user relations.
 CREATE TABLE team_members (
   workspace_id  uuid  NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   team_id       uuid  NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
@@ -132,6 +146,7 @@ CREATE TABLE team_members (
 --    Parent-only containers. PERT macro-estimation removed (legacy project-level pert_best/likely/worst purged).
 --    PERT is now computed exclusively from task-level aggregations via get_operational_intelligence().
 CREATE TABLE projects (
+  external_id           text,
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   team_id               uuid        REFERENCES teams(id) ON DELETE SET NULL,
@@ -140,6 +155,7 @@ CREATE TABLE projects (
   description           text,
   status                text        NOT NULL DEFAULT 'planning'
                                     CHECK (status IN ('planning', 'active', 'in-progress', 'review', 'done', 'archived', 'deployed')),
+  deleted_by            uuid        REFERENCES users(id) ON DELETE SET NULL,
   priority              text        NOT NULL DEFAULT 'medium'
                                     CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
   template              text        NOT NULL DEFAULT 'Blank',
@@ -169,6 +185,7 @@ CREATE TABLE projects (
 --    Executable work items carrying task-level PERT for micro-estimation.
 --    Aggregated globally by get_operational_intelligence() RPC.
 CREATE TABLE tasks (
+  external_id           text,
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   project_id            uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -185,7 +202,7 @@ CREATE TABLE tasks (
   acceptance_criteria   text,
   -- State
   status                text        NOT NULL DEFAULT 'backlog'
-                                    CHECK (status IN ('backlog', 'ready', 'in_progress', 'review', 'done')),
+                                    CHECK (status IN ('backlog', 'ready', 'in_progress', 'review', 'done', 'blocked', 'completed', 'changes_requested', 'ready_for_review', 'assigned', 'cancelled')),
   priority              text        NOT NULL DEFAULT 'medium'
                                     CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
   risk                  text        CHECK (risk IN ('low', 'medium', 'high')),
@@ -297,6 +314,7 @@ CREATE TABLE comments (
 
 -- 8.1 task_comments
 CREATE TABLE task_comments (
+  metadata            jsonb       DEFAULT '{}'::jsonb,
   id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id      uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   task_id           uuid        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -509,7 +527,7 @@ CREATE OR REPLACE FUNCTION current_workspace()
 RETURNS uuid
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
   SELECT workspace_id FROM users WHERE id = auth.uid() LIMIT 1
@@ -576,42 +594,43 @@ BEGIN
   -- Lookup the role of the current user
   SELECT role INTO v_role FROM public.users WHERE id = auth.uid() LIMIT 1;
 
-  -- Only restrict developers Ã¢â‚¬â€ PMs/super_admins have full access
+  -- Only restrict developers -- PMs/super_admins have full access
   IF v_role IS DISTINCT FROM 'developer' THEN
     RETURN NEW;
   END IF;
 
-  -- Block 1: Developers cannot reassign tasks
-  IF NEW.assignee_id IS DISTINCT FROM OLD.assignee_id THEN
-    RAISE EXCEPTION 'Unauthorized: Developers cannot reassign tasks. Contact your PM.';
-  END IF;
-
-  -- Block 2: Developers cannot move tasks between projects
-  IF NEW.project_id IS DISTINCT FROM OLD.project_id THEN
-    RAISE EXCEPTION 'Unauthorized: Developers cannot move tasks between projects.';
-  END IF;
-
-  -- Block 3: Developers cannot modify governance/analytics fields
-  IF NEW.confidence IS DISTINCT FROM OLD.confidence THEN
-    RAISE EXCEPTION 'Unauthorized: Developers cannot modify confidence ratings.';
-  END IF;
-
-  IF NEW.risk IS DISTINCT FROM OLD.risk THEN
-    RAISE EXCEPTION 'Unauthorized: Developers cannot modify risk assessments.';
-  END IF;
-
-  IF NEW.delay_drift_days IS DISTINCT FROM OLD.delay_drift_days THEN
-    RAISE EXCEPTION 'Unauthorized: Developers cannot modify delay drift values.';
-  END IF;
-
-  IF NEW.predicted_completion IS DISTINCT FROM OLD.predicted_completion THEN
-    RAISE EXCEPTION 'Unauthorized: Developers cannot modify predicted completion dates.';
-  END IF;
-
-  -- Block 4: Developers cannot modify priority (only PMs decide priority)
-  IF NEW.priority IS DISTINCT FROM OLD.priority THEN
-    RAISE EXCEPTION 'Unauthorized: Developers cannot modify task priority.';
-  END IF;
+  -- Block any modifications to core identity, planning, and governance fields
+  -- White-listed fields that CAN be updated: status, progress_percent, work_time_hours, wait_time_hours, cycle_time_hours,
+  -- estimated_effort_minutes, actual_effort_minutes, discovery_notes, blocked_reason, blocked_since,
+  -- needs_help_from, completion_notes, delay_reason, first_started_at, completed_at, last_activity_at, updated_at,
+  -- completion_evidence_summary, completion_evidence_link, completion_evidence_pr_url
+  
+  IF NEW.assignee_id IS DISTINCT FROM OLD.assignee_id THEN RAISE EXCEPTION 'Unauthorized: Developers cannot reassign tasks.'; END IF;
+  IF NEW.project_id IS DISTINCT FROM OLD.project_id THEN RAISE EXCEPTION 'Unauthorized: Developers cannot move tasks between projects.'; END IF;
+  IF NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN RAISE EXCEPTION 'Unauthorized: Cannot change workspace.'; END IF;
+  IF NEW.parent_task_id IS DISTINCT FROM OLD.parent_task_id THEN RAISE EXCEPTION 'Unauthorized: Cannot change hierarchy.'; END IF;
+  IF NEW.epic_id IS DISTINCT FROM OLD.epic_id THEN RAISE EXCEPTION 'Unauthorized: Cannot change epic.'; END IF;
+  IF NEW.sprint_id IS DISTINCT FROM OLD.sprint_id THEN RAISE EXCEPTION 'Unauthorized: Cannot change sprint.'; END IF;
+  IF NEW.story_id IS DISTINCT FROM OLD.story_id THEN RAISE EXCEPTION 'Unauthorized: Cannot change story.'; END IF;
+  IF NEW.name IS DISTINCT FROM OLD.name THEN RAISE EXCEPTION 'Unauthorized: Developers cannot rename tasks.'; END IF;
+  IF NEW.description IS DISTINCT FROM OLD.description THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change description.'; END IF;
+  IF NEW.deadline IS DISTINCT FROM OLD.deadline THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change deadline.'; END IF;
+  IF NEW.due_date IS DISTINCT FROM OLD.due_date THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change due date.'; END IF;
+  IF NEW.start_date IS DISTINCT FROM OLD.start_date THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change start date.'; END IF;
+  IF NEW.priority IS DISTINCT FROM OLD.priority THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change priority.'; END IF;
+  IF NEW.estimated_hours IS DISTINCT FROM OLD.estimated_hours THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change estimates.'; END IF;
+  IF NEW.story_points IS DISTINCT FROM OLD.story_points THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change story points.'; END IF;
+  IF NEW.pert_best IS DISTINCT FROM OLD.pert_best THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change PERT estimates.'; END IF;
+  IF NEW.pert_likely IS DISTINCT FROM OLD.pert_likely THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change PERT estimates.'; END IF;
+  IF NEW.pert_worst IS DISTINCT FROM OLD.pert_worst THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change PERT estimates.'; END IF;
+  IF NEW.confidence IS DISTINCT FROM OLD.confidence THEN RAISE EXCEPTION 'Unauthorized: Developers cannot modify confidence ratings.'; END IF;
+  IF NEW.risk IS DISTINCT FROM OLD.risk THEN RAISE EXCEPTION 'Unauthorized: Developers cannot modify risk assessments.'; END IF;
+  IF NEW.delay_drift_days IS DISTINCT FROM OLD.delay_drift_days THEN RAISE EXCEPTION 'Unauthorized: Developers cannot modify delay drift values.'; END IF;
+  IF NEW.predicted_completion IS DISTINCT FROM OLD.predicted_completion THEN RAISE EXCEPTION 'Unauthorized: Developers cannot modify predicted completion dates.'; END IF;
+  IF NEW.milestone_id IS DISTINCT FROM OLD.milestone_id THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change milestones.'; END IF;
+  IF NEW.deleted_at IS DISTINCT FROM OLD.deleted_at THEN RAISE EXCEPTION 'Unauthorized: Developers cannot delete/restore tasks.'; END IF;
+  IF NEW.definition_of_done IS DISTINCT FROM OLD.definition_of_done THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change definition of done.'; END IF;
+  IF NEW.acceptance_criteria IS DISTINCT FROM OLD.acceptance_criteria THEN RAISE EXCEPTION 'Unauthorized: Developers cannot change acceptance criteria.'; END IF;
 
   RETURN NEW;
 END;
@@ -627,109 +646,16 @@ CREATE TRIGGER check_developer_task_restrictions
 -- RPC: get_operational_intelligence(p_workspace_id UUID)
 --
 -- Computes all four global delivery metrics server-side.
--- Aggregates task-level PERT data Ã¢â‚¬â€ bypasses legacy project-level
+-- Aggregates task-level PERT data ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â bypasses legacy project-level
 -- pert_best/likely/worst columns (which no longer exist on projects).
 -- Called by operationalSyncService.ts via supabase.rpc().
 -- =============================================================
 
-CREATE OR REPLACE FUNCTION get_operational_intelligence(p_workspace_id UUID)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_delivery_confidence NUMERIC;
-  v_execution_pressure  NUMERIC;
-  v_daily_fatigue       NUMERIC;
-  v_risk_forecast       NUMERIC;
-  v_total_decay_hours   NUMERIC := 0;
-  v_pressure_score      NUMERIC := 0;
 
-  v_active_project      RECORD;
-  v_expected            NUMERIC;
-  v_spread              NUMERIC;
-  v_new_worst           NUMERIC;
-  v_new_best            NUMERIC;
-
-  v_active_tasks        INT;
-  v_blocked_tasks       INT;
-
-  v_confidence_risk     NUMERIC;
-  v_fatigue_risk        NUMERIC;
-BEGIN
-  -- Ã¢â€â‚¬Ã¢â€â‚¬ 1. Delivery Confidence & Daily Fatigue Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  -- Aggregates task-level PERT from every active, non-archived project.
-  FOR v_active_project IN
-    SELECT
-      p.id,
-      COALESCE(SUM((t.pert_best + 4 * t.pert_likely + t.pert_worst) / 6.0), 0) AS expected,
-      COALESCE(SUM(POWER((t.pert_worst - t.pert_best) / 6.0, 2)), 0)            AS variance
-    FROM projects p
-    LEFT JOIN tasks t
-      ON t.project_id = p.id
-     AND t.pert_best  > 0
-     AND t.pert_likely > 0
-     AND t.pert_worst > 0
-    WHERE p.workspace_id = p_workspace_id
-      AND p.status NOT IN ('deployed', 'done', 'archived')
-      AND p.deleted_at IS NULL
-    GROUP BY p.id
-  LOOP
-    v_expected  := v_active_project.expected;
-    v_new_worst := v_expected + (2.0 * SQRT(v_active_project.variance));
-
-    IF v_new_worst > v_expected THEN
-      v_total_decay_hours := v_total_decay_hours + (v_new_worst - v_expected);
-    END IF;
-
-    v_new_best := GREATEST(0, v_expected - (2.0 * SQRT(v_active_project.variance)));
-    v_spread   := GREATEST(0, v_new_worst - v_new_best);
-
-    IF v_spread > 0 AND v_expected > 0 THEN
-      v_pressure_score := v_pressure_score + ((v_spread / GREATEST(v_expected, 1.0)) * 10.0);
-    END IF;
-  END LOOP;
-
-  v_delivery_confidence := GREATEST(0, 100.0 - (v_total_decay_hours * 0.5));
-  v_daily_fatigue       := v_total_decay_hours;
-
-  -- Ã¢â€â‚¬Ã¢â€â‚¬ 2. Execution Pressure Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  -- Uses GLOBAL task counts Ã¢â‚¬â€ not paginated, not filtered by visible projects.
-  SELECT
-    COUNT(*) FILTER (WHERE status IN ('blocked', 'triage')),
-    COUNT(*) FILTER (WHERE status <> 'done')
-  INTO v_blocked_tasks, v_active_tasks
-  FROM tasks
-  WHERE workspace_id = p_workspace_id;
-
-  IF v_active_tasks > 0 THEN
-    v_pressure_score := v_pressure_score
-      + ((v_blocked_tasks::NUMERIC / v_active_tasks::NUMERIC) * 40.0);
-  END IF;
-
-  v_execution_pressure := LEAST(100, v_pressure_score);
-
-  -- Ã¢â€â‚¬Ã¢â€â‚¬ 3. Risk Forecast Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  v_confidence_risk := 100.0 - v_delivery_confidence;
-  v_fatigue_risk    := LEAST(100, v_daily_fatigue * 2.0);
-  v_risk_forecast   := LEAST(100,
-    (v_confidence_risk * 0.45) +
-    (v_execution_pressure * 0.35) +
-    (v_fatigue_risk * 0.20)
-  );
-
-  RETURN jsonb_build_object(
-    'deliveryConfidence', ROUND(v_delivery_confidence, 1),
-    'executionPressure',  ROUND(v_execution_pressure,  1),
-    'dailyFatigue',       ROUND(v_daily_fatigue,       1),
-    'riskForecast',       ROUND(v_risk_forecast,        1)
-  );
-END;
-$$;
 
 
 -- =============================================================
--- ROW LEVEL SECURITY Ã¢â‚¬â€ ENABLE ON ALL TABLES
+-- ROW LEVEL SECURITY ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ENABLE ON ALL TABLES
 -- =============================================================
 
 ALTER TABLE workspaces        ENABLE ROW LEVEL SECURITY;
@@ -758,7 +684,7 @@ ALTER TABLE system_audit_ledger ENABLE ROW LEVEL SECURITY;
 -- SECURITY POLICIES
 -- =============================================================
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Workspaces Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Workspaces ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 
 DROP POLICY IF EXISTS "Workspace members can view their workspace" ON workspaces;
 CREATE POLICY "Workspace members can view their workspace"
@@ -776,10 +702,10 @@ CREATE POLICY "Workspace owner can create workspace"
   WITH CHECK (owner_id = auth.uid());
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Users Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P0-1 Ã¢â‚¬â€ Users SELECT restricted to same workspace + self
--- Wave 7.5: P0-2 Ã¢â‚¬â€ Pending user workspace hijack prevention
--- Wave 7.5: P0-3 Ã¢â‚¬â€ Self-update restricted to safe profile fields only
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Users ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P0-1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Users SELECT restricted to same workspace + self
+-- Wave 7.5: P0-2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Pending user workspace hijack prevention
+-- Wave 7.5: P0-3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Self-update restricted to safe profile fields only
 
 DROP POLICY IF EXISTS "Users are visible within the platform" ON users;
 DROP POLICY IF EXISTS "Users visible within workspace" ON users;
@@ -863,7 +789,7 @@ CREATE POLICY "Invited users can bootstrap their own user row"
     )
   );
 
--- P0-3: Self-update Ã¢â‚¬â€ users may only modify safe profile fields.
+-- P0-3: Self-update ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â users may only modify safe profile fields.
 -- role, workspace_id are immutable via self-update.
 -- The trigger prevent_role_escalation provides defense-in-depth,
 -- but this WITH CHECK enforces it at the RLS layer.
@@ -882,8 +808,8 @@ CREATE POLICY "Users can update their own safe profile fields"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Teams Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P0-7 Ã¢â‚¬â€ Team mutations restricted to PM/Admin
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Teams ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P0-7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Team mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Teams are isolated by workspace" ON teams;
 DROP POLICY IF EXISTS "Teams are visible to workspace" ON teams;
@@ -905,8 +831,8 @@ CREATE POLICY "Teams can be managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Team Members Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P0-7 Ã¢â‚¬â€ Team member mutations restricted to PM/Admin
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Team Members ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P0-7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Team member mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Team members are isolated by workspace" ON team_members;
 DROP POLICY IF EXISTS "Team members are visible to workspace" ON team_members;
@@ -928,7 +854,7 @@ CREATE POLICY "Team members can be managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Projects Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Projects ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 
 DROP POLICY IF EXISTS "Projects are isolated by workspace" ON projects;
 -- Fix 2: RLS Validation (Added strict role gating for mutations)
@@ -948,7 +874,7 @@ CREATE POLICY "Projects can be mutated by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Tasks Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Tasks ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 -- Wave 7/9 Hardening: Granular developer permission scoping
 
 DROP POLICY IF EXISTS "Tasks are isolated by workspace" ON tasks;
@@ -958,7 +884,7 @@ DROP POLICY IF EXISTS "Tasks can be mutated by developers, PMs, and Admins" ON t
 -- SELECT: All workspace members can read tasks
 CREATE POLICY "Tasks are visible to workspace"
   ON tasks FOR SELECT
-  USING (workspace_id = current_workspace());
+  USING (workspace_id = current_workspace() AND deleted_at IS NULL);
 
 -- INSERT: Only PMs and Admins can create tasks
 CREATE POLICY "Tasks can be created by PMs and Admins"
@@ -994,7 +920,7 @@ CREATE POLICY "Tasks can be deleted by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Task Dependencies Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Task Dependencies ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 -- Wave 7/9 Hardening: Developers cannot create or remove dependencies
 
 DROP POLICY IF EXISTS "Task dependencies are isolated by workspace" ON task_dependencies;
@@ -1015,7 +941,7 @@ CREATE POLICY "Task dependencies can be managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Comments Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Comments ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 -- Wave 7/9 Hardening: Author-only mutation for non-admins
 
 DROP POLICY IF EXISTS "Comments are isolated by workspace" ON comments;
@@ -1055,8 +981,8 @@ CREATE POLICY "Users can delete their own comments"
   USING (workspace_id = current_workspace() AND author_id = auth.uid());
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Files Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: Files Ã¢â‚¬â€ SELECT for all, mutations restricted to uploader + PM/Admin
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Files ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: Files ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SELECT for all, mutations restricted to uploader + PM/Admin
 
 DROP POLICY IF EXISTS "Files are isolated by workspace" ON files;
 DROP POLICY IF EXISTS "Files are visible to workspace" ON files;
@@ -1086,8 +1012,8 @@ CREATE POLICY "Files can be managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Notifications Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P1-1 Ã¢â‚¬â€ Notification INSERT restricted: user_id must be self or by PM/Admin
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Notifications ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P1-1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Notification INSERT restricted: user_id must be self or by PM/Admin
 
 DROP POLICY IF EXISTS "Notifications are isolated by workspace" ON notifications;
 DROP POLICY IF EXISTS "Notifications are visible to workspace members" ON notifications;
@@ -1125,8 +1051,8 @@ CREATE POLICY "Users can update own notifications"
   USING (workspace_id = current_workspace() AND user_id = auth.uid());
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Activity Logs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P1-3 Ã¢â‚¬â€ actor_id must match auth.uid() to prevent forgery
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Activity Logs ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P1-3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â actor_id must match auth.uid() to prevent forgery
 
 DROP POLICY IF EXISTS "Activity logs are isolated by workspace" ON activity_logs;
 DROP POLICY IF EXISTS "Activity logs are readable by workspace" ON activity_logs;
@@ -1144,8 +1070,8 @@ CREATE POLICY "Activity logs can be inserted with verified actor"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Attendance Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P0-6 Ã¢â‚¬â€ Attendance mutations restricted to PM/Admin
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Attendance ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P0-6 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Attendance mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Attendance is isolated by workspace" ON attendance;
 DROP POLICY IF EXISTS "Attendance is visible to workspace" ON attendance;
@@ -1167,8 +1093,8 @@ CREATE POLICY "Attendance can be managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Salaries Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P0-5 Ã¢â‚¬â€ Salary mutations restricted to PM/Admin
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Salaries ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P0-5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Salary mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Salaries are isolated by workspace" ON salaries;
 DROP POLICY IF EXISTS "Salaries are visible to admins" ON salaries;
@@ -1193,7 +1119,7 @@ CREATE POLICY "Salaries can be managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Invitations Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Invitations ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 
 DROP POLICY IF EXISTS "Invitations are readable by the invited email or workspace members" ON invitations;
 CREATE POLICY "Invitations are readable by the invited email or workspace members"
@@ -1227,7 +1153,7 @@ CREATE POLICY "Invited users can accept their own invitation"
   WITH CHECK (lower(email) = lower(auth.email()) AND status = 'accepted');
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Workspace Holidays Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Workspace Holidays ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 -- Wave 7.5: Holidays mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Workspace holidays are isolated by workspace" ON workspace_holidays;
@@ -1250,7 +1176,7 @@ CREATE POLICY "Workspace holidays can be managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Team Events Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Team Events ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 -- Wave 7.5: Team events mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Team events are isolated by team" ON team_events;
@@ -1273,8 +1199,8 @@ CREATE POLICY "Team events can be managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Personal Leave Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P1-2 Ã¢â‚¬â€ Self-only mutation for non-admins
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Personal Leave ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P1-2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Self-only mutation for non-admins
 
 DROP POLICY IF EXISTS "Personal leaves are isolated by user workspace" ON personal_leave;
 DROP POLICY IF EXISTS "Personal leave is visible to workspace" ON personal_leave;
@@ -1302,8 +1228,8 @@ CREATE POLICY "PMs and Admins can manage all leave"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ Workspace Settings Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P0-4 Ã¢â‚¬â€ Workspace settings mutations restricted to PM/Admin
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Workspace Settings ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P0-4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Workspace settings mutations restricted to PM/Admin
 
 DROP POLICY IF EXISTS "Workspace settings are isolated by workspace" ON workspace_settings;
 DROP POLICY IF EXISTS "Workspace settings are visible to workspace" ON workspace_settings;
@@ -1325,8 +1251,8 @@ CREATE POLICY "Workspace settings can be managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ System Audit Ledger Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
--- Wave 7.5: P1-4 Ã¢â‚¬â€ Audit ledger SELECT binds BOTH role AND workspace_id
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ System Audit Ledger ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+-- Wave 7.5: P1-4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Audit ledger SELECT binds BOTH role AND workspace_id
 
 DROP POLICY IF EXISTS "System audit ledger is viewable by workspace admins" ON system_audit_ledger;
 CREATE POLICY "System audit ledger is viewable by workspace admins"
@@ -1654,13 +1580,6 @@ FOR SELECT USING (
   employee_id = auth.uid()
 );
 
--- 4. Backfill existing users into employment_records
-INSERT INTO public.employment_records (profile_id, workspace_id, date_of_joining, employment_status, created_at, updated_at)
-SELECT id, workspace_id, created_at, 'active', now(), now()
-FROM public.users
-WHERE workspace_id IS NOT NULL
-ON CONFLICT (profile_id, workspace_id) DO NOTHING;
--- ==========================================
 -- HR DATA ISOLATION MIGRATION
 -- Moves sensitive salary data out of globally fetched operational structures
 -- and into strict 'compensation_records' with explicit Super Admin RLS.
@@ -1713,16 +1632,6 @@ WITH CHECK (
       AND users.workspace_id = compensation_records.workspace_id
       AND users.role = 'super_admin'
   )
-);
-
--- 6. Migrate data from 'salaries' to 'compensation_records'
-INSERT INTO public.compensation_records (employee_id, workspace_id, base_salary, created_at)
-SELECT user_id, workspace_id, base_salary, created_at
-FROM public.salaries
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.compensation_records 
-  WHERE compensation_records.employee_id = salaries.user_id
-    AND compensation_records.workspace_id = salaries.workspace_id
 );
 
 
@@ -1996,7 +1905,7 @@ BEGIN
     -- Project, Epic, Sprint, Decision are visible to the workspace.
     RETURN true;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
 CREATE OR REPLACE FUNCTION public.can_insert_entity_file(p_entity_type text, p_entity_id uuid)
@@ -2038,7 +1947,7 @@ BEGIN
 
     RETURN false;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
 CREATE OR REPLACE FUNCTION public.can_manage_entity_file(p_entity_type text, p_entity_id uuid, p_uploaded_by uuid)
@@ -2083,7 +1992,7 @@ BEGIN
 
     RETURN false;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
 -- 2. workspace_files RLS
@@ -2360,7 +2269,7 @@ BEGIN
         'project'::text as entity_type,
         id as entity_id,
         name as title,
-        status || ' Ã‚Â· ' || execution_mode as context,
+        status || ' Ãƒâ€šÃ‚Â· ' || execution_mode as context,
         updated_at as last_updated,
         owner_id as owner_id,
         (CASE WHEN name ILIKE p_query THEN 100 WHEN name ILIKE v_query THEN 50 ELSE 0 END)::real as rank
@@ -2374,7 +2283,7 @@ BEGIN
         'task'::text as entity_type,
         id as entity_id,
         name as title,
-        status || ' Ã‚Â· Priority: ' || priority as context,
+        status || ' Ãƒâ€šÃ‚Â· Priority: ' || priority as context,
         updated_at as last_updated,
         assignee_id as owner_id,
         (CASE 
@@ -2393,7 +2302,7 @@ BEGIN
         'file'::text as entity_type,
         id as entity_id,
         file_name as title,
-        file_type || ' Ã‚Â· ' || (file_size/1024) || 'KB' as context,
+        file_type || ' Ãƒâ€šÃ‚Â· ' || (file_size/1024) || 'KB' as context,
         updated_at as last_updated,
         uploaded_by as owner_id,
         (CASE WHEN file_name ILIKE p_query THEN 100 WHEN file_name ILIKE v_query THEN 50 ELSE 0 END)::real as rank
@@ -2421,7 +2330,7 @@ BEGIN
         'user'::text as entity_type,
         id as entity_id,
         full_name as title,
-        role || COALESCE(' Ã‚Â· ' || designation, '') as context,
+        role || COALESCE(' Ãƒâ€šÃ‚Â· ' || designation, '') as context,
         created_at as last_updated,
         id as owner_id,
         (CASE WHEN full_name ILIKE p_query THEN 100 WHEN full_name ILIKE v_query THEN 50 ELSE 0 END)::real as rank
@@ -2435,7 +2344,7 @@ BEGIN
         'client'::text as entity_type,
         id as entity_id,
         company_name as title,
-        'Client Ã‚Â· ' || COALESCE(status, '') as context,
+        'Client Ãƒâ€šÃ‚Â· ' || COALESCE(status, '') as context,
         updated_at as last_updated,
         NULL::uuid as owner_id,
         (CASE WHEN company_name ILIKE p_query THEN 100 WHEN company_name ILIKE v_query THEN 50 ELSE 0 END)::real as rank
@@ -2449,7 +2358,7 @@ BEGIN
         'invoice'::text as entity_type,
         id as entity_id,
         invoice_number as title,
-        'Invoice Ã‚Â· ' || status as context,
+        'Invoice Ãƒâ€šÃ‚Â· ' || status as context,
         updated_at as last_updated,
         created_by as owner_id,
         (CASE WHEN invoice_number ILIKE p_query THEN 100 WHEN invoice_number ILIKE v_query THEN 50 ELSE 0 END)::real as rank
@@ -2459,13 +2368,13 @@ BEGIN
     ORDER BY rank DESC, last_updated DESC
     LIMIT p_limit;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
 -- ==========================================
 -- APPENDED FROM: MIGRATION_RECURRING_TASKS.sql
 -- ==========================================
-CREATE OR REPLACE FUNCTION public.get_user_role(target_workspace_id uuid) RETURNS text AS $$ DECLARE v_role text; BEGIN SELECT role INTO v_role FROM public.users WHERE id = auth.uid() AND workspace_id = target_workspace_id; RETURN v_role; END; $$ LANGUAGE plpgsql SECURITY DEFINER;
+CREATE OR REPLACE FUNCTION public.get_user_role(target_workspace_id uuid) RETURNS text AS $$ DECLARE v_role text; BEGIN SELECT role INTO v_role FROM public.users WHERE id = auth.uid() AND workspace_id = target_workspace_id; RETURN v_role; END; $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 -- MIGRATION: Enterprise Recurring Tasks System
 -- Adds recurring task templates, history tracking, and generation engine
 
@@ -2518,7 +2427,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 DROP TRIGGER IF EXISTS on_recurring_task_change ON public.recurring_task_templates;
 CREATE TRIGGER on_recurring_task_change
@@ -2635,7 +2544,7 @@ BEGIN
 
     RETURN jsonb_build_object('generated_count', generated_count);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
 -- ==========================================
@@ -2758,7 +2667,10 @@ CREATE TABLE IF NOT EXISTS public.clients (
     email text,
     phone text,
     billing_address text,
-    status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    status                text        NOT NULL DEFAULT 'active'
+                                    CHECK (status IN ('active', 'inactive')),
+  deleted_at            timestamptz,
+  deleted_by            uuid        REFERENCES users(id) ON DELETE SET NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     deleted_at timestamptz
@@ -2911,7 +2823,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 DROP TRIGGER IF EXISTS trigger_log_invoice_activity ON public.invoices;
 CREATE TRIGGER trigger_log_invoice_activity AFTER INSERT OR UPDATE ON public.invoices FOR EACH ROW EXECUTE FUNCTION public.log_finance_activity();
@@ -3047,7 +2959,7 @@ BEGIN
 
     RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 -- Apply locking triggers
 DROP TRIGGER IF EXISTS enforce_invoice_lock ON public.invoices;
@@ -3129,7 +3041,7 @@ BEGIN
 
     RETURN v_period_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
 -- ==========================================
@@ -3149,7 +3061,7 @@ BEGIN
     
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 DROP TRIGGER IF EXISTS trigger_log_financial_adjustment ON public.financial_adjustments;
 CREATE TRIGGER trigger_log_financial_adjustment
@@ -3884,7 +3796,7 @@ CREATE TABLE IF NOT EXISTS public.invoice_sequences (
 );
 
 ALTER TABLE public.invoice_sequences ENABLE ROW LEVEL SECURITY;
--- No direct policies, should be accessed via security definer function if needed, or by super admin
+-- No direct policies, should be accessed via SECURITY DEFINER SET search_path = '' function if needed, or by super admin
 
 -- Function to generate the next invoice number securely
 CREATE OR REPLACE FUNCTION public.generate_invoice_number(p_workspace_id uuid, p_prefix text)
@@ -3907,7 +3819,7 @@ BEGIN
     v_invoice_number := p_prefix || '/' || v_year || '/' || lpad(v_seq::text, 3, '0');
     RETURN v_invoice_number;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
 -- 4. Extend invoices table
@@ -4012,7 +3924,7 @@ BEGIN
     
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 DROP TRIGGER IF EXISTS trg_update_invoice_balance ON public.payments;
 CREATE TRIGGER trg_update_invoice_balance
@@ -4066,7 +3978,7 @@ BEGIN
     END IF;
     RETURN NULL; -- AFTER trigger
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 DROP TRIGGER IF EXISTS trg_audit_gst_invoices ON public.invoices;
 CREATE TRIGGER trg_audit_gst_invoices
@@ -4387,7 +4299,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 DROP TRIGGER IF EXISTS audit_capabilities_trigger ON users;
 CREATE TRIGGER audit_capabilities_trigger
@@ -4949,7 +4861,7 @@ ADD COLUMN IF NOT EXISTS meeting_category text DEFAULT 'Internal' CHECK (meeting
 CREATE OR REPLACE FUNCTION get_shared_project_data(p_token text)
 RETURNS json
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE
   v_link external_access_links%ROWTYPE;
@@ -5006,7 +4918,7 @@ CREATE OR REPLACE FUNCTION submit_client_approval(
 )
 RETURNS json
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE
   v_link external_access_links%ROWTYPE;
@@ -5165,6 +5077,197 @@ WITH CHECK (
 
 -- 4. RLS SWEEP ON CORE TABLES (Projects, Tasks, Users, Invoices)
 -- Ensure 'external_client' roles can only view their specific entities.
+-- 2. Fetch Project Data
+  SELECT json_build_object(
+      'id', p.id,
+      'name', p.name,
+      'description', p.description,
+      'status', p.status,
+      'target_date', p.target_date,
+      'timeline', p.timeline,
+      'client_id', p.client_id
+  ) INTO v_project
+  FROM projects p
+  WHERE p.id = v_link.entity_id;
+
+  -- We return the sanitized project, plus permissions so the frontend knows what to render
+  v_response := json_build_object(
+      'project', v_project,
+      'permissions', v_link.permissions,
+      'workspace_id', v_link.workspace_id
+  );
+
+  RETURN v_response;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_shared_project_data(text) TO anon, authenticated;
+
+-- 5. Create RPC to submit client approvals securely using token bypass
+CREATE OR REPLACE FUNCTION submit_client_approval(
+  p_token text,
+  p_approval_id uuid,
+  p_status text,
+  p_notes text
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_link external_access_links%ROWTYPE;
+  v_approval universal_approvals%ROWTYPE;
+BEGIN
+  -- 1. Find the link and ensure it is valid
+  SELECT * INTO v_link
+  FROM external_access_links
+  WHERE token_hash = p_token
+    AND (expires_at IS NULL OR expires_at > now())
+    AND revoked_at IS NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Invalid, expired, or revoked access token';
+  END IF;
+
+  -- 2. Verify the approval exists and belongs to the project
+  SELECT * INTO v_approval
+  FROM universal_approvals
+  WHERE id = p_approval_id AND entity_id = v_link.entity_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Approval request not found for this project';
+  END IF;
+
+  -- 3. Validate status
+  IF p_status NOT IN ('approved', 'rejected') THEN
+    RAISE EXCEPTION 'Invalid status';
+  END IF;
+
+  -- 4. Update the approval
+  UPDATE universal_approvals
+  SET 
+    status = p_status,
+    notes = p_notes,
+    resolved_at = now()
+  WHERE id = p_approval_id;
+
+  -- 5. Log activity
+  INSERT INTO activity_logs (workspace_id, entity_type, entity_id, action, actor_id, details)
+  VALUES (
+    v_link.workspace_id, 
+    'project', 
+    v_link.entity_id, 
+    'client_' || p_status, 
+    v_link.created_by, -- Use the creator of the link as the proxy actor, or null if allowed
+    jsonb_build_object('approval_id', p_approval_id, 'notes', p_notes, 'client_token_id', v_link.id)
+  );
+
+  RETURN json_build_object('success', true);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION submit_client_approval(text, uuid, text, text) TO anon, authenticated;
+
+-- END OF MERGED FILE: MIGRATION_SPRINT4_EXTERNAL_ACCESS.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT5_PRODUCTION_READINESS.sql --
+-- =====================================================================
+-- SPRINT 5: PRODUCTION DEPLOYMENT & COMPANY READINESS
+-- =====================================================================
+
+-- 1. Create Workspace License Table
+CREATE TABLE IF NOT EXISTS workspace_license (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  license_key_hash text NOT NULL,
+  activation_date timestamptz NOT NULL DEFAULT now(),
+  allowed_users integer NOT NULL DEFAULT 10,
+  license_type text NOT NULL DEFAULT 'standard' CHECK (license_type IN ('standard', 'premium', 'enterprise')),
+  support_until timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE workspace_license ENABLE ROW LEVEL SECURITY;
+
+-- Super Admins can view license
+CREATE POLICY "Super Admins can view workspace license"
+  ON workspace_license FOR SELECT
+  USING (
+    workspace_id IN (
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
+    )
+  );
+
+-- 3. Notify Supabase Realtime (optional, just good practice for settings)
+-- ALTER PUBLICATION supabase_realtime ADD TABLE workspace_license;
+
+-- END OF MERGED FILE: MIGRATION_SPRINT5_PRODUCTION_READINESS.sql --
+
+-- START OF MERGED FILE: MIGRATION_SPRINT6_RELEASE_CANDIDATE.sql --
+-- ==============================================================================
+-- SPRINT 6: RELEASE CANDIDATE HARDENING
+-- Focus: Security, Performance, Data Integrity, Audit Immutability
+-- ==============================================================================
+
+-- 1. FOREIGN KEY INTEGRITY FIXES
+-- The activity_logs table should NOT prevent users from being deleted, but the log must remain.
+ALTER TABLE activity_logs 
+  DROP CONSTRAINT IF EXISTS activity_logs_actor_id_fkey,
+  ADD CONSTRAINT activity_logs_actor_id_fkey 
+  FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE RESTRICT;
+
+ALTER TABLE invoices 
+  DROP CONSTRAINT IF EXISTS invoices_project_id_fkey,
+  ADD CONSTRAINT invoices_project_id_fkey 
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
+
+ALTER TABLE comments 
+  DROP CONSTRAINT IF EXISTS comments_task_id_fkey,
+  ADD CONSTRAINT comments_task_id_fkey 
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+
+-- 2. MISSING INDEXES FOR PERFORMANCE
+-- High-frequency lookup fields
+CREATE INDEX IF NOT EXISTS idx_users_workspace_id ON users(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_projects_workspace_id_status ON projects(workspace_id, status);
+CREATE INDEX IF NOT EXISTS idx_tasks_project_id_assignee_id ON tasks(project_id, assignee_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_workspace_id_created_at ON activity_logs(workspace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_universal_approvals_entity ON universal_approvals(entity_type, entity_id);
+
+-- 3. AUDIT IMMUTABILITY (activity_logs)
+-- We enforce that NO ONE can UPDATE or DELETE from activity_logs, even Super Admins.
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone in workspace can view activity logs" ON activity_logs;
+DROP POLICY IF EXISTS "Anyone in workspace can insert activity logs" ON activity_logs;
+DROP POLICY IF EXISTS "No one can update activity logs" ON activity_logs;
+DROP POLICY IF EXISTS "No one can delete activity logs" ON activity_logs;
+
+-- Recreate policies strictly
+CREATE POLICY "Anyone in workspace can view activity logs"
+ON activity_logs FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE users.id = auth.uid() AND users.workspace_id = activity_logs.workspace_id
+  )
+);
+
+CREATE POLICY "Anyone in workspace can insert activity logs"
+ON activity_logs FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM users
+    WHERE users.id = auth.uid() AND users.workspace_id = activity_logs.workspace_id
+  )
+);
+
+-- Note: No UPDATE or DELETE policies are created, meaning they are implicitly DENIED.
+
+-- 4. RLS SWEEP ON CORE TABLES (Projects, Tasks, Users, Invoices)
+-- Ensure 'external_client' roles can only view their specific entities.
 
 -- Projects
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
@@ -5175,12 +5278,13 @@ USING (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
-      AND users.workspace_id = projects.workspace_id
-      AND (
-        users.role != 'external_client'
-        OR
-        (users.role = 'external_client' AND projects.client_id = users.id)
+        AND (
+           users.role != 'external_client'
+           OR
+           (users.role = 'external_client' AND projects.client_id = users.id)
+        )
       )
+  AND deleted_at IS NULL
   )
 );
 
@@ -5320,7 +5424,7 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_update_invoice_status_on_payment();
 CREATE OR REPLACE FUNCTION public.fn_audit_sensitive_changes()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE
   v_actor_id uuid;
@@ -5514,7 +5618,7 @@ CREATE POLICY "Project Managers can update external access links"
 CREATE OR REPLACE FUNCTION get_shared_project_data(p_token text)
 RETURNS json
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE
   v_link external_access_links%ROWTYPE;
@@ -5709,7 +5813,7 @@ WITH CHECK (
 -- ==========================================
 
 -- ==============================================================================
--- RESOLVE PM Ã¢â‚¬â€ SPRINT 8.2: ENTERPRISE SECURITY LOCKDOWN & TRUST HARDENING
+-- RESOLVE PM â€” SPRINT 8.2: ENTERPRISE SECURITY LOCKDOWN & TRUST HARDENING
 -- ==============================================================================
 -- RUN THIS SCRIPT IN SUPABASE SQL EDITOR AS `postgres` USER
 -- Addresses DB-backed capabilities, strict RLS enforcement, employee revocation
@@ -5825,7 +5929,7 @@ CREATE OR REPLACE FUNCTION public.is_active_employee(p_user_id uuid)
 RETURNS boolean
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
     SELECT NOT EXISTS (
@@ -5841,7 +5945,7 @@ CREATE OR REPLACE FUNCTION public.current_workspace()
 RETURNS uuid
 LANGUAGE sql
 STABLE
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
     SELECT 
@@ -5863,7 +5967,7 @@ CREATE OR REPLACE FUNCTION public.has_capability(p_user_id uuid, p_cap text)
 RETURNS boolean
 LANGUAGE plpgsql
 STABLE
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
 DECLARE
@@ -6155,7 +6259,7 @@ DROP FUNCTION IF EXISTS public.get_shared_project_data(text);
 CREATE OR REPLACE FUNCTION public.get_shared_project_data(p_token text)
 RETURNS JSONB
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
 DECLARE
@@ -6213,7 +6317,7 @@ $$;
 -- ==========================================
 
 -- ==============================================================================
--- RESOLVE PM Ã¢â‚¬â€ SPRINT 9: ENTERPRISE SECURITY AUDIT FIX PACK
+-- RESOLVE PM â€” SPRINT 9: ENTERPRISE SECURITY AUDIT FIX PACK
 -- ==============================================================================
 -- RUN THIS SCRIPT IN SUPABASE SQL EDITOR
 -- Addresses all Critical Launch Blockers from External Security Audit
@@ -6223,7 +6327,7 @@ $$;
 -- SECTION 1: RLS POLICIES FOR UNPROTECTED TABLES
 -- ##############################################################################
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ wait_states Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- â€” wait_states â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
 -- Has workspace_id column
 
 DROP POLICY IF EXISTS "Wait states visible to workspace" ON wait_states;
@@ -6244,7 +6348,7 @@ CREATE POLICY "Wait states managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ project_signoffs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- â€” project_signoffs â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
 -- Has workspace_id column
 
 DROP POLICY IF EXISTS "Signoffs visible to workspace" ON project_signoffs;
@@ -6265,7 +6369,7 @@ CREATE POLICY "Signoffs managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ project_allocations Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- â€” project_allocations â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
 -- Has workspace_id column
 
 DROP POLICY IF EXISTS "Allocations visible to workspace" ON project_allocations;
@@ -6286,7 +6390,7 @@ CREATE POLICY "Allocations managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ allocation_periods Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- â€” allocation_periods â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
 -- Has workspace_id column
 
 DROP POLICY IF EXISTS "Allocation periods visible to workspace" ON allocation_periods;
@@ -6307,7 +6411,7 @@ CREATE POLICY "Allocation periods managed by PMs and Admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ billing_milestones Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- â€” billing_milestones â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
 -- Has workspace_id column
 
 DROP POLICY IF EXISTS "Billing milestones visible to workspace admins" ON public.billing_milestones;
@@ -6331,7 +6435,7 @@ CREATE POLICY "Billing milestones managed by admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ client_credits Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- â€” client_credits â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
 -- Has workspace_id column
 
 DROP POLICY IF EXISTS "Client credits visible to workspace admins" ON public.client_credits;
@@ -6355,7 +6459,7 @@ CREATE POLICY "Client credits managed by admins"
   );
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ invoice_audit_logs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- â€” invoice_audit_logs â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
 -- Has workspace_id column. Read: admin only. Insert: workspace members (to log actions).
 
 DROP POLICY IF EXISTS "Invoice audit logs visible to admins" ON public.invoice_audit_logs;
@@ -6376,7 +6480,7 @@ DROP POLICY IF EXISTS "Invoice audit logs are immutable" ON public.invoice_audit
 -- (No UPDATE/DELETE policies = blocked by RLS default deny)
 
 
--- Ã¢â€â‚¬Ã¢â€â‚¬ capability_change_logs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+-- â€” capability_change_logs â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
 -- Has user_id but needs workspace join
 
 DROP POLICY IF EXISTS "Capability logs visible to admins" ON capability_change_logs;
@@ -6414,7 +6518,7 @@ CREATE POLICY "Capability logs insertable by admins"
 CREATE OR REPLACE FUNCTION public.complete_work_session(p_session_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
 DECLARE
@@ -6619,7 +6723,7 @@ CREATE TRIGGER check_invoice_modification_governance
 
 
 -- ##############################################################################
--- SECTION 5: ACTIVITY LOGS Ã¢â‚¬â€ MAKE TRULY APPEND-ONLY
+-- SECTION 5: ACTIVITY LOGS â€” MAKE TRULY APPEND-ONLY
 -- ##############################################################################
 
 -- activity_logs should be append-only (no updates, no deletes).
@@ -6653,7 +6757,7 @@ CREATE TRIGGER worm_activity_logs_immutable
 -- ==========================================
 
 -- ==============================================================================
--- RESOLVE PM Ã¢â‚¬â€ SPRINT 8.2 PHASE 4.1: EMPLOYEE LIFECYCLE PRESERVATION
+-- RESOLVE PM â€” SPRINT 8.2 PHASE 4.1: EMPLOYEE LIFECYCLE PRESERVATION
 -- ==============================================================================
 -- RUN THIS SCRIPT IN SUPABASE SQL EDITOR AS `postgres` USER
 -- Addresses soft-deletes, blocks hard deletes, replaces CASCADE with RESTRICT
@@ -6728,7 +6832,7 @@ CREATE TRIGGER prevent_user_hard_delete_trigger
 CREATE OR REPLACE FUNCTION public.cleanup_test_workspace(p_workspace_id uuid)
 RETURNS void
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
 BEGIN
@@ -6760,7 +6864,7 @@ GRANT EXECUTE ON FUNCTION public.cleanup_test_workspace(uuid) TO service_role;
 CREATE OR REPLACE FUNCTION public.archive_employee(p_user_id uuid, p_status text, p_reason text)
 RETURNS boolean
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
 DECLARE
@@ -6819,7 +6923,18 @@ $$;
 -- 1. MISSING PRODUCTION TABLES
 -- -------------------------------------------------------------
 
--- Finance tables based on financeService.ts
+CREATE TABLE IF NOT EXISTS system_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES users(id),
+  source text,
+  event_type text,
+  payload jsonb,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE system_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can insert system events" ON system_events FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND source = 'frontend');
+
 CREATE TABLE IF NOT EXISTS company_billing_profile (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -6842,113 +6957,9 @@ CREATE TABLE IF NOT EXISTS clients (
   email text NOT NULL,
   phone text NOT NULL,
   billing_address text NOT NULL,
-  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-  gstin text,
-  billing_state text,
-  billing_country text,
-  tax_type text CHECK (tax_type IN ('registered', 'unregistered')),
-  currency text,
-  default_currency text,
-  advance_balance numeric DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS milestones (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  description text,
-  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'completed', 'blocked')),
-  target_date timestamptz,
-  completion_date timestamptz,
-  progress_percent numeric DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS invoices (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-  project_id uuid REFERENCES projects(id) ON DELETE SET NULL,
-  invoice_number text NOT NULL,
-  amount numeric NOT NULL DEFAULT 0,
-  subtotal numeric NOT NULL DEFAULT 0,
-  discount_amount numeric NOT NULL DEFAULT 0,
-  taxable_amount numeric NOT NULL DEFAULT 0,
-  cgst_amount numeric NOT NULL DEFAULT 0,
-  sgst_amount numeric NOT NULL DEFAULT 0,
-  igst_amount numeric NOT NULL DEFAULT 0,
-  total_tax numeric NOT NULL DEFAULT 0,
-  grand_total numeric NOT NULL DEFAULT 0,
-  balance_due numeric NOT NULL DEFAULT 0,
-  billing_state_snapshot text,
-  currency text NOT NULL DEFAULT 'USD',
-  company_base_currency text,
-  base_amount numeric,
-  invoice_currency text,
-  invoice_amount numeric,
-  converted_amount numeric,
-  exchange_rate numeric,
-  exchange_rate_locked boolean DEFAULT false,
-  exchange_locked_at timestamptz,
-  exchange_override_reason text,
-  conversion_date timestamptz,
-  status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'issued', 'paid', 'overdue', 'cancelled', 'partial', 'partially_paid')),
-  issue_date date NOT NULL,
-  due_date date NOT NULL,
-  paid_date date,
-  task_id uuid REFERENCES tasks(id) ON DELETE SET NULL,
-  billing_type text,
-  payment_terms text,
-  milestone_id uuid REFERENCES milestones(id) ON DELETE SET NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(workspace_id, invoice_number)
-);
-
-CREATE TABLE IF NOT EXISTS invoice_line_items (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  invoice_id uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
-  description text NOT NULL,
-  quantity numeric NOT NULL DEFAULT 1,
-  rate numeric NOT NULL DEFAULT 0,
-  tax_percentage numeric NOT NULL DEFAULT 0,
-  amount numeric NOT NULL DEFAULT 0
-);
-
-CREATE TABLE IF NOT EXISTS payments (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  invoice_id uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
-  amount numeric NOT NULL,
-  payment_date date NOT NULL,
-  method text NOT NULL,
-  reference_number text NOT NULL,
-  client_id uuid REFERENCES clients(id) ON DELETE SET NULL,
-  advance_payment boolean DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS expenses (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  category text NOT NULL CHECK (category IN ('salary', 'software', 'infrastructure', 'office', 'misc')),
-  amount numeric NOT NULL,
-  date date NOT NULL,
-  description text NOT NULL,
-  project_id uuid REFERENCES projects(id) ON DELETE SET NULL,
-  task_id uuid REFERENCES tasks(id) ON DELETE SET NULL,
-  billable boolean DEFAULT false,
-  reimbursed_invoice_id uuid REFERENCES invoices(id) ON DELETE SET NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS financial_periods (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  status                text        NOT NULL DEFAULT 'active'
+                                    CHECK (status IN ('active', 'inactive')),
+  deleted_at            timestamptz,
   month integer NOT NULL CHECK (month >= 1 AND month <= 12),
   year integer NOT NULL,
   status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
@@ -7128,7 +7139,7 @@ CREATE TABLE IF NOT EXISTS task_handoff_requests (
 CREATE OR REPLACE FUNCTION archive_employee(p_user_id uuid, p_workspace_id uuid)
 RETURNS void
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER SET search_path = ''
 AS $$
 BEGIN
   -- We don't delete the user row, we just mark them as terminated or resigned
@@ -7236,3 +7247,177 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+-- Sprint 8.10 Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_tasks_workspace_status ON public.tasks(workspace_id, status);
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee_status ON public.tasks(assignee_id, status);
+CREATE INDEX IF NOT EXISTS idx_activity_project ON public.activity_logs(project_id);
+CREATE INDEX IF NOT EXISTS idx_activity_task ON public.activity_logs(task_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON public.notifications(workspace_id, user_id, read_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_created ON public.notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_work_sessions_user_start ON public.work_sessions(user_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_ws_status ON public.invoices(workspace_id, status);
+
+
+-- Sprint 8.12 Observability Pipeline
+CREATE TABLE system_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  event_type text NOT NULL,
+  severity text NOT NULL CHECK (severity IN ('info', 'warning', 'error', 'critical')),
+  source text NOT NULL CHECK (source IN ('frontend', 'database', 'edge_function', 'integration')),
+  message text NOT NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  stack_trace text,
+  browser_info jsonb,
+  resolved boolean NOT NULL DEFAULT false,
+  resolved_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_system_events_severity ON system_events(severity);
+CREATE INDEX idx_system_events_created_at ON system_events(created_at DESC);
+CREATE INDEX idx_system_events_workspace_id ON system_events(workspace_id);
+
+ALTER TABLE system_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can insert system events" ON system_events FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND source = 'frontend');
+CREATE POLICY "Admins can view system events" ON system_events FOR SELECT TO authenticated USING (workspace_id IS NOT NULL AND EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.workspace_id = system_events.workspace_id AND public.has_capability(users.id, 'platform_governance')));
+CREATE POLICY "Admins can update system events" ON system_events FOR UPDATE TO authenticated USING (workspace_id IS NOT NULL AND EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.workspace_id = system_events.workspace_id AND public.has_capability(users.id, 'platform_governance'))) WITH CHECK (workspace_id IS NOT NULL AND EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.workspace_id = system_events.workspace_id AND public.has_capability(users.id, 'platform_governance')));
+
+
+
+-- =============================================================
+-- SPRINT 11-21 CONSOLIDATED ADDITIONS (APPENDED)
+-- =============================================================
+
+-- 12. system_migrations
+CREATE TABLE system_migrations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  version text NOT NULL,
+  description text,
+  status text NOT NULL CHECK (status IN ('in_progress', 'completed', 'failed', 'rolled_back')),
+  applied_at timestamptz DEFAULT now(),
+  completed_at timestamptz,
+  logs jsonb DEFAULT '{}'::jsonb
+);
+
+-- 13. follow_ups
+CREATE TABLE follow_ups (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id    uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  source_type text        NOT NULL CHECK (source_type IN ('task_comment', 'task', 'project')),
+  source_id   uuid        NOT NULL,
+  remind_at   timestamptz NOT NULL,
+  reason      text        NOT NULL,
+  completed   boolean     NOT NULL DEFAULT false,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+-- Sandbox Isolation RPC
+CREATE OR REPLACE FUNCTION clone_workspace_to_sandbox(p_workspace_id UUID, p_user_id UUID)
+RETURNS UUID AS $$
+DECLARE
+    v_sandbox_id UUID;
+    v_team RECORD;
+    v_project RECORD;
+    v_task RECORD;
+    v_new_team_id UUID;
+    v_new_project_id UUID;
+BEGIN
+    -- 3.1. Insert sandbox workspace row copying production settings
+    INSERT INTO workspaces (
+        name, owner_id, business_type, template_id, execution_mode, default_lanes,
+        workflow_rules, work_start, work_end, lunch_duration, workdays, timezone,
+        attendance_enabled, payroll_enabled, productivity_factor, country, region,
+        completion_policy, allow_overallocation, status, metadata
+    )
+    SELECT 
+        '[Sandbox] ' || name, owner_id, business_type, template_id, execution_mode, default_lanes,
+        workflow_rules, work_start, work_end, lunch_duration, workdays, timezone,
+        attendance_enabled, payroll_enabled, productivity_factor, country, region,
+        completion_policy, allow_overallocation, 'sandbox', 
+        jsonb_build_object('environment', 'sandbox', 'safe_to_purge', true, 'created_by', 'system')
+    FROM workspaces WHERE id = p_workspace_id
+    RETURNING id INTO v_sandbox_id;
+
+    -- 3.2. Copy workspace settings row
+    INSERT INTO workspace_settings (
+        workspace_id, working_hours, working_time_from, working_time_to, 
+        lunch_duration_minutes, settings_blob
+    )
+    SELECT 
+        v_sandbox_id, working_hours, working_time_from, working_time_to, 
+        lunch_duration_minutes, settings_blob
+    FROM workspace_settings WHERE workspace_id = p_workspace_id
+    ON CONFLICT (workspace_id) DO NOTHING;
+
+    -- 3.3. Clone teams
+    FOR v_team IN SELECT * FROM teams WHERE workspace_id = p_workspace_id LOOP
+        INSERT INTO teams (workspace_id, name, data, capacity_hours_per_week)
+        VALUES (v_sandbox_id, v_team.name, v_team.data, v_team.capacity_hours_per_week)
+        RETURNING id INTO v_new_team_id;
+    END LOOP;
+
+    -- 3.4. Clone projects (non-deleted ones)
+    FOR v_project IN SELECT * FROM projects WHERE workspace_id = p_workspace_id AND deleted_at IS NULL LOOP
+        INSERT INTO projects (
+            workspace_id, name, description, status, template, owner_id, team_id, deadline, created_at, updated_at
+        )
+        VALUES (
+            v_sandbox_id, v_project.name, v_project.description, v_project.status, v_project.template, 
+            v_project.owner_id, NULL, v_project.deadline, v_project.created_at, v_project.updated_at
+        )
+        RETURNING id INTO v_new_project_id;
+
+        -- 3.5. Clone tasks for this project (non-deleted ones)
+        FOR v_task IN SELECT * FROM tasks WHERE project_id = v_project.id AND deleted_at IS NULL LOOP
+            INSERT INTO tasks (
+                workspace_id, project_id, name, description, status, priority, risk, 
+                assignee_id, estimated_hours, story_points, created_at, updated_at
+            )
+            VALUES (
+                v_sandbox_id, v_new_project_id, v_task.name, v_task.description, v_task.status, v_task.priority, v_task.risk, 
+                v_task.assignee_id, v_task.estimated_hours, v_task.story_points, v_task.created_at, v_task.updated_at
+            );
+        END LOOP;
+    END LOOP;
+
+    RETURN v_sandbox_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Soft Delete Intercept Rules
+CREATE OR REPLACE RULE workspaces_soft_delete AS ON DELETE TO workspaces
+DO INSTEAD (
+  UPDATE workspaces SET status = 'inactive' WHERE id = OLD.id
+);
+
+CREATE OR REPLACE RULE users_soft_delete AS ON DELETE TO users
+DO INSTEAD (
+  UPDATE users SET role = 'viewer', workspace_id = NULL WHERE id = OLD.id
+);
+
+CREATE OR REPLACE RULE projects_soft_delete AS ON DELETE TO projects
+DO INSTEAD (
+  UPDATE projects SET deleted_at = NOW(), status = 'archived' WHERE id = OLD.id AND deleted_at IS NULL
+);
+
+-- Extra Indexes
+CREATE INDEX IF NOT EXISTS idx_projects_external_id ON public.projects(external_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_external_id ON public.tasks(external_id);
+CREATE INDEX IF NOT EXISTS idx_follow_ups_owner_completed ON follow_ups(owner_id, completed);
+CREATE INDEX IF NOT EXISTS idx_follow_ups_remind_at ON follow_ups(remind_at);
+
+-- Extra Tables RLS Enablement & Policies
+ALTER TABLE system_migrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE follow_ups ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Platform admins can view migrations" ON system_migrations
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can manage their own follow ups" ON follow_ups
+  FOR ALL TO authenticated
+  USING (auth.uid() = owner_id)
+  WITH CHECK (auth.uid() = owner_id);

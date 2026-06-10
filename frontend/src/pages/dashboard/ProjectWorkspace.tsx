@@ -10,7 +10,7 @@ import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { ProjectCard } from '../../components/project/ProjectCard';
 import { hasCapability } from '../../core/auth/permissions';
-import { EmptyState } from '../../components/common/EmptyState';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 
 export function ProjectWorkspace() {
   const { workspace, user } = useWorkspace() as any;
@@ -168,12 +168,15 @@ export function ProjectWorkspace() {
 
         {filteredProjects.length === 0 && (
           <div className="col-span-full">
-            <EmptyState 
+            <PremiumEmptyState 
               icon={Briefcase}
-              title="No projects created yet"
-              description="Create your first project to start tracking work and managing your team."
-              actionLabel="Create Project"
-              onAction={() => setIsAdding(true)}
+              title="No Active Projects"
+              description="A project acts as a container for milestones, tasks, and budgets. Create your first project to begin organizing work."
+              action={hasCapability(profile?.role as any, 'manage_projects') ? (
+                <button onClick={() => setIsAdding(true)} className="btn-premium-primary px-4 py-2 rounded text-xs mt-2">
+                  Create Project
+                </button>
+              ) : null}
             />
           </div>
         )}

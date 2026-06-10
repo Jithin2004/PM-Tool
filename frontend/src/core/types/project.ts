@@ -24,6 +24,7 @@ export interface Project {
   id: string;
   workspace_id: string;
   client_id?: string;
+  external_id?: string;
   team_id?: string;
   owner_id?: string;
   department_id?: string;

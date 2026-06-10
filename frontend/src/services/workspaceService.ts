@@ -34,6 +34,11 @@ interface WorkspaceRow {
   attendance_enabled: boolean;
   payroll_enabled: boolean;
   productivity_factor: number;
+  is_demo?: boolean;
+  is_sandbox?: boolean;
+  parent_workspace_id?: string;
+  status?: string;
+  metadata?: any;
   created_at: string;
   updated_at?: string;
 }
@@ -82,6 +87,11 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
     id: row.id,
     name: row.name,
     ownerId: row.owner_id,
+    is_demo: row.is_demo,
+    is_sandbox: row.is_sandbox,
+    parent_workspace_id: row.parent_workspace_id,
+    status: row.status as any || 'active',
+    metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {}),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     settings: {
@@ -252,3 +262,21 @@ export async function updateWorkspaceSettings(workspace: Workspace, settings: Pa
 export async function repairUserWorkspace(userId: string, email?: string): Promise<{ repaired: boolean; workspaceId: string | null; reason: string }> {
   return reconcileWorkspaceMembership(userId, email);
 }
+
+export async function cloneWorkspaceToSandbox(workspaceId: string, userId: string): Promise<string> {
+  const { data: sandboxId, error } = await supabase.rpc('clone_workspace_to_sandbox', {
+    p_workspace_id: workspaceId,
+    p_user_id: userId
+  });
+
+  if (error) throw error;
+  
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ workspace_id: sandboxId })
+    .eq('id', userId);
+
+  if (updateError) throw updateError;
+  return sandboxId;
+}
+

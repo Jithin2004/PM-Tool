@@ -7,6 +7,8 @@ import { FileText, Download, Activity, Calendar, Users, DollarSign } from 'lucid
 import { exportToPDF, exportToCSV } from '../../services/pdfExportService';
 import { supabase } from '../../lib/supabase';
 import { showAlert } from '../../components/common/Dialogs';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { generateWeeklyDigestMarkdown } from '../../core/reporting/WeeklyDigestEngine';
 
 export default function ReportsCenter() {
   const { workspace } = useWorkspace();
@@ -20,12 +22,14 @@ export default function ReportsCenter() {
   const [exportFormat, setExportFormat] = useState<'PDF' | 'CSV'>('PDF');
   const [previewData, setPreviewData] = useState<any[] | null>(null);
   const [previewColumns, setPreviewColumns] = useState<string[]>([]);
+  const [digestMarkdown, setDigestMarkdown] = useState<string | null>(null);
   
   const canManageCompensation = hasCapability(profile?.role, 'manage_compensation');
 
   const handleGenerate = async () => {
     if (!workspace) return;
     setExporting(true);
+    setDigestMarkdown(null);
     
     let reportData: any[] = [];
     const isFinancial = ['payroll', 'invoices', 'gst', 'profit'].includes(selectedReport);
@@ -134,6 +138,27 @@ export default function ReportsCenter() {
           "Total Expenses": totalExp,
           "Net Profit": totalRev - totalExp
         }];
+      } else if (selectedReport === 'weekly_digest') {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(new Date().getDate() - 7);
+        
+        const [ { data: logs }, { data: approvalsData } ] = await Promise.all([
+          supabase.from('activity_logs').select('*').eq('workspace_id', workspace.id).gte('created_at', sevenDaysAgo.toISOString()),
+          supabase.from('universal_approvals').select('*').eq('workspace_id', workspace.id).gte('approved_at', sevenDaysAgo.toISOString())
+        ]);
+        
+        const md = generateWeeklyDigestMarkdown({
+          tasks,
+          projects,
+          profiles,
+          activityLogs: logs || [],
+          approvals: approvalsData || [],
+          workspaceSettingsBlob: workspace.settings
+        });
+        
+        setDigestMarkdown(md);
+        setExporting(false);
+        return; // Weekly digest doesn't use the standard table export flow
       }
 
       if (reportData.length > 0 && isFinancial) {
@@ -230,6 +255,7 @@ export default function ReportsCenter() {
                 >
                   <option className="bg-surface-highest text-text-primary" value="project">Project Report</option>
                   <option className="bg-surface-highest text-text-primary" value="team">Team Report</option>
+                  <option className="bg-surface-highest text-text-primary" value="weekly_digest">Weekly Digest (Markdown)</option>
                   <option className="bg-surface-highest text-text-primary" value="sprint">Sprint Report</option>
                   <option className="bg-surface-highest text-text-primary" value="attendance">Attendance Report</option>
                   {canManageCompensation && (
@@ -279,6 +305,12 @@ export default function ReportsCenter() {
               </div>
             </div>
 
+            {selectedReport === 'weekly_digest' && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-500 text-sm">
+                <p>The Weekly Digest deterministically parses all operational data from the last 7 days and outputs an exportable Markdown summary. Date range and format settings are ignored.</p>
+              </div>
+            )}
+
             <div className="pt-4 flex gap-3 border-t border-border/50">
               <button 
                 onClick={handleGenerate} 
@@ -301,7 +333,12 @@ export default function ReportsCenter() {
             Report Preview ({previewData.length} records)
           </h2>
           {previewData.length === 0 ? (
-            <p className="text-sm text-text-tertiary">No data found for the selected criteria.</p>
+            <PremiumEmptyState 
+              icon={FileText} 
+              title="No Report Data Available" 
+              description="There is no data matching your selected filters. Try adjusting the date range or selecting a different report type to see insights." 
+              compact={true}
+            />
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border/50 bg-surface-3/10 backdrop-blur-md">
               <table className="w-full text-left border-collapse whitespace-nowrap table-premium">
@@ -333,6 +370,31 @@ export default function ReportsCenter() {
               Showing first 50 records. Download to see all {previewData.length} records.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Markdown Digest Preview */}
+      {digestMarkdown !== null && (
+        <div className="mt-8 glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-[var(--pm-on-surface)]">
+              Weekly Digest Report
+            </h2>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(digestMarkdown);
+                showAlert("Markdown copied to clipboard!", { type: "success" });
+              }} 
+              className="px-4 py-2 bg-[var(--pm-surface-highest)] border border-[var(--pm-border)] rounded text-sm text-[var(--pm-text)] hover:bg-[var(--pm-surface-hover)] transition-colors"
+            >
+              Copy Markdown
+            </button>
+          </div>
+          <div className="p-6 rounded-lg border border-border/50 bg-surface-3/10 backdrop-blur-md overflow-x-auto">
+            <pre className="text-sm font-mono text-text-primary whitespace-pre-wrap leading-relaxed">
+              {digestMarkdown}
+            </pre>
+          </div>
         </div>
       )}
     </div>

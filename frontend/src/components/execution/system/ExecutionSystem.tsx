@@ -139,6 +139,8 @@ export function ExecutionSystem({
   const [reviewTask, setReviewTask] = useState<{task: Task, action: 'completed' | 'changes_requested'} | null>(null);
   const [evidenceTask, setEvidenceTask] = useState<Task | null>(null);
   const [delayReasonTask, setDelayReasonTask] = useState<Task | null>(null);
+  
+  const [columnLimits, setColumnLimits] = useState<Record<string, number>>({});
 
   const role = currentUserProfile?.role || 'viewer';
   const hasWriteAccess = hasCapability(role, 'manage_tasks');
@@ -679,6 +681,7 @@ function BoardView({
   blockers,
   onUpdateSubstate
 }: any) {
+  const [columnLimits, setColumnLimits] = React.useState<Record<string, number>>({});
   // Determine columns based on groupBy
   let columns: any[] = [];
   if (groupBy === 'status') {
@@ -737,24 +740,34 @@ function BoardView({
                   No Tasks
                 </div>
               ) : (
-                colTasks.map((task: Task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    project={projectMap.get(task.project_id)}
-                    hasWriteAccess={typeof hasWriteAccess === 'function' ? hasWriteAccess(task) : hasWriteAccess}
-                    columns={columns}
-                    onTransitionTask={onTransitionTask}
-                    onEditTask={onEditTask}
-                    onClick={onTaskClick}
-                    assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
-                    blockedByTasks={blockedByMap.get(task.id)}
-                    density={density}
-                    substate={taskSubstates[task.id]}
-                    blockers={blockers}
-                    
-                  />
-                ))
+                <>
+                  {colTasks.slice(0, columnLimits[col.id] || 50).map((task: Task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      project={projectMap.get(task.project_id)}
+                      hasWriteAccess={typeof hasWriteAccess === 'function' ? hasWriteAccess(task) : hasWriteAccess}
+                      columns={columns}
+                      onTransitionTask={onTransitionTask}
+                      onEditTask={onEditTask}
+                      onClick={onTaskClick}
+                      assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
+                      blockedByTasks={blockedByMap.get(task.id)}
+                      density={density}
+                      substate={taskSubstates[task.id]}
+                      blockers={blockers}
+                      
+                    />
+                  ))}
+                  {colTasks.length > (columnLimits[col.id] || 50) && (
+                    <button 
+                      onClick={() => setColumnLimits(prev => ({ ...prev, [col.id]: (prev[col.id] || 50) + 50 }))}
+                      className="w-full py-2 bg-surface-3 hover:bg-surface-high border border-border rounded-lg text-xs font-semibold transition-colors mt-2"
+                    >
+                      Load More Tasks ({colTasks.length - (columnLimits[col.id] || 50)} remaining)
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

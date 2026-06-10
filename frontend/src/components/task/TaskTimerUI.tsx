@@ -163,6 +163,13 @@ export function TaskTimerUI({ task, workspace, currentUser, onRefreshTasks, isCo
         {formatTime(elapsedMs)}
       </div>
 
+      {elapsedMs > 36000000 && session.status === 'active' && !isCompact && (
+        <div className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[9px] rounded-sm font-mono flex items-center gap-1 border border-amber-500/20" title="It looks like this timer was left running overnight.">
+          <Clock className="w-3 h-3" />
+          Auto-paused soon?
+        </div>
+      )}
+
       {session.status === 'active' ? (
         <button onClick={handlePause} disabled={loading} className="p-1.5 hover:bg-surface-3 rounded text-amber-400 transition-colors" title="Pause">
           <Pause className="w-3.5 h-3.5" />

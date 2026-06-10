@@ -13,7 +13,7 @@ interface ProjectCreationModalProps {
   onSuccess?: () => void;
 }
 
-type TabKey = 'identity' | 'planning' | 'requirements' | 'milestones' | 'team' | 'execution' | 'finance';
+type TabKey = 'identity' | 'planning' | 'requirements' | 'milestones' | 'tasks' | 'team' | 'execution' | 'finance';
 
 export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCreationModalProps) {
   const { workspace, activeTeams, profiles } = useWorkspace() as any;
@@ -43,6 +43,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     allocations: [],
     initialRequirements: [],
     initialMilestones: [],
+    initialTasks: [],
   });
 
   const [reqTitle, setReqTitle] = useState('');
@@ -52,6 +53,13 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
 
   const [msName, setMsName] = useState('');
   const [msDate, setMsDate] = useState('');
+
+  const [taskName, setTaskName] = useState('');
+  const [taskDesc, setTaskDesc] = useState('');
+  const [taskMsIndex, setTaskMsIndex] = useState<number | ''>('');
+  const [taskAssignee, setTaskAssignee] = useState('');
+  const [taskEst, setTaskEst] = useState<number>(0);
+  const [taskPriority, setTaskPriority] = useState('medium');
 
   const [allocUser, setAllocUser] = useState('');
   const [allocPercent, setAllocPercent] = useState(100);
@@ -85,6 +93,22 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     setMsName(''); setMsDate('');
   };
 
+  const addTask = () => {
+    if (!taskName) return;
+    setFormData(prev => ({
+      ...prev,
+      initialTasks: [...(prev.initialTasks || []), { 
+        name: taskName, 
+        description: taskDesc, 
+        milestone_index: taskMsIndex === '' ? undefined : taskMsIndex,
+        assignee_id: taskAssignee || undefined,
+        estimated_hours: taskEst,
+        priority: taskPriority
+      }]
+    }));
+    setTaskName(''); setTaskDesc(''); setTaskMsIndex(''); setTaskAssignee(''); setTaskEst(0); setTaskPriority('medium');
+  };
+
   const addAllocation = () => {
     if (!allocUser) return;
     setFormData(prev => ({
@@ -94,7 +118,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     setAllocUser(''); setAllocPercent(100);
   };
 
-  const removeArrayItem = (field: 'initialRequirements' | 'initialMilestones' | 'allocations', index: number) => {
+  const removeArrayItem = (field: 'initialRequirements' | 'initialMilestones' | 'initialTasks' | 'allocations', index: number) => {
     setFormData(prev => {
       const arr = [...(prev[field] as any[])];
       arr.splice(index, 1);
@@ -102,23 +126,31 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     });
   };
 
+  const [isSuccess, setIsSuccess] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name) return alert('Project Designation is required');
+    if (!formData.name) {
+      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Project Designation is required', type: 'error' } }));
+      return;
+    }
     setIsSubmitting(true);
     try {
       const res = await createProject({ ...formData, workspace_id: workspace.id });
       if (res) {
-        onSuccess?.();
-        onClose();
+        setIsSuccess(true);
+        setTimeout(() => {
+          onSuccess?.();
+          onClose();
+        }, 1200);
       } else {
-        alert('Failed to create project.');
+        window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Failed to create project.', type: 'error' } }));
       }
     } catch (err) {
       console.error(err);
-      alert('Error creating project.');
+      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Error creating project.', type: 'error' } }));
     } finally {
-      setIsSubmitting(false);
+      if (!isSuccess) setIsSubmitting(false);
     }
   };
 
@@ -127,6 +159,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     { id: 'planning', label: 'Planning', icon: Calendar },
     { id: 'requirements', label: 'Requirements', icon: FileText },
     { id: 'milestones', label: 'Milestones', icon: Target },
+    { id: 'tasks', label: 'Initial Tasks', icon: Target },
     { id: 'team', label: 'Team', icon: Users },
     { id: 'execution', label: 'Execution', icon: Settings },
   ];
@@ -310,6 +343,55 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
                 </div>
               )}
 
+              {/* Tasks Tab */}
+              {activeTab === 'tasks' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div className="bg-surface-3/30 border border-border/50 p-4 rounded-xl space-y-3">
+                    <h4 className="text-sm font-semibold">Add Initial Task</h4>
+                    <input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} placeholder="Task Designation" className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none" />
+                    <textarea value={taskDesc} onChange={e => setTaskDesc(e.target.value)} placeholder="Description" className="w-full bg-surface border border-border p-3 rounded-lg text-sm outline-none" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <select value={taskMsIndex} onChange={e => setTaskMsIndex(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none">
+                        <option value="">No Milestone Link</option>
+                        {formData.initialMilestones?.map((m, i) => (
+                          <option key={i} value={i}>{m.name}</option>
+                        ))}
+                      </select>
+                      <select value={taskAssignee} onChange={e => setTaskAssignee(e.target.value)} className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none">
+                        <option value="">Unassigned</option>
+                        {availableUsers.map((u: any) => <option key={u.id} value={u.id}>{u.full_name || u.email}</option>)}
+                      </select>
+                      <input type="number" min="0" value={taskEst} onChange={e => setTaskEst(Number(e.target.value))} placeholder="Est. Hours" className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none" />
+                      <select value={taskPriority} onChange={e => setTaskPriority(e.target.value)} className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                      </select>
+                    </div>
+                    <button type="button" onClick={addTask} className="bg-surface-high hover:bg-surface-highest text-sm font-medium px-4 py-2 rounded-lg transition-colors border border-border">
+                      Add Task
+                    </button>
+                  </div>
+                  
+                  {formData.initialTasks?.length ? (
+                    <div className="space-y-2 mt-4">
+                      {formData.initialTasks.map((t, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-surface-lowest border border-border rounded-lg text-sm">
+                          <div>
+                            <span className="font-medium text-text-primary">{t.name}</span>
+                            <span className="text-text-tertiary ml-2">Est: {t.estimated_hours}h | {t.priority}</span>
+                          </div>
+                          <button type="button" onClick={() => removeArrayItem('initialTasks', i)} className="text-red-400 hover:text-red-300 transition-colors p-1">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
               {/* Team Tab */}
               {activeTab === 'team' && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -428,11 +510,11 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
 
         {/* Footer Actions */}
         <div className="p-5 border-t border-border/50 flex justify-end gap-3 shrink-0 bg-surface">
-          <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-text-secondary hover:bg-surface-3 rounded-lg transition-colors">
+          <button type="button" onClick={onClose} disabled={isSuccess || isSubmitting} className="px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-text-secondary hover:bg-surface-3 rounded-lg transition-colors">
             Cancel
           </button>
-          <button form="project-form" type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-teal-500 hover:bg-teal-400 text-[var(--pm-text)] text-[var(--text-primary)] rounded-lg text-sm font-bold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-[0_0_15px_rgba(20,184,166,0.3)]">
-            {isSubmitting ? <span className="animate-pulse">Committing...</span> : 'Create Project'}
+          <button form="project-form" type="submit" disabled={isSubmitting || isSuccess} className={`px-6 py-2.5 rounded-lg text-sm font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(20,184,166,0.3)] ${isSuccess ? 'bg-emerald-500 text-white' : 'bg-teal-500 hover:bg-teal-400 text-[var(--pm-text)] text-[var(--text-primary)]'}`}>
+            {isSuccess ? <span className="animate-pulse">Project Created! 🎉</span> : (isSubmitting ? <span className="animate-pulse">Committing...</span> : 'Create Project')}
           </button>
         </div>
       </motion.div>

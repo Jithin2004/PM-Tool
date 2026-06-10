@@ -1,3 +1,4 @@
+import { trackSupabaseOperation } from '../core/observability/telemetry';
 import { supabase } from '../lib/supabase';
 import type { PostgrestError } from '@supabase/supabase-js';
 
@@ -246,23 +247,23 @@ export async function fetchFinanceData(workspaceId: string) {
 }
 
 export const createClient = async (workspaceId: string, client: Partial<Client>): Promise<Client> => {
-  const { data, error } = await supabase.from('clients').insert([{ ...client, workspace_id: workspaceId }]).select().single();
+  const { data, error } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').insert([{ ...client, workspace_id: workspaceId }]).select().single());
   if (error) throw error;
   return data as Client;
 };
 
 export const fetchClients = async (workspaceId: string): Promise<Client[]> => {
-  const { data, error } = await supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId);
+  const { data, error } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId));
   if (error) throw error;
   return data as Client[];
 };
 
 export async function generateInvoice(workspaceId: string, invoice: Partial<Invoice>, lineItems: Partial<InvoiceLineItem>[], prefix: string = 'RPM') {
   // 1. Generate Invoice Number via RPC
-  const { data: invNumber, error: rpcError } = await supabase.rpc('generate_invoice_number', {
+  const { data: invNumber, error: rpcError } = await trackSupabaseOperation('supabase_rpc_generate_invoice_number', () => supabase.rpc('generate_invoice_number', {
     p_workspace_id: workspaceId,
     p_prefix: prefix
-  });
+  }));
   if (rpcError) throw rpcError;
   
   if (invoice.exchange_rate_locked) {
@@ -270,18 +271,18 @@ export async function generateInvoice(workspaceId: string, invoice: Partial<Invo
   }
 
   // 2. Insert Invoice
-  const { data: newInvoice, error: invError } = await supabase.from('invoices').insert([{ 
+  const { data: newInvoice, error: invError } = await trackSupabaseOperation('supabase_from_invoices', () => supabase.from('invoices').insert([{ 
     ...invoice, 
     workspace_id: workspaceId,
     invoice_number: invNumber 
-  }]).select().single();
+  }]).select().single());
   
   if (invError) throw invError;
 
   // 3. Insert Line Items
   if (lineItems && lineItems.length > 0) {
     const itemsToInsert = lineItems.map(item => ({ ...item, invoice_id: newInvoice.id }));
-    const { error: lineItemsError } = await supabase.from('invoice_line_items').insert(itemsToInsert);
+    const { error: lineItemsError } = await trackSupabaseOperation('supabase_from_invoice_line_items', () => supabase.from('invoice_line_items').insert(itemsToInsert));
     if (lineItemsError) {
       console.error("Failed to insert line items", lineItemsError);
     }
@@ -291,50 +292,50 @@ export async function generateInvoice(workspaceId: string, invoice: Partial<Invo
 }
 
 export async function auditExchangeRateOverride(invoiceId: string, workspaceId: string, oldRate: number | null, newRate: number, changedBy: string, reason: string) {
-  const { error } = await supabase.from('exchange_rate_audits').insert([{
+  const { error } = await trackSupabaseOperation('supabase_from_exchange_rate_audits', () => supabase.from('exchange_rate_audits').insert([{
     invoice_id: invoiceId,
     workspace_id: workspaceId,
     old_rate: oldRate,
     new_rate: newRate,
     changed_by: changedBy,
     reason: reason
-  }]);
+  }]));
   if (error) {
     console.error('Failed to log exchange rate audit:', error);
   }
 }
 
 export async function logPayment(workspaceId: string, payment: any) {
-  const { data, error } = await supabase.from('payments').insert([payment]).select().single();
+  const { data, error } = await trackSupabaseOperation('supabase_from_payments', () => supabase.from('payments').insert([payment]).select().single());
   if (error) throw error;
   return data;
 }
 
 export async function recordPayment(payment: Partial<Payment>) {
-  const { data, error } = await supabase.from('payments').insert([payment]).select().single();
+  const { data, error } = await trackSupabaseOperation('supabase_from_payments', () => supabase.from('payments').insert([payment]).select().single());
   if (error) throw error;
   return data;
 }
 
 export async function createExpense(workspaceId: string, expense: Partial<Expense>) {
-  const { data, error } = await supabase.from('expenses').insert([{ ...expense, workspace_id: workspaceId }]).select().single();
+  const { data, error } = await trackSupabaseOperation('supabase_from_expenses', () => supabase.from('expenses').insert([{ ...expense, workspace_id: workspaceId }]).select().single());
   if (error) throw error;
   return data;
 }
 
 export async function closeFinancialPeriod(workspaceId: string, month: number, year: number, userId: string) {
-  const { data, error } = await supabase.rpc('close_financial_period', {
+  const { data, error } = await trackSupabaseOperation('supabase_rpc_close_financial_period', () => supabase.rpc('close_financial_period', {
     p_workspace_id: workspaceId,
     p_month: month,
     p_year: year,
     p_user_id: userId
-  });
+  }));
   if (error) throw error;
   return data;
 }
 
 export async function createFinancialAdjustment(adjustment: Partial<FinancialAdjustment>) {
-  const { data, error } = await supabase.from('financial_adjustments').insert([adjustment]).select().single();
+  const { data, error } = await trackSupabaseOperation('supabase_from_financial_adjustments', () => supabase.from('financial_adjustments').insert([adjustment]).select().single());
   if (error) throw error;
   return data;
 }
@@ -343,12 +344,12 @@ export async function checkPeriodClosed(workspaceId: string, dateStr: string): P
   const date = new Date(dateStr);
   const month = date.getMonth() + 1;
   const year = date.getFullYear();
-  const { data } = await supabase.from('financial_periods')
+  const { data } = await trackSupabaseOperation('supabase_from_financial_periods', () => supabase.from('financial_periods')
     .select('status')
     .eq('workspace_id', workspaceId)
     .eq('month', month)
     .eq('year', year)
-    .maybeSingle();
+    .maybeSingle());
   return data?.status === 'closed';
 }
 
@@ -363,10 +364,10 @@ export async function cancelInvoice(invoice: Invoice, performedBy: string, reaso
     throw new Error('Cannot cancel invoice in a closed financial period.');
   }
 
-  const { error } = await supabase.from('invoices').update({ status: 'cancelled' }).eq('id', invoice.id);
+  const { error } = await trackSupabaseOperation('supabase_from_invoices', () => supabase.from('invoices').update({ status: 'cancelled' }).eq('id', invoice.id));
   if (error) throw error;
 
-  await supabase.from('invoice_audit_logs').insert([{
+  await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
     workspace_id: invoice.workspace_id,
     invoice_id: invoice.id,
     action: 'cancelled',
@@ -374,7 +375,7 @@ export async function cancelInvoice(invoice: Invoice, performedBy: string, reaso
     reason: reason,
     old_value: { status: invoice.status },
     new_value: { status: 'cancelled' }
-  }]);
+  }]));
 }
 
 export async function createCreditNote(workspaceId: string, creditNote: Partial<CreditNote>) {
@@ -383,54 +384,54 @@ export async function createCreditNote(workspaceId: string, creditNote: Partial<
   }
 
   // 1. Generate Credit Note Number via RPC or simple logic (assuming prefix CN-)
-  const { data: countData } = await supabase.from('credit_notes').select('id', { count: 'exact' }).eq('workspace_id', workspaceId);
+  const { data: countData } = await trackSupabaseOperation('supabase_from_credit_notes', () => supabase.from('credit_notes').select('id', { count: 'exact' }).eq('workspace_id', workspaceId));
   const nextNum = (countData?.length || 0) + 1;
   const cnNumber = `CN-${String(nextNum).padStart(4, '0')}`;
 
-  const { data, error } = await supabase.from('credit_notes').insert([{ 
+  const { data, error } = await trackSupabaseOperation('supabase_from_credit_notes', () => supabase.from('credit_notes').insert([{ 
     ...creditNote, 
     workspace_id: workspaceId,
     credit_note_number: cnNumber
-  }]).select().single();
+  }]).select().single());
   
   if (error) throw error;
   
-  await supabase.from('invoice_audit_logs').insert([{
+  await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
     workspace_id: workspaceId,
     invoice_id: creditNote.invoice_id,
     action: 'credit_note_issued',
     performed_by: creditNote.created_by,
     reason: `Credit note ${cnNumber} issued for ${creditNote.amount}`
-  }]);
+  }]));
 
   return data;
 }
 
 export async function applyAdvanceToInvoice(workspaceId: string, clientId: string, invoiceId: string, amount: number, performedBy: string) {
   // Get active client credits
-  const { data: credits } = await supabase.from('client_credits').select('*').limit(50).eq('client_id', clientId).eq('status', 'active');
+  const { data: credits } = await trackSupabaseOperation('supabase_from_client_credits', () => supabase.from('client_credits').select('*').limit(50).eq('client_id', clientId).eq('status', 'active'));
   if (!credits || credits.length === 0) throw new Error("No active advances found.");
 
   // For simplicity, we just log it against the first credit or an aggregate.
   // We need a credit_id for advance_applications.
   const creditId = credits[0].id;
 
-  const { error: appError } = await supabase.from('advance_applications').insert([{
+  const { error: appError } = await trackSupabaseOperation('supabase_from_advance_applications', () => supabase.from('advance_applications').insert([{
     workspace_id: workspaceId,
     client_credit_id: creditId,
     invoice_id: invoiceId,
     amount_applied: amount,
     applied_by: performedBy,
     notes: 'Applied from advance balance'
-  }]);
+  }]));
   if (appError) throw appError;
 
   // Deduct from client advance_balance via RPC or simple update
-  const { data: client } = await supabase.from('clients').select('advance_balance').eq('id', clientId).single();
+  const { data: client } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').select('advance_balance').eq('id', clientId).single());
   const currentAdvance = client?.advance_balance || 0;
   if (currentAdvance < amount) throw new Error("Insufficient advance balance.");
 
-  await supabase.from('clients').update({ advance_balance: currentAdvance - amount }).eq('id', clientId);
+  await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').update({ advance_balance: currentAdvance - amount }).eq('id', clientId));
 
   // Record it as a payment
   await recordPayment({
@@ -443,33 +444,33 @@ export async function applyAdvanceToInvoice(workspaceId: string, clientId: strin
     advance_payment: false
   });
 
-  await supabase.from('invoice_audit_logs').insert([{
+  await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
     workspace_id: workspaceId,
     invoice_id: invoiceId,
     action: 'advance_applied',
     performed_by: performedBy,
     reason: `Applied advance of ${amount}`
-  }]);
+  }]));
 }
 
 export const upsertCompanyBillingProfile = async (profile: Partial<CompanyBillingProfile>) => {
-  const { data, error } = await supabase.from('company_billing_profile').upsert(profile, { onConflict: 'workspace_id' }).select().single();
+  const { data, error } = await trackSupabaseOperation('supabase_from_company_billing_profile', () => supabase.from('company_billing_profile').upsert(profile, { onConflict: 'workspace_id' }).select().single());
   if (error) throw error;
   return data as CompanyBillingProfile;
 };
 
 export async function deleteInvoice(invoiceId: string, workspaceId: string, performedBy: string, reason: string) {
   // We can only delete draft invoices
-  const { data: invoice } = await supabase.from('invoices').select('status').eq('id', invoiceId).single();
+  const { data: invoice } = await trackSupabaseOperation('supabase_from_invoices', () => supabase.from('invoices').select('status').eq('id', invoiceId).single());
   if (!invoice) throw new Error("Invoice not found.");
   if (invoice.status !== 'draft') {
     throw new Error("Only draft invoices can be completely deleted. Please cancel issued invoices instead.");
   }
 
-  const { error } = await supabase.from('invoices').delete().eq('id', invoiceId);
+  const { error } = await trackSupabaseOperation('supabase_from_invoices', () => supabase.from('invoices').delete().eq('id', invoiceId));
   if (error) throw error;
 
-  await supabase.from('invoice_audit_logs').insert([{
+  await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
     workspace_id: workspaceId,
     invoice_id: invoiceId,
     action: 'deleted',
@@ -477,15 +478,15 @@ export async function deleteInvoice(invoiceId: string, workspaceId: string, perf
     reason: reason,
     old_value: { status: invoice.status },
     new_value: null
-  }]);
+  }]));
 
-  await supabase.from('activity_logs').insert([{
+  await trackSupabaseOperation('supabase_from_activity_logs', () => supabase.from('activity_logs').insert([{
     workspace_id: workspaceId,
     actor_id: performedBy,
     action: 'deleted_invoice',
     entity_type: 'invoice',
     entity_id: invoiceId,
     metadata: { reason }
-  }]);
+  }]));
 }
 

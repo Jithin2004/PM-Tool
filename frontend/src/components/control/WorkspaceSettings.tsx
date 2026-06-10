@@ -6,16 +6,18 @@ import { useOperationalData } from '../../context/OperationalDataContext';
 import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw, ChevronDown, Building2, Download, Briefcase, Key } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { upsertCompanyBillingProfile } from '../../services/financeService';
-import { DemoWorkspaceManager } from '../workspace/DemoWorkspaceManager';
+import { SandboxWorkspaceManager } from '../workspace/SandboxWorkspaceManager';
 import { PilotReadinessPanel } from '../workspace/PilotReadinessPanel';
 import { WorkspaceHealth } from './WorkspaceHealth';
 import { ExportCenter } from './ExportCenter';
+import { BillingSettings } from './BillingSettings';
 
 const TABS = [
   { id: 'organization', label: 'Organization' },
   { id: 'working_rules', label: 'Working Rules' },
   { id: 'people_rules', label: 'People Rules' },
   { id: 'finance', label: 'Finance Settings' },
+  { id: 'billing', label: 'Billing & Plans' },
   { id: 'client_access', label: 'Client Access' },
   { id: 'security', label: 'Security' },
   { id: 'export', label: 'Export & Backup' }
@@ -303,6 +305,10 @@ export function WorkspaceSettings() {
         {activeTab === 'export' && (
           <ExportCenter />
         )}
+
+        {activeTab === 'billing' && (
+          <BillingSettings />
+        )}
       </div>
 
       <div className="flex justify-end pt-8">
@@ -317,7 +323,7 @@ export function WorkspaceSettings() {
         </button>
       </div>
       <div className="mt-16 space-y-4">
-        <DemoWorkspaceManager />
+        <SandboxWorkspaceManager />
         <PilotReadinessPanel />
       </div>
     </div>

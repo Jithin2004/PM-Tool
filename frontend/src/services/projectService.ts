@@ -1,3 +1,4 @@
+import { trackSupabaseOperation } from '../core/observability/telemetry';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { logServiceFailure } from '../utils/supabaseError';
@@ -28,12 +29,13 @@ export interface CreateProjectInput {
   allocations?: { user_id: string; allocation_percent?: number }[];
   initialRequirements?: { title: string; description?: string; acceptance_criteria?: string; client_visible?: boolean }[];
   initialMilestones?: { name: string; target_date?: string }[];
+  initialTasks?: { name: string; description?: string; milestone_index?: number; assignee_id?: string; estimated_hours?: number; priority?: string }[];
 }
 
 export async function createProject(input: CreateProjectInput): Promise<{ id: string } | null> {
   if (!isSupabaseConfigured) return null;
   try {
-    const { data, error } = await supabase
+    const { data, error } = await trackSupabaseOperation('supabase_from_projects', () => supabase
       .from('projects')
       .insert({
         workspace_id: input.workspace_id,
@@ -54,26 +56,26 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
         pert_enabled: input.pert_enabled !== undefined ? input.pert_enabled : true
       })
       .select('id')
-      .maybeSingle();
+      .maybeSingle());
     if (error) { logServiceFailure('createProject', input, error); return null; }
     if (data) {
       const projectId = data.id;
       
       // Insert Allocations
       if (input.allocations && input.allocations.length > 0) {
-        await supabase.from('project_allocations').insert(
+        await trackSupabaseOperation('supabase_from_project_allocations', () => supabase.from('project_allocations').insert(
           input.allocations.map(a => ({
             workspace_id: input.workspace_id,
             project_id: projectId,
             user_id: a.user_id,
             allocation_percent: a.allocation_percent || 100
           }))
-        );
+        ));
       }
 
       // Insert Requirements
       if (input.initialRequirements && input.initialRequirements.length > 0) {
-        await supabase.from('requirements').insert(
+        await trackSupabaseOperation('supabase_from_requirements', () => supabase.from('requirements').insert(
           input.initialRequirements.map(r => ({
             workspace_id: input.workspace_id,
             project_id: projectId,
@@ -82,19 +84,43 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
             acceptance_criteria: r.acceptance_criteria,
             client_visible: r.client_visible || false
           }))
-        );
+        ));
       }
 
       // Insert Milestones
+      let insertedMilestones: any[] = [];
       if (input.initialMilestones && input.initialMilestones.length > 0) {
-        await supabase.from('milestones').insert(
+        const { data: msData } = await trackSupabaseOperation('supabase_from_milestones', () => supabase.from('milestones').insert(
           input.initialMilestones.map(m => ({
             workspace_id: input.workspace_id,
             project_id: projectId,
             name: m.name,
             target_date: m.target_date || null
           }))
-        );
+        ).select('id'));
+        if (msData) insertedMilestones = msData;
+      }
+
+      // Insert Initial Tasks
+      if (input.initialTasks && input.initialTasks.length > 0) {
+        await trackSupabaseOperation('supabase_from_tasks', () => supabase.from('tasks').insert(
+          input.initialTasks.map((t) => {
+            const msId = (t.milestone_index !== undefined && insertedMilestones[t.milestone_index]) 
+              ? insertedMilestones[t.milestone_index].id 
+              : null;
+            return {
+              workspace_id: input.workspace_id,
+              project_id: projectId,
+              name: t.name,
+              description: t.description || '',
+              assignee_id: t.assignee_id || null,
+              estimated_hours: t.estimated_hours || 0,
+              priority: t.priority || 'medium',
+              status: 'backlog',
+              milestone_id: msId
+            };
+          })
+        ));
       }
 
       await activityLogService.appendLog({
@@ -125,11 +151,11 @@ export async function updateProject(
   }
 
   try {
-    const { error } = await supabase
+    const { error } = await trackSupabaseOperation('supabase_from_projects', () => supabase
       .from('projects')
       .update(updates)
       .eq('id', projectId)
-      .eq('workspace_id', workspaceId);
+      .eq('workspace_id', workspaceId));
       
     if (error) throw error;
     
@@ -151,19 +177,19 @@ export async function archiveProject(projectId: string, workspaceId: string, act
     const now = new Date().toISOString();
 
     // 1. Archive the project itself
-    await supabase.from('projects').update({ status: 'archived', deleted_at: now }).eq('id', projectId);
+    await trackSupabaseOperation('supabase_from_projects', () => supabase.from('projects').update({ status: 'archived', deleted_at: now }).eq('id', projectId));
 
     // 2. Cascade to Tasks
-    await supabase.from('tasks').update({ status: 'archived', deleted_at: now }).eq('project_id', projectId).is('deleted_at', null);
+    await trackSupabaseOperation('supabase_from_tasks', () => supabase.from('tasks').update({ status: 'archived', deleted_at: now }).eq('project_id', projectId).is('deleted_at', null));
 
     // 3. Cascade to Wait States (Targeting Project)
-    await supabase.from('wait_states').update({ status: 'archived', deleted_at: now }).eq('target_type', 'project').eq('target_id', projectId).is('deleted_at', null);
+    await trackSupabaseOperation('supabase_from_wait_states', () => supabase.from('wait_states').update({ status: 'archived', deleted_at: now }).eq('target_type', 'project').eq('target_id', projectId).is('deleted_at', null));
 
     // 4. Cascade to Signoffs
-    await supabase.from('project_signoffs').update({ status: 'archived', deleted_at: now }).eq('project_id', projectId).is('deleted_at', null);
+    await trackSupabaseOperation('supabase_from_project_signoffs', () => supabase.from('project_signoffs').update({ status: 'archived', deleted_at: now }).eq('project_id', projectId).is('deleted_at', null));
 
     // 5. Cascade to Allocation Periods (Phase 2B)
-    await supabase.from('allocation_periods').update({ deleted_at: now }).eq('project_id', projectId).is('deleted_at', null);
+    await trackSupabaseOperation('supabase_from_allocation_periods', () => supabase.from('allocation_periods').update({ deleted_at: now }).eq('project_id', projectId).is('deleted_at', null));
 
     // Audit the action
     await activityLogService.appendLog({

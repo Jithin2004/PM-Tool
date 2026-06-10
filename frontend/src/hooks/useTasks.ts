@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { sha256 } from '../utils/cryptoUtils';
 import { hasCapability, guardCapability } from '../core/auth/permissions';
 import { getFriendlyErrorMessage } from '../utils/errorUtils';
+import { WorkspaceLifecycleEngine } from '../core/system/WorkspaceLifecycleEngine';
 
 export const wouldCreateCycle = (
   taskId: string,
@@ -72,6 +73,21 @@ export function useTasks(workspaceId?: string) {
   const DEVELOPER_PROTECTED_FIELDS = new Set([
     'assignee_id', 'project_id', 'priority', 'start_date', 'deadline', 'due_date', 'estimated_hours', 'original_estimate', 'workspace_id'
   ]);
+
+  const checkWorkspaceAcceptTasks = useCallback(async () => {
+    if (!workspaceId || !isSupabaseConfigured) return true;
+    try {
+      const { data, error } = await supabase
+        .from('workspaces')
+        .select('status')
+        .eq('id', workspaceId)
+        .maybeSingle();
+      if (error || !data) return true;
+      return WorkspaceLifecycleEngine.canAcceptTasks(data.status);
+    } catch {
+      return true;
+    }
+  }, [workspaceId]);
 
   const insertTaskHistoryLog = useCallback(async (
     taskId: string,
@@ -412,34 +428,42 @@ export function useTasks(workspaceId?: string) {
       if (fetchError) throw fetchError;
       if (abortSignal?.aborted) return;
       
-      setTasks(normalizeTasksFromRows((data || []) as Record<string, unknown>[]));
+      const fetchedTasks = normalizeTasksFromRows((data || []) as Record<string, unknown>[]);
+      setTasks(fetchedTasks);
       if (!fetchAllLoaded) setPage(0);
       setHasMore(count !== null ? (to + 1) < count : false);
 
-      // Fetch task dependencies from canonical table
-      const depsQuery = supabase
-        .from('task_dependencies')
-        .select('*')
-        .eq('workspace_id', workspaceId);
+      const taskIds = fetchedTasks.map(t => t.id);
 
-      if (abortSignal) depsQuery.abortSignal(abortSignal);
-      const { data: depData, error: depError } = await depsQuery;
+      if (taskIds.length > 0) {
+        // Fetch task dependencies from canonical table
+        const depsQuery = supabase
+          .from('task_dependencies')
+          .select('*')
+          .in('task_id', taskIds);
 
-      if (depError) throw depError;
-      if (abortSignal?.aborted) return;
-      setDependencies(depData as TaskDependency[]);
+        if (abortSignal) depsQuery.abortSignal(abortSignal);
+        const { data: depData, error: depError } = await depsQuery;
 
-      // Fetch task collaborators
-      const collabQuery = supabase
-        .from('task_collaborators')
-        .select('*')
-        .eq('workspace_id', workspaceId);
+        if (depError) throw depError;
+        if (abortSignal?.aborted) return;
+        setDependencies(depData as TaskDependency[]);
 
-      if (abortSignal) collabQuery.abortSignal(abortSignal);
-      const { data: collabData, error: collabError } = await collabQuery;
-      if (collabError) throw collabError;
-      if (abortSignal?.aborted) return;
-      setCollaborators(collabData as TaskCollaborator[]);
+        // Fetch task collaborators
+        const collabQuery = supabase
+          .from('task_collaborators')
+          .select('*')
+          .in('task_id', taskIds);
+
+        if (abortSignal) collabQuery.abortSignal(abortSignal);
+        const { data: collabData, error: collabError } = await collabQuery;
+        if (collabError) throw collabError;
+        if (abortSignal?.aborted) return;
+        setCollaborators(collabData as TaskCollaborator[]);
+      } else {
+        setDependencies([]);
+        setCollaborators([]);
+      }
 
       setError(null);
     } catch (err: any) {
@@ -479,12 +503,45 @@ export function useTasks(workspaceId?: string) {
         .range(from, to);
 
       if (fetchError) throw fetchError;
+      const existingIds = new Set(tasks.map(t => t.id)); // using tasks from outer scope
+      const newUnique = normalizeTasksFromRows((data || []) as Record<string, unknown>[]).filter(
+        t => !existingIds.has(t.id),
+      );
+      
+      if (newUnique.length > 0) {
+        const newTaskIds = newUnique.map(t => t.id);
+        
+        const { data: depData } = await supabase
+          .from('task_dependencies')
+          .select('*')
+          .in('task_id', newTaskIds);
+          
+        if (depData) {
+          setDependencies(prev => {
+            const existingDepIds = new Set(prev.map(d => `${d.task_id}-${d.depends_on_task_id}`));
+            const newDeps = (depData as TaskDependency[]).filter(d => !existingDepIds.has(`${d.task_id}-${d.depends_on_task_id}`));
+            return [...prev, ...newDeps];
+          });
+        }
+        
+        const { data: collabData } = await supabase
+          .from('task_collaborators')
+          .select('*')
+          .in('task_id', newTaskIds);
+          
+        if (collabData) {
+          setCollaborators(prev => {
+            const existingCollabIds = new Set(prev.map(c => c.id));
+            const newCollabs = (collabData as TaskCollaborator[]).filter(c => !existingCollabIds.has(c.id));
+            return [...prev, ...newCollabs];
+          });
+        }
+      }
+
       setTasks(prev => {
-        const existingIds = new Set(prev.map(t => t.id));
-        const newUnique = normalizeTasksFromRows((data || []) as Record<string, unknown>[]).filter(
-          t => !existingIds.has(t.id),
-        );
-        return [...prev, ...newUnique];
+        const currentIds = new Set(prev.map(t => t.id));
+        const finalUnique = newUnique.filter(t => !currentIds.has(t.id));
+        return [...prev, ...finalUnique];
       });
       setPage(nextPage);
       setHasMore(count !== null ? (to + 1) < count : false);
@@ -599,6 +656,12 @@ export function useTasks(workspaceId?: string) {
 
   const addTask = async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
     if (!workspaceId) return null;
+    const canAccept = await checkWorkspaceAcceptTasks();
+    if (!canAccept) {
+      const msg = 'Workspace is inactive or retired and cannot accept task updates.';
+      setError(msg);
+      throw new Error(msg);
+    }
     // Wave 7/9: Developers cannot create tasks — only PMs and Admins
     if (isDeveloper) {
       const msg = 'Unauthorized: Developers cannot create tasks. Contact your PM.';
@@ -677,6 +740,12 @@ export function useTasks(workspaceId?: string) {
 
   const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
     if (!workspaceId) return;
+    const canAccept = await checkWorkspaceAcceptTasks();
+    if (!canAccept) {
+      const msg = 'Workspace is inactive or retired and cannot accept task updates.';
+      setError(msg);
+      throw new Error(msg);
+    }
     guardCapability(profile?.role, 'manage_tasks', 'updateTaskStatus');
     // Wave 7/9 + Sprint 6.5: Developers can only change status on assigned or collaborated tasks
     if (isDeveloper && !isAssignedTo(taskId) && !isCollaborator(taskId)) {
@@ -772,6 +841,12 @@ export function useTasks(workspaceId?: string) {
 
   const updateTaskDates = async (taskId: string, startDate: string | null, deadline: string | null) => {
     if (!workspaceId) return;
+    const canAccept = await checkWorkspaceAcceptTasks();
+    if (!canAccept) {
+      const msg = 'Workspace is inactive or retired and cannot accept task updates.';
+      setError(msg);
+      throw new Error(msg);
+    }
     guardCapability(profile?.role, 'manage_tasks', 'updateTaskDates');
     // Wave 7/9: Developers cannot change dates directly
     if (isDeveloper) {
@@ -850,6 +925,12 @@ export function useTasks(workspaceId?: string) {
 
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     if (!workspaceId) return;
+    const canAccept = await checkWorkspaceAcceptTasks();
+    if (!canAccept) {
+      const msg = 'Workspace is inactive or retired and cannot accept task updates.';
+      setError(msg);
+      throw new Error(msg);
+    }
     guardCapability(profile?.role, 'manage_tasks', 'updateTask');
 
     // Wave 7/9: Developer scope restrictions
@@ -970,6 +1051,12 @@ export function useTasks(workspaceId?: string) {
 
   const deleteTask = async (taskId: string) => {
     if (!workspaceId) return;
+    const canAccept = await checkWorkspaceAcceptTasks();
+    if (!canAccept) {
+      const msg = 'Workspace is inactive or retired and cannot accept task updates.';
+      setError(msg);
+      throw new Error(msg);
+    }
     // Wave 7/9: Developers cannot delete tasks
     if (isDeveloper) {
       const msg = 'Unauthorized: Developers cannot delete tasks. Contact your PM.';
@@ -1009,6 +1096,12 @@ export function useTasks(workspaceId?: string) {
 
   const addDependency = async (taskId: string, dependsOnTaskId: string, metadata?: Record<string, any>) => {
     if (!workspaceId) return;
+    const canAccept = await checkWorkspaceAcceptTasks();
+    if (!canAccept) {
+      const msg = 'Workspace is inactive or retired and cannot accept task updates.';
+      setError(msg);
+      throw new Error(msg);
+    }
     // Wave 7/9: Developers cannot create dependencies
     if (isDeveloper) {
       const msg = 'Unauthorized: Developers cannot create task dependencies. Contact your PM.';
@@ -1070,6 +1163,12 @@ export function useTasks(workspaceId?: string) {
 
   const removeDependency = async (taskId: string, dependsOnTaskId: string) => {
     if (!workspaceId) return;
+    const canAccept = await checkWorkspaceAcceptTasks();
+    if (!canAccept) {
+      const msg = 'Workspace is inactive or retired and cannot accept task updates.';
+      setError(msg);
+      throw new Error(msg);
+    }
     // Wave 7/9: Developers cannot remove dependencies
     if (isDeveloper) {
       const msg = 'Unauthorized: Developers cannot remove task dependencies. Contact your PM.';

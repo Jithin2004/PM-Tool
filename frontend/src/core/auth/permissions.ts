@@ -112,6 +112,27 @@ const ROLE_CAPABILITIES: Record<UserRole, Capability[]> = {
   viewer: [...VIEW_CAPABILITIES],
   uninvited: [],
   'pending-workspace-setup': [],
+  hr: [
+    'view_projects',
+    'view_teams',
+    'manage_employees',
+    'manage_attendance',
+    'manage_employment_records',
+    'view_analytics',
+  ],
+  finance: [
+    'view_projects',
+    'manage_payroll',
+    'manage_invoice',
+    'manage_expenses',
+    'manage_finance',
+    'view_reports',
+  ],
+  client: [
+    'view_projects',
+    'view_tasks',
+    'view_stakeholders',
+  ],
 };
 
 import { ROUTE_CAPABILITY_MAP } from '../../app/routeRegistry';

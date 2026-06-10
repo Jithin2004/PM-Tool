@@ -2,7 +2,7 @@ import React from 'react';
 
 export function PrivacyPage() {
   return (
-    <div className="min-h-screen  text-[#e2e2e5] font-sans">
+    <div className="min-h-screen text-[#e2e2e5] font-sans">
       <header className="w-full h-16 flex items-center px-6 lg:px-12 border-b border-[var(--border-soft)] sticky top-0 bg-[#050712]/50 backdrop-blur-md z-50">
         <a href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[rgba(124,58,237,0.18)] border border-purple-500/30 flex items-center justify-center">
@@ -19,37 +19,30 @@ export function PrivacyPage() {
         </div>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">Introduction</h2>
+          <h2 className="text-xl font-semibold text-white">1. Data Ownership & Self-Hosting</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            Resolve PM is committed to protecting user privacy while providing advanced project orchestration tools.
+            Resolve PM operates as self-hosted, perpetual enterprise software. You retain 100% ownership and control over your project data, employee metrics, and system configuration. Because the software runs within your isolated environment, Resolve PM HQ cannot access, view, or harvest your operational data.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">Google Data Usage</h2>
+          <h2 className="text-xl font-semibold text-white">2. License Verification Telemetry</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            We access Google Calendar data strictly to synchronize project deadlines, identify user availability for capacity planning, and update project-related events when timelines shift.
+            The software performs a lightweight, periodic background ping to our licensing servers strictly to verify the cryptographic authenticity of your product key. This ping transmits your Product Key, an anonymous hardware fingerprint, and the timestamp. No project data, personally identifiable information, or usage analytics are transmitted during this check.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">Limited Use Disclosure</h2>
+          <h2 className="text-xl font-semibold text-white">3. Third-Party Integrations</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            Resolve PM’s use and transfer of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy#additional_requirements_for_specific_api_scopes" target="_blank" rel="noreferrer" className="text-purple-400 hover:underline">Google API Services User Data Policy</a>, including the Limited Use requirements.
+            If you enable third-party integrations (such as Google Calendar, Slack, or GitHub), data exchange occurs directly between your Resolve PM instance and the third-party provider's API. Resolve PM HQ does not proxy or intercept this communication. You are subject to the privacy policies of those third-party services.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">Data Protection</h2>
+          <h2 className="text-xl font-semibold text-white">4. Diagnostic Support Packages</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            We do not sell user data to third parties.
-          </p>
-        </section>
-
-        <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">Contact</h2>
-          <p className="text-[#a1a1aa] leading-relaxed">
-            For privacy inquiries, contact <a href="mailto:resolve.pm.dev@gmail.com" className="text-purple-400 hover:underline">resolve.pm.dev@gmail.com</a>.
+            In the event of a system failure, your Super Administrator may choose to escalate a support ticket to Resolve PM HQ. This action explicitly bundles an anonymized diagnostic package containing error stack traces and configuration states. The administrator may review this package prior to transmission. We use this data strictly for troubleshooting your specific issue.
           </p>
         </section>
       </main>

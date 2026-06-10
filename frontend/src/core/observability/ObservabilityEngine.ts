@@ -114,6 +114,17 @@ class ObservabilityEngineCore {
     this.incidents = [newIncident, ...this.incidents].slice(0, 50);
     this.recalculateHealth();
     this.notify();
+
+    // Fire and forget persistence to system_events
+    import('./telemetry').then(({ persistSystemEvent }) => {
+      persistSystemEvent(
+        'frontend_incident',
+        severity,
+        'frontend',
+        message,
+        { causality, context, category }
+      );
+    }).catch(() => { /* ignore */ });
   }
 
   resolveIncident(id: string) {

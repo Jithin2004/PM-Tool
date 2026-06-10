@@ -5,6 +5,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { EmptyExecutionState } from '../../components/setup/EmptyExecutionState';
 import { ExecutionReadinessPanel } from '../../components/setup/ExecutionReadinessPanel';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 
 function getProjectIdFromPath(): string | null {
   const segments = window.location.pathname.split('/');
@@ -193,12 +194,15 @@ export default function BacklogPage() {
                 ))}
               </div>
             ) : (
-              <EmptyExecutionState
+              <PremiumEmptyState
                 icon={Zap}
-                title="No Tasks in Backlog"
-                description="WHY: Tasks represent actionable units of work for the team. IMPACT: An empty backlog means no work is queued for execution. NEXT: Break down epics into specific tasks."
-                actionLabel={hasEpics ? 'Create First Task' : 'Start with an Epic First'}
-                onAction={() => hasEpics ? {} : setShowCreateEpic(true)}
+                title="Your Backlog is Empty"
+                description="The backlog is where your team lines up future work. Add tasks here so developers always know what's coming next."
+                action={
+                  <button onClick={() => hasEpics ? {} : setShowCreateEpic(true)} className="btn-premium-primary px-4 py-2 rounded text-xs mt-2">
+                    {hasEpics ? 'Create First Task' : 'Start with an Epic First'}
+                  </button>
+                }
               />
             )}
           </div>

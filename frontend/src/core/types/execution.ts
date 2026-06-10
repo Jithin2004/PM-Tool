@@ -30,6 +30,7 @@ export interface Task {
   id: string;
   workspace_id: string;
   project_id: string;
+  external_id?: string;
   assignee_id?: string;
   name: string;
   description?: string;

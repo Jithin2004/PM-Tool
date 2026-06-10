@@ -49,27 +49,27 @@ export function LandingPage() {
     navigateTo(destination, true);
   }, [hasSession, profile, workspace, workspaceLoading]);
 
-  // Typing Animation
-  useEffect(() => {
-    const text = "Find bottlenecks in Project Delta...";
-    const typingElement = document.getElementById('typing-text');
-    let index = 0;
-    let timeoutId: any;
-
-    function type() {
-      if (!typingElement) return;
-      if (index < text.length) {
-        typingElement.textContent += text.charAt(index);
-        index++;
-        timeoutId = setTimeout(type, 100);
-      } else {
-        timeoutId = setTimeout(() => {
-          if (typingElement) typingElement.textContent = "";
-          index = 0;
-          type();
-        }, 3000);
+    // Typing Animation
+    useEffect(() => {
+      const text = "Why is Project Delta delayed again?...";
+      const typingElement = document.getElementById('typing-text');
+      let index = 0;
+      let timeoutId: any;
+  
+      function type() {
+        if (!typingElement) return;
+        if (index < text.length) {
+          typingElement.textContent += text.charAt(index);
+          index++;
+          timeoutId = setTimeout(type, 80);
+        } else {
+          timeoutId = setTimeout(() => {
+            if (typingElement) typingElement.textContent = "";
+            index = 0;
+            type();
+          }, 3000);
+        }
       }
-    }
 
     timeoutId = setTimeout(type, 100);
     return () => clearTimeout(timeoutId);
@@ -146,18 +146,18 @@ export function LandingPage() {
         <section className="max-w-7xl mx-auto px-container-padding grid grid-cols-1 lg:grid-cols-12 gap-grid-gutter items-center mb-32">
           <div className="lg:col-span-7 flex flex-col gap-stack-gap-lg">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit">
-              <span className="material-symbols-outlined text-[14px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-              <span className="font-mono-label text-mono-label text-primary uppercase tracking-widest">Enterprise Ready 2026</span>
+              <span className="material-symbols-outlined text-[14px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>visibility</span>
+              <span className="font-mono-label text-mono-label text-primary uppercase tracking-widest">For Software Agencies (20-200 Employees)</span>
             </div>
             <h1 className="font-display-lg text-display-lg text-on-surface leading-tight">
-              Project Delivery, Simplified.
+              Stop wondering why<br/>development is slow.
             </h1>
             <p className="font-body-lg text-body-lg text-on-surface-variant max-w-xl">
-              Keep your team on track by identifying bottlenecks before they cause delays. Track external dependencies, maintain project safety, and forecast your completion dates with real-world data.
+              You aren't missing deadlines because your developers are lazy. You're missing them because your team is waiting on client approvals, third-party APIs, and feedback. Resolve PM exposes exactly where time is lost, so you can guarantee your delivery timelines.
             </p>
             <div className="flex flex-wrap gap-stack-gap-md mt-4">
-              <a href={verified ? "/login" : "/activate"} className="btn-premium-primary px-8 py-3.5 rounded font-headline-sm text-headline-sm font-semibold">Get Started</a>
-              <a href="/activate" className="btn-premium-secondary px-8 py-3.5 rounded font-headline-sm text-headline-sm">Request Access</a>
+              <a href={verified ? "/login" : "/activate"} className="btn-premium-primary px-8 py-3.5 rounded font-headline-sm text-headline-sm font-semibold">Start Founder Pilot</a>
+              <a href="/activate" className="btn-premium-secondary px-8 py-3.5 rounded font-headline-sm text-headline-sm">See Pricing</a>
             </div>
             <div className="mt-4">
               <a className="text-body-sm text-on-surface-variant hover:text-primary transition-colors underline decoration-dotted" href="/login">Already a member? Login</a>
@@ -202,9 +202,9 @@ export function LandingPage() {
         <section id="how-it-works" className="bg-surface-container-lowest py-32 border-y border-[var(--pm-border)] dark:border-[var(--border-soft)] scroll-mt-16">
           <div className="max-w-7xl mx-auto px-container-padding">
             <div className="mb-24 md:mb-32">
-              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">Execution Orchestration</h2>
+              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">How agencies regain control</h2>
               <p className="font-body-lg text-lg text-on-surface-variant max-w-3xl leading-relaxed">
-                Enterprise delivery isn't delayed by incomplete tasks—it's delayed by client dependencies, approvals, infrastructure readiness, and wait states. Resolve PM coordinates the entire deployment flow.
+                Client projects aren't delayed by code—they are delayed by miscommunication, missing assets, and external wait states. Resolve PM forces visibility onto the hidden blocks that kill your margins.
               </p>
             </div>
             
@@ -218,8 +218,8 @@ export function LandingPage() {
                   <div className="md:col-span-5 flex gap-6">
                     <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-surface-container-highest border border-[var(--pm-border)] dark:border-[var(--border-soft)] flex items-center justify-center text-on-surface font-mono-label shadow-lg">01</div>
                     <div>
-                      <h3 className="text-xl font-semibold text-on-surface mb-3">Onboard & Configure</h3>
-                      <p className="text-on-surface-variant leading-relaxed text-sm">Map your entire project structure before execution begins. Define the critical path, infrastructure requirements, and expected operational blocks.</p>
+                      <h3 className="text-xl font-semibold text-on-surface mb-3">Map the Reality</h3>
+                      <p className="text-on-surface-variant leading-relaxed text-sm">Most tools just track 'To-Do'. We track who is actually holding the ball. Define the critical path including the parts your team doesn't control.</p>
                     </div>
                   </div>
                   <div className="md:col-span-7">
@@ -248,8 +248,8 @@ export function LandingPage() {
                   <div className="md:col-span-5 flex gap-6">
                     <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-mono-label shadow-[0_0_15px_rgba(99,102,241,0.15)]">02</div>
                     <div>
-                      <h3 className="text-xl font-semibold text-on-surface mb-3">Coordinate Dependencies</h3>
-                      <p className="text-on-surface-variant leading-relaxed text-sm">Identify external wait states early. Link cross-team deliverables and client approvals to your primary timeline to prevent unexpected delivery blocks.</p>
+                      <h3 className="text-xl font-semibold text-on-surface mb-3">Highlight the Blockers</h3>
+                      <p className="text-on-surface-variant leading-relaxed text-sm">When a client doesn't send the API keys, Jira just shows a task sitting there. Resolve PM flags it, calculates the cost of the delay, and alerts you.</p>
                     </div>
                   </div>
                   <div className="md:col-span-7">
@@ -278,8 +278,8 @@ export function LandingPage() {
                   <div className="md:col-span-5 flex gap-6">
                     <div className="relative z-10 w-14 h-14 shrink-0 rounded-xl bg-surface-container-highest border border-[var(--pm-border)] dark:border-[var(--border-soft)] flex items-center justify-center text-on-surface font-mono-label shadow-lg">03</div>
                     <div>
-                      <h3 className="text-xl font-semibold text-on-surface mb-3">Track & Monitor Health</h3>
-                      <p className="text-on-surface-variant leading-relaxed text-sm">Real-time visibility into operational drift. Automatically distinguish between internal progress and external blockers with an immutable timeline ledger.</p>
+                      <h3 className="text-xl font-semibold text-on-surface mb-3">Defend Your Margins</h3>
+                      <p className="text-on-surface-variant leading-relaxed text-sm">When the client asks "Why is this late?", you have an exact, immutable timeline showing that 14 days were spent waiting on their compliance team.</p>
                     </div>
                   </div>
                   <div className="md:col-span-7">
@@ -308,9 +308,9 @@ export function LandingPage() {
         <section id="analytics" className="py-32 scroll-mt-16 bg-[#121416]">
           <div className="max-w-7xl mx-auto px-container-padding">
             <div className="mb-24 text-center md:text-left">
-              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">Wait-State Intelligence</h2>
+              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">See what's actually happening</h2>
               <p className="font-body-lg text-lg text-on-surface-variant max-w-3xl leading-relaxed md:mx-0 mx-auto">
-                Stop looking at generic dashboard widgets. Resolve PM analytics focus on delivery confidence, dependency congestion, and the exact percentage of time your project spends blocked by outside factors.
+                Stop looking at generic burndown charts. Resolve PM analytics focus on delivery confidence, client bottleneck congestion, and exactly how much time your project spends waiting on external factors.
               </p>
             </div>
 
@@ -375,26 +375,26 @@ export function LandingPage() {
           <div className="max-w-7xl mx-auto px-container-padding">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
               <div>
-                <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">Predictable Execution</h2>
+                <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight">Why Trust Us?</h2>
                 <div className="space-y-6 text-lg text-on-surface-variant leading-relaxed">
                   <p>
-                    Resolve PM is engineered for operational seriousness. We replace fragmented spreadsheets and chaotic chat threads with deterministic workflows and structured synchronization.
+                    We built Resolve PM because we were tired of running agencies on spreadsheets and chaotic chat threads. Generic tools track tasks, but they don't track reality.
                   </p>
                   <p>
-                    Every state change, block, and approval is written to a permanent audit ledger, ensuring absolute operational clarity and accountability across massive organizations.
+                    Resolve PM is provided as a <strong>Perpetual License</strong>. You buy it once, you host it yourself (or we host it for you), and you own your data forever. No per-seat pricing. No SaaS lock-in. No unexpected subscription hikes.
                   </p>
                   <ul className="space-y-4 mt-8 pt-4 border-t border-[var(--pm-border)] dark:border-[var(--border-soft)]">
                     <li className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-sm">lock</span>
-                      <span className="text-sm font-mono text-on-surface">Capability-driven governance</span>
+                      <span className="material-symbols-outlined text-primary text-sm">payments</span>
+                      <span className="text-sm font-mono text-on-surface">One-time flat fee (₹2,50,000)</span>
                     </li>
                     <li className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-sm">visibility</span>
-                      <span className="text-sm font-mono text-on-surface">Total audit visibility</span>
+                      <span className="material-symbols-outlined text-primary text-sm">groups</span>
+                      <span className="text-sm font-mono text-on-surface">Unlimited team members</span>
                     </li>
                     <li className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-sm">account_tree</span>
-                      <span className="text-sm font-mono text-on-surface">Scalable coordination</span>
+                      <span className="material-symbols-outlined text-primary text-sm">shield</span>
+                      <span className="text-sm font-mono text-on-surface">100% data ownership</span>
                     </li>
                   </ul>
                 </div>
@@ -435,12 +435,12 @@ export function LandingPage() {
         <section className="max-w-7xl mx-auto px-container-padding py-32">
           <div className="glass-panel p-12 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-stack-gap-lg">
             <div className="flex-1 text-center md:text-left">
-              <h2 className="font-headline-md text-3xl text-on-surface mb-2 tracking-tight">Ready for better project visibility?</h2>
-              <p className="font-body-md text-lg text-on-surface-variant">Work with our team to set up your custom project tracking environment.</p>
+              <h2 className="font-headline-md text-3xl text-on-surface mb-2 tracking-tight">Join the Founder Pilot Program</h2>
+              <p className="font-body-md text-lg text-on-surface-variant">We are onboarding 10 agencies this month with direct CEO support and discounted perpetual licensing.</p>
             </div>
             <div className="flex flex-col items-center gap-stack-gap-md shrink-0">
-              <a href="/activate" className="btn-premium-primary px-8 py-3.5 rounded font-headline-sm text-sm font-semibold">Start Setup</a>
-              <a className="text-xs font-mono text-on-surface-variant hover:text-primary transition-colors underline decoration-dotted" href="/login">Already have an invite? Login</a>
+              <a href="/activate" className="btn-premium-primary px-8 py-3.5 rounded font-headline-sm text-sm font-semibold">Apply for Pilot</a>
+              <a className="text-xs font-mono text-on-surface-variant hover:text-primary transition-colors underline decoration-dotted" href="/login">Already a member? Login</a>
             </div>
           </div>
         </section>

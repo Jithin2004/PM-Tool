@@ -4,8 +4,8 @@ import { X, Terminal, AlertTriangle, MessageSquare, ShieldAlert } from 'lucide-r
 import { Project, Task, TaskStatus } from '../../types';
 import { hasCapability } from '../../core/auth/permissions';
 import { AssigneePicker } from './AssigneePicker';
-import { TaskDiscussionTab } from './TaskDiscussionTab';
-import { TaskActivityTab } from './TaskActivityTab';
+import { TaskPulse } from './TaskPulse';
+import { generateHandoffBrief, HandoffBrief } from '../../core/handoff/HandoffEngine';
 import { FilePanel } from '../common/FilePanel';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -43,7 +43,7 @@ export function TaskEditModal({
   const [estimateReason, setEstimateReason] = useState('');
   const [assigneeId, setAssigneeId] = useState(task.assignee_id || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'discussion' | 'activity' | 'files'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'pulse' | 'files'>('details');
 
   // Task Handover states
   const [showTransferOverlay, setShowTransferOverlay] = useState(false);
@@ -62,7 +62,10 @@ export function TaskEditModal({
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
 
-  const { raw: { collaborators = [] }, taskActions } = useOperationalData();
+  const [handoffBrief, setHandoffBrief] = useState<HandoffBrief | null>(null);
+
+  const { raw: { collaborators = [], workSessions, activityLogs, workspaceSettingsBlob }, taskActions } = useOperationalData();
+  const blockers = Array.isArray(workspaceSettingsBlob?.execution_blockers) ? workspaceSettingsBlob.execution_blockers : [];
   const { addCollaborator, removeCollaborator } = taskActions;
   const taskCollaborators = collaborators.filter(c => c.task_id === task.id);
 
@@ -88,6 +91,37 @@ export function TaskEditModal({
         .then(({ data }) => {
           if (data) setSuggestions(data);
         });
+
+      // Fetch handoff if user is the new assignee
+      if (task.assignee_id === currentUserProfile?.id) {
+        supabase
+          .from('task_assignment_history')
+          .select('*')
+          .eq('task_id', task.id)
+          .eq('new_assignee_id', currentUserProfile?.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .then(({ data }) => {
+            if (data && data.length > 0) {
+              const history = data[0];
+              const brief = generateHandoffBrief({
+                task,
+                previousAssigneeId: history.previous_assignee_id,
+                newAssigneeId: history.new_assignee_id,
+                workSessions: workSessions || [],
+                activityLogs: activityLogs || [],
+                blockers,
+                transferReason: history.transfer_reason,
+                handoverNotes: history.handover_notes
+              });
+              setHandoffBrief(brief);
+            } else {
+              setHandoffBrief(null);
+            }
+          });
+      } else {
+        setHandoffBrief(null);
+      }
     }
   }, [isOpen, task]);
 
@@ -274,16 +308,10 @@ export function TaskEditModal({
             Details
           </button>
           <button
-            onClick={() => setActiveTab('discussion')}
-            className={`pb-2 text-[10px] font-mono tracking-wide uppercase transition-colors ${activeTab === 'discussion' ? 'text-accent-primary border-b-2 border-accent-primary' : 'text-text-quaternary hover:text-text-secondary'}`}
+            onClick={() => setActiveTab('pulse')}
+            className={`pb-2 text-[10px] font-mono tracking-wide uppercase transition-colors ${activeTab === 'pulse' ? 'text-accent-primary border-b-2 border-accent-primary' : 'text-text-quaternary hover:text-text-secondary'}`}
           >
-            Discussion
-          </button>
-          <button
-            onClick={() => setActiveTab('activity')}
-            className={`pb-2 text-[10px] font-mono tracking-wide uppercase transition-colors ${activeTab === 'activity' ? 'text-accent-primary border-b-2 border-accent-primary' : 'text-text-quaternary hover:text-text-secondary'}`}
-          >
-            Activity
+            Pulse
           </button>
           <button
             onClick={() => setActiveTab('files')}
@@ -384,6 +412,54 @@ export function TaskEditModal({
                 placeholder="Why did the estimate change?"
                 className="input-premium w-full h-9 px-3 text-xs outline-none transition-colors placeholder:text-text-quaternary"
               />
+            </div>
+          )}
+
+          {/* Handoff Brief */}
+          {handoffBrief && isPrimaryAssignee && (
+            <div className="border border-indigo-500/30 p-3 rounded-sm space-y-3 bg-indigo-500/5 mb-4">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-indigo-400" />
+                <label className="block text-[10px] font-mono uppercase tracking-wider text-indigo-400">Incoming Handoff Context</label>
+              </div>
+              <div className="text-xs text-text-secondary space-y-2">
+                <p><strong>Transfer Reason:</strong> {handoffBrief.context.transferReason || 'Not provided'}</p>
+                <p><strong>Notes:</strong> {handoffBrief.context.handoverNotes || 'Not provided'}</p>
+                {handoffBrief.context.totalHoursWorked > 0 && <p><strong>Previous Hours Worked:</strong> {handoffBrief.context.totalHoursWorked}h</p>}
+                
+                {handoffBrief.context.pendingBlockers.length > 0 && (
+                  <div>
+                    <strong>Pending Blockers:</strong>
+                    <ul className="list-disc pl-4 mt-1">
+                      {handoffBrief.context.pendingBlockers.map((b, i) => <li key={i}>{b}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {handoffBrief.context.recentDecisions.length > 0 && (
+                  <div>
+                    <strong>Recent Decisions:</strong>
+                    <ul className="list-disc pl-4 mt-1">
+                      {handoffBrief.context.recentDecisions.map((d, i) => <li key={i}>{d}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {handoffBrief.context.incompleteIntentions.length > 0 && (
+                  <div>
+                    <strong>Incomplete Intentions:</strong>
+                    <ul className="list-disc pl-4 mt-1">
+                      {handoffBrief.context.incompleteIntentions.map((intent, i) => <li key={i}>{intent}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {handoffBrief.recommendedActions.length > 0 && (
+                  <div className="mt-2 p-2 bg-indigo-500/10 rounded-sm">
+                    <strong>Recommended Actions:</strong>
+                    <ul className="list-disc pl-4 mt-1 text-indigo-300">
+                      {handoffBrief.recommendedActions.map((action, i) => <li key={i}>{action}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -616,17 +692,13 @@ export function TaskEditModal({
         </form>
         )}
 
-        {activeTab === 'discussion' && (
-          <TaskDiscussionTab 
+        {activeTab === 'pulse' && (
+          <TaskPulse 
             taskId={task.id} 
             users={users} 
             currentUserProfile={currentUserProfile} 
             notify={notify} 
           />
-        )}
-
-        {activeTab === 'activity' && (
-          <TaskActivityTab taskId={task.id} />
         )}
 
         {activeTab === 'files' && (

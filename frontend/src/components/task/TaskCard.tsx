@@ -28,7 +28,7 @@ interface TaskCardProps {
   onOpenWaitState?: (task: Task) => void;
 }
 
-export function TaskCard({
+export const TaskCard = React.memo(function TaskCard({
   task,
   project,
   hasWriteAccess,
@@ -258,8 +258,11 @@ export function TaskCard({
                 )}
               </div>
             ) : (
-              <div className="w-5 h-5 rounded-full border border-dashed border-[var(--border-soft)] flex items-center justify-center">
-                <User className="w-3 h-3 text-[var(--text-secondary)]" />
+              <div className="flex items-center gap-1.5" title="No assignee">
+                <div className="w-5 h-5 rounded-full border border-dashed border-rose-500/50 bg-rose-500/10 flex items-center justify-center">
+                  <AlertTriangle className="w-3 h-3 text-rose-400" />
+                </div>
+                {!isCompact && <span className="text-[10px] font-medium text-rose-400">Unassigned</span>}
               </div>
             )}
           </div>
@@ -285,11 +288,11 @@ export function TaskCard({
                       onEditTask(task);
                     }
                   }}
-                  className="p-1 hover:bg-[var(--surface-hover)] rounded transition-colors text-[var(--text-secondary)] hover:text-purple-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-500"
+                  className="p-2 md:p-1 hover:bg-[var(--surface-hover)] rounded transition-colors text-[var(--text-secondary)] hover:text-purple-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-500 flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-[24px] md:min-h-[24px]"
                   title="Edit task"
                   aria-label={`Edit task ${task.name}`}
                 >
-                  <Edit2 className="w-3 h-3" />
+                  <Edit2 className="w-4 h-4 md:w-3 md:h-3" />
                 </button>
                 <div className="w-px h-3 bg-[var(--surface-glass)] mx-0.5" />
                 <button
@@ -301,10 +304,10 @@ export function TaskCard({
                       onTransitionTask(task.id, columns[prevIndex].id as Task['status']);
                     }
                   }}
-                  className="p-1 hover:bg-[var(--surface-hover)] rounded transition-colors text-[var(--text-secondary)] hover:text-white"
+                  className="p-2 md:p-1 hover:bg-[var(--surface-hover)] rounded transition-colors text-[var(--text-secondary)] hover:text-white flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-[24px] md:min-h-[24px]"
                   title="Move backward"
                 >
-                  <ArrowRight className="w-3 h-3 rotate-180" />
+                  <ArrowRight className="w-4 h-4 md:w-3 md:h-3 rotate-180" />
                 </button>
                 <button
                   onClick={(e) => {
@@ -315,10 +318,10 @@ export function TaskCard({
                       onTransitionTask(task.id, columns[nextIndex].id as Task['status']);
                     }
                   }}
-                  className="p-1 hover:bg-[var(--surface-hover)] rounded transition-colors text-[var(--text-secondary)] hover:text-white"
+                  className="p-2 md:p-1 hover:bg-[var(--surface-hover)] rounded transition-colors text-[var(--text-secondary)] hover:text-white flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-[24px] md:min-h-[24px]"
                   title="Move forward"
                 >
-                  <ArrowRight className="w-3 h-3" />
+                  <ArrowRight className="w-4 h-4 md:w-3 md:h-3" />
                 </button>
               </div>
             )}
@@ -328,16 +331,48 @@ export function TaskCard({
         {/* Action Bar */}
         {hasWriteAccess && onOpenWaitState && task.status !== 'completed' && !isCompact && (
           <div className="mt-2 pt-2 border-t border-[var(--border-soft)] flex justify-between items-center">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenWaitState(task);
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--surface-glass)] hover:bg-amber-500/10 text-[var(--text-secondary)] hover:text-amber-400 text-[10px] font-mono uppercase tracking-wide rounded-lg border border-[var(--border-soft)] hover:border-amber-500/30 transition-colors cursor-pointer"
-            >
-              <Clock className="w-3 h-3" />
-              Log Delay
-            </button>
+            <div className="flex gap-1 overflow-x-auto no-scrollbar">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenWaitState(task);
+                }}
+                className="flex items-center gap-1.5 px-3 min-h-[44px] bg-[var(--surface-glass)] hover:bg-amber-500/10 text-[var(--text-secondary)] hover:text-amber-400 text-[10px] font-mono uppercase tracking-wide rounded-lg border border-[var(--border-soft)] hover:border-amber-500/30 transition-colors cursor-pointer"
+              >
+                <Clock className="w-3 h-3" />
+                <span className="hidden sm:inline">Delay</span>
+              </button>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTransitionTask(task.id, 'completed');
+                }}
+                className="flex items-center gap-1.5 px-3 min-h-[44px] bg-[var(--surface-glass)] hover:bg-emerald-500/10 text-[var(--text-secondary)] hover:text-emerald-400 text-[10px] font-mono uppercase tracking-wide rounded-lg border border-[var(--border-soft)] hover:border-emerald-500/30 transition-colors cursor-pointer"
+              >
+                <span className="hidden sm:inline">Done</span>
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onEditTask) onEditTask(task);
+                }}
+                className="flex items-center gap-1.5 px-3 min-h-[44px] bg-[var(--surface-glass)] hover:bg-purple-500/10 text-[var(--text-secondary)] hover:text-purple-400 text-[10px] font-mono uppercase tracking-wide rounded-lg border border-[var(--border-soft)] hover:border-purple-500/30 transition-colors cursor-pointer"
+              >
+                <span className="hidden sm:inline">Upload</span>
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onEditTask) onEditTask(task);
+                }}
+                className="flex items-center gap-1.5 px-3 min-h-[44px] bg-[var(--surface-glass)] hover:bg-blue-500/10 text-[var(--text-secondary)] hover:text-blue-400 text-[10px] font-mono uppercase tracking-wide rounded-lg border border-[var(--border-soft)] hover:border-blue-500/30 transition-colors cursor-pointer"
+              >
+                <span className="hidden sm:inline">Ask</span>
+              </button>
+            </div>
             {workspace && profile && (
               <TaskTimerUI 
                 task={task as any} 
@@ -351,5 +386,5 @@ export function TaskCard({
       </div>
     </motion.div>
   );
-}
+});
 

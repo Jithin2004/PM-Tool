@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Notification, NotificationCategory } from '../types';
+import { evaluateNotification } from './NotificationIntelligence';
 
 /**
  * Dispatches a new notification to a workspace (or user specifically)
@@ -12,6 +13,11 @@ export const sendNotification = async (
   userId?: string,
   metadata?: Record<string, any>
 ): Promise<Notification | null> => {
+  const intel = evaluateNotification(category, title, body);
+  if (!intel.shouldSend) return null;
+  
+  const finalTitle = intel.modifiedTitle || title;
+  const finalMetadata = { ...metadata, priority: intel.priority };
   if (isSupabaseConfigured) {
     const { data, error } = await supabase
       .from('notifications')
@@ -19,9 +25,9 @@ export const sendNotification = async (
         workspace_id: workspaceId,
         user_id: userId || null,
         category,
-        title,
+        title: finalTitle,
         body,
-        metadata: metadata || {},
+        metadata: finalMetadata,
         created_at: new Date().toISOString()
       })
       .select()
@@ -39,9 +45,9 @@ export const sendNotification = async (
       workspace_id: workspaceId,
       user_id: userId,
       category,
-      title,
+      title: finalTitle,
       body,
-      metadata: metadata || {},
+      metadata: finalMetadata,
       created_at: new Date().toISOString()
     };
     

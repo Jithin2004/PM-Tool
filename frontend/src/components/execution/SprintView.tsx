@@ -2,6 +2,7 @@ import React from 'react';
 import { SprintBoard } from '../scrum/SprintBoard';
 import { SDLCBoard } from '../sdlc/SDLCBoard';
 import { activityLogService } from '../../services/activityLogService';
+import { updateTaskWithLock } from '../../services/taskService';
 
 interface SprintViewProps {
   scrumProjects: any[];
@@ -36,8 +37,20 @@ const SprintView = React.memo(function SprintView({
           currentUserProfile={profile}
           notify={notify}
           onUpdateTaskStatus={async (taskId, status) => {
-            const { supabase } = await import('../../lib/supabase');
-            await supabase.from('tasks').update({ status, updated_at: new Date().toISOString() }).eq('id', taskId);
+            const currentTask = allTasks.find(t => t.id === taskId);
+            const expectedUpdatedAt = currentTask?.updated_at || null;
+            
+            const { success, error } = await updateTaskWithLock(taskId, { status }, expectedUpdatedAt);
+            
+            if (!success) {
+              if (error === 'VERSION_CONFLICT') {
+                notify("This task changed recently. Refreshing latest version.", "warning");
+              } else {
+                notify(`Failed to update task: ${error}`, "error");
+              }
+              return; // abort if failed
+            }
+
             await activityLogService.appendLog({
               workspace_id: project.workspace_id, actor_id: profile?.id,
               project_id: project.id, task_id: taskId, action: 'task_status_changed',
@@ -83,8 +96,18 @@ const SprintView = React.memo(function SprintView({
           currentUserProfile={profile}
           notify={notify}
           onUpdateTaskStatus={async (taskId, status) => {
-            const { supabase } = await import('../../lib/supabase');
-            await supabase.from('tasks').update({ status, updated_at: new Date().toISOString() }).eq('id', taskId);
+            const currentTask = allTasks.find(t => t.id === taskId);
+            const expectedUpdatedAt = currentTask?.updated_at || null;
+            
+            const { success, error } = await updateTaskWithLock(taskId, { status }, expectedUpdatedAt);
+            
+            if (!success) {
+              if (error === 'VERSION_CONFLICT') {
+                notify("This task changed recently. Refreshing latest version.", "warning");
+              } else {
+                notify(`Failed to update task: ${error}`, "error");
+              }
+            }
           }}
           onCreateTask={async (taskData) => {
             const { supabase } = await import('../../lib/supabase');

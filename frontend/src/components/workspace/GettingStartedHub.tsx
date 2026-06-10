@@ -41,17 +41,44 @@ export function GettingStartedHub() {
         <span className="text-xs font-bold text-text-secondary w-10 text-right">{progress}%</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {checklist.map(item => (
-          <div key={item.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${item.completed ? 'bg-surface-2/50 border-border-subtle' : 'bg-surface border-border'}`}>
-            {item.completed ? (
-              <CheckCircle2 className="w-4 h-4 text-signal-safe shrink-0" />
-            ) : (
-              <Circle className="w-4 h-4 text-text-quaternary shrink-0" />
+          <div key={item.id} className={`flex flex-col gap-2 p-4 rounded-lg border transition-colors ${item.completed ? 'bg-surface-2/50 border-border-subtle opacity-70' : 'bg-surface border-border hover:border-accent-primary/50'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {item.completed ? (
+                  <CheckCircle2 className="w-5 h-5 text-signal-safe shrink-0" />
+                ) : (
+                  <Circle className="w-5 h-5 text-text-quaternary shrink-0" />
+                )}
+                <span className={`text-sm font-bold ${item.completed ? 'text-text-tertiary line-through' : 'text-text-primary'}`}>
+                  {item.label}
+                </span>
+              </div>
+              {!item.completed && item.id === 'project' && (
+                <button onClick={() => window.location.href = '/workspace/portfolio'} className="px-3 py-1 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 text-xs font-bold uppercase rounded transition-colors">
+                  Go Create
+                </button>
+              )}
+              {!item.completed && item.id === 'invite' && (
+                <button onClick={() => window.location.href = '/resources/teams'} className="px-3 py-1 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 text-xs font-bold uppercase rounded transition-colors">
+                  Go Invite
+                </button>
+              )}
+              {!item.completed && item.id === 'task' && (
+                <button onClick={() => window.location.href = '/workspace/portfolio'} className="px-3 py-1 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 text-xs font-bold uppercase rounded transition-colors">
+                  Go Add
+                </button>
+              )}
+            </div>
+            {!item.completed && (
+              <p className="text-xs text-text-tertiary ml-8 leading-relaxed">
+                {item.id === 'workspace' && "Set up your company's isolated environment."}
+                {item.id === 'project' && "A project acts as a container for milestones, tasks, and budgets. Create one to unlock timeline predictions."}
+                {item.id === 'invite' && "Bring your team in to collaborate. Assign roles and manage access."}
+                {item.id === 'task' && "Break down the work. Add tasks to start tracking velocity and blockers."}
+              </p>
             )}
-            <span className={`text-xs font-medium ${item.completed ? 'text-text-tertiary line-through' : 'text-text-secondary'}`}>
-              {item.label}
-            </span>
           </div>
         ))}
       </div>

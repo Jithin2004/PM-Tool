@@ -388,7 +388,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // We set up the real-time listener inside a wrapper to handle dynamic user changes
     const setupRealtimeUser = (userId: string) => {
-      if (userSubscription) userSubscription.unsubscribe();
+      if (userSubscription) supabase.removeChannel(userSubscription);
       
       userSubscription = supabase.channel(`public:users:id=eq.${userId}`)
         .on('postgres_changes', {
@@ -420,7 +420,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
       if (authListener) authListener.unsubscribe();
-      if (userSubscription) userSubscription.unsubscribe();
+      if (userSubscription) supabase.removeChannel(userSubscription);
       if (safetyTimeoutRef.current) {
         clearTimeout(safetyTimeoutRef.current);
         safetyTimeoutRef.current = null;

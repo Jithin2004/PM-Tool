@@ -20,6 +20,7 @@ import { ProjectReviewModal } from './ProjectReviewModal';
 import { ProjectEffortSummary } from '../reports/ProjectEffortSummary';
 import { TeamCapacityView } from '../reports/TeamCapacityView';
 import { ProjectShareModal } from './ProjectShareModal';
+import { SharedProjectDashboard } from '../../pages/shared/SharedProjectDashboard';
 
 function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; currentUserProfile?: any }) {
   const [loading, setLoading] = useState(true);
@@ -343,6 +344,7 @@ export function ProjectDetailsModal({
 
   const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance' | 'insights'>('general');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [previewToken, setPreviewToken] = useState<string | null>(null);
   const [deltaDays, setDeltaDays] = useState('5');
   const [blockerCategory, setBlockerCategory] = useState('Client IT Team');
   const [blockerOwnership, setBlockerOwnership] = useState('Client');
@@ -781,6 +783,20 @@ export function ProjectDetailsModal({
       >
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 z-50" />
 
+        {previewToken ? (
+          <div className="absolute inset-0 z-[130] bg-surface overflow-y-auto">
+            <div className="sticky top-0 z-[140] bg-bg border-b border-border p-4 flex justify-between items-center">
+              <div className="flex items-center gap-2 text-signal-info font-mono text-xs uppercase tracking-widest">
+                <ShieldCheck className="w-4 h-4" /> Client Portal Simulator
+              </div>
+              <button onClick={() => setPreviewToken(null)} className="px-3 py-1.5 border border-border rounded-lg text-xs hover:bg-surface-3 transition-colors text-text-primary uppercase tracking-wide">
+                Exit Simulator
+              </button>
+            </div>
+            <SharedProjectDashboard previewToken={previewToken} />
+          </div>
+        ) : null}
+
         {showLogs && (
           <div className="absolute inset-0 z-50 bg-surface flex flex-col">
             {/* Header */}
@@ -1072,10 +1088,28 @@ export function ProjectDetailsModal({
               </div>
             </div>
             <div className="flex gap-2">
+              <button 
+                onClick={async () => {
+                  try {
+                    const { data } = await supabase.from('external_access_links').select('token').eq('project_id', project.id).eq('is_active', true).limit(1).single();
+                    if (data?.token) {
+                      setPreviewToken(data.token);
+                    } else {
+                      notify("No active client link found. Share the project first.", "warning");
+                    }
+                  } catch (err) {
+                    notify("No active client link found. Share the project first.", "warning");
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary"
+              >
+                <Activity className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Preview as Client</span>
+              </button>
               {(currentUserProfile?.role === 'pm' || currentUserProfile?.role === 'super_admin') && (
                 <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
                   <Share2 className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase tracking-wider">Share</span>
+                  <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Share</span>
                 </button>
               )}
               <button onClick={onClose} aria-label="Close modal" className="p-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">

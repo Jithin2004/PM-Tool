@@ -19,6 +19,7 @@ interface WorkspaceContextValue {
   updateWorkspaceSettings: (settings: Partial<WorkspaceSettings>) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  t: (key: string, fallback?: string) => string;
 }
 
 export interface CreateWorkspaceInput {
@@ -212,6 +213,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setWorkspace(null);
   }, []);
 
+  const t = useCallback((key: string, fallback?: string): string => {
+    const termMap = (workspace?.settings as any)?.terminology || {};
+    return termMap[key] || fallback || key;
+  }, [workspace?.settings]);
+
   const value = useMemo<WorkspaceContextValue>(() => ({
     user,
     workspace,
@@ -222,8 +228,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     createWorkspace,
     updateWorkspaceSettings,
     signInWithGoogle,
-    signOut
-  }), [user, workspace, loading, error, refreshWorkspace, createWorkspace, updateWorkspaceSettings, signInWithGoogle, signOut]);
+    signOut,
+    t
+  }), [user, workspace, loading, error, refreshWorkspace, createWorkspace, updateWorkspaceSettings, signInWithGoogle, signOut, t]);
 
   return (
     <WorkspaceContext.Provider value={value}>

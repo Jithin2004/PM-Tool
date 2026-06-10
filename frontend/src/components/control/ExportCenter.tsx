@@ -46,7 +46,7 @@ export function ExportCenter() {
       const { data, error } = await query;
       if (error) throw error;
       if (!data || data.length === 0) {
-        notify(`No data found for ${type}`, 'info');
+        notify(`There's nothing to export for ${type} right now.`, 'info');
         setExporting(null);
         return;
       }

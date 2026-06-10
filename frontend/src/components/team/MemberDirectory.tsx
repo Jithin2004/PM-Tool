@@ -7,6 +7,7 @@ import { Icon } from '../ui/Icon';
 import { supabase } from '../../lib/supabase';
 import { DocumentGeneratorDropdown } from '../hr/DocumentGeneratorDropdown';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { ExitHandoffEngine, HandoffAuditReport } from '../../core/system/ExitHandoffEngine';
 
 function getRoleLabel(role: string) {
   const labels: Record<string, string> = {
@@ -33,9 +34,29 @@ export function MemberDirectory() {
   
   const [selectedMemberDetails, setSelectedMemberDetails] = useState<any | null>(null);
   const [dojEditState, setDojEditState] = useState<{ active: boolean; newDoj: string; reason: string }>({ active: false, newDoj: '', reason: '' });
+  const [handoffState, setHandoffState] = useState<{
+    active: boolean;
+    targetStatus: 'resigned' | 'terminated' | null;
+    report: HandoffAuditReport | null;
+    loading: boolean;
+    transferToUserId: string;
+    transferring: boolean;
+    transferredCount: number;
+    transferError: string | null;
+  }>({
+    active: false,
+    targetStatus: null,
+    report: null,
+    loading: false,
+    transferToUserId: '',
+    transferring: false,
+    transferredCount: 0,
+    transferError: null,
+  });
 
-  useEscapeKey(!!selectedMemberDetails && !dojEditState.active, () => setSelectedMemberDetails(null));
+  useEscapeKey(!!selectedMemberDetails && !dojEditState.active && !handoffState.active, () => setSelectedMemberDetails(null));
   useEscapeKey(dojEditState.active, () => setDojEditState({ active: false, newDoj: '', reason: '' }));
+  useEscapeKey(handoffState.active, () => setHandoffState(prev => ({ ...prev, active: false })));
 
   const userCustomRoles = systemData.userCustomRoles || {};
   const activeProfiles = profiles.filter(p => p.role !== 'uninvited');
@@ -167,7 +188,45 @@ export function MemberDirectory() {
                   </div>
                   <div>
                     <div className="text-[10px] uppercase text-[var(--text-secondary)] font-mono mb-1">Employment Status</div>
-                    <div className="font-medium capitalize">{selectedMemberDetails.employment_status || 'Active'}</div>
+                    {currentUserProfile?.role === 'super_admin' && selectedMemberDetails.id !== currentUserProfile.id ? (
+                      <select
+                        value={selectedMemberDetails.employment_status || 'active'}
+                        onChange={async (e) => {
+                          const val = e.target.value as any;
+                          if (val === 'resigned' || val === 'terminated') {
+                            setHandoffState({
+                              active: true,
+                              targetStatus: val,
+                              report: null,
+                              loading: true,
+                              transferToUserId: '',
+                              transferring: false,
+                              transferredCount: 0,
+                              transferError: null,
+                            });
+                            const report = await ExitHandoffEngine.generateHandoffReport(workspace!.id, selectedMemberDetails.id);
+                            setHandoffState(prev => ({ ...prev, report, loading: false }));
+                          } else {
+                            const { error } = await supabase.from('employment_records')
+                              .update({ employment_status: val })
+                              .eq('user_id', selectedMemberDetails.id);
+                            if (!error) {
+                              setSelectedMemberDetails({ ...selectedMemberDetails, employment_status: val });
+                              invalidateAll();
+                            }
+                          }
+                        }}
+                        className="bg-black/40 border border-[var(--border-soft)] rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-indigo-500 capitalize"
+                      >
+                        <option value="active" className="bg-[#1f2937]">Active</option>
+                        <option value="resigned" className="bg-[#1f2937]">Resigned</option>
+                        <option value="terminated" className="bg-[#1f2937]">Terminated</option>
+                        <option value="suspended" className="bg-[#1f2937]">Suspended</option>
+                        <option value="on_leave" className="bg-[#1f2937]">On Leave</option>
+                      </select>
+                    ) : (
+                      <div className="font-medium capitalize">{selectedMemberDetails.employment_status || 'Active'}</div>
+                    )}
                   </div>
                   <div>
                     <div className="text-[10px] uppercase text-[var(--text-secondary)] font-mono mb-1">Date of Joining</div>
@@ -303,6 +362,168 @@ export function MemberDirectory() {
                 Save Change
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {handoffState.active && selectedMemberDetails && (
+        <div className="fixed inset-0 flex items-center justify-center z-[70] p-4 modal-overlay-premium">
+          <div className="absolute inset-0 z-0 bg-black/60 backdrop-blur-sm" onClick={() => setHandoffState(prev => ({ ...prev, active: false }))} />
+          <div className="relative modal-premium w-full max-w-2xl rounded-2xl shadow-2xl p-6 z-10 animate-in fade-in zoom-in-95 duration-200 text-white max-h-[85vh] overflow-y-auto scrollbar-premium flex flex-col bg-[#1f2937] border border-[var(--border-soft)]">
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--border-soft)] mb-4">
+              <h3 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <Icon name="exit_to_app" size={20} className="text-red-400" />
+                Exit Handoff & Ownership Transfer
+              </h3>
+              <button 
+                onClick={() => setHandoffState(prev => ({ ...prev, active: false }))}
+                className="p-1.5 hover:bg-white/10 rounded transition-colors"
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="text-sm text-[var(--text-secondary)] mb-6">
+              You are transitioning <span className="font-semibold text-white">{selectedMemberDetails.full_name || selectedMemberDetails.email}</span> to <span className="font-semibold text-red-400 uppercase">{handoffState.targetStatus}</span> status. To ensure no work is lost, audit and transfer responsibilities below.
+            </div>
+
+            {handoffState.loading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+                <span className="text-xs font-mono text-[var(--text-secondary)]">Auditing employee ownership...</span>
+              </div>
+            ) : (
+              <div className="space-y-6 flex-1">
+                {/* Ownership Report */}
+                <div className="border border-[var(--border-soft)] rounded-xl p-4 bg-black/20 space-y-4">
+                  <h4 className="text-xs font-mono uppercase tracking-widest text-[var(--text-secondary)] border-b border-[var(--border-soft)] pb-2">Ownership Report</h4>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/5 p-3 rounded-lg border border-[var(--border-soft)]">
+                      <div className="text-[10px] uppercase font-mono text-[var(--text-secondary)]">Active Tasks</div>
+                      <div className="text-xl font-bold text-white mt-1">{handoffState.report?.activeTasks.length || 0}</div>
+                    </div>
+                    <div className="bg-white/5 p-3 rounded-lg border border-[var(--border-soft)]">
+                      <div className="text-[10px] uppercase font-mono text-[var(--text-secondary)]">Owned Projects</div>
+                      <div className="text-xl font-bold text-white mt-1">{handoffState.report?.ownedProjects.length || 0}</div>
+                    </div>
+                    <div className="bg-white/5 p-3 rounded-lg border border-[var(--border-soft)]">
+                      <div className="text-[10px] uppercase font-mono text-[var(--text-secondary)]">Pending Approvals</div>
+                      <div className="text-xl font-bold text-white mt-1">{handoffState.report?.pendingApprovals.length || 0}</div>
+                    </div>
+                    <div className="bg-white/5 p-3 rounded-lg border border-[var(--border-soft)]">
+                      <div className="text-[10px] uppercase font-mono text-[var(--text-secondary)] font-medium">Unanswered Mentions</div>
+                      <div className="text-xl font-bold text-white mt-1">{handoffState.report?.unansweredMentions.length || 0}</div>
+                    </div>
+                  </div>
+
+                  {/* List of active tasks and owned projects */}
+                  {((handoffState.report?.activeTasks.length || 0) > 0 || (handoffState.report?.ownedProjects.length || 0) > 0) && (
+                    <div className="text-xs space-y-2 pt-2 text-[var(--text-secondary)]">
+                      {handoffState.report?.ownedProjects.length ? (
+                        <div>
+                          <span className="font-semibold text-white">Owned Projects:</span> {handoffState.report.ownedProjects.map((p: any) => p.name).join(', ')}
+                        </div>
+                      ) : null}
+                      {handoffState.report?.activeTasks.length ? (
+                        <div>
+                          <span className="font-semibold text-white">Pending Tasks:</span> {handoffState.report.activeTasks.map((t: any) => t.name).join(', ')}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+
+                {/* Transfer Section */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-mono uppercase tracking-widest text-[var(--text-secondary)]">Reassign Ownership</h4>
+                  
+                  <div>
+                    <label className="block text-xs text-[var(--text-secondary)] mb-2">Select Teammate to receive tasks, projects, and approvals:</label>
+                    <select
+                      value={handoffState.transferToUserId}
+                      onChange={(e) => setHandoffState(prev => ({ ...prev, transferToUserId: e.target.value }))}
+                      className="w-full bg-black/40 border border-[var(--border-soft)] rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="" className="bg-[#1f2937]">-- Choose Teammate --</option>
+                      {activeProfiles
+                        .filter(p => p.id !== selectedMemberDetails.id)
+                        .map(p => (
+                          <option key={p.id} value={p.id} className="bg-[#1f2937]">
+                            {p.full_name || p.email} ({p.role})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+
+                {handoffState.transferError && (
+                  <div className="text-xs text-red-400 bg-red-400/10 border border-red-500/20 p-3 rounded-lg">
+                    {handoffState.transferError}
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border-soft)]">
+                  <button
+                    onClick={() => setHandoffState(prev => ({ ...prev, active: false }))}
+                    className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-white rounded-lg transition-colors border border-[var(--border-soft)]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={!handoffState.transferToUserId || handoffState.transferring}
+                    onClick={async () => {
+                      setHandoffState(prev => ({ ...prev, transferring: true, transferError: null }));
+                      
+                      const report = handoffState.report;
+                      if (!report) return;
+
+                      const taskIds = report.activeTasks.map(t => t.id);
+                      const projectIds = report.ownedProjects.map(p => p.id);
+                      const approvalIds = report.pendingApprovals.map(a => a.id);
+                      const fileIds = report.ownedFiles.map(f => f.id);
+
+                      // 1. Transfer items
+                      const transferRes = await ExitHandoffEngine.transferOwnership(
+                        workspace!.id,
+                        selectedMemberDetails.id,
+                        handoffState.transferToUserId,
+                        { taskIds, projectIds, approvalIds, fileIds }
+                      );
+
+                      if (!transferRes.success) {
+                        setHandoffState(prev => ({ ...prev, transferring: false, transferError: transferRes.error || 'Failed to transfer ownership' }));
+                        return;
+                      }
+
+                      // 2. Update status
+                      const statusRes = await ExitHandoffEngine.updateEmploymentStatus(
+                        workspace!.id,
+                        selectedMemberDetails.id,
+                        handoffState.targetStatus!,
+                        currentUserProfile!.id
+                      );
+
+                      if (statusRes) {
+                        setSelectedMemberDetails({
+                          ...selectedMemberDetails,
+                          employment_status: handoffState.targetStatus!
+                        });
+                        invalidateAll();
+                        setHandoffState(prev => ({ ...prev, active: false, transferring: false }));
+                      } else {
+                        setHandoffState(prev => ({ ...prev, transferring: false, transferError: 'Ownership transferred, but failed to update status.' }));
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-white rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    {handoffState.transferring && <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />}
+                    Transfer & Save Status
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

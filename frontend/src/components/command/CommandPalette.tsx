@@ -8,6 +8,8 @@ import { activityLogService } from '../../services/activityLogService';
 import { recordUsage, getSessionId } from '../../services/commandUsageService';
 import { CANONICAL_ROUTES, renderRouteIcon } from '../../app/routeRegistry';
 import { searchService } from '../../services/searchService';
+import { executeDeterministicSearch } from '../../core/search/OperationalSearchEngine';
+import { useOperationalData } from '../../context/OperationalDataContext';
 
 interface CmdResult {
   id: string;
@@ -304,6 +306,7 @@ export default function CommandPalette(props: Props) {
     disclosureLevel = 3,
     disclosureActive = false,
   } = props;
+  const { raw: { profiles: users = [], activityLogs = [] } } = useOperationalData();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
@@ -390,8 +393,49 @@ export default function CommandPalette(props: Props) {
       setDbResults(mapped);
       setIsSearching(false);
     });
+
+    // Execute Deterministic Client-side Search (Operational Memory)
+    if (cleanQuery) {
+      const localMatches = executeDeterministicSearch({
+        query: cleanQuery,
+        tasks,
+        projects,
+        users,
+        activityLogs,
+        currentUserId: profile?.id
+      });
+      // Merge local matches into mapped DB results later
+      setDbResults(prev => {
+        const out = [...prev];
+        // Add header if we found local matches that aren't in DB results yet
+        if (localMatches.length > 0) {
+          out.push({ id: '_memory_header', group: 'MEMORY', label: 'OPERATIONAL MEMORY', onSelect: () => {} });
+          localMatches.forEach(lm => {
+            if (!out.find(o => o.id.includes(lm.id.split(':')[2]))) {
+              out.push({
+                id: lm.id,
+                group: 'MEMORY',
+                label: lm.title,
+                description: lm.subtitle,
+                icon: lm.type === 'task' ? <Check className="w-3.5 h-3.5 text-signal-warning" /> :
+                      lm.type === 'project' ? <BarChart3 className="w-3.5 h-3.5 text-emerald-400" /> :
+                      lm.type === 'user' ? <Users className="w-3.5 h-3.5 text-purple-400" /> :
+                      lm.type === 'operational_answer' ? <ShieldAlert className="w-3.5 h-3.5 text-rose-400 animate-pulse" /> :
+                      <BrainCircuit className="w-3.5 h-3.5 text-cyan-400" />,
+                onSelect: () => {
+                  onNavigate(lm.route);
+                  onClose();
+                }
+              });
+            }
+          });
+        }
+        return out;
+      });
+    }
+
     return () => { active = false; };
-  }, [debouncedQuery]);
+  }, [debouncedQuery, tasks, projects, users, activityLogs, profile]);
 
   const allResults = useMemo((): CmdResult[] => {
     const rawQuery = debouncedQuery.trim();
@@ -423,6 +467,28 @@ export default function CommandPalette(props: Props) {
     if (matchedAiNlp.length > 0) {
       out.push({ id: '_ainlp_header', group: 'AI', label: 'AI', onSelect: () => {} });
       matchedAiNlp.forEach(r => out.push(r));
+    }
+
+    // --- MIGRATION (Legacy ID Match) ---
+    if (q) {
+      const extProjects = projects.filter(p => p.external_id && p.external_id.toLowerCase().includes(q.toLowerCase()));
+      const extTasks = tasks.filter(t => t.external_id && t.external_id.toLowerCase().includes(q.toLowerCase()));
+      
+      if (extProjects.length > 0 || extTasks.length > 0) {
+        out.push({ id: '_ext_header', group: 'MIGRATION', label: 'LEGACY ID LOOKUP', onSelect: () => {} });
+        extProjects.forEach(p => {
+          out.push({
+            id: `ext_proj:${p.id}`, group: 'MIGRATION', label: `${p.external_id} → ${p.name}`, icon: <Link2 className="w-3.5 h-3.5 text-blue-400" />,
+            onSelect: () => { onNavigate(`/projects/${p.id}/board`); onClose(); }
+          });
+        });
+        extTasks.forEach(t => {
+          out.push({
+            id: `ext_task:${t.id}`, group: 'MIGRATION', label: `${t.external_id} → ${t.name}`, icon: <Link2 className="w-3.5 h-3.5 text-blue-400" />,
+            onSelect: () => { onNavigate(`/execution?task=${t.id}`); onClose(); }
+          });
+        });
+      }
     }
 
     // --- CONTEXTUAL — route-aware suggestions (empty query only) ---

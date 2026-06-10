@@ -80,6 +80,48 @@ export async function createTask(input: CreateTaskInput): Promise<{ id: string }
   return null;
 }
 
+export async function updateTaskWithLock(
+  taskId: string,
+  updates: Record<string, any>,
+  expectedUpdatedAt: string | null
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured) return { success: false, error: 'Supabase not configured' };
+  
+  try {
+    // 1. Fetch current task to check version
+    const { data: currentTask, error: fetchError } = await supabase
+      .from('tasks')
+      .select('updated_at')
+      .eq('id', taskId)
+      .maybeSingle();
+
+    if (fetchError || !currentTask) {
+      return { success: false, error: 'Task not found or fetch failed' };
+    }
+
+    // 2. Compare updated_at
+    // If expectedUpdatedAt is provided, it must match the current DB state exactly.
+    if (expectedUpdatedAt && currentTask.updated_at && currentTask.updated_at !== expectedUpdatedAt) {
+      return { success: false, error: 'VERSION_CONFLICT' };
+    }
+
+    // 3. Perform update, stamping new updated_at
+    const now = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('tasks')
+      .update({ ...updates, updated_at: now })
+      .eq('id', taskId);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 export async function createTaskDependency(input: {
   workspace_id: string;
   task_id: string;
