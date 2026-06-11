@@ -164,7 +164,7 @@ async function populateAdminAdapter(workspaceId: string, overview: DailyOverview
 }
 
 async function populateHRAdapter(workspaceId: string, overview: DailyOverview) {
-  const { data: profiles } = await supabase.from('profiles').select('id, role').eq('workspace_id', workspaceId);
+  const { data: profiles } = await supabase.from('users').select('id, role').eq('workspace_id', workspaceId);
   const employeeCount = profiles?.length || 0;
 
   overview.metrics = [
@@ -172,23 +172,72 @@ async function populateHRAdapter(workspaceId: string, overview: DailyOverview) {
     { id: 'm2', label: 'Pending Leaves', value: 0, status: 'good' }
   ];
 
-  overview.recommendations.push({ id: 'r1', message: 'Review pending attendance anomalies.', type: 'action' });
+  if (employeeCount === 0) {
+    overview.recommendations.push({ id: 'r1', message: 'Invite team members to get started.', type: 'action' });
+  } else {
+    overview.recommendations.push({ id: 'r1', message: 'Review any pending attendance or leave requests.', type: 'action' });
+  }
 }
 
 async function populateFinanceAdapter(workspaceId: string, overview: DailyOverview) {
+  const { data: invoices } = await supabase
+    .from('invoices')
+    .select('id, status, amount')
+    .eq('workspace_id', workspaceId)
+    .in('status', ['draft', 'sent', 'overdue', 'partial']);
+
+  const pendingCount = invoices?.length || 0;
+  const pendingAmount = invoices?.reduce((sum, inv) => sum + Number(inv.amount || 0), 0) || 0;
+
+  const { data: expenses } = await supabase
+    .from('expenses')
+    .select('id, amount')
+    .eq('workspace_id', workspaceId);
+
+  const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount || 0), 0) || 0;
+
   overview.metrics = [
-    { id: 'm1', label: 'Pending Invoices', value: '3 Actionable', status: 'warning' },
-    { id: 'm2', label: 'Monthly Expenses', value: 'Requires Review', status: 'good' }
+    { id: 'm1', label: 'Pending Invoices', value: pendingCount, status: pendingCount > 0 ? 'warning' : 'good' },
+    { id: 'm2', label: 'Outstanding Amount', value: `$${pendingAmount.toLocaleString()}`, status: pendingAmount > 0 ? 'warning' : 'good' },
+    { id: 'm3', label: 'Monthly Expenses', value: `$${totalExpenses.toLocaleString()}`, status: 'good' }
   ];
 
-  overview.recommendations.push({ id: 'r1', message: 'Process pending payroll approvals.', type: 'urgent' });
+  if (pendingCount > 0) {
+    overview.recommendations.push({ id: 'r1', message: `${pendingCount} invoice${pendingCount > 1 ? 's' : ''} require attention.`, type: 'urgent' });
+  } else {
+    overview.recommendations.push({ id: 'r1', message: 'All invoices are up to date.', type: 'info' });
+  }
 }
 
 async function populateClientAdapter(userId: string, workspaceId: string, overview: DailyOverview) {
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id, name, status')
+    .eq('workspace_id', workspaceId)
+    .neq('status', 'archived');
+
+  const activeCount = projects?.length || 0;
+
   overview.metrics = [
-    { id: 'm1', label: 'Active Projects', value: 1, status: 'good' },
+    { id: 'm1', label: 'Active Projects', value: activeCount, status: 'good' },
     { id: 'm2', label: 'Pending Approvals', value: 0, status: 'good' }
   ];
 
-  overview.recommendations.push({ id: 'r1', message: 'Check the latest milestone deliverables.', type: 'info' });
+  (projects || []).slice(0, 5).forEach(p => {
+    overview.todayFocus.push({
+      id: p.id,
+      title: p.name,
+      subtitle: `Status: ${p.status}`,
+      priority: 'Normal',
+      status: p.status,
+      type: 'Project'
+    });
+  });
+
+  if (activeCount === 0) {
+    overview.recommendations.push({ id: 'r1', message: 'No active projects yet. Contact your account manager.', type: 'info' });
+  } else {
+    overview.recommendations.push({ id: 'r1', message: 'Check the latest milestone deliverables.', type: 'info' });
+  }
 }
+

@@ -27,9 +27,7 @@ app.get('/test',(req,res)=>{
 
 app.use('/api/calendar', calendarRoutes);
 
-// Fallback for Google OAuth if REDIRECT_URI is set to the root path without /api/calendar
-const calendarController = require('./controller/calendarController');
-app.get('/auth/google/callback', calendarController.googleAuthCallback);
+
 
 app.listen(PORT,async()=>{
     await connectDB()

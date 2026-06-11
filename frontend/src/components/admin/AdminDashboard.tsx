@@ -81,7 +81,8 @@ export function AdminDashboard({
       const token = sessionData.session?.access_token;
 
       // Provision user via backend API
-      const res = await fetch('http://localhost:5001/api/provision-employee', {
+      const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL || 'https://pm-tool-server.onrender.com';
+      const res = await fetch(`${baseUrl}/api/provision-employee`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

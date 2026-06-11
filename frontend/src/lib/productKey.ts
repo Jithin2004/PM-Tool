@@ -3,7 +3,7 @@
 
 const STORAGE_KEY = 'resolve-product-license';
 const FINGERPRINT_KEY = 'resolve-device-fingerprint';
-const API_BASE_URL = (import.meta as any).env.VITE_PRODUCT_KEY_API_URL || 'http://localhost:5000';
+const API_BASE_URL = (import.meta as any).env.VITE_PRODUCT_KEY_API_URL || 'https://pm-tool-server.onrender.com';
 const ACTIVATE_URL = `${API_BASE_URL}/activate`;
 const VERIFY_URL = `${API_BASE_URL}/verify`;
 const TIMEOUT_MS = 30_000;

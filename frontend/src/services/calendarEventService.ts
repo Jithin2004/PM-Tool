@@ -9,7 +9,7 @@ import type { CalendarEvent, CalendarEventType } from '../types';
  * Falls back to http://localhost:5001/api/calendar so the URL never silently
  * becomes the string "undefined/events/..." when the env var is missing.
  */
-const RAW_URL = (import.meta.env.VITE_CALENDAR_API_URL || 'http://localhost:5001').replace(/\/$/, '');
+const RAW_URL = (import.meta.env.VITE_CALENDAR_API_URL || 'https://pm-tool-server.onrender.com').replace(/\/$/, '');
 const CALENDAR_API_BASE = RAW_URL.endsWith('/api/calendar') ? RAW_URL : `${RAW_URL}/api/calendar`;
 
 interface RecurrenceRule {

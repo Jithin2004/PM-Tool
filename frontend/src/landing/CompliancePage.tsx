@@ -26,9 +26,9 @@ export function CompliancePage() {
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">Google API Compliance</h2>
+          <h2 className="text-xl font-semibold text-white">Internal Calendar Security</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            We maintain 100% compliance with the Google API Services User Data Policy, specifically the "Limited Use" requirements for the Google Calendar API.
+            All calendar and scheduling data remains strictly within the Resolve PM internal system, ensuring that project dates, deadlines, and personal availability never leave the platform.
           </p>
         </section>
 

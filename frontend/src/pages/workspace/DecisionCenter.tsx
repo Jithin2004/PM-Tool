@@ -1,7 +1,31 @@
-import React from 'react';
-import { BrainCircuit, AlertTriangle, CheckCircle2, Clock, Filter, Shield } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { BrainCircuit, CheckCircle2, Clock, Shield } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 
 export default function DecisionCenter() {
+  const { workspace } = useWorkspace();
+  const [approvals, setApprovals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!workspace?.id) return;
+    supabase
+      .from('approvals')
+      .select('id, title, status, created_at, requested_by')
+      .eq('workspace_id', workspace.id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+      .then(({ data }) => {
+        setApprovals(data || []);
+        setLoading(false);
+      });
+  }, [workspace?.id]);
+
+  const pendingCount = approvals.filter(a => a.status === 'pending').length;
+  const resolvedCount = approvals.filter(a => a.status === 'approved' || a.status === 'rejected').length;
+
   return (
     <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
       {/* Header */}
@@ -26,10 +50,10 @@ export default function DecisionCenter() {
       {/* KPI metrics bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          { label: 'Pending Approvals', value: 3, sub: 'Awaiting Sign-off', icon: <CheckCircle2 size={20} />, color: 'var(--pm-primary)' },
-          { label: 'Active Escalations', value: 1, sub: 'Requires immediate action', icon: <AlertTriangle size={20} />, color: 'var(--pm-error)' },
-          { label: 'Resolved Decisions', value: 42, sub: 'Last 30 days', icon: <BrainCircuit size={20} />, color: '#34d399' },
-          { label: 'Avg Resolution Time', value: '1.2d', sub: 'From initiation to approval', icon: <Clock size={20} />, color: '#60a5fa' }
+          { label: 'Pending Approvals', value: loading ? '—' : pendingCount, sub: 'Awaiting Sign-off', icon: <CheckCircle2 size={20} />, color: 'var(--pm-primary)' },
+          { label: 'Resolved Decisions', value: loading ? '—' : resolvedCount, sub: 'Total resolved', icon: <BrainCircuit size={20} />, color: '#34d399' },
+          { label: 'Total Requests', value: loading ? '—' : approvals.length, sub: 'All time', icon: <Shield size={20} />, color: '#60a5fa' },
+          { label: 'Avg Resolution Time', value: 'Tracked', sub: 'From initiation to approval', icon: <Clock size={20} />, color: '#a78bfa' }
         ].map((kpi, i) => (
           <div key={i} className="pm-card p-5 relative overflow-hidden group">
             <div className="flex items-center justify-between mb-4">
@@ -46,98 +70,43 @@ export default function DecisionCenter() {
         ))}
       </div>
 
-      {/* Primary Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column - Decision Pipeline */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-[var(--pm-primary)]">Decision Pipeline</h2>
-              <div className="flex gap-2">
-                <button className="p-1.5 rounded bg-surface-3 border border-border text-[var(--pm-on-surface-variant)] hover:text-[var(--pm-primary)] transition-colors cursor-pointer">
-                  <Filter size={14} />
-                </button>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {/* Example Escalation */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl transition-all gap-4 bg-surface-2 border border-border"
-                style={{ background: 'rgba(239, 68, 68, 0.04)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Resource Allocation Override</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-red-500/10 text-red-400 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20">ESCALATION</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)]">
-                    <span>INITIATOR: <strong className="text-[var(--pm-primary)]">John Doe</strong></span>
-                    <span>•</span>
-                    <span>PROJECT: <strong className="text-[var(--pm-primary)]">Phoenix Backend Rebuild</strong></span>
-                  </div>
-                  <p className="text-xs mt-2" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                    Project requires 2 additional senior backend engineers to meet the revised client deadline.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 shrink-0">
-                  <button className="px-4 py-2 rounded-lg text-xs font-mono-pm uppercase tracking-widest bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 transition-all cursor-pointer">
-                    Review Request
-                  </button>
-                </div>
-              </div>
-
-              {/* Example Approval */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl transition-all gap-4 bg-surface-2 border border-border"
-                style={{ background: 'var(--pm-surface-high)', borderColor: 'rgba(70,69,84,0.3)' }}>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Architectural Shift: Monolith to Microservices</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-amber-500/10 text-amber-400 border border-amber-500/20">PENDING APPROVAL</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)]">
-                    <span>INITIATOR: <strong className="text-[var(--pm-primary)]">Tech Council</strong></span>
-                    <span>•</span>
-                    <span>IMPACT: <strong className="text-amber-400">HIGH</strong></span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 shrink-0">
-                  <button className="px-4 py-2 rounded-lg text-xs font-mono-pm uppercase tracking-widest bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-all cursor-pointer">
-                    Cast Vote
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Decision Pipeline */}
+      <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-semibold text-[var(--pm-primary)]">Decision Pipeline</h2>
         </div>
 
-        {/* Right Column - Intelligence Surface */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-[var(--pm-primary)]">Governance Ledger</h2>
-              <Shield size={16} className="text-indigo-400" />
-            </div>
-            
-            <div className="space-y-4">
-              <div className="p-3 rounded-lg border bg-surface-3 border-border flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-[var(--pm-primary)]">Q3 Budget Expansion</span>
-                <div className="flex items-center justify-between text-[10px] font-mono-pm text-[var(--pm-on-surface-variant)]">
-                  <span>STATUS: <strong className="text-emerald-400">APPROVED</strong></span>
-                  <span>AUG 12</span>
-                </div>
-                <p className="text-[10px] text-[var(--pm-on-surface-variant)]">By CEO & CFO Council</p>
-              </div>
-
-              <div className="p-3 rounded-lg border bg-surface-3 border-border flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-[var(--pm-primary)]">Vendor Selection: AWS</span>
-                <div className="flex items-center justify-between text-[10px] font-mono-pm text-[var(--pm-on-surface-variant)]">
-                  <span>STATUS: <strong className="text-emerald-400">APPROVED</strong></span>
-                  <span>AUG 05</span>
-                </div>
-                <p className="text-[10px] text-[var(--pm-on-surface-variant)]">By Lead Architect</p>
-              </div>
-            </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-24">
+            <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           </div>
-        </div>
+        ) : approvals.filter(a => a.status === 'pending').length === 0 ? (
+          <PremiumEmptyState
+            icon={CheckCircle2}
+            title="No Pending Decisions"
+            description="All decisions are resolved. New approval requests will appear here."
+          />
+        ) : (
+          <div className="space-y-4">
+            {approvals.filter(a => a.status === 'pending').map(approval => (
+              <div key={approval.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl gap-4"
+                style={{ background: 'var(--pm-surface-high)', borderColor: 'rgba(70,69,84,0.3)', border: '1px solid' }}>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{approval.title}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-amber-500/10 text-amber-400 border border-amber-500/20">PENDING</span>
+                  </div>
+                  <div className="font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)]">
+                    Submitted: {new Date(approval.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+

@@ -24,16 +24,6 @@ export interface OperationalChannel {
 
 export const OPERATIONAL_CHANNELS: OperationalChannel[] = [
   {
-    id: 'calendar_coordination',
-    key: 'google_calendar',
-    label: 'Calendar Coordination',
-    description: 'Sprint scheduling, milestone alignment, availability signals',
-    scope: 'workspace',
-    state: 'awaiting_oauth',
-    lastIngestion: null,
-    lastChecked: null,
-  },
-  {
     id: 'repository_activity',
     key: 'github',
     label: 'Repository Activity',

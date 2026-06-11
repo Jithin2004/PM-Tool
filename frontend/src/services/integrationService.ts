@@ -101,7 +101,6 @@ function resolveSyncFn(service: string, payload: Record<string, any>, _workspace
     case 'github': return () => syncGitHubRepo(_workspaceId, (payload as any).repo_url || '', (payload as any).branch || 'main');
     case 'gitlab': return () => syncGitLabRepo(_workspaceId, (payload as any).repo_url || '', (payload as any).branch || 'main');
     case 'figma': return () => syncFigmaFrame(_workspaceId, (payload as any).frame_url || '');
-    case 'google_calendar': return () => syncGoogleCalendar(_workspaceId, _accessToken);
     case 'google_drive': return () => syncGoogleDrive(_workspaceId, _accessToken);
     default: return async () => ({ success: false, message: 'Unknown service' });
   }
@@ -610,27 +609,6 @@ export async function syncFigmaFrame(workspaceId: string, frameUrl: string): Pro
   }
 }
 
-export async function syncGoogleCalendar(workspaceId: string, accessToken?: string): Promise<SyncResult> {
-  await updateIntegrationHealth(workspaceId, 'google_calendar', 'syncing');
-  try {
-    if (!accessToken) throw new Error('Connect pending — no access token');
-    
-    // The backend dynamically fetches and merges Google Calendar events in the /events endpoint.
-    // There's no need to manually pull events into Supabase here.
-    // We just verify that we can still reach the Google Calendar API.
-    const res = await fetch(
-      'https://www.googleapis.com/calendar/v3/users/me/calendarList',
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    if (!res.ok) throw new Error(res.status === 401 ? 'Token expired' : 'Sync unavailable');
-    
-    await syncUpdateHealth(workspaceId, 'google_calendar', true, undefined, 0);
-    return { success: true, message: 'Google Calendar synced and healthy', itemsSynced: 0 };
-  } catch (e: any) {
-    await syncUpdateHealth(workspaceId, 'google_calendar', false, e.message);
-    return { success: false, message: e.message };
-  }
-}
 
 export async function syncGoogleDrive(workspaceId: string, accessToken?: string): Promise<SyncResult> {
   await updateIntegrationHealth(workspaceId, 'google_drive', 'syncing');

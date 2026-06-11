@@ -366,10 +366,7 @@ export function ResolveRouter() {
     if (!guardRoute(role, '/workspace/portfolio')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><PortfolioPage /></RouteShell>;
   }
-  if (pathname === '/workspace/executive') {
-    if (!guardRoute(role, '/workspace/executive')) return <RouteShell><AccessRestricted /></RouteShell>;
-    return <RouteShell><ExecutiveOverview /></RouteShell>;
-  }
+
   if (pathname === '/workspace/reports') {
     if (!guardRoute(role, '/workspace/reports')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><ReportsCenter /></RouteShell>;

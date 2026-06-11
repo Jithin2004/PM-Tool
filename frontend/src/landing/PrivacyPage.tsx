@@ -35,7 +35,7 @@ export function PrivacyPage() {
         <section className="space-y-4 premium-panel p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">3. Third-Party Integrations</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            If you enable third-party integrations (such as Google Calendar, Slack, or GitHub), data exchange occurs directly between your Resolve PM instance and the third-party provider's API. Resolve PM HQ does not proxy or intercept this communication. You are subject to the privacy policies of those third-party services.
+            If you enable third-party integrations (such as Slack or GitHub), data exchange occurs directly between your Resolve PM instance and the third-party provider's API. Resolve PM HQ does not proxy or intercept this communication. You are subject to the privacy policies of those third-party services.
           </p>
         </section>
 

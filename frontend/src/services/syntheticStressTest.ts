@@ -86,7 +86,7 @@ export interface FailedOperation {
 const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'SDLC', 'CUSTOM'] as const;
 const TASK_STATUSES = ['backlog', 'ready', 'in_progress', 'review', 'done'] as const;
 const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
-const INTEGRATION_SERVICES = ['github', 'gitlab', 'figma', 'google_calendar', 'google_drive', 'slack', 'jira', 'notion', 'asana', 'trello'] as const;
+const INTEGRATION_SERVICES = ['github', 'gitlab', 'figma', 'google_drive', 'slack', 'jira', 'notion', 'asana', 'trello'] as const;
 const WEBHOOK_EVENTS = ['task.created', 'task.updated', 'task.completed', 'project.created', 'sprint.completed', 'approval.completed', 'document.created'];
 
 const DEFAULT_MAX = { users: 200, projects: 1000, tasks: 10000 } as const;
