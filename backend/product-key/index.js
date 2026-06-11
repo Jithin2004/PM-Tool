@@ -7,24 +7,16 @@ const licenseController = require('./controller/license');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Dynamic database selection safety fallback
-const dbUri = process.env.MONGO_URI || process.env.DB;
-if (!dbUri) {
-    console.error('[FATAL] Database connection URI missing (MONGO_URI or DB). Exiting...');
-    process.exit(1);
-}
-
 // Global Core Middlewares
 app.use(cors());
 app.use(express.json());
 
-// ── Inline Public Licensing Endpoints (Guarantees mapping resolution) ──
-app.get('/verify', licenseController.verifyLicense);
-app.post('/activate', licenseController.activateLicense);
-app.get('/addLicense', licenseController.addLicense);
+// Health Check Endpoint (for Render and Docker healthchecks)
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
-// Base Health Fallback Encodings
-// ── Inline Public Licensing Endpoints with Fail-Safe Header Guards ──
+// ── Public Licensing Endpoints with Authorization Guard ──
 app.get('/verify', (req, res, next) => {
     const authHeader = req.headers.authorization;
     
@@ -43,11 +35,16 @@ app.post('/activate', licenseController.activateLicense);
 app.get('/addLicense', licenseController.addLicense);
 
 // App Startup Process
+let isDbConnected = false;
+
 app.listen(PORT, async () => {
+    console.log(`[SERVER] License server starting on port ${PORT}...`);
     try {
         await connectDB();
-        console.log(`License server is running securely on port ${PORT}`);
+        isDbConnected = true;
+        console.log('[SERVER] ✓ License server ready (port ' + PORT + ')');
     } catch (dbErr) {
         console.error('[FATAL] MongoDB initialization failed during bootstrap:', dbErr.message);
+        process.exit(1);
     }
 });
