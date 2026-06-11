@@ -156,16 +156,6 @@ exports.activateLicense = async (req, res) => {
     }
 };
 
-// 3. License Key Verification
-// Helper fallback inside the file to prevent crashes
-const getFeaturesForPlan = (plan) => {
-    const plans = {
-        'ENTERPRISE': ['all_features', 'priority_support', 'ai_automation'],
-        'PRO': ['all_features', 'priority_support'],
-        'STANDARD': ['all_features']
-    };
-    return plans[plan] || ['standard_features'];
-};
 
 // 3. License Key Verification
 exports.verifyLicense = async (req, res) => {
