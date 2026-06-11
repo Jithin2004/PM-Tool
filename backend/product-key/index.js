@@ -18,26 +18,29 @@ if (!dbUri) {
     process.exit(1);
 }
 
+// ... env checks and database configurations ...
+
 const cors = require('cors');
 app.use(cors());
 app.use(express.json());
 
+// Remove the external file require line and pull the controller directly
+const licenseController = require('./controller/license');
+
+// Register the /verify endpoint directly on the main app instance
+app.get('/verify', licenseController.verifyLicense);
+app.post('/activate', licenseController.activateLicense);
+app.get('/addLicense', licenseController.addLicense);
+
+// Base health endpoints serve as fallbacks below
 app.get('/', (req, res) => {
     res.status(200).json({
         message: 'welcome to pm-tool license server'
-    })
-})
-
-const licenseRoute = require('./routes/licenseRoute')
-app.use("/", licenseRoute)
+    });
+});
 
 app.get('/test', (req, res) => {
     res.status(200).json({
         message: 'test route success backend running successfully'
-    })
-})
-
-app.listen(PORT, async () => {
-    await connectDB()
-    console.log(`License server is running on port ${PORT}`)
-})
+    });
+});
