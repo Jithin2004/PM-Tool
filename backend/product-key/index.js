@@ -1,49 +1,29 @@
-require('dotenv').config()
-const express = require('express')
-const connectDB = require('./config/db')
-
-const app = express()
-const PORT = process.env.PORT || 5000
-
-// Hardened startup environment variable checks
-const requiredEnv = ['JWT_SECRET', 'LICENSE_SECRET'];
-const missingEnv = requiredEnv.filter(name => !process.env[name]);
-if (missingEnv.length > 0) {
-    console.error(`[FATAL] Required environment variables missing: ${missingEnv.join(', ')}. Exiting...`);
-    process.exit(1);
-}
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const connectDB = require('./config/db');
+const licenseController = require('./controller/license');
 
 const app = express();
-const PORT = process.env.PORT || 10000; // Render injects PORT automatically
+const PORT = process.env.PORT || 10000;
 
-// Fail-safe default fallback configuration for production environments
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_production_jwt_secret_key';
-const LICENSE_SECRET = process.env.LICENSE_SECRET || 'fallback_production_license_secret_key';
-
+// Dynamic database selection safety fallback
 const dbUri = process.env.MONGO_URI || process.env.DB;
 if (!dbUri) {
     console.error('[FATAL] Database connection URI missing (MONGO_URI or DB). Exiting...');
     process.exit(1);
 }
 
-// ... env checks and database configurations ...
-
-const cors = require('cors');
+// Global Core Middlewares
 app.use(cors());
 app.use(express.json());
 
-// Remove the external file require line and pull the controller directly
-const licenseController = require('./controller/license');
-
-// Register the /verify endpoint directly on the main app instance
+// ── Inline Public Licensing Endpoints (Guarantees mapping resolution) ──
 app.get('/verify', licenseController.verifyLicense);
 app.post('/activate', licenseController.activateLicense);
 app.get('/addLicense', licenseController.addLicense);
 
-// Base health endpoints serve as fallbacks below
+// Base Health Fallback Encodings
 app.get('/', (req, res) => {
     res.status(200).json({
         message: 'welcome to pm-tool license server'
@@ -54,4 +34,14 @@ app.get('/test', (req, res) => {
     res.status(200).json({
         message: 'test route success backend running successfully'
     });
+});
+
+// App Startup Process
+app.listen(PORT, async () => {
+    try {
+        await connectDB();
+        console.log(`License server is running securely on port ${PORT}`);
+    } catch (dbErr) {
+        console.error('[FATAL] MongoDB initialization failed during bootstrap:', dbErr.message);
+    }
 });
