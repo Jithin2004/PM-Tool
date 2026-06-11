@@ -47,15 +47,18 @@ export default function DocumentView() {
 
   const loadDoc = useCallback(async () => {
     if (!docId || docId === 'undefined') { setLoading(false); return; }
-    const [d, v, a] = await Promise.all([
-      fetchDocument(docId), fetchVersions(docId), fetchAnnotations(docId),
-    ]);
-    setDoc(d);
-    setVersions(v);
-    setAnnotations(a);
-    setEditContent(d?.content || '');
-    setEditTitle(d?.title || '');
-    setLoading(false);
+    try {
+      const [d, v, a] = await Promise.all([
+        fetchDocument(docId), fetchVersions(docId), fetchAnnotations(docId),
+      ]);
+      setDoc(d);
+      setVersions(v);
+      setAnnotations(a);
+      setEditContent(d?.content || '');
+      setEditTitle(d?.title || '');
+    } finally {
+      setLoading(false);
+    }
   }, [docId]);
 
   useEffect(() => { loadDoc(); }, [loadDoc]);

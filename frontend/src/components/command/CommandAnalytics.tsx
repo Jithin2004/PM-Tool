@@ -80,6 +80,9 @@ export default function CommandAnalytics({ isOpen, onClose, role, workspaceId, p
         activityLogService.logHeatmapView(workspaceId, profileId, { role, scope, trend_count: t.length, friction_count: f.length });
         if (h) activityLogService.logHealthGenerated(workspaceId, profileId, h);
       }
+    }).catch(err => {
+      console.error('Failed to load command analytics', err);
+      setLoading(false);
     });
   }, [isOpen, workspaceId]);
 

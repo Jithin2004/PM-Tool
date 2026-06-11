@@ -36,14 +36,17 @@ export default function ConnectionsPanel() {
 
   const loadData = useCallback(async () => {
     if (!wsId) return;
-    const [h, a] = await Promise.all([fetchIntegrationHealth(wsId), fetchConnectedAccounts(wsId)]);
-    const hmap: Record<string, IntegrationHealth> = {};
-    for (const item of h) hmap[item.service] = item;
-    const amap: Record<string, ConnectedAccount> = {};
-    for (const item of a) amap[item.service] = item;
-    setHealth(hmap);
-    setAccounts(amap);
-    setLoading(false);
+    try {
+      const [h, a] = await Promise.all([fetchIntegrationHealth(wsId), fetchConnectedAccounts(wsId)]);
+      const hmap: Record<string, IntegrationHealth> = {};
+      for (const item of h) hmap[item.service] = item;
+      const amap: Record<string, ConnectedAccount> = {};
+      for (const item of a) amap[item.service] = item;
+      setHealth(hmap);
+      setAccounts(amap);
+    } finally {
+      setLoading(false);
+    }
   }, [wsId]);
 
   useEffect(() => { loadData(); }, [loadData]);

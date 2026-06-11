@@ -35,10 +35,13 @@ export default function AutomationsPanel() {
 
   const loadData = useCallback(async () => {
     if (!wsId) return;
-    const [r, t] = await Promise.all([fetchAutomationRules(wsId), fetchTemplates()]);
-    setRules(r);
-    setTemplates(t);
-    setLoading(false);
+    try {
+      const [r, t] = await Promise.all([fetchAutomationRules(wsId), fetchTemplates()]);
+      setRules(r);
+      setTemplates(t);
+    } finally {
+      setLoading(false);
+    }
   }, [wsId]);
 
   useEffect(() => { loadData(); }, [loadData]);

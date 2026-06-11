@@ -19,22 +19,25 @@ export default function ApprovalsPage() {
     if (!workspace?.id || !profile?.id) return;
     setLoading(true);
     
-    let query = supabase.from('universal_approvals').select('*, requested_by_user:users!requested_by(email), approved_by_user:users!approved_by(email)').eq('workspace_id', workspace.id);
-    
-    if (filter === 'needs_me') {
-      query = query.eq('decision', 'Pending');
-    } else if (filter === 'requested_by_me') {
-      query = query.eq('requested_by', profile.id);
-    } else if (filter === 'completed') {
-      query = query.neq('decision', 'Pending');
-    }
-    
-    const { data, error } = await query.order('created_at', { ascending: false });
+    try {
+      let query = supabase.from('universal_approvals').select('*, requested_by_user:users!requested_by(email), approved_by_user:users!approved_by(email)').eq('workspace_id', workspace.id);
       
-    if (!error && data) {
-      setApprovals(data);
+      if (filter === 'needs_me') {
+        query = query.eq('decision', 'Pending');
+      } else if (filter === 'requested_by_me') {
+        query = query.eq('requested_by', profile.id);
+      } else if (filter === 'completed') {
+        query = query.neq('decision', 'Pending');
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+        
+      if (!error && data) {
+        setApprovals(data);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {

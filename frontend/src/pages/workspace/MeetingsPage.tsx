@@ -30,17 +30,20 @@ export default function MeetingsPage() {
       query = query.eq('status', 'completed');
     }
     
-    const { data, error } = await query.order('date', { ascending: filter === 'upcoming' });
-    
-    if (!error && data) {
-      if (filter === 'my') {
-        const myData = data.filter(m => m.organizer_id === profile?.id || m.meeting_attendees?.some((a: any) => a.user_id === profile?.id));
-        setMeetings(myData);
-      } else {
-        setMeetings(data);
+    try {
+      const { data, error } = await query.order('date', { ascending: filter === 'upcoming' });
+      
+      if (!error && data) {
+        if (filter === 'my') {
+          const myData = data.filter(m => m.organizer_id === profile?.id || m.meeting_attendees?.some((a: any) => a.user_id === profile?.id));
+          setMeetings(myData);
+        } else {
+          setMeetings(data);
+        }
       }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {

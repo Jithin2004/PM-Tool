@@ -47,7 +47,7 @@ export function ProjectWorkspace() {
     }
 
     // Sort by recent activity
-    return filtered.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return [...filtered].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [projects, activeProjects, completedProjects, highRiskProjects, filterMode, searchTerm]);
 
   return (

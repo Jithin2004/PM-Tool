@@ -17,8 +17,10 @@ export default function DecisionCenter() {
       .eq('workspace_id', workspace.id)
       .order('created_at', { ascending: false })
       .limit(10)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         setApprovals(data || []);
+      })
+      .finally(() => {
         setLoading(false);
       });
   }, [workspace?.id]);

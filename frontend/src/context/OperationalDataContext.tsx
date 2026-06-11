@@ -242,57 +242,60 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      if (user && profile && workspace?.id) {
-        // ── Phase 1: critical path — projects, profiles, teams, settings ────
-        // UI becomes interactive as soon as this resolves (~1 network round-trip)
-        const critical = await refreshOperationalCritical(workspace.id);
-        if (!mounted) return;
-
-        if (critical.projects) setProjects(critical.projects);
-        if (critical.profiles) setProfiles(critical.profiles);
-        if (critical.teams) setTeams(critical.teams);
-        if (critical.workspaceSettingsBlob) setWorkspaceSettingsBlob(critical.workspaceSettingsBlob);
-
-        // Clear the loading spinner — page renders now
-        setLoading(false);
-
-        // ── Phase 2: secondary — attendance, tasks, skills (background) ────
-        // Small delay so the browser paints the first frame before fetching more
-        setTimeout(async () => {
-          if (!mounted || !workspace?.id) return;
-          const secondary = await refreshOperationalSecondary(workspace.id);
+      try {
+        if (user && profile && workspace?.id) {
+          // ── Phase 1: critical path — projects, profiles, teams, settings ────
+          // UI becomes interactive as soon as this resolves (~1 network round-trip)
+          const critical = await refreshOperationalCritical(workspace.id);
           if (!mounted) return;
-
-          if (secondary.attendanceRows) setAttendanceRows(secondary.attendanceRows);
-          if (secondary.allocationPeriods) setAllocationPeriods(secondary.allocationPeriods);
-          if (secondary.skills) setSkills(secondary.skills);
-          if (secondary.userSkills) setUserSkills(secondary.userSkills);
-          if (secondary.serverMetrics) setServerMetrics(secondary.serverMetrics);
-
-          // Background governance (non-blocking)
-          if (critical.workspaceSettingsBlob?.execution_blockers) {
-            const blockers = critical.workspaceSettingsBlob.execution_blockers as any[];
-            DataGovernanceEngine.partitionBlockerHistory(workspace.id, blockers).then(result => {
-              if (result.archivedCount > 0) updateWorkspaceSettings({ execution_blockers: result.active });
+  
+          if (critical.projects) setProjects(critical.projects);
+          if (critical.profiles) setProfiles(critical.profiles);
+          if (critical.teams) setTeams(critical.teams);
+          if (critical.workspaceSettingsBlob) setWorkspaceSettingsBlob(critical.workspaceSettingsBlob);
+  
+          // Clear the loading spinner — page renders now
+          setLoading(false);
+  
+          // ── Phase 2: secondary — attendance, tasks, skills (background) ────
+          // Small delay so the browser paints the first frame before fetching more
+          setTimeout(async () => {
+            if (!mounted || !workspace?.id) return;
+            const secondary = await refreshOperationalSecondary(workspace.id);
+            if (!mounted) return;
+  
+            if (secondary.attendanceRows) setAttendanceRows(secondary.attendanceRows);
+            if (secondary.allocationPeriods) setAllocationPeriods(secondary.allocationPeriods);
+            if (secondary.skills) setSkills(secondary.skills);
+            if (secondary.userSkills) setUserSkills(secondary.userSkills);
+            if (secondary.serverMetrics) setServerMetrics(secondary.serverMetrics);
+  
+            // Background governance (non-blocking)
+            if (critical.workspaceSettingsBlob?.execution_blockers) {
+              const blockers = critical.workspaceSettingsBlob.execution_blockers as any[];
+              DataGovernanceEngine.partitionBlockerHistory(workspace.id, blockers).then(result => {
+                if (result.archivedCount > 0) updateWorkspaceSettings({ execution_blockers: result.active });
+              }).catch(console.error);
+            }
+            DataGovernanceEngine.compressAuditHistory(workspace.id).catch(console.error);
+            DataGovernanceEngine.aggregateObservabilitySignals(workspace.id).catch(console.error);
+            if (secondary.serverMetrics) {
+              DataGovernanceEngine.snapshotOrganizationalIntelligence(workspace.id, secondary.serverMetrics).catch(console.error);
+            }
+            DataGovernanceEngine.verifyArchivalConsistency(workspace.id, 'blocker_archive').then(isValid => {
+              if (!isValid) console.warn('Archival consistency warning: Blocker archive integrity compromised');
             }).catch(console.error);
-          }
-          DataGovernanceEngine.compressAuditHistory(workspace.id).catch(console.error);
-          DataGovernanceEngine.aggregateObservabilitySignals(workspace.id).catch(console.error);
-          if (secondary.serverMetrics) {
-            DataGovernanceEngine.snapshotOrganizationalIntelligence(workspace.id, secondary.serverMetrics).catch(console.error);
-          }
-          DataGovernanceEngine.verifyArchivalConsistency(workspace.id, 'blocker_archive').then(isValid => {
-            if (!isValid) console.warn('Archival consistency warning: Blocker archive integrity compromised');
-          }).catch(console.error);
-        }, 100);
-
-      } else if (!user) {
-        setProjects([]);
-        setTeams([]);
-        setProfiles([]);
-        setAttendanceRows([]);
-        if (mounted) setLoading(false);
-      } else {
+          }, 100);
+  
+        } else if (!user) {
+          setProjects([]);
+          setTeams([]);
+          setProfiles([]);
+          setAttendanceRows([]);
+        }
+      } catch (err) {
+        console.error('Failed to load operational data', err);
+      } finally {
         if (mounted) setLoading(false);
       }
     };

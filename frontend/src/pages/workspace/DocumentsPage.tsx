@@ -16,16 +16,19 @@ export default function DocumentsPage() {
     if (!workspace?.id) return;
     setLoading(true);
     
-    const { data, error } = await supabase
-      .from('document_references')
-      .select('*')
-      .eq('workspace_id', workspace.id)
-      .order('created_at', { ascending: false });
-      
-    if (!error && data) {
-      setDocuments(data);
+    try {
+      const { data, error } = await supabase
+        .from('document_references')
+        .select('*')
+        .eq('workspace_id', workspace.id)
+        .order('created_at', { ascending: false });
+        
+      if (!error && data) {
+        setDocuments(data);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDelete = async () => {

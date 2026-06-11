@@ -18,16 +18,19 @@ export default function RequirementsPage() {
     if (!workspace?.id) return;
     setLoading(true);
     
-    const { data, error } = await supabase
-      .from('requirements')
-      .select('*')
-      .eq('workspace_id', workspace.id)
-      .order('created_at', { ascending: false });
-      
-    if (!error && data) {
-      setRequirements(data);
+    try {
+      const { data, error } = await supabase
+        .from('requirements')
+        .select('*')
+        .eq('workspace_id', workspace.id)
+        .order('created_at', { ascending: false });
+        
+      if (!error && data) {
+        setRequirements(data);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
