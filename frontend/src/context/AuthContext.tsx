@@ -115,8 +115,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!data) {
           setProfileHydrating(true);
-          const delays = [250, 500, 1000, 2000];
-          for (let i = 0; i < delays.length; i++) {
+          // Optimized retry logic: fewer delays for Render's reliable database
+          // In production, first query usually succeeds; retries are for eventual consistency edge cases
+          const maxRetries = 2; // Reduced from 4
+          const delays = [100, 300]; // Reduced from [250, 500, 1000, 2000]
+          
+          for (let i = 0; i < maxRetries; i++) {
             await new Promise(r => setTimeout(r, delays[i]));
             const retry = await supabase
               .from('users')
@@ -339,15 +343,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Explicitly initialize auth state
     initAuth();
 
-    // Bulletproof fallback to absolutely prevent infinite loading screens
-    // Extended to 15s to support cold starts and network delays on reload.
+    // Bulletproof fallback to prevent infinite loading screens
+    // 10 seconds is reasonable: 400ms retries + network latency + processing
     if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
     safetyTimeoutRef.current = setTimeout(() => {
       if (safetyTimeoutRef.current) {
         setLoading(false);
         safetyTimeoutRef.current = null;
       }
-    }, 15000);
+    }, 10000);
     const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 

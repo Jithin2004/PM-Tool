@@ -287,11 +287,20 @@ exports.adminDisableKey = async (req, res) => {
 };
 
 // 6. Admin API: View Activations
+// 6. Admin API: View All License Activations
 exports.adminGetActivations = async (req, res) => {
     try {
+        const limit = Math.min(parseInt(req.query.limit, 10) || 100, 1000); // Cap at 1000
+        const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
+        
         // Excludes Mongo document IDs and internal metadata fields
-        const licenses = await License.find({}, { _id: 0, __v: 0 }).lean();
-        res.json(licenses);
+        const licenses = await License.find({}, { _id: 0, __v: 0 })
+            .limit(limit)
+            .skip(skip)
+            .lean();
+        
+        const total = await License.countDocuments({});
+        res.json({ data: licenses, total, limit, skip });
     } catch (error) {
         console.error('Admin fetch activations error:', error);
         res.status(500).json({ error: 'Failed to fetch activations' });
@@ -301,9 +310,18 @@ exports.adminGetActivations = async (req, res) => {
 // 7. Admin API: View Audit Events
 exports.adminGetEvents = async (req, res) => {
     try {
+        const limit = Math.min(parseInt(req.query.limit, 10) || 100, 1000); // Cap at 1000
+        const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
+        
         // Excludes Mongo document IDs
-        const events = await AuditEvent.find({}, { _id: 0, __v: 0 }).sort({ timestamp: -1 }).lean();
-        res.json(events);
+        const events = await AuditEvent.find({}, { _id: 0, __v: 0 })
+            .sort({ timestamp: -1 })
+            .limit(limit)
+            .skip(skip)
+            .lean();
+        
+        const total = await AuditEvent.countDocuments({});
+        res.json({ data: events, total, limit, skip });
     } catch (error) {
         console.error('Admin fetch events error:', error);
         res.status(500).json({ error: 'Failed to fetch audit events' });

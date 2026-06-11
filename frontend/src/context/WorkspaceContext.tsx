@@ -149,13 +149,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     loadWorkspace();
 
-    // Bulletproof fallback to absolutely prevent infinite loading screens
-    // Extended to 15s to support cold starts and network delays on reload.
-    const safetyTimeout = setTimeout(() => {
-      if (active) {
-        setLoading(false);
-      }
-    }, 15000);
+      // Bulletproof fallback to prevent infinite loading screens
+      // 10 seconds is reasonable for Render with reliable connectivity
+      const safetyTimeout = setTimeout(() => {
+        if (active) {
+          setLoading(false);
+        }
+      }, 10000);
 
     return () => {
       active = false;

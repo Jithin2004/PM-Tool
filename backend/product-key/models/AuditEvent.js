@@ -10,24 +10,31 @@ const auditEventSchema = new mongoose.Schema({
       'license_revoked', 
       'verification_failed', 
       'activation_limit_reached'
-    ] 
+    ],
+    index: true
   },
   timestamp: { 
     type: Date, 
     default: Date.now,
-    required: true 
+    required: true,
+    index: true
   },
   reason: { 
     type: String 
   },
   device_hash: { 
-    type: String 
+    type: String,
+    index: true
   },
   license_key: { 
     type: String,
-    required: true 
+    required: true,
+    index: true
   }
 });
+
+// Compound index for common query patterns (license_key + timestamp DESC)
+auditEventSchema.index({ license_key: 1, timestamp: -1 });
 
 // Strip MongoDB metadata for safety
 const stripSecrets = (doc, ret) => {
