@@ -296,18 +296,25 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   const isSidebarItemActive = (path: string): boolean => {
     const current = window.location.pathname;
-    if (path === '/overview') return current === '/overview' || current === '/';
-    if (path === '/workspace') return current === '/workspace' || current.startsWith('/projects/');
-    if (path === '/execution') {
+    // Strip query parameters from the path being checked (e.g., '/control/identity?tab=roles' → '/control/identity')
+    const pathWithoutQuery = path.split('?')[0];
+    
+    if (pathWithoutQuery === '/overview') return current === '/overview' || current === '/';
+    if (pathWithoutQuery === '/workspace') return current === '/workspace' || current.startsWith('/projects/');
+    if (pathWithoutQuery === '/execution') {
       return current.startsWith('/execution') && !current.includes('timeline');
     }
-    if (path === '/execution/timeline') return current.includes('timeline');
-    if (path === '/resources') return current === '/resources' || current.startsWith('/resources/logistics');
-    if (path === '/control/identity') return current === '/control/identity' || current === '/control';
-    if (path === '/control/settings') {
+    if (pathWithoutQuery === '/execution/timeline') return current.includes('timeline');
+    if (pathWithoutQuery === '/resources') return current === '/resources' || current.startsWith('/resources/logistics');
+    if (pathWithoutQuery === '/control/identity') return current === '/control/identity' || current === '/control' || current.startsWith('/control/identity/');
+    if (pathWithoutQuery === '/control/settings') {
       return current === '/control/settings' || current.startsWith('/control/settings/');
     }
-    return current === path || current.startsWith(`${path}/`);
+    // For admin routes (/control/*), use prefix matching to handle nested paths
+    if (current.startsWith('/control/') && pathWithoutQuery.startsWith('/control/')) {
+      return current === pathWithoutQuery || current.startsWith(`${pathWithoutQuery}/`);
+    }
+    return current === pathWithoutQuery || current.startsWith(`${pathWithoutQuery}/`);
   };
 
   const visibleDomains = useMemo(() => {

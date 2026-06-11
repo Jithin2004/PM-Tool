@@ -161,7 +161,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       active = false;
       clearTimeout(safetyTimeout);
     };
-  }, [profile, authLoading]);
+  }, [profile, authLoading, isSupabaseConfigured]);
 
   const createWorkspace = useCallback(async ({ name, settings, templateId, executionMode, defaultLanes, workflowRules }: CreateWorkspaceInput) => {
     if (!user) throw new Error('You must be signed in to create a workspace.');
