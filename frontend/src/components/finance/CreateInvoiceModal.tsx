@@ -95,6 +95,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
     }
   }, [paymentTerms, issueDate, isOpen]);
 
+  // Early return must be after ALL hooks are defined (Rules of Hooks)
   if (!isOpen) return null;
 
   const client = clients.find(c => c.id === selectedClient);

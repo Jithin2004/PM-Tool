@@ -69,7 +69,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     return (profiles || []).filter((p: any) => p.status !== 'archived');
   }, [profiles]);
 
-  if (!isOpen) return null;
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleUpdate = (field: keyof CreateProjectInput, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -126,8 +126,6 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     });
   };
 
-  const [isSuccess, setIsSuccess] = useState(false);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) {
@@ -168,7 +166,8 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     tabs.push({ id: 'finance', label: 'Finance', icon: DollarSign });
   }
 
-
+  // Early return must be after ALL hooks are defined (Rules of Hooks)
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-bg/90 backdrop-blur-sm p-4 overflow-y-auto">

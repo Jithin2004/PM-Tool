@@ -26,6 +26,7 @@ export function TaskDelayReasonModal({ task, isOpen, onClose, onSubmit }: TaskDe
 
   useEscapeKey(isOpen, onClose);
 
+  // Early return must be after ALL hooks are defined (Rules of Hooks)
   if (!isOpen) return null;
 
   return (

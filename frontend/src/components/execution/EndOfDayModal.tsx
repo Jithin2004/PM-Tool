@@ -95,6 +95,7 @@ export function EndOfDayModal({ isOpen, onClose, currentUser, workspaceId, notif
     }
   };
 
+  // Early return must be after ALL hooks are defined (Rules of Hooks)
   if (!isOpen) return null;
 
   return (

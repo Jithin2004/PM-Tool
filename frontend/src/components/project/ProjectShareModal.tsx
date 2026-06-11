@@ -118,6 +118,7 @@ export function ProjectShareModal({ projectId, workspaceId, isOpen, onClose, not
     notify('Link copied to clipboard.', 'success');
   };
 
+  // Early return must be after ALL hooks are defined (Rules of Hooks)
   if (!isOpen) return null;
 
   return (

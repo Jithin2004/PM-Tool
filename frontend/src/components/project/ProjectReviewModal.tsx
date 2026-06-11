@@ -71,6 +71,7 @@ export function ProjectReviewModal({ project, workspaceId, userId, isOpen, onClo
     }
   };
 
+  // Early return must be after ALL hooks are defined (Rules of Hooks)
   if (!isOpen) return null;
 
   return (
