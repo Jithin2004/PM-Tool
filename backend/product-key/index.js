@@ -24,17 +24,23 @@ app.post('/activate', licenseController.activateLicense);
 app.get('/addLicense', licenseController.addLicense);
 
 // Base Health Fallback Encodings
-app.get('/', (req, res) => {
-    res.status(200).json({
-        message: 'welcome to pm-tool license server'
-    });
+// ── Inline Public Licensing Endpoints with Fail-Safe Header Guards ──
+app.get('/verify', (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    
+    // If testing directly in a browser tab without a token, send a clean 401 JSON immediately
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ 
+            valid: false, 
+            message: 'Missing or invalid authorization token. Direct browser access is not supported.' 
+        });
+    }
+    // If a token is present, pass it safely to the controller
+    return licenseController.verifyLicense(req, res, next);
 });
 
-app.get('/test', (req, res) => {
-    res.status(200).json({
-        message: 'test route success backend running successfully'
-    });
-});
+app.post('/activate', licenseController.activateLicense);
+app.get('/addLicense', licenseController.addLicense);
 
 // App Startup Process
 app.listen(PORT, async () => {
