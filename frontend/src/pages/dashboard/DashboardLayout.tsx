@@ -1277,20 +1277,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             )}
           </AnimatePresence>
 
-          {getLicenseInfo()?.offlineVerified && (
-            <div className="bg-rose-500/20 border-b border-rose-500/30 text-rose-400 text-center py-1.5 text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2">
-              <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-              Unable to verify license. Last verified: {new Date(getLicenseInfo()?.verifiedAt || 0).toLocaleString()}
-            </div>
-          )}
-
-          {workspace?.status === 'sandbox' && (
-            <div className="bg-amber-500/20 border-b border-amber-500/30 text-amber-500 text-center py-1.5 text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Sandbox Environment — All changes are temporary
-            </div>
-          )}
-
           {isSandboxMode && (
             <div className="bg-blue-500/20 border-b border-blue-500/30 text-blue-400 text-center py-1.5 text-[10px] font-bold tracking-widest uppercase flex justify-center items-center gap-2">
               <Shield className="w-3.5 h-3.5" />
