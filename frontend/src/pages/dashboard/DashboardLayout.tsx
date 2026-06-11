@@ -178,14 +178,6 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     ]
   },
   {
-    id: 'integrations',
-    label: 'Integrations',
-    iconName: 'Link2',
-    subsections: [
-      { label: 'Connected Accounts', path: '/control/connections', capability: 'manage_integrations' }
-    ]
-  },
-  {
     id: 'admin',
     label: 'Admin',
     iconName: 'Settings',

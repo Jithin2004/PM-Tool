@@ -41,6 +41,48 @@ async function fetchTasks(workspaceId: string): Promise<Task[]> {
   return (data || []) as Task[];
 }
 
+/**
+ * Phase 1 — Critical path fetch.
+ * Returns the minimum data needed to render the first visible screen.
+ * Completes in ~1-2 round trips instead of 9.
+ */
+export async function refreshOperationalCritical(workspaceId: string): Promise<Partial<OperationalSnapshot>> {
+  const safeFetch = async <T>(promise: Promise<T>, fallback: T): Promise<T> => {
+    try { return await promise; } catch { return fallback; }
+  };
+
+  const [projects, profiles, workspaceSettingsBlob, teams] = await Promise.all([
+    safeFetch(fetchProjects(workspaceId), []),
+    safeFetch(fetchWorkspaceProfiles(workspaceId), []),
+    safeFetch(fetchWorkspaceSettingsBlob(workspaceId), {}),
+    safeFetch(fetchWorkspaceTeams(workspaceId), []),
+  ]);
+
+  return { projects, profiles, workspaceSettingsBlob, teams };
+}
+
+/**
+ * Phase 2 — Secondary fetch (runs after UI is visible).
+ * Fetches attendance, skills, allocationPeriods, and serverMetrics.
+ */
+export async function refreshOperationalSecondary(workspaceId: string): Promise<Partial<OperationalSnapshot>> {
+  const safeFetch = async <T>(promise: Promise<T>, fallback: T): Promise<T> => {
+    try { return await promise; } catch { return fallback; }
+  };
+
+  const [attendanceRows, allocationPeriods, skills, userSkills, tasks] = await Promise.all([
+    safeFetch(fetchWorkspaceAttendance(workspaceId), []),
+    safeFetch(import('./capacityEngine').then(m => m.capacityEngine.fetchAllocationPeriods(workspaceId)), []),
+    safeFetch(fetchSkills(workspaceId), []),
+    safeFetch(fetchUserSkills(workspaceId), []),
+    safeFetch(fetchTasks(workspaceId), []),
+  ]);
+
+  const serverMetrics = computeOperationalIntelligence([], tasks);
+
+  return { attendanceRows, allocationPeriods, skills, userSkills, serverMetrics };
+}
+
 export async function refreshOperationalSnapshot(workspaceId: string): Promise<OperationalSnapshot> {
   const safeFetch = async <T>(promise: Promise<T>, fallback: T): Promise<T> => {
     try {
