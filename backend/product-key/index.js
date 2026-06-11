@@ -12,6 +12,17 @@ if (missingEnv.length > 0) {
     console.error(`[FATAL] Required environment variables missing: ${missingEnv.join(', ')}. Exiting...`);
     process.exit(1);
 }
+require('dotenv').config();
+const express = require('express');
+const connectDB = require('./config/db');
+
+const app = express();
+const PORT = process.env.PORT || 10000; // Render injects PORT automatically
+
+// Fail-safe default fallback configuration for production environments
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_production_jwt_secret_key';
+const LICENSE_SECRET = process.env.LICENSE_SECRET || 'fallback_production_license_secret_key';
+
 const dbUri = process.env.MONGO_URI || process.env.DB;
 if (!dbUri) {
     console.error('[FATAL] Database connection URI missing (MONGO_URI or DB). Exiting...');
