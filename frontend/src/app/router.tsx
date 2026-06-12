@@ -17,7 +17,23 @@ import { normalizePath, parseProjectRoute, isRegisteredPath } from './routeRegis
 // ── Lazy-loaded route pages ──
 
 const withRetry = (componentImport: () => Promise<any>) => {
-  return lazy(componentImport);
+  return lazy(() => {
+    const importStr = componentImport.toString();
+    const chunkNameMatch = importStr.match(/import\(['"]([^'"]+)['"]\)/);
+    const chunkName = chunkNameMatch ? chunkNameMatch[1] : 'unknown chunk';
+    
+    console.log(`[lazy] importing: ${chunkName}`);
+    
+    return componentImport()
+      .then(m => {
+        console.log(`[lazy] resolved: ${chunkName}`);
+        return m;
+      })
+      .catch(error => {
+        console.error(`[withRetry] error:`, error);
+        throw error;
+      });
+  });
 };
 
 const WorkspaceSetupWizard = withRetry(() => import('../pages/onboarding/WorkspaceSetupWizard').then(m => ({ default: m.WorkspaceSetupWizard })));
