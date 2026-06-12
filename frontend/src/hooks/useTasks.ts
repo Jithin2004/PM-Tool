@@ -379,9 +379,11 @@ export function useTasks(workspaceId?: string) {
 
   const fetchTasks = useCallback(async (abortSignal?: AbortSignal, fetchAllLoaded = false) => {
     if (!workspaceId) {
-      setTasks([]);
-      setDependencies([]);
-      setLoading(false);
+      if (!user) {
+        setTasks([]);
+        setDependencies([]);
+        setLoading(false);
+      }
       return;
     }
 

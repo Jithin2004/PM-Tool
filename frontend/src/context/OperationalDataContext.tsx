@@ -244,7 +244,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     const load = async () => {
       try {
         if (user && profile && workspace?.id) {
-          // ── Phase 1: critical path — projects, profiles, teams, settings ────
+          // ── Phase 1: critical path – projects, profiles, teams, settings ────
           // UI becomes interactive as soon as this resolves (~1 network round-trip)
           const critical = await refreshOperationalCritical(workspace.id);
           if (!mounted) return;
@@ -254,10 +254,10 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           if (critical.teams) setTeams(critical.teams);
           if (critical.workspaceSettingsBlob) setWorkspaceSettingsBlob(critical.workspaceSettingsBlob);
   
-          // Clear the loading spinner — page renders now
+          // Clear the loading spinner – page renders now
           setLoading(false);
   
-          // ── Phase 2: secondary — attendance, tasks, skills (background) ────
+          // ── Phase 2: secondary – attendance, tasks, skills (background) ────
           // Small delay so the browser paints the first frame before fetching more
           setTimeout(async () => {
             if (!mounted || !workspace?.id) return;
@@ -292,10 +292,10 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           setTeams([]);
           setProfiles([]);
           setAttendanceRows([]);
+          setLoading(false);
         }
       } catch (err) {
         console.error('Failed to load operational data', err);
-      } finally {
         if (mounted) setLoading(false);
       }
     };
