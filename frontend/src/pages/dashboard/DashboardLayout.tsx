@@ -62,6 +62,7 @@ import { GuidedTour, TourStep } from '../../components/onboarding/GuidedTour';
 import { WorkSessionManager } from '../../components/execution/WorkSessionManager';
 import { cloneWorkspaceToSandbox } from '../../services/workspaceService';
 import { EndOfDayModal } from '../../components/execution/EndOfDayModal';
+import { prefetchRouteByPath } from '../../app/router';
 // Sunset imported above
 
 interface ConfirmState {
@@ -1156,6 +1157,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 </button>
                 <button
                   onClick={() => navigateTo('/control/settings')}
+                  onMouseEnter={() => prefetchRouteByPath('/control/settings')}
                   className={`p-1.5 rounded-md transition-colors cursor-pointer ${isSidebarCollapsed ? '' : 'ml-1'}`}
                   style={{ color: 'var(--pm-on-surface-variant)' }}
                   onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
@@ -1314,6 +1316,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   <button
                     key={sub.path}
                     onClick={() => navigateTo(sub.path)}
+                    onMouseEnter={() => prefetchRouteByPath(sub.path)}
                     className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all whitespace-nowrap`}
                     style={isSubActive ? {
                       background: 'var(--pm-primary)',

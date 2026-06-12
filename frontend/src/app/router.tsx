@@ -94,15 +94,42 @@ const SharedProjectDashboard = withRetry(() => import('../pages/shared/SharedPro
 const DEFAULT_AUTH_REDIRECT = '/overview';
 
 function RouteFallback() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShow(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!show) return <div className="min-h-[60vh]" />;
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center font-geist text-[10px] uppercase tracking-widest text-text-tertiary">
       <div className="flex items-center gap-3">
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-400" />
-        Loading workspace...
+        <span className="opacity-70">Loading view...</span>
       </div>
     </div>
   );
 }
+
+// Map of prefixes to dynamic import chunks for prefetching
+export const prefetchRouteByPath = (path: string) => {
+  try {
+    if (path.startsWith('/overview')) import('../components/overview/DailyCommandCenter');
+    else if (path.startsWith('/execution/board')) import('../pages/execution/BoardPage');
+    else if (path.startsWith('/execution/timeline')) import('../pages/execution/TimelinePage');
+    else if (path.startsWith('/execution/gantt')) import('../pages/execution/GanttPage');
+    else if (path.startsWith('/workspace/portfolio')) import('../pages/workspace/PortfolioPage');
+    else if (path.startsWith('/workspace') && !path.includes('/reports') && !path.includes('/decisions')) import('../pages/workspace/ProjectsPage');
+    else if (path.startsWith('/resources/teams')) import('../pages/resources/TeamsPage');
+    else if (path.startsWith('/workspace/reports')) import('../pages/workspace/ReportsCenter');
+    else if (path.startsWith('/workspace/decisions')) import('../pages/workspace/DecisionsPage');
+    else if (path.startsWith('/resources/finance')) import('../pages/resources/FinancePage');
+    else if (path.startsWith('/control/settings')) import('../pages/control/SettingsPage');
+  } catch (e) {
+    // Ignore prefetch errors
+  }
+};
 
 function AccessRestricted() {
   return (
