@@ -58,7 +58,7 @@ export function TaskPulse({ taskId, users, currentUserProfile, notify }: TaskPul
     } finally {
       setLoading(false);
     }
-  };
+  }, [task, taskId, workspace?.id, fetchTaskComments]);
 
   const pulseEvents = useMemo(() => {
     const events: PulseEvent[] = [];
