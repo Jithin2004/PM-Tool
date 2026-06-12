@@ -38,11 +38,15 @@ export function TaskPulse({ taskId, users, currentUserProfile, notify }: TaskPul
 
   useEffect(() => {
     if (workspace?.id && taskId) {
-      loadData();
+      fetchPulse();
     }
   }, [taskId, workspace?.id]);
 
-  const loadData = async () => {
+  const fetchPulse = useCallback(async () => {
+    if (!task) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [fetchedComments, fetchedLogs] = await Promise.all([

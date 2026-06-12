@@ -16,7 +16,10 @@ export default function ApprovalsPage() {
   const [selectedApproval, setSelectedApproval] = useState<any | null>(null);
 
   const fetchApprovals = async () => {
-    if (!workspace?.id || !profile?.id) return;
+    if (!workspace?.id || !profile?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     
     try {

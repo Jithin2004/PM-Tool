@@ -13,7 +13,10 @@ export default function DocumentsPage() {
   const [documentToDelete, setDocumentToDelete] = useState<any | null>(null);
 
   const fetchDocuments = async () => {
-    if (!workspace?.id) return;
+    if (!workspace?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     
     try {

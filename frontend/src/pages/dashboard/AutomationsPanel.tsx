@@ -34,7 +34,10 @@ export default function AutomationsPanel() {
   const [newActionType, setNewActionType] = useState('send_notification');
 
   const loadData = useCallback(async () => {
-    if (!wsId) return;
+    if (!wsId) {
+      setLoading(false);
+      return;
+    }
     try {
       const [r, t] = await Promise.all([fetchAutomationRules(wsId), fetchTemplates()]);
       setRules(r);

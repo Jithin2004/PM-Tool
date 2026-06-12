@@ -19,7 +19,10 @@ export default function MeetingsPage() {
   const [selectedMeeting, setSelectedMeeting] = useState<any | null>(null);
 
   const fetchMeetings = async () => {
-    if (!workspace?.id) return;
+    if (!workspace?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     
     let query = supabase.from('meetings').select('*, meeting_attendees(user_id, attended)').eq('workspace_id', workspace.id);

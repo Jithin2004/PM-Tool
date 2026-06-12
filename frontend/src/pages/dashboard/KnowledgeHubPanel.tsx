@@ -40,7 +40,10 @@ export default function KnowledgeHubPanel() {
   }, []);
 
   const loadDocs = useCallback(async () => {
-    if (!wsId) return;
+    if (!wsId) {
+      setLoading(false);
+      return;
+    }
     if (tab === 'archived') {
       const data = searchQuery.trim()
         ? (await fetchArchivedDocuments(wsId)).filter(d =>

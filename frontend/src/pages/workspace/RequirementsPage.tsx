@@ -15,7 +15,10 @@ export default function RequirementsPage() {
   const [selectedRequirement, setSelectedRequirement] = useState<any | null>(null);
 
   const fetchRequirements = async () => {
-    if (!workspace?.id) return;
+    if (!workspace?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     
     try {
