@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
+import { useOperationalData } from '../context/OperationalDataContext';
 import { canAccessRoute } from '../core/auth/permissions';
 import type { UserRole } from '../types';
 import {
@@ -180,9 +181,23 @@ function guardRoute(role: UserRole | undefined, path: string): boolean {
 }
 
 function RouteShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { loading } = useOperationalData();
+  const [remountKey, setRemountKey] = useState(0);
+
+  useEffect(() => {
+    if (!loading) {
+      // Force a remount 500ms after loading finishes, as a safety net for lost wake-ups
+      const timer = setTimeout(() => {
+        setRemountKey(k => k + 1);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
   return (
     <DashboardLayout>
-      <Suspense fallback={FALLBACK}>{children}</Suspense>
+      <Suspense key={`${pathname}-${remountKey}`} fallback={FALLBACK}>{children}</Suspense>
     </DashboardLayout>
   );
 }

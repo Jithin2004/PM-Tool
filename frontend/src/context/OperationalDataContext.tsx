@@ -6,6 +6,7 @@ import React, {
   useMemo,
   useState,
   useRef,
+  startTransition,
 } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { DataGovernanceEngine } from '../core/governance/dataGovernanceEngine';
@@ -253,14 +254,16 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           console.log('[OperationalDataContext] refreshOperationalCritical returned', critical);
           if (!mounted) return;
   
-          if (critical.projects) setProjects(critical.projects);
-          if (critical.profiles) setProfiles(critical.profiles);
-          if (critical.teams) setTeams(critical.teams);
-          if (critical.workspaceSettingsBlob) setWorkspaceSettingsBlob(critical.workspaceSettingsBlob);
-  
-          // Clear the loading spinner – page renders now
-          console.log('[OperationalDataContext] calling setLoading(false)');
-          setLoading(false);
+          startTransition(() => {
+            if (critical.projects) setProjects(critical.projects);
+            if (critical.profiles) setProfiles(critical.profiles);
+            if (critical.teams) setTeams(critical.teams);
+            if (critical.workspaceSettingsBlob) setWorkspaceSettingsBlob(critical.workspaceSettingsBlob);
+    
+            // Clear the loading spinner – page renders now
+            console.log('[OperationalDataContext] calling setLoading(false)');
+            setLoading(false);
+          });
   
           // ── Phase 2: secondary – attendance, tasks, skills (background) ────
           // Small delay so the browser paints the first frame before fetching more
