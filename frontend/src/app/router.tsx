@@ -112,22 +112,40 @@ function RouteFallback() {
   );
 }
 
-// Map of prefixes to dynamic import chunks for prefetching
+// Prefetch cache to avoid duplicate import() calls
+const _prefetched = new Set<string>();
+
+// Map of route prefixes to dynamic import chunks for prefetching
 export const prefetchRouteByPath = (path: string) => {
+  // Normalize: strip query params for matching
+  const route = path.split('?')[0];
+  if (_prefetched.has(route)) return;
+  _prefetched.add(route);
+
   try {
-    if (path.startsWith('/overview')) import('../components/overview/DailyCommandCenter');
-    else if (path.startsWith('/execution/board')) import('../pages/execution/BoardPage');
-    else if (path.startsWith('/execution/timeline')) import('../pages/execution/TimelinePage');
-    else if (path.startsWith('/execution/gantt')) import('../pages/execution/GanttPage');
-    else if (path.startsWith('/workspace/portfolio')) import('../pages/workspace/PortfolioPage');
-    else if (path.startsWith('/workspace') && !path.includes('/reports') && !path.includes('/decisions')) import('../pages/workspace/ProjectsPage');
-    else if (path.startsWith('/resources/teams')) import('../pages/resources/TeamsPage');
-    else if (path.startsWith('/workspace/reports')) import('../pages/workspace/ReportsCenter');
-    else if (path.startsWith('/workspace/decisions')) import('../pages/workspace/DecisionsPage');
-    else if (path.startsWith('/resources/finance')) import('../pages/resources/FinancePage');
-    else if (path.startsWith('/control/settings')) import('../pages/control/SettingsPage');
-  } catch (e) {
-    // Ignore prefetch errors
+    if (route.startsWith('/overview')) import('../components/overview/DailyCommandCenter');
+    else if (route.startsWith('/execution/board')) import('../pages/execution/BoardPage');
+    else if (route.startsWith('/execution/timeline')) import('../pages/execution/TimelinePage');
+    else if (route.startsWith('/execution/gantt')) import('../pages/execution/GanttPage');
+    else if (route === '/workspace' || route.startsWith('/workspace/executive')) import('../pages/workspace/ProjectsPage');
+    else if (route.startsWith('/workspace/portfolio')) import('../pages/workspace/PortfolioPage');
+    else if (route.startsWith('/workspace/reports')) import('../pages/workspace/ReportsCenter');
+    else if (route.startsWith('/workspace/decisions')) import('../pages/workspace/DecisionsPage');
+    else if (route.startsWith('/workspace/documents')) import('../pages/workspace/DocumentsPage');
+    else if (route.startsWith('/workspace/knowledge')) import('../pages/workspace/KnowledgePage');
+    else if (route.startsWith('/workspace/requirements')) import('../pages/workspace/RequirementsPage');
+    else if (route.startsWith('/workspace/approvals')) import('../pages/workspace/ApprovalsPage');
+    else if (route.startsWith('/resources/teams')) import('../pages/resources/TeamsPage');
+    else if (route.startsWith('/resources/capacity')) import('../pages/resources/CapacityPage');
+    else if (route.startsWith('/resources/finance')) import('../pages/resources/FinancePage');
+    else if (route === '/resources') import('../pages/dashboard/LogisticsPanel');
+    else if (route.startsWith('/control/settings')) import('../pages/control/SettingsPage');
+    else if (route.startsWith('/control/audit')) import('../pages/control/AuditPage');
+    else if (route.startsWith('/control/identity')) import('../pages/dashboard/AdminPanel');
+    else if (route.startsWith('/control/automations')) import('../pages/dashboard/AutomationsPanel');
+    else if (route.startsWith('/control/system-health')) import('../pages/dashboard/ObservabilityPanel');
+  } catch {
+    // Ignore prefetch errors silently
   }
 };
 

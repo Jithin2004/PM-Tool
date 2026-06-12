@@ -375,6 +375,25 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     }
   };
 
+  // Prefetch the first subsection chunk when a sidebar domain is hovered
+  const handleDomainHover = (domainId: string) => {
+    const domain = visibleDomains.find(d => d.id === domainId);
+    if (domain && domain.subsections.length > 0) {
+      prefetchRouteByPath(domain.subsections[0].path);
+    }
+  };
+
+  // Eagerly prefetch the most common route chunks shortly after dashboard mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      prefetchRouteByPath('/overview');
+      prefetchRouteByPath('/execution/board');
+      prefetchRouteByPath('/resources/teams');
+      prefetchRouteByPath('/workspace');
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Strict route guards for Phase 5 UX role alignment
   useEffect(() => {
     if (loading || !profile?.role) return;
@@ -1074,6 +1093,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     color: 'rgba(156, 163, 175, 0.7)',
                   }}
                   onMouseEnter={e => {
+                    handleDomainHover(domain.id);
                     if (!isActive) {
                       (e.currentTarget as any).style.background = 'rgba(255, 255, 255, 0.03)';
                       (e.currentTarget as any).style.color = 'var(--pm-on-surface)';
@@ -1157,10 +1177,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 </button>
                 <button
                   onClick={() => navigateTo('/control/settings')}
-                  onMouseEnter={() => prefetchRouteByPath('/control/settings')}
                   className={`p-1.5 rounded-md transition-colors cursor-pointer ${isSidebarCollapsed ? '' : 'ml-1'}`}
                   style={{ color: 'var(--pm-on-surface-variant)' }}
-                  onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
+                  onMouseEnter={e => { prefetchRouteByPath('/control/settings'); (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
                   onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
                   title="Settings"
                 >
@@ -1316,7 +1335,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   <button
                     key={sub.path}
                     onClick={() => navigateTo(sub.path)}
-                    onMouseEnter={() => prefetchRouteByPath(sub.path)}
                     className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all whitespace-nowrap`}
                     style={isSubActive ? {
                       background: 'var(--pm-primary)',
@@ -1326,7 +1344,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       color: 'var(--pm-on-surface-variant)',
                       background: 'transparent'
                     }}
-                    onMouseEnter={e => { if (!isSubActive) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; } }}
+                    onMouseEnter={e => { prefetchRouteByPath(sub.path); if (!isSubActive) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; } }}
                     onMouseLeave={e => { if (!isSubActive) { (e.currentTarget as any).style.background = 'transparent'; } }}
                   >
                     {sub.label}
