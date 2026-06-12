@@ -113,6 +113,8 @@ function RouteFallback() {
   );
 }
 
+const FALLBACK = <RouteFallback />;
+
 function AccessRestricted() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] font-geist text-center px-4" style={{ color: 'var(--pm-on-surface)' }}>
@@ -180,7 +182,7 @@ function guardRoute(role: UserRole | undefined, path: string): boolean {
 function RouteShell({ children }: { children: React.ReactNode }) {
   return (
     <DashboardLayout>
-      <Suspense fallback={<RouteFallback />}>{children}</Suspense>
+      <Suspense fallback={FALLBACK}>{children}</Suspense>
     </DashboardLayout>
   );
 }
@@ -225,24 +227,24 @@ export function ResolveRouter() {
   // ── Public routes ──
 
   if (pathname === '/') {
-    return <Suspense fallback={<RouteFallback />}><LandingPage /></Suspense>;
+    return <Suspense fallback={FALLBACK}><LandingPage /></Suspense>;
   }
 
   if (pathname === '/privacy') {
-    return <Suspense fallback={<RouteFallback />}><PrivacyPage /></Suspense>;
+    return <Suspense fallback={FALLBACK}><PrivacyPage /></Suspense>;
   }
   if (pathname === '/terms') {
-    return <Suspense fallback={<RouteFallback />}><TermsPage /></Suspense>;
+    return <Suspense fallback={FALLBACK}><TermsPage /></Suspense>;
   }
   if (pathname === '/compliance') {
-    return <Suspense fallback={<RouteFallback />}><CompliancePage /></Suspense>;
+    return <Suspense fallback={FALLBACK}><CompliancePage /></Suspense>;
   }
   if (pathname === '/security') {
-    return <Suspense fallback={<RouteFallback />}><SecurityPage /></Suspense>;
+    return <Suspense fallback={FALLBACK}><SecurityPage /></Suspense>;
   }
 
   if (pathname.startsWith('/shared/project/')) {
-    return <Suspense fallback={<RouteFallback />}><SharedProjectDashboard /></Suspense>;
+    return <Suspense fallback={FALLBACK}><SharedProjectDashboard /></Suspense>;
   }
 
   if (pathname === '/activate') {
@@ -263,7 +265,7 @@ export function ResolveRouter() {
   if (pathname === '/password-setup') {
     // Dynamically load to avoid circular deps, or just mock inline for now
     const PasswordSetup = lazy(() => import('../components/auth/PasswordSetup').then(m => ({ default: m.PasswordSetup })));
-    return <Suspense fallback={<RouteFallback />}><PasswordSetup /></Suspense>;
+    return <Suspense fallback={FALLBACK}><PasswordSetup /></Suspense>;
   }
 
   if (workspaceLoading || authLoading || !profileResolved || profileHydrating) {

@@ -9,9 +9,11 @@ interface AppProvidersProps {
   children: React.ReactNode;
 }
 
+const GLOBAL_FALLBACK = <div className="flex h-screen w-screen bg-[#0b0c12]"></div>;
+
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <React.Suspense fallback={<div className="flex h-screen w-screen bg-[#0b0c12]"></div>}>
+    <React.Suspense fallback={GLOBAL_FALLBACK}>
       <ThemeProvider>
         <ObservabilityProvider>
           <AuthProvider>
