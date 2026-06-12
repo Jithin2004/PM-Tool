@@ -63,6 +63,7 @@ interface OperationalDataContextValue {
 export const OperationalDataContext = createContext<OperationalDataContextValue | null>(null);
 
 export function OperationalDataProvider({ children }: { children: React.ReactNode }) {
+  console.log('[OperationalDataContext] PROVIDER MOUNT/RENDER');
   const { user, profile, updateRole } = useAuth();
   const { workspace } = useWorkspace();
   const {
@@ -244,9 +245,12 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     const load = async () => {
       try {
         if (user && profile && workspace?.id) {
+          console.log('[OperationalDataContext] entering critical fetch branch');
           // ── Phase 1: critical path – projects, profiles, teams, settings ────
           // UI becomes interactive as soon as this resolves (~1 network round-trip)
+          console.log('[OperationalDataContext] calling refreshOperationalCritical');
           const critical = await refreshOperationalCritical(workspace.id);
+          console.log('[OperationalDataContext] refreshOperationalCritical returned', critical);
           if (!mounted) return;
   
           if (critical.projects) setProjects(critical.projects);
@@ -255,6 +259,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           if (critical.workspaceSettingsBlob) setWorkspaceSettingsBlob(critical.workspaceSettingsBlob);
   
           // Clear the loading spinner – page renders now
+          console.log('[OperationalDataContext] calling setLoading(false)');
           setLoading(false);
   
           // ── Phase 2: secondary – attendance, tasks, skills (background) ────
