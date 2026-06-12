@@ -380,7 +380,7 @@ export function useTasks(workspaceId?: string) {
   const fetchTasks = useCallback(async (abortSignal?: AbortSignal, fetchAllLoaded = false) => {
     if (!workspaceId) {
       if (!user) {
-        setTasks([]);
+        console.log('[useTasks] setTasks (empty)'); setTasks([]);
         setDependencies([]);
         setLoading(false);
       }
@@ -391,9 +391,9 @@ export function useTasks(workspaceId?: string) {
       // Offline fallback
       const localTasks = localStorage.getItem(`tasks_${workspaceId}`);
       if (localTasks) {
-        setTasks(JSON.parse(localTasks));
+        console.log('[useTasks] setTasks (localTasks)'); setTasks(JSON.parse(localTasks));
       } else {
-        setTasks([]);
+        console.log('[useTasks] setTasks (empty)'); setTasks([]);
       }
       const localDeps = localStorage.getItem(`task_dependencies_${workspaceId}`);
       if (localDeps) {
@@ -431,7 +431,7 @@ export function useTasks(workspaceId?: string) {
       if (abortSignal?.aborted) return;
       
       const fetchedTasks = normalizeTasksFromRows((data || []) as Record<string, unknown>[]);
-      setTasks(fetchedTasks);
+      console.log('[useTasks] setTasks (fetchedTasks)'); setTasks(fetchedTasks);
       if (!fetchAllLoaded) setPage(0);
       setHasMore(count !== null ? (to + 1) < count : false);
 
@@ -472,7 +472,7 @@ export function useTasks(workspaceId?: string) {
       if (err.name === 'AbortError' || abortSignal?.aborted) return;
       const localTasks = localStorage.getItem(`tasks_${workspaceId}`);
       if (localTasks) {
-        setTasks(JSON.parse(localTasks));
+        console.log('[useTasks] setTasks (localTasks)'); setTasks(JSON.parse(localTasks));
       }
       const localDeps = localStorage.getItem(`task_dependencies_${workspaceId}`);
       if (localDeps) {
@@ -540,7 +540,7 @@ export function useTasks(workspaceId?: string) {
         }
       }
 
-      setTasks(prev => {
+      console.log('[useTasks] setTasks (realtime)'); setTasks(prev => {
         const currentIds = new Set(prev.map(t => t.id));
         const finalUnique = newUnique.filter(t => !currentIds.has(t.id));
         return [...prev, ...finalUnique];
@@ -574,7 +574,7 @@ export function useTasks(workspaceId?: string) {
         const { eventType, new: newRecord, old: oldRecord } = payload;
         if (eventType === 'INSERT') {
           if (newRecord.deleted_at) return;
-          setTasks(prev => {
+          console.log('[useTasks] setTasks (realtime)'); setTasks(prev => {
             if (prev.some(t => t.id === newRecord.id)) return prev;
             return [normalizeTaskFromRow(newRecord as Record<string, unknown>), ...prev];
           });

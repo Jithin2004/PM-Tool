@@ -207,11 +207,11 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       if (!isValid) console.warn('Archival consistency warning: Blocker archive integrity compromised');
     }).catch(console.error);
 
-    setProjects(snapshot.projects);
-    setProfiles(snapshot.profiles);
-    setTeams(snapshot.teams);
+    console.log('[OperationalDataContext] setProjects (refreshAll)'); setProjects(snapshot.projects);
+    console.log('[OperationalDataContext] setProfiles (refreshAll)'); setProfiles(snapshot.profiles);
+    console.log('[OperationalDataContext] setTeams (refreshAll)'); setTeams(snapshot.teams);
     setAttendanceRows(snapshot.attendanceRows);
-    setWorkspaceSettingsBlob(snapshot.workspaceSettingsBlob);
+    console.log('[OperationalDataContext] setWorkspaceSettingsBlob (refreshAll)'); setWorkspaceSettingsBlob(snapshot.workspaceSettingsBlob);
     setServerMetrics(snapshot.serverMetrics);
     if (snapshot.allocationPeriods) setAllocationPeriods(snapshot.allocationPeriods);
     if (snapshot.skills) setSkills(snapshot.skills);
@@ -221,7 +221,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const refreshProjects = useCallback(async () => {
     if (!workspace?.id) return;
     const partial = await refreshOperationalPartial(workspace.id, ['projects', 'serverMetrics']);
-    if (partial.projects) setProjects(partial.projects);
+    if (partial.projects) console.log('[OperationalDataContext] setProjects (refreshProjects)'); setProjects(partial.projects);
     if (partial.serverMetrics) setServerMetrics(partial.serverMetrics);
   }, [workspace?.id]);
 
@@ -266,10 +266,10 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           if (!mounted) return;
   
           startTransition(() => {
-            if (critical.projects) setProjects(critical.projects);
-            if (critical.profiles) setProfiles(critical.profiles);
-            if (critical.teams) setTeams(critical.teams);
-            if (critical.workspaceSettingsBlob) setWorkspaceSettingsBlob(critical.workspaceSettingsBlob);
+            if (critical.projects) console.log('[OperationalDataContext] setProjects (critical)'); setProjects(critical.projects);
+            if (critical.profiles) console.log('[OperationalDataContext] setProfiles (critical)'); setProfiles(critical.profiles);
+            if (critical.teams) console.log('[OperationalDataContext] setTeams (critical)'); setTeams(critical.teams);
+            if (critical.workspaceSettingsBlob) console.log('[OperationalDataContext] setWorkspaceSettingsBlob (critical)'); setWorkspaceSettingsBlob(critical.workspaceSettingsBlob);
     
             // Clear the loading spinner – page renders now
             console.log('[OperationalDataContext] calling setLoading(false)');
@@ -307,9 +307,9 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           }, 100);
   
         } else if (!user) {
-          setProjects([]);
-          setTeams([]);
-          setProfiles([]);
+          console.log('[OperationalDataContext] setProjects (empty)'); setProjects([]);
+          console.log('[OperationalDataContext] setTeams (empty)'); setTeams([]);
+          console.log('[OperationalDataContext] setProfiles (empty)'); setProfiles([]);
           setAttendanceRows([]);
           setLoading(false);
         }
