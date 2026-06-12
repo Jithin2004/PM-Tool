@@ -17,22 +17,22 @@ import { normalizePath, parseProjectRoute, isRegisteredPath } from './routeRegis
 // ── Lazy-loaded route pages ──
 
 const withRetry = (componentImport: () => Promise<any>) => {
-  return lazy(() => {
-    const importStr = componentImport.toString();
-    const chunkNameMatch = importStr.match(/import\(['"]([^'"]+)['"]\)/);
-    const chunkName = chunkNameMatch ? chunkNameMatch[1] : 'unknown chunk';
-    
-    console.log(`[lazy] importing: ${chunkName}`);
-    
-    return componentImport()
-      .then(m => {
-        console.log(`[lazy] resolved: ${chunkName}`);
-        return m;
-      })
-      .catch(error => {
-        console.error(`[withRetry] error:`, error);
-        throw error;
-      });
+  return lazy(async () => {
+    try {
+      const module = await componentImport();
+      sessionStorage.removeItem('chunk_reload_count');
+      return module;
+    } catch (error: any) {
+      if (error?.message?.includes('Failed to fetch dynamically imported module')) {
+        const reloadCount = parseInt(sessionStorage.getItem('chunk_reload_count') || '0', 10);
+        if (reloadCount < 2) {
+          sessionStorage.setItem('chunk_reload_count', (reloadCount + 1).toString());
+          window.location.reload();
+          return { default: () => <RouteFallback /> };
+        }
+      }
+      return { default: () => <div className="flex items-center justify-center min-h-[50vh] p-8 text-center text-rose-400/80 font-mono text-sm tracking-tight border border-rose-500/10 rounded-lg bg-rose-500/5 max-w-md mx-auto mt-20">System partition failed to load. Please verify connection and refresh.</div> };
+    }
   });
 };
 
@@ -94,60 +94,15 @@ const SharedProjectDashboard = withRetry(() => import('../pages/shared/SharedPro
 const DEFAULT_AUTH_REDIRECT = '/overview';
 
 function RouteFallback() {
-  const [show, setShow] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setShow(true), 300);
-    return () => clearTimeout(t);
-  }, []);
-
-  if (!show) return <div className="min-h-[60vh]" />;
-
   return (
     <div className="flex min-h-[60vh] items-center justify-center font-geist text-[10px] uppercase tracking-widest text-text-tertiary">
       <div className="flex items-center gap-3">
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500/30 border-t-indigo-400" />
-        <span className="opacity-70">Loading view...</span>
+        Loading workspace...
       </div>
     </div>
   );
 }
-
-// Prefetch cache to avoid duplicate import() calls
-const _prefetched = new Set<string>();
-
-// Map of route prefixes to dynamic import chunks for prefetching
-export const prefetchRouteByPath = (path: string) => {
-  // Normalize: strip query params for matching
-  const route = path.split('?')[0];
-  if (_prefetched.has(route)) return;
-  _prefetched.add(route);
-
-  try {
-    if (route.startsWith('/overview')) import('../components/overview/DailyCommandCenter');
-    else if (route.startsWith('/execution/board')) import('../pages/execution/BoardPage');
-    else if (route.startsWith('/execution/timeline')) import('../pages/execution/TimelinePage');
-    else if (route.startsWith('/execution/gantt')) import('../pages/execution/GanttPage');
-    else if (route === '/workspace' || route.startsWith('/workspace/executive')) import('../pages/workspace/ProjectsPage');
-    else if (route.startsWith('/workspace/portfolio')) import('../pages/workspace/PortfolioPage');
-    else if (route.startsWith('/workspace/reports')) import('../pages/workspace/ReportsCenter');
-    else if (route.startsWith('/workspace/decisions')) import('../pages/workspace/DecisionsPage');
-    else if (route.startsWith('/workspace/documents')) import('../pages/workspace/DocumentsPage');
-    else if (route.startsWith('/workspace/knowledge')) import('../pages/workspace/KnowledgePage');
-    else if (route.startsWith('/workspace/requirements')) import('../pages/workspace/RequirementsPage');
-    else if (route.startsWith('/workspace/approvals')) import('../pages/workspace/ApprovalsPage');
-    else if (route.startsWith('/resources/teams')) import('../pages/resources/TeamsPage');
-    else if (route.startsWith('/resources/capacity')) import('../pages/resources/CapacityPage');
-    else if (route.startsWith('/resources/finance')) import('../pages/resources/FinancePage');
-    else if (route === '/resources') import('../pages/dashboard/LogisticsPanel');
-    else if (route.startsWith('/control/settings')) import('../pages/control/SettingsPage');
-    else if (route.startsWith('/control/audit')) import('../pages/control/AuditPage');
-    else if (route.startsWith('/control/identity')) import('../pages/dashboard/AdminPanel');
-    else if (route.startsWith('/control/automations')) import('../pages/dashboard/AutomationsPanel');
-    else if (route.startsWith('/control/system-health')) import('../pages/dashboard/ObservabilityPanel');
-  } catch {
-    // Ignore prefetch errors silently
-  }
-};
 
 function AccessRestricted() {
   return (

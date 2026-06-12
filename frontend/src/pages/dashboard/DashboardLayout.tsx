@@ -62,7 +62,6 @@ import { GuidedTour, TourStep } from '../../components/onboarding/GuidedTour';
 import { WorkSessionManager } from '../../components/execution/WorkSessionManager';
 import { cloneWorkspaceToSandbox } from '../../services/workspaceService';
 import { EndOfDayModal } from '../../components/execution/EndOfDayModal';
-import { prefetchRouteByPath } from '../../app/router';
 // Sunset imported above
 
 interface ConfirmState {
@@ -374,25 +373,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       navigateTo(firstSub.path);
     }
   };
-
-  // Prefetch the first subsection chunk when a sidebar domain is hovered
-  const handleDomainHover = (domainId: string) => {
-    const domain = visibleDomains.find(d => d.id === domainId);
-    if (domain && domain.subsections.length > 0) {
-      prefetchRouteByPath(domain.subsections[0].path);
-    }
-  };
-
-  // Eagerly prefetch the most common route chunks shortly after dashboard mounts
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      prefetchRouteByPath('/overview');
-      prefetchRouteByPath('/execution/board');
-      prefetchRouteByPath('/resources/teams');
-      prefetchRouteByPath('/workspace');
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Strict route guards for Phase 5 UX role alignment
   useEffect(() => {
@@ -1093,7 +1073,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     color: 'rgba(156, 163, 175, 0.7)',
                   }}
                   onMouseEnter={e => {
-                    handleDomainHover(domain.id);
                     if (!isActive) {
                       (e.currentTarget as any).style.background = 'rgba(255, 255, 255, 0.03)';
                       (e.currentTarget as any).style.color = 'var(--pm-on-surface)';
@@ -1179,7 +1158,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   onClick={() => navigateTo('/control/settings')}
                   className={`p-1.5 rounded-md transition-colors cursor-pointer ${isSidebarCollapsed ? '' : 'ml-1'}`}
                   style={{ color: 'var(--pm-on-surface-variant)' }}
-                  onMouseEnter={e => { prefetchRouteByPath('/control/settings'); (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
+                  onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
                   onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
                   title="Settings"
                 >
@@ -1344,7 +1323,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       color: 'var(--pm-on-surface-variant)',
                       background: 'transparent'
                     }}
-                    onMouseEnter={e => { prefetchRouteByPath(sub.path); if (!isSubActive) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; } }}
+                    onMouseEnter={e => { if (!isSubActive) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; } }}
                     onMouseLeave={e => { if (!isSubActive) { (e.currentTarget as any).style.background = 'transparent'; } }}
                   >
                     {sub.label}
