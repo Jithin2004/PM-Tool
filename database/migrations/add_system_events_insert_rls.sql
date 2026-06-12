@@ -1,40 +1,35 @@
--- Migration: Add RLS INSERT policy for system_events table
--- Purpose: Allow authenticated users to insert telemetry and observability data into system_events
--- This resolves HTTP 403 errors: "new row violates row-level security policy for table "system_events""
+-- Migration: Add RLS Policies for system_events table
+-- Description: Grant INSERT for authenticated users, SELECT for workspace scoping, and DELETE for admins
 
--- Enable RLS if not already enabled
-ALTER TABLE public.system_events ENABLE ROW LEVEL SECURITY;
+-- Ensure RLS is enabled on the table
+ALTER TABLE system_events ENABLE ROW LEVEL SECURITY;
 
--- Create policy to allow authenticated users to INSERT records
-CREATE POLICY "Allow authenticated inserts to system_events" 
-  ON public.system_events 
-  FOR INSERT 
-  TO authenticated 
-  WITH CHECK (true);
+-- 1. INSERT policy for authenticated users (Telemetry writes)
+CREATE POLICY "Enable insert for authenticated users" 
+ON system_events 
+FOR INSERT 
+TO authenticated 
+WITH CHECK (true);
 
--- Ensure workspace_id-based read access for current user
--- Allow users to SELECT records from their own workspace
-CREATE POLICY "Allow users to read system_events from their workspace"
-  ON public.system_events
-  FOR SELECT
-  TO authenticated
-  USING (
-    workspace_id IN (
-      SELECT workspace_id FROM public.users 
-      WHERE id = auth.uid()
-    )
-  );
+-- 2. SELECT policy (Workspace-scoped read access)
+CREATE POLICY "Enable select based on workspace_id" 
+ON system_events 
+FOR SELECT 
+TO authenticated 
+USING (
+  workspace_id IN (
+    SELECT workspace_id FROM profiles WHERE id = auth.uid()
+  )
+);
 
--- Allow workspace admins to DELETE system_events records (for maintenance/cleanup)
-CREATE POLICY "Allow admins to manage system_events"
-  ON public.system_events
-  FOR DELETE
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() 
-      AND workspace_id = system_events.workspace_id 
-      AND role IN ('owner', 'super_admin')
-    )
-  );
+-- 3. DELETE policy (Admin cleanup)
+CREATE POLICY "Enable delete for admins" 
+ON system_events 
+FOR DELETE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE profiles.id = auth.uid() AND profiles.role IN ('super_admin', 'pm')
+  )
+);

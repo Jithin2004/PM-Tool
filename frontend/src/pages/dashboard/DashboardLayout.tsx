@@ -153,7 +153,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   {
     id: 'people',
     label: 'People Operations',
-    iconName: 'UserCog',
+    iconName: 'Users',
     subsections: [
       { label: 'Attendance & Leave', path: '/resources', capability: 'manage_logistics' }
     ]
@@ -161,7 +161,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   {
     id: 'documents',
     label: 'Documents',
-    iconName: 'FolderOpen',
+    iconName: 'FileText',
     subsections: [
       { label: 'Files & Documents', path: '/workspace/documents', capability: 'view_projects' },
       { label: 'Templates', path: '/control/document-templates', capability: 'manage_settings' },
@@ -171,7 +171,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   {
     id: 'automation',
     label: 'Automation / AI',
-    iconName: 'Sparkles',
+    iconName: 'Cpu',
     subsections: [
       { label: 'AI Recommendations', path: '/workspace/decisions', capability: 'view_decision_center' },
       { label: 'Automations & Rules', path: '/control/automations', capability: 'manage_automations' }
@@ -340,7 +340,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
     for (const domain of visibleDomains) {
       for (const sub of domain.subsections) {
-        if (sub.path === routePath) {
+        const subPathBase = sub.path.split('?')[0]; if (subPathBase === routePath) {
           return { activeDomain: domain, activeSubsection: sub };
         }
       }
@@ -350,7 +350,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     for (const domain of visibleDomains) {
       const sortedSubs = [...domain.subsections].sort((a, b) => b.path.length - a.path.length);
       for (const sub of sortedSubs) {
-        if (routePath.startsWith(sub.path) && sub.path !== '/overview' && sub.path !== '/workspace') {
+        const subPathBase = sub.path.split('?')[0]; if (routePath.startsWith(subPathBase) && subPathBase !== '/overview' && sub.path !== '/workspace') {
           return { activeDomain: domain, activeSubsection: sub };
         }
       }

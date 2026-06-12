@@ -4,7 +4,7 @@ import {
   BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
   Activity, Shield, Zap, Settings, Link2, FileText,
   Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork,
-  Radar, Landmark, UserCog, FolderOpen, Sparkles
+  Radar, Landmark, UserCog, FolderOpen, Sparkles, Cpu
 } from 'lucide-react';
 
 import {
@@ -20,7 +20,7 @@ const ROUTE_ICON_MAP: Record<string, React.ComponentType<any>> = {
   BarChart3, BrainCircuit, Clock, Truck, Users, Building2,
   Activity, Shield, Zap, Settings, Link2, FileText,
   Key, Lock, PlusCircle, Bell, Sliders, GitBranch, GitFork,
-  Radar, Landmark, UserCog, FolderOpen, Sparkles,
+  Radar, Landmark, UserCog, FolderOpen, Sparkles, Cpu,
 
   // Resolve PM Enterprise Command Center Set (Phosphor)
   TreeStructure, ArchiveBox: Archive, Kanban, Timeline: Calendar,

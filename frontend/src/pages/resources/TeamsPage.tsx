@@ -1,5 +1,5 @@
 import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TeamRosterView } from '../../components/resources/TeamRosterView';
 import { SkillsMatrixView } from '../../components/resources/SkillsMatrixView';
 import { WorkforceInsights } from '../../components/hr/WorkforceInsights';
@@ -9,6 +9,20 @@ import { hasCapability } from '../../core/auth/permissions';
 export default function TeamsPage() {
   const { profile } = useAuth();
   const isHR = hasCapability(profile?.role, 'manage_employees');
+  
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') || 'employees';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setActiveTab(params.get('tab') || 'employees');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   
   return (
     <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
@@ -30,25 +44,27 @@ export default function TeamsPage() {
           </span>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-12 glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
-          <TeamRosterView />
-        </div>
-      </div>
 
-      {/* Skills Matrix Section */}
-      <div className="grid grid-cols-1 gap-6 mt-8">
-        <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
-          <SkillsMatrixView />
+      {activeTab === 'skills' && (
+        <div className="grid grid-cols-1 gap-6 mt-8">
+          <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
+            <SkillsMatrixView />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* HR Insights Section */}
-      {isHR && (
+      {activeTab === 'departments' && isHR && (
         <div className="grid grid-cols-1 gap-6 mt-8">
           <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
             <WorkforceInsights />
+          </div>
+        </div>
+      )}
+
+      {activeTab !== 'skills' && activeTab !== 'departments' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-12 glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
+            <TeamRosterView />
           </div>
         </div>
       )}
