@@ -207,6 +207,7 @@ function RouteShell({ children }: { children: React.ReactNode }) {
 }
 
 export function ResolveRouter() {
+  console.log('[ResolveRouter] RENDER');
   const rawPathname = usePathname();
   const pathname = normalizePath(rawPathname);
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
