@@ -180,7 +180,7 @@ function guardRoute(role: UserRole | undefined, path: string): boolean {
   return canAccessRoute(role, path);
 }
 
-function RouteShell({ children }: { children: React.ReactNode }) {
+function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { loading } = useOperationalData();
   const [remountKey, setRemountKey] = useState(0);
@@ -195,9 +195,13 @@ function RouteShell({ children }: { children: React.ReactNode }) {
     }
   }, [loading]);
 
+  return <Suspense key={`${pathname}-${remountKey}`} fallback={FALLBACK}>{children}</Suspense>;
+}
+
+function RouteShell({ children }: { children: React.ReactNode }) {
   return (
     <DashboardLayout>
-      <Suspense key={`${pathname}-${remountKey}`} fallback={FALLBACK}>{children}</Suspense>
+      <SuspenseWrapper>{children}</SuspenseWrapper>
     </DashboardLayout>
   );
 }
