@@ -213,40 +213,6 @@ export function ResolveRouter() {
   useEffect(() => {
   }, [pathname, workspace, user, role, workspaceLoading, authLoading, profileResolved, profileHydrating]);
 
-  const prefetchInitiated = useRef(false);
-
-  useEffect(() => {
-    if (prefetchInitiated.current) return;
-    if (workspaceLoading || authLoading || !profileResolved || profileHydrating) return;
-    if (!user || !profile || !workspace) return;
-
-    prefetchInitiated.current = true;
-
-    const prefetchRoutes = async () => {
-      // Small delay to let initial render settle before prefetching
-      await new Promise(r => setTimeout(r, 1000));
-      
-      const r = profile.role;
-      try {
-        if (r === 'super_admin') {
-          import('../pages/resources/FinancePage');
-          import('../pages/resources/TeamsPage');
-          import('../pages/control/SettingsPage');
-        } else if (r === 'pm') {
-          import('../pages/workspace/ProjectsPage');
-          import('../pages/execution/BoardPage');
-          import('../pages/resources/TeamsPage');
-        } else if (r === 'developer' || r === 'viewer') {
-          import('../pages/execution/BoardPage');
-          import('../pages/execution/TimelinePage');
-        }
-      } catch (e) {
-      }
-    };
-    
-    prefetchRoutes();
-  }, [workspaceLoading, authLoading, profileResolved, profileHydrating, user, profile, workspace]);
-
   // ── Public routes ──
 
   if (pathname === '/') {
