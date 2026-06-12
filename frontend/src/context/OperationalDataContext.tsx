@@ -149,33 +149,9 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     return rawBlockers.filter(b => validTaskIds.has(b.task_id));
   }, [workspaceSettingsBlob, tasks]);
 
-  const [governanceCache, setGovernanceCache] = useState<GovernanceCache>(() => 
+  const governanceCache = useMemo(() => 
     compileCoherentPlatformState(projects, tasks, teams, profiles, blockers, dependencies, decisions, events)
-  );
-
-  const prevDepsRef = useRef<any[]>([]);
-  useEffect(() => {
-    const prev = prevDepsRef.current;
-    const current = [projects, tasks, teams, profiles, blockers, dependencies, decisions, events];
-    if (prev.length > 0) {
-      const changed = current.map((c, i) => c !== prev[i] ? i : -1).filter(i => i !== -1);
-      if (changed.length > 0) {
-        console.log('[OperationalDataContext] UNSTABLE DEPS:', changed.map(i => ['projects', 'tasks', 'teams', 'profiles', 'blockers', 'dependencies', 'decisions', 'events'][i]));
-      }
-    }
-    prevDepsRef.current = current;
-
-    let active = true;
-    const timer = setTimeout(() => {
-      if (active) {
-        setGovernanceCache(compileCoherentPlatformState(projects, tasks, teams, profiles, blockers, dependencies, decisions, events));
-      }
-    }, 250);
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [projects, tasks, teams, profiles, blockers, dependencies, decisions, events]);
+  , [projects, tasks, teams, profiles, blockers, dependencies, decisions, events]);
 
   const refreshAll = useCallback(async () => {
     if (!workspace?.id) return;
