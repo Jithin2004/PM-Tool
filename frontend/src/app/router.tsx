@@ -18,11 +18,19 @@ import { normalizePath, parseProjectRoute, isRegisteredPath } from './routeRegis
 
 const withRetry = (componentImport: () => Promise<any>) => {
   return lazy(async () => {
+    const importStr = componentImport.toString();
+    const chunkNameMatch = importStr.match(/import\(['"]([^'"]+)['"]\)/);
+    const chunkName = chunkNameMatch ? chunkNameMatch[1] : 'unknown chunk';
+
+    console.log(`[lazy] importing: ${chunkName}`);
+
     try {
       const module = await componentImport();
+      console.log(`[lazy] resolved: ${chunkName}`);
       sessionStorage.removeItem('chunk_reload_count');
       return module;
     } catch (error: any) {
+      console.error(`[withRetry] error:`, error);
       if (error?.message?.includes('Failed to fetch dynamically imported module')) {
         const reloadCount = parseInt(sessionStorage.getItem('chunk_reload_count') || '0', 10);
         if (reloadCount < 2) {
