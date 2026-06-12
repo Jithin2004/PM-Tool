@@ -18,7 +18,7 @@ FOR SELECT
 TO authenticated 
 USING (
   workspace_id IN (
-    SELECT workspace_id FROM profiles WHERE id = auth.uid()
+    SELECT workspace_id FROM users WHERE id = auth.uid()
   )
 );
 
@@ -29,7 +29,7 @@ FOR DELETE
 TO authenticated 
 USING (
   EXISTS (
-    SELECT 1 FROM profiles 
-    WHERE profiles.id = auth.uid() AND profiles.role IN ('super_admin', 'pm')
+    SELECT 1 FROM users 
+    WHERE users.id = auth.uid() AND users.role IN ('super_admin', 'pm')
   )
 );
