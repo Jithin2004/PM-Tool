@@ -25,6 +25,7 @@ export function DailyCommandCenter() {
   }, [user, workspace, profile]);
 
   if (loading || !overview) {
+    console.log('[DailyCommandCenter] Early Return - loading=', loading, 'overview=', !!overview, 'workspace=', workspace?.id, 'user=', user?.id);
     return (
       <div className="flex items-center justify-center h-full min-h-[60vh]">
         <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />

@@ -102,6 +102,7 @@ const SharedProjectDashboard = withRetry(() => import('../pages/shared/SharedPro
 const DEFAULT_AUTH_REDIRECT = '/overview';
 
 function RouteFallback() {
+  console.log('[RouteFallback] Rendering "Loading workspace..." fallback');
   return (
     <div className="flex min-h-[60vh] items-center justify-center font-geist text-[10px] uppercase tracking-widest text-text-tertiary">
       <div className="flex items-center gap-3">

@@ -964,6 +964,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   });
 
   if (loading) {
+    console.log('[DashboardLayout] Early Return - loading=', loading, 'workspace=', workspace?.id, 'profile=', profile?.id);
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-5 font-geist ">
         <div className="relative w-12 h-12">
