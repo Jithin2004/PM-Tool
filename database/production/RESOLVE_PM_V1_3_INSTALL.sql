@@ -7595,7 +7595,11 @@ CREATE POLICY "Users can manage their own follow ups" ON follow_ups
 CREATE TABLE IF NOT EXISTS public.workspace_calendar_settings (
   workspace_id uuid PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE CASCADE,
   working_days jsonb NOT NULL DEFAULT '[1,2,3,4,5,6]'::jsonb, -- 0=Sun, 1=Mon, ..., 6=Sat
-  saturday_policy text NOT NULL DEFAULT 'all_working' CHECK (saturday_policy IN ('all_working', 'all_off', '1st_3rd_off', '2nd_4th_off')),
+  saturday_policy text NOT NULL DEFAULT 'all_working' CHECK (saturday_policy IN ('all_working', 'all_off', '1st_3rd_off', '2nd_4th_off', 'custom')),
+  custom_saturdays_off integer[] DEFAULT ARRAY[]::integer[],
+  working_hours jsonb NOT NULL DEFAULT '{"office_start_time": "09:00", "office_end_time": "17:00", "daily_working_hours": 8}'::jsonb,
+  holiday_source text DEFAULT 'manual',
+  last_sync timestamptz,
   timezone text NOT NULL DEFAULT 'UTC',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
@@ -7608,7 +7612,7 @@ CREATE TABLE IF NOT EXISTS public.company_calendar_events (
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   name text NOT NULL,
   date date NOT NULL,
-  event_type text NOT NULL CHECK (event_type IN ('holiday', 'festival', 'regional', 'company', 'meeting', 'event', 'maintenance', 'custom')),
+  event_type text NOT NULL CHECK (event_type IN ('holiday', 'festival', 'regional', 'company', 'meeting', 'event', 'maintenance', 'custom', 'non_working_day')),
   source text NOT NULL DEFAULT 'manual', -- 'sync', 'manual_import', 'manual'
   year int NOT NULL,
   created_at timestamptz DEFAULT now(),
@@ -7620,8 +7624,15 @@ CREATE TABLE IF NOT EXISTS public.company_calendar_events (
 CREATE OR REPLACE FUNCTION public.create_default_calendar_settings()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.workspace_calendar_settings (workspace_id, working_days, saturday_policy, timezone)
-  VALUES (NEW.id, '[1,2,3,4,5,6]'::jsonb, 'all_working', 'UTC')
+  INSERT INTO public.workspace_calendar_settings (workspace_id, working_days, saturday_policy, custom_saturdays_off, working_hours, timezone)
+  VALUES (
+    NEW.id, 
+    '[1,2,3,4,5,6]'::jsonb, 
+    'all_working', 
+    ARRAY[]::integer[],
+    '{"office_start_time": "09:00", "office_end_time": "17:00", "daily_working_hours": 8}'::jsonb,
+    'UTC'
+  )
   ON CONFLICT DO NOTHING;
   RETURN NEW;
 END;
@@ -7631,3 +7642,37 @@ DROP TRIGGER IF EXISTS on_workspace_created_calendar ON public.workspaces;
 CREATE TRIGGER on_workspace_created_calendar
   AFTER INSERT ON public.workspaces
   FOR EACH ROW EXECUTE FUNCTION public.create_default_calendar_settings();
+
+-- Enable Row Level Security
+ALTER TABLE public.workspace_calendar_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.company_calendar_events ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for workspace_calendar_settings
+CREATE POLICY "Workspace members can read calendar settings"
+  ON public.workspace_calendar_settings FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Workspace members can insert calendar settings"
+  ON public.workspace_calendar_settings FOR INSERT
+  WITH CHECK (workspace_id = current_workspace());
+
+CREATE POLICY "Workspace members can update calendar settings"
+  ON public.workspace_calendar_settings FOR UPDATE
+  USING (workspace_id = current_workspace());
+
+-- RLS Policies for company_calendar_events
+CREATE POLICY "Workspace members can read company calendar events"
+  ON public.company_calendar_events FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Workspace members can insert company calendar events"
+  ON public.company_calendar_events FOR INSERT
+  WITH CHECK (workspace_id = current_workspace());
+
+CREATE POLICY "Workspace members can update company calendar events"
+  ON public.company_calendar_events FOR UPDATE
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Workspace members can delete company calendar events"
+  ON public.company_calendar_events FOR DELETE
+  USING (workspace_id = current_workspace());

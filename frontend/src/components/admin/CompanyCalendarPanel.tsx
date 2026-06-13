@@ -149,6 +149,7 @@ export function CompanyCalendarPanel() {
           if (saturdayPolicy === 'all_off') isOff = true;
           else if (saturdayPolicy === '1st_3rd_off' && (satCount === 1 || satCount === 3)) isOff = true;
           else if (saturdayPolicy === '2nd_4th_off' && (satCount === 2 || satCount === 4)) isOff = true;
+          else if (saturdayPolicy === 'custom' && settings?.custom_saturdays_off?.includes(satCount)) isOff = true;
         }
 
         const dateStr = `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -178,13 +179,7 @@ export function CompanyCalendarPanel() {
               >
                 <Plus className="w-4 h-4" /> Add Event
               </button>
-              <button 
-                onClick={() => fileInputRef.current?.click()} 
-                className="px-4 py-2 bg-surface-3 border border-border rounded-lg text-[12px] font-semibold flex items-center gap-2 hover:bg-surface-4"
-              >
-                <Upload className="w-4 h-4" /> Upload Calendar
-              </button>
-              <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleFileUpload} />
+              
             </>
           )}
           <div className="flex items-center bg-surface-2 border border-border rounded-lg p-1 shadow-sm">
@@ -218,27 +213,7 @@ export function CompanyCalendarPanel() {
 
       {tab === 'calendar' && (
         <div className="space-y-8">
-          <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <RefreshCw className={`w-5 h-5 text-accent-primary ${syncing ? 'animate-spin' : ''}`} />
-              <div>
-                <h3 className="text-sm font-bold text-text-primary">Sync Official Holidays</h3>
-                <p className="text-xs text-text-tertiary">Imports holidays based on workspace location ({workspace?.settings?.country || 'Unconfigured'}).</p>
-              </div>
-            </div>
-            <button 
-              onClick={handleSyncNow} 
-              disabled={syncing || !workspace?.settings?.country} 
-              className="px-5 py-2 bg-surface-3 border border-border rounded-lg text-xs font-bold hover:bg-surface-4 transition-all disabled:opacity-50"
-            >
-              {syncing ? 'Syncing...' : 'Sync Official Holidays'}
-            </button>
-          </div>
-          {lastSyncResult && (
-            <div className="p-4 rounded-lg bg-signal-safe/10 border border-signal-safe/20 text-signal-safe text-sm font-bold">
-              {lastSyncResult}
-            </div>
-          )}
+          
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {calendarGrid.map((monthDays, mi) => (
@@ -291,45 +266,168 @@ export function CompanyCalendarPanel() {
       )}
 
       {tab === 'settings' && settings && (
-        <div className="max-w-2xl bg-surface-2 border border-border rounded-xl p-6 shadow-sm space-y-6">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary mb-4 border-b border-border-subtle pb-2">Working Days</h3>
-          
-          <div className="flex gap-4 mb-4">
-            {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((day, i) => (
-              <label key={day} className="flex items-center gap-2 text-sm font-medium text-text-secondary cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={settings.working_days.includes(i)}
-                  onChange={() => toggleWorkingDay(i)}
-                  className="w-4 h-4 rounded text-accent-primary focus:ring-accent-primary bg-surface border-border"
-                />
-                {day.substring(0,3)}
-              </label>
-            ))}
-          </div>
+        <div className="max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column: Rules & Hours */}
+          <div className="space-y-6">
+            <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary mb-4 border-b border-border-subtle pb-2">Working Week</h3>
+              <div className="flex flex-wrap gap-4">
+                {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((day, i) => (
+                  <label key={day} className="flex items-center gap-2 text-sm font-medium text-text-secondary cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={settings.working_days.includes(i)}
+                      onChange={() => toggleWorkingDay(i)}
+                      className="w-4 h-4 rounded text-accent-primary focus:ring-accent-primary bg-surface border-border"
+                    />
+                    {day.substring(0,3)}
+                  </label>
+                ))}
+              </div>
+            </div>
 
-          <div className="pt-4 border-t border-border-subtle">
-            <h4 className="text-xs font-bold text-text-primary mb-2">Saturday Policy</h4>
-            <select 
-              value={settings.saturday_policy}
-              onChange={(e: any) => setSettings({ ...settings, saturday_policy: e.target.value })}
-              disabled={!settings.working_days.includes(6)}
-              className="w-full max-w-xs input-premium h-10 px-3 text-sm"
-            >
-              <option value="all_working">All Saturdays Working</option>
-              <option value="all_off">All Saturdays Off</option>
-              <option value="1st_3rd_off">1st & 3rd Saturdays Off</option>
-              <option value="2nd_4th_off">2nd & 4th Saturdays Off</option>
-            </select>
-            {!settings.working_days.includes(6) && (
-              <p className="text-xs text-text-tertiary mt-2">Enable Saturday in Working Days to configure policies.</p>
+            {settings.working_days.includes(6) && (
+              <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary mb-4 border-b border-border-subtle pb-2">Saturday Policy</h3>
+                <select 
+                  value={settings.saturday_policy}
+                  onChange={(e: any) => setSettings({ ...settings, saturday_policy: e.target.value })}
+                  className="w-full input-premium h-10 px-3 text-sm mb-4"
+                >
+                  <option value="all_working">All Saturdays Working</option>
+                  <option value="all_off">All Saturdays Off</option>
+                  <option value="1st_3rd_off">1st & 3rd Saturdays Off</option>
+                  <option value="2nd_4th_off">2nd & 4th Saturdays Off</option>
+                  <option value="custom">Custom Saturday Rules</option>
+                </select>
+
+                {settings.saturday_policy === 'custom' && (
+                  <div className="p-4 rounded-lg bg-surface-3 border border-border mt-2 flex flex-wrap gap-3">
+                    {[1, 2, 3, 4, 5].map(week => (
+                      <label key={week} className="flex items-center gap-2 text-xs font-bold text-text-secondary cursor-pointer bg-surface-2 px-3 py-1.5 rounded-md border border-border hover:border-accent-primary/50 transition-colors">
+                        <input 
+                          type="checkbox"
+                          checked={settings.custom_saturdays_off?.includes(week)}
+                          onChange={(e) => {
+                            const current = settings.custom_saturdays_off || [];
+                            const updated = e.target.checked 
+                              ? [...current, week] 
+                              : current.filter(w => w !== week);
+                            setSettings({ ...settings, custom_saturdays_off: updated });
+                          }}
+                          className="w-3.5 h-3.5 rounded text-accent-primary bg-surface"
+                        />
+                        {week}{week === 1 ? 'st' : week === 2 ? 'nd' : week === 3 ? 'rd' : 'th'} Sat
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
+
+            <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary mb-4 border-b border-border-subtle pb-2">Working Hours</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Office Start Time</label>
+                  <input 
+                    type="time" 
+                    value={settings.working_hours?.office_start_time || '09:00'}
+                    onChange={e => setSettings({
+                      ...settings, 
+                      working_hours: { ...settings.working_hours, office_start_time: e.target.value } as any
+                    })}
+                    className="w-full input-premium h-10 px-3 text-sm" 
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Office End Time</label>
+                  <input 
+                    type="time" 
+                    value={settings.working_hours?.office_end_time || '17:00'}
+                    onChange={e => setSettings({
+                      ...settings, 
+                      working_hours: { ...settings.working_hours, office_end_time: e.target.value } as any
+                    })}
+                    className="w-full input-premium h-10 px-3 text-sm" 
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Daily Working Hours</label>
+                  <input 
+                    type="number" 
+                    step="0.5"
+                    value={settings.working_hours?.daily_working_hours || 8}
+                    onChange={e => setSettings({
+                      ...settings, 
+                      working_hours: { ...settings.working_hours, daily_working_hours: parseFloat(e.target.value) } as any
+                    })}
+                    className="w-full input-premium h-10 px-3 text-sm" 
+                  />
+                  <p className="text-[10px] text-text-tertiary mt-1">Used for capacity and sprint point calculations.</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="pt-6 flex justify-end">
-            <button onClick={saveSettings} className="px-6 py-2 btn-premium-primary rounded-lg text-sm font-bold flex items-center gap-2">
-              <Save className="w-4 h-4" /> Save Rules
-            </button>
+          {/* Right Column: Holiday Config & Save */}
+          <div className="space-y-6 flex flex-col h-full">
+            <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm flex-1">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary mb-4 border-b border-border-subtle pb-2">Holiday Configuration</h3>
+              
+              <div className="space-y-6">
+                <div className="p-5 rounded-xl border border-border bg-surface flex flex-col">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-accent-primary/10 flex items-center justify-center text-accent-primary">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-text-primary">Smart Holiday Sync</h4>
+                      <p className="text-[11px] text-text-tertiary">Based on workspace location ({workspace?.settings?.country || 'Unconfigured'})</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleSyncNow} 
+                    disabled={syncing || !workspace?.settings?.country} 
+                    className="w-full py-2.5 bg-surface-3 border border-border rounded-lg text-xs font-bold hover:bg-surface-4 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-auto"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                    {syncing ? 'Syncing...' : 'Sync Government Holidays'}
+                  </button>
+                  {lastSyncResult && lastSyncResult.includes('imported') && (
+                    <p className="text-[10px] font-bold text-signal-safe text-center mt-2">{lastSyncResult}</p>
+                  )}
+                </div>
+
+                <div className="p-5 rounded-xl border border-border bg-surface flex flex-col">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-surface-3 flex items-center justify-center text-text-secondary">
+                      <Upload className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-text-primary">Manual Calendar Upload</h4>
+                      <p className="text-[11px] text-text-tertiary">Upload HR calendars via CSV format</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    className="w-full py-2.5 bg-surface-3 border border-border rounded-lg text-xs font-bold hover:bg-surface-4 transition-all flex items-center justify-center gap-2 mt-auto"
+                  >
+                    <Upload className="w-3.5 h-3.5" /> Select File
+                  </button>
+                  <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleFileUpload} />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="text-xs text-text-tertiary font-medium">Any changes will recalculate active sprint capacities.</p>
+              </div>
+              <button onClick={saveSettings} className="px-6 py-2.5 btn-premium-primary rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg shadow-accent-primary/20">
+                <Save className="w-4 h-4" /> Save Configuration
+              </button>
+            </div>
           </div>
         </div>
       )}

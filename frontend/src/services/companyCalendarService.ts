@@ -16,7 +16,15 @@ export interface CompanyCalendarEvent {
 export interface WorkspaceCalendarSettings {
   workspace_id: string;
   working_days: number[]; // 0=Sun, 1=Mon...
-  saturday_policy: 'all_working' | 'all_off' | '1st_3rd_off' | '2nd_4th_off';
+  saturday_policy: 'all_working' | 'all_off' | '1st_3rd_off' | '2nd_4th_off' | 'custom';
+  custom_saturdays_off?: number[];
+  working_hours?: {
+    office_start_time: string;
+    office_end_time: string;
+    daily_working_hours: number;
+  };
+  holiday_source?: string;
+  last_sync?: string;
   timezone: string;
 }
 
@@ -30,7 +38,30 @@ export const companyCalendarService = {
       .eq('workspace_id', workspaceId)
       .maybeSingle();
       
-    if (error || !data) return null;
+    if (error) return null;
+    
+    // If settings don't exist yet, create defaults
+    if (!data) {
+      const defaultSettings = {
+        workspace_id: workspaceId,
+        working_days: [1, 2, 3, 4, 5, 6],
+        saturday_policy: 'all_working' as const,
+        custom_saturdays_off: [],
+        working_hours: { office_start_time: "09:00", office_end_time: "17:00", daily_working_hours: 8 },
+        timezone: 'UTC'
+      };
+      const { data: newData, error: insertError } = await supabase
+        .from('workspace_calendar_settings')
+        .insert([defaultSettings])
+        .select()
+        .single();
+      
+      if (!insertError && newData) {
+        return newData as WorkspaceCalendarSettings;
+      }
+      return defaultSettings as WorkspaceCalendarSettings;
+    }
+    
     return data as WorkspaceCalendarSettings;
   },
 
