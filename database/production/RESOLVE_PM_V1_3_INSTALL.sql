@@ -1,4 +1,4 @@
-﻿-- =============================================================================
+-- =============================================================================
 -- RESOLVE PM v1.3.0-internal-stable -- PRODUCTION DATABASE INSTALLER
 -- =============================================================================
 -- Release Date : June 10, 2026
@@ -542,8 +542,8 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Prevent changing workspace_id after it has been set
-  IF OLD.workspace_id IS NOT NULL AND NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN
+  -- Prevent changing workspace_id after it has been set, EXCEPT during a soft-delete (workspace_id = NULL)
+  IF OLD.workspace_id IS NOT NULL AND NEW.workspace_id IS NOT NULL AND NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN
     RAISE EXCEPTION 'Unauthorized: Cannot migrate workspaces.';
   END IF;
 
