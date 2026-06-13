@@ -12,6 +12,7 @@ import {
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { Login } from '../components/auth/Login';
 import { PasswordSetup } from '../components/auth/PasswordSetup';
+import { PasswordSetup } from '../components/auth/PasswordSetup';
 import { ProductKeyGate } from '../components/auth/ProductKeyGate';
 import { isProductKeyVerified } from '../lib/productKey';
 import { normalizePath, parseProjectRoute, isRegisteredPath } from './routeRegistry';
@@ -181,31 +182,14 @@ function guardRoute(role: UserRole | undefined, path: string): boolean {
   return canAccessRoute(role, path);
 }
 
-function SuspenseWrapper({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const { loading } = useOperationalData();
-  const [remountKey, setRemountKey] = useState(0);
-
-  useEffect(() => {
-    if (!loading) {
-      // Force a remount 500ms after loading finishes, as a safety net for lost wake-ups
-      const timer = setTimeout(() => {
-        setRemountKey(k => k + 1);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [loading]);
-
-  return <Suspense key={`${pathname}-${remountKey}`} fallback={FALLBACK}>{children}</Suspense>;
-}
-
 function RouteShell({ children }: { children: React.ReactNode }) {
   return (
     <DashboardLayout>
-      <SuspenseWrapper>{children}</SuspenseWrapper>
+      {children}
     </DashboardLayout>
   );
 }
+
 
 export function ResolveRouter() {
   console.log('[ResolveRouter] RENDER');

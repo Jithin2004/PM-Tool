@@ -26,19 +26,7 @@ if (content.includes("import { Login } from '../components/auth/Login';")) {
 // 5. Replace RouteFallback entirely
 content = content.replace(/function RouteFallback\(\) \{[\s\S]*?const FALLBACK = <RouteFallback \/>;\n\n/g, '');
 
-// 6. Replace SuspenseWrapper entirely
-content = content.replace(/function SuspenseWrapper\(\{ children \}: \{ children: React\.ReactNode \}\) \{[\s\S]*?return <Suspense key=\{\`\$\{pathname\}-\$\{remountKey\}\`\} fallback=\{FALLBACK\}>\{children\}<\/Suspense>;\n\}\n\n/g, '');
-
-// 7. Rewrite RouteShell
-content = content.replace(/function RouteShell\(\{ children \}: \{ children: React\.ReactNode \}\) \{[\s\S]*?return \(\n    <DashboardLayout>\n      <SuspenseWrapper>\{children\}<\/SuspenseWrapper>\n    <\/DashboardLayout>\n  \);\n\}/g, `function RouteShell({ children }: { children: React.ReactNode }) {
-  return (
-    <DashboardLayout>
-      {children}
-    </DashboardLayout>
-  );
-}`);
-
-// 8. Replace explicit <Suspense fallback={FALLBACK}><Comp /></Suspense> with <Comp />
+// 6. Replace explicit <Suspense fallback={FALLBACK}><Comp /></Suspense> with <Comp />
 content = content.replace(/<Suspense fallback=\{FALLBACK\}>\s*(<[A-Za-z0-9_]+ \/>)\s*<\/Suspense>/g, '$1');
 
 fs.writeFileSync('router.tsx', content);
