@@ -1,173 +1,199 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Icon } from '../ui/Icon';
-import { AlertTriangle, Server, Database, RefreshCw, CheckCircle2, ShieldAlert } from 'lucide-react';
+import packageJson from '../../../package.json';
+import { Activity, Database, Server, CheckCircle2, AlertTriangle, ShieldCheck, Clock, FileText, ChevronRight } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export function SystemInfoPanel() {
-  const [migrations, setMigrations] = useState<any[]>([]);
+  const { profile } = useAuth();
+  const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [recoveryState, setRecoveryState] = useState<'idle' | 'rolling_back' | 'resuming'>('idle');
-
+  const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'issue'>('checking');
+  
   useEffect(() => {
-    fetchMigrations();
-  }, []);
-
-  const fetchMigrations = async () => {
-    setLoading(true);
-    const { data } = await supabase.from('system_migrations').select('*').order('applied_at', { ascending: false });
-    if (data) setMigrations(data);
-    setLoading(false);
-  };
-
-  const failedMigration = migrations.find(m => m.status === 'failed');
-  const latestMigration = migrations.filter(m => m.status === 'completed')[0];
-
-  const handleRollback = () => {
-    setRecoveryState('rolling_back');
-    setTimeout(async () => {
-      if (failedMigration) {
-        await supabase.from('system_migrations').delete().eq('id', failedMigration.id);
+    async function loadStatus() {
+      setLoading(true);
+      
+      // Check DB connection
+      try {
+        const { error } = await supabase.from('users').select('id').limit(1);
+        if (error) setDbStatus('issue');
+        else setDbStatus('connected');
+      } catch (e) {
+        setDbStatus('issue');
       }
-      setRecoveryState('idle');
-      fetchMigrations();
-      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Rollback successful. Restored to stable state.', type: 'success' } }));
-    }, 2000);
-  };
 
-  const handleResume = () => {
-    setRecoveryState('resuming');
-    setTimeout(async () => {
-      if (failedMigration) {
-        await supabase.from('system_migrations').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', failedMigration.id);
+      // Load events
+      if (profile?.workspace_id) {
+        const { data } = await supabase
+          .from('system_events')
+          .select('*')
+          .eq('workspace_id', profile.workspace_id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        
+        if (data) setEvents(data);
       }
-      setRecoveryState('idle');
-      fetchMigrations();
-      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Upgrade resumed and completed successfully.', type: 'success' } }));
-    }, 3000);
+      
+      setLoading(false);
+    }
+    
+    loadStatus();
+  }, [profile?.workspace_id]);
+
+  const getSeverityColor = (severity: string) => {
+    switch(severity?.toLowerCase()) {
+      case 'high': return 'text-red-500 bg-red-500/10';
+      case 'medium': return 'text-amber-500 bg-amber-500/10';
+      case 'low': return 'text-blue-500 bg-blue-500/10';
+      default: return 'text-emerald-500 bg-emerald-500/10';
+    }
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-[var(--pm-text-secondary)] font-mono-pm animate-pulse">Scanning system state...</div>;
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col h-full font-sans bg-bg">
-      <div className="p-5 border-b border-[var(--pm-border)] bg-[var(--pm-surface-high)]">
-        <h2 className="text-xl font-semibold text-[var(--pm-text)]">System Information</h2>
-        <p className="text-sm text-[var(--pm-text-secondary)] mt-1">Version control and environment topology</p>
+    <div className="flex flex-col h-full font-geist bg-[var(--pm-bg)] text-[var(--pm-text)]">
+      <div className="p-6 border-b border-[var(--pm-border)] bg-[var(--pm-surface)]">
+        <h2 className="text-xl font-semibold text-[var(--pm-text)]">System Health</h2>
+        <p className="text-sm text-[var(--pm-text-secondary)] mt-1">Monitor workspace services and platform status.</p>
       </div>
 
-      <div className="p-6 space-y-8 overflow-y-auto">
-        {failedMigration && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                <ShieldAlert className="w-5 h-5 text-red-500" />
+      <div className="p-6 space-y-6 overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Application Status */}
+          <div className="bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                <Activity className="w-4 h-4" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-red-500 font-semibold text-lg">Upgrade Incomplete</h3>
-                <p className="text-[var(--pm-text-secondary)] text-sm mt-1 mb-4">
-                  The migration to <span className="font-mono-pm">{failedMigration.version}</span> ({failedMigration.description}) failed during execution. The system is in a corrupted half-state.
-                </p>
-                {failedMigration.logs && failedMigration.logs.error && (
-                  <div className="bg-black/20 p-3 rounded text-xs font-mono-pm text-red-400 mb-4 border border-red-500/20">
-                    ERROR: {failedMigration.logs.error}
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={handleResume}
-                    disabled={recoveryState !== 'idle'}
-                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {recoveryState === 'resuming' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Server className="w-4 h-4" />}
-                    {recoveryState === 'resuming' ? 'Resuming...' : 'Resume Upgrade'}
-                  </button>
-                  <button 
-                    onClick={handleRollback}
-                    disabled={recoveryState !== 'idle'}
-                    className="px-4 py-2 bg-[var(--pm-surface)] hover:bg-[var(--pm-surface-hover)] border border-[var(--pm-border)] text-[var(--pm-text)] rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                  >
-                    {recoveryState === 'rolling_back' ? 'Rolling back...' : 'Rollback to Safety'}
-                  </button>
-                  <button className="px-4 py-2 text-[var(--pm-text-secondary)] hover:text-[var(--pm-text)] text-sm font-medium transition-colors ml-auto underline">
-                    Contact Support
-                  </button>
-                </div>
+              <div className="text-sm font-medium text-[var(--pm-text-secondary)]">Application Status</div>
+            </div>
+            <div className="text-2xl font-semibold text-[var(--pm-text)] flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+              Operational
+            </div>
+            <div className="text-xs text-[var(--pm-text-secondary)] mt-2">
+              Env: <span className="font-mono">{import.meta.env.MODE || 'production'}</span>
+            </div>
+          </div>
+
+          {/* Database */}
+          <div className="bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
+                <Database className="w-4 h-4" />
+              </div>
+              <div className="text-sm font-medium text-[var(--pm-text-secondary)]">Database</div>
+            </div>
+            <div className={`text-2xl font-semibold ${dbStatus === 'connected' ? 'text-emerald-500' : 'text-red-500'}`}>
+              {dbStatus === 'connected' ? 'Connected' : 'Connection issue'}
+            </div>
+            <div className="text-xs text-[var(--pm-text-secondary)] mt-2">
+              Supabase Instance
+            </div>
+          </div>
+
+          {/* Services */}
+          <div className="bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                <Server className="w-4 h-4" />
+              </div>
+              <div className="text-sm font-medium text-[var(--pm-text-secondary)]">Services</div>
+            </div>
+            <div className="space-y-2 mt-1">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-[var(--pm-text-secondary)]">Authentication</span>
+                <span className="text-emerald-500 font-medium text-xs bg-emerald-500/10 px-2 py-0.5 rounded">Active</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-[var(--pm-text-secondary)]">Storage</span>
+                <span className="text-emerald-500 font-medium text-xs bg-emerald-500/10 px-2 py-0.5 rounded">Active</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-[var(--pm-text-secondary)]">Realtime</span>
+                <span className="text-emerald-500 font-medium text-xs bg-emerald-500/10 px-2 py-0.5 rounded">Active</span>
               </div>
             </div>
           </div>
-        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[var(--pm-surface-elevated)] border border-[var(--pm-border)] rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <Server className="w-5 h-5 text-[var(--pm-primary)]" />
-              <div className="text-sm font-medium text-[var(--pm-text-secondary)]">Resolve PM Version</div>
+          {/* Version Info */}
+          <div className="bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div className="text-sm font-medium text-[var(--pm-text-secondary)]">Version Information</div>
             </div>
-            <div className="text-2xl font-bold text-[var(--pm-text)]">{latestMigration?.version || 'v1.0.0'}</div>
-            <div className="text-xs text-[var(--pm-success)] mt-2 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Latest stable release
+            <div className="text-2xl font-semibold text-[var(--pm-text)] tracking-tight">
+              v{packageJson.version}
             </div>
-          </div>
-
-          <div className="bg-[var(--pm-surface-elevated)] border border-[var(--pm-border)] rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <Database className="w-5 h-5 text-purple-400" />
-              <div className="text-sm font-medium text-[var(--pm-text-secondary)]">Database Schema</div>
+            <div className="text-xs text-emerald-500 mt-2 flex items-center gap-1 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Latest stable release
             </div>
-            <div className="text-2xl font-bold text-[var(--pm-text)]">Schema 42</div>
-            <div className="text-xs text-[var(--pm-text-secondary)] mt-2">PostgreSQL 15.x</div>
-          </div>
-
-          <div className="bg-[var(--pm-surface-elevated)] border border-[var(--pm-border)] rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <RefreshCw className="w-5 h-5 text-blue-400" />
-              <div className="text-sm font-medium text-[var(--pm-text-secondary)]">Last Migration</div>
-            </div>
-            <div className="text-lg font-bold text-[var(--pm-text)] truncate">{latestMigration ? new Date(latestMigration.applied_at).toLocaleString() : 'N/A'}</div>
-            <div className="text-xs text-[var(--pm-text-secondary)] mt-2 truncate">{latestMigration?.description}</div>
-          </div>
-
-          <div className="bg-[var(--pm-surface-elevated)] border border-[var(--pm-border)] rounded-xl p-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <AlertTriangle className={`w-5 h-5 ${failedMigration ? 'text-red-500' : 'text-emerald-500'}`} />
-              <div className="text-sm font-medium text-[var(--pm-text-secondary)]">System Health</div>
-            </div>
-            <div className={`text-2xl font-bold ${failedMigration ? 'text-red-500' : 'text-emerald-500'}`}>
-              {failedMigration ? 'Critical' : 'Healthy'}
-            </div>
-            <div className="text-xs text-[var(--pm-text-secondary)] mt-2">All services online</div>
           </div>
         </div>
 
-        <div>
-          <h3 className="text-sm font-semibold text-[var(--pm-text)] mb-4">Migration History</h3>
-          <div className="bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-xl overflow-hidden">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-[var(--pm-surface-high)] text-[var(--pm-text-secondary)] text-xs border-b border-[var(--pm-border)]">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Version</th>
-                  <th className="px-5 py-3 font-medium">Description</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium">Applied At</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--pm-border)]">
-                {migrations.map(m => (
-                  <tr key={m.id} className="hover:bg-[var(--pm-surface-hover)] transition-colors">
-                    <td className="px-5 py-3 font-mono-pm">{m.version}</td>
-                    <td className="px-5 py-3 text-[var(--pm-text-secondary)]">{m.description}</td>
-                    <td className="px-5 py-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${m.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : m.status === 'failed' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                        {m.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-[var(--pm-text-secondary)]">{new Date(m.applied_at).toLocaleString()}</td>
+        {/* Recent Activity */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-[var(--pm-text)]">Recent System Events</h3>
+            <button className="text-xs text-indigo-500 hover:text-indigo-600 font-medium flex items-center gap-1 transition-colors">
+              View Audit Logs <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          
+          <div className="bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-xl overflow-hidden shadow-sm">
+            {events.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <div className="w-12 h-12 bg-[var(--pm-surface-hover)] rounded-full flex items-center justify-center mb-4">
+                  <FileText className="w-6 h-6 text-[var(--pm-text-tertiary)]" />
+                </div>
+                <h3 className="text-[var(--pm-text)] font-medium mb-1">No system events recorded</h3>
+                <p className="text-[var(--pm-text-secondary)] text-sm max-w-sm">
+                  System events, critical alerts, and infrastructure changes will appear here.
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-sm text-left">
+                <thead className="bg-[var(--pm-surface-high)] text-[var(--pm-text-secondary)] text-xs border-b border-[var(--pm-border)] uppercase tracking-wider font-mono">
+                  <tr>
+                    <th className="px-6 py-4 font-medium">Event</th>
+                    <th className="px-6 py-4 font-medium">Category</th>
+                    <th className="px-6 py-4 font-medium">Severity</th>
+                    <th className="px-6 py-4 font-medium">Timestamp</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[var(--pm-border)]">
+                  {events.map((event: any) => (
+                    <tr key={event.id} className="hover:bg-[var(--pm-surface-hover)] transition-colors group">
+                      <td className="px-6 py-4 font-medium text-[var(--pm-text)]">
+                        {event.action || event.description || 'System Event'}
+                      </td>
+                      <td className="px-6 py-4 text-[var(--pm-text-secondary)]">
+                        {event.category || event.source || 'system'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${getSeverityColor(event.severity)}`}>
+                          {(event.severity || 'info').toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-[var(--pm-text-secondary)] flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {new Date(event.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

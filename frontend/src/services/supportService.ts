@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import packageJson from '../../package.json';
 
 export interface SupportPackage {
   systemVersion: string;
@@ -29,8 +30,8 @@ export const supportService = {
     ]);
 
     const pkg: SupportPackage = {
-      systemVersion: 'v1.0.0',
-      schemaVersion: 'Schema 42',
+      systemVersion: packageJson.version,
+      schemaVersion: 'PostgreSQL 15.x',
       generatedAt: new Date().toISOString(),
       workspaceId,
       diagnostics: {
