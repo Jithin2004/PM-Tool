@@ -7096,18 +7096,6 @@ $$;
 -- 1. MISSING PRODUCTION TABLES
 -- -------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS system_events (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES users(id),
-  source text,
-  event_type text,
-  payload jsonb,
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE system_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can insert system events" ON system_events FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND source = 'frontend');
-
 CREATE TABLE IF NOT EXISTS company_billing_profile (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -7431,9 +7419,35 @@ CREATE INDEX idx_system_events_workspace_id ON system_events(workspace_id);
 
 ALTER TABLE system_events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can insert system events" ON system_events FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() AND source = 'frontend');
-CREATE POLICY "Admins can view system events" ON system_events FOR SELECT TO authenticated USING (workspace_id IS NOT NULL AND EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.workspace_id = system_events.workspace_id AND public.has_capability(users.id, 'platform_governance')));
-CREATE POLICY "Admins can update system events" ON system_events FOR UPDATE TO authenticated USING (workspace_id IS NOT NULL AND EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.workspace_id = system_events.workspace_id AND public.has_capability(users.id, 'platform_governance'))) WITH CHECK (workspace_id IS NOT NULL AND EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.workspace_id = system_events.workspace_id AND public.has_capability(users.id, 'platform_governance')));
+-- 1. INSERT policy for authenticated users (Telemetry writes)
+CREATE POLICY "Enable insert for authenticated users" 
+ON system_events 
+FOR INSERT 
+TO authenticated 
+WITH CHECK (true);
+
+-- 2. SELECT policy (Workspace-scoped read access)
+CREATE POLICY "Enable select based on workspace_id" 
+ON system_events 
+FOR SELECT 
+TO authenticated 
+USING (
+  workspace_id IN (
+    SELECT workspace_id FROM users WHERE id = auth.uid()
+  )
+);
+
+-- 3. DELETE policy (Admin cleanup)
+CREATE POLICY "Enable delete for admins" 
+ON system_events 
+FOR DELETE 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM users 
+    WHERE users.id = auth.uid() AND users.role IN ('super_admin', 'pm')
+  )
+);
 
 
 
