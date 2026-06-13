@@ -8,7 +8,9 @@ import { supabase } from '../../lib/supabase';
 export function BillingSettings() {
   const { workspace } = useWorkspace();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
   const [serverLicenseData, setServerLicenseData] = useState<any>(null);
+  const [verifyError, setVerifyError] = useState(false);
   const [activeUsersCount, setActiveUsersCount] = useState<number>(0);
   const license = getLicenseInfo();
 
@@ -25,7 +27,10 @@ export function BillingSettings() {
     }
     
     async function verifyLicenseOnline() {
-      if (!license?.token) return;
+      if (!license?.token) {
+        setIsVerifying(false);
+        return;
+      }
       const API_URL = import.meta.env.VITE_PRODUCT_KEY_API_URL || 'https://api.resolvepm.com/license';
       
       try {
@@ -38,9 +43,14 @@ export function BillingSettings() {
         if (res.ok) {
           const data = await res.json();
           setServerLicenseData(data);
+        } else {
+          setVerifyError(true);
         }
       } catch (err) {
         console.error('License verification failed:', err);
+        setVerifyError(true);
+      } finally {
+        setIsVerifying(false);
       }
     }
 
@@ -57,15 +67,36 @@ export function BillingSettings() {
     }, 500);
   };
 
-  const isActive = license?.status === 'Activated';
+  const isActive = license && serverLicenseData && !verifyError;
   const isExpired = license?.status === 'Expired Support';
   
-  const statusColor = isActive ? 'text-emerald-400' : isExpired ? 'text-amber-400' : 'text-red-400';
-  const statusBg = isActive ? 'bg-emerald-500/10 border-emerald-500/20' : isExpired ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20';
-  const statusDot = isActive ? 'bg-emerald-400' : isExpired ? 'bg-amber-400' : 'bg-red-400';
+  let displayStatus = 'UNACTIVATED';
+  let statusColor = 'text-red-400';
+  let statusBg = 'bg-red-500/10 border-red-500/20';
+  let statusDot = 'bg-red-400';
 
-  const planName = serverLicenseData?.plan || 'Standard Enterprise';
-  const maxSeats = serverLicenseData?.seats || 'Unlimited';
+  if (isVerifying) {
+    displayStatus = 'Checking license...';
+    statusColor = 'text-indigo-400';
+    statusBg = 'bg-indigo-500/10 border-indigo-500/20';
+    statusDot = 'bg-indigo-400';
+  } else if (isActive) {
+    displayStatus = 'ACTIVE';
+    statusColor = 'text-emerald-400';
+    statusBg = 'bg-emerald-500/10 border-emerald-500/20';
+    statusDot = 'bg-emerald-400';
+  } else if (isExpired) {
+    displayStatus = 'EXPIRED SUPPORT';
+    statusColor = 'text-amber-400';
+    statusBg = 'bg-amber-500/10 border-amber-500/20';
+    statusDot = 'bg-amber-400';
+  } else if (verifyError) {
+    displayStatus = 'INVALID';
+  }
+
+  const planName = serverLicenseData?.plan || license?.plan || '';
+  const maxSeats = serverLicenseData?.seats || '';
+  const productKeyId = serverLicenseData?.keyId || license?.productKey || license?.purchaseId || 'Unlicensed';
 
   return (
     <div className="space-y-8 animate-fade-in font-geist">
@@ -81,8 +112,8 @@ export function BillingSettings() {
             </p>
           </div>
           <div className={`px-4 py-2 ${statusBg} border rounded-lg flex items-center gap-2`}>
-            <span className={`w-2 h-2 rounded-full ${statusDot} ${isActive ? 'animate-pulse' : ''}`} />
-            <span className={`text-xs font-bold ${statusColor} uppercase tracking-wider`}>{license?.status || 'Unactivated'}</span>
+            <span className={`w-2 h-2 rounded-full ${statusDot} ${isVerifying || isActive ? 'animate-pulse' : ''}`} />
+            <span className={`text-xs font-bold ${statusColor} uppercase tracking-wider`}>{displayStatus}</span>
           </div>
         </div>
 
@@ -106,8 +137,8 @@ export function BillingSettings() {
                 <Server className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm font-bold text-[var(--pm-text)]">{planName}</p>
-                <p className="text-xs text-[var(--pm-text-tertiary)]">Self-Hosted Instance</p>
+                <p className="text-sm font-bold text-[var(--pm-text)]">{planName || 'N/A'}</p>
+                {serverLicenseData?.environment && <p className="text-xs text-[var(--pm-text-tertiary)]">{serverLicenseData.environment}</p>}
               </div>
             </div>
           </div>
@@ -119,7 +150,7 @@ export function BillingSettings() {
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm font-bold text-[var(--pm-text)]">{activeUsersCount} <span className="text-xs text-[var(--pm-text-tertiary)] font-normal">/ {maxSeats}</span></p>
+                <p className="text-sm font-bold text-[var(--pm-text)]">{activeUsersCount} {maxSeats && <span className="text-xs text-[var(--pm-text-tertiary)] font-normal">/ {maxSeats}</span>}</p>
                 <p className="text-xs text-[var(--pm-text-tertiary)]">Licensed Team Members</p>
               </div>
             </div>
@@ -132,7 +163,7 @@ export function BillingSettings() {
             <div className="space-y-4">
               <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
                 <span className="text-sm text-[var(--pm-text-secondary)]">Status</span>
-                <span className={`text-sm font-medium ${statusColor}`}>{license?.status || 'Invalid'}</span>
+                <span className={`text-sm font-medium ${statusColor}`}>{displayStatus}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
                 <span className="text-sm text-[var(--pm-text-secondary)]">Activated On</span>
@@ -141,12 +172,12 @@ export function BillingSettings() {
               <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
                 <span className="text-sm text-[var(--pm-text-secondary)]">Support Coverage</span>
                 <span className={`text-sm font-medium ${isExpired ? 'text-red-400' : 'text-indigo-500'}`}>
-                  {license?.supportExpiry ? `Until ${new Date(license.supportExpiry).toLocaleDateString()}` : 'No limit'}
+                  {license?.supportExpiry ? `Until ${new Date(license.supportExpiry).toLocaleDateString()}` : 'N/A'}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
                 <span className="text-sm text-[var(--pm-text-secondary)]">License Key ID</span>
-                <span className="text-sm font-mono text-[var(--pm-text)]">{license?.productKey || license?.purchaseId || 'Unlicensed'}</span>
+                <span className="text-sm font-mono text-[var(--pm-text)]">{productKeyId}</span>
               </div>
             </div>
           </div>
