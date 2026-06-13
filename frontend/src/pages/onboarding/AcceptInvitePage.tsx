@@ -106,12 +106,7 @@ export function AcceptInvitePage() {
 
       if (signUpError) {
         if (signUpError.message.includes('already registered')) {
-          // If they already exist, try to sign them in.
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: inviteDetails!.email,
-            password: password
-          });
-          if (signInError) throw new Error('Account exists but password was incorrect. Please login normally.');
+          throw new Error('ACCOUNT_EXISTS');
         } else {
           throw signUpError;
         }
@@ -201,7 +196,17 @@ export function AcceptInvitePage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
-              {error && (
+              {error && error === 'ACCOUNT_EXISTS' ? (
+                <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg animate-in slide-in-from-top-2 text-center">
+                  <p className="text-indigo-200 text-sm mb-3">You already have an account with this email address.</p>
+                  <a 
+                    href="/login" 
+                    className="inline-block px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold uppercase tracking-wider rounded transition-colors"
+                  >
+                    Log In to Accept Invitation
+                  </a>
+                </div>
+              ) : error && (
                 <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg animate-in slide-in-from-top-2">
                   {error}
                 </div>
