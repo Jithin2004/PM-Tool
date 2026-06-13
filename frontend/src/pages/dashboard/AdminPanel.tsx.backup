@@ -13,7 +13,7 @@ import { SystemHealthPanel } from '../../components/admin/SystemHealthPanel';
 import { BackupRestorePanel } from '../../components/admin/BackupRestorePanel';
 import { BillingSettings } from '../../components/control/BillingSettings';
 import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
-type TopTab = 'company' | 'people' | 'workspace' | 'system';
+type AdminTab = 'general' | 'identity' | 'calendar' | 'teams' | 'health' | 'import' | 'system_info' | 'backups' | 'license' | 'workspaces';
 
 function getInitials(name: string) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -62,8 +62,7 @@ export function AdminPanel() {
     invalidateAll,
   } = useDashboard();
 
-  const [activeTopTab, setActiveTopTab] = useState<TopTab>('company');
-  const [activeSubTab, setActiveSubTab] = useState<string>('profile');
+  const [tab, setTab] = useState<AdminTab>('identity');
   const [activeGearPopover, setActiveGearPopover] = useState<string | null>(null);
   const [capabilityModal, setCapabilityModal] = useState({ isOpen: false, userId: '', userEmail: '', capabilities: [] as string[], reason: '', saving: false });
 
@@ -157,10 +156,10 @@ export function AdminPanel() {
   };
 
   useEffect(() => {
-    if (activeSubTab === 'registry') {
+    if (tab === 'workspaces') {
       loadWorkspacesData();
     }
-  }, [activeSubTab]);
+  }, [tab]);
 
   const handleArchiveWorkspace = async (workspaceId: string) => {
     askConfirmation("Archive Workspace", "Are you sure you want to archive/retire this workspace? Tasks updates will be disabled.", async () => {
@@ -417,46 +416,23 @@ export function AdminPanel() {
   const activeTeams = teams.filter(t => t.name !== 'SYSTEM_SETTINGS');
   const activeProfiles = profiles || [];
 
-  
-  const TOP_TABS = [
-    { id: 'company', label: 'Company' },
-    { id: 'people', label: 'People & Access' },
-    { id: 'workspace', label: 'Workspace' },
-    { id: 'system', label: 'System' }
-  ] as const;
-
-  const SUB_TABS: Record<TopTab, { id: string; label: string; icon: string }[]> = {
-    company: [
-      { id: 'profile', label: 'Profile', icon: 'business' },
-      { id: 'calendar', label: 'Calendar', icon: 'calendar_month' },
-      { id: 'business_units', label: 'Business Units', icon: 'hub' }
-    ],
-    people: [
-      { id: 'users', label: 'Users', icon: 'groups' },
-      { id: 'roles', label: 'Roles & Permissions', icon: 'admin_panel_settings' },
-      { id: 'security', label: 'Security', icon: 'security' }
-    ],
-    workspace: [
-      { id: 'rules', label: 'Rules', icon: 'gavel' },
-      { id: 'data_management', label: 'Data Management', icon: 'cloud_upload' },
-      { id: 'integrations', label: 'Integrations', icon: 'extension' }
-    ],
-    system: [
-      { id: 'health', label: 'Health', icon: 'monitor_heart' },
-      { id: 'backup', label: 'Backup', icon: 'settings_backup_restore' },
-      { id: 'audit_logs', label: 'Audit Logs', icon: 'history' },
-      { id: 'license', label: 'License', icon: 'verified_user' },
-      { id: 'registry', label: 'Workspace Registry', icon: 'dns' }
-    ]
-  };
-
-  useEffect(() => {
-    setActiveSubTab(SUB_TABS[activeTopTab][0].id);
-  }, [activeTopTab]);
+  const tabs: { id: AdminTab; label: string; icon: string }[] = [
+    { id: 'general', label: 'General Settings', icon: 'settings' },
+    { id: 'identity', label: 'Workspace Access', icon: 'groups' },
+    { id: 'teams', label: 'Delivery Units', icon: 'hub' },
+    ...(canViewCalendar ? [{ id: 'calendar' as AdminTab, label: 'Company Calendar', icon: 'calendar_month' }] : []),
+    { id: 'import' as AdminTab, label: 'Data Import Hub', icon: 'cloud_upload' },
+    { id: 'system_info', label: 'System Info', icon: 'memory' },
+    { id: 'health', label: 'Health & Diagnostics', icon: 'monitor_heart' },
+    { id: 'backups', label: 'Disaster Recovery', icon: 'settings_backup_restore' },
+    { id: 'license', label: 'License & Coverage', icon: 'verified_user' },
+    { id: 'workspaces', label: 'Workspace Registry', icon: 'dns' },
+  ];
 
   return (
     <div className="flex flex-col gap-6 font-geist" style={{ color: 'var(--pm-on-surface)' }}>
-      {/* Header */}
+
+      {/* ── Header ─────────────────────────────────────────────── */}
       <div className="flex items-end justify-between px-1 pt-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Access Control</h1>
@@ -470,29 +446,14 @@ export function AdminPanel() {
         </span>
       </div>
 
-      {/* Top Tab Bar */}
-      <div className="flex gap-4 border-b pb-0" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-        {TOP_TABS.map(t => (
-          <button key={t.id} onClick={() => setActiveTopTab(t.id)}
-            className="flex items-center gap-2 px-2 py-2.5 text-base font-semibold transition-all relative"
+      {/* ── Tab Bar ─────────────────────────────────────────────── */}
+      <div className="flex gap-1 border-b pb-0" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-all relative"
             style={{
-              color: activeTopTab === t.id ? 'var(--pm-primary)' : 'var(--pm-on-surface-variant)',
-              borderBottom: activeTopTab === t.id ? '2px solid var(--pm-primary)' : '2px solid transparent',
-            }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Sub Tab Bar */}
-      <div className="flex gap-2 pb-0 mb-2">
-        {SUB_TABS[activeTopTab].map(t => (
-          <button key={t.id} onClick={() => setActiveSubTab(t.id)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={{
-              color: activeSubTab === t.id ? 'white' : 'var(--pm-on-surface-variant)',
-              background: activeSubTab === t.id ? 'var(--pm-surface-high)' : 'transparent',
-              border: activeSubTab === t.id ? '1px solid rgba(192,193,255,0.1)' : '1px solid transparent'
+              color: tab === t.id ? 'var(--pm-primary)' : 'var(--pm-on-surface-variant)',
+              borderBottom: tab === t.id ? '2px solid var(--pm-primary)' : '2px solid transparent',
             }}>
             <Icon name={t.icon} size={16} />
             {t.label}
@@ -500,8 +461,8 @@ export function AdminPanel() {
         ))}
       </div>
 
-      {/* Views */}
-{activeSubTab === 'profile' && (
+      {/* ── General Settings Tab ───────────────────────────────── */}
+      {tab === 'general' && (
         <div className="space-y-8">
           <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 lg:w-1/2 shadow-sm">
             <h3 className="font-semibold mb-6 flex items-center gap-2">
@@ -547,196 +508,8 @@ export function AdminPanel() {
         </div>
       )}
 
-{activeSubTab === 'calendar' && (
-        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(70,69,84,0.3)' }}>
-          <CompanyCalendarPanel />
-        </div>
-      )}
-
-{activeSubTab === 'business_units' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {activeTeams.map((team: any) => (
-              <div key={team.id} className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 group shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-5">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ background: 'var(--pm-surface-highest)', border: '1px solid rgba(70,69,84,0.3)', color: 'var(--pm-primary)' }}>
-                    <Icon name="hub" size={20} />
-                  </div>
-                  <span className="font-mono-pm text-[9px] font-bold uppercase tracking-widest pm-badge-success">
-                    ACTIVE
-                  </span>
-                </div>
-                <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>{team.name}</h3>
-                <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                  {team.description || 'Delivery unit within the workspace.'}
-                </p>
-                <div className="flex justify-between items-center">
-                  <div className="flex -space-x-2">
-                    {(team.members || []).slice(0, 3).map((m: any, i: number) => (
-                      <div key={i} className="w-7 h-7 rounded-full border-2 flex items-center justify-center text-[9px] font-bold"
-                        style={{ borderColor: 'var(--pm-surface-low)', background: 'var(--pm-surface-highest)', color: 'var(--pm-primary)' }}>
-                        {getInitials(m.name || m)}
-                      </div>
-                    ))}
-                    {(team.members?.length || 0) > 3 && (
-                      <div className="w-7 h-7 rounded-full border-2 flex items-center justify-center text-[9px] font-bold"
-                        style={{ borderColor: 'var(--pm-surface-low)', background: 'var(--pm-surface-highest)', color: 'var(--pm-on-surface-variant)' }}>
-                        +{(team.members?.length || 0) - 3}
-                      </div>
-                    )}
-                  </div>
-                  <Icon name="open_in_new" size={18}
-                    className="transition-colors group-hover:text-primary"
-                    style={{ color: 'rgba(199,196,215,0.3)' }} />
-                </div>
-
-                {/* Governance buttons */}
-                <div className="flex gap-2 mt-4 pt-4 border-t" style={{ borderColor: 'rgba(70,69,84,0.1)' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      startEditingTeam(team);
-                      setShowTeamForm(true);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
-                    style={{ background: 'rgba(192,193,255,0.05)', border: '1px solid rgba(192,193,255,0.1)', color: 'var(--pm-primary)' }}
-                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
-                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.05)'; }}
-                  >
-                    <Icon name="edit" size={12} />
-                    Edit Unit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      askConfirmation(
-                        "Delete Delivery Unit",
-                        `Are you sure you want to delete the delivery unit "${team.name}"? This action cannot be undone.`,
-                        async () => {
-                          await handleDeleteTeam(team.id);
-                          notify("Delivery unit deleted successfully.", "success");
-                        },
-                        "Delete"
-                      );
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
-                    style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', color: 'var(--pm-error)' }}
-                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.1)'; }}
-                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.05)'; }}
-                  >
-                    <Icon name="delete" size={12} />
-                    Delete Unit
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {/* Add team slot */}
-            <button className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all"
-              style={{ border: '2px dashed rgba(70,69,84,0.4)', background: showTeamForm ? 'rgba(192,193,255,0.05)' : '' }}
-              onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(192,193,255,0.4)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.03)'; }}
-              onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = showTeamForm ? 'rgba(192,193,255,0.05)' : ''; }}
-              onClick={() => {
-                setShowTeamForm(!showTeamForm);
-                if (!showTeamForm) setEditingTeamId(null);
-              }}>
-              <Icon name={showTeamForm ? "remove_circle" : "add_circle"} size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
-              <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em] font-bold"
-                style={{ color: 'var(--pm-on-surface-variant)' }}>
-                {showTeamForm ? 'Close Form' : 'Create Unit'}
-              </span>
-            </button>
-          </div>
-
-          {(showTeamForm || editingTeamId) && (
-            <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 mt-5 shadow-sm" id="team-form">
-              <h3 className="font-semibold mb-6 flex items-center gap-2">
-                <Icon name="offline_bolt" size={18} style={{ color: 'var(--pm-primary)' }} />
-                {editingTeamId ? 'Update Delivery Unit' : 'Initialize Delivery Unit'}
-              </h3>
-              <form onSubmit={handleCreateTeamSubmit} className="space-y-4 max-w-xl">
-                <div>
-                  <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Unit Name</label>
-                  <input
-                    required
-                    type="text"
-                    value={newTeamName}
-                    onChange={e => setNewTeamName(e.target.value)}
-                    className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
-                    style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                    placeholder="E.g. SQUAD_DELTA"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Unit Lead</label>
-                  <select
-                    required
-                    value={selectedPm}
-                    onChange={e => setSelectedPm(e.target.value)}
-                    className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
-                    style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                  >
-                    <option value="" disabled>Select Unit Lead</option>
-                    {pms.map(pm => (
-                      <option key={pm.id} value={pm.id}>{pm.full_name || pm.email}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Team Members</label>
-                  <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-                    {availableDevs.map(dev => (
-                      <label key={dev.id} className="flex items-center gap-2 text-xs font-mono-pm cursor-pointer hover:bg-[var(--pm-surface)]/5 p-1.5 rounded transition-colors" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                        <input
-                          type="checkbox"
-                          className="accent-[var(--pm-primary)]"
-                          checked={selectedDevs.includes(dev.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) setSelectedDevs([...selectedDevs, dev.id]);
-                            else setSelectedDevs(selectedDevs.filter(id => id !== dev.id));
-                          }}
-                        />
-                        <span>{dev.full_name || dev.email}</span>
-                      </label>
-                    ))}
-                    {availableDevs.length === 0 && <p className="text-[10px] italic p-1" style={{ color: 'var(--pm-on-surface-variant)' }}>No unassigned members available.</p>}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="submit"
-                    className="flex-1 rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all"
-                    style={{ background: 'rgba(192,193,255,0.1)', color: 'var(--pm-primary)', border: '1px solid rgba(192,193,255,0.2)' }}
-                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.15)'; }}
-                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
-                  >
-                    {editingTeamId ? 'Update Unit' : 'Create Unit'}
-                  </button>
-                  {editingTeamId && (
-                    <button
-                      type="button"
-                      onClick={cancelEditingTeam}
-                      className="flex-1 rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all"
-                      style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface-variant)', border: '1px solid rgba(70,69,84,0.3)' }}
-                      onMouseEnter={e => { (e.currentTarget as any).style.background = 'var(--pm-surface-highest)'; }}
-                      onMouseLeave={e => { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </form>
-            </div>
-          )}
-        </div>
-      )}
-
-
-      {activeSubTab === 'users' && (
+      {/* ── Workspace Access Tab ───────────────────────────────── */}
+      {tab === 'identity' && (
         <div className="space-y-8">
           {/* Identity Table */}
           <div className="rounded-xl shadow-2xl overflow-visible"
@@ -1200,118 +973,233 @@ export function AdminPanel() {
         </div>
       )}
 
-      {activeSubTab === 'roles' && (
-        <div className="space-y-6">
-          <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
-            <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
-              <Icon name="admin_panel_settings" size={22} style={{ color: 'var(--pm-secondary)' }} />
-              Designation Registry
-            </h3>
-            <p className="text-xs text-text-tertiary mb-6">Manage custom roles and professional designations across the workspace.</p>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 border-r pr-6 space-y-4" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
-                <h4 className="font-mono-pm text-[11px] uppercase tracking-widest text-text-secondary">Register Custom Designation</h4>
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const name = newCustomDesignation.trim();
-                    if (!name) return;
-                    if (customRoles.includes(name)) {
-                      notify("Designation already exists.", "warning");
-                      return;
-                    }
-                    const updated = [...customRoles, name];
-                    await handleSaveLogisticsData({ ...systemData, customRoles: updated });
-                    setNewCustomDesignation('');
-                    notify(`Designation '${name}' added to workspace registry.`, "success");
-                  }}
-                  className="space-y-4"
-                >
-                  <div>
-                    <label className="block text-[9px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Designation Label</label>
-                    <input required type="text" value={newCustomDesignation} onChange={e => setNewCustomDesignation(e.target.value)} className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none focus:border-[var(--border-soft)] transition-all text-text-primary bg-bg" style={{ borderColor: 'rgba(70,69,84,0.3)' }} placeholder="e.g. Lead QA Engineer" />
+      {/* ── Delivery Units Tab ───────────────────────────────── */}
+      {tab === 'teams' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {activeTeams.map((team: any) => (
+              <div key={team.id} className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 group shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-5">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ background: 'var(--pm-surface-highest)', border: '1px solid rgba(70,69,84,0.3)', color: 'var(--pm-primary)' }}>
+                    <Icon name="hub" size={20} />
                   </div>
-                  <button type="submit" className="w-full rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all" style={{ background: 'rgba(192,193,255,0.1)', color: 'var(--pm-primary)', border: '1px solid rgba(192,193,255,0.2)' }}>
-                    Add Designation
+                  <span className="font-mono-pm text-[9px] font-bold uppercase tracking-widest pm-badge-success">
+                    ACTIVE
+                  </span>
+                </div>
+                <h3 className="font-semibold mb-2" style={{ color: 'var(--pm-on-surface)' }}>{team.name}</h3>
+                <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                  {team.description || 'Delivery unit within the workspace.'}
+                </p>
+                <div className="flex justify-between items-center">
+                  <div className="flex -space-x-2">
+                    {(team.members || []).slice(0, 3).map((m: any, i: number) => (
+                      <div key={i} className="w-7 h-7 rounded-full border-2 flex items-center justify-center text-[9px] font-bold"
+                        style={{ borderColor: 'var(--pm-surface-low)', background: 'var(--pm-surface-highest)', color: 'var(--pm-primary)' }}>
+                        {getInitials(m.name || m)}
+                      </div>
+                    ))}
+                    {(team.members?.length || 0) > 3 && (
+                      <div className="w-7 h-7 rounded-full border-2 flex items-center justify-center text-[9px] font-bold"
+                        style={{ borderColor: 'var(--pm-surface-low)', background: 'var(--pm-surface-highest)', color: 'var(--pm-on-surface-variant)' }}>
+                        +{(team.members?.length || 0) - 3}
+                      </div>
+                    )}
+                  </div>
+                  <Icon name="open_in_new" size={18}
+                    className="transition-colors group-hover:text-primary"
+                    style={{ color: 'rgba(199,196,215,0.3)' }} />
+                </div>
+
+                {/* Governance buttons */}
+                <div className="flex gap-2 mt-4 pt-4 border-t" style={{ borderColor: 'rgba(70,69,84,0.1)' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      startEditingTeam(team);
+                      setShowTeamForm(true);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
+                    style={{ background: 'rgba(192,193,255,0.05)', border: '1px solid rgba(192,193,255,0.1)', color: 'var(--pm-primary)' }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.05)'; }}
+                  >
+                    <Icon name="edit" size={12} />
+                    Edit Unit
                   </button>
-                </form>
-              </div>
-              <div className="lg:col-span-2 space-y-4">
-                <h4 className="font-mono-pm text-[11px] uppercase tracking-widest text-text-secondary">Assignments</h4>
-                <div className="p-6 border rounded-lg flex flex-col items-center justify-center text-center" style={{ borderColor: 'rgba(70,69,84,0.3)', background: 'var(--pm-surface-lowest)' }}>
-                  <Icon name="info" size={24} style={{ color: 'var(--pm-on-surface-variant)' }} className="mb-3" />
-                  <p className="text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>Role Assignments Relocated</p>
-                  <p className="text-xs" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                    You can change member access roles and custom designations directly from the gear icon in the Users table.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      askConfirmation(
+                        "Delete Delivery Unit",
+                        `Are you sure you want to delete the delivery unit "${team.name}"? This action cannot be undone.`,
+                        async () => {
+                          await handleDeleteTeam(team.id);
+                          notify("Delivery unit deleted successfully.", "success");
+                        },
+                        "Delete"
+                      );
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
+                    style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', color: 'var(--pm-error)' }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.1)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(239,68,68,0.05)'; }}
+                  >
+                    <Icon name="delete" size={12} />
+                    Delete Unit
+                  </button>
                 </div>
               </div>
-            </div>
+            ))}
+
+            {/* Add team slot */}
+            <button className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all"
+              style={{ border: '2px dashed rgba(70,69,84,0.4)', background: showTeamForm ? 'rgba(192,193,255,0.05)' : '' }}
+              onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(192,193,255,0.4)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.03)'; }}
+              onMouseLeave={e => { (e.currentTarget as any).style.borderColor = 'rgba(70,69,84,0.4)'; (e.currentTarget as any).style.background = showTeamForm ? 'rgba(192,193,255,0.05)' : ''; }}
+              onClick={() => {
+                setShowTeamForm(!showTeamForm);
+                if (!showTeamForm) setEditingTeamId(null);
+              }}>
+              <Icon name={showTeamForm ? "remove_circle" : "add_circle"} size={32} style={{ color: 'var(--pm-on-surface-variant)' }} />
+              <span className="font-mono-pm text-[10px] uppercase tracking-[0.3em] font-bold"
+                style={{ color: 'var(--pm-on-surface-variant)' }}>
+                {showTeamForm ? 'Close Form' : 'Create Unit'}
+              </span>
+            </button>
           </div>
+
+          {(showTeamForm || editingTeamId) && (
+            <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 mt-5 shadow-sm" id="team-form">
+              <h3 className="font-semibold mb-6 flex items-center gap-2">
+                <Icon name="offline_bolt" size={18} style={{ color: 'var(--pm-primary)' }} />
+                {editingTeamId ? 'Update Delivery Unit' : 'Initialize Delivery Unit'}
+              </h3>
+              <form onSubmit={handleCreateTeamSubmit} className="space-y-4 max-w-xl">
+                <div>
+                  <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Unit Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={newTeamName}
+                    onChange={e => setNewTeamName(e.target.value)}
+                    className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
+                    style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                    placeholder="E.g. SQUAD_DELTA"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Unit Lead</label>
+                  <select
+                    required
+                    value={selectedPm}
+                    onChange={e => setSelectedPm(e.target.value)}
+                    className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
+                    style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                  >
+                    <option value="" disabled>Select Unit Lead</option>
+                    {pms.map(pm => (
+                      <option key={pm.id} value={pm.id}>{pm.full_name || pm.email}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assign Team Members</label>
+                  <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+                    {availableDevs.map(dev => (
+                      <label key={dev.id} className="flex items-center gap-2 text-xs font-mono-pm cursor-pointer hover:bg-[var(--pm-surface)]/5 p-1.5 rounded transition-colors" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                        <input
+                          type="checkbox"
+                          className="accent-[var(--pm-primary)]"
+                          checked={selectedDevs.includes(dev.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedDevs([...selectedDevs, dev.id]);
+                            else setSelectedDevs(selectedDevs.filter(id => id !== dev.id));
+                          }}
+                        />
+                        <span>{dev.full_name || dev.email}</span>
+                      </label>
+                    ))}
+                    {availableDevs.length === 0 && <p className="text-[10px] italic p-1" style={{ color: 'var(--pm-on-surface-variant)' }}>No unassigned members available.</p>}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all"
+                    style={{ background: 'rgba(192,193,255,0.1)', color: 'var(--pm-primary)', border: '1px solid rgba(192,193,255,0.2)' }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.15)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
+                  >
+                    {editingTeamId ? 'Update Unit' : 'Create Unit'}
+                  </button>
+                  {editingTeamId && (
+                    <button
+                      type="button"
+                      onClick={cancelEditingTeam}
+                      className="flex-1 rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all"
+                      style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface-variant)', border: '1px solid rgba(70,69,84,0.3)' }}
+                      onMouseEnter={e => { (e.currentTarget as any).style.background = 'var(--pm-surface-highest)'; }}
+                      onMouseLeave={e => { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       )}
 
-      {activeSubTab === 'security' && (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 rounded-xl border border-dashed" style={{ borderColor: 'rgba(70,69,84,0.4)', background: 'rgba(70,69,84,0.05)' }}>
-          <Icon name="security" size={48} style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }} />
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Security Settings</h3>
-          <p className="text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>Password policies, login rules, and authentication settings will be available here.</p>
+      {/* ── Company Calendar Tab ───────────────────────────────── */}
+      {tab === 'calendar' && (
+        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(70,69,84,0.3)' }}>
+          <CompanyCalendarPanel />
         </div>
       )}
 
-      {activeSubTab === 'rules' && (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 rounded-xl border border-dashed" style={{ borderColor: 'rgba(70,69,84,0.4)', background: 'rgba(70,69,84,0.05)' }}>
-          <Icon name="gavel" size={48} style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }} />
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Workspace Rules</h3>
-          <p className="text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>Project defaults, task settings, and workflow rules will be available here.</p>
-        </div>
-      )}
-{activeSubTab === 'data_management' && (
+      {/* ── Data Import Tab ───────────────────────────── */}
+      {tab === 'import' && (
         <div className="rounded-xl overflow-hidden">
           <EnterpriseImportCenter />
         </div>
       )}
 
-
-      {activeSubTab === 'integrations' && (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 rounded-xl border border-dashed" style={{ borderColor: 'rgba(70,69,84,0.4)', background: 'rgba(70,69,84,0.05)' }}>
-          <Icon name="extension" size={48} style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }} />
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Integrations</h3>
-          <p className="text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>Connect with Email, Google Workspace, Slack, and Microsoft Teams. Coming soon.</p>
+      {/* ── System Info Tab ───────────────────────────── */}
+      {tab === 'system_info' && (
+        <div className="rounded-xl overflow-hidden">
+          <SystemInfoPanel />
         </div>
       )}
 
-      {activeSubTab === 'health' && (
-        <div className="flex flex-col gap-6">
-          <div className="rounded-xl overflow-hidden">
-            <SystemInfoPanel />
-          </div>
-          <div className="rounded-xl overflow-hidden min-h-[600px]">
-            <SystemHealthPanel />
-          </div>
+      {/* ── Health & Diagnostics Tab ──────────────────── */}
+      {tab === 'health' && (
+        <div className="rounded-xl overflow-hidden h-[600px]">
+          <SystemHealthPanel />
         </div>
       )}
-{activeSubTab === 'backup' && (
+
+      {/* ── Disaster Recovery Tab ─────────────────────── */}
+      {tab === 'backups' && (
         <div className="rounded-xl overflow-hidden">
           <BackupRestorePanel />
         </div>
       )}
 
-
-      {activeSubTab === 'audit_logs' && (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 rounded-xl border border-dashed" style={{ borderColor: 'rgba(70,69,84,0.4)', background: 'rgba(70,69,84,0.05)' }}>
-          <Icon name="history" size={48} style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }} />
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Audit Logs</h3>
-          <p className="text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>View system-wide activity, access history, and permission changes.</p>
-        </div>
-      )}
-{activeSubTab === 'license' && (
+      {/* ── License & Coverage Tab ────────────────────── */}
+      {tab === 'license' && (
         <div className="rounded-xl overflow-hidden">
           <BillingSettings />
         </div>
       )}
 
-{activeSubTab === 'registry' && (
+      {/* ── Workspace Registry Tab ─────────────────────────── */}
+      {tab === 'workspaces' && (
         <div className="space-y-8">
           {loadingWorkspaces ? (
             <div className="text-center py-12 text-sm text-[var(--pm-on-surface-variant)]">
@@ -1500,9 +1388,7 @@ export function AdminPanel() {
         </div>
       )}
 
-
       {/* Render Capability Edit Modal */}
-
       {capabilityModal.isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-[#1c1d1f] border border-[var(--border-soft)] rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
