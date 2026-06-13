@@ -32,10 +32,7 @@ export function AcceptInvitePage() {
 
       try {
         const { data: invRow, error: fetchError } = await supabase
-          .from('invitations')
-          .select('id, email, role, status, expires_at, workspace_id')
-          .eq('token', token)
-          .single();
+          .rpc('get_invitation_by_token', { p_token: token });
 
         if (fetchError || !invRow) {
           setError('Invalid invitation link. Please request a new invite from your administrator.');
@@ -52,18 +49,12 @@ export function AcceptInvitePage() {
           return;
         }
 
-        const { data: wsRow } = await supabase
-          .from('workspaces')
-          .select('name')
-          .eq('id', invRow.workspace_id)
-          .single();
-
         setInviteDetails({
           email: invRow.email,
-          full_name: invRow.email.split('@')[0], // we don't store full_name in invitations
+          full_name: invRow.email.split('@')[0], 
           role: invRow.role,
           department: null,
-          workspace_name: wsRow?.name || 'Your Company'
+          workspace_name: invRow.workspace_name || 'Your Company'
         });
 
       } catch (err: any) {
