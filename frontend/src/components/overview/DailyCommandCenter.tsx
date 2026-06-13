@@ -17,9 +17,15 @@ export function DailyCommandCenter() {
   useEffect(() => {
     async function load() {
       if (!user || !workspace || !profile?.role) return;
-      const data = await getDailyOverview(user.id, workspace.id, profile.role, profile.full_name || profile.email || 'User');
-      setOverview(data);
-      setLoading(false);
+      try {
+        const data = await getDailyOverview(user.id, workspace.id, profile.role, profile.full_name || profile.email || 'User');
+        console.log('[DailyCommandCenter] overview loaded', data);
+        setOverview(data);
+      } catch (err) {
+        console.error('[DailyCommandCenter] getDailyOverview failed', err);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [user, workspace, profile]);
