@@ -48,6 +48,7 @@ const withRetry = (componentImport: () => Promise<any>) => {
 };
 
 import { WorkspaceSetupWizard } from '../pages/onboarding/WorkspaceSetupWizard';
+import { AcceptInvitePage } from '../pages/onboarding/AcceptInvitePage';
 import { LandingPage } from '../landing/LandingPage';
 import { PrivacyPage } from '../landing/PrivacyPage';
 import { TermsPage } from '../landing/TermsPage';
@@ -233,6 +234,10 @@ export function ResolveRouter() {
 
   if (pathname === '/') {
     return <LandingPage />;
+  }
+
+  if (pathname.startsWith('/accept-invite/')) {
+    return <AcceptInvitePage />;
   }
 
   if (pathname === '/privacy') {

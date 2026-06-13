@@ -2,7 +2,7 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { Workspace, WorkspaceSettings } from '../types/workspace';
 import { calendarEventService } from './calendarEventService';
-import { holidaySourceService } from './holidaySourceService';
+import { companyCalendarService } from './companyCalendarService';
 import { hasCapability } from '../core/auth/permissions';
 import { reconcileWorkspaceMembership } from '../core/auth/reconcileInvitationMembership';
 import type { UserRole } from '../types';
@@ -180,7 +180,7 @@ export async function getWorkspaceForUser(userId: string): Promise<Workspace | n
 }
 
 export async function syncWorkspaceHolidays(workspaceId: string, country: string, region: string, actorId?: string) {
-  await holidaySourceService.syncForWorkspace(workspaceId, country, region, actorId);
+  await companyCalendarService.syncHolidays(workspaceId, country, region);
 }
 
 export async function createWorkspaceForUser({ name, settings, user, templateId, executionMode, defaultLanes, workflowRules }: CreateWorkspaceInput): Promise<Workspace> {

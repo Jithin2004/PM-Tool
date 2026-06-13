@@ -89,7 +89,11 @@ export const sprintService = {
     const { data: sprint } = await supabase.from('sprints').select('*').limit(50).eq('id', sprintId).single();
     if (!sprint) return { effectiveCapacity: 0, deductedHours: 0, confidence: 0, eventCount: 0 };
     const baseHoursPerDay = 8;
-    const workingDays = [1, 2, 3, 4, 5];
+    
+    const { companyCalendarService } = await import('./companyCalendarService');
+    const calSettings = await companyCalendarService.getSettings(workspaceId);
+    const workingDays = calSettings?.working_days || [1, 2, 3, 4, 5, 6];
+
     const { totalCapacity, deductedHours, events } = await calendarEventService.getEffectiveCapacity(
       workspaceId, sprint.start_date, sprint.end_date, baseHoursPerDay, workingDays, undefined, undefined, workStart, workEnd
     );

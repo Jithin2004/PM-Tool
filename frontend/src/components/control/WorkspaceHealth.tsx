@@ -1,33 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { ShieldAlert, CheckCircle, AlertTriangle, Database } from 'lucide-react';
 import { useOperationalData } from '../../context/OperationalDataContext';
+import { workspaceHealthService, HealthCheckResult } from '../../services/workspaceHealthService';
 
 export function WorkspaceHealth() {
   const { workspace } = useWorkspace();
   const { raw, derived } = useOperationalData();
+  const [healthChecks, setHealthChecks] = useState<HealthCheckResult[]>([]);
 
-  const healthChecks = useMemo(() => {
-    if (!workspace) return [];
-    
-    const checks = [];
-    const s = (workspace.settings || {}) as any;
-
-    if (!s.companyName) {
-      checks.push({ type: 'warning', message: 'Company Name missing in Organization settings.' });
+  useEffect(() => {
+    if (workspace?.id) {
+      workspaceHealthService.getHealthDiagnostics(workspace.id).then(setHealthChecks);
     }
-    if (!s.timezone) {
-      checks.push({ type: 'warning', message: 'Timezone missing in Organization settings.' });
-    }
-    if (!s.baseCurrency) {
-      checks.push({ type: 'warning', message: 'Finance currency missing. Please set Base Currency in Finance Settings.' });
-    }
-    if (!s.passwordPolicy) {
-      checks.push({ type: 'info', message: 'Recommended: Configure a Password Policy in Security Settings.' });
-    }
-
-    return checks;
-  }, [workspace]);
+  }, [workspace?.id, workspace?.settings]); // Re-run when settings change
 
   const dataDiagnostics = useMemo(() => {
     if (!raw.profiles || !derived.visibleProjects || !derived.visibleTasks) return [];
@@ -91,7 +77,7 @@ export function WorkspaceHealth() {
               <p className="text-sm font-medium text-signal-warning flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" /> Action Recommended
               </p>
-              <p className="text-xs text-signal-warning/80 mt-1">Some configuration is missing which may affect features like invoicing or user management.</p>
+              <p className="text-xs text-signal-warning/80 mt-1">Some configuration is missing which may affect features like invoicing or calendar sync.</p>
             </div>
           )}
           

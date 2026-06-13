@@ -81,8 +81,8 @@ export function AdminDashboard({
       const token = sessionData.session?.access_token;
 
       // Provision user via backend API
-      const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL || 'https://pm-tool-server.onrender.com';
-      const res = await fetch(`${baseUrl}/api/provision-employee`, {
+      const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL || 'http://localhost:5001';
+      const res = await fetch(`${baseUrl}/api/invite`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -90,19 +90,18 @@ export function AdminDashboard({
         },
         body: JSON.stringify({
           email,
-          role: inviteRole
+          role: inviteRole,
+          source: 'manual'
         })
       });
 
-      const data = await res.json();
+      const result = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to provision employee.');
+        throw new Error(result.error || 'Failed to provision employee.');
       }
 
-      // Also record it in invitations for tracking purposes if needed, but not strictly required
-      // We will just show the temp password to the admin
-      showAlert(`Employee provisioned successfully.\nEmail: ${email}\nTemp Password: ${data.tempPassword}\n\nPlease share this password with the employee.`);
+      showAlert(`Employee invited successfully.\nEmail: ${email}\n\nInvite Link:\n${result.data.invite_link}\n\nPlease copy and share this link with the employee.`);
 
       setInviteEmail('');
       fetchInvitations();

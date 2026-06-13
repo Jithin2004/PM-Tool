@@ -5,7 +5,7 @@ import type { WorkflowTemplate } from '../../constants/product';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { predictEtaSync } from '../../services/etaService';
-import { holidaySourceService } from '../../services/holidaySourceService';
+import { companyCalendarService } from '../../services/companyCalendarService';
 import type { BusinessType, WorkspaceSettings } from '../../types/workspace';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
 import { supabase } from '../../lib/supabase';
@@ -66,17 +66,13 @@ export function WorkspaceSetupPage() {
   useEffect(() => {
     if (step === 4 && settings.country && previewHolidays.length === 0 && !previewLoading) {
       setPreviewLoading(true);
-      const year = new Date().getFullYear();
-      Promise.all([
-        holidaySourceService.fetchHolidays(settings.country, settings.region || '', year),
-        holidaySourceService.fetchHolidays(settings.country, settings.region || '', year + 1)
-      ]).then(([thisYear, nextYear]) => {
-        setPreviewHolidays([...thisYear, ...nextYear]);
-      }).catch(() => {
+      try {
+        companyCalendarService.syncHolidays(workspace?.id || '', settings.country, settings.region || '').catch(() => {});
+      } catch (e) {
         setPreviewHolidays([]);
-      }).finally(() => {
+      } finally {
         setPreviewLoading(false);
-      });
+      }
     }
   }, [step, settings.country, settings.region]);
 
@@ -159,8 +155,8 @@ export function WorkspaceSetupPage() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
 
-        const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL || 'https://pm-tool-server.onrender.com';
-        const res = await fetch(`${baseUrl}/api/provision-employee`, {
+        const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL || 'http://localhost:5001';
+        const res = await fetch(`${baseUrl}/api/invite`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -169,17 +165,17 @@ export function WorkspaceSetupPage() {
           body: JSON.stringify({
             email,
             role: 'developer', // Default invited role
-            date_of_joining: new Date(inviteDoj).toISOString()
+            source: 'onboarding'
           })
         });
 
-        const data = await res.json();
+        const result = await res.json();
 
         if (!res.ok) {
-          throw new Error(data.error || 'Failed to provision employee.');
+          throw new Error(result.error || 'Failed to provision employee.');
         }
 
-        alert(`Employee provisioned successfully.\nEmail: ${email}\nTemp Password: ${data.tempPassword}\n\nPlease share this password with the employee.`);
+        alert(`Employee invited successfully.\nEmail: ${email}\n\nInvite Link:\n${result.data.invite_link}\n\nPlease copy and share this link with the employee.`);
       }
       setInvites(prev => [...prev, { email, doj: inviteDoj }]);
       setInviteEmail('');

@@ -6,7 +6,7 @@ import type { Workspace, WorkspaceSettings } from '../types/workspace';
 import { useAuth } from './AuthContext';
 import { hasCapability } from '../core/auth/permissions';
 //import { buildOAuthRedirectUrl, setRedirectToAfterAuth } from '../core/auth/postAuthRedirect';
-import { holidaySourceService } from '../services/holidaySourceService';
+import { companyCalendarService } from '../services/companyCalendarService';
 
 interface WorkspaceContextValue {
   user: User | null;
@@ -123,7 +123,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
           // Auto-fetch next year's holidays in background (owner / super_admin only)
           if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || hasCapability(profile.role, 'manage_settings'))) {
-            holidaySourceService.checkAndSyncNextYear(parsed.id, parsed.settings.country, parsed.settings.region || '', profile?.id).catch(() => { });
+            companyCalendarService.syncHolidays(parsed.id, parsed.settings.country, parsed.settings.region || '').catch(() => { });
           } else if (parsed.settings?.country) {
           }
 

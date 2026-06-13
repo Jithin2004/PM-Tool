@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { UserRole } from '../../types';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
-import { CalendarIntelligencePanel } from '../../components/admin/CalendarIntelligencePanel';
+import { CompanyCalendarPanel } from '../../components/admin/CompanyCalendarPanel';
 import { hasCapability } from '../../core/auth/permissions';
 import { Icon } from '../../components/ui/Icon';
 import { supabase } from '../../lib/supabase';
@@ -420,8 +420,8 @@ export function AdminPanel() {
     { id: 'general', label: 'General Settings', icon: 'settings' },
     { id: 'identity', label: 'Workspace Access', icon: 'groups' },
     { id: 'teams', label: 'Delivery Units', icon: 'hub' },
-    ...(canViewCalendar ? [{ id: 'calendar' as AdminTab, label: 'Calendar Intelligence', icon: 'calendar_month' }] : []),
-    { id: 'import' as AdminTab, label: 'Data Import', icon: 'cloud_upload' },
+    ...(canViewCalendar ? [{ id: 'calendar' as AdminTab, label: 'Company Calendar', icon: 'calendar_month' }] : []),
+    { id: 'import' as AdminTab, label: 'Data Import Hub', icon: 'cloud_upload' },
     { id: 'system_info', label: 'System Info', icon: 'memory' },
     { id: 'health', label: 'Health & Diagnostics', icon: 'monitor_heart' },
     { id: 'backups', label: 'Disaster Recovery', icon: 'settings_backup_restore' },
@@ -1156,10 +1156,10 @@ export function AdminPanel() {
         </div>
       )}
 
-      {/* ── Calendar Intelligence Tab ───────────────────────────── */}
+      {/* ── Company Calendar Tab ───────────────────────────────── */}
       {tab === 'calendar' && (
         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(70,69,84,0.3)' }}>
-          <CalendarIntelligencePanel />
+          <CompanyCalendarPanel />
         </div>
       )}
 

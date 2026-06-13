@@ -63,43 +63,50 @@ export function WorkspaceSetupWizard() {
             'hr': 'super_admin',
             'external access': 'viewer'
           };
-          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
           
           let imported = 0;
           let failed = 0;
           let skipped = 0;
           let failReasons: string[] = [];
 
-          for (const m of members) {
+          const payloadUsers = members.map(m => {
             const rawRole = m.role.toLowerCase();
-            const mappedRole = roleMap[rawRole] || 'developer';
-            
-            const insertPayload = {
+            return {
               email: m.email,
-              workspace_id: created.id,
-              role: mappedRole,
-              status: 'pending',
-              invited_by: user?.id,
-              expires_at: expiresAt
+              role: roleMap[rawRole] || 'developer',
+              full_name: m.name || m.email.split('@')[0],
+              department: null
             };
-            
-            try {
-              const { error: inviteError } = await trackSupabaseOperation('supabase_from_invitations', () => supabase.from('invitations').insert(insertPayload));
-              if (inviteError) {
-                if (inviteError.message?.includes('duplicate key') || inviteError.code === '23505') {
-                  skipped++;
-                  failReasons.push(`${m.email}: This employee already exists. Try inviting them instead.`);
-                } else {
-                  failed++;
-                  failReasons.push(`${m.email}: Failed to invite.`);
-                }
-              } else {
-                imported++;
-              }
-            } catch (innerErr) {
-              failed++;
-              failReasons.push(`${m.email}: Unexpected error.`);
+          });
+
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error("Not authenticated");
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/bulk-invite`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: JSON.stringify({
+                users: payloadUsers,
+                source: 'onboarding'
+              })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+              imported = result.results?.length || 0;
+              failed = result.errors?.length || 0;
+              failReasons = result.errors?.map((e: any) => `${e.email}: ${e.error}`) || [];
+            } else {
+              throw new Error(result.error || 'Failed to bulk invite users');
             }
+          } catch (err: any) {
+            console.error("Bulk invite failed:", err);
+            failed = members.length;
+            failReasons.push(`API Error: ${err.message}`);
           }
           
           // Optionally show summary before redirect if there are failures
