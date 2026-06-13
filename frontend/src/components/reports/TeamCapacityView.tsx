@@ -14,28 +14,42 @@ export function TeamCapacityView({ projectId }: { projectId?: string }) {
 
   useEffect(() => {
     async function loadData() {
-      if (!isSupabaseConfigured || !workspace?.id) return;
+      if (!workspace?.id) {
+        setLoading(false);
+        return;
+      }
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
 
-      let taskQuery = supabase.from('tasks').select('*').eq('workspace_id', workspace.id);
-      if (projectId) taskQuery = taskQuery.eq('project_id', projectId);
-      
-      const { data: t } = await taskQuery;
-      if (t) setTasks(t as Task[]);
+      try {
+        let taskQuery = supabase.from('tasks').select('*').eq('workspace_id', workspace.id);
+        if (projectId) taskQuery = taskQuery.eq('project_id', projectId);
+        
+        const { data: t, error: tErr } = await taskQuery;
+        if (tErr) throw tErr;
+        if (t) setTasks(t as Task[]);
 
-      const { data: p } = await supabase.from('profiles').select('id, full_name, email, role');
-      if (p) setProfiles(p);
+        const { data: p, error: pErr } = await supabase.from('profiles').select('id, full_name, email, role');
+        if (pErr) throw pErr;
+        if (p) setProfiles(p);
 
-      const { data: ws } = await supabase
-        .from('workspace_settings')
-        .select('working_hours')
-        .eq('workspace_id', workspace.id)
-        .single();
-      if (ws) setWorkspaceSettings(ws);
+        const { data: ws, error: wsErr } = await supabase
+          .from('workspace_settings')
+          .select('working_hours')
+          .eq('workspace_id', workspace.id)
+          .maybeSingle();
+        if (ws) setWorkspaceSettings(ws);
 
-      const { data: lv } = await supabase.from('personal_leave').select('*');
-      if (lv) setLeaves(lv);
-
-      setLoading(false);
+        const { data: lv, error: lvErr } = await supabase.from('personal_leave').select('*');
+        if (lvErr) throw lvErr;
+        if (lv) setLeaves(lv);
+      } catch (err) {
+        console.error('Failed to load team capacity data:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [workspace?.id, projectId]);

@@ -17,34 +17,50 @@ export function ProjectEffortSummary({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     async function loadData() {
-      if (!isSupabaseConfigured || !workspace?.id || !projectId) return;
-
-      const { data: t } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('project_id', projectId);
-      
-      const taskIds = t ? t.map(x => x.id) : [];
-
-      if (taskIds.length > 0) {
-        const { data: s } = await supabase
-          .from('work_sessions')
-          .select('*')
-          .in('task_id', taskIds);
-        if (s) setSessions(s as WorkSession[]);
-      } else {
-        setSessions([]);
+      if (!workspace?.id || !projectId) {
+        setLoading(false);
+        return;
       }
-      
-      if (t) setTasks(t as Task[]);
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
 
-      const { data: lv } = await supabase.from('personal_leave').select('*');
-      if (lv) setLeaves(lv);
+      try {
+        const { data: t, error: tErr } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('project_id', projectId);
+        if (tErr) throw tErr;
+        
+        const taskIds = t ? t.map(x => x.id) : [];
 
-      const { data: hol } = await supabase.from('workspace_holidays').select('*');
-      if (hol) setHolidays(hol);
+        if (taskIds.length > 0) {
+          const { data: s, error: sErr } = await supabase
+            .from('work_sessions')
+            .select('*')
+            .in('task_id', taskIds);
+          if (sErr) throw sErr;
+          if (s) setSessions(s as WorkSession[]);
+        } else {
+          setSessions([]);
+        }
+        
+        if (t) setTasks(t as Task[]);
 
-      setLoading(false);
+        const { data: lv, error: lvErr } = await supabase.from('personal_leave').select('*');
+        if (lvErr) throw lvErr;
+        if (lv) setLeaves(lv);
+
+        const { data: hol, error: holErr } = await supabase.from('workspace_holidays').select('*');
+        if (holErr) throw holErr;
+        if (hol) setHolidays(hol);
+
+      } catch (err) {
+        console.error('Failed to load project effort data:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [workspace?.id, projectId]);

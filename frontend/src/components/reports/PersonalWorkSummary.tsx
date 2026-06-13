@@ -14,25 +14,39 @@ export function PersonalWorkSummary() {
 
   useEffect(() => {
     async function loadData() {
-      if (!isSupabaseConfigured || !workspace?.id || !profile?.id) return;
+      if (!workspace?.id || !profile?.id) {
+        setLoading(false);
+        return;
+      }
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
 
-      const { data: s } = await supabase
-        .from('work_sessions')
-        .select('*')
-        .eq('workspace_id', workspace.id)
-        .eq('user_id', profile.id)
-        .order('started_at', { ascending: false })
-        .limit(50);
-      
-      const { data: t } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('workspace_id', workspace.id)
-        .eq('assignee_id', profile.id);
+      try {
+        const { data: s, error: sErr } = await supabase
+          .from('work_sessions')
+          .select('*')
+          .eq('workspace_id', workspace.id)
+          .eq('user_id', profile.id)
+          .order('started_at', { ascending: false })
+          .limit(50);
+        if (sErr) throw sErr;
+        
+        const { data: t, error: tErr } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('workspace_id', workspace.id)
+          .eq('assignee_id', profile.id);
+        if (tErr) throw tErr;
 
-      if (s) setSessions(s as WorkSession[]);
-      if (t) setTasks(t as Task[]);
-      setLoading(false);
+        if (s) setSessions(s as WorkSession[]);
+        if (t) setTasks(t as Task[]);
+      } catch (err) {
+        console.error('Failed to load personal work summary:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [workspace?.id, profile?.id]);

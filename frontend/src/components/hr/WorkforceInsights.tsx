@@ -21,16 +21,29 @@ export function WorkforceInsights() {
 
   useEffect(() => {
     async function loadHR() {
-      if (!isSupabaseConfigured || !workspace?.id) return;
-      const { data } = await supabase
-        .from('employment_records')
-        .select('id, profile_id, employee_type, contract_end, probation_end, joining_date')
-        .eq('workspace_id', workspace.id);
-      
-      if (data) {
-        setRecords(data as EmploymentRecord[]);
+      if (!workspace?.id) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from('employment_records')
+          .select('id, profile_id, employee_type, contract_end, probation_end, joining_date')
+          .eq('workspace_id', workspace.id);
+        
+        if (error) throw error;
+        if (data) {
+          setRecords(data as EmploymentRecord[]);
+        }
+      } catch (err) {
+        console.error('Failed to load HR data:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     loadHR();
   }, [workspace?.id]);
