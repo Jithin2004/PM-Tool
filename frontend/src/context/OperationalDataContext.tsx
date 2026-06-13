@@ -241,16 +241,14 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           console.log('[OperationalDataContext] refreshOperationalCritical returned', critical);
           if (!mounted) return;
   
-          startTransition(() => {
-            if (critical.projects) console.log('[OperationalDataContext] setProjects (critical)'); setProjects(critical.projects);
-            if (critical.profiles) console.log('[OperationalDataContext] setProfiles (critical)'); setProfiles(critical.profiles);
-            if (critical.teams) console.log('[OperationalDataContext] setTeams (critical)'); setTeams(critical.teams);
-            if (critical.workspaceSettingsBlob) console.log('[OperationalDataContext] setWorkspaceSettingsBlob (critical)'); setWorkspaceSettingsBlob(critical.workspaceSettingsBlob);
-    
-            // Clear the loading spinner – page renders now
-            console.log('[OperationalDataContext] calling setLoading(false)');
-            setLoading(false);
-          });
+          if (critical.projects) { console.log('[OperationalDataContext] setProjects (critical)'); setProjects(critical.projects); }
+          if (critical.profiles) { console.log('[OperationalDataContext] setProfiles (critical)'); setProfiles(critical.profiles); }
+          if (critical.teams) { console.log('[OperationalDataContext] setTeams (critical)'); setTeams(critical.teams); }
+          if (critical.workspaceSettingsBlob) { console.log('[OperationalDataContext] setWorkspaceSettingsBlob (critical)'); setWorkspaceSettingsBlob(critical.workspaceSettingsBlob); }
+  
+          // Clear the loading spinner — page renders now
+          console.log('[OperationalDataContext] calling setLoading(false)');
+          setLoading(false);
   
           // ── Phase 2: secondary – attendance, tasks, skills (background) ────
           // Small delay so the browser paints the first frame before fetching more
