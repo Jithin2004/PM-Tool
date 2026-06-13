@@ -409,13 +409,9 @@ export function ResolveRouter() {
     if (!guardRoute(role, '/resources')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><LogisticsPanel /></RouteShell>;
   }
-  if (pathname === '/resources/teams') {
+  if (pathname === '/resources/teams' || pathname === '/resources/capacity') {
     if (!guardRoute(role, '/resources/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><TeamsPage /></RouteShell>;
-  }
-  if (pathname === '/resources/capacity') {
-    if (!guardRoute(role, '/resources/capacity')) return <RouteShell><AccessRestricted /></RouteShell>;
-    return <RouteShell><CapacityPage /></RouteShell>;
   }
   if (pathname === '/resources/work-logs') {
     if (!guardRoute(role, '/resources/work-logs')) return <RouteShell><AccessRestricted /></RouteShell>;
