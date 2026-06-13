@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { useOperationalData } from '../context/OperationalDataContext';
@@ -11,6 +11,7 @@ import {
 // AuthPage removed — unified to Login component (Bug 6 fix)
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { Login } from '../components/auth/Login';
+import { PasswordSetup } from '../components/auth/PasswordSetup';
 import { ProductKeyGate } from '../components/auth/ProductKeyGate';
 import { isProductKeyVerified } from '../lib/productKey';
 import { normalizePath, parseProjectRoute, isRegisteredPath } from './routeRegistry';
@@ -45,60 +46,60 @@ const withRetry = (componentImport: () => Promise<any>) => {
   });
 };
 
-const WorkspaceSetupWizard = withRetry(() => import('../pages/onboarding/WorkspaceSetupWizard').then(m => ({ default: m.WorkspaceSetupWizard })));
-const LandingPage = withRetry(() => import('../landing/LandingPage').then(m => ({ default: m.LandingPage })));
-const PrivacyPage = withRetry(() => import('../landing/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
-const TermsPage = withRetry(() => import('../landing/TermsPage').then(m => ({ default: m.TermsPage })));
-const CompliancePage = withRetry(() => import('../landing/CompliancePage').then(m => ({ default: m.CompliancePage })));
-const SecurityPage = withRetry(() => import('../landing/SecurityPage').then(m => ({ default: m.SecurityPage })));
+import { WorkspaceSetupWizard } from '../pages/onboarding/WorkspaceSetupWizard';
+import { LandingPage } from '../landing/LandingPage';
+import { PrivacyPage } from '../landing/PrivacyPage';
+import { TermsPage } from '../landing/TermsPage';
+import { CompliancePage } from '../landing/CompliancePage';
+import { SecurityPage } from '../landing/SecurityPage';
 
-const DailyCommandCenter = withRetry(() => import('../components/overview/DailyCommandCenter').then(m => ({ default: m.DailyCommandCenter })));
+import { DailyCommandCenter } from '../components/overview/DailyCommandCenter';
 
-const AdminPanel = withRetry(() => import('../pages/dashboard/AdminPanel').then(m => ({ default: m.AdminPanel })));
-const LogisticsPanel = withRetry(() => import('../pages/dashboard/LogisticsPanel').then(m => ({ default: m.LogisticsPanel })));
-const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
-const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage'));
-const KnowledgePage = withRetry(() => import('../pages/workspace/KnowledgePage'));
-const DecisionsPage = withRetry(() => import('../pages/workspace/DecisionsPage'));
-const MeetingsPage = withRetry(() => import('../pages/workspace/MeetingsPage'));
-const RequirementsPage = withRetry(() => import('../pages/workspace/RequirementsPage'));
-const DocumentsPage = withRetry(() => import('../pages/workspace/DocumentsPage'));
-const ApprovalsPage = withRetry(() => import('../pages/workspace/ApprovalsPage'));
-const EmployeeStartCenter = withRetry(() => import('../components/onboarding/EmployeeStartCenter').then(m => ({ default: m.EmployeeStartCenter })));
+import { AdminPanel } from '../pages/dashboard/AdminPanel';
+import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
+import ProjectsPage from '../pages/workspace/ProjectsPage';
+import PortfolioPage from '../pages/workspace/PortfolioPage';
+import KnowledgePage from '../pages/workspace/KnowledgePage';
+import DecisionsPage from '../pages/workspace/DecisionsPage';
+import MeetingsPage from '../pages/workspace/MeetingsPage';
+import RequirementsPage from '../pages/workspace/RequirementsPage';
+import DocumentsPage from '../pages/workspace/DocumentsPage';
+import ApprovalsPage from '../pages/workspace/ApprovalsPage';
+import { EmployeeStartCenter } from '../components/onboarding/EmployeeStartCenter';
 
 
-const ProductAdoptionDashboard = withRetry(() => import('../pages/workspace/ProductAdoptionDashboard').then(m => ({ default: m.ProductAdoptionDashboard })));
-const ReportsCenter = withRetry(() => import('../pages/workspace/ReportsCenter'));
+import { ProductAdoptionDashboard } from '../pages/workspace/ProductAdoptionDashboard';
+import ReportsCenter from '../pages/workspace/ReportsCenter';
 
-const BoardPage = withRetry(() => import('../pages/execution/BoardPage'));
-const TimelinePage = withRetry(() => import('../pages/execution/TimelinePage'));
-const GanttPage = withRetry(() => import('../pages/execution/GanttPage'));
-const SprintPage = withRetry(() => import('../pages/execution/SprintPage'));
+import BoardPage from '../pages/execution/BoardPage';
+import TimelinePage from '../pages/execution/TimelinePage';
+import GanttPage from '../pages/execution/GanttPage';
+import SprintPage from '../pages/execution/SprintPage';
 
-const TeamsPage = withRetry(() => import('../pages/resources/TeamsPage'));
-const CapacityPage = withRetry(() => import('../pages/resources/CapacityPage'));
-const WorkLogsPage = withRetry(() => import('../pages/resources/WorkLogsPage'));
-const FinancePage = withRetry(() => import('../pages/resources/FinancePage'));
+import TeamsPage from '../pages/resources/TeamsPage';
+import CapacityPage from '../pages/resources/CapacityPage';
+import WorkLogsPage from '../pages/resources/WorkLogsPage';
+import FinancePage from '../pages/resources/FinancePage';
 
-const AnalyticsPage = withRetry(() => import('../pages/control/AnalyticsPage'));
-const AuditPage = withRetry(() => import('../pages/control/AuditPage'));
-const DocumentTemplatesPage = withRetry(() => import('../pages/control/DocumentTemplatesPage'));
-const ObservabilityPanel = withRetry(() => import('../pages/dashboard/ObservabilityPanel').then(m => ({ default: m.ObservabilityPanel })));
-const SettingsPage = withRetry(() => import('../pages/control/SettingsPage'));
+import AnalyticsPage from '../pages/control/AnalyticsPage';
+import AuditPage from '../pages/control/AuditPage';
+import DocumentTemplatesPage from '../pages/control/DocumentTemplatesPage';
+import { ObservabilityPanel } from '../pages/dashboard/ObservabilityPanel';
+import SettingsPage from '../pages/control/SettingsPage';
 
-const DocumentView = withRetry(() => import('../pages/dashboard/DocumentView'));
-const AutomationsPanel = withRetry(() => import('../pages/dashboard/AutomationsPanel'));
-const ConnectionsPanel = withRetry(() => import('../pages/dashboard/ConnectionsPanel'));
-const NotificationSettings = withRetry(() => import('../pages/dashboard/NotificationSettings'));
-const ModeSettings = withRetry(() => import('../pages/dashboard/ModeSettings'));
-const MissionControlPage = withRetry(() => import('../pages/mission-control/MissionControlPage'));
+import DocumentView from '../pages/dashboard/DocumentView';
+import AutomationsPanel from '../pages/dashboard/AutomationsPanel';
+import ConnectionsPanel from '../pages/dashboard/ConnectionsPanel';
+import NotificationSettings from '../pages/dashboard/NotificationSettings';
+import ModeSettings from '../pages/dashboard/ModeSettings';
+import MissionControlPage from '../pages/mission-control/MissionControlPage';
 
-const ExecutionSetupPage = withRetry(() => import('../pages/setup/ExecutionSetupPage'));
-const BacklogPage = withRetry(() => import('../pages/backlog/BacklogPage'));
-const ProjectBoardPage = withRetry(() => import('../pages/board/ProjectBoardPage'));
-const ProjectSprintPage = withRetry(() => import('../pages/sprints/ProjectSprintPage'));
-const ProjectTimelinePage = withRetry(() => import('../pages/timeline/ProjectTimelinePage'));
-const SharedProjectDashboard = withRetry(() => import('../pages/shared/SharedProjectDashboard').then(m => ({ default: m.SharedProjectDashboard })));
+import ExecutionSetupPage from '../pages/setup/ExecutionSetupPage';
+import BacklogPage from '../pages/backlog/BacklogPage';
+import ProjectBoardPage from '../pages/board/ProjectBoardPage';
+import ProjectSprintPage from '../pages/sprints/ProjectSprintPage';
+import ProjectTimelinePage from '../pages/timeline/ProjectTimelinePage';
+import { SharedProjectDashboard } from '../pages/shared/SharedProjectDashboard';
 
 const DEFAULT_AUTH_REDIRECT = '/overview';
 
@@ -247,24 +248,24 @@ export function ResolveRouter() {
   // ── Public routes ──
 
   if (pathname === '/') {
-    return <Suspense fallback={FALLBACK}><LandingPage /></Suspense>;
+    return <LandingPage />;
   }
 
   if (pathname === '/privacy') {
-    return <Suspense fallback={FALLBACK}><PrivacyPage /></Suspense>;
+    return <PrivacyPage />;
   }
   if (pathname === '/terms') {
-    return <Suspense fallback={FALLBACK}><TermsPage /></Suspense>;
+    return <TermsPage />;
   }
   if (pathname === '/compliance') {
-    return <Suspense fallback={FALLBACK}><CompliancePage /></Suspense>;
+    return <CompliancePage />;
   }
   if (pathname === '/security') {
-    return <Suspense fallback={FALLBACK}><SecurityPage /></Suspense>;
+    return <SecurityPage />;
   }
 
   if (pathname.startsWith('/shared/project/')) {
-    return <Suspense fallback={FALLBACK}><SharedProjectDashboard /></Suspense>;
+    return <SharedProjectDashboard />;
   }
 
   if (pathname === '/activate') {
@@ -284,8 +285,8 @@ export function ResolveRouter() {
 
   if (pathname === '/password-setup') {
     // Dynamically load to avoid circular deps, or just mock inline for now
-    const PasswordSetup = lazy(() => import('../components/auth/PasswordSetup').then(m => ({ default: m.PasswordSetup })));
-    return <Suspense fallback={FALLBACK}><PasswordSetup /></Suspense>;
+    
+    return <PasswordSetup />;
   }
 
   if (workspaceLoading || authLoading || !profileResolved || profileHydrating) {
