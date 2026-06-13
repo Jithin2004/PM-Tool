@@ -5,9 +5,11 @@ interface ProjectChipsInputProps {
   value: string[];
   onChange: (value: string[]) => void;
   placeholder?: string;
+  itemLabel?: string;
+  itemLabelPlural?: string;
 }
 
-export function ProjectChipsInput({ value, onChange, placeholder }: ProjectChipsInputProps) {
+export function ProjectChipsInput({ value, onChange, placeholder, itemLabel = 'project', itemLabelPlural = 'projects' }: ProjectChipsInputProps) {
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -17,7 +19,7 @@ export function ProjectChipsInput({ value, onChange, placeholder }: ProjectChips
     if (!cleanProject) return;
 
     if (value.some(chip => chip.toLowerCase() === cleanProject.toLowerCase())) {
-      setError(`Duplicate project: ${cleanProject}`);
+      setError(`Duplicate ${itemLabel}: ${cleanProject}`);
       return;
     }
 
@@ -64,7 +66,7 @@ export function ProjectChipsInput({ value, onChange, placeholder }: ProjectChips
               onClick={(e) => { e.stopPropagation(); removeChip(chip); }}
               className="p-0.5 hover:bg-red-500/20 rounded-full transition-colors text-[var(--pm-on-surface-variant)] hover:text-red-400 ml-1 focus:outline-none focus:ring-1 focus:ring-red-400"
               title={`Remove ${chip}`}
-              aria-label={`Remove project ${chip}`}
+              aria-label={`Remove ${itemLabel} ${chip}`}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -79,19 +81,19 @@ export function ProjectChipsInput({ value, onChange, placeholder }: ProjectChips
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           className="flex-1 bg-transparent min-w-[150px] outline-none text-sm p-1 text-[var(--pm-on-surface)]"
-          placeholder={value.length === 0 ? (placeholder || "Enter project name and press Enter") : ""}
-          aria-label="Project chips input"
+          placeholder={value.length === 0 ? (placeholder || `Enter ${itemLabel} name and press Enter`) : ""}
+          aria-label={`${itemLabel} chips input`}
         />
       </div>
       
       <div className="flex justify-between items-center mt-2 px-1 min-h-[20px]">
         {value.length === 0 ? (
           <span className="text-[11px] text-[var(--pm-on-surface-variant)] italic">
-            No projects yet. You can create projects now or later.
+            No {itemLabelPlural} yet. You can create {itemLabelPlural} now or later.
           </span>
         ) : (
           <span className="text-[11px] font-medium text-[var(--pm-on-surface-variant)] uppercase tracking-wide">
-            {value.length} project{value.length !== 1 ? 's' : ''} added
+            {value.length} {value.length !== 1 ? itemLabelPlural : itemLabel} added
           </span>
         )}
         {error && (

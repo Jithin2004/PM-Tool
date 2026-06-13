@@ -123,7 +123,7 @@ export function EmailChipsInput({ value, onChange, placeholder }: EmailChipsInpu
           </span>
         ) : (
           <span className="text-[11px] font-medium text-[var(--pm-on-surface-variant)] uppercase tracking-wide">
-            {value.length} invitation{value.length !== 1 ? 's' : ''} queued
+            {value.length} member{value.length !== 1 ? 's' : ''} added
           </span>
         )}
         {error && (

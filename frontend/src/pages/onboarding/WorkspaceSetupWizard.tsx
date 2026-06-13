@@ -165,6 +165,15 @@ export function WorkspaceSetupWizard() {
     }, {} as Record<string, number>);
   };
 
+  const getHoursConfigured = () => {
+    if (!workingTimeFrom || !workingTimeTo) return 0;
+    const start = new Date(`2000-01-01T${workingTimeFrom}`);
+    const end = new Date(`2000-01-01T${workingTimeTo}`);
+    let diff = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    if (diff < 0) diff += 24;
+    return diff;
+  };
+
   return (
     <ResolveLayout eyebrow="Onboarding">
       <div className="grid gap-8 lg:grid-cols-2 max-w-5xl mx-auto items-start">
@@ -218,6 +227,8 @@ export function WorkspaceSetupWizard() {
                 value={departments}
                 onChange={setDepartments}
                 placeholder="E.g. Engineering, Sales (press Enter)"
+                itemLabel="department"
+                itemLabelPlural="departments"
               />
               <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic mt-2">Departments help organize teams and reports.</p>
             </div>
@@ -236,7 +247,12 @@ export function WorkspaceSetupWizard() {
                   <input type="time" value={workingTimeTo} onChange={e => setWorkingTimeTo(e.target.value)} className="w-full p-3 input-premium" />
                 </div>
               </div>
-              <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic mt-2">Used for capacity planning and availability tracking.</p>
+              <div className="flex justify-between items-center mt-2 px-1 min-h-[20px]">
+                <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic">Used for capacity planning and availability tracking.</p>
+                <span className="text-[11px] font-medium text-[var(--pm-on-surface-variant)] uppercase tracking-wide">
+                  {getHoursConfigured()} HOURS CONFIGURED
+                </span>
+              </div>
             </div>
           )}
 
@@ -260,7 +276,8 @@ export function WorkspaceSetupWizard() {
               {members.length === 0 ? (
                 <p className="text-sm text-[var(--pm-on-surface-variant)] italic">No team members added. You can skip this step.</p>
               ) : (
-                <div className="max-h-60 overflow-y-auto space-y-2 border border-border/50 rounded-lg p-2 bg-surface-4">
+                <>
+                  <div className="max-h-60 overflow-y-auto space-y-2 border border-border/50 rounded-lg p-2 bg-surface-4">
                   {members.map((m, idx) => (
                     <div key={idx} className="flex items-center justify-between p-2 bg-surface-3 rounded border border-border/50">
                       <span className="text-sm font-medium">{m.email}</span>
@@ -281,6 +298,12 @@ export function WorkspaceSetupWizard() {
                     </div>
                   ))}
                 </div>
+                <div className="flex justify-between items-center mt-2 px-1 min-h-[20px]">
+                  <span className="text-[11px] font-medium text-[var(--pm-on-surface-variant)] uppercase tracking-wide">
+                    {members.length} {members.length !== 1 ? 'ROLES' : 'ROLE'} CREATED
+                  </span>
+                </div>
+              </>
               )}
             </div>
           )}
