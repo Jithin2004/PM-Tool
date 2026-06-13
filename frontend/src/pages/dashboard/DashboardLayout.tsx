@@ -126,9 +126,9 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     iconName: 'Users',
     subsections: [
       { label: 'Employees', path: '/resources/teams', capability: 'view_teams' },
-      { label: 'Departments', path: '/resources/teams?tab=departments', capability: 'view_teams' },
+      { label: 'Departments', path: '/resources/teams/departments', capability: 'view_teams' },
       { label: 'Workload Planning', path: '/resources/capacity', capability: 'view_reports' },
-      { label: 'Skills Matrix', path: '/resources/teams?tab=skills', capability: 'view_teams' }
+      { label: 'Skills Matrix', path: '/resources/teams/skills', capability: 'view_teams' }
     ]
   },
   {

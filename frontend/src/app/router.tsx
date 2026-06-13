@@ -409,7 +409,7 @@ export function ResolveRouter() {
     if (!guardRoute(role, '/resources')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><LogisticsPanel /></RouteShell>;
   }
-  if (pathname === '/resources/teams' || pathname === '/resources/capacity') {
+  if (pathname === '/resources/teams' || pathname === '/resources/capacity' || pathname === '/resources/teams/departments' || pathname === '/resources/teams/skills') {
     if (!guardRoute(role, '/resources/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
     return <RouteShell><TeamsPage /></RouteShell>;
   }

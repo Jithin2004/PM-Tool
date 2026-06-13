@@ -2,7 +2,7 @@ import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 import React, { useState, useEffect } from 'react';
 import { TeamRosterView } from '../../components/resources/TeamRosterView';
 import { SkillsMatrixView } from '../../components/resources/SkillsMatrixView';
-import { WorkforceInsights } from '../../components/hr/WorkforceInsights';
+import { DepartmentManagement } from '../../components/team/DepartmentManagement';
 import { MemberDirectory } from '../../components/team/MemberDirectory';
 import { useAuth } from '../../context/AuthContext';
 import { hasCapability } from '../../core/auth/permissions';
@@ -12,24 +12,19 @@ export default function TeamsPage() {
   const isHR = hasCapability(profile?.role, 'manage_employees');
   
   const [activeTab, setActiveTab] = useState<'employees' | 'departments' | 'workloadPlanning' | 'skillsMatrix'>(() => {
-    if (window.location.pathname === '/resources/capacity') return 'workloadPlanning';
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab === 'departments') return 'departments';
-    if (tab === 'skills') return 'skillsMatrix';
+    const path = window.location.pathname;
+    if (path === '/resources/capacity') return 'workloadPlanning';
+    if (path === '/resources/teams/departments') return 'departments';
+    if (path === '/resources/teams/skills') return 'skillsMatrix';
     return 'employees';
   });
 
   useEffect(() => {
     const handlePopState = () => {
-      if (window.location.pathname === '/resources/capacity') {
-        setActiveTab('workloadPlanning');
-        return;
-      }
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get('tab');
-      if (tab === 'departments') setActiveTab('departments');
-      else if (tab === 'skills') setActiveTab('skillsMatrix');
+      const path = window.location.pathname;
+      if (path === '/resources/capacity') setActiveTab('workloadPlanning');
+      else if (path === '/resources/teams/departments') setActiveTab('departments');
+      else if (path === '/resources/teams/skills') setActiveTab('skillsMatrix');
       else setActiveTab('employees');
     };
     window.addEventListener('popstate', handlePopState);
@@ -44,7 +39,7 @@ export default function TeamsPage() {
     ),
     departments: (
       <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
-        <WorkforceInsights />
+        <DepartmentManagement />
       </div>
     ),
     workloadPlanning: (
