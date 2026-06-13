@@ -61,6 +61,7 @@ import {
 import { GuidedTour, TourStep } from '../../components/onboarding/GuidedTour';
 import { WorkSessionManager } from '../../components/execution/WorkSessionManager';
 import { cloneWorkspaceToSandbox } from '../../services/workspaceService';
+import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 import { EndOfDayModal } from '../../components/execution/EndOfDayModal';
 // Sunset imported above
 
@@ -1028,7 +1029,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               {!isSidebarCollapsed && (
                 <div className="flex-1 min-w-0 premium-fade-in">
                   <h1 className="font-semibold tracking-tight text-[13px] font-geist truncate" style={{ color: 'var(--pm-primary)' }}>
-                    Resolve PM {workspace?.settings?.companyName ? `| ${workspace.settings.companyName}` : ''}
+                    Resolve PM {workspace?.settings?.companyName ? `| ${getWorkspaceDisplayName(workspace.settings.companyName, false)}` : ''}
                   </h1>
                   <p className="text-[9px] font-mono-pm uppercase tracking-[0.15em] truncate" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Enterprise Orchestration</p>
                 </div>
@@ -1379,19 +1380,22 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     notify('Transitioning environment...', 'info');
                     try {
                       if (!isSandboxMode) {
-                        // Enter Sandbox
+                        // Enter Sandbox — save the current (parent) workspace ID so we can reliably exit
+                        localStorage.setItem('resolve-sandbox-parent-workspace', workspace.id);
                         await cloneWorkspaceToSandbox(workspace.id, user.id);
                         setIsSandboxMode(true);
                         localStorage.setItem('resolve-sandbox-mode', 'true');
                         notify('Sandbox Mode Activated - Data isolated.', 'success');
                         setTimeout(() => window.location.reload(), 1000);
                       } else {
-                        // Exit Sandbox (Return to Parent Workspace)
-                        if (workspace.parent_workspace_id) {
-                          await supabase.from('users').update({ workspace_id: workspace.parent_workspace_id }).eq('id', user.id);
+                        // Exit Sandbox — use stored parent workspace ID (DB may not set parent_workspace_id)
+                        const parentId = workspace.parent_workspace_id || localStorage.getItem('resolve-sandbox-parent-workspace');
+                        if (parentId) {
+                          await supabase.from('users').update({ workspace_id: parentId }).eq('id', user.id);
                         }
                         setIsSandboxMode(false);
                         localStorage.setItem('resolve-sandbox-mode', 'false');
+                        localStorage.removeItem('resolve-sandbox-parent-workspace');
                         notify('Exited Sandbox - Returning to Production.', 'success');
                         setTimeout(() => window.location.reload(), 1000);
                       }

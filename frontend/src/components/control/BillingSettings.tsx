@@ -3,6 +3,7 @@ import { Shield, Key, Building2, Server, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { getLicenseInfo, clearLicense } from '../../lib/productKey';
+import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 import { supabase } from '../../lib/supabase';
 
 export function BillingSettings() {
@@ -10,7 +11,6 @@ export function BillingSettings() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
   const [serverLicenseData, setServerLicenseData] = useState<any>(null);
-  const [verifyError, setVerifyError] = useState(false);
   const [activeUsersCount, setActiveUsersCount] = useState<number>(0);
   const license = getLicenseInfo();
 
@@ -31,7 +31,8 @@ export function BillingSettings() {
         setIsVerifying(false);
         return;
       }
-      const API_URL = import.meta.env.VITE_PRODUCT_KEY_API_URL || 'https://api.resolvepm.com/license';
+      // Use same API base as productKey.ts activation flow
+      const API_URL = import.meta.env.VITE_PRODUCT_KEY_API_URL || 'https://pm-tool-server.onrender.com';
       
       try {
         const res = await fetch(`${API_URL}/verify`, {
@@ -43,12 +44,11 @@ export function BillingSettings() {
         if (res.ok) {
           const data = await res.json();
           setServerLicenseData(data);
-        } else {
-          setVerifyError(true);
         }
+        // Don't set verifyError — server being unavailable doesn't invalidate a locally stored license
       } catch (err) {
-        console.error('License verification failed:', err);
-        setVerifyError(true);
+        console.error('License verification (supplementary) failed:', err);
+        // Don't set verifyError — local license data is the source of truth
       } finally {
         setIsVerifying(false);
       }
@@ -67,7 +67,9 @@ export function BillingSettings() {
     }, 500);
   };
 
-  const isActive = license && serverLicenseData && !verifyError;
+  // Local license data from localStorage is the source of truth.
+  // serverLicenseData is supplementary enrichment from the /verify endpoint.
+  const isActive = license?.status === 'Activated';
   const isExpired = license?.status === 'Expired Support';
   
   let displayStatus = 'UNACTIVATED';
@@ -90,13 +92,13 @@ export function BillingSettings() {
     statusColor = 'text-amber-400';
     statusBg = 'bg-amber-500/10 border-amber-500/20';
     statusDot = 'bg-amber-400';
-  } else if (verifyError) {
-    displayStatus = 'INVALID';
   }
 
   const planName = serverLicenseData?.plan || license?.plan || '';
   const maxSeats = serverLicenseData?.seats || '';
   const productKeyId = serverLicenseData?.keyId || license?.productKey || license?.purchaseId || 'Unlicensed';
+  const isSandbox = workspace?.is_sandbox || workspace?.status === 'sandbox';
+  const displayWorkspaceName = getWorkspaceDisplayName(workspace?.name, !!isSandbox);
 
   return (
     <div className="space-y-8 animate-fade-in font-geist">
@@ -125,7 +127,7 @@ export function BillingSettings() {
                 <Building2 className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm font-bold text-[var(--pm-text)]">{workspace?.name || 'Enterprise Workspace'}</p>
+                <p className="text-sm font-bold text-[var(--pm-text)]">{displayWorkspaceName || 'Workspace'}</p>
               </div>
             </div>
           </div>

@@ -12,6 +12,7 @@ import { SystemInfoPanel } from '../../components/admin/SystemInfoPanel';
 import { SystemHealthPanel } from '../../components/admin/SystemHealthPanel';
 import { BackupRestorePanel } from '../../components/admin/BackupRestorePanel';
 import { BillingSettings } from '../../components/control/BillingSettings';
+import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 type AdminTab = 'general' | 'identity' | 'calendar' | 'teams' | 'health' | 'import' | 'system_info' | 'backups' | 'license' | 'workspaces';
 
 function getInitials(name: string) {
@@ -85,7 +86,10 @@ export function AdminPanel() {
   const canViewCalendar = hasCapability(profile?.role, 'view_decision_center');
 
   // General Settings state
-  const [companyName, setCompanyName] = useState(workspace?.settings?.companyName || workspace?.name || '');
+  const [companyName, setCompanyName] = useState(() => {
+    const raw = workspace?.settings?.companyName || workspace?.name || '';
+    return raw.replace(/\[Sandbox\]\s*/gi, '').trim();
+  });
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Invitation state
@@ -1224,7 +1228,7 @@ export function AdminPanel() {
                     <tbody className="divide-y divide-border/20">
                       {workspacesList.filter(w => w.status === 'active' || w.status === 'onboarding' || !w.status).map((ws: any) => (
                         <tr key={ws.id} className="hover:bg-white/[0.02] transition-colors">
-                          <td className="py-4 text-sm font-medium text-white">{ws.name}</td>
+                          <td className="py-4 text-sm font-medium text-white">{getWorkspaceDisplayName(ws.name, ws.status === 'sandbox')}</td>
                           <td className="py-4">
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
                               {ws.status || 'active'}
@@ -1277,7 +1281,7 @@ export function AdminPanel() {
                     <tbody className="divide-y divide-border/20">
                       {workspacesList.filter(w => w.status === 'sandbox').map((ws: any) => (
                         <tr key={ws.id} className="hover:bg-white/[0.02] transition-colors">
-                          <td className="py-4 text-sm font-medium text-white">{ws.name}</td>
+                          <td className="py-4 text-sm font-medium text-white">{getWorkspaceDisplayName(ws.name, ws.status === 'sandbox')}</td>
                           <td className="py-4">
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/25">
                               sandbox
@@ -1339,7 +1343,7 @@ export function AdminPanel() {
                     <tbody className="divide-y divide-border/20">
                       {workspacesList.filter(w => w.status === 'retired' || w.status === 'inactive').map((ws: any) => (
                         <tr key={ws.id} className="hover:bg-white/[0.02] transition-colors">
-                          <td className="py-4 text-sm font-medium text-white">{ws.name}</td>
+                          <td className="py-4 text-sm font-medium text-white">{getWorkspaceDisplayName(ws.name, ws.status === 'sandbox')}</td>
                           <td className="py-4">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${ws.status === 'retired' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25' : 'bg-red-500/10 text-red-400 border border-red-500/25'}`}>
                               {ws.status}
