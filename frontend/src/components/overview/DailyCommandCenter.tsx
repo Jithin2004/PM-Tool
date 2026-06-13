@@ -7,12 +7,30 @@ import { MetricsGrid } from './MetricsGrid';
 import { TodayFocusList } from './TodayFocusList';
 import { BlockersList } from './BlockersList';
 import { RecommendationsList } from './RecommendationsList';
+import { ActivityStream } from '../dashboard/ActivityStream';
 
 export function DailyCommandCenter() {
   const { profile, user } = useAuth();
   const { workspace } = useWorkspace();
   const [overview, setOverview] = useState<DailyOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'metrics' | 'executiveInsights' | 'activity'>(() => {
+    const path = window.location.pathname;
+    if (path === '/overview/executive') return 'executiveInsights';
+    if (path === '/overview/activity') return 'activity';
+    return 'metrics';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === '/overview/executive') setActiveTab('executiveInsights');
+      else if (path === '/overview/activity') setActiveTab('activity');
+      else setActiveTab('metrics');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -39,23 +57,38 @@ export function DailyCommandCenter() {
     );
   }
 
-  return (
-    <div className="space-y-8 pb-16 px-1 h-full overflow-y-auto scrollbar-premium font-sans animate-fade-in">
-      <DailyHeader greeting={overview.greeting} />
-      
-      {overview.metrics.length > 0 && (
-        <MetricsGrid metrics={overview.metrics} />
-      )}
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
+  const overviewViews = {
+    metrics: (
+      <>
+        {overview.metrics.length > 0 && (
+          <MetricsGrid metrics={overview.metrics} />
+        )}
+        <div className="mt-8 space-y-6 max-w-4xl">
           <TodayFocusList items={overview.todayFocus} />
         </div>
+      </>
+    ),
+    executiveInsights: (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
         <div className="space-y-6">
           <RecommendationsList items={overview.recommendations} />
+        </div>
+        <div className="space-y-6">
           {overview.blockers.length > 0 && <BlockersList items={overview.blockers} />}
         </div>
       </div>
+    ),
+    activity: (
+      <div className="mt-8 bg-[var(--pm-surface)] border border-[var(--pm-outline-variant)] rounded-xl p-4 h-full min-h-[500px]">
+        {workspace?.id && <ActivityStream wsId={workspace.id} />}
+      </div>
+    )
+  };
+
+  return (
+    <div className="space-y-8 pb-16 px-1 h-full overflow-y-auto scrollbar-premium font-sans animate-fade-in">
+      <DailyHeader greeting={overview.greeting} />
+      {overviewViews[activeTab]}
     </div>
   );
 }

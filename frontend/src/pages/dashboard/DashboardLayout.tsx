@@ -96,8 +96,8 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     iconName: 'Radar',
     subsections: [
       { label: 'Metrics', path: '/overview', capability: 'view_projects' },
-      { label: 'Executive Insights', path: '/workspace/executive', capability: 'view_analytics' },
-      { label: 'Activity', path: '/workspace/reports', capability: 'view_reports' }
+      { label: 'Executive Insights', path: '/overview/executive', capability: 'view_analytics' },
+      { label: 'Activity', path: '/overview/activity', capability: 'view_reports' }
     ]
   },
   {

@@ -335,7 +335,7 @@ export function ResolveRouter() {
 
   // ── OVERVIEW ──
 
-  if (pathname === '/overview') {
+  if (pathname === '/overview' || pathname === '/overview/executive' || pathname === '/overview/activity') {
     return <RouteShell><DailyCommandCenter /></RouteShell>;
   }
 
