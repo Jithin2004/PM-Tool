@@ -1,20 +1,62 @@
-import React, { useState } from 'react';
-import { Shield, Key, Download, Building2, Server } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Key, Building2, Server, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { getLicenseInfo } from '../../lib/productKey';
+import { getLicenseInfo, clearLicense } from '../../lib/productKey';
+import { supabase } from '../../lib/supabase';
 
 export function BillingSettings() {
   const { workspace } = useWorkspace();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [serverLicenseData, setServerLicenseData] = useState<any>(null);
+  const [activeUsersCount, setActiveUsersCount] = useState<number>(0);
+  const license = getLicenseInfo();
 
-  const handleRefresh = () => {
+  useEffect(() => {
+    async function fetchStats() {
+      if (workspace?.id) {
+        const { count } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', workspace.id);
+        
+        setActiveUsersCount(count || 0);
+      }
+    }
+    
+    async function verifyLicenseOnline() {
+      if (!license?.token) return;
+      const API_URL = import.meta.env.VITE_PRODUCT_KEY_API_URL || 'https://api.resolvepm.com/license';
+      
+      try {
+        const res = await fetch(`${API_URL}/verify`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${license.token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setServerLicenseData(data);
+        }
+      } catch (err) {
+        console.error('License verification failed:', err);
+      }
+    }
+
+    fetchStats();
+    verifyLicenseOnline();
+  }, [workspace?.id, license?.token]);
+
+  const handleUpdateLicense = () => {
     setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 1500);
+    // Clear license and reload to trigger the app's standard activation flow
+    setTimeout(() => {
+      clearLicense();
+      window.location.href = '/'; 
+    }, 500);
   };
 
-  const license = getLicenseInfo();
   const isActive = license?.status === 'Activated';
   const isExpired = license?.status === 'Expired Support';
   
@@ -22,17 +64,20 @@ export function BillingSettings() {
   const statusBg = isActive ? 'bg-emerald-500/10 border-emerald-500/20' : isExpired ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20';
   const statusDot = isActive ? 'bg-emerald-400' : isExpired ? 'bg-amber-400' : 'bg-red-400';
 
+  const planName = serverLicenseData?.plan || 'Standard Enterprise';
+  const maxSeats = serverLicenseData?.seats || 'Unlimited';
+
   return (
-    <div className="space-y-8">
-      <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8 bg-surface-2">
-        <div className="flex items-center justify-between mb-8 pb-6 border-b border-border">
+    <div className="space-y-8 animate-fade-in font-geist">
+      <div className="bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div className="flex items-center justify-between mb-8 pb-6 border-b border-[var(--pm-border)]">
           <div>
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Shield className="w-5 h-5 text-emerald-400" />
-              Resolve PM Enterprise License
+            <h3 className="text-xl font-bold text-[var(--pm-text)] flex items-center gap-2">
+              <Shield className="w-5 h-5 text-indigo-500" />
+              Resolve PM License Details
             </h3>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">
-              On-premise / Private Cloud operating system license details.
+            <p className="text-sm text-[var(--pm-text-secondary)] mt-1 tracking-tight">
+              Manage your deployment's license status and workspace coverage.
             </p>
           </div>
           <div className={`px-4 py-2 ${statusBg} border rounded-lg flex items-center gap-2`}>
@@ -42,78 +87,77 @@ export function BillingSettings() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="p-5 rounded-xl border border-[var(--border-soft)] bg-surface flex flex-col">
-            <span className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-mono mb-2">Company Identity</span>
+          <div className="p-5 rounded-xl border border-[var(--pm-border)] bg-[var(--pm-surface-elevated)] flex flex-col">
+            <span className="text-xs text-[var(--pm-text-secondary)] uppercase tracking-wider font-mono mb-2">Workspace Identity</span>
             <div className="flex items-center gap-3">
-              <Building2 className="w-8 h-8 text-indigo-400" />
+              <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                <Building2 className="w-5 h-5" />
+              </div>
               <div>
-                <p className="text-sm font-bold text-white">{license?.companyName || workspace?.name || 'Enterprise Workspace'}</p>
-                <p className="text-xs text-[var(--text-tertiary)]">Purchased: Resolve PM Enterprise</p>
+                <p className="text-sm font-bold text-[var(--pm-text)]">{workspace?.name || 'Enterprise Workspace'}</p>
               </div>
             </div>
           </div>
 
-          <div className="p-5 rounded-xl border border-[var(--border-soft)] bg-surface flex flex-col">
-            <span className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-mono mb-2">System Version</span>
+          <div className="p-5 rounded-xl border border-[var(--pm-border)] bg-[var(--pm-surface-elevated)] flex flex-col">
+            <span className="text-xs text-[var(--pm-text-secondary)] uppercase tracking-wider font-mono mb-2">License Plan</span>
             <div className="flex items-center gap-3">
-              <Server className="w-8 h-8 text-blue-400" />
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                <Server className="w-5 h-5" />
+              </div>
               <div>
-                <p className="text-sm font-bold text-white">v1.0.0 (LTS)</p>
-                <p className="text-xs text-[var(--text-tertiary)]">Private Cloud Instance</p>
+                <p className="text-sm font-bold text-[var(--pm-text)]">{planName}</p>
+                <p className="text-xs text-[var(--pm-text-tertiary)]">Self-Hosted Instance</p>
               </div>
             </div>
           </div>
 
-          <div className="p-5 rounded-xl border border-[var(--border-soft)] bg-surface flex flex-col">
-            <span className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-mono mb-2">Capacity Utilization</span>
-            <div className="flex flex-col gap-2 mt-1">
-              <div className="flex justify-between items-end">
-                <span className="text-xl font-bold text-white">Unlimited</span>
-                <span className="text-xs text-[var(--text-tertiary)] mb-1">Licensed Team Members</span>
+          <div className="p-5 rounded-xl border border-[var(--pm-border)] bg-[var(--pm-surface-elevated)] flex flex-col">
+            <span className="text-xs text-[var(--pm-text-secondary)] uppercase tracking-wider font-mono mb-2">Active Seats</span>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <Users className="w-5 h-5" />
               </div>
-              <div className="w-full h-1.5 bg-surface-3 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 rounded-full" style={{ width: '100%' }} />
+              <div>
+                <p className="text-sm font-bold text-[var(--pm-text)]">{activeUsersCount} <span className="text-xs text-[var(--pm-text-tertiary)] font-normal">/ {maxSeats}</span></p>
+                <p className="text-xs text-[var(--pm-text-tertiary)]">Licensed Team Members</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 rounded-xl border border-[var(--border-soft)] bg-surface-3/30">
-            <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider font-mono">Product Key Architecture</h4>
+          <div className="p-6 rounded-xl border border-[var(--pm-border)] bg-[var(--pm-surface-elevated)]">
+            <h4 className="text-sm font-bold text-[var(--pm-text)] mb-4 uppercase tracking-wider font-mono">License Architecture</h4>
             <div className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                <span className="text-sm text-[var(--text-secondary)]">Status</span>
-                <span className={`text-sm font-medium ${statusColor}`}>{license?.status || 'Unknown'}</span>
+              <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
+                <span className="text-sm text-[var(--pm-text-secondary)]">Status</span>
+                <span className={`text-sm font-medium ${statusColor}`}>{license?.status || 'Invalid'}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                <span className="text-sm text-[var(--text-secondary)]">Activated</span>
-                <span className="text-sm font-medium text-white">{license?.verifiedAt ? new Date(license.verifiedAt).toLocaleDateString() : 'N/A'}</span>
+              <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
+                <span className="text-sm text-[var(--pm-text-secondary)]">Activated On</span>
+                <span className="text-sm font-medium text-[var(--pm-text)]">{license?.verifiedAt ? new Date(license.verifiedAt).toLocaleDateString() : 'N/A'}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                <span className="text-sm text-[var(--text-secondary)]">Support Coverage</span>
-                <span className={`text-sm font-medium ${isExpired ? 'text-red-400' : 'text-indigo-400'}`}>
-                  {license?.supportExpiry ? `Until ${new Date(license.supportExpiry).toLocaleDateString()}` : 'N/A'}
+              <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
+                <span className="text-sm text-[var(--pm-text-secondary)]">Support Coverage</span>
+                <span className={`text-sm font-medium ${isExpired ? 'text-red-400' : 'text-indigo-500'}`}>
+                  {license?.supportExpiry ? `Until ${new Date(license.supportExpiry).toLocaleDateString()}` : 'No limit'}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                <span className="text-sm text-[var(--text-secondary)]">Purchase ID</span>
-                <span className="text-sm font-mono text-white">{license?.purchaseId || 'N/A'}</span>
+              <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
+                <span className="text-sm text-[var(--pm-text-secondary)]">License Key ID</span>
+                <span className="text-sm font-mono text-[var(--pm-text)]">{license?.productKey || license?.purchaseId || 'Unlicensed'}</span>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col gap-4 justify-center">
             <button 
-              onClick={handleRefresh}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-indigo-500 text-white hover:bg-indigo-600 transition-colors shadow-lg"
+              onClick={handleUpdateLicense}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-indigo-500 text-white hover:bg-indigo-600 transition-colors shadow-sm"
             >
               <Key className="w-4 h-4" />
-              {isRefreshing ? 'Verifying...' : 'Update License Key'}
-            </button>
-            <button className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-surface-3 text-[var(--text-secondary)] hover:text-white hover:bg-surface-4 transition-colors">
-              <Shield className="w-4 h-4" />
-              Download Audit Certificate
+              {isRefreshing ? 'Redirecting...' : 'Update License Key'}
             </button>
           </div>
         </div>
