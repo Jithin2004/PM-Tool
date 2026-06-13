@@ -50,7 +50,11 @@ export const companyCalendarService = {
       .eq('year', year)
       .order('date', { ascending: true });
       
-    if (error || !data) return [];
+    if (error) {
+      console.error('getEvents error:', error);
+      return [];
+    }
+    if (!data) return [];
     return data as CompanyCalendarEvent[];
   },
 
@@ -107,16 +111,21 @@ export const companyCalendarService = {
       const year = parseInt(h.date.substring(0, 4), 10);
       const event_type = h.type === 'festival' ? 'festival' : h.type === 'regional' ? 'regional' : 'holiday';
       
-      const { error } = await supabase.from('company_calendar_events').insert({
+      const { error } = await supabase.from('company_calendar_events').upsert({
         workspace_id: workspaceId,
         name: h.name,
         date: h.date,
         event_type,
         source: 'sync',
         year
-      });
+      }, { onConflict: 'workspace_id, date, name', ignoreDuplicates: true });
       
-      if (!error) imported++;
+      if (!error) {
+        imported++;
+      } else {
+        console.error('Insert error:', error);
+        throw new Error(error.message || 'Insert failed');
+      }
     }
 
     // Attempt to log sync (optional)
