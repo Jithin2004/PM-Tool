@@ -7,6 +7,7 @@ import { CompanyCalendarPanel } from '../../components/admin/CompanyCalendarPane
 import { hasCapability } from '../../core/auth/permissions';
 import { Icon } from '../../components/ui/Icon';
 import { supabase } from '../../lib/supabase';
+import { InviteService } from '../../services/inviteService';
 import { EnterpriseImportCenter } from './EnterpriseImportCenter';
 import { SystemInfoPanel } from '../../components/admin/SystemInfoPanel';
 import { SystemHealthPanel } from '../../components/admin/SystemHealthPanel';
@@ -306,22 +307,15 @@ export function AdminPanel() {
       if (!workspace?.id) throw new Error("Could not locate active workspace.");
       if (!currentUserProfile?.id) throw new Error("No active user profile.");
 
-      const { error: insertError } = await supabase
-        .from('invitations')
-        .insert({
-          email,
-          workspace_id: workspace.id,
-          role: inviteRole,
-          status: 'pending',
-          invited_by: currentUserProfile.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        });
+      const result = await InviteService.createInvitation({
+        email,
+        workspaceId: workspace.id,
+        role: inviteRole,
+        createdBy: currentUserProfile.id
+      });
 
-      if (insertError) {
-        if (insertError.code === '23505') {
-          throw new Error("This email is already invited.");
-        }
-        throw insertError;
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
       setInviteEmail('');
@@ -335,11 +329,8 @@ export function AdminPanel() {
 
   const handleRevokeInvitation = async (id: string) => {
     askConfirmation("Revoke Invitation", "Are you sure you want to revoke this invitation? The user will no longer be allowed to join.", async () => {
-      const { error } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', id);
-      if (!error) {
+      const success = await InviteService.revokeInvitation(id);
+      if (success) {
         fetchInvitations();
       }
     }, "Revoke");
@@ -1095,24 +1086,40 @@ export function AdminPanel() {
                     Pending Invitations
                   </h3>
                   <div className="divide-y rounded-lg border max-h-[220px] overflow-y-auto p-4" style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-                    {invitations.map(inv => (
-                      <div key={inv.id} className="flex justify-between items-center py-3 hover:bg-[var(--pm-surface)]/5 transition-colors rounded px-2">
-                        <div className="flex flex-col">
-                          <span className="text-[11px] font-mono-pm" style={{ color: 'var(--pm-on-surface-variant)' }}>{inv.email}</span>
-                          <span className="text-[9px] font-mono-pm uppercase tracking-widest mt-1" style={{ color: 'var(--pm-primary)' }}>Role: {inv.role}</span>
+                    {invitations.map(inv => {
+                      const inviteUrl = window.location.origin + '/accept-invite/' + inv.token;
+                      return (
+                        <div key={inv.id} className="flex justify-between items-center py-3 hover:bg-[var(--pm-surface)]/5 transition-colors rounded px-2">
+                          <div className="flex flex-col">
+                            <span className="text-[11px] font-mono-pm" style={{ color: 'var(--pm-on-surface-variant)' }}>{inv.email}</span>
+                            <span className="text-[9px] font-mono-pm uppercase tracking-widest mt-1" style={{ color: 'var(--pm-primary)' }}>Role: {inv.role}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(inviteUrl);
+                                window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Invite link copied', type: 'success' }}));
+                              }}
+                              className="text-[9px] font-mono-pm uppercase tracking-widest px-3 py-1.5 rounded transition-all"
+                              style={{ border: '1px solid rgba(100,200,100,0.3)', color: '#4ade80', background: 'rgba(100,200,100,0.05)' }}
+                            >
+                              Copy Link
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRevokeInvitation(inv.id)}
+                              className="text-[9px] font-mono-pm uppercase tracking-widest px-3 py-1.5 rounded transition-all"
+                              style={{ border: '1px solid rgba(255,100,100,0.3)', color: 'var(--pm-error)', background: 'rgba(255,100,100,0.05)' }}
+                              onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,100,100,0.1)'; }}
+                              onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,100,100,0.05)'; }}
+                            >
+                              Revoke
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRevokeInvitation(inv.id)}
-                          className="text-[9px] font-mono-pm uppercase tracking-widest px-3 py-1.5 rounded transition-all"
-                          style={{ border: '1px solid rgba(255,100,100,0.3)', color: 'var(--pm-error)', background: 'rgba(255,100,100,0.05)' }}
-                          onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,100,100,0.1)'; }}
-                          onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,100,100,0.05)'; }}
-                        >
-                          Revoke
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {invitations.length === 0 && (
                       <div className="text-center py-8 text-[11px] font-mono-pm italic" style={{ color: 'var(--pm-on-surface-variant)' }}>
                         No pending invitations.

@@ -409,12 +409,14 @@ CREATE TABLE salaries (
 -- 14. invitations
 CREATE TABLE invitations (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  email         text        NOT NULL,
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  email         text        NOT NULL,
   role          text        NOT NULL CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer')),
+  token         text        UNIQUE NOT NULL,
   status        text        NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'revoked')),
-  invited_by    uuid        REFERENCES users(id) ON DELETE RESTRICT,
   expires_at    timestamptz NOT NULL,
+  created_by    uuid        REFERENCES users(id) ON DELETE RESTRICT,
+  accepted_at   timestamptz,
   created_at    timestamptz NOT NULL DEFAULT now(),
   UNIQUE(workspace_id, email)
 );

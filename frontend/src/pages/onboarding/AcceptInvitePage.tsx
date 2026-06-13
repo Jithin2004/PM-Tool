@@ -31,40 +31,38 @@ export function AcceptInvitePage() {
       }
 
       try {
-        // Query the users table for the invite
-        const { data: userRow, error: fetchError } = await supabase
-          .from('users')
-          .select('email, full_name, role, department, status, invite_expires_at, workspace_id')
-          .eq('invite_token', token)
+        const { data: invRow, error: fetchError } = await supabase
+          .from('invitations')
+          .select('id, email, role, status, expires_at, workspace_id')
+          .eq('token', token)
           .single();
 
-        if (fetchError || !userRow) {
+        if (fetchError || !invRow) {
           setError('Invalid invitation link. Please request a new invite from your administrator.');
           return;
         }
 
-        if (userRow.status !== 'invited') {
+        if (invRow.status !== 'pending') {
           setError('This invitation has already been processed or deactivated.');
           return;
         }
 
-        if (new Date(userRow.invite_expires_at) < new Date()) {
+        if (new Date(invRow.expires_at) < new Date()) {
           setError('This invitation has expired. Please request a new one.');
           return;
         }
 
-        // Fetch workspace name for context
         const { data: wsRow } = await supabase
           .from('workspaces')
           .select('name')
-          .eq('id', userRow.workspace_id)
+          .eq('id', invRow.workspace_id)
           .single();
 
         setInviteDetails({
-          email: userRow.email,
-          full_name: userRow.full_name || userRow.email.split('@')[0],
-          role: userRow.role,
-          department: userRow.department,
+          email: invRow.email,
+          full_name: invRow.email.split('@')[0], // we don't store full_name in invitations
+          role: invRow.role,
+          department: null,
           workspace_name: wsRow?.name || 'Your Company'
         });
 
@@ -95,31 +93,43 @@ export function AcceptInvitePage() {
     setLoading(true);
 
     try {
-      // Call backend to accept invite and update password securely
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/accept-invite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password })
+      // 1. Mark the token as accepted in the database first
+      // so it's consumed before creating the user to avoid race conditions.
+      const { error: updateError } = await supabase
+        .from('invitations')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('token', token)
+        .eq('status', 'pending');
+
+      if (updateError) {
+        throw new Error('Could not accept the invitation at this time.');
+      }
+
+      // 2. Create the user in Supabase Auth
+      // The reconcileInvitationMembership core will automatically pick up the 'accepted' invitation
+      // when it sees the email, and assign the proper workspace and role!
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: inviteDetails!.email,
+        password: password,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to accept invitation');
+      if (signUpError) {
+        if (signUpError.message.includes('already registered')) {
+          // If they already exist, try to sign them in.
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: inviteDetails!.email,
+            password: password
+          });
+          if (signInError) throw new Error('Account exists but password was incorrect. Please login normally.');
+        } else {
+          throw signUpError;
+        }
       }
 
       setSuccess(true);
-      
-      // Auto login with new credentials
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: inviteDetails!.email,
-        password: password
-      });
-
-      if (signInError) throw signInError;
 
       setTimeout(() => {
-        window.location.href = '/workspace';
+        window.location.href = '/overview';
       }, 2000);
 
     } catch (err: any) {
