@@ -58,14 +58,10 @@ export function PortfolioAnalytics() {
       } else if (proj.tags?.includes('R&D') || proj.tags?.includes('NEW')) {
         groups['Internal R&D Projects'].push(proj);
       } else {
-        // Fallback round-robin based on name length for mock variation
-        if (proj.name.length % 3 === 0) {
-          groups['Enterprise SLA Portfolio'].push(proj);
-        } else if (proj.name.length % 3 === 1) {
-          groups['Public Sector Accounts'].push(proj);
-        } else {
-          groups['Internal R&D Projects'].push(proj);
+        if (!groups['Uncategorized Portfolios']) {
+          groups['Uncategorized Portfolios'] = [];
         }
+        groups['Uncategorized Portfolios'].push(proj);
       }
     });
 

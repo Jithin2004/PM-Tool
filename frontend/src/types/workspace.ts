@@ -18,11 +18,11 @@ export interface WorkspaceSettings {
   productivityFactor: number;
   completionPolicy?: 'flexible' | 'controlled' | 'strict' | 'enterprise';
   allowOverallocation?: boolean;
-  saturdayRule?: 'all' | 'off' | '2nd_4th' | '1st_3rd' | 'custom';
+  saturdayRule?: 'ALL_WORKING' | 'ALL_OFF' | 'FIRST_THIRD_OFF' | 'SECOND_FOURTH_OFF' | 'CUSTOM';
   country?: string;
   region?: string;
   city?: string;
-  shutdowns?: Array<{ start: string; end: string; name: string }>;
+  shutdowns?: { start: string; end: string; name: string }[];
   default_mode?: string;
   auto_archive?: boolean;
   notifications?: boolean;
@@ -30,7 +30,6 @@ export interface WorkspaceSettings {
   logoUrl?: string;
   workingTimeFrom?: string;
   workingTimeTo?: string;
-  departments?: string[];
   passwordPolicy?: string;
   magicLinkExpiry?: string;
   baseCurrency?: string;

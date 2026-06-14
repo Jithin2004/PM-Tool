@@ -84,28 +84,28 @@ export default defineConfig(({ mode }) => {
 
             // ── Heavy feature pages (lazy by router, but explicit chunks ──────
             // ── prevent them landing in the root index.js bundle) ─────────────
-            if (id.includes('/pages/dashboard/AdminPanel') || id.includes('/components/admin/Admin')) {
+            if (id.includes('/pages/dashboard/AdminPanel')) {
               return 'AdminPanel';
             }
-            if (id.includes('/pages/dashboard/LogisticsPanel') || id.includes('/components/admin/Logistics')) {
+            if (id.includes('/pages/dashboard/LogisticsPanel')) {
               return 'LogisticsPanel';
             }
-            if (id.includes('/pages/workspace/MeetingsPage') || id.includes('/components/meeting')) {
+            if (id.includes('/pages/workspace/MeetingsPage')) {
               return 'MeetingsPage';
             }
-            if (id.includes('/pages/resources/FinancePage') || id.includes('/components/finance')) {
+            if (id.includes('/pages/resources/FinancePage')) {
               return 'FinancePage';
             }
-            if (id.includes('/pages/workspace/DecisionsPage') || id.includes('/components/decisions')) {
+            if (id.includes('/pages/workspace/DecisionsPage')) {
               return 'DecisionsPage';
             }
             if (id.includes('/pages/mission-control/MissionControlPage')) {
               return 'MissionControlPage';
             }
-            if (id.includes('/pages/workspace/ReportsCenter') || id.includes('/components/reports')) {
+            if (id.includes('/pages/workspace/ReportsCenter')) {
               return 'ReportsCenter';
             }
-            if (id.includes('/pages/control/AnalyticsPage') || id.includes('/components/analytics')) {
+            if (id.includes('/pages/control/AnalyticsPage')) {
               return 'AnalyticsPage';
             }
             if (id.includes('/services/syntheticStressTest')) {
@@ -118,8 +118,7 @@ export default defineConfig(({ mode }) => {
               id.includes('/pages/board/') ||
               id.includes('/pages/sprints/') ||
               id.includes('/pages/timeline/') ||
-              id.includes('/pages/backlog/') ||
-              id.includes('/components/execution/')
+              id.includes('/pages/backlog/')
             ) {
               return 'ExecutionSystem';
             }

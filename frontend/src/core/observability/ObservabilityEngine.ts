@@ -1,4 +1,5 @@
 import { PlatformHealthStatus, RealtimeHealthProfile, AuditIntegrityStatus, ReplayIntegrityProfile, OperationalReliabilityMetrics, IncidentRecord, IncidentSeverity } from './types';
+import { persistSystemEvent } from './telemetry';
 
 type Subscriber = () => void;
 
@@ -116,7 +117,7 @@ class ObservabilityEngineCore {
     this.notify();
 
     // Fire and forget persistence to system_events
-    import('./telemetry').then(({ persistSystemEvent }) => {
+    try {
       persistSystemEvent(
         'frontend_incident',
         severity,
@@ -124,7 +125,7 @@ class ObservabilityEngineCore {
         message,
         { causality, context, category }
       );
-    }).catch(() => { /* ignore */ });
+    } catch (e) { /* ignore */ }
   }
 
   resolveIncident(id: string) {

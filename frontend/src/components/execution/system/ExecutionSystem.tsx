@@ -49,7 +49,7 @@ import { supabase } from '../../../lib/supabase';
 import { reconstructProjectTimeline } from '../../../core/execution/flowEngine';
 import type { DeliveryTimeline } from '../../../core/execution/flowEngine';
 
-const ExecutionTimelineView = React.lazy(() => import('./ExecutionTimelineView'));
+import ExecutionTimelineView from './ExecutionTimelineView';
 
 interface ExecutionSystemProps {
   projects: Project[];
@@ -474,14 +474,12 @@ export function ExecutionSystem({
         )}
 
         {activeView === 'timeline' && (
-          <React.Suspense fallback={<div className="p-8 text-center text-sm text-text-quaternary animate-pulse">Loading Timeline Engine...</div>}>
-            <ExecutionTimelineView
-              tasks={filteredTasks}
-              projects={projects}
-              dependencies={dependencies}
-              users={users}
-            />
-          </React.Suspense>
+          <ExecutionTimelineView
+            tasks={filteredTasks}
+            projects={projects}
+            dependencies={dependencies}
+            users={users}
+          />
         )}
 
         {activeView === 'roadmap' && (

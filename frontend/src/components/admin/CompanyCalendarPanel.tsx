@@ -113,7 +113,7 @@ export function CompanyCalendarPanel() {
   const saveSettings = async () => {
     if (!workspace?.id || !settings) return;
     await companyCalendarService.updateSettings(workspace.id, settings);
-    alert('Settings saved successfully.');
+    window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Settings saved successfully.', type: 'success' }}));
   };
 
   const toggleWorkingDay = (dayIndex: number) => {
@@ -127,7 +127,7 @@ export function CompanyCalendarPanel() {
   const calendarGrid = useMemo(() => {
     const weeks: Array<Array<{ day: number; isOff: boolean; events: CompanyCalendarEvent[] } | null>> = [];
     const workingDays = settings?.working_days || [1,2,3,4,5,6];
-    const saturdayPolicy = settings?.saturday_policy || 'all_working';
+    const saturdayPolicy = settings?.saturday_policy || 'ALL_WORKING';
 
     for (let m = 0; m < 12; m++) {
       const firstDay = new Date(year, m, 1);
@@ -146,10 +146,10 @@ export function CompanyCalendarPanel() {
         
         if (dayOfWeek === 6 && workingDays.includes(6)) {
           satCount++;
-          if (saturdayPolicy === 'all_off') isOff = true;
-          else if (saturdayPolicy === '1st_3rd_off' && (satCount === 1 || satCount === 3)) isOff = true;
-          else if (saturdayPolicy === '2nd_4th_off' && (satCount === 2 || satCount === 4)) isOff = true;
-          else if (saturdayPolicy === 'custom' && settings?.custom_saturdays_off?.includes(satCount)) isOff = true;
+          if (saturdayPolicy === 'ALL_OFF') isOff = true;
+          else if (saturdayPolicy === 'FIRST_THIRD_OFF' && (satCount === 1 || satCount === 3)) isOff = true;
+          else if (saturdayPolicy === 'SECOND_FOURTH_OFF' && (satCount === 2 || satCount === 4)) isOff = true;
+          else if (saturdayPolicy === 'CUSTOM' && settings?.custom_saturdays_off?.includes(satCount)) isOff = true;
         }
 
         const dateStr = `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -294,14 +294,14 @@ export function CompanyCalendarPanel() {
                   onChange={(e: any) => setSettings({ ...settings, saturday_policy: e.target.value })}
                   className="w-full input-premium h-10 px-3 text-sm mb-4"
                 >
-                  <option value="all_working">All Saturdays Working</option>
-                  <option value="all_off">All Saturdays Off</option>
-                  <option value="1st_3rd_off">1st & 3rd Saturdays Off</option>
-                  <option value="2nd_4th_off">2nd & 4th Saturdays Off</option>
-                  <option value="custom">Custom Saturday Rules</option>
+                  <option value="ALL_WORKING">All Saturdays Working</option>
+                  <option value="ALL_OFF">All Saturdays Off</option>
+                  <option value="FIRST_THIRD_OFF">1st & 3rd Saturdays Off</option>
+                  <option value="SECOND_FOURTH_OFF">2nd & 4th Saturdays Off</option>
+                  <option value="CUSTOM">Custom Saturday Rules</option>
                 </select>
 
-                {settings.saturday_policy === 'custom' && (
+                {settings.saturday_policy === 'CUSTOM' && (
                   <div className="p-4 rounded-lg bg-surface-3 border border-border mt-2 flex flex-wrap gap-3">
                     {[1, 2, 3, 4, 5].map(week => (
                       <label key={week} className="flex items-center gap-2 text-xs font-bold text-text-secondary cursor-pointer bg-surface-2 px-3 py-1.5 rounded-md border border-border hover:border-accent-primary/50 transition-colors">

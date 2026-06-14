@@ -34,18 +34,20 @@ export function AcceptInvitePage() {
         const { data: invRow, error: fetchError } = await supabase
           .rpc('get_invitation_by_token', { p_token: token });
 
-        if (fetchError || !invRow) {
-          setError('Invalid invitation link. Please request a new invite from your administrator.');
+        if (fetchError) {
+          setError('Failed to validate invitation. Please try again later.');
           return;
         }
 
-        if (invRow.status !== 'pending') {
-          setError('This invitation has already been processed or deactivated.');
-          return;
-        }
-
-        if (new Date(invRow.expires_at) < new Date()) {
-          setError('This invitation has expired. Please request a new one.');
+        if (!invRow || !invRow.valid) {
+          const reason = invRow?.reason;
+          if (reason === 'EXPIRED') {
+            setError('INVITE_EXPIRED');
+          } else if (reason === 'NOT_PENDING') {
+            setError('This invitation has already been processed or deactivated.');
+          } else {
+            setError('Invalid invitation link. Please request a new invite from your administrator.');
+          }
           return;
         }
 
@@ -84,16 +86,13 @@ export function AcceptInvitePage() {
     setLoading(true);
 
     try {
-      // 1. Mark the token as accepted in the database first
-      // so it's consumed before creating the user to avoid race conditions.
-      const { error: updateError } = await supabase
-        .from('invitations')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-        .eq('token', token)
-        .eq('status', 'pending');
+      // 1. Mark the token as accepted securely via RPC
+      // This eliminates RLS dependency and ensures atomicity.
+      const { data: accepted, error: updateError } = await supabase
+        .rpc('accept_invitation', { p_token: token });
 
-      if (updateError) {
-        throw new Error('Could not accept the invitation at this time.');
+      if (updateError || !accepted) {
+        throw new Error('Could not accept the invitation. It may have expired or already been used.');
       }
 
       // 2. Create the user in Supabase Auth
@@ -136,6 +135,20 @@ export function AcceptInvitePage() {
   }
 
   if (error && !success && !inviteDetails) {
+    if (error === 'INVITE_EXPIRED') {
+      return (
+        <ResolveLayout eyebrow="Setup">
+          <div className="max-w-md mx-auto mt-20 p-8 premium-panel rounded-2xl text-center shadow-2xl border border-red-500/20 bg-dark-eval/50 backdrop-blur-xl">
+            <div className="w-16 h-16 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
+              <X className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-4">Invitation Expired</h2>
+            <p className="text-gray-400 text-sm mb-6">This invitation link has expired.<br/>Please request a new invitation from your administrator.</p>
+          </div>
+        </ResolveLayout>
+      );
+    }
+
     return (
       <ResolveLayout eyebrow="Setup">
         <div className="max-w-md mx-auto mt-20 p-8 premium-panel rounded-2xl text-center shadow-2xl border border-red-500/20 bg-dark-eval/50 backdrop-blur-xl">

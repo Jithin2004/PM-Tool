@@ -290,7 +290,7 @@ export function computeOperationalDerived(input: ComputeDerivedInput): Operation
   };
 
   // Friction-Adjusted Forecasting: Incorporate wait-state duration latency into delivery confidence
-  const deliveryConfidence = avgAdjustedConfidence;
+  const deliveryConfidence = input.serverMetrics?.deliveryConfidence ?? avgAdjustedConfidence;
 
   const stats: Stats = {
     totalProjects: activeWorkflows.length,

@@ -15,6 +15,9 @@ import { ManageClientsModal } from '../../components/finance/ManageClientsModal'
 import { generateInvoicePDF } from '../../services/invoicePdfService';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { deliverableService, Milestone } from '../../services/deliverableService';
+import { profitabilityService, ProjectProfitability } from '../../services/profitabilityService';
+import { Icon } from '../../components/ui/Icon';
 
 export default function FinancePage() {
   const { workspace } = useWorkspace();
@@ -42,6 +45,11 @@ export default function FinancePage() {
   const [showManageClientsModal, setShowManageClientsModal] = useState(false);
   const [adjustmentForm, setAdjustmentForm] = useState({ type: 'expense', amount: '', reason: '' });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [billableMilestones, setBillableMilestones] = useState<Milestone[]>([]);
+  const [projectProfitability, setProjectProfitability] = useState<ProjectProfitability[]>([]);
+  const [showTimeInvoiceModal, setShowTimeInvoiceModal] = useState(false);
+  const [selectedClientForTime, setSelectedClientForTime] = useState('');
+  const [isGeneratingTimeInvoice, setIsGeneratingTimeInvoice] = useState(false);
 
   useEffect(() => {
     if (!workspace?.id) return;
@@ -84,6 +92,12 @@ export default function FinancePage() {
       if (!data) setLoading(true);
       const result = await fetchFinanceData(workspace!.id);
       setData(result as any);
+      
+      const milestones = await deliverableService.getMilestones(workspace!.id, 'ready_for_billing');
+      setBillableMilestones(milestones);
+      
+      const profitability = await profitabilityService.getWorkspaceProfitability(workspace!.id);
+      setProjectProfitability(profitability);
     } catch (err) {
       console.error('Failed to load finance data', err);
     } finally {
@@ -238,13 +252,22 @@ export default function FinancePage() {
             Manage Clients
           </button>
           {!isClosed ? (
-            <button 
-              onClick={() => setShowInvoiceModal(true)} 
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-700 transition-all active:scale-[0.98]"
-            >
-              <Plus className="w-4 h-4" />
-              New Invoice
-            </button>
+            <>
+              <button 
+                onClick={() => setShowTimeInvoiceModal(true)} 
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-[var(--pm-primary)] border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
+              >
+                <Clock className="w-4 h-4" />
+                Bill Time
+              </button>
+              <button 
+                onClick={() => setShowInvoiceModal(true)} 
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-700 transition-all active:scale-[0.98]"
+              >
+                <Plus className="w-4 h-4" />
+                New Invoice
+              </button>
+            </>
           ) : (
             <button 
               onClick={() => setShowAdjustmentModal(true)} 
@@ -393,6 +416,99 @@ export default function FinancePage() {
             </div>
           </div>
         ) : null}
+
+        {/* Project Profitability Section */}
+        {projectProfitability.length > 0 && (
+          <div className="premium-panel rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)]">
+            <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center bg-indigo-500/5">
+              <div className="flex items-center gap-2">
+                <Icon name="monitoring" size={16} className="text-indigo-400" />
+                <h3 className="font-semibold text-sm text-indigo-400">Project Profitability Intelligence</h3>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse table-premium">
+                <thead>
+                  <tr>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Project</th>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)] text-right">Revenue</th>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)] text-right">Labor Cost</th>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)] text-right">Margin</th>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)] text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projectProfitability.map(p => (
+                    <tr key={p.project_id}>
+                      <td className="text-xs font-semibold text-[var(--text-secondary)]">{p.project_name}</td>
+                      <td className="text-right text-xs font-mono text-[var(--text-secondary)]">${Number(p.revenue).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                      <td className="text-right text-xs font-mono text-[var(--text-secondary)]">${Number(p.actual_cost).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                      <td className="text-right">
+                        <div className="flex flex-col items-end">
+                          <span className={`text-xs font-mono font-bold ${p.margin >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            ${Number(p.margin).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                          </span>
+                          <span className="text-[10px] text-[var(--text-secondary)] font-mono">{Number(p.margin_percentage).toFixed(1)}%</span>
+                        </div>
+                      </td>
+                      <td className="text-right">
+                         <span className={`text-[9px] uppercase tracking-widest font-mono font-bold px-2 py-0.5 rounded border ${
+                            p.risk === 'Healthy' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15' : 
+                            p.risk === 'At Risk' ? 'bg-amber-500/10 text-amber-400 border-amber-500/15' : 
+                            'bg-rose-500/10 text-rose-400 border-rose-500/15'}`}>
+                            {p.risk}
+                          </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Billable Deliverables Section */}
+        {billableMilestones.length > 0 && (
+          <div className="premium-panel rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-emerald-500/30">
+            <div className="px-5 py-4 border-b border-emerald-500/30 flex justify-between items-center bg-emerald-500/5">
+              <div className="flex items-center gap-2">
+                <Icon name="check_circle" size={16} className="text-emerald-400" />
+                <h3 className="font-semibold text-sm text-emerald-400">Billable Deliverables (Client Approved)</h3>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse table-premium">
+                <thead>
+                  <tr>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Project</th>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)]">Deliverable</th>
+                    <th className="text-[10px] uppercase tracking-wider font-mono font-bold text-[var(--text-secondary)] text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {billableMilestones.map(m => (
+                    <tr key={m.id}>
+                      <td className="text-xs font-semibold text-[var(--text-secondary)]">{m.project_name}</td>
+                      <td className="text-xs text-[var(--text-secondary)]">{m.title}</td>
+                      <td className="text-right">
+                        <button 
+                          className="px-3 py-1.5 text-xs font-bold rounded bg-indigo-600 text-white hover:bg-indigo-500 transition-colors"
+                          onClick={() => {
+                            // Pre-fill invoice modal based on milestone
+                            setShowInvoiceModal(true);
+                            // In a full implementation, we would pass the milestone to the modal.
+                          }}
+                        >
+                          Generate Invoice
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
  
         <div className="premium-panel rounded-2xl flex flex-col border border-[var(--border-soft)]">
           <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center">
@@ -613,6 +729,63 @@ export default function FinancePage() {
           companyProfile={data.companyProfile}
           onSuccess={() => { loadData(); fetchClients(workspace.id).then(setClients); }}
         />
+      )}
+
+      {/* Time to Invoice Modal */}
+      {showTimeInvoiceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div onClick={() => setShowTimeInvoiceModal(false)} className="absolute inset-0 modal-overlay-premium" />
+          <div className="relative modal-premium p-6 rounded-2xl max-w-md w-full text-white max-h-[90vh] flex flex-col scrollbar-premium">
+            <div className="flex justify-between items-center mb-4 flex-none">
+              <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2"><Clock className="w-5 h-5 text-emerald-400" /> Invoice Unbilled Time</h2>
+              <button onClick={() => setShowTimeInvoiceModal(false)} className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors text-[var(--text-secondary)] hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-4 scrollbar-premium">
+              <p className="text-xs text-[var(--text-secondary)]">This will generate a consolidated draft invoice for all unbilled work sessions and deliverables for the selected client.</p>
+              <div>
+                <label className="block text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-2">Select Client</label>
+                <select 
+                  value={selectedClientForTime} 
+                  onChange={e => setSelectedClientForTime(e.target.value)}
+                  className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500/50 text-white cursor-pointer transition-colors"
+                >
+                  <option value="">-- Choose Client --</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id}>{c.company_name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <button 
+                onClick={async () => {
+                  if (!selectedClientForTime) return showAlert("Please select a client.");
+                  setIsGeneratingTimeInvoice(true);
+                  try {
+                    const { error } = await supabase.rpc('generate_invoice_from_time_logs', {
+                      p_workspace_id: workspace?.id,
+                      p_client_id: selectedClientForTime,
+                      p_creator_id: profile?.id
+                    });
+                    if (error) throw error;
+                    showAlert("Draft invoice generated successfully.", "success");
+                    setShowTimeInvoiceModal(false);
+                    loadData();
+                  } catch (e: any) {
+                    showAlert(e.message || "Failed to generate invoice");
+                  } finally {
+                    setIsGeneratingTimeInvoice(false);
+                  }
+                }}
+                disabled={!selectedClientForTime || isGeneratingTimeInvoice}
+                className="w-full btn-premium-primary py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider active:scale-[0.98] mt-4 disabled:opacity-50"
+              >
+                {isGeneratingTimeInvoice ? 'Processing...' : 'Generate Draft Invoice'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
  
       {/* Manage Clients Modal */}

@@ -25,11 +25,11 @@ const withRetry = (componentImport: () => Promise<any>) => {
     const chunkNameMatch = importStr.match(/import\(['"]([^'"]+)['"]\)/);
     const chunkName = chunkNameMatch ? chunkNameMatch[1] : 'unknown chunk';
 
-    console.log(`[lazy] importing: ${chunkName}`);
+    
 
     try {
       const module = await componentImport();
-      console.log(`[lazy] resolved: ${chunkName}`);
+      
       sessionStorage.removeItem('chunk_reload_count');
       return module;
     } catch (error: any) {
@@ -106,7 +106,7 @@ import { SharedProjectDashboard } from '../pages/shared/SharedProjectDashboard';
 const DEFAULT_AUTH_REDIRECT = '/overview';
 
 function RouteFallback() {
-  console.log('[RouteFallback] Rendering "Loading workspace..." fallback');
+  
   return (
     <div className="flex min-h-[60vh] items-center justify-center font-geist text-[10px] uppercase tracking-widest text-text-tertiary">
       <div className="flex items-center gap-3">
@@ -193,7 +193,7 @@ function RouteShell({ children }: { children: React.ReactNode }) {
 
 
 export function ResolveRouter() {
-  console.log('[ResolveRouter] RENDER');
+  
   const rawPathname = usePathname();
   const pathname = normalizePath(rawPathname);
   const { user, workspace, loading: workspaceLoading } = useWorkspace();
@@ -273,8 +273,6 @@ export function ResolveRouter() {
   }
 
   if (pathname === '/password-setup') {
-    // Dynamically load to avoid circular deps, or just mock inline for now
-    
     return <PasswordSetup />;
   }
 
@@ -294,6 +292,10 @@ export function ResolveRouter() {
   if (!user) return <Login />;
 
   if (profile?.employment_status && ['terminated', 'resigned', 'suspended'].includes(profile.employment_status)) {
+    return <Redirect to="/login?error=access_denied" />;
+  }
+
+  if ((profile as any)?.status && ['archived', 'offboarding', 'disabled'].includes((profile as any).status)) {
     return <Redirect to="/login?error=access_denied" />;
   }
 

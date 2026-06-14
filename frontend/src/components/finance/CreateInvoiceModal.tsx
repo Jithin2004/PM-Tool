@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save, Download } from 'lucide-react';
-import { Client, Invoice, InvoiceLineItem, generateInvoice, CompanyBillingProfile } from '../../services/financeService';
+import { Client, Invoice, InvoiceLineItem, generateInvoice, CompanyBillingProfile, auditExchangeRateOverride } from '../../services/financeService';
 import { generateInvoicePDF } from '../../services/invoicePdfService';
 import { fetchDocumentTemplates, DocumentTemplate } from '../../services/documentTemplateService';
 import { documentGenerator } from '../../services/documentGeneratorService';
@@ -211,7 +211,6 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
       
       if (exchangeRate !== 1 && exchangeOverrideReason) {
          // Audit the manual change (assuming previous rate was 1)
-         const { auditExchangeRateOverride } = await import('../../services/financeService');
          await auditExchangeRateOverride((newInvoice as Invoice).id, workspaceId, 1, exchangeRate, 'system', exchangeOverrideReason);
       }
 

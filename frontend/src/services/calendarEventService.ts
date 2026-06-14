@@ -6,7 +6,7 @@ import type { CalendarEvent, CalendarEventType } from '../types';
 
 /**
  * Resolved base URL for the calendar backend API.
- * Falls back to http://localhost:5001/api/calendar so the URL never silently
+ * Falls back to localhost only in dev mode so the URL never silently
  * becomes the string "undefined/events/..." when the env var is missing.
  */
 const RAW_URL = (import.meta.env.VITE_CALENDAR_API_URL || 'https://pm-tool-server.onrender.com').replace(/\/$/, '');

@@ -233,7 +233,7 @@ export async function recoverJobs(): Promise<number> {
     // Load recoverable jobs
     const { data: jobs } = await supabase
       .from('integration_sync_jobs')
-      .select('*').limit(50)
+      .select('*')
       .in('status', ['queued', 'retrying'])
       .or(`next_retry_at.is.null,next_retry_at.lte.${new Date().toISOString()}`)
       .order('created_at', { ascending: true })
@@ -339,7 +339,7 @@ export async function verifyOAuthState(stateToken: string, workspaceId: string):
   try {
     const { data } = await supabase
       .from('oauth_sessions')
-      .select('*').limit(50)
+      .select('*')
       .eq('state_token', stateToken)
       .eq('workspace_id', workspaceId)
       .maybeSingle();
@@ -362,7 +362,7 @@ export async function fetchConnectedAccounts(workspaceId: string): Promise<Conne
   try {
     const { data } = await supabase
       .from('connected_accounts')
-      .select('*').limit(50)
+      .select('*')
       .eq('workspace_id', workspaceId)
       .order('connected_at', { ascending: false });
     if (data) return data as ConnectedAccount[];
@@ -415,7 +415,7 @@ export async function fetchIntegrationConfigs(workspaceId: string, projectId?: s
   try {
     let query = supabase
       .from('integration_configs')
-      .select('*').limit(50)
+      .select('*')
       .eq('workspace_id', workspaceId);
     if (projectId) query = query.eq('project_id', projectId);
     const { data } = await query;
@@ -452,7 +452,7 @@ export async function fetchIntegrationHealth(workspaceId: string): Promise<Integ
   try {
     const { data } = await supabase
       .from('integration_health')
-      .select('*').limit(50)
+      .select('*')
       .eq('workspace_id', workspaceId)
       .order('service', { ascending: true });
     if (data) return data as IntegrationHealth[];

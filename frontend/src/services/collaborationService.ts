@@ -20,6 +20,7 @@ export interface UniversalComment {
   edited_at?: string;
   deleted_at?: string;
   parent_comment_id?: string;
+  is_internal: boolean;
   author?: Profile;
 }
 
@@ -67,7 +68,8 @@ export const collaborationService = {
     authorId: string, 
     body: string, 
     mentions: Mention[] = [],
-    routePath?: string
+    routePath?: string,
+    isInternal: boolean = false
   ): Promise<UniversalComment | null> {
     if (!isSupabaseConfigured) return null;
 
@@ -81,6 +83,7 @@ export const collaborationService = {
           author_id: authorId,
           body,
           mentions,
+          is_internal: isInternal,
         })
         .select(`
           *,

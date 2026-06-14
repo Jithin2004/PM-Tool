@@ -43,6 +43,7 @@ export function MemberDirectory() {
     transferring: boolean;
     transferredCount: number;
     transferError: string | null;
+    handoffNotes: string;
   }>({
     active: false,
     targetStatus: null,
@@ -52,6 +53,7 @@ export function MemberDirectory() {
     transferring: false,
     transferredCount: 0,
     transferError: null,
+    handoffNotes: '',
   });
 
   useEscapeKey(!!selectedMemberDetails && !dojEditState.active && !handoffState.active, () => setSelectedMemberDetails(null));
@@ -203,6 +205,7 @@ export function MemberDirectory() {
                               transferring: false,
                               transferredCount: 0,
                               transferError: null,
+                              handoffNotes: '',
                             });
                             const report = await ExitHandoffEngine.generateHandoffReport(workspace!.id, selectedMemberDetails.id);
                             setHandoffState(prev => ({ ...prev, report, loading: false }));
@@ -455,6 +458,15 @@ export function MemberDirectory() {
                         ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-xs text-[var(--text-secondary)] mb-2">Handoff Notes & Instructions:</label>
+                    <textarea 
+                      value={handoffState.handoffNotes}
+                      onChange={(e) => setHandoffState(prev => ({ ...prev, handoffNotes: e.target.value }))}
+                      placeholder="Add context, pending passwords, client relationships, or other key info for the successor..."
+                      className="w-full bg-black/30 border border-[var(--border-soft)] rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500/50 text-white min-h-[100px] transition-colors"
+                    />
+                  </div>
                 </div>
 
                 {handoffState.transferError && (
@@ -506,6 +518,21 @@ export function MemberDirectory() {
                       );
 
                       if (statusRes) {
+                        // 3. Log into employee_handoffs
+                        await supabase.from('employee_handoffs').insert({
+                          workspace_id: workspace!.id,
+                          departing_user_id: selectedMemberDetails.id,
+                          manager_id: currentUserProfile!.id,
+                          target_user_id: handoffState.transferToUserId,
+                          notes: handoffState.handoffNotes,
+                          metadata: {
+                            transferred_tasks: taskIds.length,
+                            transferred_projects: projectIds.length,
+                            transferred_approvals: approvalIds.length,
+                            transferred_files: fileIds.length
+                          }
+                        });
+
                         setSelectedMemberDetails({
                           ...selectedMemberDetails,
                           employment_status: handoffState.targetStatus!

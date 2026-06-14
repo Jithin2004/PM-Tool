@@ -200,8 +200,8 @@ export interface CreditNote {
 export async function fetchFinanceData(workspaceId: string) {
   const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments, billingMilestones, clientCredits, advanceApplications, creditNotes] = await Promise.all([
     supabase.from('company_billing_profile').select('*').limit(50).eq('workspace_id', workspaceId).maybeSingle(),
-    supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId),
-    supabase.from('invoices').select('*, invoice_line_items(*)').eq('workspace_id', workspaceId),
+    supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null),
+    supabase.from('invoices').select('*, invoice_line_items(*)').eq('workspace_id', workspaceId).is('deleted_at', null),
     supabase.from('payments').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('expenses').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('salaries').select('base_salary').eq('workspace_id', workspaceId),
@@ -253,9 +253,19 @@ export const createClient = async (workspaceId: string, client: Partial<Client>)
 };
 
 export const fetchClients = async (workspaceId: string): Promise<Client[]> => {
-  const { data, error } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId));
+  const { data, error } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null));
   if (error) throw error;
   return data as Client[];
+};
+
+export const deleteClient = async (clientId: string, workspaceId: string, performedBy: string): Promise<void> => {
+  const { error } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').update({ deleted_at: new Date().toISOString(), deleted_by: performedBy }).eq('id', clientId).eq('workspace_id', workspaceId));
+  if (error) throw error;
+};
+
+export const restoreClient = async (clientId: string, workspaceId: string): Promise<void> => {
+  const { error } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').update({ deleted_at: null, deleted_by: null }).eq('id', clientId).eq('workspace_id', workspaceId));
+  if (error) throw error;
 };
 
 export async function generateInvoice(workspaceId: string, invoice: Partial<Invoice>, lineItems: Partial<InvoiceLineItem>[], prefix: string = 'RPM') {
@@ -467,7 +477,7 @@ export async function deleteInvoice(invoiceId: string, workspaceId: string, perf
     throw new Error("Only draft invoices can be completely deleted. Please cancel issued invoices instead.");
   }
 
-  const { error } = await trackSupabaseOperation('supabase_from_invoices', () => supabase.from('invoices').delete().eq('id', invoiceId));
+  const { error } = await trackSupabaseOperation('supabase_from_invoices', () => supabase.from('invoices').update({ deleted_at: new Date().toISOString(), deleted_by: performedBy }).eq('id', invoiceId));
   if (error) throw error;
 
   await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
@@ -477,7 +487,7 @@ export async function deleteInvoice(invoiceId: string, workspaceId: string, perf
     performed_by: performedBy,
     reason: reason,
     old_value: { status: invoice.status },
-    new_value: null
+    new_value: { status: 'deleted_soft' }
   }]));
 
   await trackSupabaseOperation('supabase_from_activity_logs', () => supabase.from('activity_logs').insert([{
@@ -490,3 +500,17 @@ export async function deleteInvoice(invoiceId: string, workspaceId: string, perf
   }]));
 }
 
+export async function restoreInvoice(invoiceId: string, workspaceId: string, performedBy: string) {
+  const { error } = await trackSupabaseOperation('supabase_from_invoices', () => supabase.from('invoices').update({ deleted_at: null, deleted_by: null }).eq('id', invoiceId).eq('workspace_id', workspaceId));
+  if (error) throw error;
+
+  await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
+    workspace_id: workspaceId,
+    invoice_id: invoiceId,
+    action: 'restored',
+    performed_by: performedBy,
+    reason: 'Manual restore',
+    old_value: { status: 'deleted_soft' },
+    new_value: { status: 'draft' }
+  }]));
+}

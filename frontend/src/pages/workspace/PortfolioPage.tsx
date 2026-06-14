@@ -6,8 +6,12 @@ import { Icon } from '../../components/ui/Icon';
 import { hasCapability } from '../../core/auth/permissions';
 import { useOperationalDerived, useOperationalData } from '../../context/OperationalDataContext';
 import { useDashboard } from '../../context/DashboardContext';
+import { dependencyService, CrossProjectDependency } from '../../services/dependencyService';
 
-type ViewMode = 'grid' | 'list' | 'timeline';
+import { deliverableService, Milestone } from '../../services/deliverableService';
+import { profitabilityService, ProjectProfitability } from '../../services/profitabilityService';
+
+type ViewMode = 'grid' | 'list' | 'timeline' | 'deliverables';
 type StatusFilter = 'all' | 'active' | 'deployed' | 'planning';
 
 const STATUS_META: Record<string, { label: string; color: string; dot: string }> = {
@@ -36,6 +40,27 @@ export default function PortfolioPage() {
   const [view, setView] = useState<ViewMode>('grid');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
+  const [crossDeps, setCrossDeps] = useState<CrossProjectDependency[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [profitability, setProfitability] = useState<Record<string, ProjectProfitability>>({});
+
+  React.useEffect(() => {
+    if (workspace?.id && view === 'deliverables') {
+      deliverableService.getMilestones(workspace.id).then(setMilestones);
+    }
+  }, [workspace?.id, view]);
+
+  React.useEffect(() => {
+    if (workspace?.id) {
+      dependencyService.getCrossProjectDependencies(workspace.id).then(res => {
+        if (res.data) setCrossDeps(res.data);
+      });
+      profitabilityService.getWorkspaceProfitability(workspace.id).then(data => {
+        const map = data.reduce((acc, curr) => ({ ...acc, [curr.project_id]: curr }), {});
+        setProfitability(map);
+      }).catch(console.error);
+    }
+  }, [workspace?.id]);
 
   const filteredProjects = useMemo(() => {
     let list = [...(projects || [])];
@@ -79,13 +104,13 @@ export default function PortfolioPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         {/* View toggle */}
         <div className="flex p-1 rounded-lg" style={{ background: 'var(--pm-surface-lowest)', border: '1px solid rgba(70,69,84,0.2)' }}>
-          {(['grid', 'list', 'timeline'] as ViewMode[]).map(v => (
+          {(['grid', 'list', 'timeline', 'deliverables'] as ViewMode[]).map(v => (
             <button key={v} onClick={() => setView(v)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm transition-all"
               style={view === v
                 ? { background: 'var(--pm-secondary-container)', color: 'var(--pm-on-secondary-container)' }
                 : { color: 'var(--pm-on-surface-variant)' }}>
-              <Icon name={v === 'grid' ? 'grid_view' : v === 'list' ? 'list' : 'timeline'} size={16} />
+              <Icon name={v === 'grid' ? 'grid_view' : v === 'list' ? 'list' : v === 'timeline' ? 'timeline' : 'verified'} size={16} />
               {v.charAt(0).toUpperCase() + v.slice(1)}
             </button>
           ))}
@@ -137,6 +162,8 @@ export default function PortfolioPage() {
             const confidence = frictionMetric.adjustedConfidence;
             const blockers = projectTasks.filter((t: any) => t.risk === 'high' && t.status !== 'done').length;
             const confColor = confidence >= 80 ? '#34d399' : confidence >= 50 ? 'var(--pm-primary)' : 'var(--pm-error)';
+            const prof = profitability[project.id];
+            const riskColor = prof?.risk === 'Healthy' ? '#34d399' : prof?.risk === 'At Risk' ? '#f59e0b' : '#ef4444';
 
             return (
               <div key={project.id} className="pm-card flex flex-col gap-4 p-6 cursor-pointer group hover:-translate-y-0.5 transition-transform">
@@ -185,18 +212,30 @@ export default function PortfolioPage() {
                 <div className="grid grid-cols-2 gap-3 mt-1">
                   <div>
                     <span className="font-mono-pm text-[9px] uppercase tracking-widest block mb-1"
-                      style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>CALIBRATED COGNITION</span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono-pm text-base font-semibold" style={{ color: confColor }}>{confidence}%</span>
-                      <span className="text-[10px] text-text-tertiary">CONFIDENCE</span>
+                      style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>BUDGET HEALTH</span>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono-pm text-base font-semibold" style={{ color: riskColor }}>
+                          {prof?.risk || 'Unknown'}
+                        </span>
+                      </div>
+                      {prof && prof.risk !== 'Healthy' && (
+                        <span className="text-[9px] text-[var(--pm-on-surface-variant)] leading-tight mt-1">
+                          {prof.actual_cost > prof.estimated_cost ? 'High effort variance' : 'Scope/Cost overrun'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div>
                     <span className="font-mono-pm text-[9px] uppercase tracking-widest block mb-1"
                       style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.6 }}>STABILITY</span>
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono-pm text-base font-semibold text-indigo-300">{frictionMetric.operationalContinuity}/100</span>
-                      <span className="text-[10px] text-text-tertiary">CONTINUITY</span>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono-pm text-base font-semibold text-indigo-300">{frictionMetric.operationalContinuity}/100</span>
+                      </div>
+                      <span className="text-[9px] text-[var(--pm-on-surface-variant)] leading-tight mt-1">
+                        CONF: <span style={{ color: confColor }}>{confidence}%</span>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -316,6 +355,130 @@ export default function PortfolioPage() {
           <p className="text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>
             Gantt timeline view — navigate to <strong>Scheduling</strong> for full execution timeline.
           </p>
+        </div>
+      )}
+
+      {/* Deliverables View */}
+      {view === 'deliverables' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Drafts */}
+            <div className="bg-surface-lowest rounded-xl p-4 border border-[var(--pm-border)]">
+              <h3 className="text-sm font-bold uppercase font-mono tracking-wider mb-4 flex items-center justify-between">
+                <span>Internal Drafts</span>
+                <span className="bg-surface-high px-2 py-0.5 rounded-full text-[10px]">{milestones.filter(m => !['client_review', 'approved', 'ready_for_billing', 'billed'].includes(m.status)).length}</span>
+              </h3>
+              <div className="space-y-3">
+                {milestones.filter(m => !['client_review', 'approved', 'ready_for_billing', 'billed'].includes(m.status)).map(m => (
+                  <div key={m.id} className="p-3 bg-surface-2 rounded-lg border border-[var(--pm-border)] flex flex-col gap-2">
+                    <div className="text-[10px] uppercase text-[var(--pm-on-surface-variant)]">{m.project_name}</div>
+                    <div className="font-semibold">{m.title}</div>
+                    {m.status === 'changes_requested' && (
+                      <div className="text-xs text-amber-500 bg-amber-500/10 p-2 rounded flex gap-1 items-start">
+                        <Icon name="warning" size={14} /> Client requested changes
+                      </div>
+                    )}
+                    <button 
+                      className="mt-2 text-xs font-semibold py-1.5 bg-primary/10 text-primary rounded w-full hover:bg-primary/20 transition-colors"
+                      onClick={async () => {
+                        await deliverableService.updateMilestoneStatus(m.id, 'client_review');
+                        deliverableService.getMilestones(workspace.id).then(setMilestones);
+                      }}
+                    >
+                      Submit for Client Review
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* In Review */}
+            <div className="bg-surface-lowest rounded-xl p-4 border border-amber-500/30">
+              <h3 className="text-sm font-bold uppercase font-mono tracking-wider mb-4 flex items-center justify-between text-amber-500">
+                <span>Client Review</span>
+                <span className="bg-amber-500/10 px-2 py-0.5 rounded-full text-[10px]">{milestones.filter(m => m.status === 'client_review').length}</span>
+              </h3>
+              <div className="space-y-3">
+                {milestones.filter(m => m.status === 'client_review').map(m => (
+                  <div key={m.id} className="p-3 bg-surface-2 rounded-lg border border-amber-500/30 flex flex-col gap-2">
+                    <div className="text-[10px] uppercase text-[var(--pm-on-surface-variant)]">{m.project_name}</div>
+                    <div className="font-semibold">{m.title}</div>
+                    <div className="text-xs text-[var(--pm-on-surface-variant)] flex items-center gap-1">
+                      <Icon name="schedule" size={14} /> Waiting on client...
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Approved & Ready */}
+            <div className="bg-surface-lowest rounded-xl p-4 border border-emerald-500/30">
+              <h3 className="text-sm font-bold uppercase font-mono tracking-wider mb-4 flex items-center justify-between text-emerald-400">
+                <span>Approved</span>
+                <span className="bg-emerald-500/10 px-2 py-0.5 rounded-full text-[10px]">{milestones.filter(m => ['approved', 'ready_for_billing', 'billed'].includes(m.status)).length}</span>
+              </h3>
+              <div className="space-y-3">
+                {milestones.filter(m => ['approved', 'ready_for_billing', 'billed'].includes(m.status)).map(m => (
+                  <div key={m.id} className="p-3 bg-surface-2 rounded-lg border border-emerald-500/30 flex flex-col gap-2">
+                    <div className="text-[10px] uppercase text-[var(--pm-on-surface-variant)]">{m.project_name}</div>
+                    <div className="font-semibold">{m.title}</div>
+                    {m.status === 'approved' ? (
+                      <button 
+                        className="mt-2 text-xs font-semibold py-1.5 bg-emerald-500/10 text-emerald-400 rounded w-full hover:bg-emerald-500/20 transition-colors"
+                        onClick={async () => {
+                          await deliverableService.updateMilestoneStatus(m.id, 'ready_for_billing');
+                          deliverableService.getMilestones(workspace.id).then(setMilestones);
+                        }}
+                      >
+                        Push to Finance (Billing)
+                      </button>
+                    ) : (
+                      <div className="text-xs text-[var(--pm-on-surface-variant)] bg-surface-high p-2 rounded text-center">
+                        {m.status === 'ready_for_billing' ? 'In Finance Queue' : 'Billed'}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cross Project Dependencies Panel ──────────────────── */}
+      {crossDeps.length > 0 && (
+        <div className="mt-8 glass-panel rounded-xl p-6 border border-amber-500/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Icon name="warning" size={20} style={{ color: 'var(--pm-tertiary)' }} />
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Cross-Project Blockers</h2>
+          </div>
+          <div className="space-y-3">
+            {crossDeps.map(dep => (
+              <div key={dep.id} className="flex items-center justify-between p-4 rounded-lg bg-surface-2 border border-[var(--pm-border)]">
+                <div>
+                  <div className="font-mono-pm text-[10px] uppercase text-text-quaternary mb-1">Blocked Project</div>
+                  <div className="font-medium text-text-primary">{dep.blocked_project_name}</div>
+                  <div className="text-sm text-text-secondary mt-1 flex items-center gap-2">
+                    <Icon name="lock" size={14} className="text-amber-500" />
+                    {dep.blocked_task_title}
+                  </div>
+                </div>
+                <div className="text-center px-4">
+                  <Icon name="arrow_forward" size={20} className="text-text-quaternary" />
+                </div>
+                <div className="text-right">
+                  <div className="font-mono-pm text-[10px] uppercase text-text-quaternary mb-1">Blocking Project</div>
+                  <div className="font-medium text-text-primary">{dep.blocking_project_name}</div>
+                  <div className="text-sm text-text-secondary mt-1 flex items-center justify-end gap-2">
+                    {dep.blocking_task_title}
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-surface-highest text-text-primary">
+                      {dep.blocking_task_status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

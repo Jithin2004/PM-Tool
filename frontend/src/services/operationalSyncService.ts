@@ -27,18 +27,16 @@ export interface OperationalSnapshot {
   allocationPeriods: any[]; // Phase 2A.1
   skills?: Skill[];
   userSkills?: UserSkill[];
+  operationalSummary?: Record<string, any>;
 }
 
-async function fetchTasks(workspaceId: string): Promise<Task[]> {
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('workspace_id', workspaceId);
+async function fetchOperationalSummary(workspaceId: string): Promise<Record<string, any>> {
+  const { data, error } = await supabase.rpc('get_workspace_operational_summary', { p_workspace_id: workspaceId });
   if (error) {
-    console.error('[operationalSyncService] fetchTasks:', error);
-    return [];
+    console.error('[operationalSyncService] fetchOperationalSummary:', error);
+    return {};
   }
-  return (data || []) as Task[];
+  return data || {};
 }
 
 /**
@@ -70,17 +68,19 @@ export async function refreshOperationalSecondary(workspaceId: string): Promise<
     try { return await promise; } catch { return fallback; }
   };
 
-  const [attendanceRows, allocationPeriods, skills, userSkills, tasks] = await Promise.all([
+  const [attendanceRows, allocationPeriods, skills, userSkills, operationalSummary] = await Promise.all([
     safeFetch(fetchWorkspaceAttendance(workspaceId), []),
     safeFetch(import('./capacityEngine').then(m => m.capacityEngine.fetchAllocationPeriods(workspaceId)), []),
     safeFetch(fetchSkills(workspaceId), []),
     safeFetch(fetchUserSkills(workspaceId), []),
-    safeFetch(fetchTasks(workspaceId), []),
+    safeFetch(fetchOperationalSummary(workspaceId), {}),
   ]);
 
-  const serverMetrics = computeOperationalIntelligence([], tasks);
+  const serverMetrics = operationalSummary?.server_metrics || {
+    deliveryConfidence: 0, executionPressure: 0, dailyFatigue: 0, riskForecast: 0
+  };
 
-  return { attendanceRows, allocationPeriods, skills, userSkills, serverMetrics };
+  return { attendanceRows, allocationPeriods, skills, userSkills, serverMetrics, operationalSummary };
 }
 
 export async function refreshOperationalSnapshot(workspaceId: string): Promise<OperationalSnapshot> {
@@ -92,19 +92,21 @@ export async function refreshOperationalSnapshot(workspaceId: string): Promise<O
     }
   };
 
-  const [projects, profiles, teams, attendanceRows, workspaceSettingsBlob, tasks, allocationPeriods, skills, userSkills] = await Promise.all([
+  const [projects, profiles, teams, attendanceRows, workspaceSettingsBlob, operationalSummary, allocationPeriods, skills, userSkills] = await Promise.all([
     safeFetch(fetchProjects(workspaceId), []),
     safeFetch(fetchWorkspaceProfiles(workspaceId), []),
     safeFetch(fetchWorkspaceTeams(workspaceId), []),
     safeFetch(fetchWorkspaceAttendance(workspaceId), []),
     safeFetch(fetchWorkspaceSettingsBlob(workspaceId), {}),
-    safeFetch(fetchTasks(workspaceId), []),
+    safeFetch(fetchOperationalSummary(workspaceId), {}),
     safeFetch(import('./capacityEngine').then(m => m.capacityEngine.fetchAllocationPeriods(workspaceId)), []),
     safeFetch(fetchSkills(workspaceId), []),
     safeFetch(fetchUserSkills(workspaceId), [])
   ]);
 
-  const serverMetrics = computeOperationalIntelligence(projects, tasks);
+  const serverMetrics = operationalSummary?.server_metrics || {
+    deliveryConfidence: 0, executionPressure: 0, dailyFatigue: 0, riskForecast: 0
+  };
 
   return { 
     projects, 
@@ -115,7 +117,8 @@ export async function refreshOperationalSnapshot(workspaceId: string): Promise<O
     serverMetrics,
     allocationPeriods,
     skills,
-    userSkills
+    userSkills,
+    operationalSummary
   };
 }
 
@@ -138,9 +141,10 @@ export async function refreshOperationalPartial(
     attendanceRows: () => safeFetch(fetchWorkspaceAttendance(workspaceId), []),
     workspaceSettingsBlob: () => safeFetch(fetchWorkspaceSettingsBlob(workspaceId), {}),
     serverMetrics: async () => {
-      const proj = await safeFetch(fetchProjects(workspaceId), []);
-      const tsk = await safeFetch(fetchTasks(workspaceId), []);
-      return computeOperationalIntelligence(proj, tsk);
+      const summary = await safeFetch(fetchOperationalSummary(workspaceId), {});
+      return summary?.server_metrics || {
+        deliveryConfidence: 0, executionPressure: 0, dailyFatigue: 0, riskForecast: 0
+      };
     },
     allocationPeriods: () => safeFetch(import('./capacityEngine').then(m => m.capacityEngine.fetchAllocationPeriods(workspaceId)), []),
     skills: () => safeFetch(fetchSkills(workspaceId), []),

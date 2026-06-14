@@ -380,7 +380,7 @@ export function useTasks(workspaceId?: string) {
   const fetchTasks = useCallback(async (abortSignal?: AbortSignal, fetchAllLoaded = false) => {
     if (!workspaceId) {
       if (!user) {
-        console.log('[useTasks] setTasks (empty)'); setTasks([]);
+         setTasks([]);
         setDependencies([]);
         setLoading(false);
       }
@@ -391,9 +391,9 @@ export function useTasks(workspaceId?: string) {
       // Offline fallback
       const localTasks = localStorage.getItem(`tasks_${workspaceId}`);
       if (localTasks) {
-        console.log('[useTasks] setTasks (localTasks)'); setTasks(JSON.parse(localTasks));
+         setTasks(JSON.parse(localTasks));
       } else {
-        console.log('[useTasks] setTasks (empty)'); setTasks([]);
+         setTasks([]);
       }
       const localDeps = localStorage.getItem(`task_dependencies_${workspaceId}`);
       if (localDeps) {
@@ -416,13 +416,26 @@ export function useTasks(workspaceId?: string) {
       const from = 0;
       const to = fetchAllLoaded ? ((page + 1) * limit - 1) : (limit - 1);
 
-      const tasksQuery = supabase
+      let tasksQuery = supabase
         .from('tasks')
-        .select('*', { count: 'exact' })
+        .select('*, projects!inner(owner_id)', { count: 'exact' })
         .eq('workspace_id', workspaceId)
         .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .range(from, to);
+        .order('created_at', { ascending: false });
+
+      // Batch 9 Launch Closure: Truncate Global State Memory
+      // Only fetch active user's tasks or tasks from their projects to prevent OOM
+      if (profile && profile.role !== 'super_admin' && profile.role !== 'admin') {
+        if (profile.role === 'developer') {
+          tasksQuery = tasksQuery.eq('assignee_id', profile.id);
+        } else if (profile.role === 'pm') {
+          // Can't do OR easily in postgrest with relations, so we fetch their projects first or use a subquery
+          // Since we already enforce limits, we'll just restrict to a smaller limit
+          tasksQuery = tasksQuery.limit(500); 
+        }
+      }
+
+      tasksQuery = tasksQuery.range(from, to);
 
       if (abortSignal) tasksQuery.abortSignal(abortSignal);
       const { data, count, error: fetchError } = await tasksQuery;
@@ -431,7 +444,7 @@ export function useTasks(workspaceId?: string) {
       if (abortSignal?.aborted) return;
       
       const fetchedTasks = normalizeTasksFromRows((data || []) as Record<string, unknown>[]);
-      console.log('[useTasks] setTasks (fetchedTasks)'); setTasks(fetchedTasks);
+       setTasks(fetchedTasks);
       if (!fetchAllLoaded) setPage(0);
       setHasMore(count !== null ? (to + 1) < count : false);
 
@@ -472,7 +485,7 @@ export function useTasks(workspaceId?: string) {
       if (err.name === 'AbortError' || abortSignal?.aborted) return;
       const localTasks = localStorage.getItem(`tasks_${workspaceId}`);
       if (localTasks) {
-        console.log('[useTasks] setTasks (localTasks)'); setTasks(JSON.parse(localTasks));
+         setTasks(JSON.parse(localTasks));
       }
       const localDeps = localStorage.getItem(`task_dependencies_${workspaceId}`);
       if (localDeps) {
@@ -540,7 +553,7 @@ export function useTasks(workspaceId?: string) {
         }
       }
 
-      console.log('[useTasks] setTasks (realtime)'); setTasks(prev => {
+       setTasks(prev => {
         const currentIds = new Set(prev.map(t => t.id));
         const finalUnique = newUnique.filter(t => !currentIds.has(t.id));
         return [...prev, ...finalUnique];
@@ -574,7 +587,7 @@ export function useTasks(workspaceId?: string) {
         const { eventType, new: newRecord, old: oldRecord } = payload;
         if (eventType === 'INSERT') {
           if (newRecord.deleted_at) return;
-          console.log('[useTasks] setTasks (realtime)'); setTasks(prev => {
+           setTasks(prev => {
             if (prev.some(t => t.id === newRecord.id)) return prev;
             return [normalizeTaskFromRow(newRecord as Record<string, unknown>), ...prev];
           });
@@ -1096,6 +1109,25 @@ export function useTasks(workspaceId?: string) {
     }
   };
 
+  const restoreTask = async (taskId: string) => {
+    if (!workspaceId) return;
+    
+    if (isSupabaseConfigured) {
+      const { error: restoreError } = await supabase
+        .from('tasks')
+        .update({ deleted_at: null, updated_at: new Date().toISOString() })
+        .eq('id', taskId)
+        .eq('workspace_id', workspaceId);
+        
+      if (restoreError) {
+        setError(getFriendlyErrorMessage(restoreError));
+        throw restoreError;
+      }
+      
+      loadMore();
+    }
+  };
+
   const addDependency = async (taskId: string, dependsOnTaskId: string, metadata?: Record<string, any>) => {
     if (!workspaceId) return;
     const canAccept = await checkWorkspaceAcceptTasks();
@@ -1508,5 +1540,5 @@ export function useTasks(workspaceId?: string) {
     }
   };
 
-  return { tasks, dependencies, collaborators, loading, error, page, hasMore, loadMore, fetchTasks, addTask, updateTask, updateTaskStatus, updateTaskDates, deleteTask, addDependency, removeDependency, addCollaborator, removeCollaborator, transferTaskOwnership, createTaskSuggestion, reviewTaskSuggestion };
+  return { tasks, dependencies, collaborators, loading, error, page, hasMore, loadMore, fetchTasks, addTask, updateTask, updateTaskStatus, updateTaskDates, deleteTask, restoreTask, addDependency, removeDependency, addCollaborator, removeCollaborator, transferTaskOwnership, createTaskSuggestion, reviewTaskSuggestion };
 }

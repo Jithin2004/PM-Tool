@@ -10,7 +10,7 @@ export const workSessionService = {
     try {
       const { data, error } = await supabase
         .from('work_sessions')
-        .select('*').limit(50)
+        .select('*')
         .eq('user_id', userId)
         .in('status', ['active', 'paused'])
         .maybeSingle();
@@ -29,7 +29,7 @@ export const workSessionService = {
     try {
       const { data, error } = await supabase
         .from('work_session_pauses')
-        .select('*').limit(50)
+        .select('*')
         .eq('session_id', sessionId)
         .order('pause_start', { ascending: true });
       if (error) { logServiceFailure('getSessionPauses', { sessionId }, error); return []; }
@@ -83,7 +83,7 @@ export const workSessionService = {
           session_type: sessionType,
           status: 'active'
         })
-        .select('*').limit(50)
+        .select('*')
         .single();
         
       if (error) { logServiceFailure('startSession', { taskId, userId }, error); return null; }
@@ -130,7 +130,7 @@ export const workSessionService = {
       // Find open pause
       const { data: pauses } = await supabase
         .from('work_session_pauses')
-        .select('*').limit(50)
+        .select('*')
         .eq('session_id', sessionId)
         .is('pause_end', null)
         .order('pause_start', { ascending: false })
@@ -180,7 +180,7 @@ export const workSessionService = {
   async editSession(sessionId: string, workspaceId: string, userId: string, updates: Partial<WorkSession>, reason: string): Promise<{ success: boolean; requiresApproval: boolean }> {
     if (!isSupabaseConfigured) return { success: false, requiresApproval: false };
     try {
-      const { data: oldSession } = await supabase.from('work_sessions').select('*').limit(50).eq('id', sessionId).single();
+      const { data: oldSession } = await supabase.from('work_sessions').select('*').eq('id', sessionId).single();
       if (!oldSession) return { success: false, requiresApproval: false };
 
       if (oldSession.locked_at) {
@@ -331,7 +331,7 @@ export const workSessionService = {
   async adjustSession(sessionId: string, workspaceId: string, userId: string, newValueMins: number, reason: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
     try {
-      const { data: session } = await supabase.from('work_sessions').select('*').limit(50).eq('id', sessionId).single();
+      const { data: session } = await supabase.from('work_sessions').select('*').eq('id', sessionId).single();
       if (!session) return false;
 
       const oldValueMins = session.duration_minutes || 0;

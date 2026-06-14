@@ -2,7 +2,7 @@ import React from 'react';
 import { WorkspaceProvider } from '../context/WorkspaceContext';
 import { AuthProvider } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
-const ObservabilityProvider = React.lazy(() => import('../core/observability/ObservabilityProvider').then(m => ({ default: m.ObservabilityProvider })));
+import { ObservabilityProvider } from '../core/observability/ObservabilityProvider';
 import { GlobalDialogs } from '../components/common/Dialogs';
 
 interface AppProvidersProps {
@@ -13,17 +13,15 @@ const GLOBAL_FALLBACK = <div className="flex h-screen w-screen bg-[#0b0c12]"></d
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <React.Suspense fallback={GLOBAL_FALLBACK}>
-      <ThemeProvider>
-        <ObservabilityProvider>
-          <AuthProvider>
-            <WorkspaceProvider>
-              {children}
-              <GlobalDialogs />
-            </WorkspaceProvider>
-          </AuthProvider>
-        </ObservabilityProvider>
-      </ThemeProvider>
-    </React.Suspense>
+    <ThemeProvider>
+      <ObservabilityProvider>
+        <AuthProvider>
+          <WorkspaceProvider>
+            {children}
+            <GlobalDialogs />
+          </WorkspaceProvider>
+        </AuthProvider>
+      </ObservabilityProvider>
+    </ThemeProvider>
   );
 }

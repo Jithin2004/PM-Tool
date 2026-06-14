@@ -41,7 +41,6 @@ export function WorkspaceSetupWizard() {
         name: name || 'My Workspace',
         settings: { 
           companyName: name || 'My Workspace',
-          departments: departments,
           workStart: workingTimeFrom,
           workEnd: workingTimeTo,
           workingTimeFrom: workingTimeFrom, // Keep for backward compatibility
@@ -56,6 +55,20 @@ export function WorkspaceSetupWizard() {
         } as any
       });
       if (created) {
+        if (departments.length > 0) {
+          try {
+            await trackSupabaseOperation('supabase_insert_departments', () => 
+              supabase.from('departments').insert(
+                departments.map(dept => ({
+                  workspace_id: created.id,
+                  name: dept
+                }))
+              )
+            );
+          } catch (e) {
+            console.error('Failed to save departments', e);
+          }
+        }
         if (members.length > 0) {
           const roleMap: Record<string, string> = {
             'employee': 'developer',
@@ -83,7 +96,7 @@ export function WorkspaceSetupWizard() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/bulk-invite`, {
+            const response = await fetch(`${(import.meta.env.PROD ? (() => { if (!import.meta.env.VITE_API_URL) throw new Error("Backend URL missing"); return import.meta.env.VITE_API_URL; })() : (import.meta.env.VITE_API_URL || 'http://localhost:5001'))}/api/bulk-invite`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

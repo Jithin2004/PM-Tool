@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Save, Edit2, Download } from 'lucide-react';
 import { Client, Invoice, Payment } from '../../services/financeService';
+import { generateClientStatementPDF } from '../../services/invoicePdfService';
 import { supabase } from '../../lib/supabase';
 import { Project } from '../../core/types/project';
 import { showAlert, showConfirm } from '../../components/common/Dialogs';
@@ -77,7 +78,7 @@ export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSu
       const { data: cns } = await supabase.from('credit_notes').select('*').eq('client_id', editingClient.id);
       const { data: advances } = await supabase.from('client_credits').select('*').eq('client_id', editingClient.id);
       
-      const { generateClientStatementPDF } = await import('../../services/invoicePdfService');
+      
       
       await generateClientStatementPDF(
         comp as any,

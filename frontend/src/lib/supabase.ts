@@ -29,6 +29,24 @@ const fetchWithTimeout = (url: URL | RequestInfo, options?: RequestInit) => {
   return fetch(url, {
     ...options,
     signal: controller.signal
+  }).then(async (res) => {
+    if (!res.ok && typeof url === 'string' && !url.includes('system_events')) {
+      try {
+        const cloned = res.clone();
+        const errData = await cloned.json();
+        import('../services/observabilityService').then(m => {
+          m.observabilityService.captureSupabaseError(url, errData);
+        });
+      } catch (e) {}
+    }
+    return res;
+  }).catch((err) => {
+    if (typeof url === 'string' && !url.includes('system_events')) {
+      import('../services/observabilityService').then(m => {
+        m.observabilityService.captureSupabaseError(url, err);
+      });
+    }
+    throw err;
   }).finally(() => clearTimeout(timeoutId));
 };
 

@@ -23,6 +23,10 @@ export function CommentThread({ entityType, entityId, profiles, currentUserId, r
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const currentUserRole = profiles.find(p => p.id === currentUserId)?.role || 'viewer';
+  const isClient = currentUserRole === 'client';
+  const [isInternal, setIsInternal] = useState(!isClient);
+
   // File Panel State
   const [expandedFiles, setExpandedFiles] = useState<Record<string, boolean>>({});
 
@@ -151,7 +155,8 @@ export function CommentThread({ entityType, entityId, profiles, currentUserId, r
       currentUserId,
       inputValue,
       activeMentions,
-      routePath
+      routePath,
+      isClient ? false : isInternal
     );
 
     if (newComment) {
@@ -203,6 +208,9 @@ export function CommentThread({ entityType, entityId, profiles, currentUserId, r
                   <div className="flex items-baseline gap-2">
                     <span className="text-xs font-semibold text-text-primary">{comment.author?.full_name || 'Former Member'}</span>
                     <span className="text-[10px] text-text-quaternary">{new Date(comment.created_at).toLocaleString()}</span>
+                    {comment.is_internal && (
+                      <span className="text-[9px] uppercase tracking-wider font-bold text-accent-primary bg-accent-primary/10 px-1.5 py-0.5 rounded">Internal</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     <button 
@@ -249,6 +257,19 @@ export function CommentThread({ entityType, entityId, profiles, currentUserId, r
       </div>
 
       <div className="p-3 bg-surface-2 border-t border-[var(--pm-border)] relative">
+        {!isClient && (
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <label className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={isInternal}
+                onChange={e => setIsInternal(e.target.checked)}
+                className="rounded border-[var(--pm-border)] bg-surface-2 text-accent-primary focus:ring-accent-primary/50 cursor-pointer"
+              />
+              Internal note (hidden from clients)
+            </label>
+          </div>
+        )}
         <div className={`relative flex items-end gap-2 bg-[var(--pm-surface)] rounded-lg border border-[var(--pm-border)] p-1 transition-colors ${fetchError ? 'opacity-50 pointer-events-none' : 'focus-within:border-accent-primary/50'}`}>
           <textarea
             ref={inputRef}

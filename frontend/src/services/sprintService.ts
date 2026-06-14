@@ -47,7 +47,7 @@ export const sprintService = {
 
   async getSprints(workspaceId: string, projectId?: string): Promise<Sprint[]> {
     if (!isSupabaseConfigured) return [];
-    let query = supabase.from('sprints').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null).order('start_date', { ascending: false });
+    let query = supabase.from('sprints').select('*').eq('workspace_id', workspaceId).is('deleted_at', null).order('start_date', { ascending: false });
     if (projectId) query = query.eq('project_id', projectId);
     const { data, error } = await query;
     if (error) { console.error('sprintService.getSprints:', error); return []; }
@@ -58,7 +58,7 @@ export const sprintService = {
     if (!isSupabaseConfigured) return null;
     const { data, error } = await supabase
       .from('sprints')
-      .select('*').limit(50)
+      .select('*')
       .eq('workspace_id', workspaceId)
       .eq('project_id', projectId)
       .eq('status', 'active')
@@ -86,7 +86,7 @@ export const sprintService = {
     workEnd?: string
   ): Promise<{ effectiveCapacity: number; deductedHours: number; confidence: number; eventCount: number }> {
     if (!isSupabaseConfigured) return { effectiveCapacity: 0, deductedHours: 0, confidence: 0, eventCount: 0 };
-    const { data: sprint } = await supabase.from('sprints').select('*').limit(50).eq('id', sprintId).single();
+    const { data: sprint } = await supabase.from('sprints').select('*').eq('id', sprintId).single();
     if (!sprint) return { effectiveCapacity: 0, deductedHours: 0, confidence: 0, eventCount: 0 };
     const baseHoursPerDay = 8;
     

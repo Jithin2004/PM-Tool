@@ -35,7 +35,7 @@ export interface DocumentTemplateHistory {
 export const fetchDocumentTemplates = async (workspaceId: string): Promise<DocumentTemplate[]> => {
   const { data, error } = await supabase
     .from('document_templates')
-    .select('*').limit(50)
+    .select('*')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
 
@@ -49,7 +49,7 @@ export const fetchDocumentTemplates = async (workspaceId: string): Promise<Docum
 export const fetchTemplateHistory = async (templateId: string): Promise<DocumentTemplateHistory[]> => {
   const { data, error } = await supabase
     .from('document_template_history')
-    .select('*').limit(50)
+    .select('*')
     .eq('template_id', templateId)
     .order('version_number', { ascending: false });
 

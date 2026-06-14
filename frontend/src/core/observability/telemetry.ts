@@ -59,6 +59,8 @@ export async function persistSystemEvent(
   }
 }
 
+import { formatDatabaseError } from '../../utils/errorHandler';
+
 /**
  * Reusable wrapper to execute a Supabase operation and automatically
  * record failures to the system_events table.
@@ -84,6 +86,9 @@ export async function trackSupabaseOperation<T = any>(
         result.error.message || 'Unknown error',
         { operationName, error: result.error }
       );
+      
+      // Mutate the error for the frontend
+      result.error = formatDatabaseError(result.error);
     }
     return result;
   } catch (err: any) {
@@ -102,6 +107,6 @@ export async function trackSupabaseOperation<T = any>(
       err?.message || 'Unknown exception',
       { operationName }
     );
-    return { data: null, error: err };
+    return { data: null, error: formatDatabaseError(err) };
   }
 }

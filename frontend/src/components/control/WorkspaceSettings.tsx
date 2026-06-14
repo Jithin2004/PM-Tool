@@ -41,7 +41,6 @@ export function WorkspaceSettings() {
     notifications: true,
     workingTimeFrom: '09:00',
     workingTimeTo: '17:00',
-    departments: '',
     passwordPolicy: 'standard',
     magicLinkExpiry: '24h',
   });
@@ -68,7 +67,6 @@ export function WorkspaceSettings() {
         notifications: workspace.settings.notifications ?? true,
         workingTimeFrom: workspace.settings.workingTimeFrom || '09:00',
         workingTimeTo: workspace.settings.workingTimeTo || '17:00',
-        departments: (workspace.settings.departments || []).join(', '),
         passwordPolicy: workspace.settings.passwordPolicy || 'standard',
         magicLinkExpiry: workspace.settings.magicLinkExpiry || '24h',
       });
@@ -110,7 +108,6 @@ export function WorkspaceSettings() {
         notifications: formState.notifications,
         workingTimeFrom: formState.workingTimeFrom,
         workingTimeTo: formState.workingTimeTo,
-        departments: formState.departments.split(',').map(s => s.trim()).filter(Boolean),
         passwordPolicy: formState.passwordPolicy,
         magicLinkExpiry: formState.magicLinkExpiry,
       });
@@ -211,21 +208,6 @@ export function WorkspaceSettings() {
                     <option value="TIMELINE">Timeline / Gantt</option>
                   </select>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'people_rules' && (
-          <div className="space-y-8">
-            <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">
-              <h3 className="text-xs font-mono font-bold tracking-widest uppercase text-[var(--text-secondary)] mb-6 flex items-center gap-2.5">
-                <Briefcase className="w-4 h-4 text-purple-400" />
-                Departments & Organization
-              </h3>
-              <div className="group/input">
-                <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-2 block">Departments (comma separated)</label>
-                <input value={formState.departments} onChange={e => setFormState(s => ({ ...s, departments: e.target.value }))} className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl h-11 px-4 text-sm text-white outline-none focus:border-indigo-500/50 transition-all focus:bg-black/50" placeholder="e.g. Engineering, Marketing, Design" />
               </div>
             </div>
           </div>

@@ -52,6 +52,7 @@ export function WorkspaceSetupPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteDoj, setInviteDoj] = useState(new Date().toISOString().split('T')[0]);
   const [invites, setInvites] = useState<{email: string, doj: string}[]>([]);
+  const [inviteLinkToCopy, setInviteLinkToCopy] = useState<{email: string, link: string} | null>(null);
   const [previewHolidays, setPreviewHolidays] = useState<DerivedHoliday[]>([]);
   const [ignoredHolidayDates, setIgnoredHolidayDates] = useState<Set<string>>(new Set());
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -155,8 +156,10 @@ export function WorkspaceSetupPage() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
 
-        const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL || 'http://localhost:5001';
-        const res = await fetch(`${baseUrl}/api/invite`, {
+        const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL;
+        if (!baseUrl && import.meta.env.PROD) throw new Error("Backend URL missing");
+        const finalUrl = baseUrl || 'http://localhost:5001';
+        const res = await fetch(`${finalUrl}/api/invite`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -175,7 +178,7 @@ export function WorkspaceSetupPage() {
           throw new Error(result.error || 'Failed to provision employee.');
         }
 
-        alert(`Employee invited successfully.\nEmail: ${email}\n\nInvite Link:\n${result.data.invite_link}\n\nPlease copy and share this link with the employee.`);
+        setInviteLinkToCopy({ email, link: result.data.invite_link });
       }
       setInvites(prev => [...prev, { email, doj: inviteDoj }]);
       setInviteEmail('');
@@ -579,7 +582,18 @@ export function WorkspaceSetupPage() {
                   </button>
                 </div>
               </div>
-              <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
+              
+              {inviteLinkToCopy && (
+                <div className="mt-4 p-4 border border-emerald-500/30 bg-emerald-500/10 rounded-lg flex flex-col gap-2">
+                  <div className="text-xs text-emerald-400 font-semibold">Invite link generated for {inviteLinkToCopy.email}</div>
+                  <div className="flex gap-2 items-center">
+                    <input readOnly value={inviteLinkToCopy.link} className="flex-1 bg-surface-3 border border-border/50 text-xs px-2 py-1 rounded outline-none" />
+                    <button type="button" onClick={() => { navigator.clipboard.writeText(inviteLinkToCopy.link); window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Link copied to clipboard', type: 'success' }})); }} className="px-3 py-1 bg-[var(--pm-primary)] text-white text-xs rounded hover:opacity-90">Copy</button>
+                  </div>
+                </div>
+              )}
+    
+<div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin">
                 {invites.map(inv => (
                   <div key={inv.email} className="flex items-center justify-between border border-border/50 rounded-lg bg-surface-3 px-4.5 py-3 text-xs font-mono-pm">
                     <div>

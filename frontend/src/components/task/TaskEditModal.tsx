@@ -13,6 +13,7 @@ import { TaskTimerUI } from './TaskTimerUI';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { showPrompt } from '../common/Dialogs';
 import { supabase } from '../../lib/supabase';
+import { SubtasksPanel } from './SubtasksPanel';
 
 interface TaskEditModalProps {
   isOpen: boolean;
@@ -362,6 +363,10 @@ export function TaskEditModal({
               rows={3}
               className={`input-premium w-full p-3 text-xs outline-none transition-colors resize-none ${isDeveloper ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
+          </div>
+
+          <div className="border border-border p-3 rounded-sm bg-surface-1">
+            <SubtasksPanel parentTask={task as any} />
           </div>
 
           <div className="flex gap-4">

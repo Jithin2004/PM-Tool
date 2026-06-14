@@ -275,15 +275,20 @@ export function calculateTaskCountdown(
   const now = new Date();
   if (predictedEnd <= now) return { text: 'OVERDUE', color: 'text-rose-500 font-bold', pulse: 'bg-rose-500 animate-ping' };
 
-  const totalMs = predictedEnd.getTime() - now.getTime();
-  const totalHours = totalMs / 3600000;
-  if (totalHours > 48) {
-    return { text: `${Math.round(totalHours / 24)}d ${Math.round(totalHours % 24)}h`, color: 'text-cyan-400 font-mono', pulse: 'bg-cyan-500 animate-pulse' };
+  const dailyCap = calculateDailyProductiveHours(workWindow) || 8;
+  const workingDays = Math.floor(weightHours / dailyCap);
+  const remainingHours = Math.round(weightHours % dailyCap);
+
+  if (workingDays > 2) {
+    return { text: `${workingDays} working days`, color: 'text-cyan-400 font-mono', pulse: 'bg-cyan-500 animate-pulse' };
   }
-  const hours = Math.floor(totalHours);
-  const mins = Math.floor((totalMs % 3600000) / 60000);
-  const secs = Math.floor((totalMs % 60000) / 1000);
-  const text = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  if (workingDays > 0) {
+    return { text: `${workingDays}wd ${remainingHours}h`, color: 'text-cyan-400 font-mono', pulse: 'bg-cyan-500 animate-pulse' };
+  }
+
+  const hours = Math.floor(weightHours);
+  const mins = Math.floor((weightHours * 60) % 60);
+  const text = `${String(hours).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m`;
   if (hours < 2) return { text, color: 'text-amber-500 font-mono font-medium', pulse: 'bg-amber-500 animate-pulse' };
   return { text, color: 'text-cyan-400 font-mono', pulse: 'bg-cyan-500 animate-pulse' };
 }

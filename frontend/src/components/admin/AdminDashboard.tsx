@@ -81,7 +81,9 @@ export function AdminDashboard({
       const token = sessionData.session?.access_token;
 
       // Provision user via backend API
-      const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL || 'http://localhost:5001';
+      const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL;
+      if (!baseUrl && import.meta.env.PROD) throw new Error("Backend URL missing");
+      const finalUrl = baseUrl || 'http://localhost:5001';
       const res = await fetch(`${baseUrl}/api/invite`, {
         method: 'POST',
         headers: { 

@@ -1,8 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { calendarEventService } from './calendarEventService';
 
-const RAW_URL = ((import.meta as any).env.VITE_CALENDAR_API_URL || 'https://pm-tool-server.onrender.com').replace(/\/$/, '');
-const API_BASE_URL = RAW_URL.endsWith('/api/calendar') ? RAW_URL.replace('/api/calendar', '') : RAW_URL;
-const CALENDAR_API_URL = `${API_BASE_URL}/api/calendar`;
 
 export interface CalendarEvent {
   id: string;
@@ -27,7 +25,6 @@ export const calendarService = {
 
   async getEvents(workspaceId: string, startDate: string, endDate: string): Promise<CalendarEvent[]> {
     try {
-      const { calendarEventService } = await import('./calendarEventService');
       const events = await calendarEventService.getEventsInRange(workspaceId, startDate, endDate);
       return events.map(row => ({
         id: row.id,
@@ -45,7 +42,6 @@ export const calendarService = {
 
   async createEvent(event: Omit<CalendarEvent, 'id'> & { workspace_id?: string; event_type?: string }): Promise<CalendarEvent> {
     try {
-      const { calendarEventService } = await import('./calendarEventService');
       const created = await calendarEventService.createEvent({
         workspace_id: event.workspace_id || '',
         title: event.summary,
@@ -73,7 +69,6 @@ export const calendarService = {
 
   async updateEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent> {
     try {
-      const { calendarEventService } = await import('./calendarEventService');
       const updates: any = {};
       if (event.summary !== undefined) updates.title = event.summary;
       if (event.description !== undefined) updates.description = event.description;
@@ -98,7 +93,6 @@ export const calendarService = {
 
   async deleteEvent(id: string): Promise<void> {
     try {
-      const { calendarEventService } = await import('./calendarEventService');
       // workspaceId is required by deleteEvent signature but we might not have it here easily.
       // We will pass an empty string and the backend will just delete by ID.
       await calendarEventService.deleteEvent(id, '');
@@ -109,7 +103,6 @@ export const calendarService = {
 
   async upsertEvent(params: UpsertParams & { workspace_id?: string }): Promise<CalendarEvent> {
     try {
-      const { calendarEventService } = await import('./calendarEventService');
       const result = await calendarEventService.upsertBySourceKey({
         workspace_id: params.workspace_id || '',
         title: params.summary,

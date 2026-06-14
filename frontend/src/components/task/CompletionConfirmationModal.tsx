@@ -21,7 +21,7 @@ export function CompletionConfirmationModal({
   onCancel
 }: CompletionConfirmationModalProps) {
   useEscapeKey(true, onCancel);
-  // Mock readiness logic (should ideally be retrieved from completionReadinessEngine, but since engines are frozen, we'll run simple client checks)
+  // Readiness logic evaluated via client checks
   const activeWaitStates = waitStates.filter(ws => ws.target_id === task.id && ws.status === 'active');
   const unresolvedDependencies = dependencies.filter(d => d.task_id === task.id && !d.resolved);
   

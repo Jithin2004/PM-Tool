@@ -7,7 +7,7 @@ import type { AttendanceRow, SalaryRow } from '../core/operational/types';
 export async function fetchProjects(workspaceId: string): Promise<Project[]> {
   const { data, error } = await supabase
     .from('projects')
-    .select('*').limit(50)
+    .select('*')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
 
@@ -24,14 +24,14 @@ export const fetchWorkspaceProjects = fetchProjects;
 export async function fetchWorkspaceProfiles(workspaceId: string): Promise<Profile[]> {
   const { data, error } = await supabase
     .from('users')
-    .select('*').limit(50)
+    .select('*')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: true });
 
   let users = (!error && data) ? (data as Profile[]) : [];
   
   if (users.length === 0) {
-    const { data: fallback, error: fallbackErr } = await supabase.from('profiles').select('*').limit(50);
+    const { data: fallback, error: fallbackErr } = await supabase.from('profiles').select('*');
     if (!fallbackErr && fallback) {
       users = fallback as Profile[];
     }
@@ -69,7 +69,7 @@ export async function fetchWorkspaceAttendance(workspaceId: string): Promise<Att
   try {
     const { data, error } = await supabase
       .from('attendance')
-      .select('*').limit(50)
+      .select('*')
       .eq('workspace_id', workspaceId);
     if (!error && data) return data as AttendanceRow[];
   } catch (err) {
@@ -82,7 +82,7 @@ export async function fetchWorkspaceSalaries(workspaceId: string): Promise<Salar
   try {
     const { data, error } = await supabase
       .from('salaries')
-      .select('*').limit(50)
+      .select('*')
       .eq('workspace_id', workspaceId);
     if (!error && data) return data as SalaryRow[];
   } catch (err) {
@@ -93,7 +93,7 @@ export async function fetchWorkspaceSalaries(workspaceId: string): Promise<Salar
 export async function fetchWorkspaceTeams(workspaceId: string): Promise<Team[]> {
   const { data: teamsData, error: teamsError } = await supabase
     .from('teams')
-    .select('*').limit(50)
+    .select('*')
     .eq('workspace_id', workspaceId)
     .order('created_at', { ascending: false });
 
@@ -115,7 +115,7 @@ export async function fetchWorkspaceTeams(workspaceId: string): Promise<Team[]> 
 
   const { data: membersData, error: membersError } = await supabase
     .from('team_members')
-    .select('*').limit(50)
+    .select('*')
     .eq('workspace_id', workspaceId);
 
   const membersList = !membersError && membersData ? membersData : [];
@@ -188,7 +188,7 @@ export async function fetchWorkspaceSettingsBlob(workspaceId: string): Promise<R
 }
 
 export async function fetchSkills(workspaceId: string) {
-  const { data } = await supabase.from('skills').select('*').limit(50).eq('workspace_id', workspaceId);
+  const { data } = await supabase.from('skills').select('*').eq('workspace_id', workspaceId);
   return data || [];
 }
 
@@ -199,7 +199,7 @@ export async function fetchUserSkills(workspaceId: string) {
   
   if (userIds.length === 0) return [];
   
-  const { data: userSkills } = await supabase.from('user_skills').select('*').limit(50).in('user_id', userIds);
+  const { data: userSkills } = await supabase.from('user_skills').select('*').in('user_id', userIds);
   return userSkills || [];
 }
 export async function createSkill(workspaceId: string, name: string, category: string = 'General') {
@@ -245,4 +245,21 @@ export async function removeUserSkill(userId: string, skillId: string) {
   const { error } = await supabase.from('user_skills').delete().eq('user_id', userId).eq('skill_id', skillId);
   if (error) throw error;
   return true;
+}
+
+/**
+ * Search active workspace users (Batch 6C Scale Architecture)
+ * Uses RPC to prevent downloading all users to the client.
+ */
+export async function searchWorkspaceUsers(workspaceId: string, searchText: string, limit: number = 20): Promise<Profile[]> {
+  const { data, error } = await supabase.rpc('search_workspace_users', {
+    p_workspace_id: workspaceId,
+    p_search_text: searchText,
+    p_limit: limit
+  });
+  if (error) {
+    console.error('[searchWorkspaceUsers] Error:', error);
+    return [];
+  }
+  return (data || []) as Profile[];
 }

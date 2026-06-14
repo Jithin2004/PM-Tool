@@ -16,16 +16,15 @@ export interface CompanyCalendarEvent {
 export interface WorkspaceCalendarSettings {
   workspace_id: string;
   working_days: number[]; // 0=Sun, 1=Mon...
-  saturday_policy: 'all_working' | 'all_off' | '1st_3rd_off' | '2nd_4th_off' | 'custom';
-  custom_saturdays_off?: number[];
+  saturday_policy: 'ALL_WORKING' | 'ALL_OFF' | 'FIRST_THIRD_OFF' | 'SECOND_FOURTH_OFF' | 'CUSTOM';
+  custom_saturdays?: number[];
   working_hours?: {
     office_start_time: string;
     office_end_time: string;
     daily_working_hours: number;
   };
-  holiday_source?: string;
-  last_sync?: string;
   timezone: string;
+  effective_from: string;
 }
 
 const nagerProvider = new NagerDateProvider();
@@ -33,9 +32,11 @@ const nagerProvider = new NagerDateProvider();
 export const companyCalendarService = {
   async getSettings(workspaceId: string): Promise<WorkspaceCalendarSettings | null> {
     const { data, error } = await supabase
-      .from('workspace_calendar_settings')
+      .from('company_working_rules')
       .select('*')
       .eq('workspace_id', workspaceId)
+      .order('effective_from', { ascending: false })
+      .limit(1)
       .maybeSingle();
       
     if (error) return null;
@@ -44,38 +45,50 @@ export const companyCalendarService = {
     if (!data) {
       const defaultSettings = {
         workspace_id: workspaceId,
-        working_days: [1, 2, 3, 4, 5, 6],
-        saturday_policy: 'all_working' as const,
-        custom_saturdays_off: [],
+        working_days: [1, 2, 3, 4, 5],
+        saturday_policy: 'ALL_WORKING',
+        custom_saturdays: [],
         working_hours: { office_start_time: "09:00", office_end_time: "17:00", daily_working_hours: 8 },
-        timezone: 'UTC'
+        timezone: 'UTC',
+        effective_from: new Date().toISOString().split('T')[0]
       };
       const { data: newData, error: insertError } = await supabase
-        .from('workspace_calendar_settings')
+        .from('company_working_rules')
         .insert([defaultSettings])
         .select()
         .single();
       
       if (!insertError && newData) {
-        return newData as WorkspaceCalendarSettings;
+        return {
+          ...newData,
+          custom_saturdays_off: newData.custom_saturdays
+        } as unknown as WorkspaceCalendarSettings;
       }
-      return defaultSettings as WorkspaceCalendarSettings;
+      return defaultSettings as unknown as WorkspaceCalendarSettings;
     }
     
-    return data as WorkspaceCalendarSettings;
+    return {
+      ...data,
+      custom_saturdays_off: data.custom_saturdays
+    } as unknown as WorkspaceCalendarSettings;
   },
 
   async updateSettings(workspaceId: string, updates: Partial<WorkspaceCalendarSettings>): Promise<boolean> {
+    const dbUpdates: any = { ...updates };
+    if (dbUpdates.custom_saturdays_off !== undefined) {
+      dbUpdates.custom_saturdays = dbUpdates.custom_saturdays_off;
+      delete dbUpdates.custom_saturdays_off;
+    }
+
     const { error } = await supabase
-      .from('workspace_calendar_settings')
-      .update(updates)
-      .eq('workspace_id', workspaceId);
+      .from('company_working_rules')
+      .insert({ ...dbUpdates, workspace_id: workspaceId, effective_from: new Date().toISOString().split('T')[0] });
     return !error;
   },
 
   async getEvents(workspaceId: string, year: number): Promise<CompanyCalendarEvent[]> {
     const { data, error } = await supabase
-      .from('company_calendar_events')
+      .from('company_holidays')
       .select('*')
       .eq('workspace_id', workspaceId)
       .eq('year', year)
@@ -91,7 +104,7 @@ export const companyCalendarService = {
 
   async createEvent(event: CompanyCalendarEvent): Promise<CompanyCalendarEvent | null> {
     const { data, error } = await supabase
-      .from('company_calendar_events')
+      .from('company_holidays')
       .insert([event])
       .select()
       .single();
@@ -105,7 +118,7 @@ export const companyCalendarService = {
 
   async deleteEvent(eventId: string): Promise<boolean> {
     const { error } = await supabase
-      .from('company_calendar_events')
+      .from('company_holidays')
       .delete()
       .eq('id', eventId);
     return !error;
@@ -142,7 +155,7 @@ export const companyCalendarService = {
       const year = parseInt(h.date.substring(0, 4), 10);
       const event_type = h.type === 'festival' ? 'festival' : h.type === 'regional' ? 'regional' : 'holiday';
       
-      const { error } = await supabase.from('company_calendar_events').upsert({
+      const { error } = await supabase.from('company_holidays').upsert({
         workspace_id: workspaceId,
         name: h.name,
         date: h.date,
@@ -185,7 +198,7 @@ export const companyCalendarService = {
         event_type = 'custom';
       }
       
-      const { error } = await supabase.from('company_calendar_events').insert({
+      const { error } = await supabase.from('company_holidays').insert({
         workspace_id: workspaceId,
         name: e.name,
         date: e.date,

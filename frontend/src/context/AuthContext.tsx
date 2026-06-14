@@ -172,7 +172,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (data) {
-          const profileWithDesignation = rowToProfile(data as Record<string, unknown>);
+          // Task 3: Fetch database capabilities
+          const { data: roleCaps } = await supabase
+            .from('role_capabilities')
+            .select('capability_id')
+            .eq('role_id', data.role);
+            
+          const { data: userCaps } = await supabase
+            .from('user_capability_overrides')
+            .select('capability_id')
+            .eq('user_id', data.id);
+
+          const dbCapabilities = [
+            ...(roleCaps?.map(r => r.capability_id) || []),
+            ...(userCaps?.map(u => u.capability_id) || [])
+          ];
+
+          const extendedData = {
+            ...data,
+            capabilities: dbCapabilities.length > 0 ? Array.from(new Set(dbCapabilities)) : undefined
+          };
+
+          const profileWithDesignation = rowToProfile(extendedData as Record<string, unknown>);
           setProfile(profileWithDesignation);
           lastSyncedUserIdRef.current = authUser.id;
           setProfileResolved(true);

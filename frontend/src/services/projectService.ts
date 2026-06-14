@@ -205,3 +205,49 @@ export async function archiveProject(projectId: string, workspaceId: string, act
     return false;
   }
 }
+
+export async function deleteMilestone(milestoneId: string, workspaceId: string, performedBy: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await trackSupabaseOperation('supabase_from_milestones', () => supabase
+      .from('milestones')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: performedBy })
+      .eq('id', milestoneId)
+      .eq('workspace_id', workspaceId));
+      
+    if (error) throw error;
+    
+    await activityLogService.appendLog({
+      workspace_id: workspaceId,
+      action: 'milestone_deleted',
+      metadata: { milestone_id: milestoneId, performed_by: performedBy },
+    });
+    return true;
+  } catch (err) { 
+    logServiceFailure('deleteMilestone', { milestoneId }, err); 
+    return false; 
+  }
+}
+
+export async function restoreMilestone(milestoneId: string, workspaceId: string, performedBy: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await trackSupabaseOperation('supabase_from_milestones', () => supabase
+      .from('milestones')
+      .update({ deleted_at: null, deleted_by: null, updated_at: new Date().toISOString() })
+      .eq('id', milestoneId)
+      .eq('workspace_id', workspaceId));
+      
+    if (error) throw error;
+    
+    await activityLogService.appendLog({
+      workspace_id: workspaceId,
+      action: 'milestone_restored',
+      metadata: { milestone_id: milestoneId, performed_by: performedBy },
+    });
+    return true;
+  } catch (err) { 
+    logServiceFailure('restoreMilestone', { milestoneId }, err); 
+    return false; 
+  }
+}

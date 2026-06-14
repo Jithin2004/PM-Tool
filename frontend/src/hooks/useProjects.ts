@@ -371,5 +371,25 @@ export function useProjects(workspaceId?: string) {
     }
   };
 
-  return { projects, loading, error, page, hasMore, loadMore, fetchProjects, addProject, updateProject, updateProjectStatus, deleteProject };
+  const restoreProject = async (projectId: string) => {
+    if (!workspaceId) return;
+    
+    if (isSupabaseConfigured) {
+      const { error: restoreError } = await supabase
+        .from('projects')
+        .update({ deleted_at: null, updated_at: new Date().toISOString() })
+        .eq('id', projectId)
+        .eq('workspace_id', workspaceId);
+        
+      if (restoreError) {
+        setError(restoreError.message);
+        throw restoreError;
+      }
+      
+      // Realtime orchestration should re-fetch or insert it, or we can manually fetch
+      loadMore();
+    }
+  };
+
+  return { projects, loading, error, page, hasMore, loadMore, fetchProjects, addProject, updateProject, updateProjectStatus, deleteProject, restoreProject };
 }

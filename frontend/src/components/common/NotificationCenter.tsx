@@ -5,40 +5,38 @@ import { useOperationalData } from '../../context/OperationalDataContext';
 import { supabase } from '../../lib/supabase';
 import { activityLogService } from '../../services/activityLogService';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAuth } from '../../context/AuthContext';
 import { PremiumEmptyState } from './PremiumEmptyState';
 
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const { workspace } = useWorkspace() as any;
+  const { profile } = useAuth();
   const { dbNotifications = [] } = useOperationalData();
+  const [groupedData, setGroupedData] = useState<any[]>([]);
 
   const activeNotifications = dbNotifications.filter(n => !n.read_at);
   const unreadCount = activeNotifications.length;
 
-  const getCategoryGroup = (n: any) => {
-    const type = n.type || n.category;
-    
-    // Needs Action: important unread
-    if (!n.read_at && ['approval', 'assignments', 'assigned_work', 'mention', 'risk', 'capacity'].includes(type)) {
-      return 'Needs Action';
+  React.useEffect(() => {
+    if (isOpen && workspace?.id && profile?.id) {
+      loadGroupedNotifications();
     }
-    
-    const createdDate = new Date(n.created_at);
-    const today = new Date();
-    const isToday = createdDate.getDate() === today.getDate() &&
-      createdDate.getMonth() === today.getMonth() &&
-      createdDate.getFullYear() === today.getFullYear();
-      
-    if (isToday) return 'Today';
-    return 'Earlier';
-  };
+  }, [isOpen, dbNotifications.length]);
 
-  const categorized = dbNotifications.slice(0, 50).reduce((acc: any, n: any) => {
-    const group = getCategoryGroup(n);
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(n);
-    return acc;
-  }, {});
+  const loadGroupedNotifications = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_grouped_notifications', {
+        p_workspace_id: workspace.id,
+        p_user_id: profile.id
+      });
+      if (!error && data) {
+        setGroupedData(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const markAllRead = async () => {
     const unreadIds = activeNotifications.map(n => n.id);
@@ -58,10 +56,11 @@ export function NotificationCenter() {
     }
   };
 
-  const markRead = async (id: string) => {
+  const markReadGroup = async (notificationIds: string[]) => {
     await supabase.from('notifications')
       .update({ read_at: new Date().toISOString() })
-      .eq('id', id);
+      .in('id', notificationIds);
+    loadGroupedNotifications();
   };
 
   const markOpened = async (id: string) => {
@@ -128,14 +127,11 @@ export function NotificationCenter() {
   };
 
   const handleNavigate = (n: any) => {
-    if (n.route_path) {
-      window.location.hash = `#${n.route_path}`;
-    } else if (n.source_entity_type && n.source_entity_id) {
-      // Fallback navigation using source_entity fields
-      window.location.hash = `#/${n.source_entity_type}/${n.source_entity_id}`;
+    // Navigate logic would ideally depend on the first item in the group,
+    // but for grouped notifications, we might just mark them as read.
+    if (n.notification_ids?.length) {
+      markReadGroup(n.notification_ids);
     }
-    if (!n.read_at) markRead(n.id);
-    if (!n.opened_at) markOpened(n.id);
   };
 
   return (
@@ -171,7 +167,7 @@ export function NotificationCenter() {
             </div>
             
             <div className="flex-1 overflow-y-auto scrollbar-thin p-2">
-              {Object.keys(categorized).length === 0 ? (
+              {groupedData.length === 0 ? (
                 <PremiumEmptyState
                   icon={Bell}
                   title="All caught up!"
@@ -180,71 +176,53 @@ export function NotificationCenter() {
                 />
               ) : (
                 <div className="flex flex-col gap-2">
-                  {['Needs Action', 'Today', 'Earlier'].map(group => {
-                    const notes = categorized[group];
-                    if (!notes || notes.length === 0) return null;
-                    return (
-                      <div key={group} className="mb-2">
-                        <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-1 font-mono">
-                          {group}
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          {notes.map((n: any) => {
-                            const style = getTypeStyle(n.type || n.category);
-                            return (
-                              <div 
-                                key={n.id} 
-                                onClick={() => handleNavigate(n)}
-                                className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:bg-[var(--surface-hover)] ${
-                                  !n.read_at 
-                                    ? 'border-[var(--border-soft)] bg-[var(--surface-glass)] shadow-sm shadow-purple-500/5' 
-                                    : 'border-transparent bg-transparent'
-                                }`}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className={`p-2 rounded-lg border flex items-center justify-center shrink-0 ${style.color}`}>
-                                    {getIcon(n.type || n.category)}
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-start justify-between gap-1">
-                                      <h4 className={`text-xs font-semibold ${!n.read_at ? 'text-white' : 'text-[var(--text-secondary)]'}`}>
-                                        {n.title}
-                                      </h4>
-                                      {!n.read_at && (
-                                        <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${style.dot}`} />
-                                      )}
-                                    </div>
-                                    <p className="text-[11px] text-[var(--text-secondary)] mt-1 leading-relaxed">{n.message || n.body}</p>
-                                    <span className="text-[9px] font-mono text-[var(--text-secondary)] mt-1.5 block">
-                                      {new Date(n.created_at).toLocaleDateString()} at {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                  <div className="shrink-0 flex flex-col gap-1">
-                                    <button 
-                                      onClick={(e) => { e.stopPropagation(); dismiss(n.id); }} 
-                                      className="p-1 hover:bg-[var(--surface-hover)] rounded text-[var(--text-secondary)] hover:text-rose-400 transition-colors" 
-                                      title="Dismiss"
-                                    >
-                                      <Archive className="w-3.5 h-3.5" />
-                                    </button>
-                                    {!n.read_at && (
-                                      <button 
-                                        onClick={(e) => { e.stopPropagation(); markRead(n.id); }} 
-                                        className="p-1 hover:bg-[var(--surface-hover)] rounded text-[var(--text-secondary)] hover:text-emerald-400 transition-colors" 
-                                        title="Mark Read"
-                                      >
-                                        <Check className="w-3.5 h-3.5" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
+                  <div className="mb-2">
+                    <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-1 font-mono">
+                      Recent Activity
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      {groupedData.map((group: any, idx: number) => {
+                        const style = getTypeStyle(group.action || 'info');
+                        const isUnread = true; // All from RPC are unread
+                        return (
+                          <div 
+                            key={idx} 
+                            onClick={() => handleNavigate(group)}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:bg-[var(--surface-hover)] border-[var(--border-soft)] bg-[var(--surface-glass)] shadow-sm shadow-purple-500/5`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`p-2 rounded-lg border flex items-center justify-center shrink-0 ${style.color}`}>
+                                {getIcon(group.action || 'info')}
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between gap-1">
+                                  <h4 className="text-xs font-semibold text-white">
+                                    {group.count > 1 ? `${group.count} ${group.action} notifications` : group.sample_title || group.action}
+                                  </h4>
+                                  <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${style.dot}`} />
+                                </div>
+                                <p className="text-[11px] text-[var(--text-secondary)] mt-1 leading-relaxed">
+                                  {group.count > 1 ? `You have ${group.count} related updates for ${group.entity_type}.` : `New update regarding ${group.entity_type}.`}
+                                </p>
+                                <span className="text-[9px] font-mono text-[var(--text-secondary)] mt-1.5 block">
+                                  {new Date(group.latest_created_at).toLocaleDateString()} at {new Date(group.latest_created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <div className="shrink-0 flex flex-col gap-1">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); markReadGroup(group.notification_ids); }} 
+                                  className="p-1 hover:bg-[var(--surface-hover)] rounded text-[var(--text-secondary)] hover:text-emerald-400 transition-colors" 
+                                  title="Mark Read"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

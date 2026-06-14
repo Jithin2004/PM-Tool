@@ -1533,16 +1533,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           isOpen={commandPaletteOpen}
           onClose={() => setCommandPaletteOpen(false)}
           onNavigate={navigateTo}
-          profile={profile}
-          projects={projectsWithAggregatedPERT}
-          tasks={visibleTasks}
-          setSelectedProject={setSelectedProject}
-          notify={notify}
-          setIsAdding={setIsAdding}
-          workspaceId={workspace?.id}
-          disclosureLevel={disclosure.level}
-          disclosureActive={disclosure.active}
-          onOpenAnalytics={() => { setCommandPaletteOpen(false); setCommandAnalyticsOpen(true); }}
         />
 
         <CommandAnalytics

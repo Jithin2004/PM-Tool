@@ -239,6 +239,14 @@ export default function ReportsCenter() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
           <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border space-y-6">
+            {projects.length === 0 ? (
+              <PremiumEmptyState 
+                icon={FileText}
+                title="No Data for Reports"
+                description="Reports will be automatically generated once you have active projects, tasks, and team activity."
+              />
+            ) : (
+              <>
             
             <div className="flex items-center gap-3 border-b border-border/50 pb-4">
                <FileText className="w-6 h-6 text-emerald-400" />
@@ -322,6 +330,8 @@ export default function ReportsCenter() {
               </button>
             </div>
 
+            </>
+            )}
           </div>
         </div>
       </div>

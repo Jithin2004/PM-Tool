@@ -31,11 +31,21 @@ export interface CapacityRisk {
 }
 
 export const capacityEngine = {
+  async isWorkingDay(workspaceId: string, dateStr: string): Promise<boolean> {
+    const { supabase, isSupabaseConfigured } = await import('../lib/supabase');
+    if (!isSupabaseConfigured) return true; // Fallback
+    try {
+      const { data, error } = await supabase.rpc('is_working_day', { p_workspace_id: workspaceId, p_date: dateStr });
+      if (error) return true;
+      return data === true;
+    } catch { return true; }
+  },
+
   async fetchAllocationPeriods(workspaceId: string): Promise<AllocationPeriod[]> {
     const { supabase, isSupabaseConfigured } = await import('../lib/supabase');
     if (!isSupabaseConfigured) return [];
     try {
-      const { data } = await supabase.from('allocation_periods').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null);
+      const { data } = await supabase.from('allocation_periods').select('*').eq('workspace_id', workspaceId).is('deleted_at', null);
       return data || [];
     } catch { return []; }
   },

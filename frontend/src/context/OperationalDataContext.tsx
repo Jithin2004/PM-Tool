@@ -27,7 +27,7 @@ import { markAsRead } from '../services/notificationService';
 import type { Project, Profile, Team, UserRole, Notification } from '../types';
 
 interface OperationalDataContextValue {
-  raw: OperationalRawState;
+  raw: OperationalRawState & { operationalSummary?: Record<string, any> };
   derived: OperationalDerivedState;
   governanceCache: GovernanceCache;
   loading: boolean;
@@ -64,7 +64,7 @@ interface OperationalDataContextValue {
 export const OperationalDataContext = createContext<OperationalDataContextValue | null>(null);
 
 export function OperationalDataProvider({ children }: { children: React.ReactNode }) {
-  console.log('[OperationalDataContext] PROVIDER MOUNT/RENDER');
+  
   const { user, profile, updateRole } = useAuth();
   const { workspace } = useWorkspace();
   const {
@@ -98,6 +98,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   const [allocationPeriods, setAllocationPeriods] = useState<any[]>([]);
   const [skills, setSkills] = useState<OperationalRawState['skills']>([]);
   const [userSkills, setUserSkills] = useState<OperationalRawState['userSkills']>([]);
+  const [operationalSummary, setOperationalSummary] = useState<Record<string, any>>({});
 
   const raw: OperationalRawState = useMemo(
     () => ({
@@ -112,9 +113,10 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       workspaceSettingsBlob,
       allocationPeriods,
       skills,
-      userSkills
+      userSkills,
+      operationalSummary
     }),
-    [projects, tasks, dependencies, collaborators, teams, profiles, attendanceRows, workspaceSettingsBlob, allocationPeriods, skills, userSkills]
+    [projects, tasks, dependencies, collaborators, teams, profiles, attendanceRows, workspaceSettingsBlob, allocationPeriods, skills, userSkills, operationalSummary]
   );
 
   const derived = useMemo(
@@ -183,21 +185,22 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       if (!isValid) console.warn('Archival consistency warning: Blocker archive integrity compromised');
     }).catch(console.error);
 
-    console.log('[OperationalDataContext] setProjects (refreshAll)'); setProjects(snapshot.projects);
-    console.log('[OperationalDataContext] setProfiles (refreshAll)'); setProfiles(snapshot.profiles);
-    console.log('[OperationalDataContext] setTeams (refreshAll)'); setTeams(snapshot.teams);
+     setProjects(snapshot.projects);
+     setProfiles(snapshot.profiles);
+     setTeams(snapshot.teams);
     setAttendanceRows(snapshot.attendanceRows);
-    console.log('[OperationalDataContext] setWorkspaceSettingsBlob (refreshAll)'); setWorkspaceSettingsBlob(snapshot.workspaceSettingsBlob);
+     setWorkspaceSettingsBlob(snapshot.workspaceSettingsBlob);
     setServerMetrics(snapshot.serverMetrics);
     if (snapshot.allocationPeriods) setAllocationPeriods(snapshot.allocationPeriods);
     if (snapshot.skills) setSkills(snapshot.skills);
     if (snapshot.userSkills) setUserSkills(snapshot.userSkills);
+    if (snapshot.operationalSummary) setOperationalSummary(snapshot.operationalSummary);
   }, [workspace?.id]);
 
   const refreshProjects = useCallback(async () => {
     if (!workspace?.id) return;
     const partial = await refreshOperationalPartial(workspace.id, ['projects', 'serverMetrics']);
-    if (partial.projects) console.log('[OperationalDataContext] setProjects (refreshProjects)'); setProjects(partial.projects);
+    if (partial.projects)  setProjects(partial.projects);
     if (partial.serverMetrics) setServerMetrics(partial.serverMetrics);
   }, [workspace?.id]);
 
@@ -233,21 +236,21 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
     const load = async () => {
       try {
         if (user && profile && workspace?.id) {
-          console.log('[OperationalDataContext] entering critical fetch branch');
+          
           // ── Phase 1: critical path – projects, profiles, teams, settings ────
           // UI becomes interactive as soon as this resolves (~1 network round-trip)
-          console.log('[OperationalDataContext] calling refreshOperationalCritical');
+          
           const critical = await refreshOperationalCritical(workspace.id);
-          console.log('[OperationalDataContext] refreshOperationalCritical returned', critical);
+          
           if (!mounted) return;
   
-          if (critical.projects) { console.log('[OperationalDataContext] setProjects (critical)'); setProjects(critical.projects); }
-          if (critical.profiles) { console.log('[OperationalDataContext] setProfiles (critical)'); setProfiles(critical.profiles); }
-          if (critical.teams) { console.log('[OperationalDataContext] setTeams (critical)'); setTeams(critical.teams); }
-          if (critical.workspaceSettingsBlob) { console.log('[OperationalDataContext] setWorkspaceSettingsBlob (critical)'); setWorkspaceSettingsBlob(critical.workspaceSettingsBlob); }
+          if (critical.projects) {  setProjects(critical.projects); }
+          if (critical.profiles) {  setProfiles(critical.profiles); }
+          if (critical.teams) {  setTeams(critical.teams); }
+          if (critical.workspaceSettingsBlob) {  setWorkspaceSettingsBlob(critical.workspaceSettingsBlob); }
   
           // Clear the loading spinner — page renders now
-          console.log('[OperationalDataContext] calling setLoading(false)');
+          
           setLoading(false);
   
           // ── Phase 2: secondary – attendance, tasks, skills (background) ────
@@ -262,6 +265,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
             if (secondary.skills) setSkills(secondary.skills);
             if (secondary.userSkills) setUserSkills(secondary.userSkills);
             if (secondary.serverMetrics) setServerMetrics(secondary.serverMetrics);
+            if (secondary.operationalSummary) setOperationalSummary(secondary.operationalSummary);
   
             // Background governance (non-blocking)
             if (critical.workspaceSettingsBlob?.execution_blockers) {
@@ -281,9 +285,9 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           }, 100);
   
         } else if (!user) {
-          console.log('[OperationalDataContext] setProjects (empty)'); setProjects([]);
-          console.log('[OperationalDataContext] setTeams (empty)'); setTeams([]);
-          console.log('[OperationalDataContext] setProfiles (empty)'); setProfiles([]);
+           setProjects([]);
+           setTeams([]);
+           setProfiles([]);
           setAttendanceRows([]);
           setLoading(false);
         }

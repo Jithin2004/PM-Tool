@@ -57,7 +57,7 @@ export const contextPredictionService = {
     for (const ctx of contexts) {
       const { data: existing } = await supabase
         .from('prediction_context_metrics')
-        .select('*').limit(50)
+        .select('*')
         .eq('workspace_id', workspaceId)
         .eq('context_type', ctx.type)
         .eq('context_value', ctx.value)
@@ -119,7 +119,7 @@ export const contextPredictionService = {
 
     let query = supabase
       .from('prediction_context_metrics')
-      .select('*').limit(50)
+      .select('*')
       .eq('workspace_id', workspaceId);
 
     if (contextType) query = query.eq('context_type', contextType);

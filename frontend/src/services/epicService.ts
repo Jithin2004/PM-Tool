@@ -40,3 +40,43 @@ export async function createEpic(input: CreateEpicInput): Promise<{ id: string }
   } catch (err) { logServiceFailure('createEpic', input, err); }
   return null;
 }
+
+export async function deleteEpic(epicId: string, workspaceId: string, performedBy: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase
+      .from('epics')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: performedBy })
+      .eq('id', epicId)
+      .eq('workspace_id', workspaceId);
+      
+    if (error) { logServiceFailure('deleteEpic', { epicId }, error); return false; }
+    
+    await activityLogService.appendLog({
+      workspace_id: workspaceId,
+      action: 'epic_deleted',
+      metadata: { epic_id: epicId, performed_by: performedBy },
+    });
+    return true;
+  } catch (err) { logServiceFailure('deleteEpic', { epicId }, err); return false; }
+}
+
+export async function restoreEpic(epicId: string, workspaceId: string, performedBy: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase
+      .from('epics')
+      .update({ deleted_at: null, deleted_by: null })
+      .eq('id', epicId)
+      .eq('workspace_id', workspaceId);
+      
+    if (error) { logServiceFailure('restoreEpic', { epicId }, error); return false; }
+    
+    await activityLogService.appendLog({
+      workspace_id: workspaceId,
+      action: 'epic_restored',
+      metadata: { epic_id: epicId, performed_by: performedBy },
+    });
+    return true;
+  } catch (err) { logServiceFailure('restoreEpic', { epicId }, err); return false; }
+}

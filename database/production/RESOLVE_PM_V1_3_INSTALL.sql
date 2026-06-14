@@ -75,7 +75,7 @@ CREATE TABLE workspaces (
   metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   name                text        NOT NULL,
-  owner_id            uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  owner_id            uuid        NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   business_type       text        NOT NULL DEFAULT 'Software',
   template_id         text,
   execution_mode      text        NOT NULL DEFAULT 'KANBAN',
@@ -101,7 +101,7 @@ CREATE TABLE workspaces (
 -- 2. users
 --    Canonical identity + RBAC profile. Role 'uninvited' is a client-only ephemeral state.
 CREATE TABLE users (
-  id                  uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id                  uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE RESTRICT,
   workspace_id        uuid        REFERENCES workspaces(id) ON DELETE CASCADE,
   email               text        NOT NULL,
   full_name           text,
@@ -266,6 +266,7 @@ CREATE TABLE wait_states (
   resolved_at         timestamptz,
   duration_hours      numeric     DEFAULT 0
 );
+ALTER TABLE public.wait_states ENABLE ROW LEVEL SECURITY;
 
 -- 7.2. project_signoffs
 CREATE TABLE project_signoffs (
@@ -277,6 +278,7 @@ CREATE TABLE project_signoffs (
   notes               text,
   created_at          timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.project_signoffs ENABLE ROW LEVEL SECURITY;
 
 -- 7.3. project_allocations
 CREATE TABLE project_allocations (
@@ -289,6 +291,7 @@ CREATE TABLE project_allocations (
   updated_at          timestamptz NOT NULL DEFAULT now(),
   UNIQUE(project_id, user_id)
 );
+ALTER TABLE public.project_allocations ENABLE ROW LEVEL SECURITY;
 
 -- 7.4. allocation_periods
 CREATE TABLE allocation_periods (
@@ -304,10 +307,12 @@ CREATE TABLE allocation_periods (
   deleted_at          timestamptz,
   CHECK (start_date <= end_date)
 );
+ALTER TABLE public.allocation_periods ENABLE ROW LEVEL SECURITY;
 
 
 -- 8. comments
 CREATE TABLE comments (
+  is_internal boolean NOT NULL DEFAULT false,
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   task_id       uuid        REFERENCES tasks(id) ON DELETE CASCADE,
@@ -319,6 +324,7 @@ CREATE TABLE comments (
 
 -- 8.1 task_comments
 CREATE TABLE task_comments (
+  is_internal boolean NOT NULL DEFAULT false,
   metadata            jsonb       DEFAULT '{}'::jsonb,
   id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id      uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -344,6 +350,7 @@ CREATE TABLE files (
   name          text        NOT NULL,
   mime_type     text,
   size_bytes    bigint,
+  is_internal   boolean     NOT NULL DEFAULT true,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 
@@ -411,7 +418,7 @@ CREATE TABLE invitations (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   email         text        NOT NULL,
-  role          text        NOT NULL CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer')),
+  role          text        NOT NULL CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer', 'client')),
   token         text        UNIQUE NOT NULL,
   status        text        NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'revoked')),
   expires_at    timestamptz NOT NULL,
@@ -528,7 +535,21 @@ SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
   SELECT workspace_id FROM users WHERE id = auth.uid() LIMIT 1
-$$;
+$;
+
+-- Returns true if the currently authenticated user is an active workspace member.
+CREATE OR REPLACE FUNCTION public.is_active_workspace_member()
+RETURNS boolean AS $
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM public.users 
+    WHERE id = auth.uid() 
+      AND workspace_id = current_workspace() 
+      AND status = 'active'
+  );
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
 -- Auto-creates a users row when a new auth.users record is inserted (OAuth / email signup).
@@ -698,10 +719,10 @@ CREATE POLICY "Workspace owner can create workspace"
   WITH CHECK (owner_id = auth.uid());
 
 
--- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Users ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P0-1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Users SELECT restricted to same workspace + self
--- Wave 7.5: P0-2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Pending user workspace hijack prevention
--- Wave 7.5: P0-3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Self-update restricted to safe profile fields only
+-- ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ Users ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬
+-- Wave 7.5: P0-1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  Users SELECT restricted to same workspace + self
+-- Wave 7.5: P0-2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  Pending user workspace hijack prevention
+-- Wave 7.5: P0-3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  Self-update restricted to safe profile fields only
 
 DROP POLICY IF EXISTS "Users are visible within the platform" ON users;
 DROP POLICY IF EXISTS "Users visible within workspace" ON users;
@@ -781,7 +802,7 @@ CREATE POLICY "Invited users can bootstrap their own user row"
       WHERE lower(invitations.email) = lower(auth.email())
         AND invitations.workspace_id = users.workspace_id
         AND invitations.role = users.role
-        AND invitations.status = 'pending'
+        AND invitations.status = 'pending' AND invitations.expires_at > now()
     )
   );
 
@@ -856,16 +877,18 @@ DROP POLICY IF EXISTS "Projects are isolated by workspace" ON projects;
 -- Fix 2: RLS Validation (Added strict role gating for mutations)
 CREATE POLICY "Projects are visible to workspace"
   ON projects FOR SELECT
-  USING (workspace_id = current_workspace() AND deleted_at IS NULL);
+  USING (workspace_id = current_workspace() AND deleted_at IS NULL AND public.is_active_workspace_member());
 
 CREATE POLICY "Projects can be mutated by PMs and Admins"
   ON projects FOR ALL
   USING (
     workspace_id = current_workspace() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
@@ -880,13 +903,14 @@ DROP POLICY IF EXISTS "Tasks can be mutated by developers, PMs, and Admins" ON t
 -- SELECT: All workspace members can read tasks
 CREATE POLICY "Tasks are visible to workspace"
   ON tasks FOR SELECT
-  USING (workspace_id = current_workspace() AND deleted_at IS NULL);
+  USING (workspace_id = current_workspace() AND deleted_at IS NULL AND public.is_active_workspace_member());
 
 -- INSERT: Only PMs and Admins can create tasks
 CREATE POLICY "Tasks can be created by PMs and Admins"
   ON tasks FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
@@ -895,6 +919,7 @@ CREATE POLICY "Tasks can be fully updated by PMs and Admins"
   ON tasks FOR UPDATE
   USING (
     workspace_id = current_workspace() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
@@ -904,6 +929,7 @@ CREATE POLICY "Developers can update their assigned tasks"
   USING (
     workspace_id = current_workspace() AND
     assignee_id = auth.uid() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role = 'developer')
   );
 
@@ -912,6 +938,7 @@ CREATE POLICY "Tasks can be deleted by PMs and Admins"
   ON tasks FOR DELETE
   USING (
     workspace_id = current_workspace() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
@@ -945,14 +972,15 @@ DROP POLICY IF EXISTS "Comments are isolated by workspace" ON comments;
 -- SELECT: All workspace members can read comments
 CREATE POLICY "Comments are visible to workspace"
   ON comments FOR SELECT
-  USING (workspace_id = current_workspace());
+  USING (workspace_id = current_workspace() AND public.is_active_workspace_member());
 
 -- INSERT: Authenticated workspace members can create comments (author_id must be self)
 CREATE POLICY "Comments can be created by authenticated users"
   ON comments FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
-    author_id = auth.uid()
+    author_id = auth.uid() AND
+    public.is_active_workspace_member()
   );
 
 -- UPDATE/DELETE for PMs/Admins: Full moderation access
@@ -960,21 +988,23 @@ CREATE POLICY "Comments can be moderated by PMs and Admins"
   ON comments FOR ALL
   USING (
     workspace_id = current_workspace() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
 -- UPDATE/DELETE for non-admins: Own comments only
 CREATE POLICY "Users can edit their own comments"
   ON comments FOR UPDATE
-  USING (workspace_id = current_workspace() AND author_id = auth.uid());
+  USING (workspace_id = current_workspace() AND author_id = auth.uid() AND public.is_active_workspace_member());
 
 CREATE POLICY "Users can delete their own comments"
   ON comments FOR DELETE
-  USING (workspace_id = current_workspace() AND author_id = auth.uid());
+  USING (workspace_id = current_workspace() AND author_id = auth.uid() AND public.is_active_workspace_member());
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Files ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
@@ -987,23 +1017,40 @@ DROP POLICY IF EXISTS "Files can be managed by PMs and Admins" ON files;
 
 CREATE POLICY "Files are visible to workspace"
   ON files FOR SELECT
-  USING (workspace_id = current_workspace());
+  USING (
+    workspace_id = current_workspace() 
+    AND public.is_active_workspace_member()
+    AND (
+      EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role != 'client')
+      OR
+      (
+        EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role = 'client')
+        AND is_internal = false
+        AND EXISTS (
+          SELECT 1 FROM projects WHERE projects.id = files.project_id AND projects.owner_id = auth.uid()
+        )
+      )
+    )
+  );
 
 CREATE POLICY "Files can be uploaded by authenticated users"
   ON files FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
-    uploaded_by = auth.uid()
+    uploaded_by = auth.uid() AND
+    public.is_active_workspace_member()
   );
 
 CREATE POLICY "Files can be managed by PMs and Admins"
   ON files FOR ALL
   USING (
     workspace_id = current_workspace() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
+    public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
@@ -2083,6 +2130,7 @@ WITH CHECK (
 
 -- 1. Create universal_comments table
 CREATE TABLE IF NOT EXISTS public.universal_comments (
+  is_internal boolean NOT NULL DEFAULT false,
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
     entity_type text NOT NULL,
@@ -2648,8 +2696,7 @@ CREATE TABLE IF NOT EXISTS public.clients (
   deleted_at            timestamptz,
   deleted_by            uuid        REFERENCES users(id) ON DELETE SET NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now(),
-    deleted_at timestamptz
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
@@ -4250,6 +4297,7 @@ CREATE TABLE IF NOT EXISTS capability_change_logs (
   reason text,
   created_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.capability_change_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION audit_and_protect_capabilities()
 RETURNS trigger AS $$
@@ -4785,18 +4833,6 @@ CREATE INDEX IF NOT EXISTS idx_session_quality_flags_session ON session_quality_
 -- ==============================================================================
 
 -- 1. Create external_access_links table
-CREATE TABLE IF NOT EXISTS external_access_links (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  entity_type text NOT NULL, -- e.g. 'project'
-  entity_id uuid NOT NULL,
-  token_hash text NOT NULL UNIQUE,
-  permissions jsonb NOT NULL DEFAULT '{}'::jsonb,
-  expires_at timestamptz,
-  created_by uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  revoked_at timestamptz
-);
 
 -- Enable RLS
 ALTER TABLE external_access_links ENABLE ROW LEVEL SECURITY;
@@ -5052,7 +5088,7 @@ WITH CHECK (
 -- Note: No UPDATE or DELETE policies are created, meaning they are implicitly DENIED.
 
 -- 4. RLS SWEEP ON CORE TABLES (Projects, Tasks, Users, Invoices)
--- Ensure 'external_client' roles can only view their specific entities.
+-- Ensure 'client' roles can only view their specific entities.
 -- 2. Fetch Project Data
   SELECT json_build_object(
       'id', p.id,
@@ -5152,17 +5188,6 @@ GRANT EXECUTE ON FUNCTION submit_client_approval(text, uuid, text, text) TO anon
 -- =====================================================================
 
 
--- Enable RLS
-ALTER TABLE workspace_license ENABLE ROW LEVEL SECURITY;
-
--- Super Admins can view license
-CREATE POLICY "Super Admins can view workspace license"
-  ON workspace_license FOR SELECT
-  USING (
-    workspace_id IN (
-      SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
-    )
-  );
 
 -- 3. Notify Supabase Realtime (optional, just good practice for settings)
 -- ALTER PUBLICATION supabase_realtime ADD TABLE workspace_license;
@@ -5202,36 +5227,10 @@ CREATE INDEX IF NOT EXISTS idx_universal_approvals_entity ON universal_approvals
 
 -- 3. AUDIT IMMUTABILITY (activity_logs)
 -- We enforce that NO ONE can UPDATE or DELETE from activity_logs, even Super Admins.
-ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Anyone in workspace can view activity logs" ON activity_logs;
-DROP POLICY IF EXISTS "Anyone in workspace can insert activity logs" ON activity_logs;
-DROP POLICY IF EXISTS "No one can update activity logs" ON activity_logs;
-DROP POLICY IF EXISTS "No one can delete activity logs" ON activity_logs;
-
--- Recreate policies strictly
-CREATE POLICY "Anyone in workspace can view activity logs"
-ON activity_logs FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM users
-    WHERE users.id = auth.uid() AND users.workspace_id = activity_logs.workspace_id
-  )
-);
-
-CREATE POLICY "Anyone in workspace can insert activity logs"
-ON activity_logs FOR INSERT
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM users
-    WHERE users.id = auth.uid() AND users.workspace_id = activity_logs.workspace_id
-  )
-);
-
--- Note: No UPDATE or DELETE policies are created, meaning they are implicitly DENIED.
 
 -- 4. RLS SWEEP ON CORE TABLES (Projects, Tasks, Users, Invoices)
--- Ensure 'external_client' roles can only view their specific entities.
+-- Ensure 'client' roles can only view their specific entities.
 
 -- Projects
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
@@ -5243,9 +5242,9 @@ USING (
     SELECT 1 FROM users
     WHERE users.id = auth.uid()
         AND (
-           users.role != 'external_client'
+           users.role != 'client'
            OR
-           (users.role = 'external_client' AND projects.client_id = users.id)
+           (users.role = 'client' AND projects.client_id = users.id)
         )
       )
   AND deleted_at IS NULL
@@ -5263,9 +5262,9 @@ USING (
     WHERE users.id = auth.uid()
       AND users.workspace_id = invoices.workspace_id
       AND (
-        users.role != 'external_client'
+        users.role != 'client'
         OR
-        (users.role = 'external_client' AND invoices.client_id = users.id)
+        (users.role = 'client' AND invoices.client_id = users.id)
       )
   )
 );
@@ -5569,15 +5568,6 @@ ADD COLUMN IF NOT EXISTS revoked_by uuid REFERENCES public.users(id) ON DELETE R
 ADD COLUMN IF NOT EXISTS last_accessed_at timestamptz,
 ADD COLUMN IF NOT EXISTS access_count integer DEFAULT 0 NOT NULL;
 
--- Enable RLS for external_access_links update
-DROP POLICY IF EXISTS "Project Managers can update external access links" ON public.external_access_links;
-CREATE POLICY "Project Managers can update external access links"
-  ON public.external_access_links FOR UPDATE
-  USING (
-    workspace_id IN (
-      SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
-    )
-  );
 
 CREATE OR REPLACE FUNCTION get_shared_project_data(p_token text)
 RETURNS json
@@ -5793,6 +5783,7 @@ CREATE TABLE IF NOT EXISTS public.roles (
     description text NOT NULL,
     created_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.capabilities (
     id text PRIMARY KEY,
@@ -5800,6 +5791,7 @@ CREATE TABLE IF NOT EXISTS public.capabilities (
     description text,
     created_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.capabilities ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.role_capabilities (
     role_id text REFERENCES public.roles(id) ON DELETE CASCADE,
@@ -5807,14 +5799,16 @@ CREATE TABLE IF NOT EXISTS public.role_capabilities (
     created_at timestamptz DEFAULT now(),
     PRIMARY KEY (role_id, capability_id)
 );
+ALTER TABLE public.role_capabilities ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.user_capability_overrides (
-    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    user_id uuid REFERENCES public.users(id) ON DELETE RESTRICT,
     capability_id text REFERENCES public.capabilities(id) ON DELETE CASCADE,
     is_granted boolean NOT NULL DEFAULT true,
     created_at timestamptz DEFAULT now(),
     PRIMARY KEY (user_id, capability_id)
 );
+ALTER TABLE public.user_capability_overrides ENABLE ROW LEVEL SECURITY;
 
 -- 2. Seed Default Roles
 INSERT INTO public.roles (id, description) VALUES
@@ -6202,6 +6196,7 @@ CREATE TABLE IF NOT EXISTS public.connected_accounts (
     refresh_token text,
     created_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.connected_accounts ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.documents (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6212,6 +6207,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
     created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
     created_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.sprints (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6224,6 +6220,7 @@ CREATE TABLE IF NOT EXISTS public.sprints (
     created_at timestamptz DEFAULT now(),
     deleted_at timestamptz
 );
+ALTER TABLE public.sprints ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.approval_chains (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6231,6 +6228,7 @@ CREATE TABLE IF NOT EXISTS public.approval_chains (
     name text NOT NULL,
     created_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.approval_chains ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.approval_instances (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6240,6 +6238,7 @@ CREATE TABLE IF NOT EXISTS public.approval_instances (
     status text DEFAULT 'pending',
     created_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.approval_instances ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.automation_rules (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6248,6 +6247,7 @@ CREATE TABLE IF NOT EXISTS public.automation_rules (
     action_payload jsonb NOT NULL,
     created_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.automation_rules ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.integration_sync_jobs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6257,6 +6257,7 @@ CREATE TABLE IF NOT EXISTS public.integration_sync_jobs (
     started_at timestamptz DEFAULT now(),
     completed_at timestamptz
 );
+ALTER TABLE public.integration_sync_jobs ENABLE ROW LEVEL SECURITY;
 
 -- Force-add workspace_id in case the tables already existed but lacked the column.
 DO $$ 
@@ -7118,25 +7119,6 @@ CREATE TABLE IF NOT EXISTS company_billing_profile (
   UNIQUE(workspace_id)
 );
 
-CREATE TABLE IF NOT EXISTS clients (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  company_name text NOT NULL,
-  contact_person text NOT NULL,
-  email text NOT NULL,
-  phone text NOT NULL,
-  billing_address text NOT NULL,
-  status                text        NOT NULL DEFAULT 'active'
-                                    CHECK (status IN ('active', 'inactive')),
-  deleted_at            timestamptz,
-  month integer NOT NULL CHECK (month >= 1 AND month <= 12),
-  year integer NOT NULL,
-  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
-  closed_by uuid REFERENCES users(id) ON DELETE SET NULL,
-  closed_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(workspace_id, month, year)
-);
 
 CREATE TABLE IF NOT EXISTS financial_snapshots (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -7173,6 +7155,7 @@ CREATE TABLE IF NOT EXISTS billing_milestones (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.billing_milestones ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS client_credits (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -7184,6 +7167,7 @@ CREATE TABLE IF NOT EXISTS client_credits (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.client_credits ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS advance_applications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -7221,6 +7205,7 @@ CREATE TABLE IF NOT EXISTS invoice_audit_logs (
   new_value jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.invoice_audit_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS exchange_rate_audits (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -7252,7 +7237,7 @@ CREATE TABLE IF NOT EXISTS external_access_links (
   target_id uuid NOT NULL,
   access_token text NOT NULL UNIQUE,
   expires_at timestamptz,
-  created_by uuid REFERENCES users(id) ON DELETE CASCADE,
+  created_by uuid REFERENCES users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -7269,6 +7254,7 @@ CREATE TABLE IF NOT EXISTS departments (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(workspace_id, name)
 );
+ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
 
 
 -- -------------------------------------------------------------
@@ -7405,21 +7391,6 @@ CREATE INDEX IF NOT EXISTS idx_invoices_ws_status ON public.invoices(workspace_i
 
 
 -- Sprint 8.12 Observability Pipeline
-CREATE TABLE system_events (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid REFERENCES workspaces(id) ON DELETE CASCADE,
-  user_id uuid REFERENCES users(id) ON DELETE SET NULL,
-  event_type text NOT NULL,
-  severity text NOT NULL CHECK (severity IN ('info', 'warning', 'error', 'critical')),
-  source text NOT NULL CHECK (source IN ('frontend', 'database', 'edge_function', 'integration')),
-  message text NOT NULL,
-  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
-  stack_trace text,
-  browser_info jsonb,
-  resolved boolean NOT NULL DEFAULT false,
-  resolved_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
 
 CREATE INDEX idx_system_events_severity ON system_events(severity);
 CREATE INDEX idx_system_events_created_at ON system_events(created_at DESC);
@@ -7477,7 +7448,7 @@ CREATE TABLE system_migrations (
 -- 13. follow_ups
 CREATE TABLE follow_ups (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id    uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  owner_id    uuid        NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   source_type text        NOT NULL CHECK (source_type IN ('task_comment', 'task', 'project')),
   source_id   uuid        NOT NULL,
   remind_at   timestamptz NOT NULL,
@@ -7678,3 +7649,1846 @@ CREATE POLICY "Workspace members can update company calendar events"
 CREATE POLICY "Workspace members can delete company calendar events"
   ON public.company_calendar_events FOR DELETE
   USING (workspace_id = current_workspace());
+
+
+-- ==============================================================================
+-- BATCH 1B: Missing RLS Policies
+-- ==============================================================================
+
+-- 1. Departments Policies
+-- (ENABLE ROW LEVEL SECURITY was already added in Batch 1A)
+CREATE POLICY "Workspace members can view departments"
+  ON public.departments FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Departments can be managed by PMs and Admins"
+  ON public.departments FOR ALL
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- 2. Epics Policies
+ALTER TABLE public.epics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view epics"
+  ON public.epics FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Epics can be managed by PMs and Admins"
+  ON public.epics FOR ALL
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- 3. Milestones Policies
+ALTER TABLE public.milestones ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view milestones"
+  ON public.milestones FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Milestones can be managed by PMs and Admins"
+  ON public.milestones FOR ALL
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- 4. Task Comments Policies
+ALTER TABLE public.task_comments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view task comments"
+  ON public.task_comments FOR SELECT
+  USING (workspace_id = current_workspace());
+
+CREATE POLICY "Users can create their own task comments"
+  ON public.task_comments FOR INSERT
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    author_id = auth.uid()
+  );
+
+CREATE POLICY "Users can update their own task comments"
+  ON public.task_comments FOR UPDATE
+  USING (workspace_id = current_workspace() AND author_id = auth.uid());
+
+CREATE POLICY "Users can delete their own task comments"
+  ON public.task_comments FOR DELETE
+  USING (workspace_id = current_workspace() AND author_id = auth.uid());
+
+CREATE POLICY "Task comments can be managed by PMs and Admins"
+  ON public.task_comments FOR ALL
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  )
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+
+
+-- ==============================================================================
+-- BATCH 1D: Workspace Ownership Recovery & Last Admin Protection
+-- ==============================================================================
+
+-- ------------------------------------------------------------------------------
+-- PART 1: Ownership Transfer
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.transfer_workspace_ownership(new_owner_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_workspace_id uuid;
+  v_old_owner_id uuid;
+  v_is_valid boolean;
+BEGIN
+  v_workspace_id := public.current_workspace();
+  v_old_owner_id := auth.uid();
+  
+  -- 1. Validate ownership
+  IF NOT EXISTS (
+    SELECT 1 FROM workspaces 
+    WHERE id = v_workspace_id AND owner_id = v_old_owner_id
+  ) THEN
+    RAISE EXCEPTION 'Only the current workspace owner can transfer ownership.';
+  END IF;
+
+  -- 2. Validate new owner
+  SELECT EXISTS (
+    SELECT 1 FROM users
+    WHERE id = new_owner_id 
+      AND workspace_id = v_workspace_id
+      AND status = 'active'
+      AND role = 'super_admin'
+  ) INTO v_is_valid;
+
+  IF NOT v_is_valid THEN
+    RAISE EXCEPTION 'New owner must be an active super_admin in this workspace.';
+  END IF;
+
+  -- 3. Update ownership
+  UPDATE workspaces
+  SET owner_id = new_owner_id, updated_at = now()
+  WHERE id = v_workspace_id;
+
+  -- 4. Create audit entry
+  INSERT INTO activity_logs (workspace_id, actor_id, action, metadata)
+  VALUES (
+    v_workspace_id,
+    v_old_owner_id,
+    'WORKSPACE_OWNERSHIP_TRANSFERRED',
+    jsonb_build_object(
+      'old_owner_id', v_old_owner_id,
+      'new_owner_id', new_owner_id,
+      'timestamp', now()
+    )
+  );
+
+  RETURN true;
+END;
+$$;
+
+-- ------------------------------------------------------------------------------
+-- PART 2: Prevent Last Super Admin Loss
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.prevent_last_super_admin_removal()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_other_admin_count INT;
+BEGIN
+  -- Only execute if the user was an active super_admin prior to the update
+  IF OLD.role = 'super_admin' AND OLD.status = 'active' THEN
+    -- Check if they are being demoted or deactivated
+    IF NEW.role != 'super_admin' OR NEW.status != 'active' THEN
+      SELECT count(*) INTO v_other_admin_count
+      FROM users
+      WHERE workspace_id = OLD.workspace_id
+        AND role = 'super_admin'
+        AND status = 'active'
+        AND id != OLD.id;
+
+      IF v_other_admin_count = 0 THEN
+        RAISE EXCEPTION 'Cannot remove the last Super Admin. Promote another user first.';
+      END IF;
+    END IF;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_prevent_last_super_admin ON public.users;
+CREATE TRIGGER trg_prevent_last_super_admin
+  BEFORE UPDATE ON public.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.prevent_last_super_admin_removal();
+
+-- ------------------------------------------------------------------------------
+-- PART 3: Verification Notes
+-- ------------------------------------------------------------------------------
+/*
+  SQL VERIFICATION TESTS:
+  
+  -- Scenario A: Workspace has 1 super_admin. Try to demote.
+  -- Expected: BLOCKED ('Cannot remove the last Super Admin...')
+  UPDATE users SET role = 'pm' WHERE id = 'last-admin-id';
+  
+  -- Scenario B: Workspace has 2 super_admins. Demote one.
+  -- Expected: SUCCESS
+  UPDATE users SET role = 'pm' WHERE id = 'second-admin-id';
+  
+  -- Scenario C: Owner transfers ownership.
+  -- Expected: owner_id changes, audit created in activity_logs
+  SELECT public.transfer_workspace_ownership('new-owner-id');
+*/
+
+
+-- ==============================================================================
+-- BATCH 2B: Client Portal Boundary & Comment Visibility
+-- ==============================================================================
+
+DO $$
+DECLARE
+    pol record;
+BEGIN
+    -- Drop existing SELECT policies on comment tables to replace them
+    FOR pol IN 
+        SELECT policyname, tablename 
+        FROM pg_policies 
+        WHERE schemaname = 'public' 
+          AND tablename IN ('comments', 'task_comments', 'universal_comments') 
+          AND cmd = 'SELECT'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', pol.policyname, pol.tablename);
+    END LOOP;
+END
+$$;
+
+-- Create secure client-bounded SELECT policies
+CREATE POLICY "Client bounded visibility for comments" ON public.comments FOR SELECT
+USING (
+  workspace_id = current_workspace() AND 
+  (
+    is_internal = false OR 
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role != 'client')
+  )
+);
+
+CREATE POLICY "Client bounded visibility for task_comments" ON public.task_comments FOR SELECT
+USING (
+  workspace_id = current_workspace() AND 
+  (
+    is_internal = false OR 
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role != 'client')
+  )
+);
+
+CREATE POLICY "Client bounded visibility for universal_comments" ON public.universal_comments FOR SELECT
+USING (
+  workspace_id = current_workspace() AND 
+  (
+    is_internal = false OR 
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role != 'client')
+  )
+);
+
+
+-- ==============================================================================
+-- BATCH 2C: Task/Subtask Lifecycle Governance
+-- ==============================================================================
+
+CREATE OR REPLACE FUNCTION public.cascade_subtask_status()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_incomplete_children INT;
+BEGIN
+  -- 1. Parent -> Cancelled
+  IF NEW.status = 'cancelled' AND OLD.status != 'cancelled' THEN
+    UPDATE tasks
+    SET status = 'cancelled', updated_at = now()
+    WHERE parent_task_id = NEW.id
+      AND status NOT IN ('completed', 'done', 'cancelled');
+  END IF;
+
+  -- 2. Parent -> Blocked
+  IF NEW.status = 'blocked' AND OLD.status != 'blocked' THEN
+    IF EXISTS (SELECT 1 FROM tasks WHERE parent_task_id = NEW.id AND status NOT IN ('completed', 'done', 'cancelled')) THEN
+      INSERT INTO activity_logs (workspace_id, actor_id, project_id, task_id, action, metadata)
+      VALUES (
+        NEW.workspace_id,
+        auth.uid(),
+        NEW.project_id,
+        NEW.id,
+        'PARENT_BLOCKED_WITH_CHILDREN',
+        jsonb_build_object('message', 'Parent blocked while children exist.', 'timestamp', now())
+      );
+    END IF;
+  END IF;
+
+  -- 3. Parent -> Completed
+  IF NEW.status IN ('completed', 'done') AND OLD.status NOT IN ('completed', 'done') THEN
+    SELECT COUNT(*) INTO v_incomplete_children
+    FROM tasks
+    WHERE parent_task_id = NEW.id
+      AND status NOT IN ('completed', 'done', 'cancelled');
+
+    IF v_incomplete_children > 0 THEN
+      RAISE EXCEPTION 'Cannot complete parent task while subtasks are unfinished.';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_cascade_subtask_status ON public.tasks;
+CREATE TRIGGER trigger_cascade_subtask_status
+  BEFORE UPDATE OF status ON public.tasks
+  FOR EACH ROW
+  EXECUTE FUNCTION public.cascade_subtask_status();
+
+/*
+  SQL VERIFICATION TESTS:
+
+  -- A: Parent cancelled. Open children exist.
+  -- Expected: Children cancelled (via trigger cascading).
+  UPDATE tasks SET status = 'cancelled' WHERE id = 'parent-uuid';
+  
+  -- B: Parent blocked. Children unchanged.
+  -- Expected: Activity logged in activity_logs.
+  UPDATE tasks SET status = 'blocked' WHERE id = 'parent-uuid';
+  
+  -- C: Parent completed. Incomplete child exists.
+  -- Expected: Blocked with 'Cannot complete parent task...' exception.
+  UPDATE tasks SET status = 'done' WHERE id = 'parent-uuid';
+  
+  -- D: Parent completed. All children done.
+  -- Expected: Success.
+  UPDATE tasks SET status = 'done' WHERE id = 'parent-uuid';
+*/
+
+
+-- ==============================================================================
+-- BATCH 2D: Cross Project Dependency Visibility
+-- ==============================================================================
+
+CREATE OR REPLACE VIEW public.cross_project_dependencies
+WITH (security_invoker = true) AS
+SELECT 
+    d.task_id::text || '_' || d.depends_on_task_id::text AS id,
+    d.workspace_id,
+    -- Blocked Task (the one waiting)
+    bt.id AS blocked_task_id,
+    bt.name AS blocked_task_title,
+    bt.status AS blocked_task_status,
+    bp.name AS blocked_project_name,
+    -- Blocking Task (the one it depends on)
+    bl.id AS blocking_task_id,
+    bl.name AS blocking_task_title,
+    bl.status AS blocking_task_status,
+    blp.name AS blocking_project_name
+FROM public.task_dependencies d
+JOIN public.tasks bt ON d.task_id = bt.id
+JOIN public.projects bp ON bt.project_id = bp.id
+JOIN public.tasks bl ON d.depends_on_task_id = bl.id
+JOIN public.projects blp ON bl.project_id = blp.id
+WHERE bt.project_id != bl.project_id;
+-- Add RPC to compute workspace operational summary entirely in Postgres
+
+CREATE OR REPLACE FUNCTION public.get_workspace_operational_summary(p_workspace_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_total_tasks INT := 0;
+    v_active_tasks INT := 0;
+    v_completed_tasks INT := 0;
+    v_blocked_tasks INT := 0;
+    v_overdue_tasks INT := 0;
+    
+    v_total_projects INT := 0;
+    v_active_projects INT := 0;
+
+    -- Intelligence Metrics
+    v_total_decay_hours NUMERIC := 0.0;
+    v_pressure_score NUMERIC := 0.0;
+
+    v_delivery_confidence NUMERIC := 0.0;
+    v_execution_pressure NUMERIC := 0.0;
+    v_daily_fatigue NUMERIC := 0.0;
+    v_risk_forecast NUMERIC := 0.0;
+
+    -- Cursor variables
+    rec RECORD;
+    v_expected_sum NUMERIC;
+    v_variance_sum NUMERIC;
+    v_standard_deviation NUMERIC;
+    v_new_worst NUMERIC;
+    v_new_best NUMERIC;
+    v_spread NUMERIC;
+
+    v_blocked_count INT := 0;
+    v_active_count INT := 0;
+BEGIN
+    -- Only allow if caller is part of the workspace
+    IF NOT EXISTS (
+        SELECT 1 FROM public.users 
+        WHERE id = auth.uid() AND workspace_id = p_workspace_id
+    ) THEN
+        RAISE EXCEPTION 'Unauthorized workspace access';
+    END IF;
+
+    -- 1. Project metrics
+    SELECT 
+        COUNT(*),
+        COUNT(*) FILTER (WHERE status NOT IN ('deployed', 'done', 'archived'))
+    INTO v_total_projects, v_active_projects
+    FROM public.projects
+    WHERE workspace_id = p_workspace_id;
+
+    -- 2. Task counts
+    SELECT 
+        COUNT(*),
+        COUNT(*) FILTER (WHERE status != 'done' AND deleted_at IS NULL),
+        COUNT(*) FILTER (WHERE status = 'done' AND deleted_at IS NULL),
+        COUNT(*) FILTER (WHERE status IN ('blocked', 'changes_requested') AND deleted_at IS NULL),
+        COUNT(*) FILTER (WHERE deadline < now() AND status != 'done' AND deleted_at IS NULL)
+    INTO 
+        v_total_tasks, 
+        v_active_tasks, 
+        v_completed_tasks, 
+        v_blocked_tasks, 
+        v_overdue_tasks
+    FROM public.tasks
+    WHERE workspace_id = p_workspace_id;
+
+    -- 3. Calculate Operational Intelligence (PERT per active project)
+    FOR rec IN 
+        SELECT id FROM public.projects 
+        WHERE workspace_id = p_workspace_id 
+          AND status NOT IN ('deployed', 'done', 'archived')
+    LOOP
+        v_expected_sum := 0;
+        v_variance_sum := 0;
+
+        -- Sum expected and variance for tasks in this project
+        SELECT 
+            COALESCE(SUM((pert_best + 4.0 * pert_likely + pert_worst) / 6.0), 0),
+            COALESCE(SUM(POWER((pert_worst - pert_best) / 6.0, 2)), 0)
+        INTO v_expected_sum, v_variance_sum
+        FROM public.tasks
+        WHERE project_id = rec.id 
+          AND deleted_at IS NULL
+          AND pert_best > 0 
+          AND pert_likely > 0 
+          AND pert_worst > 0;
+
+        v_standard_deviation := SQRT(v_variance_sum);
+        v_new_worst := v_expected_sum + 2.0 * v_standard_deviation;
+        v_new_best := GREATEST(0.0, v_expected_sum - 2.0 * v_standard_deviation);
+
+        IF v_new_worst > v_expected_sum THEN
+            v_total_decay_hours := v_total_decay_hours + (v_new_worst - v_expected_sum);
+        END IF;
+
+        v_spread := GREATEST(0.0, v_new_worst - v_new_best);
+
+        IF v_spread > 0 AND v_expected_sum > 0 THEN
+            v_pressure_score := v_pressure_score + ((v_spread / GREATEST(v_expected_sum, 1.0)) * 10.0);
+        END IF;
+    END LOOP;
+
+    -- Compute global ratios
+    SELECT 
+        COUNT(*) FILTER (WHERE status != 'done' AND deleted_at IS NULL),
+        COUNT(*) FILTER (WHERE status IN ('blocked', 'changes_requested') AND deleted_at IS NULL)
+    INTO v_active_count, v_blocked_count
+    FROM public.tasks
+    WHERE workspace_id = p_workspace_id;
+
+    IF v_active_count > 0 THEN
+        v_pressure_score := v_pressure_score + ((v_blocked_count::NUMERIC / v_active_count::NUMERIC) * 40.0);
+    END IF;
+
+    -- Final intelligence derivations
+    v_delivery_confidence := GREATEST(0.0, 100.0 - (v_total_decay_hours * 0.5));
+    v_daily_fatigue := v_total_decay_hours;
+    v_execution_pressure := LEAST(100.0, v_pressure_score);
+
+    v_risk_forecast := LEAST(100.0, 
+        (100.0 - v_delivery_confidence) * 0.45 + 
+        v_execution_pressure * 0.35 + 
+        LEAST(100.0, v_daily_fatigue * 2.0) * 0.2
+    );
+
+    RETURN jsonb_build_object(
+        'total_projects', v_total_projects,
+        'active_projects', v_active_projects,
+        'total_tasks', v_total_tasks,
+        'active_tasks', v_active_tasks,
+        'completed_tasks', v_completed_tasks,
+        'blocked_tasks', v_blocked_tasks,
+        'overdue_tasks', v_overdue_tasks,
+        'server_metrics', jsonb_build_object(
+            'deliveryConfidence', ROUND(v_delivery_confidence, 1),
+            'executionPressure', ROUND(v_execution_pressure, 1),
+            'dailyFatigue', ROUND(v_daily_fatigue, 1),
+            'riskForecast', ROUND(v_risk_forecast, 1)
+        )
+    );
+END;
+$$;
+
+-- ==========================================
+-- BATCH 3C: SOFT DELETE RECOVERY ENFORCEMENT
+-- ==========================================
+
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS deleted_by uuid REFERENCES public.users(id);
+
+ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS deleted_by uuid REFERENCES public.users(id);
+
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS deleted_by uuid REFERENCES public.users(id);
+
+-- ==========================================
+-- BATCH 3D: EMPLOYEE OFFBOARDING LIFECYCLE
+-- ==========================================
+
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_status_check;
+ALTER TABLE public.users ADD CONSTRAINT users_status_check CHECK (status IN ('active', 'invited', 'disabled', 'offboarding', 'archived'));
+
+CREATE OR REPLACE FUNCTION get_employee_exit_impact(p_user_id UUID, p_workspace_id UUID)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_active_tasks INT;
+    v_owned_projects INT;
+    v_pending_approvals INT;
+    v_owned_documents INT;
+BEGIN
+    SELECT COUNT(*) INTO v_active_tasks
+    FROM public.tasks
+    WHERE assignee_id = p_user_id 
+      AND workspace_id = p_workspace_id 
+      AND status NOT IN ('completed', 'done', 'archived');
+
+    SELECT COUNT(*) INTO v_owned_projects
+    FROM public.projects
+    WHERE owner_id = p_user_id 
+      AND workspace_id = p_workspace_id 
+      AND status NOT IN ('completed', 'done', 'archived');
+
+    SELECT COUNT(*) INTO v_pending_approvals
+    FROM public.project_signoffs
+    WHERE user_id = p_user_id 
+      AND workspace_id = p_workspace_id 
+      AND status = 'pending';
+
+    SELECT COUNT(*) INTO v_owned_documents
+    FROM public.documents
+    WHERE created_by = p_user_id 
+      AND workspace_id = p_workspace_id;
+
+    RETURN jsonb_build_object(
+        'active_tasks', v_active_tasks,
+        'owned_projects', v_owned_projects,
+        'pending_approvals', v_pending_approvals,
+        'owned_documents', v_owned_documents
+    );
+END;
+$$;
+
+-- ==========================================
+-- BATCH 5J.2 HARDENING
+-- ==========================================
+
+-- 1. trigger_update_project_pert for tasks table
+
+CREATE OR REPLACE FUNCTION public.trigger_update_project_pert()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_proj_id uuid;
+
+  v_total_expected numeric := 0;
+  v_total_variance numeric := 0;
+
+  v_new_best numeric;
+  v_new_likely numeric;
+  v_new_worst numeric;
+
+BEGIN
+
+  IF TG_OP = 'DELETE' THEN
+      v_proj_id := OLD.project_id;
+  ELSE
+      v_proj_id := NEW.project_id;
+  END IF;
+
+
+  -- Recalculate current project PERT
+
+  SELECT
+      COALESCE(
+          SUM(
+              (pert_best + 4 * pert_likely + pert_worst) / 6.0
+          ),
+          0
+      ),
+
+      COALESCE(
+          SUM(
+              POWER(
+                  (pert_worst - pert_best) / 6.0,
+                  2
+              )
+          ),
+          0
+      )
+
+  INTO
+      v_total_expected,
+      v_total_variance
+
+  FROM public.tasks
+
+  WHERE project_id = v_proj_id
+  AND pert_best > 0
+  AND pert_likely > 0
+  AND pert_worst > 0;
+
+
+  v_new_best :=
+      GREATEST(
+          0,
+          v_total_expected -
+          (2 * SQRT(v_total_variance))
+      );
+
+
+  v_new_likely :=
+      v_total_expected;
+
+
+  v_new_worst :=
+      v_total_expected +
+      (2 * SQRT(v_total_variance));
+
+
+  UPDATE public.projects
+
+  SET
+
+      pert_best =
+          ROUND(v_new_best,1),
+
+      pert_likely =
+          ROUND(v_new_likely,1),
+
+      pert_worst =
+          ROUND(v_new_worst,1)
+
+  WHERE id = v_proj_id;
+
+
+  -- If task moved between projects,
+  -- refresh old project also
+
+  IF TG_OP = 'UPDATE'
+  AND OLD.project_id != NEW.project_id
+  THEN
+
+      SELECT
+
+          COALESCE(
+              SUM(
+                  (pert_best + 4 * pert_likely + pert_worst) / 6.0
+              ),
+              0
+          ),
+
+          COALESCE(
+              SUM(
+                  POWER(
+                      (pert_worst - pert_best) / 6.0,
+                      2
+                  )
+              ),
+              0
+          )
+
+      INTO
+          v_total_expected,
+          v_total_variance
+
+      FROM public.tasks
+
+      WHERE project_id = OLD.project_id
+      AND pert_best > 0
+      AND pert_likely > 0
+      AND pert_worst > 0;
+
+
+      UPDATE public.projects
+
+      SET
+
+          pert_best =
+              ROUND(
+                  GREATEST(
+                      0,
+                      v_total_expected -
+                      (2 * SQRT(v_total_variance))
+                  ),
+                  1
+              ),
+
+          pert_likely =
+              ROUND(
+                  v_total_expected,
+                  1
+              ),
+
+          pert_worst =
+              ROUND(
+                  v_total_expected +
+                  (2 * SQRT(v_total_variance)),
+                  1
+              )
+
+      WHERE id = OLD.project_id;
+
+  END IF;
+
+
+  RETURN NULL;
+
+END;
+$$;
+
+
+DROP TRIGGER IF EXISTS trigger_update_project_pert ON public.tasks;
+
+CREATE TRIGGER trigger_update_project_pert
+AFTER INSERT OR DELETE OR UPDATE OF
+    pert_best,
+    pert_likely,
+    pert_worst,
+    project_id,
+    assignee_id,
+    status
+ON public.tasks
+FOR EACH ROW
+EXECUTE FUNCTION public.trigger_update_project_pert();
+
+-- 2. prevent_last_super_admin_removal with deactivation and owner protections
+CREATE OR REPLACE FUNCTION public.prevent_last_super_admin_removal()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  super_admin_count integer;
+  is_owner boolean;
+BEGIN
+  -- Workspace Owner Protection
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.status != 'active' THEN
+      SELECT EXISTS (
+        SELECT 1 FROM public.workspaces 
+        WHERE id = OLD.workspace_id AND owner_id = OLD.id
+      ) INTO is_owner;
+
+      IF is_owner THEN
+        RAISE EXCEPTION 'Cannot deactivate workspace owner. Transfer ownership first.';
+      END IF;
+    END IF;
+  END IF;
+
+  -- Last Super Admin Protection
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.role = 'super_admin' THEN
+      SELECT count(*) INTO super_admin_count FROM public.users 
+      WHERE workspace_id = OLD.workspace_id 
+        AND role = 'super_admin' 
+        AND status = 'active'
+        AND id != OLD.id;
+      
+      IF super_admin_count = 0 THEN
+        RAISE EXCEPTION 'Cannot remove the last active Super Admin. Promote another admin first.';
+      END IF;
+    END IF;
+    RETURN OLD;
+
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF OLD.role = 'super_admin' AND (NEW.role != 'super_admin' OR NEW.workspace_id != OLD.workspace_id OR NEW.status != 'active') THEN
+      SELECT count(*) INTO super_admin_count FROM public.users 
+      WHERE workspace_id = OLD.workspace_id 
+        AND role = 'super_admin' 
+        AND status = 'active' 
+        AND id != OLD.id;
+      
+      IF super_admin_count = 0 THEN
+        RAISE EXCEPTION 'Cannot remove the last active Super Admin. Promote another admin first.';
+      END IF;
+    END IF;
+    RETURN NEW;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS check_last_super_admin_removal ON public.users;
+CREATE TRIGGER check_last_super_admin_removal
+  BEFORE UPDATE OR DELETE ON public.users
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_last_super_admin_removal();
+
+
+-- ==========================================
+-- BATCH 6C: SCALE ARCHITECTURE RPCS
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION public.search_workspace_users(
+    p_workspace_id UUID,
+    p_search_text TEXT,
+    p_limit INT DEFAULT 20
+)
+RETURNS TABLE (
+    id UUID,
+    name TEXT,
+    avatar TEXT,
+    role TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        u.id, 
+        (u.first_name || ' ' || u.last_name) AS name,
+        u.avatar_url AS avatar, 
+        u.role
+    FROM public.users u
+    WHERE u.workspace_id = p_workspace_id
+      AND u.status = 'active'
+      AND (
+          u.first_name ILIKE '%' || p_search_text || '%' OR
+          u.last_name ILIKE '%' || p_search_text || '%' OR
+          u.email ILIKE '%' || p_search_text || '%'
+      )
+    ORDER BY u.first_name ASC, u.last_name ASC
+    LIMIT p_limit;
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = '';
+
+CREATE OR REPLACE FUNCTION public.get_my_daily_command(
+    p_user_id UUID,
+    p_workspace_id UUID,
+    p_role TEXT
+)
+RETURNS JSON AS $$
+DECLARE
+    v_today_tasks INT := 0;
+    v_blockers INT := 0;
+    v_approvals INT := 0;
+    v_mentions INT := 0;
+    v_recent_changes INT := 0;
+    v_waiting_on_me INT := 0;
+BEGIN
+    IF p_role IN ('developer', 'viewer') THEN
+        SELECT COUNT(*) INTO v_today_tasks FROM public.tasks 
+        WHERE workspace_id = p_workspace_id AND assignee_id = p_user_id 
+          AND status NOT IN ('done', 'archived') AND deleted_at IS NULL;
+          
+        SELECT COUNT(*) INTO v_blockers FROM public.tasks
+        WHERE workspace_id = p_workspace_id AND assignee_id = p_user_id 
+          AND (status = 'blocked' OR (blockers IS NOT NULL AND blockers != '')) 
+          AND deleted_at IS NULL;
+
+        SELECT COUNT(*) INTO v_recent_changes FROM public.tasks
+        WHERE workspace_id = p_workspace_id AND assignee_id = p_user_id
+          AND updated_at >= NOW() - INTERVAL '1 day' AND deleted_at IS NULL;
+
+        SELECT COUNT(*) INTO v_waiting_on_me FROM public.wait_states
+        WHERE workspace_id = p_workspace_id AND owner_id = p_user_id
+          AND status = 'active';
+
+    ELSIF p_role = 'pm' THEN
+        SELECT COUNT(*) INTO v_today_tasks FROM public.projects
+        WHERE workspace_id = p_workspace_id AND owner_id = p_user_id AND status != 'archived' AND deleted_at IS NULL;
+        
+        SELECT COUNT(*) INTO v_blockers FROM public.projects
+        WHERE workspace_id = p_workspace_id AND owner_id = p_user_id AND (risk = 'high' OR delay_drift_days > 0) AND deleted_at IS NULL;
+
+        SELECT COUNT(*) INTO v_approvals FROM public.universal_approvals
+        WHERE workspace_id = p_workspace_id AND status = 'pending';
+        
+    ELSE
+        SELECT COUNT(*) INTO v_today_tasks FROM public.projects WHERE workspace_id = p_workspace_id AND status = 'active' AND deleted_at IS NULL;
+        SELECT COUNT(*) INTO v_blockers FROM public.tasks WHERE workspace_id = p_workspace_id AND status = 'blocked' AND deleted_at IS NULL;
+        SELECT COUNT(*) INTO v_approvals FROM public.invoices WHERE workspace_id = p_workspace_id AND status = 'draft';
+    END IF;
+
+    RETURN json_build_object(
+        'today_tasks', v_today_tasks,
+        'blockers', v_blockers,
+        'approvals', v_approvals,
+        'mentions', v_mentions,
+        'recent_changes', v_recent_changes,
+        'waiting_on_me', v_waiting_on_me
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = '';
+
+
+-- MIGRATION: Batch 7 Production Readiness Closure
+-- Focus: Enterprise indexing, client isolation, and event tracking
+
+-- ==========================================
+-- PHASE 1: DATABASE PERFORMANCE FINALIZATION
+-- ==========================================
+
+CREATE INDEX IF NOT EXISTS idx_tasks_workspace_active ON public.tasks(workspace_id, status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee_active ON public.tasks(workspace_id, assignee_id, status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_project_active ON public.tasks(project_id, status) WHERE deleted_at IS NULL;
+
+-- Skip projects_workspace_active as idx_projects_composite exists in V1_3_INSTALL (workspace_id, status WHERE deleted_at IS NULL).
+CREATE INDEX IF NOT EXISTS idx_projects_workspace_active ON public.projects(workspace_id, status) WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_users_rls_lookup ON public.users(id, workspace_id, status, role);
+
+CREATE INDEX IF NOT EXISTS idx_files_project_visibility ON public.files(project_id, is_internal);
+
+-- Note: 'documents' might not exist in some partial DB states. We assume it does.
+DO $$ 
+BEGIN 
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'documents') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_documents_workspace_active ON public.documents(workspace_id) WHERE deleted_at IS NULL;';
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_workspace_time ON public.activity_logs(workspace_id, created_at DESC);
+
+-- Conditional invoice index
+DO $$ 
+BEGIN 
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'invoices') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_invoices_workspace_status ON public.invoices(workspace_id, status);';
+  END IF;
+END $$;
+
+-- ==========================================
+-- PHASE 2: REAL CLIENT RELATIONSHIP AUDIT
+-- ==========================================
+
+-- 1. Add client_id to projects
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES public.users(id) ON DELETE SET NULL;
+
+-- 2. Update Projects Policy
+DROP POLICY IF EXISTS "Projects are visible to workspace" ON public.projects;
+CREATE POLICY "Projects are visible to workspace"
+  ON public.projects FOR SELECT
+  USING (
+    workspace_id = current_workspace() 
+    AND deleted_at IS NULL
+    AND public.is_active_workspace_member()
+    AND (
+      EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role != 'client')
+      OR
+      (client_id = auth.uid() AND EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role = 'client'))
+    )
+  );
+
+-- 3. Update Files Policy
+DROP POLICY IF EXISTS "Files are visible to workspace" ON public.files;
+CREATE POLICY "Files are visible to workspace"
+  ON public.files FOR SELECT
+  USING (
+    workspace_id = current_workspace() 
+    AND public.is_active_workspace_member()
+    AND (
+      EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role != 'client')
+      OR
+      (
+        EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role = 'client')
+        AND is_internal = false
+        AND EXISTS (
+          SELECT 1 FROM public.projects WHERE projects.id = public.files.project_id AND projects.client_id = auth.uid()
+        )
+      )
+    )
+  );
+
+-- 4. Update Documents Policy
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'documents') THEN
+    EXECUTE 'DROP POLICY IF EXISTS "Documents are visible to workspace" ON public.documents;';
+    EXECUTE 'CREATE POLICY "Documents are visible to workspace" ON public.documents FOR SELECT USING (workspace_id = current_workspace() AND public.is_active_workspace_member() AND (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role != ''client'') OR (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role = ''client'') AND is_internal = false AND EXISTS (SELECT 1 FROM public.projects WHERE projects.id = public.documents.project_id AND projects.client_id = auth.uid()))));';
+  END IF;
+END $$;
+
+
+-- ==========================================
+-- PHASE 3: NOTIFICATION REALITY CHECK
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.notification_events (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id  UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  user_id       UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  type          TEXT NOT NULL CHECK (type IN ('assigned', 'mentioned', 'blocked', 'approval_requested', 'client_approved', 'reassigned')),
+  entity_type   TEXT NOT NULL CHECK (entity_type IN ('task', 'comment', 'project', 'document', 'invoice')),
+  entity_id     UUID NOT NULL,
+  read_at       TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.notification_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can read their own notification events" ON public.notification_events;
+CREATE POLICY "Users can read their own notification events"
+  ON public.notification_events FOR SELECT
+  USING (
+    workspace_id = current_workspace() 
+    AND user_id = auth.uid() 
+    AND public.is_active_workspace_member()
+  );
+
+DROP POLICY IF EXISTS "System can mutate notifications" ON public.notification_events;
+CREATE POLICY "System can mutate notifications"
+  ON public.notification_events FOR ALL
+  USING (workspace_id = current_workspace() AND user_id = auth.uid())
+  WITH CHECK (workspace_id = current_workspace() AND user_id = auth.uid());
+
+-- Triggers for lightweight notifications
+
+-- Assignment Changed
+CREATE OR REPLACE FUNCTION public.notify_on_task_assignment()
+RETURNS TRIGGER AS $FUNC$
+BEGIN
+  IF NEW.assignee_id IS NOT NULL AND (OLD.assignee_id IS NULL OR NEW.assignee_id != OLD.assignee_id) THEN
+    INSERT INTO public.notification_events (workspace_id, user_id, type, entity_type, entity_id)
+    VALUES (NEW.workspace_id, NEW.assignee_id, 'assigned', 'task', NEW.id);
+  END IF;
+  RETURN NEW;
+END;
+$FUNC$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_notify_task_assignment ON public.tasks;
+CREATE TRIGGER trigger_notify_task_assignment
+  AFTER UPDATE OF assignee_id ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION public.notify_on_task_assignment();
+
+-- Blocked Status
+CREATE OR REPLACE FUNCTION public.notify_on_task_blocked()
+RETURNS TRIGGER AS $FUNC$
+BEGIN
+  IF NEW.status = 'blocked' AND OLD.status != 'blocked' AND NEW.assignee_id IS NOT NULL THEN
+    INSERT INTO public.notification_events (workspace_id, user_id, type, entity_type, entity_id)
+    VALUES (NEW.workspace_id, NEW.assignee_id, 'blocked', 'task', NEW.id);
+  END IF;
+  RETURN NEW;
+END;
+$FUNC$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trigger_notify_task_blocked ON public.tasks;
+CREATE TRIGGER trigger_notify_task_blocked
+  AFTER UPDATE OF status ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION public.notify_on_task_blocked();
+
+
+-- Resolve PM Batch 9: Launch Closure Sprint Migration
+-- Adds schema for Change Requests, Invoicing from Time Logs, and Exit Handoffs.
+
+-- Part 2: Change Request System
+CREATE TABLE IF NOT EXISTS public.change_requests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  requested_by uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  description text,
+  reason text,
+  estimated_hours_change integer DEFAULT 0,
+  budget_change numeric(12,2) DEFAULT 0,
+  deadline_change timestamptz,
+  status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'approved', 'rejected', 'implemented')),
+  approved_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  approved_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.change_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view change requests"
+  ON public.change_requests FOR SELECT
+  USING (
+    workspace_id = public.current_workspace()
+    OR
+    project_id IN (SELECT id FROM projects WHERE client_id = auth.uid())
+  );
+
+CREATE POLICY "Users can insert change requests"
+  ON public.change_requests FOR INSERT
+  WITH CHECK (
+    workspace_id = public.current_workspace()
+    OR
+    project_id IN (SELECT id FROM projects WHERE client_id = auth.uid())
+  );
+
+CREATE POLICY "PMs and Admins can update change requests"
+  ON public.change_requests FOR UPDATE
+  USING (
+    workspace_id = public.current_workspace() AND
+    public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'pm')
+  );
+
+-- Part 3: Time to Invoice Pipeline
+ALTER TABLE public.work_sessions ADD COLUMN IF NOT EXISTS invoice_id uuid REFERENCES public.invoices(id) ON DELETE SET NULL;
+
+CREATE OR REPLACE FUNCTION public.generate_invoice_from_time_logs(
+  p_workspace_id uuid,
+  p_client_id uuid,
+  p_project_id uuid,
+  p_start_date timestamptz,
+  p_end_date timestamptz,
+  p_hourly_rate numeric
+) RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_role text;
+  v_invoice_id uuid;
+  v_total_minutes integer;
+  v_total_hours numeric;
+  v_amount numeric;
+BEGIN
+  v_role := public.get_user_role(p_workspace_id);
+  IF v_role NOT IN ('super_admin', 'admin', 'pm') THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  -- Calculate total unbilled minutes
+  SELECT COALESCE(SUM(duration_minutes), 0) INTO v_total_minutes
+  FROM public.work_sessions
+  WHERE workspace_id = p_workspace_id
+    AND task_id IN (SELECT id FROM public.tasks WHERE project_id = p_project_id)
+    AND invoice_id IS NULL
+    AND status = 'completed'
+    AND started_at >= p_start_date
+    AND started_at <= p_end_date;
+
+  IF v_total_minutes = 0 THEN
+    RAISE EXCEPTION 'No unbilled time logs found for the specified criteria.';
+  END IF;
+
+  v_total_hours := v_total_minutes / 60.0;
+  v_amount := v_total_hours * p_hourly_rate;
+
+  -- Create Draft Invoice
+  INSERT INTO public.invoices (
+    workspace_id, client_id, status, subtotal, tax_total, grand_total, due_date
+  ) VALUES (
+    p_workspace_id, p_client_id, 'draft', v_amount, 0, v_amount, now() + interval '30 days'
+  ) RETURNING id INTO v_invoice_id;
+
+  -- Create Invoice Line Item
+  INSERT INTO public.invoice_line_items (
+    invoice_id, description, quantity, unit_price, total_price
+  ) VALUES (
+    v_invoice_id, 'Professional Services (' || round(v_total_hours, 2) || ' hours)', v_total_hours, p_hourly_rate, v_amount
+  );
+
+  -- Mark work sessions as billed
+  UPDATE public.work_sessions
+  SET invoice_id = v_invoice_id
+  WHERE workspace_id = p_workspace_id
+    AND task_id IN (SELECT id FROM public.tasks WHERE project_id = p_project_id)
+    AND invoice_id IS NULL
+    AND status = 'completed'
+    AND started_at >= p_start_date
+    AND started_at <= p_end_date;
+
+  RETURN v_invoice_id;
+END;
+$$;
+
+-- Part 5: Notification Digest
+CREATE OR REPLACE FUNCTION public.get_grouped_notifications(
+  p_workspace_id uuid,
+  p_user_id uuid
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  IF p_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  SELECT jsonb_agg(grouped) INTO v_result
+  FROM (
+    SELECT 
+      action,
+      entity_type,
+      COUNT(*) as count,
+      MAX(created_at) as latest_created_at,
+      jsonb_agg(id) as notification_ids,
+      MIN(title) as sample_title
+    FROM public.notification_events
+    WHERE workspace_id = p_workspace_id
+      AND user_id = p_user_id
+      AND read_at IS NULL
+    GROUP BY action, entity_type
+    ORDER BY MAX(created_at) DESC
+  ) grouped;
+
+  RETURN COALESCE(v_result, '[]'::jsonb);
+END;
+$$;
+
+-- Part 6: Exit Knowledge Transfer
+CREATE TABLE IF NOT EXISTS public.employee_handoffs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  departing_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  manager_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  notes text,
+  risks text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.employee_handoffs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Workspace members can view handoffs"
+  ON public.employee_handoffs FOR SELECT
+  USING (workspace_id = public.current_workspace());
+
+CREATE POLICY "Admins can insert handoffs"
+  ON public.employee_handoffs FOR INSERT
+  WITH CHECK (
+    workspace_id = public.current_workspace() AND
+    public.get_user_role(workspace_id) IN ('super_admin', 'admin')
+  );
+-- Migration: Batch 10 Production Operations Layer
+
+-- Part 1: File Storage Governance
+CREATE TABLE IF NOT EXISTS public.workspace_storage_settings (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    max_file_size_mb integer DEFAULT 100,
+    storage_limit_gb integer DEFAULT 100,
+    allowed_file_types text[] DEFAULT '{image/jpeg,image/png,image/gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv,application/zip}',
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    UNIQUE(workspace_id)
+);
+ALTER TABLE public.workspace_storage_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Workspace storage settings viewable by members" ON public.workspace_storage_settings;
+CREATE POLICY "Workspace storage settings viewable by members"
+    ON public.workspace_storage_settings FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM public.users
+        WHERE users.id = auth.uid() AND users.workspace_id = workspace_storage_settings.workspace_id
+    ));
+DROP POLICY IF EXISTS "Workspace storage settings manageable by admin" ON public.workspace_storage_settings;
+CREATE POLICY "Workspace storage settings manageable by admin"
+    ON public.workspace_storage_settings FOR ALL
+    USING (EXISTS (
+        SELECT 1 FROM public.users
+        WHERE users.id = auth.uid() AND users.workspace_id = workspace_storage_settings.workspace_id AND users.role IN ('super_admin', 'admin')
+    ));
+
+-- Add metadata columns to documents
+ALTER TABLE public.documents 
+    ADD COLUMN IF NOT EXISTS file_size_bytes bigint DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS mime_type text DEFAULT 'text/plain',
+    ADD COLUMN IF NOT EXISTS scan_status text DEFAULT 'clean',
+    ADD COLUMN IF NOT EXISTS uploaded_by uuid REFERENCES public.users(id) ON DELETE SET NULL;
+
+-- Add metadata columns to workspace_files
+ALTER TABLE public.workspace_files 
+    ADD COLUMN IF NOT EXISTS file_size_bytes bigint DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS mime_type text DEFAULT 'application/octet-stream',
+    ADD COLUMN IF NOT EXISTS scan_status text DEFAULT 'clean',
+    ADD COLUMN IF NOT EXISTS uploaded_by uuid REFERENCES public.users(id) ON DELETE SET NULL;
+
+-- RPC for pre-upload validation
+CREATE OR REPLACE FUNCTION public.check_storage_allowed(
+    p_workspace_id uuid,
+    p_file_size bigint,
+    p_mime_type text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_settings public.workspace_storage_settings;
+    v_used_bytes bigint;
+    v_max_bytes bigint;
+    v_limit_bytes bigint;
+BEGIN
+    -- Get settings or use defaults
+    SELECT * INTO v_settings FROM public.workspace_storage_settings WHERE workspace_id = p_workspace_id;
+    IF NOT FOUND THEN
+        v_max_bytes := 100 * 1024 * 1024; -- 100MB
+        v_limit_bytes := 100::bigint * 1024 * 1024 * 1024; -- 100GB
+    ELSE
+        v_max_bytes := v_settings.max_file_size_mb * 1024 * 1024;
+        v_limit_bytes := v_settings.storage_limit_gb::bigint * 1024 * 1024 * 1024;
+        
+        -- Check file type if settings exist and have a list
+        IF v_settings.allowed_file_types IS NOT NULL AND array_length(v_settings.allowed_file_types, 1) > 0 THEN
+            IF NOT (p_mime_type = ANY(v_settings.allowed_file_types)) THEN
+                RETURN jsonb_build_object('allowed', false, 'reason', 'File type not allowed.');
+            END IF;
+        END IF;
+    END IF;
+
+    -- Check individual file size
+    IF p_file_size > v_max_bytes THEN
+        RETURN jsonb_build_object('allowed', false, 'reason', 'File exceeds maximum allowed size.');
+    END IF;
+
+    -- Calculate current used storage (documents + workspace_files)
+    SELECT COALESCE(SUM(file_size_bytes), 0) INTO v_used_bytes 
+    FROM (
+        SELECT file_size_bytes FROM public.documents WHERE workspace_id = p_workspace_id
+        UNION ALL
+        SELECT file_size_bytes FROM public.workspace_files WHERE workspace_id = p_workspace_id
+    ) all_files;
+
+    -- Check quota
+    IF v_used_bytes + p_file_size > v_limit_bytes THEN
+        RETURN jsonb_build_object('allowed', false, 'reason', 'Workspace storage quota exceeded.');
+    END IF;
+
+    RETURN jsonb_build_object('allowed', true, 'reason', 'Success');
+END;
+$$;
+
+
+-- Part 2: Backup / Disaster Recovery Readiness
+CREATE TABLE IF NOT EXISTS public.backup_snapshots (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    snapshot_type text NOT NULL CHECK (snapshot_type IN ('automatic', 'manual')),
+    status text NOT NULL CHECK (status IN ('success', 'failed', 'running')),
+    started_at timestamptz DEFAULT now(),
+    completed_at timestamptz,
+    metadata jsonb DEFAULT '{}'::jsonb
+);
+ALTER TABLE public.backup_snapshots ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Backup snapshots viewable by super_admin" ON public.backup_snapshots;
+CREATE POLICY "Backup snapshots viewable by super_admin"
+    ON public.backup_snapshots FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM public.users
+        WHERE users.id = auth.uid() AND users.workspace_id = backup_snapshots.workspace_id AND users.role = 'super_admin'
+    ));
+DROP POLICY IF EXISTS "Backup snapshots insertable by super_admin" ON public.backup_snapshots;
+CREATE POLICY "Backup snapshots insertable by super_admin"
+    ON public.backup_snapshots FOR INSERT
+    WITH CHECK (EXISTS (
+        SELECT 1 FROM public.users
+        WHERE users.id = auth.uid() AND users.workspace_id = backup_snapshots.workspace_id AND users.role = 'super_admin'
+    ));
+
+CREATE OR REPLACE FUNCTION public.record_backup_snapshot(
+    p_workspace_id uuid,
+    p_snapshot_type text,
+    p_status text,
+    p_metadata jsonb DEFAULT '{}'::jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_user_role text;
+    v_id uuid;
+BEGIN
+    SELECT role INTO v_user_role FROM public.users WHERE id = auth.uid() AND workspace_id = p_workspace_id;
+    IF v_user_role != 'super_admin' THEN
+        RAISE EXCEPTION 'Only super_admin can record backup snapshots.';
+    END IF;
+
+    INSERT INTO public.backup_snapshots (workspace_id, snapshot_type, status, metadata, started_at, completed_at)
+    VALUES (p_workspace_id, p_snapshot_type, p_status, p_metadata, now(), CASE WHEN p_status IN ('success', 'failed') THEN now() ELSE NULL END)
+    RETURNING id INTO v_id;
+
+    RETURN v_id;
+END;
+$$;
+
+
+-- Part 3: Observability Layer
+CREATE TABLE IF NOT EXISTS public.system_events (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    severity text NOT NULL CHECK (severity IN ('info', 'warning', 'error', 'critical')),
+    source text NOT NULL CHECK (source IN ('frontend', 'database', 'rpc', 'auth', 'edge_function', 'integration')),
+    event_type text NOT NULL,
+    message text NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    resolved boolean DEFAULT false,
+    resolved_at timestamptz,
+    created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.system_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "System events viewable by admin" ON public.system_events;
+CREATE POLICY "System events viewable by admin"
+    ON public.system_events FOR SELECT
+    USING (EXISTS (
+        SELECT 1 FROM public.users
+        WHERE users.id = auth.uid() 
+          AND (system_events.workspace_id IS NULL OR users.workspace_id = system_events.workspace_id)
+          AND users.role IN ('super_admin', 'admin')
+    ));
+DROP POLICY IF EXISTS "Users can insert system events" ON public.system_events;
+CREATE POLICY "Users can insert system events"
+    ON public.system_events FOR INSERT
+    WITH CHECK (true);
+DROP POLICY IF EXISTS "Admins can update system events" ON public.system_events;
+CREATE POLICY "Admins can update system events"
+    ON public.system_events FOR UPDATE
+    USING (EXISTS (
+        SELECT 1 FROM public.users
+        WHERE users.id = auth.uid() 
+          AND (system_events.workspace_id IS NULL OR users.workspace_id = system_events.workspace_id)
+          AND users.role IN ('super_admin', 'admin')
+    ));
+
+-- Create company_working_rules table
+CREATE TABLE IF NOT EXISTS company_working_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    working_days JSONB NOT NULL DEFAULT '[1, 2, 3, 4, 5]',
+    saturday_policy TEXT NOT NULL DEFAULT 'ALL_WORKING',
+    custom_saturdays JSONB NOT NULL DEFAULT '[]',
+    working_hours JSONB NOT NULL DEFAULT '{"office_start_time": "09:00", "office_end_time": "17:00", "daily_working_hours": 8}',
+    timezone TEXT NOT NULL DEFAULT 'UTC',
+    effective_from DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_company_working_rules_workspace_date ON company_working_rules(workspace_id, effective_from);
+
+-- Create company_holidays table
+CREATE TABLE IF NOT EXISTS company_holidays (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    date DATE NOT NULL,
+    event_type TEXT NOT NULL DEFAULT 'holiday',
+    source TEXT NOT NULL DEFAULT 'manual',
+    year INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(workspace_id, date, name)
+);
+
+CREATE INDEX idx_company_holidays_workspace_date ON company_holidays(workspace_id, date);
+
+-- Enable RLS
+ALTER TABLE company_working_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE company_holidays ENABLE ROW LEVEL SECURITY;
+
+-- Policies for company_working_rules
+CREATE POLICY "Working rules visible to workspace members"
+    ON company_working_rules FOR SELECT
+    USING (workspace_id = public.current_workspace());
+
+CREATE POLICY "Working rules editable by PMs and Admins"
+    ON company_working_rules FOR ALL
+    USING (
+        workspace_id = public.current_workspace() AND
+        EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    );
+
+-- Policies for company_holidays
+CREATE POLICY "Company holidays visible to workspace members"
+    ON company_holidays FOR SELECT
+    USING (workspace_id = public.current_workspace());
+
+CREATE POLICY "Company holidays editable by PMs and Admins"
+    ON company_holidays FOR ALL
+    USING (
+        workspace_id = public.current_workspace() AND
+        EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    );
+
+
+-- RPC: is_working_day
+CREATE OR REPLACE FUNCTION is_working_day(p_workspace_id UUID, p_date DATE)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_rules record;
+    v_dow integer;
+    v_week_num integer;
+    v_is_holiday boolean;
+BEGIN
+    -- 1. Check if it's a holiday (holiday, festival, regional)
+    SELECT EXISTS (
+        SELECT 1 FROM company_holidays 
+        WHERE workspace_id = p_workspace_id 
+          AND date = p_date 
+          AND event_type IN ('holiday', 'festival', 'regional', 'company')
+    ) INTO v_is_holiday;
+
+    IF v_is_holiday THEN
+        RETURN FALSE;
+    END IF;
+
+    -- 2. Get the applicable working rules for this date
+    SELECT * INTO v_rules 
+    FROM company_working_rules 
+    WHERE workspace_id = p_workspace_id 
+      AND effective_from <= p_date
+    ORDER BY effective_from DESC 
+    LIMIT 1;
+
+    -- If no rules found, assume standard Mon-Fri
+    IF NOT FOUND THEN
+        v_dow := extract(dow from p_date);
+        IF v_dow = 0 OR v_dow = 6 THEN
+            RETURN FALSE;
+        END IF;
+        RETURN TRUE;
+    END IF;
+
+    v_dow := extract(dow from p_date);
+
+    -- 3. Check if the day of week is in working_days jsonb array
+    -- (0=Sun, 1=Mon, ..., 6=Sat)
+    IF NOT (v_rules.working_days @> to_jsonb(v_dow)) THEN
+        RETURN FALSE;
+    END IF;
+
+    -- 4. Apply Saturday specific logic if it is Saturday
+    IF v_dow = 6 THEN
+        IF v_rules.saturday_policy = 'ALL_OFF' THEN
+            RETURN FALSE;
+        ELSIF v_rules.saturday_policy = 'ALL_WORKING' THEN
+            RETURN TRUE;
+        ELSE
+            -- Calculate which occurrence of Saturday this is in the month
+            -- e.g., if date is 1st-7th it's week 1, 8th-14th week 2...
+            v_week_num := ceil(extract(day from p_date) / 7.0);
+
+            IF v_rules.saturday_policy = 'FIRST_THIRD_OFF' THEN
+                IF v_week_num = 1 OR v_week_num = 3 THEN RETURN FALSE; END IF;
+            ELSIF v_rules.saturday_policy = 'SECOND_FOURTH_OFF' THEN
+                IF v_week_num = 2 OR v_week_num = 4 THEN RETURN FALSE; END IF;
+            ELSIF v_rules.saturday_policy = 'CUSTOM' THEN
+                IF (v_rules.custom_saturdays @> to_jsonb(v_week_num)) THEN
+                    RETURN FALSE;
+                END IF;
+            END IF;
+        END IF;
+    END IF;
+
+    RETURN TRUE;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION is_working_day(UUID, DATE) TO public;
+GRANT EXECUTE ON FUNCTION is_working_day(UUID, DATE) TO anon;
+GRANT EXECUTE ON FUNCTION is_working_day(UUID, DATE) TO authenticated;
+
+NOTIFY pgrst, 'reload schema';
+-- Migration: Add Milestone Signoffs
+-- Description: Creates the milestone_signoffs table to act as an immutable audit log for client approvals.
+
+CREATE TABLE IF NOT EXISTS public.milestone_signoffs (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    milestone_id uuid NOT NULL REFERENCES public.milestones(id) ON DELETE CASCADE,
+    client_id uuid NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+    decision text NOT NULL CHECK (decision IN ('approved', 'changes_requested')),
+    comments text,
+    version_reference text,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.milestone_signoffs ENABLE ROW LEVEL SECURITY;
+
+-- Admins and PMs can view all signoffs in their workspace
+CREATE POLICY "View milestone signoffs (Internal)"
+    ON public.milestone_signoffs FOR SELECT
+    USING (
+        workspace_id = public.current_workspace() AND
+        (public.has_capability(auth.uid(), 'manage_projects') OR public.has_capability(auth.uid(), 'manage_settings'))
+    );
+
+-- Clients can view signoffs for milestones on projects they own/have access to
+CREATE POLICY "View milestone signoffs (Client)"
+    ON public.milestone_signoffs FOR SELECT
+    USING (
+        workspace_id = public.current_workspace() AND
+        EXISTS (
+            SELECT 1 FROM public.milestones m
+            JOIN public.projects p ON p.id = m.project_id
+            WHERE m.id = milestone_signoffs.milestone_id AND p.owner_id = auth.uid()
+        )
+    );
+
+-- Clients can insert signoffs for milestones on projects they own
+CREATE POLICY "Insert milestone signoffs (Client)"
+    ON public.milestone_signoffs FOR INSERT
+    WITH CHECK (
+        workspace_id = public.current_workspace() AND
+        client_id = auth.uid() AND
+        EXISTS (
+            SELECT 1 FROM public.milestones m
+            JOIN public.projects p ON p.id = m.project_id
+            WHERE m.id = milestone_id AND p.owner_id = auth.uid()
+        )
+    );
+-- ==========================================
+-- BATCH 5E: Profitability Intelligence Engine
+-- Add missing budget column and get_project_profitability RPC
+-- ==========================================
+
+-- 1. Add budget to projects safely
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS budget NUMERIC DEFAULT 0;
+
+-- 2. Create the Profitability RPC
+CREATE OR REPLACE FUNCTION public.get_project_profitability(p_workspace_id UUID)
+RETURNS TABLE (
+    project_id UUID,
+    project_name TEXT,
+    budget NUMERIC,
+    revenue NUMERIC,
+    estimated_cost NUMERIC,
+    actual_cost NUMERIC,
+    margin NUMERIC,
+    margin_percentage NUMERIC,
+    risk TEXT,
+    unbilled_approved_work NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH ProjectRevenue AS (
+        SELECT 
+            p.id as project_id,
+            COALESCE(SUM(i.grand_total), 0) as invoiced_revenue
+        FROM public.projects p
+        LEFT JOIN public.invoices i ON i.project_id = p.id AND i.status != 'cancelled' AND i.deleted_at IS NULL
+        WHERE p.workspace_id = p_workspace_id AND p.deleted_at IS NULL
+        GROUP BY p.id
+    ),
+    ProjectMilestones AS (
+        SELECT 
+            p.id as project_id,
+            -- Coalesce billing_milestones amounts that are ready_for_billing or pending but not invoiced
+            COALESCE(SUM(m.amount), 0) as unbilled_approved_work
+        FROM public.projects p
+        LEFT JOIN public.billing_milestones m ON m.project_id = p.id AND m.status = 'pending'
+        WHERE p.workspace_id = p_workspace_id AND p.deleted_at IS NULL
+        GROUP BY p.id
+    ),
+    ProjectCost AS (
+        SELECT 
+            t.project_id,
+            -- Deriving cost rate from base_salary (assuming 160 hours/month standard)
+            COALESCE(SUM(t.estimated_hours * (COALESCE(c.base_salary, 3000) / 160.0)), 0) as estimated_cost,
+            COALESCE(SUM(t.work_time_hours * (COALESCE(c.base_salary, 3000) / 160.0)), 0) as actual_cost
+        FROM public.tasks t
+        LEFT JOIN public.compensation_records c ON c.employee_id = t.assignee_id AND c.effective_to IS NULL
+        WHERE t.workspace_id = p_workspace_id AND t.deleted_at IS NULL
+        GROUP BY t.project_id
+    )
+    SELECT 
+        p.id as project_id,
+        p.name as project_name,
+        p.budget as budget,
+        (pr.invoiced_revenue + pm.unbilled_approved_work) as revenue,
+        COALESCE(pc.estimated_cost, 0) as estimated_cost,
+        COALESCE(pc.actual_cost, 0) as actual_cost,
+        ((pr.invoiced_revenue + pm.unbilled_approved_work) - COALESCE(pc.actual_cost, 0)) as margin,
+        CASE 
+            WHEN (pr.invoiced_revenue + pm.unbilled_approved_work) > 0 THEN 
+                (((pr.invoiced_revenue + pm.unbilled_approved_work) - COALESCE(pc.actual_cost, 0)) / (pr.invoiced_revenue + pm.unbilled_approved_work)) * 100
+            ELSE 0 
+        END as margin_percentage,
+        CASE
+            WHEN COALESCE(pc.actual_cost, 0) > p.budget AND p.budget > 0 THEN 'Over Budget'
+            WHEN COALESCE(pc.actual_cost, 0) > (p.budget * 0.8) AND p.budget > 0 THEN 'At Risk'
+            ELSE 'Healthy'
+        END as risk,
+        pm.unbilled_approved_work as unbilled_approved_work
+    FROM public.projects p
+    LEFT JOIN ProjectRevenue pr ON pr.project_id = p.id
+    LEFT JOIN ProjectMilestones pm ON pm.project_id = p.id
+    LEFT JOIN ProjectCost pc ON pc.project_id = p.id
+    WHERE p.workspace_id = p_workspace_id AND p.deleted_at IS NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+-- Fix PGRST116 by always returning a JSON object from get_invitation_by_token
+CREATE OR REPLACE FUNCTION get_invitation_by_token(p_token text)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_inv record;
+  v_workspace_name text;
+BEGIN
+  -- Find the invitation matching the token
+  SELECT id, email, role, status, expires_at, workspace_id 
+  INTO v_inv
+  FROM invitations
+  WHERE token = p_token;
+
+  -- If not found, return valid: false with reason NOT_FOUND
+  IF NOT FOUND THEN
+    RETURN json_build_object('valid', false, 'reason', 'NOT_FOUND');
+  END IF;
+
+  -- If not pending, it's already accepted or revoked
+  IF v_inv.status != 'pending' THEN
+    RETURN json_build_object('valid', false, 'reason', 'NOT_PENDING', 'status', v_inv.status);
+  END IF;
+
+  -- If expired
+  IF v_inv.expires_at <= now() THEN
+    RETURN json_build_object('valid', false, 'reason', 'EXPIRED', 'status', v_inv.status);
+  END IF;
+
+  -- Get the workspace name for UI display
+  SELECT name INTO v_workspace_name
+  FROM workspaces
+  WHERE id = v_inv.workspace_id;
+
+  -- Return the valid invitation payload
+  RETURN json_build_object(
+    'valid', true,
+    'id', v_inv.id,
+    'email', v_inv.email,
+    'role', v_inv.role,
+    'status', v_inv.status,
+    'expires_at', v_inv.expires_at,
+    'workspace_id', v_inv.workspace_id,
+    'workspace_name', v_workspace_name
+  );
+END;
+$$;
+
+-- Secure RPC to accept an invitation atomically
+CREATE OR REPLACE FUNCTION accept_invitation(p_token text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_inv record;
+BEGIN
+  SELECT * INTO v_inv FROM invitations WHERE token = p_token AND status = 'pending';
+  
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
+  IF v_inv.expires_at <= now() THEN
+    RETURN false;
+  END IF;
+
+  UPDATE invitations 
+  SET status = 'accepted', accepted_at = now()
+  WHERE token = p_token AND status = 'pending';
+
+  RETURN true;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_invitation_by_token(text) TO public;
+GRANT EXECUTE ON FUNCTION get_invitation_by_token(text) TO anon;
+GRANT EXECUTE ON FUNCTION get_invitation_by_token(text) TO authenticated;
+
+GRANT EXECUTE ON FUNCTION accept_invitation(text) TO public;
+GRANT EXECUTE ON FUNCTION accept_invitation(text) TO anon;
+GRANT EXECUTE ON FUNCTION accept_invitation(text) TO authenticated;
+
+-- Add RLS Policies for Invitations to allow PMs/Admins to manage them securely
+-- Previously there were no policies, causing reads/inserts to fail silently or throw errors
+
+-- Select: Visible to workspace members
+DROP POLICY IF EXISTS "Invitations are visible to workspace members" ON invitations;
+CREATE POLICY "Invitations are visible to workspace members"
+  ON invitations FOR SELECT
+  USING (workspace_id = current_workspace());
+
+-- Insert: PMs and Admins can create invitations
+DROP POLICY IF EXISTS "Invitations can be created by PMs and Admins" ON invitations;
+CREATE POLICY "Invitations can be created by PMs and Admins"
+  ON invitations FOR INSERT
+  WITH CHECK (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- Update: PMs and Admins can update/revoke invitations
+DROP POLICY IF EXISTS "Invitations can be updated by PMs and Admins" ON invitations;
+CREATE POLICY "Invitations can be updated by PMs and Admins"
+  ON invitations FOR UPDATE
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- Delete: PMs and Admins can delete invitations
+DROP POLICY IF EXISTS "Invitations can be deleted by PMs and Admins" ON invitations;
+CREATE POLICY "Invitations can be deleted by PMs and Admins"
+  ON invitations FOR DELETE
+  USING (
+    workspace_id = current_workspace() AND
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+  );
+
+-- Reload schema cache
+NOTIFY pgrst, 'reload schema';

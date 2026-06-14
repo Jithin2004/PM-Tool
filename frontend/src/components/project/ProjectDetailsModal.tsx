@@ -21,6 +21,7 @@ import { ProjectEffortSummary } from '../reports/ProjectEffortSummary';
 import { TeamCapacityView } from '../reports/TeamCapacityView';
 import { ProjectShareModal } from './ProjectShareModal';
 import { SharedProjectDashboard } from '../../pages/shared/SharedProjectDashboard';
+import { ChangeRequestsTab } from './ChangeRequestsTab';
 
 function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; currentUserProfile?: any }) {
   const [loading, setLoading] = useState(true);
@@ -342,7 +343,7 @@ export function ProjectDetailsModal({
   useEscapeKey(true, onClose);
   const hasTasks = tasks.some(t => t.project_id === project.id);
 
-  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance' | 'insights'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance' | 'insights' | 'change_requests'>('general');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [previewToken, setPreviewToken] = useState<string | null>(null);
   const [deltaDays, setDeltaDays] = useState('5');
@@ -632,19 +633,6 @@ export function ProjectDetailsModal({
     setScanningIndex(null);
   };
 
-  const simulateTampering = () => {
-    if (localLogs.length === 0) return;
-    const updated = [...localLogs];
-    const targetIdx = Math.floor(Math.random() * updated.length);
-    updated[targetIdx] = {
-      ...updated[targetIdx],
-      changes: updated[targetIdx].changes + ' [TAMPERED_METADATA_VALUE]'
-    };
-    setLocalLogs(updated);
-    setVerificationState('UNVERIFIED');
-    setTamperedIndex(null);
-    setScanningIndex(null);
-  };
 
   const logs = useMemo(() => {
     return localLogs;
@@ -873,17 +861,7 @@ export function ProjectDetailsModal({
                         {verificationState === 'VERIFYING' ? "Scanning..." : verificationState === 'SECURED' ? "Re-Verify" : "Verify Ledger"}
                       </button>
                     )}
-                    {localLogs.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={simulateTampering}
-                        disabled={verificationState === 'VERIFYING'}
-                        className="px-4 py-2 text-[10px] uppercase font-medium tracking-wide border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 text-signal-critical/90 hover:bg-signal-critical-bg transition-all"
-                        title="Mutate local block state to trigger warning UI"
-                      >
-                        Simulate Tamper
-                      </button>
-                    )}
+
                   </div>
                 </div>
 
@@ -1164,6 +1142,15 @@ export function ProjectDetailsModal({
               }`}
             >
               <TrendingUp className="w-3.5 h-3.5" /> Insights
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('change_requests')}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${
+                activeTab === 'change_requests' ? 'active text-amber-400' : ''
+              }`}
+            >
+              CRs
             </button>
           </div>
 
@@ -1640,6 +1627,8 @@ export function ProjectDetailsModal({
             </div>
           ) : activeTab === 'finance' ? (
             <ProjectFinanceTab project={project} currentUserProfile={currentUserProfile} />
+          ) : activeTab === 'change_requests' ? (
+            <ChangeRequestsTab project={project} />
           ) : null}
         </div>
       </motion.div>

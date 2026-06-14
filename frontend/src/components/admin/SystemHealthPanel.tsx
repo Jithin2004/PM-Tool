@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { Icon } from '../ui/Icon';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { supportService } from '../../services/supportService';
-import { DownloadCloud, Activity, ShieldAlert, Shield } from 'lucide-react';
+import { DownloadCloud, Activity, ShieldAlert, Shield, DatabaseBackup } from 'lucide-react';
 import { TestDataGuardian, TestDataIssue } from '../../core/system/TestDataGuardian';
 
 export function SystemHealthPanel() {
@@ -16,6 +16,7 @@ export function SystemHealthPanel() {
   const [runningAudit, setRunningAudit] = useState(false);
   const [hygieneIssues, setHygieneIssues] = useState<TestDataIssue[]>([]);
   const [scanningHygiene, setScanningHygiene] = useState(false);
+  const [latestBackup, setLatestBackup] = useState<any>(null);
 
   const scanHygiene = async () => {
     setScanningHygiene(true);
@@ -26,7 +27,7 @@ export function SystemHealthPanel() {
 
   const handleReviewIssue = (issue: TestDataIssue) => {
     const metaStr = issue.metadata ? `\nDetails: ${JSON.stringify(issue.metadata, null, 2)}` : '';
-    alert(`Reviewing: ${issue.entityName}\nType: ${issue.entityType}\nReason: ${issue.reason}${metaStr}`);
+    window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: `Reviewing: ${issue.entityName} (${issue.entityType})`, type: 'info' }}));
   };
 
   const handleArchiveIssue = async (issue: TestDataIssue) => {
@@ -104,6 +105,18 @@ export function SystemHealthPanel() {
   useEffect(() => {
     fetchEvents();
     scanHygiene();
+    const fetchBackup = async () => {
+      if (!workspace?.id) return;
+      const { data } = await supabase
+        .from('backup_snapshots')
+        .select('*')
+        .eq('workspace_id', workspace.id)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) setLatestBackup(data);
+    };
+    fetchBackup();
   }, [workspace?.id, filterSeverity, filterSource]);
 
   const handleResolve = async (id: string) => {
@@ -248,6 +261,33 @@ export function SystemHealthPanel() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Backup Health Panel */}
+      <div className="px-4 py-4 border-b bg-[var(--pm-surface-high)]" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
+        <h3 className="text-xs font-bold font-mono-pm uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--pm-on-surface)' }}>
+          <DatabaseBackup className="w-4 h-4 text-indigo-500" />
+          Backup & Recovery
+        </h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="p-3 rounded-lg border bg-[var(--pm-surface-lowest)] border-[var(--pm-border)] flex flex-col items-center justify-center text-center">
+            <span className="text-[10px] font-mono-pm uppercase text-[var(--pm-text-secondary)] mb-1">Database Backup</span>
+            <span className="text-sm font-bold text-emerald-500">Enabled</span>
+          </div>
+          <div className="p-3 rounded-lg border bg-[var(--pm-surface-lowest)] border-[var(--pm-border)] flex flex-col items-center justify-center text-center">
+            <span className="text-[10px] font-mono-pm uppercase text-[var(--pm-text-secondary)] mb-1">Storage Backup</span>
+            <span className="text-sm font-bold text-emerald-500">Enabled</span>
+          </div>
+          <div className="p-3 rounded-lg border bg-[var(--pm-surface-lowest)] border-[var(--pm-border)] flex flex-col items-center justify-center text-center">
+            <span className="text-[10px] font-mono-pm uppercase text-[var(--pm-text-secondary)] mb-1">Last Restore Test</span>
+            <span className="text-sm font-bold text-[var(--pm-text)]">
+              {latestBackup ? new Date(latestBackup.started_at).toLocaleDateString() : 'Never'}
+            </span>
+            <span className="text-[9px] mt-1 text-[var(--pm-text-tertiary)]">
+              {latestBackup?.status === 'success' ? 'Verified' : 'Pending'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Events List */}

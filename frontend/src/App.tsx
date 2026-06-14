@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AppProviders } from './app/providers';
 import { ResolveRouter } from './app/router';
 import { registerDebugTools } from './debug/registerDebugTools';
-import { CommandPalette } from './components/navigation/CommandPalette';
+
 import { PremiumAppShell } from './components/layout/PremiumAppShell';
 
 export default function App() {
@@ -42,14 +42,7 @@ export default function App() {
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
 
-    registerDebugTools().then(() => {
-      import('./services/syntheticStressTest').then(m => {
-        m.recoverAbandonedStressRuns().then(r => {
-          if (r.recovered) {
-          }
-        });
-      });
-    });
+    registerDebugTools();
 
     return () => {
       window.removeEventListener('error', handleError);
@@ -62,7 +55,6 @@ export default function App() {
   return (
     <AppProviders>
       <PremiumAppShell>
-        <CommandPalette />
         <ResolveRouter />
       </PremiumAppShell>
     </AppProviders>

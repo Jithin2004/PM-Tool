@@ -27,7 +27,7 @@ export const meetingService = {
 
   async getMeetings(workspaceId: string, projectId?: string): Promise<Meeting[]> {
     if (!isSupabaseConfigured) return [];
-    let query = supabase.from('meetings').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null).order('start_time', { ascending: true });
+    let query = supabase.from('meetings').select('*').eq('workspace_id', workspaceId).is('deleted_at', null).order('start_time', { ascending: true });
     if (projectId) query = query.eq('project_id', projectId);
     const { data, error } = await query;
     if (error) { console.error('meetingService.getMeetings:', error); return []; }
@@ -48,7 +48,7 @@ export const meetingService = {
 
   async getAttendees(meetingId: string): Promise<MeetingAttendee[]> {
     if (!isSupabaseConfigured) return [];
-    const { data, error } = await supabase.from('meeting_attendees').select('*').limit(50).eq('meeting_id', meetingId);
+    const { data, error } = await supabase.from('meeting_attendees').select('*').eq('meeting_id', meetingId);
     if (error) { console.error('meetingService.getAttendees:', error); return []; }
     return (data || []) as MeetingAttendee[];
   },

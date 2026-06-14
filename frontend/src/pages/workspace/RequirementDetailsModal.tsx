@@ -62,9 +62,37 @@ export function RequirementDetailsModal({ requirement, onClose, onUpdate }: { re
     }
   };
 
-  const handleCreateProject = () => {
-    setIsAdding(true);
-    onClose();
+  const handleCreateProject = async () => {
+    setLoading(true);
+    try {
+      const { data: proj, error } = await supabase.from('projects').insert([{
+        workspace_id: workspace!.id,
+        name: requirement.title,
+        description: requirement.description,
+        source_requirement_id: requirement.id,
+        // The prompt says: "Copies: name, description, client, attachments, estimated timeline."
+        // We will pass external_id or tags if client is stored there.
+        // Assuming requirement has a deadline, we copy it.
+        deadline: requirement.deadline || null,
+      }]).select('*').single();
+      
+      if (error) throw error;
+      
+      await activityLogService.appendLog({
+        workspace_id: workspace!.id,
+        action: 'project_created_from_requirement',
+        project_id: proj.id,
+        metadata: { requirement_id: requirement.id }
+      });
+      
+      notify('Project created successfully', 'success');
+      onClose();
+    } catch (err) {
+      console.error(err);
+      notify('Failed to create project', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

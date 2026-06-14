@@ -12,6 +12,8 @@ import { EnterpriseImportCenter } from './EnterpriseImportCenter';
 import { SystemInfoPanel } from '../../components/admin/SystemInfoPanel';
 import { SystemHealthPanel } from '../../components/admin/SystemHealthPanel';
 import { BackupRestorePanel } from '../../components/admin/BackupRestorePanel';
+import { StorageSettingsPanel } from '../../components/admin/StorageSettingsPanel';
+import { RolesPermissionsPanel } from '../../components/admin/RolesPermissionsPanel';
 import { BillingSettings } from '../../components/control/BillingSettings';
 import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 type TopTab = 'company' | 'people' | 'workspace' | 'system';
@@ -430,6 +432,7 @@ export function AdminPanel() {
     workspace: [
       { id: 'rules', label: 'Rules', icon: 'gavel' },
       { id: 'data_management', label: 'Data Management', icon: 'cloud_upload' },
+      { id: 'storage', label: 'Storage', icon: 'sd_storage' },
       { id: 'integrations', label: 'Integrations', icon: 'extension' }
     ],
     system: [
@@ -1209,6 +1212,9 @@ export function AdminPanel() {
 
       {activeSubTab === 'roles' && (
         <div className="space-y-6">
+          <div className="bg-[var(--pm-surface-low)] rounded-xl border border-[var(--pm-border)] p-4 shadow-sm">
+            <RolesPermissionsPanel />
+          </div>
           <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-sm">
             <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
               <Icon name="admin_panel_settings" size={22} style={{ color: 'var(--pm-secondary)' }} />
@@ -1276,6 +1282,12 @@ export function AdminPanel() {
 {activeSubTab === 'data_management' && (
         <div className="rounded-xl overflow-hidden">
           <EnterpriseImportCenter />
+        </div>
+      )}
+
+      {activeSubTab === 'storage' && (
+        <div className="rounded-xl overflow-hidden p-2">
+          <StorageSettingsPanel />
         </div>
       )}
 

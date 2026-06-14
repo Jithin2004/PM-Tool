@@ -2,6 +2,8 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { ExecutionSystem } from '../../components/execution/system/ExecutionSystem';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { Layers } from 'lucide-react';
 
 export default function SprintPage() {
   const { profile } = useAuth();

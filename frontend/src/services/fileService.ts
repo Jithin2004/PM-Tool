@@ -95,6 +95,15 @@ export const fileService = {
     if (!isSupabaseConfigured) return null;
     
     try {
+      // 0. Pre-upload governance check
+      const { data: checkData, error: checkError } = await supabase.rpc('check_storage_allowed', {
+        p_workspace_id: workspaceId,
+        p_file_size: file.size,
+        p_mime_type: file.type || 'application/octet-stream'
+      });
+      if (checkError) throw new Error(`Storage check failed: ${checkError.message}`);
+      if (checkData && !checkData.allowed) throw new Error(`Upload denied: ${checkData.reason}`);
+
       // 1. Upload to Supabase Storage
       const timestamp = new Date().getTime();
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
@@ -170,6 +179,15 @@ export const fileService = {
     if (!isSupabaseConfigured) return null;
     
     try {
+      // 0. Pre-upload governance check
+      const { data: checkData, error: checkError } = await supabase.rpc('check_storage_allowed', {
+        p_workspace_id: fileRecord.workspace_id,
+        p_file_size: file.size,
+        p_mime_type: file.type || 'application/octet-stream'
+      });
+      if (checkError) throw new Error(`Storage check failed: ${checkError.message}`);
+      if (checkData && !checkData.allowed) throw new Error(`Upload denied: ${checkData.reason}`);
+
       // 1. Determine next version number
       const { count } = await supabase
         .from('file_versions')
