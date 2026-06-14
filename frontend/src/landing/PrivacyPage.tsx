@@ -15,42 +15,57 @@ export function PrivacyPage() {
       <main className="max-w-3xl mx-auto px-6 py-12 lg:py-24 space-y-8 selectable-content">
         <div className="premium-panel p-8 rounded-xl border border-[var(--border-soft)]">
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-white">Privacy Policy</h1>
-          <p className="text-[#a1a1aa] font-mono text-sm opacity-80">Effective Date: May 28, 2026</p>
+          <p className="text-[#a1a1aa] font-mono text-sm opacity-80 mb-4">Effective Date: May 28, 2026</p>
+          <div className="bg-orange-500/10 border border-orange-500/30 text-orange-400 p-4 rounded text-sm font-semibold">
+            WARNING: Legal review required before commercial distribution.
+          </div>
         </div>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">1. Data Ownership & Self-Hosting</h2>
+          <h2 className="text-xl font-semibold text-white">1. Self-Hosted & Private Workspace Architecture</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            Resolve PM operates as self-hosted, perpetual enterprise software. You retain 100% ownership and control over your project data, employee metrics, and system configuration. Because the software runs within your isolated environment, Resolve PM HQ cannot access, view, or harvest your operational data.
+            Resolve PM is provided as self-hosted, perpetual enterprise software. Because the software runs entirely within your isolated database and infrastructure, you retain 100% ownership and control over your data. Resolve PM HQ cannot access, view, intercept, or harvest your operational data.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">2. License Verification Telemetry</h2>
+          <h2 className="text-xl font-semibold text-white">2. Account Information & Authentication</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            The software performs a lightweight, periodic background ping to our licensing servers strictly to verify the cryptographic authenticity of your product key. This ping transmits your Product Key, an anonymous hardware fingerprint, and the timestamp. No project data, personally identifiable information, or usage analytics are transmitted during this check.
+            Account provisioning, authentication tokens, and profile management are handled exclusively by your configured Identity Provider (IdP) and your instance of the Resolve PM database. We do not store, process, or proxy your credentials.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">3. Third-Party Integrations</h2>
+          <h2 className="text-xl font-semibold text-white">3. Operational Data & Files</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            If you enable third-party integrations (such as Slack or GitHub), data exchange occurs directly between your Resolve PM instance and the third-party provider's API. Resolve PM HQ does not proxy or intercept this communication. You are subject to the privacy policies of those third-party services.
+            All operational data—including projects, tasks, comments, financial metrics, and uploaded files—reside permanently on your secure storage buckets and database. Your instance's Row-Level Security (RLS) policies enforce strict data isolation between your users. No project data is ever transmitted to Resolve PM HQ.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">4. Diagnostic Support Packages</h2>
+          <h2 className="text-xl font-semibold text-white">4. Audit Logs</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            In the event of a system failure, your Super Administrator may choose to escalate a support ticket to Resolve PM HQ. This action explicitly bundles an anonymized diagnostic package containing error stack traces and configuration states. The administrator may review this package prior to transmission. We use this data strictly for troubleshooting your specific issue.
+            The application maintains an immutable internal audit ledger of actions performed by users. This is retained on your own database strictly for your security and compliance review. It is not shared externally.
           </p>
         </section>
+
+        <section className="space-y-4 premium-panel p-6 rounded-xl">
+          <h2 className="text-xl font-semibold text-white">5. Retention and Deletion Rights</h2>
+          <p className="text-[#a1a1aa] leading-relaxed">
+            Since you own the infrastructure, you dictate your own data retention and deletion policies. The workspace administrator has the full authority to wipe the database, archive records, or destroy instances without interference or retention policies enforced by Resolve PM HQ.
+          </p>
+        </section>
+
       </main>
 
       <footer className="w-full py-8 px-6 lg:px-12 flex flex-col md:flex-row justify-between items-center border-t border-[var(--border-soft)] mt-12 bg-black/30">
         <div className="flex flex-col items-center md:items-start gap-2 mb-6 md:mb-0">
           <span className="font-semibold text-white">Resolve PM</span>
           <p className="text-sm text-[#a1a1aa] opacity-60">© 2026 Resolve PM. All rights reserved.</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-6">
+          <a href="/terms" className="font-body-sm text-body-sm text-[#a1a1aa] hover:text-white transition-all">Terms</a>
+          <a href="mailto:contact@resolvepm.app" className="font-body-sm text-body-sm text-[#a1a1aa] hover:text-white transition-all">Contact</a>
         </div>
       </footer>
     </div>

@@ -7267,30 +7267,7 @@ ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
 -- -------------------------------------------------------------
 
 -- Archive Employee Function
-CREATE OR REPLACE FUNCTION archive_employee(p_user_id uuid, p_workspace_id uuid)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = ''
-AS $$
-BEGIN
-  -- We don't delete the user row, we just mark them as terminated or resigned
-  UPDATE users 
-  SET 
-    -- Do not touch employment_status if it's already resigned, suspended, etc.
-    -- Assuming a column employment_status exists (from workspace.ts, but let's add it if missing)
-    role = 'viewer' -- drop permissions
-  WHERE id = p_user_id AND workspace_id = p_workspace_id;
-  
-  -- Unassign from active tasks
-  UPDATE tasks 
-  SET assignee_id = NULL 
-  WHERE assignee_id = p_user_id AND status NOT IN ('done', 'archived');
-  
-  -- Log the event
-  INSERT INTO activity_logs (workspace_id, actor_id, action, metadata)
-  VALUES (p_workspace_id, auth.uid(), 'archived_employee', jsonb_build_object('user_id', p_user_id));
-END;
-$$;
+-- Removed old archive_employee(uuid, uuid)
 
 -- Add employment_status column to users table if not exists (already checked earlier, it's missing in MASTER SCHEMA!)
 DO $$ 
@@ -8741,7 +8718,7 @@ CREATE TABLE IF NOT EXISTS public.change_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  requested_by uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  requested_by uuid REFERENCES users(id) ON DELETE SET NULL,
   title text NOT NULL,
   description text,
   reason text,
@@ -8891,8 +8868,8 @@ $$;
 CREATE TABLE IF NOT EXISTS public.employee_handoffs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  departing_user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  manager_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  departing_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  manager_id uuid REFERENCES users(id) ON DELETE SET NULL,
   notes text,
   risks text,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -9492,3 +9469,116 @@ CREATE POLICY "Invitations can be deleted by PMs and Admins"
 
 -- Reload schema cache
 NOTIFY pgrst, 'reload schema';
+
+
+-- ==============================================================================
+-- RC-1.2 HARDENING: Missing RLS Policies
+-- ==============================================================================
+
+-- workspace_files
+ALTER TABLE public.workspace_files ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view workspace files"
+  ON public.workspace_files FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can insert workspace files"
+  ON public.workspace_files FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can update workspace files"
+  ON public.workspace_files FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can delete workspace files"
+  ON public.workspace_files FOR DELETE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));
+
+-- requirements
+ALTER TABLE public.requirements ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view requirements"
+  ON public.requirements FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can insert requirements"
+  ON public.requirements FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can update requirements"
+  ON public.requirements FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can delete requirements"
+  ON public.requirements FOR DELETE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));
+
+-- milestones
+ALTER TABLE public.milestones ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view milestones"
+  ON public.milestones FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can insert milestones"
+  ON public.milestones FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can update milestones"
+  ON public.milestones FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can delete milestones"
+  ON public.milestones FOR DELETE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));
+
+-- epics
+ALTER TABLE public.epics ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view epics"
+  ON public.epics FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can insert epics"
+  ON public.epics FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can update epics"
+  ON public.epics FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can delete epics"
+  ON public.epics FOR DELETE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));
+
+-- work_sessions
+ALTER TABLE public.work_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view work_sessions"
+  ON public.work_sessions FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can insert work_sessions"
+  ON public.work_sessions FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can update work_sessions"
+  ON public.work_sessions FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can delete work_sessions"
+  ON public.work_sessions FOR DELETE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));
+
+-- billing_milestones
+ALTER TABLE public.billing_milestones ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can view billing_milestones"
+  ON public.billing_milestones FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can insert billing_milestones"
+  ON public.billing_milestones FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can update billing_milestones"
+  ON public.billing_milestones FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Users can delete billing_milestones"
+  ON public.billing_milestones FOR DELETE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));
+
+
+
+-- ==============================================================================
+-- RC-1.2 HARDENING: Notification System Scale Indexes & Enterprise Indexes
+-- ==============================================================================
+
+CREATE INDEX IF NOT EXISTS idx_notification_events_user_unread ON public.notification_events(user_id, created_at DESC) WHERE read_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notification_events_user_timeline ON public.notification_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notification_events_digest_group ON public.notification_events(user_id, type, entity_type, created_at DESC);
+
+-- Verify Existing Enterprise Indexes
+CREATE INDEX IF NOT EXISTS idx_tasks_workspace_active ON public.tasks(workspace_id, status) WHERE status != 'completed' AND status != 'archived';
+CREATE INDEX IF NOT EXISTS idx_projects_workspace_active ON public.projects(workspace_id, status) WHERE status != 'completed' AND status != 'archived';
+CREATE INDEX IF NOT EXISTS idx_documents_workspace_active ON public.documents(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_users_rls_lookup ON public.users(id, workspace_id, role);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_workspace_time ON public.activity_logs(workspace_id, created_at DESC);
+
