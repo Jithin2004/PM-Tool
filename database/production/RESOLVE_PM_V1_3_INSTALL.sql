@@ -532,14 +532,13 @@ RETURNS uuid
 LANGUAGE sql
 STABLE
 SECURITY DEFINER SET search_path = ''
-SET search_path = public
 AS $$
-  SELECT workspace_id FROM users WHERE id = auth.uid() LIMIT 1
-$;
+  SELECT workspace_id FROM public.users WHERE id = auth.uid() LIMIT 1
+$$;
 
 -- Returns true if the currently authenticated user is an active workspace member.
 CREATE OR REPLACE FUNCTION public.is_active_workspace_member()
-RETURNS boolean AS $
+RETURNS boolean AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 
@@ -549,7 +548,7 @@ BEGIN
       AND status = 'active'
   );
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
 -- Auto-creates a users row when a new auth.users record is inserted (OAuth / email signup).
@@ -566,11 +565,6 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = ''
 AS $$
 BEGIN
-  -- Allow users to reclaim their workspace if they are the true owner
-  IF EXISTS (SELECT 1 FROM public.workspaces WHERE id = NEW.workspace_id AND owner_id = NEW.id) THEN
-    RETURN NEW;
-  END IF;
-
   -- Prevent changing workspace_id after it has been set, EXCEPT during a soft-delete (workspace_id = NULL)
   IF OLD.workspace_id IS NOT NULL AND NEW.workspace_id IS NOT NULL AND NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN
     RAISE EXCEPTION 'Unauthorized: Cannot migrate workspaces.';
