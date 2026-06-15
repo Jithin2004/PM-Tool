@@ -34,6 +34,33 @@ export function WorkspaceSetupWizard() {
   
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
+  const attachLicenseIfPending = async (workspaceId: string) => {
+    try {
+      const pendingStr = localStorage.getItem('pendingLicenseActivation');
+      if (pendingStr) {
+        const parsed = JSON.parse(pendingStr);
+        if (parsed.licenseData) {
+          const productKeyStr = parsed.licenseData.productKey || 'OFFLINE-LICENSE';
+          const rawPlan = (parsed.licenseData.plan || '').toLowerCase();
+          const planType = rawPlan === 'enterprise' ? 'enterprise' : rawPlan === 'premium' ? 'premium' : 'standard';
+          
+          await supabase.from('workspace_license').insert({
+            workspace_id: workspaceId,
+            license_key_hash: productKeyStr,
+            activated_at: new Date().toISOString(),
+            activated_by: user?.id,
+            status: 'active',
+            license_type: planType
+          });
+          
+          localStorage.removeItem('pendingLicenseActivation');
+        }
+      }
+    } catch (e) {
+      console.error('License attachment failed:', e);
+    }
+  };
+
   const handleFinish = async () => {
     setLoading(true);
     try {
@@ -132,6 +159,7 @@ export function WorkspaceSetupWizard() {
             }));
           }
         }
+        await attachLicenseIfPending(created.id);
         await refreshProfile();
         window.location.href = '/overview';
       }
@@ -155,6 +183,7 @@ export function WorkspaceSetupWizard() {
       });
       if (ws) {
         await demoWorkspacesService.injectDemoData(ws.id, profile!.id, selectedTemplate);
+        await attachLicenseIfPending(ws.id);
         await refreshProfile();
         window.location.href = '/overview';
       }

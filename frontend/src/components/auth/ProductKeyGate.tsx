@@ -29,15 +29,31 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [workspaceName, setWorkspaceName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupError, setSignupError] = useState('');
 
   useEffect(() => {
     if (!initializedRef.current) {
       initializedRef.current = true;
-      inputRef.current?.focus();
+      if (import.meta.env.DEV) {
+        setKey('X7K-9M2-V4P-8LQ');
+      }
     }
   }, []);
+
+  useEffect(() => {
+    // Restore session if user refreshes during signup
+    const pendingStr = localStorage.getItem('pendingLicenseActivation');
+    if (pendingStr && state === 'input') {
+      try {
+        const parsed = JSON.parse(pendingStr);
+        if (parsed.validated) {
+          setState('signup');
+        }
+      } catch (e) {}
+    }
+  }, [state]);
 
   useEffect(() => {
     if (state === 'error' && (key || uploadedFile)) {
@@ -56,6 +72,11 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     const result = await verifyProductKey(key.trim());
 
     if (result.success) {
+      localStorage.setItem('pendingLicenseActivation', JSON.stringify({
+        licenseId: key.trim(),
+        validated: true,
+        licenseData: result.licenseData
+      }));
       setState('signup');
     } else {
       setErrorMsg(result.error || 'Verification failed.');
@@ -72,6 +93,11 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     const result = await verifyLicenseFile(file);
 
     if (result.success) {
+      localStorage.setItem('pendingLicenseActivation', JSON.stringify({
+        licenseId: 'offline',
+        validated: true,
+        licenseData: result.licenseData
+      }));
       setState('signup');
     } else {
       setErrorMsg(result.error || 'License file verification failed.');
@@ -139,6 +165,16 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
       if (error) throw error;
 
       sessionStorage.setItem('pending_workspace_name', workspaceName);
+      
+      const pendingStr = localStorage.getItem('pendingLicenseActivation');
+      if (pendingStr) {
+        try {
+          const parsed = JSON.parse(pendingStr);
+          if (parsed.licenseData) {
+            localStorage.setItem('resolve-product-license', JSON.stringify(parsed.licenseData));
+          }
+        } catch (e) {}
+      }
       
       setState('success');
       setTimeout(() => onVerified(), 1200);
@@ -361,15 +397,20 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                         {showPassword ? 'HIDE' : 'SHOW'}
                       </button>
                     </div>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={confirmPassword}
-                      onChange={e => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm password"
-                      className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
-                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        required
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm password"
+                        className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
+                        style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                      />
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-3 text-xs font-semibold" style={{ color: 'var(--pm-primary)' }}>
+                        {showConfirmPassword ? 'HIDE' : 'SHOW'}
+                      </button>
+                    </div>
                   </div>
 
                   <button
@@ -379,6 +420,17 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                     style={{ background: 'var(--pm-primary)', color: 'white' }}
                   >
                     {signupLoading ? <Loader className="w-4 h-4 animate-spin" /> : 'Create Account'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.removeItem('pendingLicenseActivation');
+                      setState('input');
+                    }}
+                    className="w-full text-xs font-medium text-center hover:underline mt-2 transition-colors"
+                    style={{ color: 'var(--pm-on-surface-variant)' }}
+                  >
+                    Cancel and use a different key
                   </button>
                 </form>
               </motion.div>

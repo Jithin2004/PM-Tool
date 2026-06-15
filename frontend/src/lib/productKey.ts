@@ -46,6 +46,7 @@ export interface VerifyResult {
   error?: string;
   token?: string;
   plan?: string;
+  licenseData?: LicenseData;
 }
 
 // ── License File Payload (from generate_license.js) ─────────────────────────
@@ -197,8 +198,7 @@ export async function verifyLicenseFile(file: File): Promise<VerifyResult> {
       supportExpiry: payload.supportExpiry,
     };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(license));
-    return { success: true, plan: payload.plan };
+    return { success: true, plan: payload.plan, licenseData: license };
 
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to verify license file.' };
@@ -282,8 +282,7 @@ export async function verifyProductKey(productKey: string): Promise<VerifyResult
       supportExpiry: data?.supportExpiry || Date.now() + 365 * 24 * 60 * 60 * 1000
     };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(license));
-    return { success: true, token, plan };
+    return { success: true, token, plan, licenseData: license };
 
   } catch (err: any) {
     clearTimeout(timer);
