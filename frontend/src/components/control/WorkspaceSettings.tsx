@@ -29,7 +29,20 @@ export function WorkspaceSettings() {
   const { raw: { profiles } } = useOperationalData();
   const { notify } = useDashboard();
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('organization');
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') || 'organization';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab) setActiveTab(tab);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const [formState, setFormState] = useState({
     companyName: '',
@@ -152,7 +165,10 @@ export function WorkspaceSettings() {
         {TABS.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              window.history.replaceState(null, '', `?tab=${tab.id}`);
+            }}
             className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn whitespace-nowrap px-4 ${
               activeTab === tab.id ? 'active' : ''
             }`}

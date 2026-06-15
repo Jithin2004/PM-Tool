@@ -114,7 +114,10 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
       city,
       companyName,
       logoUrl,
-      shutdowns
+      shutdowns,
+      passwordPolicy: typeof row.metadata === 'object' ? row.metadata?.passwordPolicy : undefined,
+      magicLinkExpiry: typeof row.metadata === 'object' ? row.metadata?.magicLinkExpiry : undefined,
+      baseCurrency: typeof row.metadata === 'object' ? row.metadata?.baseCurrency : undefined,
     }
   };
 }
@@ -143,7 +146,13 @@ export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
     timezone: settings.timezone || 'UTC',
     attendance_enabled: settings.attendanceEnabled !== undefined ? settings.attendanceEnabled : true,
     payroll_enabled: settings.payrollEnabled !== undefined ? settings.payrollEnabled : false,
-    productivity_factor: settings.productivityFactor !== undefined ? settings.productivityFactor : 0.8
+    productivity_factor: settings.productivityFactor !== undefined ? settings.productivityFactor : 0.8,
+    metadata: {
+      passwordPolicy: settings.passwordPolicy,
+      magicLinkExpiry: settings.magicLinkExpiry,
+      baseCurrency: settings.baseCurrency,
+      ...settings // Let it store any other miscellaneous flags
+    }
   };
 }
 

@@ -14,24 +14,45 @@ export const workspaceHealthService = {
 
     // 1. Fetch workspace settings
     const { data: wsData } = await supabase
-      .from('workspace_settings')
-      .select('settings_blob')
-      .eq('workspace_id', workspaceId)
+      .from('workspaces')
+      .select('business_type, metadata')
+      .eq('id', workspaceId)
       .maybeSingle();
 
-    const s = wsData?.settings_blob || {};
+    let companyName = '';
+    let country = '';
+    let region = '';
+    let baseCurrency = '';
+    let passwordPolicy = '';
 
-    if (!s.companyName) {
-      checks.push({ type: 'warning', message: 'Company Name missing in Organization settings.', actionRoute: '/control?tab=profile' });
+    if (wsData) {
+      if (wsData.metadata && typeof wsData.metadata === 'object') {
+        baseCurrency = wsData.metadata.baseCurrency || '';
+        passwordPolicy = wsData.metadata.passwordPolicy || '';
+      }
+      try {
+        if (wsData.business_type && typeof wsData.business_type === 'string' && wsData.business_type.startsWith('{')) {
+          const parsed = JSON.parse(wsData.business_type);
+          companyName = parsed.companyName || '';
+          country = parsed.country || '';
+          region = parsed.region || '';
+        }
+      } catch (e) {
+        // Fallback
+      }
     }
-    if (!s.country || !s.region) {
-      checks.push({ type: 'warning', message: 'Company location missing. Required for holiday sync.', actionRoute: '/control?tab=profile' });
+
+    if (!companyName) {
+      checks.push({ type: 'warning', message: 'Company Name missing in Organization settings.', actionRoute: '/control/settings?tab=organization' });
     }
-    if (!s.baseCurrency) {
-      checks.push({ type: 'warning', message: 'Base currency not configured.', actionRoute: '/control?tab=finance' });
+    if (!country || !region) {
+      checks.push({ type: 'warning', message: 'Company location missing. Required for holiday sync.', actionRoute: '/control/settings?tab=organization' });
     }
-    if (!s.passwordPolicy) {
-      checks.push({ type: 'info', message: 'Recommended: Configure a Password Policy in Security Settings.', actionRoute: '/control?tab=security' });
+    if (!baseCurrency) {
+      checks.push({ type: 'warning', message: 'Base currency not configured.', actionRoute: '/control/settings?tab=finance' });
+    }
+    if (!passwordPolicy) {
+      checks.push({ type: 'info', message: 'Recommended: Configure a Password Policy in Security Settings.', actionRoute: '/control/settings?tab=security' });
     }
 
     // 2. Fetch calendar settings
@@ -53,7 +74,7 @@ export const workspaceHealthService = {
       .maybeSingle();
 
     if (!licenseData) {
-      checks.push({ type: 'warning', message: 'Workspace License is unactivated or invalid.', actionRoute: '/control?tab=license' });
+      checks.push({ type: 'warning', message: 'Workspace License is unactivated or invalid.', actionRoute: '/control/settings?tab=billing' });
     }
 
     return checks;
