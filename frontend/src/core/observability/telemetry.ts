@@ -44,9 +44,8 @@ export async function persistSystemEvent(
       severity,
       source,
       message,
-      metadata,
-      stack_trace: stackTrace || null,
-      browser_info: browserInfo
+      metadata: { ...metadata, browser_info: browserInfo },
+      stack_trace: stackTrace || null
     }]).then(({ error }) => {
       if (error) {
         console.error('Failed to persist system event:', error);

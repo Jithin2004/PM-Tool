@@ -580,7 +580,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     (window as any).startOnboardingTour = () => {
       sessionStorage.setItem('resolve-pm-tour-active', 'true');
       sessionStorage.setItem('resolve-pm-tour-step', '0');
-      setGuideStep(0);
+      setCurrentTourStep(0);
       setShowGuide(true);
       navigateTo('/workspace');
     };
@@ -1631,22 +1631,22 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         {/* Onboarding Tour Overlay - Spotlight Modal */}
         <GuidedTour
           steps={tourSteps}
-          currentStepIndex={guideStep}
+          currentStepIndex={currentTourStep}
           isOpen={showGuide}
           onClose={() => {
             dismissGuide();
             setShowFeedbackGate(true);
           }}
           onNext={() => {
-            const nextStep = guideStep + 1;
+            const nextStep = currentTourStep + 1;
             sessionStorage.setItem('resolve-pm-tour-step', nextStep.toString());
-            setGuideStep(nextStep);
+            setCurrentTourStep(nextStep);
             tourSteps[nextStep]?.actionBefore?.();
           }}
           onPrev={() => {
-            const prevStep = guideStep - 1;
+            const prevStep = currentTourStep - 1;
             sessionStorage.setItem('resolve-pm-tour-step', prevStep.toString());
-            setGuideStep(prevStep);
+            setCurrentTourStep(prevStep);
             tourSteps[prevStep]?.actionBefore?.();
           }}
         />
