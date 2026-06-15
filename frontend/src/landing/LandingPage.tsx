@@ -86,7 +86,7 @@ export function LandingPage() {
       {/* TopNavBar */}
       <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding h-16 bg-[#050712]/70 backdrop-blur-md border-b border-[var(--border-soft)] shadow-sm">
         <div className="flex items-center gap-stack-gap-lg">
-          <span className="font-headline-md text-headline-md font-bold text-on-surface">Resolve PM</span>
+          <img src="/logo.png" alt="Resolve PM Logo" className="h-8 w-auto object-contain" />
           <div className="hidden md:flex items-center gap-stack-gap-md ml-8">
             <a className={`transition-colors font-body-md text-body-md ${activeSection === 'showcase' ? 'text-primary font-bold border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} href="#showcase">Showcase</a>
             <a className={`transition-colors font-body-md text-body-md ${activeSection === 'why-resolve' ? 'text-primary font-bold border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} href="#why-resolve">Why Resolve</a>
@@ -400,7 +400,7 @@ export function LandingPage() {
       {/* Footer */}
       <footer id="contact" className="w-full py-stack-gap-lg px-container-padding flex flex-col md:flex-row justify-between items-center border-t border-[var(--pm-border)] dark:border-[var(--border-soft)]">
         <div className="flex flex-col items-center md:items-start gap-2 mb-6 md:mb-0">
-          <span className="font-headline-sm text-headline-sm font-semibold text-on-surface">Resolve PM</span>
+          <img src="/logo.png" alt="Resolve PM Logo" className="h-6 w-auto object-contain opacity-80" />
           <p className="font-body-sm text-body-sm text-on-surface-variant opacity-60">© 2026 Resolve PM. All rights reserved. Registered Enterprise Systems.</p>
           <div className="flex gap-4 mt-2">
              <a href="/login" className="font-mono-label text-[10px] text-primary hover:text-primary/80 transition-colors uppercase">Admin Login</a>

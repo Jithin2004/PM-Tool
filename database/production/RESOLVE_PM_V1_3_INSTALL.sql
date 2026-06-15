@@ -61,6 +61,56 @@ DROP TABLE IF EXISTS workspaces CASCADE;
 -- Legacy table aliases from V1 schema
 DROP TABLE IF EXISTS profiles CASCADE;
 
+-- =============================================================
+-- HELPER FUNCTIONS AND TRIGGER PROCEDURES
+-- =============================================================
+
+-- Standard timestamp trigger helper
+CREATE OR REPLACE FUNCTION public.trigger_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Returns the workspace_id for the currently authenticated user.
+-- Used as a secure binding expression inside RLS policies.
+CREATE OR REPLACE FUNCTION current_workspace()
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  RETURN (SELECT workspace_id FROM public.users WHERE id = auth.uid() LIMIT 1);
+END;
+$$;
+
+-- Returns true if the currently authenticated user is an active workspace member.
+CREATE OR REPLACE FUNCTION public.is_active_workspace_member()
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM public.users 
+    WHERE id = auth.uid() 
+      AND workspace_id = current_workspace() 
+      AND status = 'active'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+
+
+
+
+
+-- Auto-creates a users row when a new auth.users record is inserted
+
+
+
+
 
 -- =============================================================
 -- CORE TABLE DEFINITIONS
@@ -70,7 +120,7 @@ DROP TABLE IF EXISTS profiles CASCADE;
 --    Root of all data isolation. Every table references this via workspace_id.
 CREATE TABLE workspaces (
   is_sandbox          boolean     NOT NULL DEFAULT false,
-  parent_workspace_id uuid        REFERENCES workspaces(id) ON DELETE CASCADE,
+  parent_workspace_id uuid        REFERENCES workspaces(id) ON DELETE RESTRICT,
   status              text        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'onboarding', 'inactive', 'retired', 'sandbox')),
   metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -102,7 +152,7 @@ CREATE TABLE workspaces (
 --    Canonical identity + RBAC profile. Role 'uninvited' is a client-only ephemeral state.
 CREATE TABLE users (
   id                  uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE RESTRICT,
-  workspace_id        uuid        REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id        uuid        REFERENCES workspaces(id) ON DELETE RESTRICT,
   email               text        NOT NULL,
   full_name           text,
   phone               text,
@@ -127,7 +177,7 @@ CREATE TABLE users (
 --    'data' JSONB stores pm_id and developer_ids (membership roster managed by the application layer).
 CREATE TABLE teams (
   id                       uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id             uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id             uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   name                     text        NOT NULL,
   capacity_hours_per_week  numeric,
   data                     jsonb       DEFAULT '{}'::jsonb,
@@ -139,7 +189,7 @@ CREATE TABLE teams (
 -- 4. team_members
 --    Explicit join table for many-to-many team ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â user relations.
 CREATE TABLE team_members (
-  workspace_id  uuid  NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  uuid  NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   team_id       uuid  NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   user_id       uuid  NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   member_role   text,
@@ -150,10 +200,33 @@ CREATE TABLE team_members (
 -- 5. projects
 --    Parent-only containers. PERT macro-estimation removed (legacy project-level pert_best/likely/worst purged).
 --    PERT is now computed exclusively from task-level aggregations via get_operational_intelligence().
+
+-- =============================================================
+-- DEPARTMENTS
+-- =============================================================
+CREATE TABLE IF NOT EXISTS public.departments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  name text NOT NULL,
+  description text,
+  manager_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(workspace_id, name)
+);
+ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view departments" ON public.departments FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = departments.workspace_id AND public.is_active_workspace_member()));
+CREATE POLICY "Admins can manage departments" ON public.departments FOR ALL
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = departments.workspace_id AND public.is_active_workspace_member()))
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = departments.workspace_id AND public.is_active_workspace_member()));
+
+
 CREATE TABLE projects (
   external_id           text,
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   team_id               uuid        REFERENCES teams(id) ON DELETE SET NULL,
   owner_id              uuid        REFERENCES users(id) ON DELETE RESTRICT,
   name                  text        NOT NULL,
@@ -185,6 +258,10 @@ CREATE TABLE projects (
   updated_at            timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE public.projects
+ADD COLUMN IF NOT EXISTS target_date date;
+
+
 
 -- 6. tasks
 --    Executable work items carrying task-level PERT for micro-estimation.
@@ -192,8 +269,8 @@ CREATE TABLE projects (
 CREATE TABLE tasks (
   external_id           text,
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  project_id            uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  project_id            uuid        NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
   assignee_id           uuid        REFERENCES users(id) ON DELETE RESTRICT,
   -- Hierarchy
   parent_task_id        uuid        REFERENCES tasks(id) ON DELETE CASCADE,
@@ -243,7 +320,7 @@ CREATE TABLE tasks (
 -- 7. task_dependencies
 --    Directed acyclic graph of task blockers.
 CREATE TABLE task_dependencies (
-  workspace_id          uuid  NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id          uuid  NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   task_id               uuid  NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   depends_on_task_id    uuid  NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   PRIMARY KEY (task_id, depends_on_task_id),
@@ -255,7 +332,7 @@ CREATE TABLE task_dependencies (
 --    Polymorphic wait state tracking for Phase 1A Enterprise Delivery Model.
 CREATE TABLE wait_states (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   target_type         text        NOT NULL CHECK (target_type IN ('project', 'milestone', 'task')),
   target_id           uuid        NOT NULL,
   category            text        NOT NULL CHECK (category IN ('client', 'vendor', 'approval', 'compliance', 'infrastructure', 'data', 'internal_cross_team')),
@@ -271,8 +348,8 @@ ALTER TABLE public.wait_states ENABLE ROW LEVEL SECURITY;
 -- 7.2. project_signoffs
 CREATE TABLE project_signoffs (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
   approver_id         uuid        NOT NULL REFERENCES users(id),
   role                text        NOT NULL,
   notes               text,
@@ -283,7 +360,7 @@ ALTER TABLE public.project_signoffs ENABLE ROW LEVEL SECURITY;
 -- 7.3. project_allocations
 CREATE TABLE project_allocations (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   user_id             uuid        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   allocation_percent  numeric     NOT NULL DEFAULT 100 CHECK (allocation_percent >= 0 AND allocation_percent <= 1000),
@@ -296,7 +373,7 @@ ALTER TABLE public.project_allocations ENABLE ROW LEVEL SECURITY;
 -- 7.4. allocation_periods
 CREATE TABLE allocation_periods (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   user_id             uuid        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   allocation_percent  numeric     NOT NULL CHECK (allocation_percent >= 0 AND allocation_percent <= 100),
@@ -314,9 +391,9 @@ ALTER TABLE public.allocation_periods ENABLE ROW LEVEL SECURITY;
 CREATE TABLE comments (
   is_internal boolean NOT NULL DEFAULT false,
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  task_id       uuid        REFERENCES tasks(id) ON DELETE CASCADE,
-  project_id    uuid        REFERENCES projects(id) ON DELETE CASCADE,
+  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  task_id       uuid        REFERENCES tasks(id) ON DELETE SET NULL,
+  project_id    uuid        REFERENCES projects(id) ON DELETE SET NULL,
   author_id     uuid        REFERENCES users(id) ON DELETE RESTRICT,
   body          text        NOT NULL,
   created_at    timestamptz NOT NULL DEFAULT now()
@@ -327,8 +404,8 @@ CREATE TABLE task_comments (
   is_internal boolean NOT NULL DEFAULT false,
   metadata            jsonb       DEFAULT '{}'::jsonb,
   id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id      uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  task_id           uuid        NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  workspace_id      uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  task_id           uuid        NOT NULL REFERENCES tasks(id) ON DELETE SET NULL,
   author_id         uuid        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   content           text        NOT NULL,
   parent_comment_id uuid        REFERENCES task_comments(id) ON DELETE CASCADE,
@@ -341,9 +418,9 @@ CREATE TABLE task_comments (
 -- 9. files
 CREATE TABLE files (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  project_id    uuid        REFERENCES projects(id) ON DELETE CASCADE,
-  task_id       uuid        REFERENCES tasks(id) ON DELETE CASCADE,
+  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  project_id    uuid        REFERENCES projects(id) ON DELETE SET NULL,
+  task_id       uuid        REFERENCES tasks(id) ON DELETE SET NULL,
   uploaded_by   uuid        REFERENCES users(id) ON DELETE RESTRICT,
   bucket        text        NOT NULL,
   path          text        NOT NULL,
@@ -358,7 +435,7 @@ CREATE TABLE files (
 -- 10. notifications
 CREATE TABLE notifications (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   user_id       uuid        REFERENCES users(id) ON DELETE RESTRICT,
   category      text        NOT NULL CHECK (category IN ('assignments', 'deadlines', 'risk', 'attendance', 'system')),
   title         text        NOT NULL,
@@ -370,16 +447,21 @@ CREATE TABLE notifications (
 
 CREATE TABLE activity_logs (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   actor_id      uuid        REFERENCES users(id) ON DELETE RESTRICT,
-  project_id    uuid        REFERENCES projects(id) ON DELETE CASCADE,
-  task_id       uuid        REFERENCES tasks(id) ON DELETE CASCADE,
+  project_id    uuid        REFERENCES projects(id) ON DELETE SET NULL,
+  task_id       uuid        REFERENCES tasks(id) ON DELETE SET NULL,
   action        text        NOT NULL,
   metadata      jsonb       NOT NULL DEFAULT '{}'::jsonb,
   hash          text,
   previous_hash text,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.activity_logs
+ADD COLUMN IF NOT EXISTS entity_type text,
+ADD COLUMN IF NOT EXISTS entity_id uuid;
+
 
 -- Fix 6: Audit & Forensic Protection (WORM rules for activity logs)
 -- WARNING: Removed WORM RULES because they break referential integrity (ERROR: XX000).
@@ -391,7 +473,7 @@ CREATE TABLE activity_logs (
 -- 12. attendance
 CREATE TABLE attendance (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   user_id             uuid        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   date                date        NOT NULL,
   status              text        NOT NULL CHECK (status IN ('present', 'half_day', 'absent')),
@@ -405,7 +487,7 @@ CREATE TABLE attendance (
 -- 13. salaries
 CREATE TABLE salaries (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   user_id       uuid        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   base_salary   numeric     NOT NULL DEFAULT 3000,
   created_at    timestamptz DEFAULT now(),
@@ -416,7 +498,7 @@ CREATE TABLE salaries (
 -- 14. invitations
 CREATE TABLE invitations (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   email         text        NOT NULL,
   role          text        NOT NULL CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer', 'client')),
   token         text        UNIQUE NOT NULL,
@@ -433,7 +515,7 @@ CREATE TABLE invitations (
 --    Auto-ingested public holidays and manually defined company events.
 CREATE TABLE workspace_holidays (
   id            uuid  PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  uuid  NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id  uuid  NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   date          date  NOT NULL,
   name          text  NOT NULL,
   type          text  NOT NULL CHECK (type IN ('public', 'regional', 'festival', 'company')),
@@ -458,7 +540,7 @@ CREATE TABLE personal_leave (
 -- 18. workspace_settings
 --    Singleton JSONB blob per workspace (logistics and system settings).
 CREATE TABLE workspace_settings (
-  workspace_id          uuid    PRIMARY KEY REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id          uuid    PRIMARY KEY REFERENCES workspaces(id) ON DELETE RESTRICT,
   working_hours         numeric DEFAULT 8,
   working_time_from     text    DEFAULT '09:00',
   working_time_to       text    DEFAULT '17:00',
@@ -475,7 +557,7 @@ CREATE TABLE workspace_settings (
 --    UPDATE/DELETE: permanently prohibited via WORM rules below.
 CREATE TABLE system_audit_ledger (
   id             uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id   uuid        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id   uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id     uuid        REFERENCES projects(id) ON DELETE SET NULL,
   task_id        uuid        REFERENCES tasks(id) ON DELETE SET NULL,
   actor_id       uuid        REFERENCES users(id) ON DELETE RESTRICT,
@@ -520,38 +602,7 @@ CREATE INDEX IF NOT EXISTS idx_users_workspace      ON users(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_teams_workspace      ON teams(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_comments_task        ON comments(task_id);
 
-
--- =============================================================
--- HELPER FUNCTIONS AND TRIGGER PROCEDURES
--- =============================================================
-
--- Returns the workspace_id for the currently authenticated user.
--- Used as a secure binding expression inside RLS policies.
-CREATE OR REPLACE FUNCTION current_workspace()
-RETURNS uuid
-LANGUAGE sql
-STABLE
-SECURITY DEFINER SET search_path = ''
-AS $$
-  SELECT workspace_id FROM public.users WHERE id = auth.uid() LIMIT 1
-$$;
-
--- Returns true if the currently authenticated user is an active workspace member.
-CREATE OR REPLACE FUNCTION public.is_active_workspace_member()
-RETURNS boolean AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 
-    FROM public.users 
-    WHERE id = auth.uid() 
-      AND workspace_id = current_workspace() 
-      AND status = 'active'
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
-
-
--- Auto-creates a users row when a new auth.users record is inserted (OAuth / email signup).
+-- (OAuth / email signup).
 -- WARNING: Removed handle_new_user because it pre-inserts users as 'viewer', causing a 400 Bad Request
 -- when reconcileInvitationMembership attempts to upsert them to 'pending-workspace-setup' or other roles.
 -- The client-side reconciliation handles user row creation securely.
@@ -1354,163 +1405,163 @@ CREATE TRIGGER trigger_enforce_task_completion
   FOR EACH ROW
   EXECUTE FUNCTION enforce_task_completion_governance();
 
-- -   M I G R A T I O N _ D O J _ H R _ A U D I T . s q l 
- 
- - -   R u n   t h i s   s c r i p t   t o   m i g r a t e   t h e   d a t a b a s e   f o r   t h e   D O J   H R   A u d i t   u p d a t e . 
- 
- 
- 
- - -   1 .   A d d   d a t e _ o f _ j o i n i n g   t o   i n v i t a t i o n s 
- 
- A L T E R   T A B L E   p u b l i c . i n v i t a t i o n s   A D D   C O L U M N   I F   N O T   E X I S T S   d a t e _ o f _ j o i n i n g   T I M E S T A M P   W I T H   T I M E   Z O N E ; 
- 
- 
- 
- - -   2 .   C r e a t e   e m p l o y m e n t _ r e c o r d s   t a b l e 
- 
- C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . e m p l o y m e n t _ r e c o r d s   ( 
- 
-         i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) , 
- 
-         p r o f i l e _ i d   U U I D   N O T   N U L L   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   C A S C A D E , 
- 
-         w o r k s p a c e _ i d   U U I D   R E F E R E N C E S   p u b l i c . w o r k s p a c e s ( i d )   O N   D E L E T E   S E T   N U L L , 
- 
-         d a t e _ o f _ j o i n i n g   T I M E S T A M P   W I T H   T I M E   Z O N E   N O T   N U L L , 
- 
-         e m p l o y m e n t _ s t a t u s   T E X T   N O T   N U L L   D E F A U L T   ' a c t i v e '   C H E C K   ( e m p l o y m e n t _ s t a t u s   I N   ( ' a c t i v e ' ,   ' r e s i g n e d ' ,   ' t e r m i n a t e d ' ) ) , 
- 
-         c r e a t e d _ a t   T I M E S T A M P   W I T H   T I M E   Z O N E   N O T   N U L L   D E F A U L T   n o w ( ) , 
- 
-         u p d a t e d _ a t   T I M E S T A M P   W I T H   T I M E   Z O N E   N O T   N U L L   D E F A U L T   n o w ( ) , 
- 
-         c r e a t e d _ b y   U U I D   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   S E T   N U L L , 
- 
-         u p d a t e d _ b y   U U I D   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   S E T   N U L L , 
- 
-         C O N S T R A I N T   u n i q u e _ p r o f i l e _ w o r k s p a c e _ e m p l o y m e n t   U N I Q U E   ( p r o f i l e _ i d ,   w o r k s p a c e _ i d ) 
- 
- ) ; 
- 
- 
- 
- - -   3 .   C r e a t e   e m p l o y m e n t _ c h a n g e _ l o g s   t a b l e 
- 
- C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . e m p l o y m e n t _ c h a n g e _ l o g s   ( 
- 
-         i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) , 
- 
-         e m p l o y e e _ i d   U U I D   N O T   N U L L   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   C A S C A D E , 
- 
-         f i e l d _ c h a n g e d   T E X T   N O T   N U L L , 
- 
-         p r e v i o u s _ v a l u e   T E X T , 
- 
-         n e w _ v a l u e   T E X T , 
- 
-         c h a n g e d _ b y   U U I D   N O T   N U L L   R E F E R E N C E S   p u b l i c . u s e r s ( i d )   O N   D E L E T E   C A S C A D E , 
- 
-         c h a n g e d _ a t   T I M E S T A M P   W I T H   T I M E   Z O N E   N O T   N U L L   D E F A U L T   n o w ( ) , 
- 
-         r e a s o n   T E X T   N O T   N U L L 
- 
- ) ; 
- 
- 
- 
- - -   E n a b l e   R L S 
- 
- A L T E R   T A B L E   p u b l i c . e m p l o y m e n t _ r e c o r d s   E N A B L E   R O W   L E V E L   S E C U R I T Y ; 
- 
- A L T E R   T A B L E   p u b l i c . e m p l o y m e n t _ c h a n g e _ l o g s   E N A B L E   R O W   L E V E L   S E C U R I T Y ; 
- 
- 
- 
- - -   R L S   P o l i c i e s   f o r   e m p l o y m e n t _ r e c o r d s 
- 
- - -   S u p e r   A d m i n s   c a n   d o   a n y t h i n g 
- 
- C R E A T E   P O L I C Y   " S u p e r   A d m i n s   h a v e   f u l l   a c c e s s   t o   e m p l o y m e n t _ r e c o r d s "   O N   p u b l i c . e m p l o y m e n t _ r e c o r d s 
- 
- F O R   A L L   U S I N G   ( 
- 
-     E X I S T S   ( 
- 
-         S E L E C T   1   F R O M   p u b l i c . u s e r s 
- 
-         W H E R E   u s e r s . i d   =   a u t h . u i d ( )   A N D   u s e r s . r o l e   =   ' s u p e r _ a d m i n ' 
- 
-     ) 
- 
- ) ; 
- 
- 
- 
- - -   U s e r s   c a n   v i e w   t h e i r   o w n   r e c o r d 
- 
- C R E A T E   P O L I C Y   " U s e r s   c a n   v i e w   t h e i r   o w n   e m p l o y m e n t _ r e c o r d s "   O N   p u b l i c . e m p l o y m e n t _ r e c o r d s 
- 
- F O R   S E L E C T   U S I N G   ( 
- 
-     p r o f i l e _ i d   =   a u t h . u i d ( ) 
- 
- ) ; 
- 
- 
- 
- - -   P r o j e c t   M a n a g e r s   a n d   A d m i n s   c a n   v i e w   r e c o r d s   i n   t h e i r   w o r k s p a c e 
- 
- C R E A T E   P O L I C Y   " W o r k s p a c e   m a n a g e r s   c a n   v i e w   e m p l o y m e n t _ r e c o r d s "   O N   p u b l i c . e m p l o y m e n t _ r e c o r d s 
- 
- F O R   S E L E C T   U S I N G   ( 
- 
-     E X I S T S   ( 
- 
-         S E L E C T   1   F R O M   p u b l i c . u s e r s 
- 
-         W H E R E   u s e r s . i d   =   a u t h . u i d ( )   A N D   u s e r s . w o r k s p a c e _ i d   =   e m p l o y m e n t _ r e c o r d s . w o r k s p a c e _ i d 
- 
-         A N D   u s e r s . r o l e   I N   ( ' s u p e r _ a d m i n ' ,   ' a d m i n ' ,   ' m a n a g e r ' ,   ' e d i t o r ' ) 
- 
-     ) 
- 
- ) ; 
- 
- 
- 
- - -   R L S   P o l i c i e s   f o r   e m p l o y m e n t _ c h a n g e _ l o g s 
- 
- C R E A T E   P O L I C Y   " S u p e r   A d m i n s   h a v e   f u l l   a c c e s s   t o   e m p l o y m e n t _ c h a n g e _ l o g s "   O N   p u b l i c . e m p l o y m e n t _ c h a n g e _ l o g s 
- 
- F O R   A L L   U S I N G   ( 
- 
-     E X I S T S   ( 
- 
-         S E L E C T   1   F R O M   p u b l i c . u s e r s 
- 
-         W H E R E   u s e r s . i d   =   a u t h . u i d ( )   A N D   u s e r s . r o l e   =   ' s u p e r _ a d m i n ' 
- 
-     ) 
- 
- ) ; 
- 
- 
- 
- C R E A T E   P O L I C Y   " U s e r s   c a n   v i e w   t h e i r   o w n   c h a n g e   l o g s "   O N   p u b l i c . e m p l o y m e n t _ c h a n g e _ l o g s 
- 
- F O R   S E L E C T   U S I N G   ( 
- 
-     e m p l o y e e _ i d   =   a u t h . u i d ( ) 
- 
- ) ; 
- 
- I N S E R T   I N T O   p u b l i c . e m p l o y m e n t _ r e c o r d s   ( p r o f i l e _ i d ,   w o r k s p a c e _ i d ,   d a t e _ o f _ j o i n i n g ,   e m p l o y m e n t _ s t a t u s ,   c r e a t e d _ a t ,   u p d a t e d _ a t ) 
- S E L E C T   i d ,   w o r k s p a c e _ i d ,   c r e a t e d _ a t ,   ' a c t i v e ' ,   n o w ( ) ,   n o w ( ) 
- F R O M   p u b l i c . u s e r s 
- W H E R E   w o r k s p a c e _ i d   I S   N O T   N U L L 
- O N   C O N F L I C T   ( p r o f i l e _ i d ,   w o r k s p a c e _ i d )   D O   N O T H I N G ; 
- 
- 
+-- MIGRATION_DOJ_HR_AUDIT.sql
+
+-- Run this script to migrate the database for the DOJ HR Audit update.
+
+
+
+-- 1. Add date_of_joining to invitations
+
+ALTER TABLE public.invitations ADD COLUMN IF NOT EXISTS date_of_joining TIMESTAMP WITH TIME ZONE;
+
+
+
+-- 2. Create employment_records table
+
+CREATE TABLE IF NOT EXISTS public.employment_records (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    profile_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE SET NULL,
+
+    date_of_joining TIMESTAMP WITH TIME ZONE NOT NULL,
+
+    employment_status TEXT NOT NULL DEFAULT 'active' CHECK (employment_status IN ('active', 'resigned', 'terminated')),
+
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+
+    created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+
+    updated_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+
+    CONSTRAINT unique_profile_workspace_employment UNIQUE (profile_id, workspace_id)
+
+);
+
+
+
+-- 3. Create employment_change_logs table
+
+CREATE TABLE IF NOT EXISTS public.employment_change_logs (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    employee_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+
+    field_changed TEXT NOT NULL,
+
+    previous_value TEXT,
+
+    new_value TEXT,
+
+    changed_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+
+    changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+
+    reason TEXT NOT NULL
+
+);
+
+
+
+-- Enable RLS
+
+ALTER TABLE public.employment_records ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE public.employment_change_logs ENABLE ROW LEVEL SECURITY;
+
+
+
+-- RLS Policies for employment_records
+
+-- Super Admins can do anything
+
+CREATE POLICY "Super Admins have full access to employment_records" ON public.employment_records
+
+FOR ALL USING (
+
+  EXISTS (
+
+    SELECT 1 FROM public.users
+
+    WHERE users.id = auth.uid() AND users.role = 'super_admin'
+
+  )
+
+);
+
+
+
+-- Users can view their own record
+
+CREATE POLICY "Users can view their own employment_records" ON public.employment_records
+
+FOR SELECT USING (
+
+  profile_id = auth.uid()
+
+);
+
+
+
+-- Project Managers and Admins can view records in their workspace
+
+CREATE POLICY "Workspace managers can view employment_records" ON public.employment_records
+
+FOR SELECT USING (
+
+  EXISTS (
+
+    SELECT 1 FROM public.users
+
+    WHERE users.id = auth.uid() AND users.workspace_id = employment_records.workspace_id
+
+    AND users.role IN ('super_admin', 'admin', 'manager', 'editor')
+
+  )
+
+);
+
+
+
+-- RLS Policies for employment_change_logs
+
+CREATE POLICY "Super Admins have full access to employment_change_logs" ON public.employment_change_logs
+
+FOR ALL USING (
+
+  EXISTS (
+
+    SELECT 1 FROM public.users
+
+    WHERE users.id = auth.uid() AND users.role = 'super_admin'
+
+  )
+
+);
+
+
+
+CREATE POLICY "Users can view their own change logs" ON public.employment_change_logs
+
+FOR SELECT USING (
+
+  employee_id = auth.uid()
+
+);
+
+INSERT INTO public.employment_records (profile_id, workspace_id, date_of_joining, employment_status, created_at, updated_at)
+SELECT id, workspace_id, created_at, 'active', now(), now()
+FROM public.users
+WHERE workspace_id IS NOT NULL
+ON CONFLICT (profile_id, workspace_id) DO NOTHING;
+
+
 
 -- ========================================== 
 -- MERGED: HR ISOLATION AUDIT MIGRATION 
@@ -1609,7 +1660,7 @@ DROP TABLE IF EXISTS public.compensation_records CASCADE;
 CREATE TABLE public.compensation_records (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id uuid NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     base_salary numeric NOT NULL DEFAULT 3000,
     currency text NOT NULL DEFAULT 'USD',
     effective_from timestamptz NOT NULL DEFAULT now(),
@@ -1668,7 +1719,7 @@ ON CONFLICT (id) DO NOTHING;
 -- 2. Create workspace_files table
 CREATE TABLE IF NOT EXISTS public.workspace_files (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     entity_type text NOT NULL, -- project, task, epic, sprint, decision, comment
     entity_id uuid NOT NULL,
     file_name text NOT NULL,
@@ -1837,8 +1888,7 @@ FOR EACH ROW EXECUTE FUNCTION public.update_workspace_storage();
 
 CREATE OR REPLACE FUNCTION public.update_workspace_storage_versions()
 RETURNS TRIGGER AS $$
-DECLARE
-    v_workspace_id uuid;
+DECLAREv_workspace_id uuid;
 BEGIN
     IF TG_OP = 'INSERT' THEN
         SELECT workspace_id INTO v_workspace_id FROM public.workspace_files WHERE id = NEW.file_id;
@@ -2126,7 +2176,7 @@ WITH CHECK (
 CREATE TABLE IF NOT EXISTS public.universal_comments (
   is_internal boolean NOT NULL DEFAULT false,
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     entity_type text NOT NULL,
     entity_id uuid NOT NULL,
     author_id uuid REFERENCES public.users(id) ON DELETE RESTRICT,
@@ -2275,8 +2325,7 @@ RETURNS TABLE (
     owner_id uuid,
     rank real
 ) AS $$
-DECLARE
-    v_workspace_id uuid;
+DECLAREv_workspace_id uuid;
     v_query text := '%' || p_query || '%';
 BEGIN
     v_workspace_id := public.current_workspace();
@@ -2399,7 +2448,7 @@ CREATE OR REPLACE FUNCTION public.get_user_role(target_workspace_id uuid) RETURN
 -- 1. Recurring Task Templates Table
 CREATE TABLE IF NOT EXISTS public.recurring_task_templates (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
     
     title text NOT NULL,
@@ -2573,7 +2622,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 CREATE TABLE IF NOT EXISTS public.generated_reports (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     
     report_type text NOT NULL CHECK (report_type IN ('project', 'team', 'sprint', 'attendance', 'payroll')),
     generated_by uuid REFERENCES public.users(id) ON DELETE RESTRICT,
@@ -2612,7 +2661,7 @@ WITH CHECK (
 -- 1. Skills Dictionary
 CREATE TABLE IF NOT EXISTS public.skills (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     name text NOT NULL,
     category text,
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -2679,7 +2728,7 @@ USING (
 -- 1. Clients Table
 CREATE TABLE IF NOT EXISTS public.clients (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     company_name text NOT NULL,
     contact_person text,
     email text,
@@ -2704,7 +2753,7 @@ ON public.clients FOR ALL
 USING (public.get_user_role(workspace_id) = 'super_admin');
 
 -- Alter projects to link to client
-ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE,
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE RESTRICT,
 ADD COLUMN IF NOT EXISTS client_id uuid REFERENCES public.clients(id) ON DELETE SET NULL,
 ADD COLUMN IF NOT EXISTS department_id uuid REFERENCES public.departments(id) ON DELETE SET NULL,
 ADD COLUMN IF NOT EXISTS budget numeric DEFAULT 0,
@@ -2715,7 +2764,7 @@ ADD COLUMN IF NOT EXISTS pert_enabled boolean DEFAULT true;
 -- 2. Invoices Table
 CREATE TABLE IF NOT EXISTS public.invoices (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     client_id uuid REFERENCES public.clients(id) ON DELETE RESTRICT,
     project_id uuid REFERENCES public.projects(id) ON DELETE SET NULL,
     invoice_number text NOT NULL,
@@ -2786,7 +2835,7 @@ USING (
 -- 5. Expenses Table
 CREATE TABLE IF NOT EXISTS public.expenses (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     category text NOT NULL CHECK (category IN ('salary', 'software', 'infrastructure', 'office', 'misc')),
     amount numeric NOT NULL,
     date date NOT NULL,
@@ -2821,8 +2870,7 @@ BEGIN
         END IF;
     ELSIF TG_TABLE_NAME = 'payments' THEN
         IF TG_OP = 'INSERT' THEN
-            DECLARE
-                v_workspace_id uuid;
+            DECLAREv_workspace_id uuid;
             BEGIN
                 SELECT workspace_id INTO v_workspace_id FROM public.invoices WHERE id = NEW.invoice_id;
                 INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
@@ -2858,7 +2906,7 @@ CREATE TRIGGER trigger_log_expense_activity AFTER INSERT OR DELETE ON public.exp
 -- 1. Financial Periods
 CREATE TABLE IF NOT EXISTS public.financial_periods (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     month integer NOT NULL CHECK (month BETWEEN 1 AND 12),
     year integer NOT NULL,
     status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
@@ -2881,7 +2929,7 @@ USING (public.get_user_role(workspace_id) = 'super_admin');
 -- 2. Financial Snapshots
 CREATE TABLE IF NOT EXISTS public.financial_snapshots (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     period_id uuid NOT NULL REFERENCES public.financial_periods(id) ON DELETE CASCADE,
     total_revenue numeric NOT NULL DEFAULT 0,
     total_salary_expense numeric NOT NULL DEFAULT 0,
@@ -2942,8 +2990,7 @@ RETURNS trigger AS $$
 DECLARE
     v_month integer;
     v_year integer;
-    v_status text;
-    v_workspace_id uuid;
+    v_status text;v_workspace_id uuid;
     v_date date;
 BEGIN
     -- Determine the date and workspace based on the operation
@@ -3068,8 +3115,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 CREATE OR REPLACE FUNCTION log_financial_adjustment()
 RETURNS trigger AS $$
-DECLARE
-    v_workspace_id uuid;
+DECLAREv_workspace_id uuid;
 BEGIN
     SELECT workspace_id INTO v_workspace_id FROM public.financial_periods WHERE id = NEW.period_id;
     
@@ -3087,608 +3133,6 @@ FOR EACH ROW EXECUTE FUNCTION log_financial_adjustment();
 
 
 
-- -   M i g r a t i o n :   G S T   A c c o u n t i n g   a n d   I n v o i c i n g   L a y e r 
- 
- - -   D e s c r i p t i o n :   E n h a n c e s   f i n a n c e   s y s t e m   w i t h   c o m p a n y   p r o f i l e s ,   G S T   c a l c u l a t i o n   l o g i c ,   a n d   r o b u s t   i n v o i c i n g . 
- 
- 
- 
- B E G I N ; 
- 
- 
- 
- - -   1 .   C r e a t e   c o m p a n y   b i l l i n g   p r o f i l e 
- 
- C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . c o m p a n y _ b i l l i n g _ p r o f i l e   ( 
- 
-         i d   u u i d   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) , 
- 
-         w o r k s p a c e _ i d   u u i d   N O T   N U L L   U N I Q U E   R E F E R E N C E S   p u b l i c . w o r k s p a c e s ( i d )   O N   D E L E T E   C A S C A D E , 
- 
-         l e g a l _ n a m e   t e x t   N O T   N U L L , 
- 
-         g s t i n   t e x t , 
- 
-         p a n   t e x t , 
- 
-         b i l l i n g _ a d d r e s s   t e x t , 
- 
-         s t a t e   t e x t   N O T   N U L L , 
- 
-         c o u n t r y   t e x t   N O T   N U L L   D E F A U L T   ' I n d i a ' , 
- 
-         b a n k _ d e t a i l s   j s o n b , 
- 
-         i n v o i c e _ p r e f i x   t e x t   N O T   N U L L   D E F A U L T   ' R P M ' , 
- 
-         c r e a t e d _ a t   t i m e s t a m p t z   N O T   N U L L   D E F A U L T   n o w ( ) , 
- 
-         u p d a t e d _ a t   t i m e s t a m p t z   N O T   N U L L   D E F A U L T   n o w ( ) 
- 
- ) ; 
- 
- 
- 
- A L T E R   T A B L E   p u b l i c . c o m p a n y _ b i l l i n g _ p r o f i l e   E N A B L E   R O W   L E V E L   S E C U R I T Y ; 
- 
- 
- 
- C R E A T E   P O L I C Y   " E n a b l e   r e a d   a c c e s s   f o r   a u t h o r i z e d   u s e r s "   
- 
- O N   p u b l i c . c o m p a n y _ b i l l i n g _ p r o f i l e   F O R   S E L E C T   
- 
- U S I N G   ( p u b l i c . g e t _ u s e r _ r o l e ( w o r k s p a c e _ i d )   I N   ( ' s u p e r _ a d m i n ' ,   ' a d m i n ' ,   ' m a n a g e r ' ,   ' m e m b e r ' ) ) ; 
- 
- 
- 
- C R E A T E   P O L I C Y   " E n a b l e   w r i t e   a c c e s s   f o r   s u p e r   a d m i n "   
- 
- O N   p u b l i c . c o m p a n y _ b i l l i n g _ p r o f i l e   F O R   A L L   
- 
- U S I N G   ( p u b l i c . g e t _ u s e r _ r o l e ( w o r k s p a c e _ i d )   =   ' s u p e r _ a d m i n ' ) ; 
- 
- 
- 
- - -   2 .   E x t e n d   c l i e n t s   t a b l e 
- 
- A L T E R   T A B L E   p u b l i c . c l i e n t s 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   g s t i n   t e x t , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   b i l l i n g _ s t a t e   t e x t , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   b i l l i n g _ c o u n t r y   t e x t   D E F A U L T   ' I n d i a ' , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   t a x _ t y p e   t e x t   D E F A U L T   ' u n r e g i s t e r e d '   C H E C K   ( t a x _ t y p e   I N   ( ' r e g i s t e r e d ' ,   ' u n r e g i s t e r e d ' ) ) ; 
- 
- 
- 
- - -   3 .   I n v o i c e   S e q u e n c e   M e c h a n i s m 
- 
- C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . i n v o i c e _ s e q u e n c e s   ( 
- 
-         w o r k s p a c e _ i d   u u i d   P R I M A R Y   K E Y   R E F E R E N C E S   p u b l i c . w o r k s p a c e s ( i d )   O N   D E L E T E   C A S C A D E , 
- 
-         l a s t _ s e q u e n c e   i n t e g e r   N O T   N U L L   D E F A U L T   0 , 
- 
-         c u r r e n t _ y e a r   i n t e g e r   N O T   N U L L 
- 
- ) ; 
- 
- 
- 
- A L T E R   T A B L E   p u b l i c . i n v o i c e _ s e q u e n c e s   E N A B L E   R O W   L E V E L   S E C U R I T Y ; 
- 
- - -   N o   d i r e c t   p o l i c i e s ,   s h o u l d   b e   a c c e s s e d   v i a   s e c u r i t y   d e f i n e r   f u n c t i o n   i f   n e e d e d ,   o r   b y   s u p e r   a d m i n 
- 
- 
- 
- - -   F u n c t i o n   t o   g e n e r a t e   t h e   n e x t   i n v o i c e   n u m b e r   s e c u r e l y 
- 
- C R E A T E   O R   R E P L A C E   F U N C T I O N   p u b l i c . g e n e r a t e _ i n v o i c e _ n u m b e r ( p _ w o r k s p a c e _ i d   u u i d ,   p _ p r e f i x   t e x t ) 
- 
- R E T U R N S   t e x t   A S   $ $ 
- 
- D E C L A R E 
- 
-         v _ y e a r   i n t e g e r ; 
- 
-         v _ s e q   i n t e g e r ; 
- 
-         v _ i n v o i c e _ n u m b e r   t e x t ; 
- 
- B E G I N 
- 
-         v _ y e a r   : =   e x t r a c t ( y e a r   f r o m   c u r r e n t _ d a t e ) ; 
- 
-         
- 
-         I N S E R T   I N T O   p u b l i c . i n v o i c e _ s e q u e n c e s   ( w o r k s p a c e _ i d ,   l a s t _ s e q u e n c e ,   c u r r e n t _ y e a r ) 
- 
-         V A L U E S   ( p _ w o r k s p a c e _ i d ,   1 ,   v _ y e a r ) 
- 
-         O N   C O N F L I C T   ( w o r k s p a c e _ i d )   D O   U P D A T E 
- 
-         S E T   
- 
-                 l a s t _ s e q u e n c e   =   C A S E   W H E N   p u b l i c . i n v o i c e _ s e q u e n c e s . c u r r e n t _ y e a r   =   v _ y e a r   T H E N   p u b l i c . i n v o i c e _ s e q u e n c e s . l a s t _ s e q u e n c e   +   1   E L S E   1   E N D , 
- 
-                 c u r r e n t _ y e a r   =   v _ y e a r 
- 
-         R E T U R N I N G   l a s t _ s e q u e n c e   I N T O   v _ s e q ; 
- 
-         
- 
-         v _ i n v o i c e _ n u m b e r   : =   p _ p r e f i x   | |   ' / '   | |   v _ y e a r   | |   ' / '   | |   l p a d ( v _ s e q : : t e x t ,   3 ,   ' 0 ' ) ; 
- 
-         R E T U R N   v _ i n v o i c e _ n u m b e r ; 
- 
- E N D ; 
- 
- $ $   L A N G U A G E   p l p g s q l   S E C U R I T Y   D E F I N E R ; 
- 
- 
- 
- 
- 
- - -   4 .   E x t e n d   i n v o i c e s   t a b l e 
- 
- A L T E R   T A B L E   p u b l i c . i n v o i c e s 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   s u b t o t a l   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   d i s c o u n t _ a m o u n t   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   t a x a b l e _ a m o u n t   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   c g s t _ a m o u n t   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   s g s t _ a m o u n t   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   i g s t _ a m o u n t   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   t o t a l _ t a x   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   g r a n d _ t o t a l   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   b a l a n c e _ d u e   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
- A D D   C O L U M N   I F   N O T   E X I S T S   b i l l i n g _ s t a t e _ s n a p s h o t   t e x t ; 
- 
- 
- 
- - -   5 .   C r e a t e   i n v o i c e   l i n e   i t e m s   t a b l e 
- 
- C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . i n v o i c e _ l i n e _ i t e m s   ( 
- 
-         i d   u u i d   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) , 
- 
-         i n v o i c e _ i d   u u i d   N O T   N U L L   R E F E R E N C E S   p u b l i c . i n v o i c e s ( i d )   O N   D E L E T E   C A S C A D E , 
- 
-         d e s c r i p t i o n   t e x t   N O T   N U L L , 
- 
-         q u a n t i t y   n u m e r i c   N O T   N U L L   D E F A U L T   1 , 
- 
-         r a t e   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
-         t a x _ p e r c e n t a g e   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
-         a m o u n t   n u m e r i c   N O T   N U L L   D E F A U L T   0 , 
- 
-         c r e a t e d _ a t   t i m e s t a m p t z   N O T   N U L L   D E F A U L T   n o w ( ) 
- 
- ) ; 
- 
- 
- 
- A L T E R   T A B L E   p u b l i c . i n v o i c e _ l i n e _ i t e m s   E N A B L E   R O W   L E V E L   S E C U R I T Y ; 
- 
- 
- 
- C R E A T E   P O L I C Y   " E n a b l e   r e a d   a c c e s s   f o r   a u t h o r i z e d   u s e r s   v i a   i n v o i c e "   
- 
- O N   p u b l i c . i n v o i c e _ l i n e _ i t e m s   F O R   S E L E C T   
- 
- U S I N G   ( 
- 
-     E X I S T S   ( 
- 
-         S E L E C T   1   F R O M   p u b l i c . i n v o i c e s   i   W H E R E   i . i d   =   i n v o i c e _ i d   A N D   p u b l i c . g e t _ u s e r _ r o l e ( i . w o r k s p a c e _ i d )   I N   ( ' s u p e r _ a d m i n ' ,   ' a d m i n ' ,   ' m a n a g e r ' ,   ' m e m b e r ' ) 
- 
-     ) 
- 
- ) ; 
- 
- 
- 
- C R E A T E   P O L I C Y   " E n a b l e   w r i t e   a c c e s s   f o r   a u t h o r i z e d   u s e r s   v i a   i n v o i c e "   
- 
- O N   p u b l i c . i n v o i c e _ l i n e _ i t e m s   F O R   A L L   
- 
- U S I N G   ( 
- 
-     E X I S T S   ( 
- 
-         S E L E C T   1   F R O M   p u b l i c . i n v o i c e s   i   W H E R E   i . i d   =   i n v o i c e _ i d   A N D   p u b l i c . g e t _ u s e r _ r o l e ( i . w o r k s p a c e _ i d )   =   ' s u p e r _ a d m i n ' 
- 
-     ) 
- 
- ) ; 
- 
- 
- 
- 
- 
- - -   6 .   T r i g g e r   f o r   P a y m e n t   A c c o u n t i n g   ( A u t o   u p d a t e   b a l a n c e   a n d   s t a t u s ) 
- 
- C R E A T E   O R   R E P L A C E   F U N C T I O N   p u b l i c . u p d a t e _ i n v o i c e _ b a l a n c e ( ) 
- 
- R E T U R N S   T R I G G E R   A S   $ $ 
- 
- D E C L A R E 
- 
-         v _ i n v o i c e _ a m o u n t   n u m e r i c ; 
- 
-         v _ t o t a l _ p a i d   n u m e r i c ; 
- 
-         v _ n e w _ b a l a n c e   n u m e r i c ; 
- 
- B E G I N 
- 
-         I F   T G _ O P   =   ' I N S E R T '   O R   T G _ O P   =   ' U P D A T E '   T H E N 
- 
-                 - -   C a l c u l a t e   t o t a l   p a y m e n t s   f o r   t h i s   i n v o i c e 
- 
-                 S E L E C T   C O A L E S C E ( S U M ( a m o u n t ) ,   0 )   I N T O   v _ t o t a l _ p a i d 
- 
-                 F R O M   p u b l i c . p a y m e n t s 
- 
-                 W H E R E   i n v o i c e _ i d   =   N E W . i n v o i c e _ i d ; 
- 
-                 
- 
-                 - -   G e t   g r a n d   t o t a l   o f   i n v o i c e 
- 
-                 S E L E C T   g r a n d _ t o t a l   I N T O   v _ i n v o i c e _ a m o u n t 
- 
-                 F R O M   p u b l i c . i n v o i c e s 
- 
-                 W H E R E   i d   =   N E W . i n v o i c e _ i d ; 
- 
-                 
- 
-                 - -   U p d a t e   i n v o i c e   b a l a n c e   a n d   s t a t u s 
- 
-                 v _ n e w _ b a l a n c e   : =   G R E A T E S T ( 0 ,   v _ i n v o i c e _ a m o u n t   -   v _ t o t a l _ p a i d ) ; 
- 
-                 
- 
-                 U P D A T E   p u b l i c . i n v o i c e s 
- 
-                 S E T   
- 
-                         b a l a n c e _ d u e   =   v _ n e w _ b a l a n c e , 
- 
-                         s t a t u s   =   C A S E   
- 
-                                                 W H E N   v _ n e w _ b a l a n c e   < =   0   T H E N   ' p a i d ' 
- 
-                                                 W H E N   v _ t o t a l _ p a i d   >   0   T H E N   ' p a r t i a l ' 
- 
-                                                 E L S E   s t a t u s   - -   k e e p   e x i s t i n g   s t a t u s   ( e . g .   s e n t ,   o v e r d u e )   i f   n o   p a y m e n t s 
- 
-                                           E N D 
- 
-                 W H E R E   i d   =   N E W . i n v o i c e _ i d ; 
- 
-                 
- 
-         E L S I F   T G _ O P   =   ' D E L E T E '   T H E N 
- 
-                 - -   C a l c u l a t e   t o t a l   p a y m e n t s   a f t e r   d e l e t i o n 
- 
-                 S E L E C T   C O A L E S C E ( S U M ( a m o u n t ) ,   0 )   I N T O   v _ t o t a l _ p a i d 
- 
-                 F R O M   p u b l i c . p a y m e n t s 
- 
-                 W H E R E   i n v o i c e _ i d   =   O L D . i n v o i c e _ i d ; 
- 
-                 
- 
-                 S E L E C T   g r a n d _ t o t a l   I N T O   v _ i n v o i c e _ a m o u n t 
- 
-                 F R O M   p u b l i c . i n v o i c e s 
- 
-                 W H E R E   i d   =   O L D . i n v o i c e _ i d ; 
- 
-                 
- 
-                 v _ n e w _ b a l a n c e   : =   G R E A T E S T ( 0 ,   v _ i n v o i c e _ a m o u n t   -   v _ t o t a l _ p a i d ) ; 
- 
-                 
- 
-                 U P D A T E   p u b l i c . i n v o i c e s 
- 
-                 S E T   
- 
-                         b a l a n c e _ d u e   =   v _ n e w _ b a l a n c e , 
- 
-                         s t a t u s   =   C A S E   
- 
-                                                 W H E N   v _ n e w _ b a l a n c e   < =   0   T H E N   ' p a i d ' 
- 
-                                                 W H E N   v _ t o t a l _ p a i d   >   0   T H E N   ' p a r t i a l ' 
- 
-                                                 W H E N   v _ t o t a l _ p a i d   =   0   T H E N   ' s e n t '   - -   R e s e t   t o   s e n t   i f   n o   p a y m e n t s   l e f t 
- 
-                                                 E L S E   s t a t u s 
- 
-                                           E N D 
- 
-                 W H E R E   i d   =   O L D . i n v o i c e _ i d ; 
- 
-         E N D   I F ; 
- 
-         
- 
-         R E T U R N   N U L L ; 
- 
- E N D ; 
- 
- $ $   L A N G U A G E   p l p g s q l   S E C U R I T Y   D E F I N E R ; 
- 
- 
- 
- D R O P   T R I G G E R   I F   E X I S T S   t r g _ u p d a t e _ i n v o i c e _ b a l a n c e   O N   p u b l i c . p a y m e n t s ; 
- 
- C R E A T E   T R I G G E R   t r g _ u p d a t e _ i n v o i c e _ b a l a n c e 
- 
- A F T E R   I N S E R T   O R   U P D A T E   O R   D E L E T E   O N   p u b l i c . p a y m e n t s 
- 
- F O R   E A C H   R O W   E X E C U T E   F U N C T I O N   p u b l i c . u p d a t e _ i n v o i c e _ b a l a n c e ( ) ; 
- 
- 
- 
- - -   A p p l y   t r i g g e r   l o g i c   t o   e x i s t i n g   i n v o i c e s   m a n u a l l y 
- 
- D O   $ $ 
- 
- D E C L A R E 
- 
-         r e c   R E C O R D ; 
- 
- B E G I N 
- 
-         F O R   r e c   I N   S E L E C T   i d ,   C O A L E S C E ( a m o u n t ,   0 )   a s   i n v o i c e _ a m o u n t   F R O M   p u b l i c . i n v o i c e s   L O O P 
- 
-                 - -   F o r   l e g a c y   c o m p a t i b i l i t y ,   a s s u m e   a m o u n t   i s   g r a n d _ t o t a l   i f   g r a n d _ t o t a l   i s   0 
- 
-                 U P D A T E   p u b l i c . i n v o i c e s   
- 
-                 S E T   g r a n d _ t o t a l   =   i n v o i c e _ a m o u n t ,   
- 
-                         s u b t o t a l   =   i n v o i c e _ a m o u n t ,   
- 
-                         t a x a b l e _ a m o u n t   =   i n v o i c e _ a m o u n t 
- 
-                 W H E R E   i d   =   r e c . i d   A N D   g r a n d _ t o t a l   =   0 ; 
- 
-         
- 
-                 U P D A T E   p u b l i c . i n v o i c e s   i 
- 
-                 S E T   b a l a n c e _ d u e   =   G R E A T E S T ( 0 ,   i . g r a n d _ t o t a l   -   C O A L E S C E ( ( S E L E C T   S U M ( a m o u n t )   F R O M   p u b l i c . p a y m e n t s   W H E R E   i n v o i c e _ i d   =   i . i d ) ,   0 ) ) 
- 
-                 W H E R E   i . i d   =   r e c . i d ; 
- 
-                 
- 
-                 U P D A T E   p u b l i c . i n v o i c e s   i 
- 
-                 S E T   s t a t u s   =   C A S E   W H E N   i . b a l a n c e _ d u e   < =   0   T H E N   ' p a i d '   W H E N   i . b a l a n c e _ d u e   <   i . g r a n d _ t o t a l   T H E N   ' p a r t i a l '   E L S E   i . s t a t u s   E N D 
- 
-                 W H E R E   i . i d   =   r e c . i d ; 
- 
-         E N D   L O O P ; 
- 
- E N D ; 
- 
- $ $ ; 
- 
- 
- 
- - -   7 .   A u d i t   L o g g i n g   i n t e g r a t i o n 
- 
- C R E A T E   O R   R E P L A C E   F U N C T I O N   p u b l i c . a u d i t _ g s t _ i n v o i c e _ c h a n g e s ( ) 
- 
- R E T U R N S   T R I G G E R   A S   $ $ 
- 
- B E G I N 
- 
-         I F   T G _ O P   =   ' I N S E R T '   T H E N 
- 
-                 I N S E R T   I N T O   p u b l i c . a u d i t _ l o g s   ( w o r k s p a c e _ i d ,   a c t i o n ,   e n t i t y _ t y p e ,   e n t i t y _ i d ,   u s e r _ i d ,   d e t a i l s ) 
- 
-                 V A L U E S   ( N E W . w o r k s p a c e _ i d ,   ' i n v o i c e _ g e n e r a t e d ' ,   ' i n v o i c e ' ,   N E W . i d ,   N E W . c r e a t e d _ b y ,   
- 
-                         j s o n b _ b u i l d _ o b j e c t ( ' i n v o i c e _ n u m b e r ' ,   N E W . i n v o i c e _ n u m b e r ,   ' g r a n d _ t o t a l ' ,   N E W . g r a n d _ t o t a l ,   ' t o t a l _ t a x ' ,   N E W . t o t a l _ t a x ) ) ; 
- 
-         E L S I F   T G _ O P   =   ' U P D A T E '   T H E N 
- 
-                 I F   O L D . s t a t u s   ! =   N E W . s t a t u s   A N D   N E W . s t a t u s   =   ' c a n c e l l e d '   T H E N 
- 
-                         I N S E R T   I N T O   p u b l i c . a u d i t _ l o g s   ( w o r k s p a c e _ i d ,   a c t i o n ,   e n t i t y _ t y p e ,   e n t i t y _ i d ,   u s e r _ i d ,   d e t a i l s ) 
- 
-                         V A L U E S   ( N E W . w o r k s p a c e _ i d ,   ' i n v o i c e _ c a n c e l l e d ' ,   ' i n v o i c e ' ,   N E W . i d ,   a u t h . u i d ( ) ,   
- 
-                                 j s o n b _ b u i l d _ o b j e c t ( ' i n v o i c e _ n u m b e r ' ,   N E W . i n v o i c e _ n u m b e r ) ) ; 
- 
-                 E N D   I F ; 
- 
-                 
- 
-                 I F   O L D . t o t a l _ t a x   ! =   N E W . t o t a l _ t a x   T H E N 
- 
-                         I N S E R T   I N T O   p u b l i c . a u d i t _ l o g s   ( w o r k s p a c e _ i d ,   a c t i o n ,   e n t i t y _ t y p e ,   e n t i t y _ i d ,   u s e r _ i d ,   d e t a i l s ) 
- 
-                         V A L U E S   ( N E W . w o r k s p a c e _ i d ,   ' g s t _ v a l u e s _ c h a n g e d ' ,   ' i n v o i c e ' ,   N E W . i d ,   a u t h . u i d ( ) ,   
- 
-                                 j s o n b _ b u i l d _ o b j e c t ( ' o l d _ t a x ' ,   O L D . t o t a l _ t a x ,   ' n e w _ t a x ' ,   N E W . t o t a l _ t a x ) ) ; 
- 
-                 E N D   I F ; 
- 
-         E N D   I F ; 
- 
-         R E T U R N   N U L L ;   - -   A F T E R   t r i g g e r 
- 
- E N D ; 
- 
- $ $   L A N G U A G E   p l p g s q l   S E C U R I T Y   D E F I N E R ; 
- 
- 
- 
- D R O P   T R I G G E R   I F   E X I S T S   t r g _ a u d i t _ g s t _ i n v o i c e s   O N   p u b l i c . i n v o i c e s ; 
- 
- C R E A T E   T R I G G E R   t r g _ a u d i t _ g s t _ i n v o i c e s 
- 
- A F T E R   I N S E R T   O R   U P D A T E   O N   p u b l i c . i n v o i c e s 
- 
- F O R   E A C H   R O W   E X E C U T E   F U N C T I O N   p u b l i c . a u d i t _ g s t _ i n v o i c e _ c h a n g e s ( ) ; 
- 
- 
- 
- C O M M I T ; 
- 
- - -   M i g r a t i o n :   O r g a n i z a t i o n   D o c u m e n t   T e m p l a t e s 
- 
- - -   D e s c r i p t i o n :   C o r e   s y s t e m   f o r   c u s t o m   b r a n d e d   d o c u m e n t   t e m p l a t e s   ( i n v o i c e s ,   r e c e i p t s ,   o f f e r   l e t t e r s ,   e t c . ) 
- 
- 
- 
- B E G I N ; 
- 
- 
- 
- C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . d o c u m e n t _ t e m p l a t e s   ( 
- 
-         i d   u u i d   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) , 
- 
-         w o r k s p a c e _ i d   u u i d   N O T   N U L L   R E F E R E N C E S   p u b l i c . w o r k s p a c e s ( i d )   O N   D E L E T E   C A S C A D E , 
- 
-         n a m e   t e x t   N O T   N U L L , 
- 
-         t y p e   t e x t   N O T   N U L L   C H E C K   ( t y p e   I N   ( ' i n v o i c e ' ,   ' r e c e i p t ' ,   ' o f f e r _ l e t t e r ' ,   ' e x p e r i e n c e _ l e t t e r ' ,   ' s a l a r y _ s l i p ' ,   ' r e p o r t ' ,   ' c u s t o m ' ) ) , 
- 
-         t e m p l a t e _ b o d y   t e x t   N O T   N U L L , 
- 
-         h e a d e r _ c o n f i g   j s o n b   D E F A U L T   ' { } ' : : j s o n b , 
- 
-         f o o t e r _ c o n f i g   j s o n b   D E F A U L T   ' { } ' : : j s o n b , 
- 
-         s t y l e s   j s o n b   D E F A U L T   ' { } ' : : j s o n b , 
- 
-         l o g o _ u r l   t e x t , 
- 
-         i s _ d e f a u l t   b o o l e a n   D E F A U L T   f a l s e , 
- 
-         c r e a t e d _ b y   u u i d   R E F E R E N C E S   a u t h . u s e r s ( i d ) , 
- 
-         c r e a t e d _ a t   t i m e s t a m p t z   N O T   N U L L   D E F A U L T   n o w ( ) , 
- 
-         u p d a t e d _ a t   t i m e s t a m p t z   N O T   N U L L   D E F A U L T   n o w ( ) 
- 
- ) ; 
- 
- 
- 
- A L T E R   T A B L E   p u b l i c . d o c u m e n t _ t e m p l a t e s   E N A B L E   R O W   L E V E L   S E C U R I T Y ; 
- 
- 
- 
- C R E A T E   P O L I C Y   " E n a b l e   r e a d   a c c e s s   f o r   a u t h o r i z e d   u s e r s "   
- 
- O N   p u b l i c . d o c u m e n t _ t e m p l a t e s   F O R   S E L E C T   
- 
- U S I N G   ( p u b l i c . g e t _ u s e r _ r o l e ( w o r k s p a c e _ i d )   I N   ( ' s u p e r _ a d m i n ' ,   ' a d m i n ' ,   ' m a n a g e r ' ,   ' m e m b e r ' ) ) ; 
- 
- 
- 
- C R E A T E   P O L I C Y   " E n a b l e   w r i t e   a c c e s s   f o r   s u p e r   a d m i n "   
- 
- O N   p u b l i c . d o c u m e n t _ t e m p l a t e s   F O R   A L L   
- 
- U S I N G   ( p u b l i c . g e t _ u s e r _ r o l e ( w o r k s p a c e _ i d )   =   ' s u p e r _ a d m i n ' ) ; 
- 
- 
- 
- 
- 
- C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . d o c u m e n t _ t e m p l a t e _ h i s t o r y   ( 
- 
-         i d   u u i d   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) , 
- 
-         t e m p l a t e _ i d   u u i d   N O T   N U L L   R E F E R E N C E S   p u b l i c . d o c u m e n t _ t e m p l a t e s ( i d )   O N   D E L E T E   C A S C A D E , 
- 
-         v e r s i o n _ n u m b e r   i n t e g e r   N O T   N U L L , 
- 
-         n a m e   t e x t   N O T   N U L L , 
- 
-         t e m p l a t e _ b o d y   t e x t   N O T   N U L L , 
- 
-         h e a d e r _ c o n f i g   j s o n b , 
- 
-         f o o t e r _ c o n f i g   j s o n b , 
- 
-         s t y l e s   j s o n b , 
- 
-         l o g o _ u r l   t e x t , 
- 
-         c r e a t e d _ b y   u u i d   R E F E R E N C E S   a u t h . u s e r s ( i d ) , 
- 
-         c r e a t e d _ a t   t i m e s t a m p t z   N O T   N U L L   D E F A U L T   n o w ( ) 
- 
- ) ; 
- 
- 
- 
- A L T E R   T A B L E   p u b l i c . d o c u m e n t _ t e m p l a t e _ h i s t o r y   E N A B L E   R O W   L E V E L   S E C U R I T Y ; 
- 
- 
- 
- C R E A T E   P O L I C Y   " E n a b l e   r e a d   a c c e s s   f o r   a u t h o r i z e d   u s e r s "   
- 
- O N   p u b l i c . d o c u m e n t _ t e m p l a t e _ h i s t o r y   F O R   S E L E C T   
- 
- U S I N G   ( p u b l i c . g e t _ u s e r _ r o l e ( ( S E L E C T   w o r k s p a c e _ i d   F R O M   p u b l i c . d o c u m e n t _ t e m p l a t e s   W H E R E   i d   =   t e m p l a t e _ i d ) )   I N   ( ' s u p e r _ a d m i n ' ,   ' a d m i n ' ,   ' m a n a g e r ' ,   ' m e m b e r ' ) ) ; 
- 
- 
- 
- C R E A T E   P O L I C Y   " E n a b l e   w r i t e   a c c e s s   f o r   s u p e r   a d m i n "   
- 
- O N   p u b l i c . d o c u m e n t _ t e m p l a t e _ h i s t o r y   F O R   A L L   
- 
- U S I N G   ( p u b l i c . g e t _ u s e r _ r o l e ( ( S E L E C T   w o r k s p a c e _ i d   F R O M   p u b l i c . d o c u m e n t _ t e m p l a t e s   W H E R E   i d   =   t e m p l a t e _ i d ) )   =   ' s u p e r _ a d m i n ' ) ; 
- 
- 
- 
- 
- 
- - -   T r i g g e r   f o r   u p d a t e d _ a t 
- 
- C R E A T E   T R I G G E R   s e t _ t i m e s t a m p 
- 
- B E F O R E   U P D A T E   O N   p u b l i c . d o c u m e n t _ t e m p l a t e s 
- 
- F O R   E A C H   R O W 
- 
- E X E C U T E   F U N C T I O N   p u b l i c . t r i g g e r _ s e t _ t i m e s t a m p ( ) ; 
- 
- 
- 
- C O M M I T ; 
- 
- 
-
 -- MIGRATION_DOCUMENT_TEMPLATES.sql
 
 -- Migration: Organization Document Templates
@@ -3698,7 +3142,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.document_templates (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     name text NOT NULL,
     type text NOT NULL CHECK (type IN ('invoice', 'receipt', 'offer_letter', 'experience_letter', 'salary_slip', 'report', 'custom')),
     template_body text NOT NULL,
@@ -3775,7 +3219,7 @@ BEGIN;
 -- 1. Create company billing profile
 CREATE TABLE IF NOT EXISTS public.company_billing_profile (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL UNIQUE REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL UNIQUE REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     legal_name text NOT NULL,
     gstin text,
     pan text,
@@ -3807,7 +3251,7 @@ ADD COLUMN IF NOT EXISTS tax_type text DEFAULT 'unregistered' CHECK (tax_type IN
 
 -- 3. Invoice Sequence Mechanism
 CREATE TABLE IF NOT EXISTS public.invoice_sequences (
-    workspace_id uuid PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     last_sequence integer NOT NULL DEFAULT 0,
     current_year integer NOT NULL
 );
@@ -3887,8 +3331,7 @@ USING (
 CREATE OR REPLACE FUNCTION public.update_invoice_balance()
 RETURNS TRIGGER AS $$
 DECLARE
-    v_invoice_amount numeric;
-    v_total_paid numeric;
+    v_invoice_amount numeric;v_total_paid numeric;
     v_new_balance numeric;
 BEGIN
     IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
@@ -4043,9 +3486,9 @@ ADD COLUMN IF NOT EXISTS billing_type text DEFAULT 'Full Project Payment' CHECK 
 -- If we alter public.payments and it doesn't exist, it will crash. Let's create it if not exists.
 CREATE TABLE IF NOT EXISTS public.payments (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     invoice_id uuid REFERENCES public.invoices(id) ON DELETE SET NULL,
-    client_id uuid REFERENCES public.clients(id) ON DELETE CASCADE,
+    client_id uuid REFERENCES public.clients(id) ON DELETE RESTRICT,
     amount numeric NOT NULL DEFAULT 0,
     payment_date timestamptz NOT NULL DEFAULT now(),
     method text,
@@ -4056,8 +3499,8 @@ CREATE TABLE IF NOT EXISTS public.payments (
 
 -- We still run ALTER to add columns in case the table exists but doesn't have them
 ALTER TABLE public.payments
-ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE,
-ADD COLUMN IF NOT EXISTS client_id uuid REFERENCES public.clients(id) ON DELETE CASCADE,
+ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+ADD COLUMN IF NOT EXISTS client_id uuid REFERENCES public.clients(id) ON DELETE RESTRICT,
 ADD COLUMN IF NOT EXISTS advance_payment boolean DEFAULT false;
 
 -- Make invoice_id nullable on payments if it isn't already
@@ -4067,7 +3510,7 @@ ALTER TABLE public.payments ALTER COLUMN invoice_id DROP NOT NULL;
 -- 4. Extend or Create expenses table
 CREATE TABLE IF NOT EXISTS public.expenses (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     category text NOT NULL,
     amount numeric NOT NULL DEFAULT 0,
     date timestamptz NOT NULL DEFAULT now(),
@@ -4095,9 +3538,21 @@ COMMIT;
 -- Creates tables for advance applications and credit notes
 
 -- 1. Advance Applications
+-- 2. Create client_credits (Advance Ledger)
+CREATE TABLE IF NOT EXISTS public.client_credits (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+    client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE RESTRICT,
+    amount numeric NOT NULL DEFAULT 0,
+    source_payment_id uuid REFERENCES public.payments(id) ON DELETE SET NULL,
+    status text DEFAULT 'active' CHECK (status IN ('active', 'used')),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS public.advance_applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     client_credit_id UUID REFERENCES public.client_credits(id) ON DELETE CASCADE,
     invoice_id UUID REFERENCES public.invoices(id) ON DELETE CASCADE,
     amount_applied NUMERIC(15, 2) NOT NULL CHECK (amount_applied > 0),
@@ -4126,8 +3581,8 @@ CREATE POLICY "Users can create advance applications in their workspace" ON publ
 -- 2. Credit Notes
 CREATE TABLE IF NOT EXISTS public.credit_notes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    client_id UUID REFERENCES public.clients(id) ON DELETE CASCADE,
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+    client_id UUID REFERENCES public.clients(id) ON DELETE RESTRICT,
     invoice_id UUID REFERENCES public.invoices(id) ON DELETE SET NULL,
     credit_note_number VARCHAR(100) NOT NULL,
     amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0), -- Stored as positive, treated as negative in calculations
@@ -4168,8 +3623,8 @@ BEGIN;
 -- 1. Create billing_milestones
 CREATE TABLE IF NOT EXISTS public.billing_milestones (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+    project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE RESTRICT,
     name text NOT NULL,
     amount numeric NOT NULL DEFAULT 0,
     status text DEFAULT 'pending' CHECK (status IN ('pending', 'invoiced', 'paid')),
@@ -4178,23 +3633,12 @@ CREATE TABLE IF NOT EXISTS public.billing_milestones (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 2. Create client_credits (Advance Ledger)
-CREATE TABLE IF NOT EXISTS public.client_credits (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
-    amount numeric NOT NULL DEFAULT 0,
-    source_payment_id uuid REFERENCES public.payments(id) ON DELETE SET NULL,
-    status text DEFAULT 'active' CHECK (status IN ('active', 'used')),
-    created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now()
-);
 
 -- 3. Create invoice_audit_logs
 CREATE TABLE IF NOT EXISTS public.invoice_audit_logs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    invoice_id uuid REFERENCES public.invoices(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+    invoice_id uuid REFERENCES public.invoices(id) ON DELETE RESTRICT,
     action text NOT NULL,
     performed_by text NOT NULL,
     reason text,
@@ -4234,7 +3678,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS employment_records (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   employee_type text NOT NULL CHECK (employee_type IN ('Intern', 'Probation', 'Full Time', 'Contract', 'Consultant', 'Freelancer')),
   date_of_joining date,
@@ -4543,8 +3987,8 @@ NOTIFY pgrst, 'reload schema';
 -- 1. Create work_sessions table
 CREATE TABLE IF NOT EXISTS work_sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  task_id uuid NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  task_id uuid NOT NULL REFERENCES tasks(id) ON DELETE RESTRICT,
   user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   started_at timestamptz NOT NULL DEFAULT now(),
   ended_at timestamptz,
@@ -4706,7 +4150,7 @@ ALTER TABLE work_sessions ADD COLUMN IF NOT EXISTS locked_by uuid REFERENCES use
 -- 2. Create work_session_adjustments table
 CREATE TABLE IF NOT EXISTS work_session_adjustments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   session_id uuid NOT NULL REFERENCES work_sessions(id) ON DELETE CASCADE,
   old_value_mins integer NOT NULL,
   new_value_mins integer NOT NULL,
@@ -4737,7 +4181,7 @@ CREATE POLICY "PMs can insert work session adjustments"
 -- 3. Create project_reviews table
 CREATE TABLE IF NOT EXISTS project_reviews (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   original_estimate_hours numeric,
   actual_time_hours numeric,
@@ -4777,7 +4221,7 @@ CREATE POLICY "PMs can insert project reviews"
 -- 1. Create session_quality_flags table
 CREATE TABLE IF NOT EXISTS session_quality_flags (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   session_id uuid NOT NULL REFERENCES work_sessions(id) ON DELETE CASCADE,
   flag_type text NOT NULL,
   reason text NOT NULL,
@@ -4826,13 +4270,27 @@ CREATE INDEX IF NOT EXISTS idx_session_quality_flags_session ON session_quality_
 -- RESOLVE PM SPRINT 4 - EXTERNAL ACCESS LAYER
 -- ==============================================================================
 
--- 1. Create external_access_links table
+-- 1. Create public.external_access_links table
+
+CREATE TABLE IF NOT EXISTS public.external_access_links (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  entity_type text NOT NULL,
+  entity_id uuid NOT NULL,
+  token text UNIQUE NOT NULL,
+  expires_at timestamptz NOT NULL,
+  revoked_at timestamptz,
+  revoked_by uuid REFERENCES users(id) ON DELETE SET NULL,
+  last_accessed_at timestamptz,
+  access_count integer DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
 -- Enable RLS
-ALTER TABLE external_access_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.external_access_links ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Workspace members can view external access links"
-  ON external_access_links FOR SELECT
+  ON public.external_access_links FOR SELECT
   USING (
     workspace_id IN (
       SELECT workspace_id FROM users WHERE id = auth.uid()
@@ -4840,7 +4298,7 @@ CREATE POLICY "Workspace members can view external access links"
   );
 
 CREATE POLICY "Project Managers can insert external access links"
-  ON external_access_links FOR INSERT
+  ON public.external_access_links FOR INSERT
   WITH CHECK (
     workspace_id IN (
       SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
@@ -4848,7 +4306,7 @@ CREATE POLICY "Project Managers can insert external access links"
   );
 
 CREATE POLICY "Project Managers can update external access links"
-  ON external_access_links FOR UPDATE
+  ON public.external_access_links FOR UPDATE
   USING (
     workspace_id IN (
       SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
@@ -4864,19 +4322,20 @@ ALTER TABLE meetings
 ADD COLUMN IF NOT EXISTS meeting_category text DEFAULT 'Internal' CHECK (meeting_category IN ('Internal', 'Client', 'HR', 'Finance'));
 
 -- 4. Create RPC to fetch shared project data securely using token bypass
+
 CREATE OR REPLACE FUNCTION get_shared_project_data(p_token text)
 RETURNS json
 LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = ''
+SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
-  v_link external_access_links%ROWTYPE;
+  v_link public.external_access_links%ROWTYPE;
   v_project json;
   v_response json;
 BEGIN
   -- 1. Find the link and ensure it is valid
   SELECT * INTO v_link
-  FROM external_access_links
+  FROM public.external_access_links
   WHERE token_hash = p_token
     AND (expires_at IS NULL OR expires_at > now())
     AND revoked_at IS NULL;
@@ -4896,7 +4355,6 @@ BEGIN
       'description', p.description,
       'status', p.status,
       'target_date', p.target_date,
-      'timeline', p.timeline,
       'client_id', p.client_id
   ) INTO v_project
   FROM projects p
@@ -4924,15 +4382,15 @@ CREATE OR REPLACE FUNCTION submit_client_approval(
 )
 RETURNS json
 LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = ''
+SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
-  v_link external_access_links%ROWTYPE;
+  v_link public.external_access_links%ROWTYPE;
   v_approval universal_approvals%ROWTYPE;
 BEGIN
   -- 1. Find the link and ensure it is valid
   SELECT * INTO v_link
-  FROM external_access_links
+  FROM public.external_access_links
   WHERE token_hash = p_token
     AND (expires_at IS NULL OR expires_at > now())
     AND revoked_at IS NULL;
@@ -4990,7 +4448,7 @@ GRANT EXECUTE ON FUNCTION submit_client_approval(text, uuid, text, text) TO anon
 -- 1. Create Workspace License Table
 CREATE TABLE IF NOT EXISTS workspace_license (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   license_key_hash text NOT NULL,
   activation_date timestamptz NOT NULL DEFAULT now(),
   allowed_users integer NOT NULL DEFAULT 10,
@@ -5083,97 +4541,6 @@ WITH CHECK (
 
 -- 4. RLS SWEEP ON CORE TABLES (Projects, Tasks, Users, Invoices)
 -- Ensure 'client' roles can only view their specific entities.
--- 2. Fetch Project Data
-  SELECT json_build_object(
-      'id', p.id,
-      'name', p.name,
-      'description', p.description,
-      'status', p.status,
-      'target_date', p.target_date,
-      'timeline', p.timeline,
-      'client_id', p.client_id
-  ) INTO v_project
-  FROM projects p
-  WHERE p.id = v_link.entity_id;
-
-  -- We return the sanitized project, plus permissions so the frontend knows what to render
-  v_response := json_build_object(
-      'project', v_project,
-      'permissions', v_link.permissions,
-      'workspace_id', v_link.workspace_id
-  );
-
-  RETURN v_response;
-END;
-$$;
-
-GRANT EXECUTE ON FUNCTION get_shared_project_data(text) TO anon, authenticated;
-
--- 5. Create RPC to submit client approvals securely using token bypass
-CREATE OR REPLACE FUNCTION submit_client_approval(
-  p_token text,
-  p_approval_id uuid,
-  p_status text,
-  p_notes text
-)
-RETURNS json
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = ''
-AS $$
-DECLARE
-  v_link external_access_links%ROWTYPE;
-  v_approval universal_approvals%ROWTYPE;
-BEGIN
-  -- 1. Find the link and ensure it is valid
-  SELECT * INTO v_link
-  FROM external_access_links
-  WHERE token_hash = p_token
-    AND (expires_at IS NULL OR expires_at > now())
-    AND revoked_at IS NULL;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Invalid, expired, or revoked access token';
-  END IF;
-
-  -- 2. Verify the approval exists and belongs to the project
-  SELECT * INTO v_approval
-  FROM universal_approvals
-  WHERE id = p_approval_id AND entity_id = v_link.entity_id;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Approval request not found for this project';
-  END IF;
-
-  -- 3. Validate status
-  IF p_status NOT IN ('approved', 'rejected') THEN
-    RAISE EXCEPTION 'Invalid status';
-  END IF;
-
-  -- 4. Update the approval
-  UPDATE universal_approvals
-  SET 
-    status = p_status,
-    notes = p_notes,
-    resolved_at = now()
-  WHERE id = p_approval_id;
-
-  -- 5. Log activity
-  INSERT INTO activity_logs (workspace_id, entity_type, entity_id, action, actor_id, details)
-  VALUES (
-    v_link.workspace_id, 
-    'project', 
-    v_link.entity_id, 
-    'client_' || p_status, 
-    v_link.created_by, -- Use the creator of the link as the proxy actor, or null if allowed
-    jsonb_build_object('approval_id', p_approval_id, 'notes', p_notes, 'client_token_id', v_link.id)
-  );
-
-  RETURN json_build_object('success', true);
-END;
-$$;
-
-GRANT EXECUTE ON FUNCTION submit_client_approval(text, uuid, text, text) TO anon, authenticated;
-
 -- END OF MERGED FILE: MIGRATION_SPRINT4_EXTERNAL_ACCESS.sql --
 
 -- START OF MERGED FILE: MIGRATION_SPRINT5_PRODUCTION_READINESS.sql --
@@ -5242,7 +4609,6 @@ USING (
         )
       )
   AND deleted_at IS NULL
-  )
 );
 
 -- Invoices
@@ -5300,7 +4666,7 @@ BEGIN;
 -- 1. TASK COLLABORATOR SYSTEM
 CREATE TABLE IF NOT EXISTS public.task_collaborators (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
     user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
     added_by uuid REFERENCES public.users(id) ON DELETE RESTRICT,
@@ -5339,11 +4705,9 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_invoice_id uuid;
-  v_total_paid numeric;
+  v_invoice_id uuid;v_total_paid numeric;
   v_invoice_total numeric;
-  v_invoice_status text;
-  v_workspace_id uuid;
+  v_invoice_status text;v_workspace_id uuid;
 BEGIN
   v_invoice_id := COALESCE(NEW.invoice_id, OLD.invoice_id);
   IF v_invoice_id IS NULL THEN
@@ -5384,8 +4748,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE
-  v_actor_id uuid;
-  v_workspace_id uuid;
+  v_actor_id uuid;v_workspace_id uuid;
   v_old_json jsonb;
   v_new_json jsonb;
   v_record_id uuid;
@@ -5466,7 +4829,7 @@ WHERE original_estimate IS NULL;
 
 CREATE TABLE IF NOT EXISTS public.task_estimate_history (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
     old_estimate numeric,
     new_estimate numeric NOT NULL,
@@ -5504,7 +4867,7 @@ ALTER TABLE public.invoices ADD CONSTRAINT invoices_status_check CHECK (status I
 -- 1. TASK OWNERSHIP TRANSFER WORKFLOW
 CREATE TABLE IF NOT EXISTS public.task_assignment_history (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
     previous_assignee_id uuid REFERENCES public.users(id) ON DELETE RESTRICT,
     new_assignee_id uuid REFERENCES public.users(id) ON DELETE RESTRICT,
@@ -5530,7 +4893,7 @@ WITH CHECK (workspace_id = current_workspace());
 -- 2. COLLABORATOR SUGGESTION MODEL
 CREATE TABLE IF NOT EXISTS public.task_suggestions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
     suggested_by uuid REFERENCES public.users(id) ON DELETE RESTRICT,
     suggestion_type text NOT NULL CHECK (suggestion_type IN ('estimate_change', 'scope_note', 'technical_risk')),
@@ -5566,16 +4929,16 @@ ADD COLUMN IF NOT EXISTS access_count integer DEFAULT 0 NOT NULL;
 CREATE OR REPLACE FUNCTION get_shared_project_data(p_token text)
 RETURNS json
 LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = ''
+SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
-  v_link external_access_links%ROWTYPE;
+  v_link public.external_access_links%ROWTYPE;
   v_project json;
   v_response json;
 BEGIN
   -- Find the link and ensure it is valid
   SELECT * INTO v_link
-  FROM external_access_links
+  FROM public.external_access_links
   WHERE token_hash = p_token
     AND (expires_at IS NULL OR expires_at > now())
     AND revoked_at IS NULL;
@@ -5589,7 +4952,7 @@ BEGIN
   END IF;
 
   -- Update access metadata
-  UPDATE external_access_links
+  UPDATE public.external_access_links
   SET last_accessed_at = now(),
       access_count = access_count + 1
   WHERE id = v_link.id;
@@ -5619,7 +4982,6 @@ BEGIN
       'description', p.description,
       'status', p.status,
       'target_date', p.target_date,
-      'timeline', p.timeline,
       'client_id', p.client_id
   ) INTO v_project
   FROM projects p
@@ -5659,7 +5021,7 @@ ADD COLUMN IF NOT EXISTS conversion_date timestamptz;
 BEGIN;
 
 ALTER TABLE public.payments
-ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE;
+ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE RESTRICT;
 
 -- Also fix invoice_id to be nullable if it isn't
 ALTER TABLE public.payments ALTER COLUMN invoice_id DROP NOT NULL;
@@ -5690,8 +5052,8 @@ ADD COLUMN IF NOT EXISTS exchange_override_reason text;
 -- 4. Exchange Rate Audits Table
 CREATE TABLE IF NOT EXISTS public.exchange_rate_audits (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    invoice_id uuid NOT NULL REFERENCES public.invoices(id) ON DELETE CASCADE,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+ invoice_id uuid REFERENCES public.invoices(id) ON DELETE SET NULL, 
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     old_rate numeric,
     new_rate numeric NOT NULL,
     changed_by uuid NOT NULL REFERENCES auth.users(id),
@@ -5705,7 +5067,7 @@ CREATE INDEX IF NOT EXISTS idx_exchange_rate_audits_invoice_id ON public.exchang
 -- 5. Financial Report Snapshots Table
 CREATE TABLE IF NOT EXISTS public.financial_report_snapshots (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     report_type text NOT NULL,
     snapshot_data jsonb NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
@@ -5970,7 +5332,7 @@ $$;
 
 CREATE TABLE IF NOT EXISTS public.ai_recommendations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
 
     recommendation_type text NOT NULL,
 
@@ -6001,7 +5363,7 @@ ON public.ai_recommendations(workspace_id);
 CREATE TABLE IF NOT EXISTS public.epics (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
 
     name text NOT NULL,
@@ -6027,11 +5389,24 @@ ON public.epics(project_id);
 -- MILESTONES
 -- ============================================================
 
+CREATE TABLE IF NOT EXISTS public.sprints (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+    project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+    name text NOT NULL,
+    start_date timestamptz NOT NULL,
+    end_date timestamptz NOT NULL,
+    status text DEFAULT 'planning',
+    created_at timestamptz DEFAULT now(),
+    deleted_at timestamptz
+);
+ALTER TABLE public.sprints ENABLE ROW LEVEL SECURITY;
+
 CREATE TABLE IF NOT EXISTS public.milestones (
 
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
 
     project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
 
@@ -6062,6 +5437,17 @@ CREATE INDEX IF NOT EXISTS idx_milestones_project
 ON public.milestones(project_id);
 
 
+
+CREATE TABLE IF NOT EXISTS public.documents (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+    project_id uuid REFERENCES public.projects(id) ON DELETE SET NULL,
+    title text NOT NULL,
+    content text,
+    created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- DOCUMENT VERSIONS
@@ -6103,7 +5489,7 @@ CREATE TABLE IF NOT EXISTS public.integration_configs (
 
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
 
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
 
@@ -6184,7 +5570,7 @@ ALTER TABLE public.task_history_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.connected_accounts (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     provider text NOT NULL,
     access_token text,
     refresh_token text,
@@ -6192,33 +5578,13 @@ CREATE TABLE IF NOT EXISTS public.connected_accounts (
 );
 ALTER TABLE public.connected_accounts ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE IF NOT EXISTS public.documents (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-    title text NOT NULL,
-    content text,
-    created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
-    created_at timestamptz DEFAULT now()
-);
-ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE IF NOT EXISTS public.sprints (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
-    name text NOT NULL,
-    start_date timestamptz NOT NULL,
-    end_date timestamptz NOT NULL,
-    status text DEFAULT 'planning',
-    created_at timestamptz DEFAULT now(),
-    deleted_at timestamptz
-);
-ALTER TABLE public.sprints ENABLE ROW LEVEL SECURITY;
+
+
 
 CREATE TABLE IF NOT EXISTS public.approval_chains (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     name text NOT NULL,
     created_at timestamptz DEFAULT now()
 );
@@ -6226,7 +5592,7 @@ ALTER TABLE public.approval_chains ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.approval_instances (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     chain_id uuid NOT NULL REFERENCES public.approval_chains(id) ON DELETE CASCADE,
     target_id uuid NOT NULL,
     status text DEFAULT 'pending',
@@ -6236,7 +5602,7 @@ ALTER TABLE public.approval_instances ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.automation_rules (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     trigger_type text NOT NULL,
     action_payload jsonb NOT NULL,
     created_at timestamptz DEFAULT now()
@@ -6245,7 +5611,7 @@ ALTER TABLE public.automation_rules ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.integration_sync_jobs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     provider text NOT NULL,
     status text DEFAULT 'pending',
     started_at timestamptz DEFAULT now(),
@@ -6264,7 +5630,7 @@ DECLARE
   ];
 BEGIN
   FOREACH t IN ARRAY tables LOOP
-    EXECUTE format('ALTER TABLE IF EXISTS public.%I ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE;', t);
+    EXECUTE format('ALTER TABLE IF EXISTS public.%I ADD COLUMN IF NOT EXISTS workspace_id uuid REFERENCES public.workspaces(id) ON DELETE RESTRICT;', t);
   END LOOP;
 END $$;
 
@@ -7043,8 +6409,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
-DECLARE
-    v_workspace_id uuid;
+DECLAREv_workspace_id uuid;
     v_current_status text;
 BEGIN
     -- Ensure the target status is a valid archived state
@@ -7101,7 +6466,7 @@ $$;
 
 CREATE TABLE IF NOT EXISTS company_billing_profile (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   legal_name text NOT NULL,
   gstin text,
   pan text,
@@ -7116,7 +6481,7 @@ CREATE TABLE IF NOT EXISTS company_billing_profile (
 
 CREATE TABLE IF NOT EXISTS financial_snapshots (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   period_id uuid NOT NULL REFERENCES financial_periods(id) ON DELETE CASCADE,
   total_revenue numeric NOT NULL DEFAULT 0,
   total_salary_expense numeric NOT NULL DEFAULT 0,
@@ -7140,8 +6505,8 @@ CREATE TABLE IF NOT EXISTS financial_adjustments (
 
 CREATE TABLE IF NOT EXISTS billing_milestones (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  project_id uuid NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
   name text NOT NULL,
   amount numeric NOT NULL,
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'invoiced', 'paid')),
@@ -7153,8 +6518,8 @@ ALTER TABLE public.billing_milestones ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS client_credits (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
   amount numeric NOT NULL,
   source_payment_id uuid REFERENCES payments(id) ON DELETE SET NULL,
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used')),
@@ -7165,7 +6530,7 @@ ALTER TABLE public.client_credits ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS advance_applications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   client_credit_id uuid NOT NULL REFERENCES client_credits(id) ON DELETE CASCADE,
   invoice_id uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
   amount_applied numeric NOT NULL,
@@ -7176,8 +6541,8 @@ CREATE TABLE IF NOT EXISTS advance_applications (
 
 CREATE TABLE IF NOT EXISTS credit_notes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
   invoice_id uuid REFERENCES invoices(id) ON DELETE SET NULL,
   credit_note_number text NOT NULL,
   amount numeric NOT NULL,
@@ -7190,7 +6555,7 @@ CREATE TABLE IF NOT EXISTS credit_notes (
 
 CREATE TABLE IF NOT EXISTS invoice_audit_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   invoice_id uuid REFERENCES invoices(id) ON DELETE SET NULL,
   action text NOT NULL,
   performed_by uuid REFERENCES users(id) ON DELETE SET NULL,
@@ -7203,8 +6568,8 @@ ALTER TABLE public.invoice_audit_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS exchange_rate_audits (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  invoice_id uuid REFERENCES invoices(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+  invoice_id uuid REFERENCES invoices(id) ON DELETE SET NULL,
   old_rate numeric,
   new_rate numeric NOT NULL,
   changed_by uuid REFERENCES users(id) ON DELETE SET NULL,
@@ -7214,7 +6579,7 @@ CREATE TABLE IF NOT EXISTS exchange_rate_audits (
 
 CREATE TABLE IF NOT EXISTS requirements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   title text NOT NULL,
   description text,
@@ -7224,9 +6589,9 @@ CREATE TABLE IF NOT EXISTS requirements (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS external_access_links (
+CREATE TABLE IF NOT EXISTS public.external_access_links (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   target_type text NOT NULL CHECK (target_type IN ('project', 'board', 'invoice', 'report')),
   target_id uuid NOT NULL,
   access_token text NOT NULL UNIQUE,
@@ -7241,7 +6606,7 @@ CREATE TABLE IF NOT EXISTS external_access_links (
 
 CREATE TABLE IF NOT EXISTS departments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   name text NOT NULL,
   parent_department_id uuid REFERENCES departments(id) ON DELETE SET NULL,
   department_head_id uuid REFERENCES users(id) ON DELETE SET NULL,
@@ -7332,8 +6697,7 @@ DECLARE
     'financial_snapshots', 'financial_adjustments', 'billing_milestones', 
     'client_credits', 'advance_applications', 'credit_notes', 
     'invoice_audit_logs', 'exchange_rate_audits', 'requirements', 
-    'external_access_links', 'departments',  
-    
+    'external_access_links', 'departments'
   ];
 BEGIN
   FOREACH t IN ARRAY tables
@@ -7360,6 +6724,20 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created ON public.notifications(cre
 CREATE INDEX IF NOT EXISTS idx_work_sessions_user_start ON public.work_sessions(user_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_invoices_ws_status ON public.invoices(workspace_id, status);
 
+
+CREATE TABLE IF NOT EXISTS public.system_events (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+    severity text NOT NULL CHECK (severity IN ('info', 'warning', 'error', 'critical')),
+    source text NOT NULL CHECK (source IN ('frontend', 'database', 'rpc', 'auth', 'edge_function', 'integration')),
+    event_type text NOT NULL,
+    message text NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    resolved boolean DEFAULT false,
+    resolved_at timestamptz,
+    created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.system_events ENABLE ROW LEVEL SECURITY;
 
 -- Sprint 8.12 Observability Pipeline
 
@@ -7537,7 +6915,7 @@ CREATE POLICY "Users can manage their own follow ups" ON follow_ups
 -- Migration: Add Company Calendar tables
 
 CREATE TABLE IF NOT EXISTS public.workspace_calendar_settings (
-  workspace_id uuid PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE RESTRICT,
   working_days jsonb NOT NULL DEFAULT '[1,2,3,4,5,6]'::jsonb, -- 0=Sun, 1=Mon, ..., 6=Sat
   saturday_policy text NOT NULL DEFAULT 'all_working' CHECK (saturday_policy IN ('all_working', 'all_off', '1st_3rd_off', '2nd_4th_off', 'custom')),
   custom_saturdays_off integer[] DEFAULT ARRAY[]::integer[],
@@ -7553,7 +6931,7 @@ CREATE TABLE IF NOT EXISTS public.workspace_calendar_settings (
 -- (merging sync and manual/import without pm-tool-server).
 CREATE TABLE IF NOT EXISTS public.company_calendar_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
   name text NOT NULL,
   date date NOT NULL,
   event_type text NOT NULL CHECK (event_type IN ('holiday', 'festival', 'regional', 'company', 'meeting', 'event', 'maintenance', 'custom', 'non_working_day')),
@@ -7727,8 +7105,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-  v_workspace_id uuid;
+DECLAREv_workspace_id uuid;
   v_old_owner_id uuid;
   v_is_valid boolean;
 BEGIN
@@ -8596,7 +7973,7 @@ DO $$
 BEGIN
   IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'documents') THEN
     EXECUTE 'DROP POLICY IF EXISTS "Documents are visible to workspace" ON public.documents;';
-    EXECUTE 'CREATE POLICY "Documents are visible to workspace" ON public.documents FOR SELECT USING (workspace_id = current_workspace() AND public.is_active_workspace_member() AND (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role != ''client'') OR (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role = ''client'') AND is_internal = false AND EXISTS (SELECT 1 FROM public.projects WHERE projects.id = public.documents.project_id AND projects.client_id = auth.uid()))));';
+    EXECUTE 'CREATE POLICY "Documents are visible to workspace" ON public.documents FOR SELECT USING (workspace_id = current_workspace() AND public.is_active_workspace_member() AND (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role != ''client'') OR (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role = ''client'') AND EXISTS (SELECT 1 FROM public.projects WHERE projects.id = public.documents.project_id AND projects.client_id = auth.uid()))));';
   END IF;
 END $$;
 
@@ -8607,8 +7984,8 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS public.notification_events (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id  UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-  user_id       UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  workspace_id  UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+ user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
   type          TEXT NOT NULL CHECK (type IN ('assigned', 'mentioned', 'blocked', 'approval_requested', 'client_approved', 'reassigned')),
   entity_type   TEXT NOT NULL CHECK (entity_type IN ('task', 'comment', 'project', 'document', 'invoice')),
   entity_id     UUID NOT NULL,
@@ -8676,8 +8053,8 @@ CREATE TRIGGER trigger_notify_task_blocked
 -- Part 2: Change Request System
 CREATE TABLE IF NOT EXISTS public.change_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+ project_id uuid REFERENCES projects(id) ON DELETE SET NULL,
   requested_by uuid REFERENCES users(id) ON DELETE SET NULL,
   title text NOT NULL,
   description text,
@@ -8827,7 +8204,7 @@ $$;
 -- Part 6: Exit Knowledge Transfer
 CREATE TABLE IF NOT EXISTS public.employee_handoffs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   departing_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
   manager_id uuid REFERENCES users(id) ON DELETE SET NULL,
   notes text,
@@ -8852,7 +8229,7 @@ CREATE POLICY "Admins can insert handoffs"
 -- Part 1: File Storage Governance
 CREATE TABLE IF NOT EXISTS public.workspace_storage_settings (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     max_file_size_mb integer DEFAULT 100,
     storage_limit_gb integer DEFAULT 100,
     allowed_file_types text[] DEFAULT '{image/jpeg,image/png,image/gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv,application/zip}',
@@ -8949,7 +8326,7 @@ $$;
 -- Part 2: Backup / Disaster Recovery Readiness
 CREATE TABLE IF NOT EXISTS public.backup_snapshots (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     snapshot_type text NOT NULL CHECK (snapshot_type IN ('automatic', 'manual')),
     status text NOT NULL CHECK (status IN ('success', 'failed', 'running')),
     started_at timestamptz DEFAULT now(),
@@ -9001,19 +8378,7 @@ $$;
 
 
 -- Part 3: Observability Layer
-CREATE TABLE IF NOT EXISTS public.system_events (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    severity text NOT NULL CHECK (severity IN ('info', 'warning', 'error', 'critical')),
-    source text NOT NULL CHECK (source IN ('frontend', 'database', 'rpc', 'auth', 'edge_function', 'integration')),
-    event_type text NOT NULL,
-    message text NOT NULL,
-    metadata jsonb DEFAULT '{}'::jsonb,
-    resolved boolean DEFAULT false,
-    resolved_at timestamptz,
-    created_at timestamptz DEFAULT now()
-);
-ALTER TABLE public.system_events ENABLE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS "System events viewable by admin" ON public.system_events;
 CREATE POLICY "System events viewable by admin"
     ON public.system_events FOR SELECT
@@ -9040,7 +8405,7 @@ CREATE POLICY "Admins can update system events"
 -- Create company_working_rules table
 CREATE TABLE IF NOT EXISTS company_working_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
     working_days JSONB NOT NULL DEFAULT '[1, 2, 3, 4, 5]',
     saturday_policy TEXT NOT NULL DEFAULT 'ALL_WORKING',
     custom_saturdays JSONB NOT NULL DEFAULT '[]',
@@ -9056,7 +8421,7 @@ CREATE INDEX idx_company_working_rules_workspace_date ON company_working_rules(w
 -- Create company_holidays table
 CREATE TABLE IF NOT EXISTS company_holidays (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
     name TEXT NOT NULL,
     date DATE NOT NULL,
     event_type TEXT NOT NULL DEFAULT 'holiday',
@@ -9183,8 +8548,8 @@ NOTIFY pgrst, 'reload schema';
 
 CREATE TABLE IF NOT EXISTS public.milestone_signoffs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    milestone_id uuid NOT NULL REFERENCES public.milestones(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+ milestone_id uuid REFERENCES public.milestones(id) ON DELETE SET NULL, 
     client_id uuid NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
     decision text NOT NULL CHECK (decision IN ('approved', 'changes_requested')),
     comments text,
