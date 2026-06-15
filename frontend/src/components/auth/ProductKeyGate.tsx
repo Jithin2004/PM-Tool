@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, CheckCircle, XCircle, Loader, AlertCircle, KeyRound, Upload, FileCheck } from 'lucide-react';
-import { verifyProductKey, verifyLicenseFile } from '../../lib/productKey';
+import { validateNewActivationKey, verifyLicenseFile } from '../../lib/productKey';
 import { showAlert } from '../../components/common/Dialogs';
 
 interface ProductKeyGateProps {
@@ -69,7 +69,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     setState('verifying');
     setErrorMsg('');
 
-    const result = await verifyProductKey(key.trim());
+    const result = await validateNewActivationKey(key.trim());
 
     if (result.success) {
       localStorage.setItem('pendingLicenseActivation', JSON.stringify({

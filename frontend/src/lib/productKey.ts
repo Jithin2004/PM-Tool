@@ -1,6 +1,8 @@
 // ── Product Key Verification, Offline Grace Period & License File Support ──
 // Phase 8 Upgrade: Adds RSA-PSS offline license.json verification via Web Crypto API
 
+import { supabase } from './supabase';
+
 const STORAGE_KEY = 'resolve-product-license';
 const FINGERPRINT_KEY = 'resolve-device-fingerprint';
 const API_BASE_URL = (import.meta as any).env.VITE_PRODUCT_KEY_API_URL || 'https://pm-tool-server.onrender.com';
@@ -233,7 +235,7 @@ export function clearLicense(): void {
 }
 
 // ── Activate new license key via server ──────────────────────────────────────
-export async function verifyProductKey(productKey: string): Promise<VerifyResult> {
+export async function validateNewActivationKey(productKey: string): Promise<VerifyResult> {
   if (!productKey.trim()) {
     return { success: false, error: 'Product key is required.' };
   }
@@ -296,6 +298,35 @@ export async function verifyProductKey(productKey: string): Promise<VerifyResult
         : (err?.message || 'Verification failed. Please try again.'),
     };
   }
+}
+
+export async function validateWorkspaceLicenseUpdate(productKey: string, currentWorkspaceId: string): Promise<VerifyResult> {
+  if (!productKey.trim() || !currentWorkspaceId) {
+    return { success: false, error: 'Product key and workspace ID are required.' };
+  }
+
+  // 1. Fetch license record from local DB
+  const { data: localLicense } = await supabase
+    .from('workspace_license')
+    .select('workspace_id, status')
+    .eq('id', productKey.trim())
+    .maybeSingle();
+
+  if (localLicense) {
+    if (localLicense.status === 'expired' || localLicense.status === 'revoked') {
+      return { success: false, error: 'This license is expired or revoked.' };
+    }
+    if (localLicense.workspace_id && localLicense.workspace_id !== currentWorkspaceId) {
+      return { success: false, error: 'This key is already attached to another workspace on this system.' };
+    }
+    // If it's the same workspace or no workspace is bound, we can proceed.
+  }
+
+  // 2. We still need to verify globally with the licensing server.
+  // We can just use validateNewActivationKey to hit /activate and get the token.
+  // Since we already checked it doesn't belong to another workspace in THIS local system,
+  // we just need the global server to accept it (which it will if activation_limit is not reached or device matches).
+  return await validateNewActivationKey(productKey);
 }
 
 // ── Background online license check ──────────────────────────────────────────

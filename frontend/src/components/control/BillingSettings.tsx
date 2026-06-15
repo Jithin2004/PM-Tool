@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Key, Building2, Server, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { getLicenseInfo, clearLicense } from '../../lib/productKey';
+import { getLicenseInfo, clearLicense, validateWorkspaceLicenseUpdate } from '../../lib/productKey';
 import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 import { supabase } from '../../lib/supabase';
 
@@ -83,21 +83,10 @@ export function BillingSettings() {
     setKeyError('');
     
     try {
-      const API_URL = import.meta.env.VITE_PRODUCT_KEY_API_URL || 'https://pm-tool-server.onrender.com';
-      const verifyRes = await fetch(`${API_URL}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: newKey.trim() })
-      });
+      const verifyRes = await validateWorkspaceLicenseUpdate(newKey.trim(), workspace.id);
 
-      if (!verifyRes.ok) {
-        throw new Error('Invalid or expired license key.');
-      }
-
-      const verifiedData = await verifyRes.json();
-      
-      if (verifiedData.status === 'used' && verifiedData.workspaceId !== workspace.id) {
-        throw new Error('This key is already attached to another workspace.');
+      if (!verifyRes.success) {
+        throw new Error(verifyRes.error || 'Invalid or expired license key.');
       }
 
       // Upsert workspace_license
@@ -106,20 +95,14 @@ export function BillingSettings() {
         .upsert({
           id: newKey.trim(),
           workspace_id: workspace.id,
-          plan: verifiedData.plan || 'Enterprise',
-          max_seats: verifiedData.seats || 9999,
-          features: verifiedData.features || {},
-          status: 'active'
+          plan: verifyRes.plan || 'Enterprise',
+          max_seats: 9999, // default unmetered for now
+          features: {}, // derive if needed
+          status: 'active',
+          activated_at: new Date().toISOString()
         }, { onConflict: 'workspace_id' });
 
       if (dbError) throw new Error('Failed to attach license to workspace.');
-
-      // Mark used remotely
-      await fetch(`${API_URL}/activate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: newKey.trim(), workspaceId: workspace.id })
-      }).catch(() => {}); // fire and forget
 
       window.location.reload();
 
