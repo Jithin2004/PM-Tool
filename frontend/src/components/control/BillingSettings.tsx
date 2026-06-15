@@ -14,6 +14,9 @@ export function BillingSettings() {
   const [newKey, setNewKey] = useState('');
   const [verifyingNewKey, setVerifyingNewKey] = useState(false);
   const [keyError, setKeyError] = useState('');
+  const [activeUsersCount, setActiveUsersCount] = useState(0);
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [serverLicenseData, setServerLicenseData] = useState<any>(null);
   const license = getLicenseInfo();
 
   useEffect(() => {
