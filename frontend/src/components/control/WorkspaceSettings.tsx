@@ -59,6 +59,7 @@ export function WorkspaceSettings() {
     attendanceEnabled: true,
     payrollEnabled: false,
     productivityFactor: 0.8,
+    baseCurrency: 'USD',
   });
 
   const [billingProfile, setBillingProfile] = useState({
@@ -88,6 +89,7 @@ export function WorkspaceSettings() {
         attendanceEnabled: workspace.settings.attendanceEnabled ?? true,
         payrollEnabled: workspace.settings.payrollEnabled ?? false,
         productivityFactor: workspace.settings.productivityFactor ?? 0.8,
+        baseCurrency: workspace.settings.baseCurrency || 'USD',
       });
     }
     if (workspace?.id) {
@@ -132,6 +134,7 @@ export function WorkspaceSettings() {
         attendanceEnabled: formState.attendanceEnabled,
         payrollEnabled: formState.payrollEnabled,
         productivityFactor: formState.productivityFactor,
+        baseCurrency: formState.baseCurrency,
       });
       await upsertCompanyBillingProfile({
         workspace_id: workspace!.id,
@@ -276,7 +279,33 @@ export function WorkspaceSettings() {
         )}
 
         {activeTab === 'finance' && (
-          <div className="space-y-8">
+          <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
+             <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">
+              <h3 className="text-xs font-mono font-bold tracking-widest uppercase text-[var(--text-secondary)] mb-6 flex items-center gap-2.5">
+                <Globe className="w-4 h-4 text-emerald-400" />
+                Global Finance Settings
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="group/input">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-2 block">Base Currency</label>
+                  <select
+                    value={formState.baseCurrency}
+                    onChange={(e) => setFormState(s => ({ ...s, baseCurrency: e.target.value }))}
+                    className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl h-11 px-4 text-sm text-white outline-none focus:border-emerald-500/50 transition-all focus:bg-black/50 cursor-pointer"
+                  >
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                    <option value="INR">INR - Indian Rupee</option>
+                    <option value="AED">AED - UAE Dirham</option>
+                    <option value="AUD">AUD - Australian Dollar</option>
+                    <option value="CAD">CAD - Canadian Dollar</option>
+                    <option value="SGD">SGD - Singapore Dollar</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
              <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">
               <h3 className="text-xs font-mono font-bold tracking-widest uppercase text-[var(--text-secondary)] mb-6 flex items-center gap-2.5">
                 <Building2 className="w-4 h-4 text-emerald-400" />

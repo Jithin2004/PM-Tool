@@ -9,9 +9,11 @@ import { supabase } from '../../lib/supabase';
 export function BillingSettings() {
   const { workspace } = useWorkspace();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(true);
-  const [serverLicenseData, setServerLicenseData] = useState<any>(null);
-  const [activeUsersCount, setActiveUsersCount] = useState<number>(0);
+  const [dbLicense, setDbLicense] = useState<any>(null);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [newKey, setNewKey] = useState('');
+  const [verifyingNewKey, setVerifyingNewKey] = useState(false);
+  const [keyError, setKeyError] = useState('');
   const license = getLicenseInfo();
 
   useEffect(() => {
@@ -23,6 +25,16 @@ export function BillingSettings() {
           .eq('workspace_id', workspace.id);
         
         setActiveUsersCount(count || 0);
+
+        const { data: licenseData } = await supabase
+          .from('workspace_license')
+          .select('*')
+          .eq('workspace_id', workspace.id)
+          .maybeSingle();
+        
+        if (licenseData) {
+          setDbLicense(licenseData);
+        }
       }
     }
     
@@ -59,17 +71,65 @@ export function BillingSettings() {
   }, [workspace?.id, license?.token]);
 
   const handleUpdateLicense = () => {
-    setIsRefreshing(true);
-    // Clear license and reload to trigger the app's standard activation flow
-    setTimeout(() => {
-      clearLicense();
-      window.location.href = '/'; 
-    }, 500);
+    setShowUpdateModal(true);
   };
 
-  // Local license data from localStorage is the source of truth.
+  const submitNewLicense = async () => {
+    if (!newKey.trim() || !workspace?.id) return;
+    setVerifyingNewKey(true);
+    setKeyError('');
+    
+    try {
+      const API_URL = import.meta.env.VITE_PRODUCT_KEY_API_URL || 'https://pm-tool-server.onrender.com';
+      const verifyRes = await fetch(`${API_URL}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: newKey.trim() })
+      });
+
+      if (!verifyRes.ok) {
+        throw new Error('Invalid or expired license key.');
+      }
+
+      const verifiedData = await verifyRes.json();
+      
+      if (verifiedData.status === 'used' && verifiedData.workspaceId !== workspace.id) {
+        throw new Error('This key is already attached to another workspace.');
+      }
+
+      // Upsert workspace_license
+      const { error: dbError } = await supabase
+        .from('workspace_license')
+        .upsert({
+          id: newKey.trim(),
+          workspace_id: workspace.id,
+          plan: verifiedData.plan || 'Enterprise',
+          max_seats: verifiedData.seats || 9999,
+          features: verifiedData.features || {},
+          status: 'active'
+        }, { onConflict: 'workspace_id' });
+
+      if (dbError) throw new Error('Failed to attach license to workspace.');
+
+      // Mark used remotely
+      await fetch(`${API_URL}/activate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: newKey.trim(), workspaceId: workspace.id })
+      }).catch(() => {}); // fire and forget
+
+      window.location.reload();
+
+    } catch (err: any) {
+      setKeyError(err.message || 'License validation failed.');
+    } finally {
+      setVerifyingNewKey(false);
+    }
+  };
+
+  // Local DB license data is the source of truth.
   // serverLicenseData is supplementary enrichment from the /verify endpoint.
-  const isActive = license?.status === 'Activated';
+  const isActive = dbLicense ? true : license?.status === 'Activated';
   const isExpired = license?.status === 'Expired Support';
   
   let displayStatus = 'UNACTIVATED';
@@ -94,9 +154,9 @@ export function BillingSettings() {
     statusDot = 'bg-amber-400';
   }
 
-  const planName = serverLicenseData?.plan || license?.plan || '';
-  const maxSeats = serverLicenseData?.seats || '';
-  const productKeyId = serverLicenseData?.keyId || license?.productKey || license?.purchaseId || 'Unlicensed';
+  const planName = dbLicense?.plan || serverLicenseData?.plan || license?.plan || 'Enterprise';
+  const maxSeats = dbLicense?.max_seats || serverLicenseData?.seats || '';
+  const productKeyId = dbLicense?.id || serverLicenseData?.keyId || license?.productKey || license?.purchaseId || 'Unlicensed';
   const isSandbox = workspace?.is_sandbox || workspace?.status === 'sandbox';
   const displayWorkspaceName = getWorkspaceDisplayName(workspace?.name, !!isSandbox);
 
@@ -169,7 +229,7 @@ export function BillingSettings() {
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
                 <span className="text-sm text-[var(--pm-text-secondary)]">Activated On</span>
-                <span className="text-sm font-medium text-[var(--pm-text)]">{license?.verifiedAt ? new Date(license.verifiedAt).toLocaleDateString() : 'N/A'}</span>
+                <span className="text-sm font-medium text-[var(--pm-text)]">{dbLicense?.created_at ? new Date(dbLicense.created_at).toLocaleDateString() : (license?.verifiedAt ? new Date(license.verifiedAt).toLocaleDateString() : 'N/A')}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
                 <span className="text-sm text-[var(--pm-text-secondary)]">Support Coverage</span>
@@ -190,11 +250,56 @@ export function BillingSettings() {
               className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-indigo-500 text-white hover:bg-indigo-600 transition-colors shadow-sm"
             >
               <Key className="w-4 h-4" />
-              {isRefreshing ? 'Redirecting...' : 'Update License Key'}
+              Update License Key
             </button>
           </div>
         </div>
       </div>
+
+      {showUpdateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-2xl p-6 sm:p-8 shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-[var(--pm-text)] mb-2 flex items-center gap-2">
+              <Key className="w-5 h-5 text-indigo-500" />
+              Update Workspace License
+            </h3>
+            <p className="text-sm text-[var(--pm-text-secondary)] mb-6">
+              Enter a new product key to upgrade or refresh your workspace's license tier.
+            </p>
+            
+            <input
+              type="text"
+              value={newKey}
+              onChange={e => setNewKey(e.target.value)}
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              className="w-full bg-black/30 border border-[var(--pm-border)] rounded-xl h-12 px-4 text-sm font-mono text-white outline-none focus:border-indigo-500/50 mb-4"
+              autoFocus
+            />
+
+            {keyError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs mb-4">
+                {keyError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3">
+              <button 
+                onClick={() => setShowUpdateModal(false)}
+                className="px-4 py-2 text-sm font-medium text-[var(--pm-text-secondary)] hover:text-[var(--pm-text)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={submitNewLicense}
+                disabled={verifyingNewKey || !newKey.trim()}
+                className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold tracking-wider uppercase rounded-lg transition-colors"
+              >
+                {verifyingNewKey ? 'Validating...' : 'Apply License'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

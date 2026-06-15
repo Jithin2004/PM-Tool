@@ -45,7 +45,7 @@ export const workspaceHealthService = {
     if (!companyName) {
       checks.push({ type: 'warning', message: 'Company Name missing in Organization settings.', actionRoute: '/control/settings?tab=organization' });
     }
-    if (!country || !region) {
+    if (!country) {
       checks.push({ type: 'warning', message: 'Company location missing. Required for holiday sync.', actionRoute: '/control/settings?tab=organization' });
     }
     if (!baseCurrency) {
