@@ -17,6 +17,7 @@ export interface UseProgressiveDisclosureInput {
   profileCreatedAt?: string;
   projectCount: number;
   taskCount: number;
+  tourCompleted?: boolean;
 }
 
 export interface UseProgressiveDisclosureResult extends DisclosureState {
@@ -49,6 +50,7 @@ export function useProgressiveDisclosure(
     input.profileCreatedAt,
     input.projectCount,
     input.taskCount,
+    input.tourCompleted,
   ]);
 }
 

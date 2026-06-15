@@ -245,6 +245,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     profileCreatedAt: profile?.created_at,
     projectCount: projects.length,
     taskCount: tasks.length,
+    tourCompleted: workspace?.metadata?.tourCompleted,
   });
 
 
@@ -254,15 +255,27 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     if (sessionStorage.getItem('resolve-pm-tour-active') === 'true') {
       return true;
     }
-    return localStorage.getItem('resolve-pm-onboarded') !== 'true';
+    return workspace ? !workspace.metadata?.tourCompleted : false;
   });
-  const [guideStep, setGuideStep] = useState(() => {
+
+  const [currentTourStep, setCurrentTourStep] = useState(() => {
     const saved = sessionStorage.getItem('resolve-pm-tour-step');
     return saved ? parseInt(saved, 10) : 0;
   });
 
-  const dismissGuide = () => {
-    localStorage.setItem('resolve-pm-onboarded', 'true');
+  const dismissGuide = async () => {
+    if (workspace && !workspace.metadata?.tourCompleted) {
+      try {
+        await updateWorkspaceSettings({
+          metadata: {
+            ...workspace.metadata,
+            tourCompleted: true
+          }
+        } as any);
+      } catch (err) {
+        console.error('Failed to update tour status', err);
+      }
+    }
     sessionStorage.removeItem('resolve-pm-tour-active');
     sessionStorage.removeItem('resolve-pm-tour-step');
     setShowGuide(false);

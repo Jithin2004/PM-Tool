@@ -50,9 +50,7 @@ export function enableFullDisclosure(workspaceId: string): void {
   }
 }
 
-export function isTourCompleted(): boolean {
-  return localStorage.getItem('resolve-pm-onboarded') === 'true';
-}
+// tourCompleted is now passed explicitly
 
 export function daysSince(isoDate: string | undefined): number {
   if (!isoDate) return 0;
@@ -66,13 +64,14 @@ export function buildDisclosureMaturity(input: {
   profileCreatedAt?: string;
   projectCount: number;
   taskCount: number;
+  tourCompleted?: boolean;
 }): DisclosureMaturity {
   const forceFull = input.workspaceId ? loadDisclosurePrefs(input.workspaceId).forceFull : false;
   return {
     projectCount: input.projectCount,
     taskCount: input.taskCount,
     daysSinceProfile: daysSince(input.profileCreatedAt),
-    tourCompleted: isTourCompleted(),
+    tourCompleted: !!input.tourCompleted,
     forceFull,
   };
 }
@@ -216,6 +215,7 @@ export function resolveDisclosureState(input: {
   profileCreatedAt?: string;
   projectCount: number;
   taskCount: number;
+  tourCompleted?: boolean;
 }): DisclosureState {
   const maturity = buildDisclosureMaturity(input);
   const level = resolveDisclosureLevel(maturity, input.role);

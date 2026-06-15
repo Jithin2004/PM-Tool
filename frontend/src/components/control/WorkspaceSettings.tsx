@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
-import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw, ChevronDown, Building2, Download, Briefcase, Key } from 'lucide-react';
+import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw, ChevronDown, Building2, Download, Briefcase, Key, Users } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { upsertCompanyBillingProfile } from '../../services/financeService';
 import { SandboxWorkspaceManager } from '../workspace/SandboxWorkspaceManager';
@@ -43,6 +43,9 @@ export function WorkspaceSettings() {
     workingTimeTo: '17:00',
     passwordPolicy: 'standard',
     magicLinkExpiry: '24h',
+    attendanceEnabled: true,
+    payrollEnabled: false,
+    productivityFactor: 0.8,
   });
 
   const [billingProfile, setBillingProfile] = useState({
@@ -69,6 +72,9 @@ export function WorkspaceSettings() {
         workingTimeTo: workspace.settings.workingTimeTo || '17:00',
         passwordPolicy: workspace.settings.passwordPolicy || 'standard',
         magicLinkExpiry: workspace.settings.magicLinkExpiry || '24h',
+        attendanceEnabled: workspace.settings.attendanceEnabled ?? true,
+        payrollEnabled: workspace.settings.payrollEnabled ?? false,
+        productivityFactor: workspace.settings.productivityFactor ?? 0.8,
       });
     }
     if (workspace?.id) {
@@ -110,6 +116,9 @@ export function WorkspaceSettings() {
         workingTimeTo: formState.workingTimeTo,
         passwordPolicy: formState.passwordPolicy,
         magicLinkExpiry: formState.magicLinkExpiry,
+        attendanceEnabled: formState.attendanceEnabled,
+        payrollEnabled: formState.payrollEnabled,
+        productivityFactor: formState.productivityFactor,
       });
       await upsertCompanyBillingProfile({
         workspace_id: workspace!.id,
@@ -214,20 +223,38 @@ export function WorkspaceSettings() {
         )}
 
         {activeTab === 'people_rules' && (
-          <div className="space-y-8">
-            <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
-              <div className="w-16 h-16 rounded-full bg-black/30 border border-[var(--border-soft)] flex items-center justify-center mb-6">
-                <Briefcase className="w-8 h-8 text-[var(--text-secondary)]" />
+          <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
+            <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">
+              <h3 className="text-xs font-mono font-bold tracking-widest uppercase text-[var(--text-secondary)] mb-6 flex items-center gap-2.5">
+                <Users className="w-4 h-4 text-purple-400" />
+                Employee Lifecycle & Governance
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="group/input">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-2 block">Attendance Tracking</label>
+                  <select value={formState.attendanceEnabled ? 'true' : 'false'} onChange={e => setFormState(s => ({ ...s, attendanceEnabled: e.target.value === 'true' }))} className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl h-11 px-4 text-sm text-white outline-none focus:border-indigo-500/50 transition-all focus:bg-black/50 cursor-pointer">
+                    <option value="true">Enabled (Required for all employees)</option>
+                    <option value="false">Disabled (Trust-based working hours)</option>
+                  </select>
+                </div>
+                <div className="group/input">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-2 block">Payroll & Compensation Engine</label>
+                  <select value={formState.payrollEnabled ? 'true' : 'false'} onChange={e => setFormState(s => ({ ...s, payrollEnabled: e.target.value === 'true' }))} className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl h-11 px-4 text-sm text-white outline-none focus:border-indigo-500/50 transition-all focus:bg-black/50 cursor-pointer">
+                    <option value="false">Disabled (External Payroll)</option>
+                    <option value="true">Enabled (Internal Ledger)</option>
+                  </select>
+                </div>
+                <div className="group/input">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-2 block">Target Productivity Factor</label>
+                  <div className="flex items-center gap-4">
+                    <input type="range" min="0.1" max="1.0" step="0.05" value={formState.productivityFactor} onChange={e => setFormState(s => ({ ...s, productivityFactor: parseFloat(e.target.value) }))} className="flex-1 accent-indigo-500" />
+                    <span className="text-sm font-mono text-white w-12 text-right">{Math.round(formState.productivityFactor * 100)}%</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-tertiary)] mt-2 leading-relaxed">
+                    Expected percentage of working hours spent on billable/productive tasks vs. overhead.
+                  </p>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">People governance rules are not configured yet</h3>
-              <p className="text-sm text-[var(--text-secondary)] max-w-md mb-8 leading-relaxed">
-                Define Employee Lifecycle (invitation policy, archive policy, exit handoff), Working Rules (working hours, leave rules), and Team Governance (department rules, manager hierarchy).
-              </p>
-              <button
-                className="bg-black/30 hover:bg-black/50 text-white h-10 px-6 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border border-[var(--border-soft)] shadow-sm"
-              >
-                Configure Rules
-              </button>
             </div>
           </div>
         )}

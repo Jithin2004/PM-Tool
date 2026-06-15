@@ -337,9 +337,6 @@ export function ResolveRouter() {
   }
 
   if (pathname === '/onboarding/workspace') {
-    if (role === 'super_admin' && workspace.ownerId === profile.id) {
-      return <WorkspaceSetupWizard />;
-    }
     return <Redirect to="/overview" />;
   }
 
