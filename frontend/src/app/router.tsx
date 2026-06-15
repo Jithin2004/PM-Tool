@@ -257,7 +257,7 @@ export function ResolveRouter() {
     return <SharedProjectDashboard />;
   }
 
-  if (pathname === '/activate') {
+  if (pathname === '/activate-license') {
     return (
       <ProductKeyGate
         onVerified={() => {
@@ -299,8 +299,8 @@ export function ResolveRouter() {
     return <Redirect to="/login?error=access_denied" />;
   }
 
-  if (role === 'pending-workspace-setup' && !isProductKeyVerified() && pathname !== '/activate') {
-    return <Redirect to="/activate" />;
+  if (role === 'pending-workspace-setup' && !isProductKeyVerified() && pathname !== '/activate-license') {
+    return <Redirect to="/activate-license" />;
   }
 
   if (role === 'uninvited' || !role) {

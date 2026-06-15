@@ -80,7 +80,7 @@ export function LandingHero({ verified }: LandingHeroProps) {
           ) : (
             <>
               <a
-                href="/activate"
+                href="/activate-license"
                 className="inline-flex items-center gap-2 px-6 py-3 btn-premium-primary transition-all text-[12px] font-mono uppercase tracking-wider rounded-lg"
               >
                 Activate Product Key
@@ -88,7 +88,7 @@ export function LandingHero({ verified }: LandingHeroProps) {
               </a>
               <span className="text-[10px] font-mono text-[var(--text-secondary)] px-2 hidden sm:inline">or</span>
               <a
-                href="/activate"
+                href="/activate-license"
                 className="inline-flex items-center gap-2 px-6 py-3 btn-premium-secondary transition-all text-[12px] font-mono uppercase tracking-wider rounded-lg"
               >
                 Request Access

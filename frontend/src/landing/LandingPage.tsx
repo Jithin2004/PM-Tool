@@ -113,7 +113,7 @@ export function LandingPage() {
               Resolve PM unifies projects, people, clients, finance, and decisions into one privately controlled workspace.
             </p>
             <div className="flex flex-wrap gap-stack-gap-md mt-6">
-              <a href={verified ? "/login" : "/activate"} className="btn-premium-primary px-8 py-4 rounded font-headline-sm text-headline-sm font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">Start Workspace</a>
+              <a href={verified ? "/login" : "/activate-license"} className="btn-premium-primary px-8 py-4 rounded font-headline-sm text-headline-sm font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">Start Workspace</a>
               <a href="#pricing" className="glass-panel px-8 py-4 rounded font-headline-sm text-headline-sm hover:bg-white/5 transition-all duration-300">View License Options</a>
             </div>
             <div className="mt-4">
@@ -357,7 +357,7 @@ export function LandingPage() {
                   <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-[18px]">check</span> Time-to-invoice workflows</li>
                   <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-[18px]">check</span> Governance & Company memory</li>
                 </ul>
-                <a href="/activate" className="w-full text-center py-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors font-bold shadow-lg shadow-primary/20">Buy Professional License</a>
+                <a href="/activate-license" className="w-full text-center py-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors font-bold shadow-lg shadow-primary/20">Buy Professional License</a>
               </div>
 
               {/* Enterprise */}
