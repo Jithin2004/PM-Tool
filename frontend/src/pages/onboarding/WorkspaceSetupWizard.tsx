@@ -23,7 +23,7 @@ export function WorkspaceSetupWizard() {
   const { refreshProfile, profile, user } = useAuth();
   
   const [step, setStep] = useState(1);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(sessionStorage.getItem('pending_workspace_name') || '');
   const [departments, setDepartments] = useState<string[]>([]);
   const [workingTimeFrom, setWorkingTimeFrom] = useState('09:00');
   const [workingTimeTo, setWorkingTimeTo] = useState('17:00');

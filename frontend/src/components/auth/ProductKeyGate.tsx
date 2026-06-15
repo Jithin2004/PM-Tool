@@ -8,7 +8,7 @@ interface ProductKeyGateProps {
   onVerified: () => void;
 }
 
-type GateState = 'input' | 'verifying' | 'success' | 'error';
+type GateState = 'input' | 'verifying' | 'success' | 'signup' | 'error';
 type GateMode = 'key' | 'file';
 
 export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
@@ -21,6 +21,16 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initializedRef = useRef(false);
+
+  // Signup Form State
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [signupError, setSignupError] = useState('');
 
   useEffect(() => {
     if (!initializedRef.current) {
@@ -46,8 +56,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     const result = await verifyProductKey(key.trim());
 
     if (result.success) {
-      setState('success');
-      setTimeout(() => onVerified(), 800);
+      setState('signup');
     } else {
       setErrorMsg(result.error || 'Verification failed.');
       setState('error');
@@ -63,8 +72,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     const result = await verifyLicenseFile(file);
 
     if (result.success) {
-      setState('success');
-      setTimeout(() => onVerified(), 800);
+      setState('signup');
     } else {
       setErrorMsg(result.error || 'License file verification failed.');
       setState('error');
@@ -99,6 +107,46 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     setUploadedFile(null);
     setKey('');
     if (next === 'key') setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupError('');
+
+    if (password !== confirmPassword) {
+      setSignupError('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 8) {
+      setSignupError('Password must be at least 8 characters');
+      return;
+    }
+
+    setSignupLoading(true);
+    try {
+      const { supabase } = await import('../../lib/supabase');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      sessionStorage.setItem('pending_workspace_name', workspaceName);
+      
+      setState('success');
+      setTimeout(() => onVerified(), 1200);
+    } catch (err: any) {
+      setSignupError(err.message || 'Failed to create owner account');
+    } finally {
+      setSignupLoading(false);
+    }
   };
 
   return (
@@ -250,8 +298,89 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                   ? <FileCheck className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
                   : <CheckCircle className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
                 }
-                <p className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Activation successful</p>
+                <p className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Account Created</p>
                 <p className="text-sm mt-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Initializing workspace...</p>
+              </motion.div>
+            )}
+
+            {/* ── Signup ── */}
+            {state === 'signup' && (
+              <motion.div key="signup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                <div className="text-center mb-6">
+                  <h2 className="text-xl font-bold" style={{ color: 'var(--pm-on-surface)' }}>Owner Account Creation</h2>
+                  <p className="text-xs mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>License verified. Create your administrative account.</p>
+                </div>
+
+                <form onSubmit={handleSignupSubmit} className="space-y-4">
+                  {signupError && (
+                    <div className="p-3 rounded-lg text-sm flex items-start gap-2" style={{ background: 'var(--pm-error-container)', color: 'var(--pm-on-error-container)' }}>
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{signupError}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={e => setFullName(e.target.value)}
+                      placeholder="Owner full name"
+                      className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
+                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                    />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="Work email"
+                      className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
+                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                    />
+                    <input
+                      type="text"
+                      required
+                      value={workspaceName}
+                      onChange={e => setWorkspaceName(e.target.value)}
+                      placeholder="Workspace/company name"
+                      className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
+                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="Password"
+                        className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
+                        style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                      />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 text-xs font-semibold" style={{ color: 'var(--pm-primary)' }}>
+                        {showPassword ? 'HIDE' : 'SHOW'}
+                      </button>
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm password"
+                      className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
+                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={signupLoading || password !== confirmPassword || !password}
+                    className={`w-full rounded-xl h-12 flex items-center justify-center gap-2 font-semibold uppercase tracking-wide text-xs transition-all shadow-sm ${signupLoading ? 'opacity-70' : 'hover:shadow-md'}`}
+                    style={{ background: 'var(--pm-primary)', color: 'white' }}
+                  >
+                    {signupLoading ? <Loader className="w-4 h-4 animate-spin" /> : 'Create Account'}
+                  </button>
+                </form>
               </motion.div>
             )}
 
