@@ -628,6 +628,13 @@ BEGIN
       WHERE me.id = auth.uid() 
         AND me.workspace_id = OLD.workspace_id 
         AND me.role = 'super_admin'
+    ) AND NOT (
+      -- Exemption: Workspace founder bootstrapping their own role
+      NEW.id = auth.uid()
+      AND EXISTS (
+        SELECT 1 FROM public.workspaces w 
+        WHERE w.id = NEW.workspace_id AND w.owner_id = auth.uid()
+      )
     ) THEN
       RAISE EXCEPTION 'Unauthorized: Only super_admin can modify roles.';
     END IF;
@@ -635,7 +642,6 @@ BEGIN
 
   RETURN NEW;
 END;
-$$;
 
 DROP TRIGGER IF EXISTS check_role_escalation ON users;
 CREATE TRIGGER check_role_escalation
@@ -8906,4 +8912,14 @@ CREATE INDEX IF NOT EXISTS idx_projects_workspace_active ON public.projects(work
 CREATE INDEX IF NOT EXISTS idx_documents_workspace_active ON public.documents(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_users_rls_lookup ON public.users(id, workspace_id, role);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_workspace_time ON public.activity_logs(workspace_id, created_at DESC);
+
+-- ==============================================================================
+-- 20. SECURITY & PRIVILEGES HARDENING
+-- ==============================================================================
+-- Grant base table permissions to authenticated and anon roles. 
+-- Supabase relies on RLS to restrict data, but requires table-level grants first.
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
 

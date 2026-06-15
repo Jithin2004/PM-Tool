@@ -340,10 +340,16 @@ export function ResolveRouter() {
     return <WorkspaceSetupWizard />;
   }
 
-  // ── OVERVIEW ──
+  // ── MISSION CONTROL ──
 
-  if (pathname === '/overview' || pathname === '/overview/executive' || pathname === '/overview/activity') {
+  if (pathname === '/overview') {
+    return <RouteShell><MissionControlPage /></RouteShell>;
+  }
+  if (pathname === '/overview/executive') {
     return <RouteShell><DailyCommandCenter /></RouteShell>;
+  }
+  if (pathname === '/overview/activity') {
+    return <RouteShell><DailyCommandCenter /></RouteShell>; // We'll modify DailyCommandCenter to handle this distinctly
   }
 
   // ── WORKSPACE ──

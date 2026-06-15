@@ -22,7 +22,7 @@ export function ActivityStream({ wsId, onItemClick, maxVirtualWindow = 50 }: Act
       entries={windowed}
       loading={loading}
       error={error}
-      emptyMessage="No recent activity"
+      emptyMessage="No activity yet. Team actions will appear here."
       onItemClick={onItemClick}
       maxItems={maxVirtualWindow}
     />

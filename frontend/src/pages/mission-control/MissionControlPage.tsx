@@ -163,6 +163,21 @@ function MissionControlContent() {
         </div>
       </div>
 
+      {(raw.projects.length === 0 && raw.tasks.length === 0) ? (
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-4">
+          <div className="w-16 h-16 rounded-full mb-6 flex items-center justify-center bg-indigo-500/10">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold mb-3 tracking-tight text-white">Company Health</h2>
+          <p className="text-sm max-w-md mx-auto leading-relaxed text-[var(--text-secondary)]">
+            Company health insights unlock as your workspace generates activity.
+          </p>
+        </div>
+      ) : (
+        <>
+
 
       {focusConfig.showPrimary && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
@@ -254,6 +269,8 @@ function MissionControlContent() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

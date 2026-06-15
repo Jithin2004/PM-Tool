@@ -48,6 +48,14 @@ export function DailyCommandCenter() {
   }
 
   const navigateTo = (path: string) => {
+    if (path === 'modal:create-project') {
+      if ((window as any).openCreateProjectModal) (window as any).openCreateProjectModal();
+      return;
+    }
+    if (path === 'modal:invite-members') {
+      if ((window as any).openTeamRosterModal) (window as any).openTeamRosterModal();
+      return;
+    }
     window.history.pushState(null, '', path);
     window.dispatchEvent(new Event('popstate'));
   };

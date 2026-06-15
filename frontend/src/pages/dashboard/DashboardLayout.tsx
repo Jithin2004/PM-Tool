@@ -92,13 +92,13 @@ interface ExecutiveDomain {
 
 const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   {
-    id: 'overview',
-    label: 'Overview',
+    id: 'mission-control',
+    label: 'Mission Control',
     iconName: 'Radar',
     subsections: [
-      { label: 'Metrics', path: '/overview', capability: 'view_projects' },
-      { label: 'Executive Insights', path: '/overview/executive', capability: 'view_analytics' },
-      { label: 'Activity', path: '/overview/activity', capability: 'view_reports' }
+      { label: 'Company Health', path: '/overview', capability: 'view_projects' },
+      { label: 'Daily Command', path: '/overview/executive', capability: 'view_analytics' },
+      { label: 'Activity Feed', path: '/overview/activity', capability: 'view_reports' }
     ]
   },
   {
@@ -608,6 +608,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   // Expose profile modal trigger for header and listen for global toast notifications
   useEffect(() => {
     (window as any).openProfileModal = () => setIsProfileOpen(true);
+    (window as any).openCreateProjectModal = () => setIsAdding(true);
+    (window as any).openTeamRosterModal = () => setIsRosterOpen(true);
 
     const handleToast = (e: Event) => {
       const detail = (e as CustomEvent).detail;

@@ -51,13 +51,13 @@ export async function getDailyIntelligence(userId: string, workspaceId: string, 
       baseIntelligence.greeting.subMessage = "Let's get your operational workspace set up.";
       baseIntelligence.primaryFocus = {
         id: 'setup-1',
-        message: 'Your workspace is empty. Recommended next step: Create your first project.',
+        message: 'Your command center is ready. Create projects and invite your team to start receiving operational intelligence.',
         type: 'action',
-        actionRoute: '/workspace'
+        actionRoute: 'modal:create-project'
       };
       baseIntelligence.recommendations = [
-        { id: 'rec-1', message: 'Invite your team members to collaborate.', type: 'action', actionRoute: '/settings' },
-        { id: 'rec-2', message: 'Configure your company calendar and working days.', type: 'action', actionRoute: '/settings' }
+        { id: 'rec-1', message: 'Invite your team members to collaborate.', type: 'action', actionRoute: 'modal:invite-members' },
+        { id: 'rec-2', message: 'Configure your company calendar and working days.', type: 'action', actionRoute: '/control/settings' }
       ];
       return baseIntelligence;
     }
