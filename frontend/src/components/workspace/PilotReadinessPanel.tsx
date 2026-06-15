@@ -1,16 +1,28 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ShieldCheck, ShieldAlert, Check, X } from 'lucide-react';
 import { useOperationalData } from '../../context/OperationalDataContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { workspaceHealthService, HealthCheckResult } from '../../services/workspaceHealthService';
 
 export function PilotReadinessPanel() {
+  const { workspace } = useWorkspace();
   const { raw: { projects, profiles, workspaceSettingsBlob } } = useOperationalData();
+  const [healthChecks, setHealthChecks] = useState<HealthCheckResult[]>([]);
+
+  useEffect(() => {
+    if (workspace?.id) {
+      workspaceHealthService.getHealthDiagnostics(workspace.id).then(setHealthChecks);
+    }
+  }, [workspace?.id, workspace?.settings]);
+
+  const hasGovernanceWarnings = healthChecks.some(c => c.type === 'warning');
 
   const checks = [
     { label: 'Onboarding Configured', passed: !!workspaceSettingsBlob },
     { label: 'Projects Initialized', passed: projects.length > 0 },
     { label: 'Users Provisioned', passed: profiles.length > 0 },
     { label: 'Reporting Active', passed: true }, // Assuming active by default in this MVP
-    { label: 'Governance Active', passed: true }
+    { label: 'Governance Active', passed: !hasGovernanceWarnings }
   ];
 
   const allPassed = checks.every(c => c.passed);

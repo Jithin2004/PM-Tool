@@ -337,7 +337,10 @@ export function ResolveRouter() {
   }
 
   if (pathname === '/onboarding/workspace') {
-    return <WorkspaceSetupWizard />;
+    if (role === 'super_admin' && workspace.ownerId === profile.id) {
+      return <WorkspaceSetupWizard />;
+    }
+    return <Redirect to="/overview" />;
   }
 
   // ── MISSION CONTROL ──

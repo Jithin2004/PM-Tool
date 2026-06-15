@@ -61,9 +61,20 @@ export function resolveAuthenticatedDestination(
   storedRedirect?: string | null,
 ): string {
   if (role === 'uninvited') return '/login?error=uninvited';
-  if (role === 'pending-workspace-setup' || !hasWorkspace) return '/onboarding/workspace';
+  
+  if (!hasWorkspace) {
+    if (role === 'pending-workspace-setup') {
+      return '/onboarding/workspace';
+    }
+    return '/login?error=access_denied';
+  }
 
   const candidate = storedRedirect ? normalizePath(storedRedirect) : null;
+  
+  if (candidate === '/onboarding/workspace' && role !== 'pending-workspace-setup') {
+    return resolvePostAuthEntryPath(role);
+  }
+
   if (candidate && candidate !== '/' && isRegisteredPath(candidate) && canAccessRoute(role, candidate)) {
     return candidate;
   }

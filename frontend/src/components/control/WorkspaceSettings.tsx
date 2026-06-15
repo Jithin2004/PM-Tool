@@ -213,6 +213,25 @@ export function WorkspaceSettings() {
           </div>
         )}
 
+        {activeTab === 'people_rules' && (
+          <div className="space-y-8">
+            <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
+              <div className="w-16 h-16 rounded-full bg-black/30 border border-[var(--border-soft)] flex items-center justify-center mb-6">
+                <Briefcase className="w-8 h-8 text-[var(--text-secondary)]" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">People governance rules are not configured yet</h3>
+              <p className="text-sm text-[var(--text-secondary)] max-w-md mb-8 leading-relaxed">
+                Define Employee Lifecycle (invitation policy, archive policy, exit handoff), Working Rules (working hours, leave rules), and Team Governance (department rules, manager hierarchy).
+              </p>
+              <button
+                className="bg-black/30 hover:bg-black/50 text-white h-10 px-6 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border border-[var(--border-soft)] shadow-sm"
+              >
+                Configure Rules
+              </button>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'finance' && (
           <div className="space-y-8">
              <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">

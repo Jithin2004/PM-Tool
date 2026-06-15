@@ -55,6 +55,11 @@ export function WorkspaceHealth() {
   const hasIssues = healthChecks.some(c => c.type === 'warning');
   const hasDataErrors = dataDiagnostics.length > 0;
 
+  const navigateTo = (path: string) => {
+    window.history.pushState(null, '', path);
+    window.dispatchEvent(new CustomEvent('popstate'));
+  };
+
   return (
     <div className="bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl p-6 mb-8 transition-all duration-300">
       <h3 className="text-xs font-bold tracking-widest uppercase text-text-secondary mb-4 flex items-center gap-2">
@@ -85,7 +90,12 @@ export function WorkspaceHealth() {
             {healthChecks.map((check, i) => (
               <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border ${check.type === 'warning' ? 'bg-signal-warning/5 border-signal-warning/20 text-signal-warning' : 'bg-signal-info/5 border-signal-info/20 text-signal-info'}`}>
                 {check.type === 'warning' ? <AlertTriangle className="w-4 h-4 shrink-0" /> : <ShieldAlert className="w-4 h-4 shrink-0" />}
-                <p className="text-xs">{check.message}</p>
+                <p className="text-xs flex-1">{check.message}</p>
+                {check.actionRoute && (
+                  <button onClick={() => navigateTo(check.actionRoute!)} className="text-[10px] font-bold uppercase tracking-wider underline opacity-80 hover:opacity-100 transition-opacity whitespace-nowrap">
+                    Resolve
+                  </button>
+                )}
               </div>
             ))}
           </div>

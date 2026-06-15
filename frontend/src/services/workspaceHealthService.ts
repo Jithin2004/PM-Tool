@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 export interface HealthCheckResult {
   type: 'warning' | 'error' | 'info';
   message: string;
+  actionRoute?: string;
 }
 
 export const workspaceHealthService = {
@@ -21,16 +22,16 @@ export const workspaceHealthService = {
     const s = wsData?.settings_blob || {};
 
     if (!s.companyName) {
-      checks.push({ type: 'warning', message: 'Company Name missing in Organization settings.' });
+      checks.push({ type: 'warning', message: 'Company Name missing in Organization settings.', actionRoute: '/control?tab=profile' });
     }
     if (!s.country || !s.region) {
-      checks.push({ type: 'warning', message: 'Company location missing. Required for holiday sync.' });
+      checks.push({ type: 'warning', message: 'Company location missing. Required for holiday sync.', actionRoute: '/control?tab=profile' });
     }
     if (!s.baseCurrency) {
-      checks.push({ type: 'warning', message: 'Base currency not configured.' });
+      checks.push({ type: 'warning', message: 'Base currency not configured.', actionRoute: '/control?tab=finance' });
     }
     if (!s.passwordPolicy) {
-      checks.push({ type: 'info', message: 'Recommended: Configure a Password Policy in Security Settings.' });
+      checks.push({ type: 'info', message: 'Recommended: Configure a Password Policy in Security Settings.', actionRoute: '/control?tab=security' });
     }
 
     // 2. Fetch calendar settings
@@ -41,18 +42,18 @@ export const workspaceHealthService = {
       .maybeSingle();
 
     if (!calData || !calData.working_days || calData.working_days.length === 0) {
-      checks.push({ type: 'warning', message: 'Working Calendar not configured. Please configure Company Calendar.' });
+      checks.push({ type: 'warning', message: 'Working Calendar not configured. Please configure Company Calendar.', actionRoute: '/control?tab=calendar' });
     }
 
     // 3. Fetch license status
     const { data: licenseData } = await supabase
       .from('workspace_license')
-      .select('status')
+      .select('id')
       .eq('workspace_id', workspaceId)
       .maybeSingle();
 
-    if (!licenseData || licenseData.status !== 'active') {
-      checks.push({ type: 'warning', message: 'Workspace License is unactivated or invalid.' });
+    if (!licenseData) {
+      checks.push({ type: 'warning', message: 'Workspace License is unactivated or invalid.', actionRoute: '/control?tab=license' });
     }
 
     return checks;
