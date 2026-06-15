@@ -65,12 +65,26 @@ export function AdminPanel() {
     invalidateAll,
   } = useDashboard();
 
-  const [activeTopTab, setActiveTopTab] = useState<TopTab>('company');
-  const [activeSubTab, setActiveSubTab] = useState<string>('profile');
+  const [activeTopTab, setActiveTopTab] = useState<TopTab>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'license' || tab === 'backup') return 'system';
+    if (tab === 'teams') return 'people';
+    return 'company';
+  });
+  const [activeSubTab, setActiveSubTab] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'license') return 'license';
+    if (tab === 'backup') return 'backup';
+    if (tab === 'teams' || tab === 'users') return 'users';
+    if (tab === 'business_units') return 'business_units';
+    return 'profile';
+  });
   const [activeGearPopover, setActiveGearPopover] = useState<string | null>(null);
   const [capabilityModal, setCapabilityModal] = useState({ isOpen: false, userId: '', userEmail: '', capabilities: [] as string[], reason: '', saving: false });
 
-  // Event listener for opening capability modal
+  // Event listener for opening capability modal and syncing tabs
   useEffect(() => {
     const handleOpen = (e: any) => {
       setCapabilityModal({
@@ -82,8 +96,27 @@ export function AdminPanel() {
         saving: false
       });
     };
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab) {
+        if (tab === 'license' || tab === 'backup') setActiveTopTab('system');
+        else if (tab === 'teams') setActiveTopTab('people');
+        else setActiveTopTab('company');
+        
+        if (tab === 'license') setActiveSubTab('license');
+        else if (tab === 'backup') setActiveSubTab('backup');
+        else if (tab === 'teams' || tab === 'users') setActiveSubTab('users');
+        else if (tab === 'business_units') setActiveSubTab('business_units');
+        else setActiveSubTab('profile');
+      }
+    };
     window.addEventListener('open-capability-modal', handleOpen);
-    return () => window.removeEventListener('open-capability-modal', handleOpen);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('open-capability-modal', handleOpen);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
   const { workspace, user: currentUserProfile, updateWorkspaceSettings } = useWorkspace();
   const canGovernPlatform = hasCapability(profile?.role, 'platform_governance');

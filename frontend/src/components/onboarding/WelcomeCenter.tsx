@@ -13,6 +13,26 @@ export function WelcomeCenter() {
     window.dispatchEvent(new CustomEvent('popstate'));
   };
 
+  const handleSetupAction = (actionType: string) => {
+    if (actionType === 'company') {
+      navigateTo('/control?tab=profile');
+    } else if (actionType === 'license') {
+      navigateTo('/control?tab=license');
+    } else if (actionType === 'backup') {
+      navigateTo('/control?tab=backup');
+    } else if (actionType === 'teams') {
+      navigateTo('/resources/teams');
+      setTimeout(() => {
+        if ((window as any).openTeamRosterModal) (window as any).openTeamRosterModal();
+      }, 100);
+    } else if (actionType === 'projects') {
+      navigateTo('/workspace');
+      setTimeout(() => {
+        if ((window as any).openCreateProjectModal) (window as any).openCreateProjectModal();
+      }, 100);
+    }
+  };
+
   const setupMetrics = useMemo(() => {
     const licenseInfo = getLicenseInfo();
     const hasCompany = !!workspace?.name && workspace.name !== 'Default Workspace';
@@ -23,11 +43,11 @@ export function WelcomeCenter() {
     const hasBackup = localStorage.getItem('resolve-backup-configured') === 'true';
 
     const checks = [
-      { id: 'company', label: 'Company Profile', icon: <Building2 className="w-5 h-5" />, done: hasCompany, action: () => navigateTo('/dashboard/admin?tab=general') },
-      { id: 'license', label: 'Enterprise License Verification', icon: <Shield className="w-5 h-5" />, done: hasLicense, action: () => navigateTo('/dashboard/admin?tab=license') },
-      { id: 'teams', label: 'First Team Created', icon: <Users className="w-5 h-5" />, done: hasTeams, action: () => navigateTo('/dashboard/admin?tab=teams') },
-      { id: 'projects', label: 'First Project Launched', icon: <KanbanSquare className="w-5 h-5" />, done: hasProjects, action: () => navigateTo('/projects') },
-      { id: 'backup', label: 'Disaster Recovery Setup', icon: <HardDrive className="w-5 h-5" />, done: hasBackup, action: () => navigateTo('/dashboard/admin?tab=backups') },
+      { id: 'company', label: 'Company Profile', icon: <Building2 className="w-5 h-5" />, done: hasCompany, action: () => handleSetupAction('company') },
+      { id: 'license', label: 'Enterprise License Verification', icon: <Shield className="w-5 h-5" />, done: hasLicense, action: () => handleSetupAction('license') },
+      { id: 'teams', label: 'First Team Created', icon: <Users className="w-5 h-5" />, done: hasTeams, action: () => handleSetupAction('teams') },
+      { id: 'projects', label: 'First Project Launched', icon: <KanbanSquare className="w-5 h-5" />, done: hasProjects, action: () => handleSetupAction('projects') },
+      { id: 'backup', label: 'Disaster Recovery Setup', icon: <HardDrive className="w-5 h-5" />, done: hasBackup, action: () => handleSetupAction('backup') },
     ];
 
     const completed = checks.filter(c => c.done).length;
