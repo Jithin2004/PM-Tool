@@ -44,7 +44,8 @@ export default function FinancePage() {
     invoices: Invoice[];
     payments: Payment[];
     expenses: Expense[];
-    salaries: { base_salary: number }[];
+    salaries: { user_id: string; base_salary: number }[];
+    employmentRecords?: { user_id: string; employment_status: string }[];
     periods: FinancialPeriod[];
     snapshots: FinancialSnapshot[];
     adjustments: FinancialAdjustment[];
@@ -202,8 +203,16 @@ export default function FinancePage() {
   const baseRevenue = isClosed && snapshot ? Number(snapshot.total_revenue) : currentMonthRevenue;
   const baseGST = isClosed ? 0 : currentMonthGST;
 
+  const hasEmploymentRecords = data.employmentRecords && data.employmentRecords.length > 0;
   const baseSalary = isClosed && snapshot ? Number(snapshot.total_salary_expense) :
-    data.salaries.reduce((sum, s) => sum + Number(s.base_salary), 0);
+    data.salaries.reduce((sum, s) => {
+      if (!hasEmploymentRecords) {
+        return sum + Number(s.base_salary);
+      }
+      const emp = data.employmentRecords?.find(e => e.user_id === s.user_id);
+      const isActive = emp ? emp.employment_status === 'active' : false;
+      return isActive ? sum + Number(s.base_salary) : sum;
+    }, 0);
 
   const baseOther = isClosed && snapshot ? Number(snapshot.total_other_expenses) :
     data.expenses.filter(e => isCurrentMonth(e.date)).reduce((sum, e) => sum + Number(e.amount), 0);

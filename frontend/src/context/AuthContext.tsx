@@ -35,7 +35,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  console.log('[AuthContext] PROVIDER RENDER');
+  if (import.meta.env.DEV) console.log('[AuthContext] PROVIDER RENDER');
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -288,6 +288,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             key.startsWith('id_map_') ||
             key.startsWith('workspace_settings_') ||
             key.startsWith('resolve-command-') ||
+            key.startsWith('SYSTEM_SETTINGS_') ||
             key === 'SYSTEM_SETTINGS' ||
             key === 'resolve-session-id' ||
             key === 'resolve-log-forensics'

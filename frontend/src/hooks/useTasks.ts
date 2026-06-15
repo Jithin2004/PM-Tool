@@ -509,13 +509,24 @@ export function useTasks(workspaceId?: string) {
     setLoading(true);
 
     try {
-      const { data, count, error: fetchError } = await supabase
+      let tasksQuery = supabase
         .from('tasks')
         .select('*', { count: 'exact' })
         .eq('workspace_id', workspaceId)
         .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .range(from, to);
+        .order('created_at', { ascending: false });
+
+      if (profile && profile.role !== 'super_admin' && profile.role !== 'admin') {
+        if (profile.role === 'developer') {
+          tasksQuery = tasksQuery.eq('assignee_id', profile.id);
+        } else if (profile.role === 'pm') {
+          tasksQuery = tasksQuery.limit(500); 
+        }
+      }
+
+      tasksQuery = tasksQuery.range(from, to);
+
+      const { data, count, error: fetchError } = await tasksQuery;
 
       if (fetchError) throw fetchError;
       const existingIds = new Set(tasks.map(t => t.id)); // using tasks from outer scope

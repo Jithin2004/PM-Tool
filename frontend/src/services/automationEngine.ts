@@ -183,7 +183,8 @@ const processedEvents = new Set<string>();
 const EVENT_DEDUP_TTL = 1000;
 
 function dedupKey(event: string, payload: Record<string, any>): string {
-  return `${event}_${payload.task_id || payload.doc_id || payload.instance_id || payload.queue_id || ''}_${Date.now()}`;
+  const entityId = payload.task_id || payload.doc_id || payload.instance_id || payload.queue_id || payload.id || '';
+  return `${payload.workspace_id}_${event}_${entityId}`;
 }
 
 export async function evaluateTriggers(

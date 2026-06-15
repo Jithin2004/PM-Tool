@@ -126,7 +126,7 @@ export async function saveLogisticsData(input: SaveLogisticsInput): Promise<Save
     delete payload.attendance;
   }
 
-  localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(payload));
+  localStorage.setItem(`SYSTEM_SETTINGS_${input.workspaceId}`, JSON.stringify(payload));
 
   if (isSupabaseConfigured) {
     const { data: existingWorkspaceSettings, error: findWorkspaceError } = await supabase

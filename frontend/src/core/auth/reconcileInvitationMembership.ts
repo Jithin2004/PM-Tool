@@ -42,6 +42,10 @@ function designationForRole(role: UserRole): string {
   if (role === 'pm') return 'Project Manager';
   if (role === 'pending-workspace-setup') return 'Pending Setup';
   if (role === 'uninvited') return 'Uninvited User';
+  if (role === 'hr') return 'Human Resources';
+  if (role === 'finance') return 'Finance';
+  if (role === 'client') return 'Client';
+  if (role === 'viewer') return 'Viewer';
   return 'Developer';
 }
 

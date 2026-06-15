@@ -98,7 +98,7 @@ export async function fetchWorkspaceTeams(workspaceId: string): Promise<Team[]> 
     .order('created_at', { ascending: false });
 
   if (teamsError || !teamsData) {
-    const localSettings = localStorage.getItem('SYSTEM_SETTINGS');
+    const localSettings = localStorage.getItem(`SYSTEM_SETTINGS_${workspaceId}`);
     if (localSettings) {
       const parsedSettings = JSON.parse(localSettings);
       return [{
@@ -124,7 +124,7 @@ export async function fetchWorkspaceTeams(workspaceId: string): Promise<Team[]> 
     teamsData.map(async team => {
       if (team.name === 'SYSTEM_SETTINGS') {
         if (team.data) {
-          localStorage.setItem('SYSTEM_SETTINGS', JSON.stringify(team.data));
+          localStorage.setItem(`SYSTEM_SETTINGS_${workspaceId}`, JSON.stringify(team.data));
         }
         return team as Team;
       }

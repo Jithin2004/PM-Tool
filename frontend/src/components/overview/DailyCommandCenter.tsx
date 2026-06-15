@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { getDailyIntelligence, DailyIntelligence, ActionableItem, Recommendation } from '../../services/dailyCommandService';
 import { ActivityStream } from '../dashboard/ActivityStream';
-import { ArrowRight, CheckCircle2, Clock, ShieldAlert, Terminal, Play, Flame, Bell, Target, TrendingUp } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock, ShieldAlert, Terminal, Play, Flame, Bell, Target, TrendingUp, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function DailyCommandCenter() {

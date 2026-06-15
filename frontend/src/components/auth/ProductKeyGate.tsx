@@ -44,7 +44,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
 
   useEffect(() => {
     // Restore session if user refreshes during signup
-    const pendingStr = localStorage.getItem('pendingLicenseActivation');
+    const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
     if (pendingStr && state === 'input') {
       try {
         const parsed = JSON.parse(pendingStr);
@@ -72,7 +72,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     const result = await validateNewActivationKey(key.trim());
 
     if (result.success) {
-      localStorage.setItem('pendingLicenseActivation', JSON.stringify({
+      sessionStorage.setItem('pendingLicenseActivation', JSON.stringify({
         licenseId: key.trim(),
         validated: true,
         licenseData: result.licenseData
@@ -93,7 +93,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     const result = await verifyLicenseFile(file);
 
     if (result.success) {
-      localStorage.setItem('pendingLicenseActivation', JSON.stringify({
+      sessionStorage.setItem('pendingLicenseActivation', JSON.stringify({
         licenseId: 'offline',
         validated: true,
         licenseData: result.licenseData
@@ -166,15 +166,9 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
 
       sessionStorage.setItem('pending_workspace_name', workspaceName);
       
-      const pendingStr = localStorage.getItem('pendingLicenseActivation');
-      if (pendingStr) {
-        try {
-          const parsed = JSON.parse(pendingStr);
-          if (parsed.licenseData) {
-            localStorage.setItem('resolve-product-license', JSON.stringify(parsed.licenseData));
-          }
-        } catch (e) {}
-      }
+      const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
+      // Intentionally omitting localStorage update for resolve-product-license
+      // productKey.ts now uses memory for validation until workspace_license is populated.
       
       setState('success');
       setTimeout(() => onVerified(), 1200);
@@ -424,7 +418,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                   <button
                     type="button"
                     onClick={() => {
-                      localStorage.removeItem('pendingLicenseActivation');
+                      sessionStorage.removeItem('pendingLicenseActivation');
                       setState('input');
                     }}
                     className="w-full text-xs font-medium text-center hover:underline mt-2 transition-colors"

@@ -500,7 +500,7 @@ CREATE TABLE invitations (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   email         text        NOT NULL,
-  role          text        NOT NULL CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer', 'client')),
+  role          text        NOT NULL CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer', 'hr', 'finance', 'client')),
   token         text        UNIQUE NOT NULL,
   status        text        NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'revoked')),
   expires_at    timestamptz NOT NULL,
@@ -642,12 +642,12 @@ BEGIN
 
   RETURN NEW;
 END;
+$$;
 
 DROP TRIGGER IF EXISTS check_role_escalation ON users;
 CREATE TRIGGER check_role_escalation
   BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION prevent_role_escalation();
-
 
 -- Wave 7/9 Hardening: Developer task mutation restrictions
 -- Prevents developers from: reassigning tasks, moving tasks between projects,

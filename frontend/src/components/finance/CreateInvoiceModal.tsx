@@ -6,6 +6,7 @@ import { fetchDocumentTemplates, DocumentTemplate } from '../../services/documen
 import { documentGenerator } from '../../services/documentGeneratorService';
 import { showConfirm, showAlert } from '../common/Dialogs';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ interface CreateInvoiceModalProps {
 
 export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, companyProfile, onSuccess, prefillProject, totalInvoicedForProject, currentUserIsSuperAdmin, prefillLineItems, prefillBillingType }: CreateInvoiceModalProps) {
   useEscapeKey(isOpen, onClose);
+  const { workspace } = useWorkspace();
+  const baseCurrency = workspace?.metadata?.baseCurrency || 'INR';
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
@@ -34,6 +37,12 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
   const navigate = (path: string) => window.location.href = path;
   const [invoiceCurrency, setInvoiceCurrency] = useState('USD');
   const [exchangeRate, setExchangeRate] = useState(1);
+
+  useEffect(() => {
+    if (invoiceCurrency === baseCurrency) {
+      setExchangeRate(1);
+    }
+  }, [invoiceCurrency, baseCurrency]);
 
   const [lineItems, setLineItems] = useState<Partial<InvoiceLineItem>[]>(prefillLineItems || [
     { description: '', quantity: 1, rate: 0, tax_percentage: 18, amount: 0 }
@@ -169,9 +178,15 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
       await showAlert("This invoice exceeds the project contract value. Super Admin override is required to proceed.", { type: "warning" });
       return;
     }
-    if (exchangeRate !== 1 && !exchangeOverrideReason) {
-      await showAlert("You must provide a reason for overriding the default exchange rate.", { type: "warning" });
-      return;
+    if (invoiceCurrency !== baseCurrency) {
+      if (!exchangeRate || isNaN(exchangeRate) || exchangeRate <= 0) {
+        await showAlert("Please enter a valid exchange rate greater than 0.", { type: "warning" });
+        return;
+      }
+      if (exchangeRate !== 1 && !exchangeOverrideReason) {
+        await showAlert("You must provide a reason for overriding the default exchange rate.", { type: "warning" });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -189,14 +204,14 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
         grand_total,
         balance_due: grand_total,
         billing_state_snapshot: client?.billing_state || null,
-        currency: 'INR', // Base currency (Legacy)
-        company_base_currency: 'INR',
-        base_amount: grand_total,
+        currency: baseCurrency, // Base currency (Legacy)
+        company_base_currency: baseCurrency,
+        base_amount: grand_total * exchangeRate,
         invoice_currency: invoiceCurrency,
-        invoice_amount: grand_total * exchangeRate,
+        invoice_amount: grand_total,
         exchange_rate: exchangeRate,
         exchange_rate_locked: true,
-        exchange_override_reason: exchangeRate !== 1 ? exchangeOverrideReason : undefined,
+        exchange_override_reason: invoiceCurrency !== baseCurrency && exchangeRate !== 1 ? exchangeOverrideReason : undefined,
         converted_amount: grand_total * exchangeRate,
         conversion_date: new Date().toISOString(),
         status: 'sent',
@@ -362,9 +377,9 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                   <tr>
                     <th className="px-4 py-3 w-1/2">Description</th>
                     <th className="px-4 py-3 w-20">Qty</th>
-                    <th className="px-4 py-3 w-32">Rate (₹)</th>
+                    <th className="px-4 py-3 w-32">Rate ({invoiceCurrency})</th>
                     <th className="px-4 py-3 w-24">Tax %</th>
-                    <th className="px-4 py-3 w-32 text-right">Amount (₹)</th>
+                    <th className="px-4 py-3 w-32 text-right">Amount ({invoiceCurrency})</th>
                     <th className="px-4 py-3 w-12"></th>
                   </tr>
                 </thead>
@@ -407,29 +422,29 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
             <div className="w-72 space-y-3 font-mono text-sm">
               <div className="flex justify-between text-text-secondary">
                 <span>Subtotal:</span>
-                <span>₹{subtotal.toFixed(2)}</span>
+                <span>{invoiceCurrency} {subtotal.toFixed(2)}</span>
               </div>
               
               {isInterState ? (
                 <div className="flex justify-between text-text-secondary">
                   <span>IGST:</span>
-                  <span>₹{igst_amount.toFixed(2)}</span>
+                  <span>{invoiceCurrency} {igst_amount.toFixed(2)}</span>
                 </div>
               ) : (
                 <>
                   <div className="flex justify-between text-text-secondary">
                     <span>CGST:</span>
-                    <span>₹{cgst_amount.toFixed(2)}</span>
+                    <span>{invoiceCurrency} {cgst_amount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-text-secondary">
                     <span>SGST:</span>
-                    <span>₹{sgst_amount.toFixed(2)}</span>
+                    <span>{invoiceCurrency} {sgst_amount.toFixed(2)}</span>
                   </div>
                 </>
               )}
               <div className="border-t border-border/50 pt-3 flex justify-between font-bold text-lg text-text-primary">
                 <span>Grand Total:</span>
-                <span>₹{grand_total.toFixed(2)}</span>
+                <span>{invoiceCurrency} {grand_total.toFixed(2)}</span>
               </div>
               
               <div className="border-t border-border/50 pt-4 mt-4">
@@ -449,19 +464,21 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                       <option value="AED">AED (د.إ)</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-xs text-text-secondary mb-1">Exchange Rate (1 {invoiceCurrency} = ₹X)</label>
-                    <input 
-                      type="number"
-                      step="0.01"
-                      value={exchangeRate}
-                      onChange={e => setExchangeRate(Number(e.target.value))}
-                      className="w-full input-premium p-2 text-xs outline-none disabled:opacity-50"
-                      disabled={invoiceCurrency === 'INR' || !currentUserIsSuperAdmin}
-                    />
-                  </div>
+                  {invoiceCurrency !== baseCurrency && (
+                    <div>
+                      <label className="block text-xs text-text-secondary mb-1">Exchange Rate (1 {invoiceCurrency} = {baseCurrency} X)</label>
+                      <input 
+                        type="number"
+                        step="0.01"
+                        value={exchangeRate}
+                        onChange={e => setExchangeRate(Number(e.target.value))}
+                        className="w-full input-premium p-2 text-xs outline-none"
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
-                {exchangeRate !== 1 && (
+                {invoiceCurrency !== baseCurrency && exchangeRate !== 1 && (
                   <div className="mb-3">
                     <label className="block text-xs text-text-secondary mb-1 flex items-center gap-1">
                       Exchange Rate Override Reason <span className="text-rose-500">*</span>
@@ -475,10 +492,16 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                     />
                   </div>
                 )}
-                {invoiceCurrency !== 'INR' && (
-                  <div className="flex justify-between items-center bg-accent-primary/10 border border-accent-primary/20 rounded p-2">
-                    <span className="text-xs text-text-secondary">Converted Amount:</span>
-                    <span className="font-bold text-accent-primary">{invoiceCurrency} {(grand_total / exchangeRate).toFixed(2)}</span>
+                {invoiceCurrency !== baseCurrency && (
+                  <div className="flex flex-col gap-1.5 bg-accent-primary/10 border border-accent-primary/20 rounded p-3 text-xs mt-3">
+                    <div className="flex justify-between items-center text-text-secondary">
+                      <span>Invoice Total:</span>
+                      <span className="font-bold text-text-primary">{invoiceCurrency} {grand_total.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-border/30 pt-1.5 mt-1.5">
+                      <span>Accounting Value:</span>
+                      <span className="font-bold text-accent-primary">{baseCurrency} {(grand_total * exchangeRate).toFixed(2)}</span>
+                    </div>
                   </div>
                 )}
               </div>

@@ -86,29 +86,38 @@ export function AcceptInvitePage() {
     setLoading(true);
 
     try {
-      // 1. Mark the token as accepted securely via RPC
-      // This eliminates RLS dependency and ensures atomicity.
-      const { data: accepted, error: updateError } = await supabase
-        .rpc('accept_invitation', { p_token: token });
-
-      if (updateError || !accepted) {
-        throw new Error('Could not accept the invitation. It may have expired or already been used.');
-      }
-
-      // 2. Create the user in Supabase Auth
-      // The reconcileInvitationMembership core will automatically pick up the 'accepted' invitation
-      // when it sees the email, and assign the proper workspace and role!
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      // 1. Authenticate or Create Account
+      let authSuccess = false;
+      
+      const { error: signUpError } = await supabase.auth.signUp({
         email: inviteDetails!.email,
         password: password,
       });
 
       if (signUpError) {
         if (signUpError.message.includes('already registered')) {
-          throw new Error('ACCOUNT_EXISTS');
+          // Try to sign in
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: inviteDetails!.email,
+            password: password,
+          });
+          if (signInError) {
+            throw new Error('Account exists but incorrect password. Please go to Login to accept your invitation.');
+          }
+          authSuccess = true;
         } else {
           throw signUpError;
         }
+      } else {
+        authSuccess = true;
+      }
+
+      // 2. Accept Invitation
+      const { data: accepted, error: updateError } = await supabase
+        .rpc('accept_invitation', { p_token: token });
+
+      if (updateError || !accepted) {
+        throw new Error('Could not accept the invitation. It may have expired or already been used.');
       }
 
       setSuccess(true);

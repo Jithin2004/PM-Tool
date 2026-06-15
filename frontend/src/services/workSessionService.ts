@@ -249,6 +249,9 @@ export const workSessionService = {
   async addManualSession(workspaceId: string, taskId: string, userId: string, start: Date, end: Date, reason: string): Promise<{ success: boolean; requiresApproval: boolean }> {
     if (!isSupabaseConfigured) return { success: false, requiresApproval: false };
     try {
+      if (end.getTime() <= start.getTime()) {
+        return { success: false, requiresApproval: false };
+      }
       const durationMins = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 60000));
       
       // If > 2 hours, requires PM approval

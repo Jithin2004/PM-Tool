@@ -198,20 +198,21 @@ export interface CreditNote {
 }
 
 export async function fetchFinanceData(workspaceId: string) {
-  const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments, billingMilestones, clientCredits, advanceApplications, creditNotes] = await Promise.all([
+  const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments, billingMilestones, clientCredits, advanceApplications, creditNotes, employmentRecords] = await Promise.all([
     supabase.from('company_billing_profile').select('*').limit(50).eq('workspace_id', workspaceId).maybeSingle(),
     supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null),
     supabase.from('invoices').select('*, invoice_line_items(*)').eq('workspace_id', workspaceId).is('deleted_at', null),
     supabase.from('payments').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('expenses').select('*').limit(50).eq('workspace_id', workspaceId),
-    supabase.from('salaries').select('base_salary').eq('workspace_id', workspaceId),
+    supabase.from('salaries').select('user_id, base_salary').eq('workspace_id', workspaceId),
     supabase.from('financial_periods').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('financial_snapshots').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('financial_adjustments').select('*, financial_periods!inner(workspace_id)').eq('financial_periods.workspace_id', workspaceId),
     supabase.from('billing_milestones').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('client_credits').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('advance_applications').select('*').limit(50).eq('workspace_id', workspaceId),
-    supabase.from('credit_notes').select('*').limit(50).eq('workspace_id', workspaceId)
+    supabase.from('credit_notes').select('*').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('employment_records').select('user_id, employment_status').eq('workspace_id', workspaceId)
   ]);
 
   if (companyProfile.error && companyProfile.error.code !== 'PGRST116') throw companyProfile.error;
@@ -228,6 +229,7 @@ export async function fetchFinanceData(workspaceId: string) {
   if (clientCredits.error && clientCredits.error.code !== '42P01') throw clientCredits.error;
   if (advanceApplications.error && advanceApplications.error.code !== '42P01') throw advanceApplications.error;
   if (creditNotes.error && creditNotes.error.code !== '42P01') throw creditNotes.error;
+  if (employmentRecords.error && employmentRecords.error.code !== '42P01') throw employmentRecords.error;
 
   return {
     companyProfile: companyProfile.data as CompanyBillingProfile | null,
@@ -235,7 +237,7 @@ export async function fetchFinanceData(workspaceId: string) {
     invoices: invoices.data as Invoice[],
     payments: payments.data as Payment[],
     expenses: expenses.data as Expense[],
-    salaries: salaries.data as { base_salary: number }[],
+    salaries: salaries.data as { user_id: string; base_salary: number }[],
     periods: (periods.data || []) as FinancialPeriod[],
     snapshots: (snapshots.data || []) as FinancialSnapshot[],
     adjustments: (adjustments.data || []) as FinancialAdjustment[],
@@ -243,6 +245,7 @@ export async function fetchFinanceData(workspaceId: string) {
     clientCredits: (clientCredits.data || []) as ClientCredit[],
     advanceApplications: (advanceApplications.data || []) as AdvanceApplication[],
     creditNotes: (creditNotes.data || []) as CreditNote[],
+    employmentRecords: (employmentRecords.data || []) as { user_id: string; employment_status: string }[],
   };
 }
 

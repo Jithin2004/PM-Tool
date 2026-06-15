@@ -167,7 +167,7 @@ export async function approveStep(instanceId: string, stepOrder: number, _userId
   if (!isSupabaseConfigured) return false;
   try {
     const { data: instance } = await trackSupabaseOperation('supabase_from_approval_instances', () => supabase
-      .from('approval_instances').select('*, approval_chains!inner(id)')
+      .from('approval_instances').select('*, approval_chains!inner(id, workspace_id)')
       .eq('id', instanceId).single());
     if (!instance) return false;
     const { data: steps } = await trackSupabaseOperation('supabase_from_approval_steps', () => supabase
@@ -179,15 +179,16 @@ export async function approveStep(instanceId: string, stepOrder: number, _userId
       await trackSupabaseOperation('supabase_from_approval_instances', () => supabase.from('approval_instances').update({
         status: 'approved', current_step: totalSteps, completed_at: new Date().toISOString(),
       }).eq('id', instanceId));
+      const resolvedWorkspaceId = (instance as any).approval_chains?.workspace_id || '';
       await activityLogService.appendLog({
-        workspace_id: '', action: 'approval_completed',
+        workspace_id: resolvedWorkspaceId, action: 'approval_completed',
         metadata: { instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'approved' },
       });
-      fireEventWebhooks('approval_completed', instance.workspace_id, {
+      fireEventWebhooks('approval_completed', resolvedWorkspaceId, {
         instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'approved',
       }).catch(() => {});
       evaluateTriggers('approval.completed', {
-        workspace_id: instance.workspace_id, target_type: instance.target_type, target_id: instance.target_id,
+        workspace_id: resolvedWorkspaceId, target_type: instance.target_type, target_id: instance.target_id,
       }).catch(() => {});
     } else {
       await trackSupabaseOperation('supabase_from_approval_instances', () => supabase.from('approval_instances').update({
@@ -202,16 +203,17 @@ export async function rejectStep(instanceId: string, _stepOrder: number, _userId
   if (!isSupabaseConfigured) return false;
   try {
     const { data: instance } = await trackSupabaseOperation('supabase_from_approval_instances', () => supabase
-      .from('approval_instances').select('*').limit(50).eq('id', instanceId).single());
+      .from('approval_instances').select('*, approval_chains!inner(id, workspace_id)').eq('id', instanceId).single());
     if (!instance) return false;
     await trackSupabaseOperation('supabase_from_approval_instances', () => supabase.from('approval_instances').update({
       status: 'rejected', completed_at: new Date().toISOString(),
     }).eq('id', instanceId));
+    const resolvedWorkspaceId = (instance as any).approval_chains?.workspace_id || '';
     await activityLogService.appendLog({
-      workspace_id: '', action: 'approval_completed',
+      workspace_id: resolvedWorkspaceId, action: 'approval_completed',
       metadata: { instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'rejected' },
     });
-    fireEventWebhooks('approval_completed', instance.workspace_id, {
+    fireEventWebhooks('approval_completed', resolvedWorkspaceId, {
       instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'rejected',
     }).catch(() => {});
     return true;

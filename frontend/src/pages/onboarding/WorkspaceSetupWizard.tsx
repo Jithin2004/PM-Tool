@@ -36,7 +36,7 @@ export function WorkspaceSetupWizard() {
 
   const attachLicenseIfPending = async (workspaceId: string) => {
     try {
-      const pendingStr = localStorage.getItem('pendingLicenseActivation');
+      const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
       if (pendingStr) {
         const parsed = JSON.parse(pendingStr);
         if (parsed.licenseData) {
@@ -53,7 +53,7 @@ export function WorkspaceSetupWizard() {
             license_type: planType
           });
           
-          localStorage.removeItem('pendingLicenseActivation');
+          sessionStorage.removeItem('pendingLicenseActivation');
         }
       }
     } catch (e) {

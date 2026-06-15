@@ -104,18 +104,10 @@ export function getDeviceFingerprint(): string {
   }
 }
 
+let memoryLicense: LicenseData | null = null;
+
 function getStored(): LicenseData | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed.token === 'string' && typeof parsed.verifiedAt === 'number') {
-      return parsed as LicenseData;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  return memoryLicense;
 }
 
 // ── RSA-PSS Offline License File Verification ────────────────────────────────
@@ -153,36 +145,38 @@ export async function verifyLicenseFile(file: File): Promise<VerifyResult> {
       return { success: false, error: `License expired on ${new Date(payload.expiresAt).toLocaleDateString()}.` };
     }
 
-    // Guard: if public key is still placeholder, skip crypto and use trusted fallback
-    const isPlaceholderKey = PUBLIC_JWK.n === 'PLACEHOLDER_REPLACE_WITH_REAL_MODULUS';
-    if (!isPlaceholderKey) {
-      // Import public key
-      let publicKey: CryptoKey;
-      try {
-        publicKey = await crypto.subtle.importKey(
-          'jwk',
-          PUBLIC_JWK,
-          { name: 'RSA-PSS', hash: 'SHA-256' },
-          false,
-          ['verify']
-        );
-      } catch {
-        return { success: false, error: 'Failed to import verification key. License file may be corrupt.' };
-      }
+    // Guard: fail closed if verification key is missing or placeholder
+    const isPlaceholderKey = PUBLIC_JWK.n === 'PLACEHOLDER_REPLACE_WITH_REAL_MODULUS' || !PUBLIC_JWK.n;
+    if (isPlaceholderKey) {
+      return { success: false, error: 'Verification key missing. Offline license validation failed.' };
+    }
 
-      // Verify signature
-      const signatureBuffer = base64urlToBuffer(signature);
-      const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
-      const isValid = await crypto.subtle.verify(
-        { name: 'RSA-PSS', saltLength: 32 },
-        publicKey,
-        signatureBuffer,
-        payloadBytes
+    // Import public key
+    let publicKey: CryptoKey;
+    try {
+      publicKey = await crypto.subtle.importKey(
+        'jwk',
+        PUBLIC_JWK,
+        { name: 'RSA-PSS', hash: 'SHA-256' },
+        false,
+        ['verify']
       );
+    } catch {
+      return { success: false, error: 'Failed to import verification key. License file may be corrupt.' };
+    }
 
-      if (!isValid) {
-        return { success: false, error: 'License signature is invalid. This license file may have been tampered with.' };
-      }
+    // Verify signature
+    const signatureBuffer = base64urlToBuffer(signature);
+    const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
+    const isValid = await crypto.subtle.verify(
+      { name: 'RSA-PSS', saltLength: 32 },
+      publicKey,
+      signatureBuffer,
+      payloadBytes
+    );
+
+    if (!isValid) {
+      return { success: false, error: 'License signature is invalid. This license file may have been tampered with.' };
     }
 
     // Build and store the license
@@ -199,6 +193,8 @@ export async function verifyLicenseFile(file: File): Promise<VerifyResult> {
       purchaseId: payload.licenseId,
       supportExpiry: payload.supportExpiry,
     };
+    
+    memoryLicense = license;
 
     return { success: true, plan: payload.plan, licenseData: license };
 
@@ -229,9 +225,7 @@ export function getLicenseInfo(): LicenseData | null {
 }
 
 export function clearLicense(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch { /* ignore */ }
+  memoryLicense = null;
 }
 
 // ── Activate new license key via server ──────────────────────────────────────
@@ -284,6 +278,7 @@ export async function validateNewActivationKey(productKey: string): Promise<Veri
       supportExpiry: data?.supportExpiry || Date.now() + 365 * 24 * 60 * 60 * 1000
     };
 
+    memoryLicense = license;
     return { success: true, token, plan, licenseData: license };
 
   } catch (err: any) {
@@ -331,87 +326,32 @@ export async function validateWorkspaceLicenseUpdate(productKey: string, current
 
 // ── Background online license check ──────────────────────────────────────────
 export async function checkLicenseOnline(): Promise<{ valid: boolean; offline: boolean; error?: string }> {
-  const stored = getStored();
-  if (!stored) {
-    return { valid: false, offline: false, error: 'No license key activated.' };
-  }
-
-  // Offline licenses (license.json) don't call home — validate locally by expiry
-  if (stored.offlineLicense) {
-    const supportExpiry = stored.supportExpiry || (stored.verifiedAt + 365 * 24 * 60 * 60 * 1000);
-    const age = Date.now() - stored.verifiedAt;
-    if (age <= GRACE_PERIOD_MS) {
-      return { valid: true, offline: true };
-    }
-    // Re-verify expiry on offline license
-    if (Date.now() <= supportExpiry) {
-      const updated: LicenseData = { ...stored, verifiedAt: Date.now() };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return { valid: true, offline: true };
-    }
-    clearLicense();
-    return { valid: false, offline: false, error: 'Offline license has expired.' };
-  }
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
   try {
-    const res = await fetch(VERIFY_URL, {
-      method: 'GET',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${stored.token}`
-      },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timer);
-
-    if (res.status === 401 || res.status === 403) {
-      clearLicense();
-      return { valid: false, offline: false, error: 'License is no longer valid.' };
-    }
-
-    if (!res.ok) {
-      throw new Error(`Server returned status ${res.status}`);
-    }
-
-    const data = await res.json();
-    if (data && data.valid) {
-      const supportExpiry = data.supportExpiry || stored.supportExpiry || (Date.now() + 365 * 24 * 60 * 60 * 1000);
-      const isSupportExpired = Date.now() > supportExpiry;
-
-      const updated: LicenseData = {
-        ...stored,
-        verifiedAt: Date.now(),
-        plan: data.plan || stored.plan || 'BUSINESS',
-        features: data.features || [],
-        offlineVerified: false,
-        status: isSupportExpired ? 'Expired Support' : 'Activated',
-        companyName: data.companyName || stored.companyName,
-        purchaseId: data.purchaseId || stored.purchaseId,
-        supportExpiry
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return { valid: true, offline: false };
-    } else {
-      clearLicense();
-      return { valid: false, offline: false, error: data.error || 'License is invalid.' };
-    }
-
-  } catch (err: any) {
-    clearTimeout(timer);
+    const { data: license, error } = await supabase.from('workspace_license').select('*').limit(1).maybeSingle();
     
-    // Server offline — check grace period
-    const age = Date.now() - stored.verifiedAt;
-    if (age <= GRACE_PERIOD_MS) {
-      const updated: LicenseData = { ...stored, offlineVerified: true };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return { valid: true, offline: true };
-    } else {
-      clearLicense();
-      return { valid: false, offline: false, error: 'License verification grace period expired. Connect to the internet to verify.' };
+    if (error || !license) {
+      memoryLicense = null;
+      return { valid: false, offline: false, error: 'No license key activated in database.' };
     }
+    
+    if (license.status === 'expired' || license.status === 'revoked') {
+      memoryLicense = null;
+      return { valid: false, offline: false, error: 'This license is expired or revoked.' };
+    }
+
+    memoryLicense = {
+      token: license.id,
+      verifiedAt: Date.now(),
+      productKey: license.license_key_hash,
+      plan: license.license_type,
+      status: license.status as any,
+      offlineVerified: true,
+      offlineLicense: false,
+    };
+    
+    return { valid: true, offline: false };
+  } catch (err: any) {
+    memoryLicense = null;
+    return { valid: false, offline: false, error: err.message };
   }
 }

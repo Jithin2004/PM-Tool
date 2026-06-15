@@ -12,7 +12,6 @@ import {
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { Login } from '../components/auth/Login';
 import { PasswordSetup } from '../components/auth/PasswordSetup';
-import { PasswordSetup } from '../components/auth/PasswordSetup';
 import { ProductKeyGate } from '../components/auth/ProductKeyGate';
 import { isProductKeyVerified } from '../lib/productKey';
 import { normalizePath, parseProjectRoute, isRegisteredPath } from './routeRegistry';

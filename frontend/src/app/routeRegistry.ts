@@ -62,7 +62,6 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'mission-control', path: '/control/mission-control', label: 'Dashboard', iconName: 'LayoutDashboard', capability: 'view_mission_control', group: 'intelligence', disclosureTier: 'platform' },
   { id: 'system-health', path: '/control/system-health', label: 'System Health', iconName: 'Activity', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
   { id: 'settings', path: '/control/settings', label: 'Settings', iconName: 'Settings', capability: 'manage_settings', group: 'system', disclosureTier: 'operational' },
-  { id: 'integrations', path: '/control/connections', label: 'Connected Accounts', iconName: 'Link2', capability: 'manage_integrations', group: 'system', disclosureTier: 'platform' },
 
   // Executive routes
   { id: 'executive', path: '/workspace/executive', label: 'Executive Overview', iconName: 'Binoculars', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
@@ -140,6 +139,9 @@ export function isRegisteredPath(pathname: string): boolean {
   if (EXACT_APP_PATHS.has(path)) return true;
 
   if (path.startsWith('/workspace/knowledge/') && path.length > '/workspace/knowledge'.length + 1) {
+    return true;
+  }
+  if (path.startsWith('/accept-invite/')) {
     return true;
   }
   if (path.startsWith('/control/automations/') || path.startsWith('/control/connections/')) {
