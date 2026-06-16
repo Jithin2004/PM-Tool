@@ -90,16 +90,17 @@ export function BillingSettings() {
       }
 
       // Upsert workspace_license
+      const rawPlan = (verifyRes.plan || '').toLowerCase();
+      const planType = rawPlan === 'enterprise' ? 'enterprise' : rawPlan === 'premium' ? 'premium' : 'standard';
+
       const { error: dbError } = await supabase
         .from('workspace_license')
         .upsert({
-          id: newKey.trim(),
           workspace_id: workspace.id,
-          plan: verifyRes.plan || 'Enterprise',
-          max_seats: 9999, // default unmetered for now
-          features: {}, // derive if needed
-          status: 'active',
-          activated_at: new Date().toISOString()
+          license_key_hash: newKey.trim(),
+          allowed_users: verifyRes.licenseData?.allowed_users || 9999,
+          license_type: planType,
+          activation_date: new Date().toISOString()
         }, { onConflict: 'workspace_id' });
 
       if (dbError) throw new Error('Failed to attach license to workspace.');
@@ -140,9 +141,9 @@ export function BillingSettings() {
     statusDot = 'bg-amber-400';
   }
 
-  const planName = dbLicense?.plan || serverLicenseData?.plan || license?.plan || 'Enterprise';
-  const maxSeats = dbLicense?.max_seats || serverLicenseData?.seats || '';
-  const productKeyId = dbLicense?.id || serverLicenseData?.keyId || license?.productKey || license?.purchaseId || 'Unlicensed';
+  const planName = dbLicense?.license_type || dbLicense?.plan || serverLicenseData?.plan || license?.plan || 'Enterprise';
+  const maxSeats = dbLicense?.allowed_users || dbLicense?.max_seats || serverLicenseData?.seats || '';
+  const productKeyId = dbLicense?.license_key_hash || dbLicense?.id || serverLicenseData?.keyId || license?.productKey || license?.purchaseId || 'Unlicensed';
   const isSandbox = workspace?.is_sandbox || workspace?.status === 'sandbox';
   const displayWorkspaceName = getWorkspaceDisplayName(workspace?.name, !!isSandbox);
 

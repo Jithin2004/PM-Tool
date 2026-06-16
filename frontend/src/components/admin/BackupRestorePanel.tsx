@@ -54,7 +54,7 @@ export function BackupRestorePanel() {
   return (
     <div className="flex flex-col h-full font-geist bg-[var(--pm-bg)]">
       <div className="p-6 border-b border-[var(--pm-border)] bg-[var(--pm-surface)]">
-        <h2 className="text-xl font-semibold text-[var(--pm-text)]">Workspace Data Export</h2>
+        <h2 className="text-xl font-semibold text-[var(--pm-text)]">Export Workspace Backup</h2>
         <p className="text-sm text-[var(--pm-text-secondary)] mt-1 tracking-tight">Generate full JSON snapshots of your workspace data.</p>
       </div>
 
@@ -65,7 +65,7 @@ export function BackupRestorePanel() {
               <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
                 <HardDriveDownload className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-semibold text-[var(--pm-text)]">Generate Export</h3>
+              <h3 className="text-lg font-semibold text-[var(--pm-text)]">Generate Backup</h3>
             </div>
             <div className="flex-1">
               <p className="text-sm text-[var(--pm-text-secondary)]">
@@ -89,7 +89,7 @@ export function BackupRestorePanel() {
               ) : (
                 <>
                   <HardDriveDownload className="w-4 h-4" />
-                  Generate JSON Export
+                  Generate Backup
                 </>
               )}
             </button>
@@ -129,8 +129,8 @@ export function BackupRestorePanel() {
             ) : history.length === 0 ? (
               <PremiumEmptyState
                 icon={FileJson}
-                title="No exports generated yet"
-                description="Click Generate JSON Export to create your first workspace data snapshot."
+                title="No backups generated yet"
+                description="Click Generate Backup to create your first workspace data snapshot."
               />
             ) : (
               <table className="w-full text-sm text-left">

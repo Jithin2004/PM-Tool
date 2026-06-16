@@ -344,7 +344,7 @@ export async function checkLicenseOnline(): Promise<{ valid: boolean; offline: b
       verifiedAt: Date.now(),
       productKey: license.license_key_hash,
       plan: license.license_type,
-      status: license.status as any,
+      status: (license.status || 'Activated') as any,
       offlineVerified: true,
       offlineLicense: false,
     };

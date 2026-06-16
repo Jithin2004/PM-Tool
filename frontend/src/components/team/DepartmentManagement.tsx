@@ -2,14 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { PremiumEmptyState } from '../ui/PremiumEmptyState';
 import { Users, Briefcase, Folders, Plus, Edit2, UserPlus, Building2 } from 'lucide-react';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 export function DepartmentManagement() {
+  const { workspace } = useWorkspace();
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!workspace?.id) {
+      setLoading(true);
+      return;
+    }
+
     async function load() {
       try {
+        setLoading(true);
         const { data, error } = await supabase
           .from('departments')
           .select(`
@@ -17,7 +25,8 @@ export function DepartmentManagement() {
             manager:users(id, full_name, avatar_url),
             team_members(count),
             teams(count)
-          `);
+          `)
+          .eq('workspace_id', workspace.id);
         
         if (!error && data) {
           setDepartments(data);
@@ -32,7 +41,7 @@ export function DepartmentManagement() {
       }
     }
     load();
-  }, []);
+  }, [workspace?.id]);
 
   if (loading) {
     return (

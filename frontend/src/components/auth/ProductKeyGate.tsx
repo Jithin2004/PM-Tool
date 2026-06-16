@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Shield, CheckCircle, XCircle, Loader, AlertCircle, KeyRound, Upload, FileCheck } from 'lucide-react';
-import { validateNewActivationKey, verifyLicenseFile } from '../../lib/productKey';
+import { Shield, CheckCircle, XCircle, Loader, AlertCircle, KeyRound } from 'lucide-react';
+import { validateNewActivationKey } from '../../lib/productKey';
 import { showAlert } from '../../components/common/Dialogs';
 
 interface ProductKeyGateProps {
@@ -9,17 +9,12 @@ interface ProductKeyGateProps {
 }
 
 type GateState = 'input' | 'verifying' | 'success' | 'signup' | 'error';
-type GateMode = 'key' | 'file';
 
 export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
-  const [mode, setMode] = useState<GateMode>('key');
   const [key, setKey] = useState('');
   const [state, setState] = useState<GateState>('input');
   const [errorMsg, setErrorMsg] = useState('');
-  const [dragOver, setDragOver] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const initializedRef = useRef(false);
 
   // Signup Form State
@@ -56,12 +51,12 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
   }, [state]);
 
   useEffect(() => {
-    if (state === 'error' && (key || uploadedFile)) {
+    if (state === 'error' && key) {
       setState('input');
       setErrorMsg('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, uploadedFile]);
+  }, [key]);
 
   // ── Product key verification ──────────────────────────────
   const handleVerifyKey = useCallback(async () => {
@@ -72,10 +67,14 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     const result = await validateNewActivationKey(key.trim());
 
     if (result.success) {
+      const seats = result.licenseData?.allowed_users || result.licenseData?.max_seats || 10;
       sessionStorage.setItem('pendingLicenseActivation', JSON.stringify({
-        licenseId: key.trim(),
-        validated: true,
-        licenseData: result.licenseData
+        productKey: key.trim(),
+        licenseId: result.token || key.trim(),
+        plan: result.plan || 'standard',
+        seats: seats,
+        validatedAt: new Date().toISOString(),
+        validated: true
       }));
       setState('signup');
     } else {
@@ -84,56 +83,9 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     }
   }, [key, onVerified]);
 
-  // ── License file verification ─────────────────────────────
-  const handleVerifyFile = useCallback(async (file: File) => {
-    if (!file) return;
-    setState('verifying');
-    setErrorMsg('');
-
-    const result = await verifyLicenseFile(file);
-
-    if (result.success) {
-      sessionStorage.setItem('pendingLicenseActivation', JSON.stringify({
-        licenseId: 'offline',
-        validated: true,
-        licenseData: result.licenseData
-      }));
-      setState('signup');
-    } else {
-      setErrorMsg(result.error || 'License file verification failed.');
-      setState('error');
-    }
-  }, [onVerified]);
-
-  const handleFileSelected = useCallback((file: File) => {
-    if (!file.name.endsWith('.json')) {
-      setErrorMsg('Please select a valid license.json file.');
-      setState('error');
-      return;
-    }
-    setUploadedFile(file);
-    handleVerifyFile(file);
-  }, [handleVerifyFile]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelected(file);
-  }, [handleFileSelected]);
-
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleVerifyKey();
   }, [handleVerifyKey]);
-
-  const switchMode = (next: GateMode) => {
-    setMode(next);
-    setState('input');
-    setErrorMsg('');
-    setUploadedFile(null);
-    setKey('');
-    if (next === 'key') setTimeout(() => inputRef.current?.focus(), 100);
-  };
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,29 +154,12 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
           <p className="text-xs uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Product Activation</p>
         </div>
 
-        {/* Mode Switcher Tabs */}
-        <div className="flex rounded-xl overflow-hidden border mb-6" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-          {(['key', 'file'] as GateMode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => switchMode(m)}
-              className="flex-1 h-9 text-xs font-semibold uppercase tracking-wide transition-all"
-              style={{
-                background: mode === m ? 'var(--pm-primary)' : 'transparent',
-                color: mode === m ? 'white' : 'var(--pm-on-surface-variant)',
-              }}
-            >
-              {m === 'key' ? '🔑 Product Key' : '📄 License File'}
-            </button>
-          ))}
-        </div>
-
         {/* Gate Content */}
-        <div>
+        <div className="mt-6">
           <AnimatePresence mode="wait">
 
             {/* ── Product Key Input ── */}
-            {mode === 'key' && state === 'input' && (
+            {state === 'input' && (
               <motion.div key="key-input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl border"
                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
@@ -261,55 +196,12 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
               </motion.div>
             )}
 
-            {/* ── License File Drop Zone ── */}
-            {mode === 'file' && state === 'input' && (
-              <motion.div key="file-input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
-                <div
-                  className="rounded-xl border-2 border-dashed p-8 text-center transition-all cursor-pointer"
-                  style={{
-                    borderColor: dragOver ? 'var(--pm-primary)' : 'rgba(70,69,84,0.4)',
-                    background: dragOver ? 'var(--pm-primary-container)/10' : 'var(--pm-surface-lowest)',
-                  }}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".json"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelected(f); }}
-                  />
-                  <Upload className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--pm-on-surface-variant)' }} />
-                  <p className="text-sm font-medium mb-1" style={{ color: 'var(--pm-on-surface)' }}>
-                    Drop your <span className="font-mono text-xs">license.json</span> here
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                    or click to browse files
-                  </p>
-                </div>
-
-                {errorMsg && (
-                  <div className="flex items-start gap-2 text-sm" style={{ color: 'var(--pm-error)' }}>
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                    <span>{errorMsg}</span>
-                  </div>
-                )}
-
-                <p className="text-xs text-center" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                  Offline activation — no internet required
-                </p>
-              </motion.div>
-            )}
-
             {/* ── Verifying ── */}
             {state === 'verifying' && (
               <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-6">
                 <Loader className="w-8 h-8 mx-auto mb-4 animate-spin" style={{ color: 'var(--pm-primary)' }} />
                 <p className="text-sm font-medium" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                  {mode === 'file' ? 'Verifying license file signature...' : 'Verifying product key...'}
+                  Verifying product key...
                 </p>
               </motion.div>
             )}
@@ -324,10 +216,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                 transition={{ duration: 0.3 }}
                 className="text-center py-6"
               >
-                {mode === 'file'
-                  ? <FileCheck className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
-                  : <CheckCircle className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
-                }
+                <CheckCircle className="w-12 h-12 mx-auto mb-4 text-emerald-400" />
                 <p className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Account Created</p>
                 <p className="text-sm mt-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Initializing workspace...</p>
               </motion.div>
@@ -441,7 +330,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                   )}
                 </div>
                 <button
-                  onClick={() => { setState('input'); setErrorMsg(''); setUploadedFile(null); }}
+                  onClick={() => { setState('input'); setErrorMsg(''); }}
                   className="w-full rounded-xl h-12 flex items-center justify-center gap-3 font-semibold uppercase tracking-wide text-xs transition-all active:scale-[0.98]"
                   style={{ background: 'var(--pm-surface-high)', color: 'var(--pm-on-surface)', border: '1px solid rgba(70,69,84,0.3)' }}
                 >
@@ -465,13 +354,6 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
               style={{ color: 'var(--pm-primary)', border: '1px solid rgba(70,69,84,0.3)' }}
             >
               Request Access
-            </button>
-            <button
-              onClick={() => showAlert('Contacting workspace admin... (Demo)')}
-              className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-[var(--pm-surface)]/5"
-              style={{ color: 'var(--pm-secondary)', border: '1px solid rgba(70,69,84,0.3)' }}
-            >
-              Contact Workspace Admin
             </button>
             <a
               href="/"

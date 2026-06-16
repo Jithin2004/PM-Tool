@@ -34,30 +34,63 @@ export function WorkspaceSetupWizard() {
   
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
-  const attachLicenseIfPending = async (workspaceId: string) => {
+  const attachLicenseIfPending = async (workspaceId: string, userId: string): Promise<boolean> => {
     try {
       const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
-      if (pendingStr) {
-        const parsed = JSON.parse(pendingStr);
-        if (parsed.licenseData) {
-          const productKeyStr = parsed.licenseData.productKey || 'OFFLINE-LICENSE';
-          const rawPlan = (parsed.licenseData.plan || '').toLowerCase();
-          const planType = rawPlan === 'enterprise' ? 'enterprise' : rawPlan === 'premium' ? 'premium' : 'standard';
-          
-          await supabase.from('workspace_license').insert({
+      if (!pendingStr) return true;
+
+      const parsed = JSON.parse(pendingStr);
+      const productKeyStr = parsed.productKey || parsed.licenseId || 'OFFLINE-LICENSE';
+      const rawPlan = (parsed.plan || '').toLowerCase();
+      const planType = rawPlan === 'enterprise' ? 'enterprise' : rawPlan === 'premium' ? 'premium' : 'standard';
+      const seats = parsed.seats || 10;
+      const validatedAt = parsed.validatedAt || new Date().toISOString();
+      const supportExpiryDate = parsed.supportExpiry ? new Date(parsed.supportExpiry).toISOString() : new Date(Date.now() + 365*24*60*60*1000).toISOString();
+
+      // Check if license already exists
+      const { data: existingLicense } = await supabase
+        .from('workspace_license')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .maybeSingle();
+
+      let queryResult;
+      if (existingLicense) {
+        queryResult = await supabase
+          .from('workspace_license')
+          .update({
+            license_key_hash: productKeyStr,
+            activation_date: validatedAt,
+            allowed_users: seats,
+            license_type: planType,
+            support_until: supportExpiryDate
+          })
+          .eq('workspace_id', workspaceId);
+      } else {
+        queryResult = await supabase
+          .from('workspace_license')
+          .insert({
             workspace_id: workspaceId,
             license_key_hash: productKeyStr,
-            activated_at: new Date().toISOString(),
-            activated_by: user?.id,
-            status: 'active',
-            license_type: planType
+            activation_date: validatedAt,
+            allowed_users: seats,
+            license_type: planType,
+            support_until: supportExpiryDate
           });
-          
-          sessionStorage.removeItem('pendingLicenseActivation');
-        }
       }
+
+      if (queryResult.error) {
+        console.error('License attachment query error:', queryResult.error);
+        return false;
+      }
+
+      // Cleanup on success
+      sessionStorage.removeItem('pendingLicenseActivation');
+      sessionStorage.removeItem('pending_workspace_name');
+      return true;
     } catch (e) {
       console.error('License attachment failed:', e);
+      return false;
     }
   };
 
@@ -159,7 +192,12 @@ export function WorkspaceSetupWizard() {
             }));
           }
         }
-        await attachLicenseIfPending(created.id);
+        const licenseSuccess = await attachLicenseIfPending(created.id, user?.id || '');
+        if (!licenseSuccess) {
+          setDbError("Workspace created but license activation failed. Please retry activation.");
+          setLoading(false);
+          return;
+        }
         await refreshProfile();
         window.location.href = '/overview';
       }
@@ -183,7 +221,12 @@ export function WorkspaceSetupWizard() {
       });
       if (ws) {
         await demoWorkspacesService.injectDemoData(ws.id, profile!.id, selectedTemplate);
-        await attachLicenseIfPending(ws.id);
+        const licenseSuccess = await attachLicenseIfPending(ws.id, user?.id || '');
+        if (!licenseSuccess) {
+          setDbError("Workspace created but license activation failed. Please retry activation.");
+          setDemoLoading(false);
+          return;
+        }
         await refreshProfile();
         window.location.href = '/overview';
       }
@@ -251,14 +294,16 @@ export function WorkspaceSetupWizard() {
             <div className="mb-6 p-4 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/50 bg-red-500/10 rounded-lg animate-in fade-in">
               <h3 className="text-red-400 font-bold mb-2 flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">!</span>
-                Database Missing
+                {dbError.includes('license') ? 'License Activation Failed' : 'Database Missing'}
               </h3>
               <p className="text-sm text-red-200 leading-relaxed">
                 {dbError}
               </p>
-              <p className="text-xs text-red-300 mt-2 font-mono">
-                Please copy the contents of <strong>RESOLVE_PM_PRODUCTION_MASTER_SCHEMA.sql</strong> and run it in your Supabase project's SQL Editor to create the necessary tables.
-              </p>
+              {!dbError.includes('license') && (
+                <p className="text-xs text-red-300 mt-2 font-mono">
+                  Please copy the contents of <strong>RESOLVE_PM_PRODUCTION_MASTER_SCHEMA.sql</strong> and run it in your Supabase project's SQL Editor to create the necessary tables.
+                </p>
+              )}
             </div>
           )}
 

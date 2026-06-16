@@ -1,12 +1,60 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
-import { getLicenseInfo } from '../../lib/productKey';
 import { CheckCircle2, Circle, ArrowRight, Server, Shield, Users, Building2, HardDrive, KanbanSquare } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 export function WelcomeCenter() {
   const { workspace } = useWorkspace();
   const { teams, projects } = useDashboard();
+  const [hasBackup, setHasBackup] = useState(false);
+  const [hasLicense, setHasLicense] = useState(false);
+
+  useEffect(() => {
+    if (!workspace?.id) return;
+
+    let active = true;
+
+    async function loadChecklistData() {
+      try {
+        // Query license from database
+        const { data: license, error: licenseErr } = await supabase
+          .from('workspace_license')
+          .select('status')
+          .limit(1)
+          .maybeSingle();
+
+        if (active && !licenseErr && license) {
+          if (license.status !== 'expired' && license.status !== 'revoked') {
+            setHasLicense(true);
+          } else {
+            setHasLicense(false);
+          }
+        }
+
+        // Query backup history from activity logs
+        const { data: backup, error: backupErr } = await supabase
+          .from('activity_logs')
+          .select('id')
+          .eq('workspace_id', workspace.id)
+          .eq('action', 'workspace_exported')
+          .limit(1);
+
+        if (active && !backupErr && backup && backup.length > 0) {
+          setHasBackup(true);
+        } else {
+          setHasBackup(false);
+        }
+      } catch (err) {
+        console.error('WelcomeCenter: loadChecklistData failed:', err);
+      }
+    }
+
+    loadChecklistData();
+    return () => {
+      active = false;
+    };
+  }, [workspace?.id]);
 
   const navigateTo = (path: string) => {
     window.history.pushState(null, '', path);
@@ -34,13 +82,9 @@ export function WelcomeCenter() {
   };
 
   const setupMetrics = useMemo(() => {
-    const licenseInfo = getLicenseInfo();
     const hasCompany = !!workspace?.name && workspace.name !== 'Default Workspace';
     const hasTeams = teams && teams.filter(t => t.name !== 'SYSTEM_SETTINGS').length > 0;
     const hasProjects = projects && projects.length > 0;
-    const hasLicense = licenseInfo ? (licenseInfo.status === 'Activated' || licenseInfo.status === 'Expired Support') : false;
-    // For Backup, since it's a simulation, we'll check local storage or default to false
-    const hasBackup = localStorage.getItem('resolve-backup-configured') === 'true';
 
     const checks = [
       { id: 'company', label: 'Company Profile', icon: <Building2 className="w-5 h-5" />, done: hasCompany, action: () => handleSetupAction('company') },
@@ -55,7 +99,7 @@ export function WelcomeCenter() {
     const nextAction = checks.find(c => !c.done);
 
     return { checks, completed, total: checks.length, score, nextAction };
-  }, [workspace, teams, projects]);
+  }, [workspace, teams, projects, hasLicense, hasBackup]);
 
   if (setupMetrics.score === 100) return null;
 
