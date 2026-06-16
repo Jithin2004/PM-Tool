@@ -104,7 +104,9 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     setSignupLoading(true);
     try {
       const { supabase } = await import('../../lib/supabase');
-      const { data, error } = await supabase.auth.signUp({
+      
+      let authUser: any = null;
+      const signUpResult = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -114,18 +116,71 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
         }
       });
 
-      if (error) throw error;
+      if (signUpResult.error) {
+        const errMsg = signUpResult.error.message?.toLowerCase() || '';
+        const errCode = signUpResult.error.code || '';
+        if (
+          errMsg.includes('already registered') || 
+          errMsg.includes('already exists') || 
+          errCode === 'user_already_exists'
+        ) {
+          // Recovery Flow: Attempt login with the password provided
+          const loginResult = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (loginResult.error) {
+            throw new Error(`This email is already registered. Recovery login attempt failed: ${loginResult.error.message}`);
+          }
+          
+          authUser = loginResult.data?.user;
+        } else {
+          throw signUpResult.error;
+        }
+      } else {
+        authUser = signUpResult.data?.user;
+      }
+
+      if (!authUser) {
+        throw new Error('User authentication succeeded but user credentials could not be loaded.');
+      }
+
+      // Verify if public profile already exists
+      const profileCheck = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      if (profileCheck.error) {
+        throw new Error(`Profile check failed: ${profileCheck.error.message}`);
+      }
+
+      // If profile is missing, create/repair it immediately
+      if (!profileCheck.data) {
+        const profileInsert = await supabase
+          .from('users')
+          .insert({
+            id: authUser.id,
+            email: authUser.email || email,
+            full_name: fullName,
+            role: 'pending-workspace-setup',
+            availability_factor: 1,
+            status: 'active'
+          });
+
+        if (profileInsert.error) {
+          throw new Error(`Failed to create user profile: ${profileInsert.error.message}`);
+        }
+      }
 
       sessionStorage.setItem('pending_workspace_name', workspaceName);
-      
-      const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
-      // Intentionally omitting localStorage update for resolve-product-license
-      // productKey.ts now uses memory for validation until workspace_license is populated.
       
       setState('success');
       setTimeout(() => onVerified(), 1200);
     } catch (err: any) {
-      setSignupError(err.message || 'Failed to create owner account');
+      setSignupError(err.message || 'Failed to create or verify owner account');
     } finally {
       setSignupLoading(false);
     }

@@ -207,18 +207,28 @@ export async function verifyLicenseFile(file: File): Promise<VerifyResult> {
 // ── Synchronous check to gate routers/onboarding ─────────────────────────────
 export function isProductKeyVerified(): boolean {
   const stored = getStored();
-  if (!stored) return false;
-  
-  if (stored.status !== 'Activated' && stored.status !== 'Expired Support') {
-    return false;
+  if (stored) {
+    if (stored.status === 'Activated' || stored.status === 'Expired Support') {
+      // Enforce 7-day grace period
+      const age = Date.now() - stored.verifiedAt;
+      if (age <= GRACE_PERIOD_MS) {
+        return true;
+      }
+    }
   }
   
-  // Enforce 7-day grace period
-  const age = Date.now() - stored.verifiedAt;
-  if (age > GRACE_PERIOD_MS) {
-    return false;
-  }
-  return true;
+  // Fallback: Check if we have a pending activation validated in sessionStorage during onboarding
+  try {
+    const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
+    if (pendingStr) {
+      const parsed = JSON.parse(pendingStr);
+      if (parsed.validated) {
+        return true;
+      }
+    }
+  } catch (e) {}
+
+  return false;
 }
 
 export function getLicenseInfo(): LicenseData | null {
