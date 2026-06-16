@@ -193,11 +193,18 @@ export async function syncWorkspaceHolidays(workspaceId: string, country: string
 }
 
 export async function createWorkspaceForUser({ name, settings, user, templateId, executionMode, defaultLanes, workflowRules }: CreateWorkspaceInput): Promise<Workspace> {
+  const { data: authData } = await supabase.auth.getUser();
+  const validOwnerId = authData.user?.id || user.id;
+
+  if (!validOwnerId) {
+    throw new Error('Authentication required to create workspace.');
+  }
+
   const { data: workspaceRow, error: workspaceError } = await supabase
     .from('workspaces')
     .insert({
       name,
-      owner_id: user.id,
+      owner_id: validOwnerId,
       template_id: templateId || null,
       execution_mode: executionMode || 'KANBAN',
       default_lanes: defaultLanes || 5,
@@ -209,9 +216,9 @@ export async function createWorkspaceForUser({ name, settings, user, templateId,
 
   if (workspaceError) throw workspaceError;
 
-  const email = user.email || '';
-  const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || 'Workspace Owner';
-  const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+  const email = user.email || authData.user?.email || '';
+  const fullName = user.user_metadata?.full_name || user.user_metadata?.name || authData.user?.user_metadata?.full_name || email.split('@')[0] || 'Workspace Owner';
+  const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || authData.user?.user_metadata?.avatar_url || null;
 
   const { error: userError } = await supabase
     .from('users')
@@ -223,7 +230,7 @@ export async function createWorkspaceForUser({ name, settings, user, templateId,
       role: 'super_admin',
       availability_factor: 1
     })
-    .eq('id', user.id);
+    .eq('id', validOwnerId);
 
   if (userError) throw userError;
 
