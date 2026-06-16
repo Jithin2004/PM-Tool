@@ -193,12 +193,13 @@ export async function syncWorkspaceHolidays(workspaceId: string, country: string
 }
 
 export async function createWorkspaceForUser({ name, settings, user, templateId, executionMode, defaultLanes, workflowRules }: CreateWorkspaceInput): Promise<Workspace> {
-  const { data: authData } = await supabase.auth.getUser();
-  const validOwnerId = authData.user?.id || user.id;
-
-  if (!validOwnerId) {
-    throw new Error('Authentication required to create workspace.');
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  
+  if (authError || !authData.user) {
+    throw new Error('Your session has expired or is invalid. Please refresh the page and log in again.');
   }
+  
+  const validOwnerId = authData.user.id;
 
   const newWorkspaceId = crypto.randomUUID();
   const workspaceData = {
