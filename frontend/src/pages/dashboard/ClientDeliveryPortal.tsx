@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { ProjectCard } from '../../components/project/ProjectCard';
 import { deliverableService, Milestone } from '../../services/deliverableService';
 import { Icon } from '../../components/ui/Icon';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { Briefcase } from 'lucide-react';
 
 export function ClientDeliveryPortal({ profile, projects, notify, workspaceId }: any) {
   // Only show projects the client has access to, and filter out internal metadata
@@ -83,7 +85,7 @@ export function ClientDeliveryPortal({ profile, projects, notify, workspaceId }:
                 </div>
                 {m.description && <p className="text-sm text-[var(--pm-on-surface-variant)] line-clamp-2">{m.description}</p>}
                 <div className="pt-3 border-t border-[var(--pm-border)] flex justify-end">
-                  <button onClick={() => handleReviewClick(m)} className="px-4 py-1.5 rounded bg-primary text-on-primary text-sm font-semibold hover:opacity-90">
+                  <button onClick={() => handleReviewClick(m)} className="btn-premium-primary px-4 py-1.5 text-xs font-bold uppercase tracking-wider">
                     Review Deliverable
                   </button>
                 </div>
@@ -109,16 +111,17 @@ export function ClientDeliveryPortal({ profile, projects, notify, workspaceId }:
             ))}
           </div>
         ) : (
-          <div className="p-8 rounded-2xl border border-[var(--border-soft)] bg-surface-2 text-center flex flex-col items-center justify-center">
-            <h3 className="text-xl font-bold text-white mb-2">No Active Projects</h3>
-            <p className="text-sm text-[var(--text-secondary)]">You do not currently have any active projects deployed in the portal.</p>
-          </div>
+          <PremiumEmptyState
+            icon={Briefcase}
+            title="No Active Projects"
+            description="You do not currently have any active projects deployed in the delivery portal. Once projects are initialized, their progress status will be visualized here."
+          />
         )}
       </div>
 
       {reviewModalOpen && selectedMilestone && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface-high border border-[var(--pm-border)] rounded-xl w-full max-w-lg overflow-hidden flex flex-col shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay-premium">
+          <div className="modal-premium rounded-2xl w-full max-w-lg overflow-hidden flex flex-col shadow-2xl">
             <div className="p-4 border-b border-[var(--pm-border)] flex items-center justify-between">
               <h2 className="font-semibold text-lg">Review Deliverable</h2>
               <button onClick={() => setReviewModalOpen(false)} className="opacity-50 hover:opacity-100">
@@ -154,9 +157,9 @@ export function ClientDeliveryPortal({ profile, projects, notify, workspaceId }:
                 />
               </div>
             </div>
-            <div className="p-4 border-t border-[var(--pm-border)] flex justify-end gap-2 bg-surface-lowest">
-              <button onClick={() => setReviewModalOpen(false)} className="px-4 py-2 rounded text-sm font-semibold hover:bg-surface-2 text-[var(--pm-on-surface-variant)]">Cancel</button>
-              <button onClick={handleSubmitReview} className="px-4 py-2 rounded text-sm font-semibold bg-primary text-on-primary">
+            <div className="p-4 border-t border-[var(--pm-border)] flex justify-end gap-3 bg-black/10">
+              <button onClick={() => setReviewModalOpen(false)} className="btn-premium-secondary px-4 py-2 rounded-lg text-sm font-medium">Cancel</button>
+              <button onClick={handleSubmitReview} className="btn-premium-primary px-4 py-2 rounded-lg text-sm font-semibold">
                 Submit Review
               </button>
             </div>

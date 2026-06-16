@@ -444,7 +444,7 @@ export default function FinancePage() {
             <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center bg-indigo-500/5">
               <div className="flex items-center gap-2">
                 <Icon name="monitoring" size={16} className="text-indigo-400" />
-                <h3 className="font-semibold text-sm text-indigo-400">Project Profitability Intelligence</h3>
+                <h3 className="font-semibold text-sm text-indigo-400">Project Financial Control</h3>
               </div>
             </div>
             <div className="overflow-x-auto">

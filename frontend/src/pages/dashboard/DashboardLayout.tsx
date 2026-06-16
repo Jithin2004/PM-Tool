@@ -171,10 +171,10 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   },
   {
     id: 'automation',
-    label: 'Automation / AI',
+    label: 'Automation',
     iconName: 'Cpu',
     subsections: [
-      { label: 'AI Recommendations', path: '/workspace/decisions', capability: 'view_decision_center' },
+      { label: 'Workload Recommendations', path: '/workspace/decisions', capability: 'view_decision_center' },
       { label: 'Automations & Rules', path: '/control/automations', capability: 'manage_automations' }
     ]
   },
@@ -517,7 +517,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         },
         {
           title: "Decision Center",
-          description: "Monitor project health and review AI-powered strategic decisions here.",
+          description: "Monitor project health and review workload-balancing strategic decisions here.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace/decisions')
         },

@@ -11,6 +11,7 @@ import { useIntegrationRegistry } from '../../core/integrations/integrationRegis
 import { describeChannelState } from '../../core/integrations/oauthStateMachine';
 import type { ChannelState } from '../../core/integrations/operationalChannels';
 import { OPERATIONAL_CHANNELS } from '../../core/integrations/operationalChannels';
+import { PremiumLoader } from '../../components/common/PremiumLoader';
 
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return '—';
@@ -64,9 +65,8 @@ export default function ConnectionsPanel() {
   };
 
   if (loading) return (
-    <div className="p-8 animate-fade-in flex flex-col items-center justify-center h-[50vh]">
-      <div className="w-10 h-10 border-2 border-accent-primary border-t-transparent rounded-full animate-spin mb-4" />
-      <div className="text-xs font-bold uppercase tracking-widest text-text-tertiary">Connecting to Channel Registry...</div>
+    <div className="p-8 h-[50vh] flex items-center justify-center">
+      <PremiumLoader type="page" label="Connecting to Channel Registry..." />
     </div>
   );
 

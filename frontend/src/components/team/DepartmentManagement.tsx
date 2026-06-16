@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { PremiumEmptyState } from '../ui/PremiumEmptyState';
+import { PremiumLoader } from '../common/PremiumLoader';
 import { Users, Briefcase, Folders, Plus, Edit2, UserPlus, Building2 } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
@@ -46,7 +47,7 @@ export function DepartmentManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <PremiumLoader />
       </div>
     );
   }
@@ -59,7 +60,7 @@ export function DepartmentManagement() {
           <p className="text-sm text-text-secondary mt-1 tracking-tight">Organize teams, managers, and company structure.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20">
+          <button className="flex items-center gap-2 px-4 py-2 btn-premium-primary rounded-lg text-sm font-medium transition-colors">
             <Plus className="w-4 h-4" />
             New Department
           </button>
@@ -71,10 +72,12 @@ export function DepartmentManagement() {
           icon={Building2}
           title="No departments created yet"
           description="Create your first department to start organizing your company structure."
-          primaryAction={{
-            label: "Create Department",
-            onClick: () => {}
-          }}
+          action={
+            <button className="btn-premium-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Create Department
+            </button>
+          }
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

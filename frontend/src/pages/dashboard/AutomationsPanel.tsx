@@ -7,6 +7,8 @@ import {
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { Zap, Plus, Settings2, Trash2, Shield, Activity, Power, Download } from 'lucide-react';
+import { PremiumLoader } from '../../components/common/PremiumLoader';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return '';
@@ -78,9 +80,8 @@ export default function AutomationsPanel() {
   };
 
   if (loading) return (
-    <div className="p-8 animate-fade-in flex flex-col items-center justify-center h-[50vh]">
-      <div className="w-10 h-10 border-2 border-accent-primary border-t-transparent rounded-full animate-spin mb-4" />
-      <div className="text-xs font-bold uppercase tracking-widest text-text-tertiary">Initializing Automation Engine...</div>
+    <div className="p-8 h-[50vh] flex items-center justify-center">
+      <PremiumLoader type="page" label="Initializing Automation Engine..." />
     </div>
   );
 
@@ -210,11 +211,16 @@ export default function AutomationsPanel() {
           )}
 
           {rules.length === 0 ? (
-            <div className="border border-dashed border-border/50 bg-surface/30 rounded-2xl p-16 flex flex-col items-center justify-center text-center">
-              <Settings2 className="w-12 h-12 text-text-quaternary mb-4 opacity-50" />
-              <span className="text-sm font-bold text-text-secondary mb-2">No active automation rules</span>
-              <span className="text-xs text-text-tertiary">Install predefined templates from the marketplace or create your own custom workflow logic.</span>
-            </div>
+            <PremiumEmptyState
+              icon={Settings2}
+              title="No active automation rules"
+              description="Deploy predefined templates from the marketplace or build a custom workflow trigger to automate notifications, state machines, and task ownership."
+              action={
+                <button onClick={() => setTab('marketplace')} className="btn-premium-primary px-4 py-2 rounded-lg text-sm font-medium">
+                  Browse Marketplace
+                </button>
+              }
+            />
           ) : (
             <div className="space-y-3">
               {rules.map(rule => (

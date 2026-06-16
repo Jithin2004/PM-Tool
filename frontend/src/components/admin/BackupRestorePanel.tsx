@@ -4,6 +4,7 @@ import { exportWorkspace } from '../../services/backupService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { supabase } from '../../lib/supabase';
 import { PremiumEmptyState } from '../ui/PremiumEmptyState';
+import { PremiumLoader } from '../common/PremiumLoader';
 
 export function BackupRestorePanel() {
   const { workspace } = useWorkspace();
@@ -123,8 +124,8 @@ export function BackupRestorePanel() {
           </h3>
           <div className="bg-[var(--pm-surface)] border border-[var(--pm-border)] rounded-xl overflow-hidden shadow-sm">
             {loadingHistory ? (
-              <div className="p-8 text-center text-[var(--pm-text-tertiary)] text-sm animate-pulse">
-                Loading history...
+              <div className="flex items-center justify-center p-12">
+                <PremiumLoader />
               </div>
             ) : history.length === 0 ? (
               <PremiumEmptyState
@@ -133,12 +134,12 @@ export function BackupRestorePanel() {
                 description="Click Generate Backup to create your first workspace data snapshot."
               />
             ) : (
-              <table className="w-full text-sm text-left">
-                <thead className="bg-[var(--pm-surface-high)] text-[var(--pm-text-secondary)] text-xs border-b border-[var(--pm-border)] uppercase tracking-wider font-mono">
+              <table className="w-full text-sm text-left table-premium">
+                <thead>
                   <tr>
-                    <th className="px-6 py-4 font-medium">Export Date</th>
-                    <th className="px-6 py-4 font-medium">Entities Count</th>
-                    <th className="px-6 py-4 font-medium">Initiated By</th>
+                    <th>Export Date</th>
+                    <th>Entities Count</th>
+                    <th>Initiated By</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--pm-border)]">

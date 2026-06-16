@@ -1378,15 +1378,15 @@ export function AdminPanel() {
                   Active Workspaces &amp; Onboarding
                 </h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[700px]">
+                  <table className="w-full text-left border-collapse min-w-[700px] table-premium">
                     <thead>
-                      <tr className="border-b" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Workspace Name</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Status</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Members</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Active Projects</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Last Activity</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)] text-right">Actions</th>
+                      <tr>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Workspace Name</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Status</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Members</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Active Projects</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Last Activity</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">
@@ -1431,15 +1431,15 @@ export function AdminPanel() {
                   Sandbox Environments
                 </h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[700px]">
+                  <table className="w-full text-left border-collapse min-w-[700px] table-premium">
                     <thead>
-                      <tr className="border-b" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Workspace Name</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Status</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Members</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Active Projects</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Last Activity</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)] text-right">Actions</th>
+                      <tr>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Workspace Name</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Status</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Members</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Active Projects</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Last Activity</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">
@@ -1493,15 +1493,15 @@ export function AdminPanel() {
                   Retired Archives &amp; Inactive Workspaces
                 </h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[700px]">
+                  <table className="w-full text-left border-collapse min-w-[700px] table-premium">
                     <thead>
-                      <tr className="border-b" style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Workspace Name</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Status</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Members</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Active Projects</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)]">Last Activity</th>
-                        <th className="pb-3 text-xs font-mono-pm uppercase tracking-wider text-[var(--pm-on-surface-variant)] text-right">Actions</th>
+                      <tr>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Workspace Name</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Status</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Members</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Active Projects</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider">Last Activity</th>
+                        <th className="text-xs font-mono-pm uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">

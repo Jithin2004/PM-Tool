@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { fetchDocumentTemplates, createDocumentTemplate, updateDocumentTemplate, deleteDocumentTemplate, DocumentTemplate, TemplateType } from '../../services/documentTemplateService';
 import { documentGenerator } from '../../services/documentGeneratorService';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
+import { PremiumLoader } from '../../components/common/PremiumLoader';
 
 const AVAILABLE_VARIABLES: Record<TemplateType | 'common', { name: string, desc: string }[]> = {
   common: [
@@ -148,7 +149,11 @@ export default function DocumentTemplatesPage() {
   };
 
   if (loading) {
-    return <div className="p-8"><span className="animate-pulse tracking-widest uppercase text-[10px] font-mono text-[var(--text-muted)]">Loading Templates...</span></div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <PremiumLoader />
+      </div>
+    );
   }
 
   const isAdmin = profile?.role === 'super_admin';
@@ -422,7 +427,7 @@ export default function DocumentTemplatesPage() {
                 <iframe src={previewPdfUrl} className="w-full h-full border-0" title="PDF Preview"/>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+                  <PremiumLoader />
                 </div>
               )}
             </div>

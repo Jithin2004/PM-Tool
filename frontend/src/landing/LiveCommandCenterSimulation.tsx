@@ -36,21 +36,44 @@ export function LiveCommandCenterSimulation() {
   const scenarios: Scenario[] = [
     {
       id: 0,
-      engineName: 'Project Intelligence Engine',
-      moduleCode: 'PROJ_INT_SYS',
+      engineName: 'Workspace Operations Sync',
+      moduleCode: 'WS_OPS_SYNC',
       colorClass: 'text-indigo-400',
       glowColor: 'rgba(99, 102, 241, 0.4)',
       logs: [
-        'Auditing active project tasks and histories...',
-        'Evaluating critical path dependencies & bottlenecks...',
-        'Calculating developer workload and sprint velocities...'
+        'Syncing active workspace projects...',
+        'Reviewing team workload and task assignments...',
+        'Checking pending client sign-offs & approvals...'
       ],
-      finding: 'Risk Detected: Mobile App Launch has 68% delay probability',
-      findingIcon: <ShieldAlert className="w-5 h-5 text-red-400 shrink-0 mt-0.5 animate-pulse" />,
-      recommendation: 'Suggested Action: Move 2 developers from low priority backlog tasks to App Critical Path',
-      impactLabel: 'Delivery Confidence',
-      impactStart: '72%',
-      impactEnd: '91%',
+      finding: 'Workspace Sync: 4 active projects, 2 client approvals pending',
+      findingIcon: <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5 animate-pulse" />,
+      recommendation: 'Suggested Action: Dispatch client approval notification for pending milestone sign-off',
+      impactLabel: 'Pending Approvals',
+      impactStart: '2',
+      impactEnd: '1',
+      successTheme: {
+        border: 'border-indigo-500/30',
+        bg: 'bg-indigo-500/5',
+        text: 'text-indigo-400'
+      }
+    },
+    {
+      id: 1,
+      engineName: 'Financial Control Audit',
+      moduleCode: 'FIN_CTRL_SYS',
+      colorClass: 'text-green-400',
+      glowColor: 'rgba(52, 211, 153, 0.4)',
+      logs: [
+        'Aggregating active budget records...',
+        'Auditing invoice logs & payment status...',
+        'Calculating actual expense records against targets...'
+      ],
+      finding: 'Financial Audit: 8 invoices generated, 1 pending review',
+      findingIcon: <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0 mt-0.5 animate-pulse" />,
+      recommendation: 'Recommendation: Ready "Invoice #104" for client dispatch (₹1.2L total)',
+      impactLabel: 'Billed Runway',
+      impactStart: '₹8.4L',
+      impactEnd: '₹9.6L',
       successTheme: {
         border: 'border-emerald-500/30',
         bg: 'bg-emerald-500/5',
@@ -58,45 +81,22 @@ export function LiveCommandCenterSimulation() {
       }
     },
     {
-      id: 1,
-      engineName: 'Financial Intelligence Engine',
-      moduleCode: 'FIN_INT_SYS',
-      colorClass: 'text-amber-400',
-      glowColor: 'rgba(245, 158, 11, 0.4)',
-      logs: [
-        'Analyzing aging invoices and pending client sign-offs...',
-        'Cross-referencing real-time burn against project budgets...',
-        'Simulating cashflow trajectories for next 90 days...'
-      ],
-      finding: 'Exposure Alert: ₹4.8L cashflow gap predicted in Q3 Runway',
-      findingIcon: <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />,
-      recommendation: 'Recommendation: Prioritize pending milestone sign-off for Client Approval',
-      impactLabel: 'Cashflow Stability',
-      impactStart: 'Critical (18 Days)',
-      impactEnd: 'Stable (90+ Days)',
-      successTheme: {
-        border: 'border-amber-500/30',
-        bg: 'bg-amber-500/5',
-        text: 'text-amber-400'
-      }
-    },
-    {
       id: 2,
-      engineName: 'Resource Capacity Engine',
-      moduleCode: 'RESC_CAP_SYS',
+      engineName: 'Team Operations Sync',
+      moduleCode: 'TEAM_OPS_SYS',
       colorClass: 'text-purple-400',
       glowColor: 'rgba(168, 85, 247, 0.4)',
       logs: [
-        'Aggregating team capacity bounds and utilization metrics...',
-        'Measuring current workload balance across specialized units...',
-        'Locating structural overload risks and idle bottlenecks...'
+        'Evaluating workforce assignment logs...',
+        'Cross-referencing active departments and skills...',
+        'Calculating capacity headroom for dev & design units...'
       ],
-      finding: 'Overload Warning: Design team capacity limits exceeded by 38%',
-      findingIcon: <ShieldAlert className="w-5 h-5 text-purple-400 shrink-0 mt-0.5 animate-pulse" />,
-      recommendation: 'Suggestion: Redistribute 14 hours design workload to underutilized resources',
-      impactLabel: 'Team Burnout Risk',
-      impactStart: 'High (Danger)',
-      impactEnd: 'Minimal (Balanced)',
+      finding: 'Logistics: Design workload at 92%, Dev workload at 75%',
+      findingIcon: <CheckCircle2 className="w-5 h-5 text-purple-400 shrink-0 mt-0.5 animate-pulse" />,
+      recommendation: 'Suggestion: Capacity limits verified. Workload distribution optimal.',
+      impactLabel: 'Workload Balance',
+      impactStart: 'High Variance',
+      impactEnd: 'Optimal',
       successTheme: {
         border: 'border-purple-500/30',
         bg: 'bg-purple-500/5',

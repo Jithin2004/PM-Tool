@@ -79,8 +79,8 @@ export function DecisionCenterPanel() {
     if (!insight.simulation || !workspace?.id || !activeRecommendationId) return;
 
     askConfirmation(
-      'Execute AI Mitigation',
-      `Are you sure you want to offload "${insight.simulation.taskName}" to ${insight.simulation.toUserName}? This action is permanent and will trigger schedule recalculations.`,
+      'Execute Workload Balancing',
+      `Are you sure you want to offload "${insight.simulation.taskName}" to ${insight.simulation.toUserName}? This action is permanent and will trigger workload recalculations.`,
       async () => {
         try {
           await aiRecommendationService.updateRecommendationStatus(workspace.id, activeRecommendationId, 'accepted');
@@ -91,15 +91,15 @@ export function DecisionCenterPanel() {
               workspace_id: workspace.id,
               user_id: insight.simulation.toUserId,
               category: 'assignments',
-              title: 'AI Mitigation Assigned',
-              body: `You have been assigned "${insight.simulation.taskName}" by the AI Decision Optimizer to balance workloads.`
+              title: 'Workload Rebalancing Assigned',
+              body: `You have been assigned "${insight.simulation.taskName}" by the Workload Balancing Optimizer to balance team capacity.`
             });
           } catch (notifErr) {
           }
 
-          notify(`Mitigation successful. Task offloaded to ${insight.simulation.toUserName}.`, 'success');
+          notify(`Balancing successful. Task offloaded to ${insight.simulation.toUserName}.`, 'success');
         } catch (err) {
-          notify('Failed to execute mitigation.', 'error');
+          notify('Failed to execute balancing.', 'error');
           console.error(err);
         } finally {
           setSimulatingInsightId(null);
@@ -114,7 +114,7 @@ export function DecisionCenterPanel() {
     if (!workspace?.id || !activeRecommendationId) return;
     try {
       await aiRecommendationService.updateRecommendationStatus(workspace.id, activeRecommendationId, 'rejected');
-      notify('AI suggestion dismissed.', 'info');
+      notify('Workload suggestion dismissed.', 'info');
     } catch (err) {
     } finally {
       setSimulatingInsightId(null);
@@ -283,9 +283,9 @@ export function DecisionCenterPanel() {
       <div className="flex items-center justify-between border-b border-border-subtle pb-4">
         <div className="flex items-center gap-2">
           <BrainCircuit className="w-5 h-5 text-accent-secondary" />
-          <h1 className="text-xl font-sans font-medium text-text-primary tracking-tight">Decision Intelligence</h1>
+          <h1 className="text-xl font-sans font-medium text-text-primary tracking-tight">Decision Support Center</h1>
         </div>
-        <span className="text-xs text-text-tertiary">AI-powered operational recommendations</span>
+        <span className="text-xs text-text-tertiary">Database-derived workload optimization</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
@@ -390,12 +390,12 @@ export function DecisionCenterPanel() {
         </div>
       </div>
 
-      {/* AI Decision Optimizer */}
+      {/* Workload Balancing Optimizer */}
       <div className="bg-surface border border-border rounded-xl p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Cpu className="w-4 h-4 text-accent-secondary" />
-          <span className="text-sm font-medium text-text-primary">AI Decision Optimizer</span>
-          <span className="text-[10px] text-text-tertiary ml-auto">Auto-calibrated from real-time roster data</span>
+          <span className="text-sm font-medium text-text-primary">Workload Balancing Optimizer</span>
+          <span className="text-[10px] text-text-tertiary ml-auto">Calculated from real-time roster capacity data</span>
         </div>
         <div className="space-y-3">
           {aiInsights.map((insight: any) => (

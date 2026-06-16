@@ -124,67 +124,67 @@ export function LandingPage() {
         <section id="showcase" className="bg-surface-container-lowest py-32 border-y border-[var(--pm-border)] dark:border-[var(--border-soft)] scroll-mt-16">
           <div className="max-w-7xl mx-auto px-container-padding">
             <div className="mb-20 text-center">
-              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight font-bold">Premium Agency Operations</h2>
+              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight font-bold">Unified Agency Operations</h2>
               <p className="font-body-lg text-lg text-on-surface-variant max-w-3xl mx-auto leading-relaxed">
                 Stop duct-taping SaaS tools together. Resolve PM provides enterprise-grade infrastructure out of the box.
               </p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Delivery Intelligence */}
-              <div className="glass-panel p-8 rounded-2xl hover:border-primary/40 transition-all duration-300 group">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-primary">monitoring</span>
+              {/* Project Delivery Control */}
+              <div className="glass-panel p-8 rounded-2xl hover:border-indigo-400/40 transition-all duration-300 group">
+                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-indigo-400">monitoring</span>
                 </div>
-                <h3 className="text-xl font-bold text-on-surface mb-2">Delivery Intelligence</h3>
-                <p className="text-on-surface-variant mb-6 text-sm">Deterministic forecasting prevents timeline slips.</p>
+                <h3 className="text-xl font-bold text-on-surface mb-2">Project Delivery Control</h3>
+                <p className="text-on-surface-variant mb-6 text-sm">Track milestones, requirements, deadlines, and project ownership.</p>
                 <div className="bg-surface-container-low p-4 rounded-lg border border-[var(--border-soft)]">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-mono text-on-surface-variant">Q4 Project Alpha</span>
-                    <span className="text-xs font-mono text-green-400 bg-green-400/10 px-2 py-1 rounded">Confidence: 91%</span>
+                    <span className="text-xs font-mono text-on-surface-variant">Milestone: Core Release</span>
+                    <span className="text-xs font-mono text-green-400 bg-green-400/10 px-2 py-1 rounded">Requirements: 100%</span>
                   </div>
                   <div className="h-1.5 w-full bg-[var(--pm-surface)]/5 rounded-full overflow-hidden flex">
-                    <div className="h-full bg-green-400 w-[91%] rounded-full"></div>
+                    <div className="h-full bg-green-400 w-full rounded-full"></div>
                   </div>
                 </div>
               </div>
 
-              {/* Profit Intelligence */}
+              {/* Financial Control */}
               <div className="glass-panel p-8 rounded-2xl hover:border-green-400/40 transition-all duration-300 group">
                 <div className="w-12 h-12 rounded-xl bg-green-400/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined text-green-400">payments</span>
                 </div>
-                <h3 className="text-xl font-bold text-on-surface mb-2">Profit Intelligence</h3>
-                <p className="text-on-surface-variant mb-6 text-sm">Track real-time burn against project budgets.</p>
+                <h3 className="text-xl font-bold text-on-surface mb-2">Financial Control</h3>
+                <p className="text-on-surface-variant mb-6 text-sm">Manage budgets, generate invoices, track expenses, and route approvals.</p>
                 <div className="bg-surface-container-low p-4 rounded-lg border border-[var(--border-soft)]">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-mono text-on-surface-variant">Margin Protection</span>
-                    <span className="text-xs font-mono text-green-400">Leakage Prevented</span>
+                    <span className="text-xs font-mono text-on-surface-variant">Budget: ₹12.5L</span>
+                    <span className="text-xs font-mono text-green-400">Invoice Generated</span>
                   </div>
                   <div className="flex items-end gap-1 h-8">
-                    <div className="w-full bg-green-400/20 h-[40%] rounded-t-sm"></div>
-                    <div className="w-full bg-green-400/40 h-[60%] rounded-t-sm"></div>
-                    <div className="w-full bg-green-400/60 h-[80%] rounded-t-sm"></div>
-                    <div className="w-full bg-green-400 h-[100%] rounded-t-sm"></div>
+                    <div className="w-full bg-green-400/20 h-[30%] rounded-t-sm" title="Expenses"></div>
+                    <div className="w-full bg-green-400/40 h-[50%] rounded-t-sm" title="Budget cap"></div>
+                    <div className="w-full bg-green-400/60 h-[70%] rounded-t-sm" title="Invoiced"></div>
+                    <div className="w-full bg-green-400 h-[85%] rounded-t-sm" title="Approved"></div>
                   </div>
                 </div>
               </div>
 
-              {/* Resource Engine */}
+              {/* Team Operations */}
               <div className="glass-panel p-8 rounded-2xl hover:border-purple-400/40 transition-all duration-300 group">
                 <div className="w-12 h-12 rounded-xl bg-purple-400/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-purple-400">group_work</span>
+                  <span className="material-symbols-outlined text-purple-400">groups</span>
                 </div>
-                <h3 className="text-xl font-bold text-on-surface mb-2">Resource Engine</h3>
-                <p className="text-on-surface-variant mb-6 text-sm">Balance workloads without spreadsheet chaos.</p>
+                <h3 className="text-xl font-bold text-on-surface mb-2">Team Operations</h3>
+                <p className="text-on-surface-variant mb-6 text-sm">Track team workload, organize departments, and check availability.</p>
                 <div className="bg-surface-container-low p-4 rounded-lg border border-[var(--border-soft)] flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-purple-400/20 flex items-center justify-center border border-purple-400/50">
                     <span className="text-xs text-purple-400 font-bold">JD</span>
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between text-xs mb-1 font-mono text-on-surface-variant">
-                      <span>Dev Team</span>
-                      <span className="text-purple-400">Capacity Balanced</span>
+                      <span>Engineering Dept</span>
+                      <span className="text-purple-400">85% Workload</span>
                     </div>
                     <div className="h-1 w-full bg-[var(--pm-surface)]/5 rounded-full overflow-hidden">
                       <div className="h-full bg-purple-400 w-[85%] rounded-full"></div>
@@ -309,7 +309,7 @@ export function LandingPage() {
                 { title: 'Invoices', icon: 'receipt_long', desc: 'Direct timesheet billing conversion' },
                 { title: 'Reports', icon: 'analytics', desc: 'Command logs & performance metrics' },
                 { title: 'Automation', icon: 'rule', desc: 'Approval pipelines & triggers' },
-                { title: 'Executive Intelligence', icon: 'psychology', desc: 'Diagnostic risk analysis' }
+                { title: 'Executive Command', icon: 'psychology', desc: 'Diagnostic risk analysis' }
               ].map((item, i) => (
                 <div key={i} className="glass-panel p-5 rounded-xl border border-white/5 bg-[#0a0d1d]/40 flex flex-col gap-2">
                   <span className="material-symbols-outlined text-primary text-2xl">{item.icon}</span>

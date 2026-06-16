@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
 import { ApprovalDecisionModal } from './ApprovalDecisionModal';
 import { PremiumEmptyState } from '../../components/common/PremiumEmptyState';
+import { PremiumLoader } from '../../components/common/PremiumLoader';
 
 export default function ApprovalsPage() {
   const { workspace } = useWorkspace();
@@ -68,9 +69,7 @@ export default function ApprovalsPage() {
 
       <div className="flex-1 p-6 overflow-y-auto scrollbar-premium">
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
-          </div>
+          <PremiumLoader type="card" count={6} label="Loading approval requests..." />
         ) : approvals.length === 0 ? (
           <div className="max-w-md mx-auto mt-12">
             <PremiumEmptyState

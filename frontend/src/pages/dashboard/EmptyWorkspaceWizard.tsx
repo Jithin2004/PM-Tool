@@ -21,7 +21,7 @@ export function EmptyWorkspaceWizard() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Step 1 */}
-        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
+        <div className="premium-panel border border-[var(--border-soft)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
           <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
           <div className="flex items-center justify-between mb-4">
             <div className="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center">
@@ -39,7 +39,7 @@ export function EmptyWorkspaceWizard() {
         </div>
 
         {/* Step 2 */}
-        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
+        <div className="premium-panel border border-[var(--border-soft)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center">
               <Users className="w-5 h-5 text-indigo-300" />
@@ -50,13 +50,13 @@ export function EmptyWorkspaceWizard() {
           <p className="text-sm text-[var(--text-secondary)] mb-6">
             Bring your operators into the system to begin assigning and tracking work.
           </p>
-          <button onClick={() => navigate('/resources/teams')} className="bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary-hover)] text-white w-full py-2 rounded text-sm text-center block transition-colors border border-[var(--border-primary)]">
+          <button onClick={() => navigate('/resources/teams')} className="btn-premium-secondary w-full py-2 rounded text-sm text-center block">
             Manage Team
           </button>
         </div>
 
         {/* Step 3 */}
-        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
+        <div className="premium-panel border border-[var(--border-soft)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5 text-indigo-300" />
@@ -67,7 +67,7 @@ export function EmptyWorkspaceWizard() {
           <p className="text-sm text-[var(--text-secondary)] mb-6">
             Head to the board to begin moving tasks through your customized workflow.
           </p>
-          <button onClick={() => navigate('/execution/board')} className="bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary-hover)] text-white w-full py-2 rounded text-sm text-center block transition-colors border border-[var(--border-primary)]">
+          <button onClick={() => navigate('/execution/board')} className="btn-premium-secondary w-full py-2 rounded text-sm text-center block">
             Open Board
           </button>
         </div>

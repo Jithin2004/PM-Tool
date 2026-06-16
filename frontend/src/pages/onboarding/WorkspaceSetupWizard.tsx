@@ -275,6 +275,11 @@ export function WorkspaceSetupWizard() {
       <div className="grid gap-8 lg:grid-cols-2 max-w-5xl mx-auto items-start">
         <section className="premium-panel rounded-2xl p-8 font-geist">
           
+          {/* Onboarding setup completion progress bar */}
+          <div className="w-full h-1 bg-white/5 mb-6 rounded-full overflow-hidden">
+            <div className="h-full bg-[var(--pm-primary)] transition-all duration-300" style={{ width: `${Math.round(((step - 1) / 5) * 100)}%` }}></div>
+          </div>
+
           <div className="flex justify-between text-[10px] sm:text-xs font-mono uppercase tracking-widest text-[var(--pm-on-surface-variant)] mb-8 border-b border-border/50 pb-4">
             <div className="flex gap-2 sm:gap-4 flex-wrap">
               <span className={step >= 1 ? "text-[var(--pm-primary)] font-bold" : ""}>Details {step > 1 ? '✓' : '○'}</span>

@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import packageJson from '../../../package.json';
 import { Activity, Database, Server, CheckCircle2, AlertTriangle, ShieldCheck, Clock, FileText, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { PremiumLoader } from '../common/PremiumLoader';
 
 export function SystemInfoPanel() {
   const { profile } = useAuth();
@@ -53,7 +54,7 @@ export function SystemInfoPanel() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <PremiumLoader />
       </div>
     );
   }
@@ -162,13 +163,13 @@ export function SystemInfoPanel() {
                 </p>
               </div>
             ) : (
-              <table className="w-full text-sm text-left">
-                <thead className="bg-[var(--pm-surface-high)] text-[var(--pm-text-secondary)] text-xs border-b border-[var(--pm-border)] uppercase tracking-wider font-mono">
+              <table className="w-full text-sm text-left table-premium">
+                <thead>
                   <tr>
-                    <th className="px-6 py-4 font-medium">Event</th>
-                    <th className="px-6 py-4 font-medium">Category</th>
-                    <th className="px-6 py-4 font-medium">Severity</th>
-                    <th className="px-6 py-4 font-medium">Timestamp</th>
+                    <th>Event</th>
+                    <th>Category</th>
+                    <th>Severity</th>
+                    <th>Timestamp</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--pm-border)]">

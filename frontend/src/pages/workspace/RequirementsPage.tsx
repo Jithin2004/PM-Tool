@@ -5,6 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
 import { RequirementCreationModal } from './RequirementCreationModal';
 import { RequirementDetailsModal } from './RequirementDetailsModal';
+import { PremiumLoader } from '../../components/common/PremiumLoader';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { FileText, Plus } from 'lucide-react';
 
 export default function RequirementsPage() {
   const { workspace } = useWorkspace();
@@ -41,32 +44,41 @@ export default function RequirementsPage() {
   }, [workspace?.id]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#111827] text-white overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-transparent text-white overflow-hidden premium-fade-in-up">
       <div className="flex-none p-6 border-b border-[var(--border-soft)]">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Requirements</h1>
-            <p className="text-sm text-[var(--text-muted)] mt-1">Manage client and internal project requirements.</p>
+            <h1 className="text-2xl font-bold tracking-tight">Requirements</h1>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">Manage client and internal project requirements.</p>
           </div>
           <button 
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+            className="btn-premium-primary px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2"
           >
-            <Icon name="add" size={18} />
+            <Plus className="w-4 h-4" />
             New Requirement
           </button>
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-6 overflow-y-auto scrollbar-premium">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
-          </div>
+          <PremiumLoader type="card" count={6} label="Syncing Requirements..." />
         ) : requirements.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)]">
-            <Icon name="description" size={48} className="mb-4 opacity-50" />
-            <p>Create your first requirement to start tracking.</p>
+          <div className="max-w-md mx-auto mt-12">
+            <PremiumEmptyState
+              icon={FileText}
+              title="No Requirements Registered"
+              description="This module tracks project scope and technical parameters, ensuring alignment between client specifications and engineering tasks."
+              action={
+                <button 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="btn-premium-primary px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Register Requirement
+                </button>
+              }
+            />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -74,7 +86,7 @@ export default function RequirementsPage() {
               <div 
                 key={req.id} 
                 onClick={() => setSelectedRequirement(req)}
-                className="bg-[var(--surface-glass)] border border-[var(--border-soft)] rounded-xl p-5 hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
+                className="card-premium hover-lift p-5 cursor-pointer flex flex-col justify-between h-40"
               >
                 <div className="flex items-start justify-between mb-3">
                   <span className={`text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded

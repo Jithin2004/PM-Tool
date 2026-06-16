@@ -34,6 +34,8 @@ import {
   X
 } from 'lucide-react';
 import { FilePanel } from '../../components/common/FilePanel';
+import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { CheckCircle2, FolderGit2 } from 'lucide-react';
 
 export default function DecisionsPage() {
   const { profile } = useAuth();
@@ -443,9 +445,12 @@ export default function DecisionsPage() {
             </div>
 
             {decisions.length === 0 ? (
-              <div className="text-center py-12 text-text-quaternary text-xs font-mono uppercase">
-                No active decisions registered. Click demo or create above.
-              </div>
+              <PremiumEmptyState
+                icon={CheckCircle2}
+                title="No Active Decisions Registered"
+                description="Use the decisions support framework to establish organizational alignments, sign-off parameters, and mitigation guidelines."
+                compact={true}
+              />
             ) : (
               <div className="space-y-4">
                 {decisions.map(dec => {
@@ -777,9 +782,12 @@ export default function DecisionsPage() {
               </div>
 
               {events.length === 0 ? (
-                <div className="text-center py-12 text-text-quaternary text-xs font-mono uppercase">
-                  No coordination sync meetings logged.
-                </div>
+                <PremiumEmptyState
+                  icon={Users}
+                  title="No Coordination Logs"
+                  description="Log alignment triage meetings, sprint planning standups, or client check-ins to capture operational outcomes."
+                  compact={true}
+                />
               ) : (
                 <div className="space-y-3">
                   {events.map(evt => (

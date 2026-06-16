@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Shield, Key, Check, X, AlertTriangle } from 'lucide-react';
+import { PremiumLoader } from '../common/PremiumLoader';
 
 export function RolesPermissionsPanel() {
   const [roles, setRoles] = useState<any[]>([]);
@@ -96,7 +97,13 @@ export function RolesPermissionsPanel() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center animate-pulse text-[var(--pm-text-tertiary)] text-sm">Loading capability matrix...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <PremiumLoader />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 font-geist">
@@ -121,12 +128,12 @@ export function RolesPermissionsPanel() {
       </div>
 
       <div className="bg-[var(--pm-surface)] rounded-xl border border-[var(--pm-border)] overflow-x-auto shadow-sm">
-        <table className="w-full text-left text-sm whitespace-nowrap">
-          <thead className="bg-[var(--pm-surface-low)] text-[var(--pm-text-secondary)] border-b border-[var(--pm-border)]">
+        <table className="w-full text-left text-sm whitespace-nowrap table-premium">
+          <thead>
             <tr>
-              <th className="px-6 py-4 font-semibold sticky left-0 z-10 bg-[var(--pm-surface-low)] border-r border-[var(--pm-border)]">Capability</th>
+              <th className="sticky left-0 top-0 z-20 border-r border-[var(--pm-border)]" style={{ background: 'rgba(8, 12, 25, 0.95)' }}>Capability</th>
               {roles.map(role => (
-                <th key={role.id} className="px-4 py-4 font-semibold text-center uppercase tracking-wider text-xs">
+                <th key={role.id} className="text-center uppercase tracking-wider text-xs">
                   {role.id.replace('_', ' ')}
                 </th>
               ))}

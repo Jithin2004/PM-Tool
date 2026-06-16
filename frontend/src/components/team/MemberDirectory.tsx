@@ -67,11 +67,11 @@ export function MemberDirectory() {
     <div className="space-y-6">
       <div className="rounded-xl shadow-2xl overflow-x-auto bg-surface-3/10 border border-border/50 backdrop-blur-md">
         <table className="w-full text-left border-collapse min-w-[600px] table-premium">
-          <thead style={{ background: 'rgba(51,53,55,0.5)', borderBottom: '1px solid rgba(70,69,84,0.3)' }}>
+          <thead>
             <tr>
-              <th className="px-8 py-4 rounded-tl-xl text-[11px] font-mono uppercase tracking-widest text-text-tertiary">Member Directory</th>
-              <th className="px-8 py-4 text-[11px] font-mono uppercase tracking-widest text-text-tertiary">Department</th>
-              <th className="px-8 py-4 rounded-tr-xl text-[11px] font-mono uppercase tracking-widest text-text-tertiary text-right">Action</th>
+              <th className="text-[11px] font-mono uppercase tracking-widest">Member Directory</th>
+              <th className="text-[11px] font-mono uppercase tracking-widest">Department</th>
+              <th className="text-[11px] font-mono uppercase tracking-widest text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y" style={{ borderColor: 'rgba(70,69,84,0.1)' }}>
