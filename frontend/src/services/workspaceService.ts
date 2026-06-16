@@ -200,21 +200,24 @@ export async function createWorkspaceForUser({ name, settings, user, templateId,
     throw new Error('Authentication required to create workspace.');
   }
 
-  const { data: workspaceRow, error: workspaceError } = await supabase
+  const newWorkspaceId = crypto.randomUUID();
+  const workspaceData = {
+    id: newWorkspaceId,
+    name,
+    owner_id: validOwnerId,
+    template_id: templateId || null,
+    execution_mode: executionMode || 'KANBAN',
+    default_lanes: defaultLanes || 5,
+    workflow_rules: workflowRules || {},
+    ...settingsToWorkspaceRow(settings)
+  };
+
+  const { error: workspaceError } = await supabase
     .from('workspaces')
-    .insert({
-      name,
-      owner_id: validOwnerId,
-      template_id: templateId || null,
-      execution_mode: executionMode || 'KANBAN',
-      default_lanes: defaultLanes || 5,
-      workflow_rules: workflowRules || {},
-      ...settingsToWorkspaceRow(settings)
-    })
-    .select()
-    .single();
+    .insert(workspaceData);
 
   if (workspaceError) throw workspaceError;
+  const workspaceRow = workspaceData;
 
   const email = user.email || authData.user?.email || '';
   const fullName = user.user_metadata?.full_name || user.user_metadata?.name || authData.user?.user_metadata?.full_name || email.split('@')[0] || 'Workspace Owner';
