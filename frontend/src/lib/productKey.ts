@@ -2,6 +2,7 @@
 // Phase 8 Upgrade: Adds RSA-PSS offline license.json verification via Web Crypto API
 
 import { supabase } from './supabase';
+import { sha256 } from '../utils/cryptoUtils';
 
 const STORAGE_KEY = 'resolve-product-license';
 const FINGERPRINT_KEY = 'resolve-device-fingerprint';
@@ -27,7 +28,7 @@ const PUBLIC_JWK: JsonWebKey = {
 
 const LICENSE_SCHEMA_VERSION = 1;
 
-export type LicenseStatus = 'Unactivated' | 'Activated' | 'Expired Support' | 'Transferred Ownership' | 'Invalid';
+export type LicenseStatus = 'Unactivated' | 'Activated' | 'Expired Support' | 'Transferred Ownership' | 'Invalid' | 'inactive';
 
 export interface LicenseData {
   token: string;
@@ -300,21 +301,20 @@ export async function validateWorkspaceLicenseUpdate(productKey: string, current
     return { success: false, error: 'Product key and workspace ID are required.' };
   }
 
+  // Generate SHA-256 hash of productKey
+  const hashedKey = await sha256(productKey.trim());
+
   // 1. Fetch license record from local DB
   const { data: localLicense } = await supabase
     .from('workspace_license')
-    .select('workspace_id, status')
-    .eq('id', productKey.trim())
+    .select('workspace_id, activation_date')
+    .eq('license_key_hash', hashedKey)
     .maybeSingle();
 
   if (localLicense) {
-    if (localLicense.status === 'expired' || localLicense.status === 'revoked') {
-      return { success: false, error: 'This license is expired or revoked.' };
-    }
     if (localLicense.workspace_id && localLicense.workspace_id !== currentWorkspaceId) {
       return { success: false, error: 'This key is already attached to another workspace on this system.' };
     }
-    // If it's the same workspace or no workspace is bound, we can proceed.
   }
 
   // 2. We still need to verify globally with the licensing server.
@@ -334,19 +334,24 @@ export async function checkLicenseOnline(): Promise<{ valid: boolean; offline: b
       return { valid: false, offline: false, error: 'No license key activated in database.' };
     }
     
-    if (license.status === 'expired' || license.status === 'revoked') {
+    const isLicenseActivated = license.workspace_id && license.activation_date;
+    if (!isLicenseActivated) {
       memoryLicense = null;
-      return { valid: false, offline: false, error: 'This license is expired or revoked.' };
+      return { valid: false, offline: false, error: 'License is inactive.' };
     }
+
+    const isSupportExpired = license.support_until && new Date(license.support_until).getTime() < Date.now();
+    const derivedStatus: LicenseStatus = isSupportExpired ? 'Expired Support' : 'Activated';
 
     memoryLicense = {
       token: license.id,
       verifiedAt: Date.now(),
       productKey: license.license_key_hash,
       plan: license.license_type,
-      status: (license.status || 'Activated') as any,
+      status: derivedStatus,
       offlineVerified: true,
       offlineLicense: false,
+      supportExpiry: license.support_until ? new Date(license.support_until).getTime() : undefined,
     };
     
     return { valid: true, offline: false };

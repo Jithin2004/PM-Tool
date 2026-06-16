@@ -20,12 +20,12 @@ export function WelcomeCenter() {
         // Query license from database
         const { data: license, error: licenseErr } = await supabase
           .from('workspace_license')
-          .select('status')
+          .select('workspace_id, activation_date')
           .limit(1)
           .maybeSingle();
 
         if (active && !licenseErr && license) {
-          if (license.status !== 'expired' && license.status !== 'revoked') {
+          if (license.workspace_id && license.activation_date) {
             setHasLicense(true);
           } else {
             setHasLicense(false);

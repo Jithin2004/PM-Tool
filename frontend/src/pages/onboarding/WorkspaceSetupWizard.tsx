@@ -9,6 +9,7 @@ import { ProjectChipsInput } from '../../components/ui/ProjectChipsInput';
 import { demoWorkspacesService } from '../../services/demoWorkspacesService';
 import { clearLicense } from '../../lib/productKey';
 import { supabase } from '../../lib/supabase';
+import { sha256 } from '../../utils/cryptoUtils';
 
 const TEMPLATE_SUMMARIES: Record<string, { projects: number, milestones: number, tasks: number, members: number, recommendedFor: string }> = {
   'ERP Implementation': { projects: 3, milestones: 12, tasks: 45, members: 8, recommendedFor: 'Enterprise Transformation' },
@@ -45,7 +46,10 @@ export function WorkspaceSetupWizard() {
       const planType = rawPlan === 'enterprise' ? 'enterprise' : rawPlan === 'premium' ? 'premium' : 'standard';
       const seats = parsed.seats || 10;
       const validatedAt = parsed.validatedAt || new Date().toISOString();
-      const supportExpiryDate = parsed.supportExpiry ? new Date(parsed.supportExpiry).toISOString() : new Date(Date.now() + 365*24*60*60*1000).toISOString();
+      const supportExpiryDate = parsed.supportExpiry ? new Date(parsed.supportExpiry).toISOString() : null;
+
+      // Hash raw product key before database insertion/update
+      const hashedKey = await sha256(productKeyStr);
 
       // Check if license already exists
       const { data: existingLicense } = await supabase
@@ -59,7 +63,7 @@ export function WorkspaceSetupWizard() {
         queryResult = await supabase
           .from('workspace_license')
           .update({
-            license_key_hash: productKeyStr,
+            license_key_hash: hashedKey,
             activation_date: validatedAt,
             allowed_users: seats,
             license_type: planType,
@@ -71,7 +75,7 @@ export function WorkspaceSetupWizard() {
           .from('workspace_license')
           .insert({
             workspace_id: workspaceId,
-            license_key_hash: productKeyStr,
+            license_key_hash: hashedKey,
             activation_date: validatedAt,
             allowed_users: seats,
             license_type: planType,

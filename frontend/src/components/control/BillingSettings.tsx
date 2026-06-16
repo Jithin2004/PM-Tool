@@ -5,6 +5,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { getLicenseInfo, clearLicense, validateWorkspaceLicenseUpdate } from '../../lib/productKey';
 import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 import { supabase } from '../../lib/supabase';
+import { sha256 } from '../../utils/cryptoUtils';
 
 export function BillingSettings() {
   const { workspace } = useWorkspace();
@@ -93,14 +94,17 @@ export function BillingSettings() {
       const rawPlan = (verifyRes.plan || '').toLowerCase();
       const planType = rawPlan === 'enterprise' ? 'enterprise' : rawPlan === 'premium' ? 'premium' : 'standard';
 
+      const hashedKey = await sha256(newKey.trim());
+
       const { error: dbError } = await supabase
         .from('workspace_license')
         .upsert({
           workspace_id: workspace.id,
-          license_key_hash: newKey.trim(),
-          allowed_users: verifyRes.licenseData?.allowed_users || 9999,
+          license_key_hash: hashedKey,
+          allowed_users: verifyRes.licenseData?.allowed_users || verifyRes.licenseData?.max_seats || 9999,
           license_type: planType,
-          activation_date: new Date().toISOString()
+          activation_date: new Date().toISOString(),
+          support_until: verifyRes.licenseData?.supportExpiry ? new Date(verifyRes.licenseData.supportExpiry).toISOString() : null
         }, { onConflict: 'workspace_id' });
 
       if (dbError) throw new Error('Failed to attach license to workspace.');
@@ -116,8 +120,12 @@ export function BillingSettings() {
 
   // Local DB license data is the source of truth.
   // serverLicenseData is supplementary enrichment from the /verify endpoint.
-  const isActive = dbLicense ? true : license?.status === 'Activated';
-  const isExpired = license?.status === 'Expired Support';
+  const isActive = dbLicense 
+    ? (!!dbLicense.workspace_id && !!dbLicense.activation_date) 
+    : license?.status === 'Activated';
+  const isExpired = dbLicense?.support_until 
+    ? (new Date(dbLicense.support_until).getTime() < Date.now()) 
+    : license?.status === 'Expired Support';
   
   let displayStatus = 'UNACTIVATED';
   let statusColor = 'text-red-400';
@@ -130,10 +138,17 @@ export function BillingSettings() {
     statusBg = 'bg-indigo-500/10 border-indigo-500/20';
     statusDot = 'bg-indigo-400';
   } else if (isActive) {
-    displayStatus = 'ACTIVE';
-    statusColor = 'text-emerald-400';
-    statusBg = 'bg-emerald-500/10 border-emerald-500/20';
-    statusDot = 'bg-emerald-400';
+    if (isExpired) {
+      displayStatus = 'EXPIRED SUPPORT';
+      statusColor = 'text-amber-400';
+      statusBg = 'bg-amber-500/10 border-amber-500/20';
+      statusDot = 'bg-amber-400';
+    } else {
+      displayStatus = 'ACTIVE';
+      statusColor = 'text-emerald-400';
+      statusBg = 'bg-emerald-500/10 border-emerald-500/20';
+      statusDot = 'bg-emerald-400';
+    }
   } else if (isExpired) {
     displayStatus = 'EXPIRED SUPPORT';
     statusColor = 'text-amber-400';
