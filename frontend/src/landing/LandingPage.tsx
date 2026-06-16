@@ -3,6 +3,7 @@ import { isProductKeyVerified } from '../lib/productKey';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { navigateTo, resolveAuthenticatedDestination } from '../core/auth/postAuthRedirect';
+import { LiveCommandCenterSimulation } from './LiveCommandCenterSimulation';
 
 export function LandingPage() {
   const verified = isProductKeyVerified() || !!useAuth().user;
@@ -12,8 +13,10 @@ export function LandingPage() {
   const authReady = profileResolved && !authLoading;
   const hasSession = authReady && !!user && !!profile && profile.role !== 'uninvited';
 
-  const [systemSpeed, setSystemSpeed] = useState('98.4');
+
   const [activeSection, setActiveSection] = useState('');
+  const [activePricingTab, setActivePricingTab] = useState('project');
+  const [priceRevealed, setPriceRevealed] = useState(false);
 
   // Scroll Spy for Nav
   useEffect(() => {
@@ -49,15 +52,7 @@ export function LandingPage() {
     navigateTo(destination, true);
   }, [hasSession, profile, workspace, workspaceLoading]);
 
-  // Simulated data updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const base = 98.4;
-      const fluc = (Math.random() * 0.2).toFixed(1);
-      setSystemSpeed((base + parseFloat(fluc)).toFixed(1));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+
 
   return (
     <div className="font-body-md text-body-md overflow-x-hidden min-h-screen text-[#e2e2e5]">
@@ -121,33 +116,7 @@ export function LandingPage() {
             </div>
           </div>
           <div className="lg:col-span-5 hidden lg:block relative">
-            <div className="absolute -inset-10 bg-primary/10 blur-[80px] rounded-full"></div>
-            <div className="glass-panel p-8 rounded-2xl relative border border-[var(--pm-border)] dark:border-[var(--border-soft)] shadow-2xl animate-pulse-slow">
-              <div className="flex items-center justify-between mb-8">
-                <span className="font-mono-label text-mono-label text-on-surface-variant uppercase">Deployment Status</span>
-                <span className="flex items-center gap-2 font-mono-label text-mono-label text-green-400">
-                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)]"></span> SELF-HOSTED ACTIVE
-                </span>
-              </div>
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-surface-container-low rounded-xl border border-[var(--border-soft)] flex flex-col gap-2">
-                    <span className="material-symbols-outlined text-primary mb-1">database</span>
-                    <span className="font-mono-label text-[10px] text-on-surface-variant uppercase">Data Ownership</span>
-                    <span className="font-mono-data text-sm text-on-surface">100% Private</span>
-                  </div>
-                  <div className="p-4 bg-surface-container-low rounded-xl border border-[var(--border-soft)] flex flex-col gap-2">
-                    <span className="material-symbols-outlined text-green-400 mb-1">speed</span>
-                    <span className="font-mono-label text-[10px] text-on-surface-variant uppercase">System Speed</span>
-                    <span className="font-mono-data text-sm text-on-surface">{systemSpeed}ms</span>
-                  </div>
-                </div>
-                <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 flex flex-col gap-2">
-                    <span className="font-mono-label text-[10px] text-primary uppercase">License Verification</span>
-                    <span className="font-mono-data text-xs text-on-surface break-all">RSLV-ENT-9942-XXXX-VALIDATED</span>
-                </div>
-              </div>
-            </div>
+            <LiveCommandCenterSimulation />
           </div>
         </section>
 
@@ -313,85 +282,307 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* Section 3: License Pricing */}
-        <section id="pricing" className="py-32 scroll-mt-16 bg-surface-container-lowest border-y border-[var(--border-soft)]">
+        {/* Section 3: Value Inspector & License Pricing */}
+        <section id="pricing" className="py-32 scroll-mt-16 bg-[#070913] border-y border-[var(--border-soft)]">
           <div className="max-w-7xl mx-auto px-container-padding">
-            <div className="text-center mb-20">
+            {/* Header */}
+            <div className="text-center mb-24">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-6">
-                <span className="font-mono-label text-mono-label text-primary uppercase tracking-widest">No Monthly Subscription</span>
+                <span className="font-mono-label text-mono-label text-primary uppercase tracking-widest">Unified Operations Stack</span>
               </div>
-              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight font-bold">Own Your Operations</h2>
-              <p className="font-body-lg text-lg text-on-surface-variant max-w-2xl mx-auto leading-relaxed">
-                A company buys Resolve PM once, deploys it, and owns their operational system forever. Updates included for the first year.
+              <h2 className="font-display-lg text-4xl md:text-5xl text-on-surface mb-6 tracking-tight font-bold">Replace Your Fragmented SaaS Subscriptions</h2>
+              <p className="font-body-lg text-lg text-on-surface-variant max-w-3xl mx-auto leading-relaxed">
+                Resolve PM consolidates your entire agency operation into a single privately deployed database. 
+                Stop paying per-seat subscriptions for fragmented tools.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-              {/* Evaluation */}
-              <div className="glass-panel p-8 rounded-2xl border border-[var(--border-soft)] flex flex-col">
-                <h3 className="text-xl font-bold text-on-surface mb-2">Evaluation</h3>
-                <div className="text-4xl font-bold text-white mb-2">Free</div>
-                <p className="text-sm text-on-surface-variant mb-8 pb-8 border-b border-[var(--border-soft)]">For testing Resolve PM securely.</p>
-                <ul className="space-y-4 mb-8 flex-1">
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-green-400 text-[18px]">check</span> Product exploration</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-green-400 text-[18px]">check</span> Limited workspace</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-green-400 text-[18px]">check</span> Demo data provisioning</li>
-                </ul>
-                <a href="#contact" className="w-full text-center py-3 rounded-lg border border-[var(--border-soft)] text-on-surface hover:bg-white/5 transition-colors font-semibold">Request Evaluation Key</a>
+            {/* 10 Operational Verticals Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-28">
+              {[
+                { title: 'Project Execution', icon: 'splitscreen', desc: 'Sprints, Kanban, Backlogs' },
+                { title: 'Task Management', icon: 'format_list_bulleted', desc: 'Subtasks, checklists & files' },
+                { title: 'Employee Operations', icon: 'badge', desc: 'Roles, profiles & departments' },
+                { title: 'Resource Planning', icon: 'date_range', desc: 'Holiday calendars & capacity' },
+                { title: 'Client Management', icon: 'group', desc: 'Portals & visibility scopes' },
+                { title: 'Finance Control', icon: 'account_balance_wallet', desc: 'Budget tracking & burn-rates' },
+                { title: 'Invoices', icon: 'receipt_long', desc: 'Direct timesheet billing conversion' },
+                { title: 'Reports', icon: 'analytics', desc: 'Command logs & performance metrics' },
+                { title: 'Automation', icon: 'rule', desc: 'Approval pipelines & triggers' },
+                { title: 'Executive Intelligence', icon: 'psychology', desc: 'Diagnostic risk analysis' }
+              ].map((item, i) => (
+                <div key={i} className="glass-panel p-5 rounded-xl border border-white/5 bg-[#0a0d1d]/40 flex flex-col gap-2">
+                  <span className="material-symbols-outlined text-primary text-2xl">{item.icon}</span>
+                  <h4 className="text-sm font-bold text-on-surface">{item.title}</h4>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Module Inspector ("What's Included") */}
+            <div className="mb-28">
+              <div className="text-center mb-12">
+                <h3 className="text-2xl font-bold text-on-surface mb-4">Inspection: What's Included</h3>
+                <p className="text-sm text-on-surface-variant max-w-xl mx-auto">
+                  Click a module to inspect the exact database features and terminal diagnostic metrics.
+                </p>
               </div>
 
-              {/* Professional */}
-              <div className="glass-panel p-8 rounded-2xl border-2 border-primary relative flex flex-col transform md:-translate-y-4 shadow-[0_10px_40px_rgba(99,102,241,0.15)]">
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-bold uppercase tracking-widest py-1 px-4 rounded-full">Recommended</div>
-                <h3 className="text-xl font-bold text-on-surface mb-2">Professional License</h3>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <div className="text-4xl font-bold text-white">$2,499</div>
-                  <div className="text-sm text-on-surface-variant line-through opacity-60">or ₹1,49,000</div>
-                </div>
-                <p className="text-sm text-primary mb-8 pb-8 border-b border-[var(--border-soft)] font-medium">One-time payment.</p>
-                <ul className="space-y-4 mb-8 flex-1">
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-[18px]">check</span> Lifetime deployment license</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-[18px]">check</span> Unlimited projects & users</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-[18px]">check</span> Project intelligence & Finance</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-[18px]">check</span> Client portal & Change requests</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-[18px]">check</span> Time-to-invoice workflows</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-primary text-[18px]">check</span> Governance & Company memory</li>
-                </ul>
-                <a href="/activate-license" className="w-full text-center py-3 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors font-bold shadow-lg shadow-primary/20">Buy Professional License</a>
+              {/* Tab headers */}
+              <div className="flex flex-wrap justify-center gap-2 mb-8 max-w-4xl mx-auto">
+                {[
+                  { id: 'project', label: 'Project Command', icon: 'rocket_launch' },
+                  { id: 'people', label: 'People Operations', icon: 'groups' },
+                  { id: 'financial', label: 'Financial Control', icon: 'payments' },
+                  { id: 'client', label: 'Client Delivery', icon: 'handshake' },
+                  { id: 'admin', label: 'Enterprise Administration', icon: 'admin_panel_settings' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActivePricingTab(tab.id)}
+                    className={`flex items-center gap-2 px-5 py-3 rounded-lg text-xs font-semibold font-mono-pm border uppercase tracking-wider transition-all ${activePricingTab === tab.id ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'border-white/5 bg-[#050712]/50 text-on-surface-variant hover:text-on-surface hover:bg-white/5'}`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
               </div>
 
-              {/* Enterprise */}
-              <div className="glass-panel p-8 rounded-2xl border border-[var(--border-soft)] flex flex-col">
-                <h3 className="text-xl font-bold text-on-surface mb-2">Enterprise License</h3>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <div className="text-4xl font-bold text-white">Starting $7,999+</div>
-                </div>
-                <p className="text-sm text-on-surface-variant mb-8 pb-8 border-b border-[var(--border-soft)]">or ₹4,99,000+</p>
-                <ul className="space-y-4 mb-8 flex-1">
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-white text-[18px]">add</span> Everything in Professional</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-green-400 text-[18px]">check</span> Deployment assistance</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-green-400 text-[18px]">check</span> Advanced governance</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-green-400 text-[18px]">check</span> Larger team architecture</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-green-400 text-[18px]">check</span> Custom branding</li>
-                  <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-green-400 text-[18px]">check</span> Priority support SLA</li>
-                </ul>
-                <a href="#contact" className="w-full text-center py-3 rounded-lg border border-[var(--border-soft)] text-on-surface hover:bg-white/5 transition-colors font-semibold">Contact Enterprise Sales</a>
+              {/* Tab contents */}
+              <div className="glass-panel p-8 rounded-2xl border border-white/5 bg-[#050712]/50 max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+                {activePricingTab === 'project' && (
+                  <>
+                    <div className="md:col-span-7 space-y-4">
+                      <h4 className="text-lg font-bold text-on-surface">Project Command Module</h4>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        Complete workspace organization with agile backlog parsing and live sprint engines. 
+                        Configured entirely on the client side with local state variables.
+                      </p>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-on-surface-variant">
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Sprint Planning Boards</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Kanban Lane Configurations</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Backlog Hierarchy & Sorting</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Timeline Tracking Views</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Custom Project Workflows</li>
+                      </ul>
+                    </div>
+                    <div className="md:col-span-5 bg-[#02040a] p-5 rounded-xl border border-white/5 font-mono-pm text-[10px] leading-relaxed text-on-surface-variant h-full flex flex-col justify-center">
+                      <div className="text-primary/70 uppercase tracking-widest text-[9px] font-bold mb-2">PROJECT_METRICS_DUMP</div>
+                      <div className="text-green-400 font-bold mb-1">▶ EXECUTION_MODE: KANBAN</div>
+                      <div>▶ SPRINTS: ACTIVE (Sprint 04)</div>
+                      <div>▶ BACKLOG ITEMS: 45</div>
+                      <div>▶ TARGET LANE COUNT: 5</div>
+                      <div className="text-indigo-400 mt-2">▶ CRITICAL_PATH: VERIFIED & NORMAL</div>
+                    </div>
+                  </>
+                )}
+
+                {activePricingTab === 'people' && (
+                  <>
+                    <div className="md:col-span-7 space-y-4">
+                      <h4 className="text-lg font-bold text-on-surface">People Operations Module</h4>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        Track resource capacity, balance team workloads, and manage holidays. Ensure optimal team deployment and avoid burnout.
+                      </p>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-on-surface-variant">
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Resource Capacity Planning</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Timesheet Log Ingest</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Team Capacity Balance</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Holiday Calendars & Time Off</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> User Role/Capability Overrides</li>
+                      </ul>
+                    </div>
+                    <div className="md:col-span-5 bg-[#02040a] p-5 rounded-xl border border-white/5 font-mono-pm text-[10px] leading-relaxed text-on-surface-variant h-full flex flex-col justify-center">
+                      <div className="text-primary/70 uppercase tracking-widest text-[9px] font-bold mb-2">RESOURCE_CAPACITY_DUMP</div>
+                      <div className="text-green-400 font-bold mb-1">▶ ACTIVE_MEMBERS: 12</div>
+                      <div>▶ TEAM_ROSTER: DESIGN, DEV, HR</div>
+                      <div>▶ AVG_UTILIZATION: 82%</div>
+                      <div>▶ ACTIVE_TIMESHEETS: CAPTURED</div>
+                      <div className="text-indigo-400 mt-2">▶ SYSTEM_LOAD: STABLE & BALANCED</div>
+                    </div>
+                  </>
+                )}
+
+                {activePricingTab === 'financial' && (
+                  <>
+                    <div className="md:col-span-7 space-y-4">
+                      <h4 className="text-lg font-bold text-on-surface">Financial Control Module</h4>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        Direct financial correlation from timesheet logging to milestone invoicing. Secure your profit margins with real-time budget forecasting.
+                      </p>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-on-surface-variant">
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Budget Margin Tracking</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Invoices Generation</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Milestone Approval Status</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Expense Reporting</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Manual Exchange Model</li>
+                      </ul>
+                    </div>
+                    <div className="md:col-span-5 bg-[#02040a] p-5 rounded-xl border border-white/5 font-mono-pm text-[10px] leading-relaxed text-on-surface-variant h-full flex flex-col justify-center">
+                      <div className="text-primary/70 uppercase tracking-widest text-[9px] font-bold mb-2">FINANCIAL_LEDGER_DUMP</div>
+                      <div className="text-green-400 font-bold mb-1">▶ BUDGET_BURN_RATE: NOMINAL</div>
+                      <div>▶ TOTAL_CONTRACT_VALUE: $25,000</div>
+                      <div>▶ PENDING_APPROVALS: ₹1,80,000</div>
+                      <div>▶ EXCHANGE_CALCULATION: MANUAL</div>
+                      <div className="text-indigo-400 mt-2">▶ CASHFLOW_ESTIMATION: POSITIVE</div>
+                    </div>
+                  </>
+                )}
+
+                {activePricingTab === 'client' && (
+                  <>
+                    <div className="md:col-span-7 space-y-4">
+                      <h4 className="text-lg font-bold text-on-surface">Client Delivery Module</h4>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        Formalized client sign-off engines and change request approval steps. Maintain visibility control scopes and isolate internal communications.
+                      </p>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-on-surface-variant">
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Client Portal Interface</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Formalized Sign-off Process</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Change Request Flows</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Workspace Visibility Control</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Client Accounts & Roles</li>
+                      </ul>
+                    </div>
+                    <div className="md:col-span-5 bg-[#02040a] p-5 rounded-xl border border-white/5 font-mono-pm text-[10px] leading-relaxed text-on-surface-variant h-full flex flex-col justify-center">
+                      <div className="text-primary/70 uppercase tracking-widest text-[9px] font-bold mb-2">CLIENT_DELIVERY_STATE</div>
+                      <div className="text-green-400 font-bold mb-1">▶ APPROVAL_ID: APR_9921_OK</div>
+                      <div>▶ VISIBILITY_SCOPE: RESTRICTED</div>
+                      <div>▶ CLIENT_USERS: 2 ACTIVE</div>
+                      <div>▶ CHANGE_REQUESTS: 0 PENDING</div>
+                      <div className="text-indigo-400 mt-2">▶ SIGN_OFF_FLOW: ENFORCED & CALIBRATED</div>
+                    </div>
+                  </>
+                )}
+
+                {activePricingTab === 'admin' && (
+                  <>
+                    <div className="md:col-span-7 space-y-4">
+                      <h4 className="text-lg font-bold text-on-surface">Enterprise Administration Module</h4>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        Control your self-hosted operating stack. Access direct activity log auditing, system settings configurations, and raw data backup utilities.
+                      </p>
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-on-surface-variant">
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Activity Logs & Auditing</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Backup & Export Center</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> System Settings Management</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Security Settings Panel</li>
+                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Self-Hosted Deployment Var</li>
+                      </ul>
+                    </div>
+                    <div className="md:col-span-5 bg-[#02040a] p-5 rounded-xl border border-white/5 font-mono-pm text-[10px] leading-relaxed text-on-surface-variant h-full flex flex-col justify-center">
+                      <div className="text-primary/70 uppercase tracking-widest text-[9px] font-bold mb-2">SYSTEM_AUDIT_LOG</div>
+                      <div className="text-green-400 font-bold mb-1">▶ DATA_BACKUP: SUCCESSFUL</div>
+                      <div>▶ AUDIT_LOGS: CAPTURED</div>
+                      <div>▶ DEPLOYMENT_TYPE: SELF-HOSTED</div>
+                      <div>▶ SECURITY_POLICY: ENFORCED</div>
+                      <div className="text-indigo-400 mt-2">▶ INTEGRITY_HASH: STABLE (SHA256)</div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-          </div>
-        </section>
 
-        {/* Section 4: Price Justification */}
-        <section id="justification" className="py-32 bg-[#050712]">
-          <div className="max-w-4xl mx-auto px-container-padding text-center">
-            <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-6">balance</span>
-            <h2 className="font-display-lg text-3xl md:text-4xl text-on-surface mb-8 tracking-tight font-bold">Why ownership beats subscription sprawl</h2>
-            <p className="font-body-lg text-lg text-on-surface-variant leading-relaxed text-left md:text-center">
-              Most agencies pay separately for project management, time tracking, reporting, client communication, and finance coordination. By the end of the year, per-seat SaaS fees drain significant capital while siloing your critical data.
-            </p>
-            <p className="font-body-lg text-lg text-on-surface-variant leading-relaxed mt-6 text-left md:text-center">
-              Resolve PM replaces disconnected systems with one owned platform. Purchasing a perpetual license transforms software from an endless operating expense into a permanent capital asset for your agency.
-            </p>
+            {/* Pricing Reveal Block */}
+            <div className="max-w-4xl mx-auto text-center border border-white/5 bg-[#050712]/30 p-12 rounded-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-indigo-500" />
+              
+              <h3 className="text-2xl font-bold text-on-surface mb-4">Ready to Own Your Operational Stack?</h3>
+              <p className="text-xs text-on-surface-variant max-w-xl mx-auto leading-relaxed mb-8">
+                Resolve PM is delivered as a permanent software capital asset. 
+                Deploy it in your own private cloud database instance, retain 100% data ownership, and avoid endless per-seat monthly subscription sprawl.
+              </p>
+
+              {!priceRevealed ? (
+                <button
+                  onClick={() => setPriceRevealed(true)}
+                  className="btn-premium-primary px-8 py-4 rounded font-headline-sm text-headline-sm font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 transform hover:scale-[1.02]"
+                >
+                  View Deployment License Pricing
+                </button>
+              ) : (
+                <div className="space-y-12 slide-up-fade">
+                  {/* The Pricing Cards Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mt-6 text-left">
+                    {/* Evaluation */}
+                    <div className="glass-panel p-8 rounded-2xl border border-white/5 bg-[#050712]/90 flex flex-col">
+                      <h4 className="text-sm font-mono-pm text-primary uppercase font-bold tracking-wider mb-2">Evaluation</h4>
+                      <div className="text-3xl font-bold text-white mb-2">Free Key</div>
+                      <p className="text-[11px] text-on-surface-variant mb-6 pb-6 border-b border-white/5">For testing the platform features securely.</p>
+                      <ul className="space-y-3 mb-8 flex-1 text-[11px] text-on-surface-variant">
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-400 text-sm">check</span> Product Exploration</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-400 text-sm">check</span> Limited Database Space</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-400 text-sm">check</span> Single Workspace</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-400 text-sm">check</span> Sandbox Environment</li>
+                      </ul>
+                      <a href={verified ? "/login" : "/activate-license"} className="w-full text-center py-2.5 rounded-lg border border-white/10 text-on-surface hover:bg-white/5 transition-colors text-xs font-bold font-mono-pm uppercase">Request Evaluation Key</a>
+                    </div>
+
+                    {/* Professional */}
+                    <div className="glass-panel p-8 rounded-2xl border-2 border-primary bg-[#080b1e]/90 flex flex-col relative transform md:-translate-y-4 shadow-[0_15px_45px_rgba(99,102,241,0.2)]">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-[9px] font-bold uppercase tracking-widest py-1 px-3.5 rounded-full">Owner License</div>
+                      <h4 className="text-sm font-mono-pm text-primary uppercase font-bold tracking-wider mb-2">Professional</h4>
+                      <div className="flex items-baseline gap-2 mb-2">
+                        <div className="text-3xl font-bold text-white">$2,499</div>
+                        <div className="text-xs text-on-surface-variant line-through opacity-60">or ₹1,49,000</div>
+                      </div>
+                      <p className="text-[11px] text-primary mb-6 pb-6 border-b border-white/5 font-semibold">One-time perpetual fee.</p>
+                      <ul className="space-y-3 mb-8 flex-1 text-[11px] text-on-surface-variant">
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-primary text-sm">check</span> Lifetime Deployment License</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-primary text-sm">check</span> 100% Core Database Ownership</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-primary text-sm">check</span> Unlimited Projects & Members</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-primary text-sm">check</span> Client Portal & Governance</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-primary text-sm">check</span> Timesheet & Finance Modules</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-primary text-sm">check</span> 1 Year Support & System Updates</li>
+                      </ul>
+                      <a href={verified ? "/login" : "/activate-license"} className="w-full text-center py-2.5 rounded-lg bg-primary text-white hover:bg-primary/90 transition-all text-xs font-bold font-mono-pm uppercase shadow-md shadow-primary/20">Buy Professional License</a>
+                    </div>
+
+                    {/* Enterprise */}
+                    <div className="glass-panel p-8 rounded-2xl border border-white/5 bg-[#050712]/90 flex flex-col">
+                      <h4 className="text-sm font-mono-pm text-primary uppercase font-bold tracking-wider mb-2">Enterprise</h4>
+                      <div className="text-3xl font-bold text-white mb-2">Starting $7,999+</div>
+                      <p className="text-[11px] text-on-surface-variant mb-6 pb-6 border-b border-white/5">or ₹4,99,000+</p>
+                      <ul className="space-y-3 mb-8 flex-1 text-[11px] text-on-surface-variant">
+                        <li className="flex items-center gap-3 text-sm text-on-surface-variant"><span className="material-symbols-outlined text-white text-sm">add</span> Everything in Professional</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-400 text-sm">check</span> Private Multi-Server Clusters</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-400 text-sm">check</span> Custom Security & SSO</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-400 text-sm">check</span> Priority SLA Support</li>
+                      </ul>
+                      <a href="mailto:contact@resolvepm.app" className="w-full text-center py-2.5 rounded-lg border border-white/10 text-on-surface hover:bg-white/5 transition-colors text-xs font-bold font-mono-pm uppercase">Contact Enterprise Sales</a>
+                    </div>
+                  </div>
+
+                  {/* Pricing justification details */}
+                  <div className="border-t border-white/5 pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 text-left text-xs text-on-surface-variant">
+                    <div className="space-y-2">
+                      <h5 className="font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px] text-primary">database</span> Private Workspace
+                      </h5>
+                      <p className="leading-relaxed">
+                        Data resides completely on your chosen database instance. There is no multi-tenant sharing or risk of cross-contamination.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <h5 className="font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px] text-primary">shield</span> Owned Deployment
+                      </h5>
+                      <p className="leading-relaxed">
+                        Deploy it self-hosted, behind your VPN or in your private cloud. You hold absolute governance and password policies.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <h5 className="font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px] text-primary">grid_view</span> Consolidated Database
+                      </h5>
+                      <p className="leading-relaxed">
+                        No fragmented data. All developers' hours, invoice items, task sprints, and client approvals are unified in one system.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 

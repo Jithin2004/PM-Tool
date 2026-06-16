@@ -1215,3 +1215,56 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
     padding: 12px !important;
   }
 }
+
+/* ================================================================
+   RESOLVE PM — ENTERPRISE BOOT SEQUENCE & ICON HYDRATION
+   ================================================================ */
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-150%);
+  }
+  50% {
+    transform: translateX(150%);
+  }
+  100% {
+    transform: translateX(150%);
+  }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.5s infinite linear;
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s infinite ease-in-out;
+}
+
+/* Fallback protection for Material Symbols ligatures to prevent unhydrated text */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-display: block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+:not(.fonts-loaded) .material-symbols-outlined {
+  color: transparent !important;
+  overflow: hidden;
+  max-width: 24px;
+  max-height: 24px;
+  display: inline-block;
+}
+
