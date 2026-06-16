@@ -191,8 +191,8 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
   }
 ];
 
-const isSubsectionAllowed = (sub: DomainSubsection, role?: string): boolean => {
-  if (sub.capability && !hasCapability(role as UserRole, sub.capability)) {
+const isSubsectionAllowed = (sub: DomainSubsection, profile?: any): boolean => {
+  if (sub.capability && !hasCapability(profile, sub.capability)) {
     return false;
   }
   return true;
@@ -333,10 +333,10 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   const visibleDomains = useMemo(() => {
     return EXECUTIVE_DOMAINS.map(domain => {
-      const allowedSubsections = domain.subsections.filter(sub => isSubsectionAllowed(sub, profile?.role));
+      const allowedSubsections = domain.subsections.filter(sub => isSubsectionAllowed(sub, profile));
       return { ...domain, subsections: allowedSubsections };
     }).filter(domain => domain.subsections.length > 0);
-  }, [profile?.role]);
+  }, [profile]);
 
   const [routePath, setRoutePath] = useState(() => normalizePath(window.location.pathname));
 
@@ -390,10 +390,10 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   // Strict route guards for Phase 5 UX role alignment
   useEffect(() => {
-    if (loading || !profile?.role) return;
+    if (loading || !profile) return;
 
-    const isDev = hasCapability(profile.role, 'manage_tasks') && !hasCapability(profile.role, 'manage_projects');
-    const isView = hasCapability(profile.role, 'view_stakeholders') && !hasCapability(profile.role, 'manage_tasks');
+    const isDev = hasCapability(profile, 'manage_tasks') && !hasCapability(profile, 'manage_projects');
+    const isView = hasCapability(profile, 'view_stakeholders') && !hasCapability(profile, 'manage_tasks');
     if (isDev) {
       const allowed = ['/overview', '/execution', '/execution/board', '/login', '/execution/timeline'];
       if (!allowed.includes(routePath)) {
@@ -415,11 +415,11 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         );
       }
     }
-  }, [profile?.role, loading, routePath]);
+  }, [profile, loading, routePath]);
 
   useEffect(() => {
     if (!disclosure.active || loading) return;
-    const isDevOrView = (hasCapability(profile?.role, 'manage_tasks') && !hasCapability(profile?.role, 'manage_projects')) || (hasCapability(profile?.role, 'view_stakeholders') && !hasCapability(profile?.role, 'manage_tasks'));
+    const isDevOrView = (hasCapability(profile, 'manage_tasks') && !hasCapability(profile, 'manage_projects')) || (hasCapability(profile, 'view_stakeholders') && !hasCapability(profile, 'manage_tasks'));
     if (isDevOrView) return; // Bypass progressive unlock for developers & stakeholders
     if (routePath === '/overview' || routePath === '/') return;
     if (disclosure.isRouteVisible(routePath)) return;
@@ -434,7 +434,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       }),
     );
     navigateTo('/overview');
-  }, [disclosure.active, disclosure.level, loading, routePath, profile?.role]);
+  }, [disclosure.active, disclosure.level, loading, routePath, profile]);
 
   const handleShowAllFeatures = () => {
     if (!workspace?.id) return;
@@ -787,6 +787,11 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   };
 
   const handleDeleteProject = async (id: string, reason: string) => {
+    if (!hasCapability(profile, 'manage_workspace') && !hasCapability(profile, 'manage_projects')) {
+      notify("You don't have permission to delete projects.", "error");
+      return;
+    }
+
     askConfirmation(
       "Archive Project",
       `Are you sure you want to archive this project? Reason: ${reason}`,
@@ -828,8 +833,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       notify("Project designation is required.", "error");
       return;
     }
-    if (!hasCapability(profile?.role, 'manage_projects')) {
-      notify("Unauthorized: Insufficient permissions to create projects.", "error");
+    if (!hasCapability(profile, 'manage_projects')) {
+      notify("You don't have permission to create projects.", 'error');
       return;
     }
     if (!workspace?.id) {
@@ -1116,7 +1121,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               message={disclosure.nextUnlock.message}
               nextLevel={disclosure.nextUnlock.level}
               lockedCount={disclosure.lockedCount}
-              onShowAll={hasCapability(profile?.role, 'manage_settings') ? handleShowAllFeatures : undefined}
+              onShowAll={hasCapability(profile, 'manage_settings') ? handleShowAllFeatures : undefined}
             />
           )}
 
@@ -1259,7 +1264,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       message={disclosure.nextUnlock.message}
                       nextLevel={disclosure.nextUnlock.level}
                       lockedCount={disclosure.lockedCount}
-                      onShowAll={hasCapability(profile?.role, 'manage_settings') ? handleShowAllFeatures : undefined}
+                      onShowAll={hasCapability(profile, 'manage_settings') ? handleShowAllFeatures : undefined}
                     />
                   )}
                 </div>
@@ -1363,7 +1368,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               </div>
 
               {/* View As Role Tool */}
-              {trueProfile?.role === 'super_admin' && (
+              {hasAuthority(trueProfile, 'admin') && (
                 <div className="relative group flex items-center">
                   <select
                     value={simulatedRole || ''}
@@ -1387,7 +1392,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               )}
 
               {/* Sandbox Toggle */}
-              {profile?.role === 'super_admin' && (
+              {hasAuthority(profile, 'admin') && (
                 <button
                   onClick={async () => {
                     if (!workspace || !user) return;
@@ -1501,7 +1506,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           {/* Dynamic Page Routing Slot */}
           <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-6 relative user-content">
             <ErrorBoundary>
-              {profile?.role === 'super_admin' && window.location.pathname === '/workspace' && (
+              {hasAuthority(profile, 'admin') && window.location.pathname === '/workspace' && (
                 <WelcomeCenter />
               )}
               {children}

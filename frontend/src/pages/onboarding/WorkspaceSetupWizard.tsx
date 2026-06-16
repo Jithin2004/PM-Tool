@@ -10,7 +10,7 @@ import { demoWorkspacesService } from '../../services/demoWorkspacesService';
 import { clearLicense } from '../../lib/productKey';
 import { supabase } from '../../lib/supabase';
 import { sha256 } from '../../utils/cryptoUtils';
-
+import { navigateTo } from '../../core/auth/postAuthRedirect';
 const TEMPLATE_SUMMARIES: Record<string, { projects: number, milestones: number, tasks: number, members: number, recommendedFor: string }> = {
   'ERP Implementation': { projects: 3, milestones: 12, tasks: 45, members: 8, recommendedFor: 'Enterprise Transformation' },
   'Software Product Launch': { projects: 2, milestones: 8, tasks: 34, members: 5, recommendedFor: 'Product Teams' },
@@ -37,6 +37,7 @@ export function WorkspaceSetupWizard() {
 
   const attachLicenseIfPending = async (workspaceId: string, userId: string): Promise<boolean> => {
     try {
+      console.log('[LICENSE ATTACH START]', sessionStorage.getItem('pendingLicenseActivation'));
       const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
       if (!pendingStr) return true;
 
@@ -82,6 +83,8 @@ export function WorkspaceSetupWizard() {
             support_until: supportExpiryDate
           });
       }
+
+      console.log('[LICENSE ATTACH RESULT]', { data: queryResult.data, error: queryResult.error });
 
       if (queryResult.error) {
         console.error('License attachment query error:', queryResult.error);
@@ -134,12 +137,7 @@ export function WorkspaceSetupWizard() {
           }
         }
         if (members.length > 0) {
-          const roleMap: Record<string, string> = {
-            'employee': 'developer',
-            'pm': 'pm',
-            'hr': 'super_admin',
-            'external access': 'viewer'
-          };
+          const { mapAuthorityToLegacyRole } = await import('../../core/types/workspace');
           
           let imported = 0;
           let failed = 0;
@@ -147,12 +145,13 @@ export function WorkspaceSetupWizard() {
           let failReasons: string[] = [];
 
           const payloadUsers = members.map(m => {
-            const rawRole = m.role.toLowerCase();
             return {
               email: m.email,
-              role: roleMap[rawRole] || 'developer',
+              role: mapAuthorityToLegacyRole(m.authority),
+              capabilities: m.functions,
+              designation: m.designation || null,
               full_name: m.name || m.email.split('@')[0],
-              department: null
+              department: null // Department is assigned later or if needed we can add it to EmailChip
             };
           });
 
@@ -203,7 +202,7 @@ export function WorkspaceSetupWizard() {
           return;
         }
         await refreshProfile();
-        window.location.href = '/overview';
+        navigateTo('/overview');
       }
     } catch (err: any) {
       console.error(err);
@@ -375,35 +374,113 @@ export function WorkspaceSetupWizard() {
 
           {step === 5 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-              <label className="block text-sm font-semibold">Step 5: Assign Roles</label>
+              <label className="block text-sm font-semibold">Step 5: Assign Permissions & Roles</label>
               {members.length === 0 ? (
                 <p className="text-sm text-[var(--pm-on-surface-variant)] italic">No team members added. You can skip this step.</p>
               ) : (
                 <>
-                  <div className="max-h-60 overflow-y-auto space-y-2 border border-border/50 rounded-lg p-2 bg-surface-4">
+                  <div className="max-h-[60vh] overflow-y-auto space-y-4 border border-border/50 rounded-lg p-3 bg-surface-4">
                   {members.map((m, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 bg-surface-3 rounded border border-border/50">
-                      <span className="text-sm font-medium">{m.email}</span>
-                      <select 
-                        value={m.role}
-                        onChange={(e) => {
-                          const newMembers = [...members];
-                          newMembers[idx].role = e.target.value as any;
-                          setMembers(newMembers);
-                        }}
-                        className="input-premium text-xs rounded px-2 py-1 outline-none"
-                      >
-                        <option value="Employee">Employee (Internal)</option>
-                        <option value="PM">Project Manager</option>
-                        <option value="HR">HR/Admin</option>
-                        <option value="External Access">External Access</option>
-                      </select>
+                    <div key={idx} className="flex flex-col gap-3 p-4 bg-surface-2 rounded-lg border border-border/60 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                        <span className="text-sm font-bold text-[var(--pm-on-surface)]">{m.email}</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-[var(--pm-on-surface-variant)] uppercase tracking-wider">Authority Level</label>
+                          <select 
+                            value={m.authority}
+                            onChange={(e) => {
+                              const newMembers = [...members];
+                              newMembers[idx].authority = e.target.value as any;
+                              setMembers(newMembers);
+                            }}
+                            className="input-premium w-full text-sm rounded px-3 py-2 outline-none"
+                          >
+                            <option value="admin">Workspace Admin</option>
+                            <option value="manager">Manager</option>
+                            <option value="member">Member</option>
+                            <option value="external">External / Client</option>
+                          </select>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-[var(--pm-on-surface-variant)] uppercase tracking-wider">Job Title (Designation)</label>
+                          <select 
+                            value={m.designation}
+                            onChange={(e) => {
+                              const newMembers = [...members];
+                              newMembers[idx].designation = e.target.value;
+                              setMembers(newMembers);
+                            }}
+                            className="input-premium w-full text-sm rounded px-3 py-2 outline-none"
+                          >
+                            <option value="">Select Title...</option>
+                            <optgroup label="Leadership">
+                              <option value="Founder">Founder</option>
+                              <option value="CEO">CEO</option>
+                              <option value="COO">COO</option>
+                              <option value="CTO">CTO</option>
+                              <option value="Director">Director</option>
+                              <option value="Department Head">Department Head</option>
+                            </optgroup>
+                            <optgroup label="Engineering">
+                              <option value="Engineering Lead">Engineering Lead</option>
+                              <option value="Senior Software Engineer">Senior Software Engineer</option>
+                              <option value="Software Engineer">Software Engineer</option>
+                              <option value="Junior Software Engineer">Junior Software Engineer</option>
+                              <option value="Intern">Intern</option>
+                            </optgroup>
+                            <optgroup label="Design">
+                              <option value="Product Designer">Product Designer</option>
+                              <option value="UI Designer">UI Designer</option>
+                              <option value="Design Lead">Design Lead</option>
+                            </optgroup>
+                            <optgroup label="Finance & People">
+                              <option value="Finance Manager">Finance Manager</option>
+                              <option value="Accountant">Accountant</option>
+                              <option value="HR Manager">HR Manager</option>
+                              <option value="HR Executive">HR Executive</option>
+                            </optgroup>
+                            <optgroup label="Operations">
+                              <option value="Operations Manager">Operations Manager</option>
+                              <option value="Operations Executive">Operations Executive</option>
+                            </optgroup>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 mt-2">
+                        <label className="text-[11px] font-semibold text-[var(--pm-on-surface-variant)] uppercase tracking-wider">Functional Responsibilities</label>
+                        <div className="flex flex-wrap gap-2">
+                          {['Projects', 'Engineering', 'Finance', 'PeopleOperations', 'Clients', 'Documents', 'Operations'].map((func) => (
+                            <label key={func} className="flex items-center gap-1.5 cursor-pointer bg-surface-3 hover:bg-surface-4 border border-border/50 rounded-full px-3 py-1.5 text-xs transition-colors">
+                              <input 
+                                type="checkbox"
+                                checked={m.functions.includes(func)}
+                                onChange={(e) => {
+                                  const newMembers = [...members];
+                                  if (e.target.checked) {
+                                    newMembers[idx].functions = [...m.functions, func];
+                                  } else {
+                                    newMembers[idx].functions = m.functions.filter(f => f !== func);
+                                  }
+                                  setMembers(newMembers);
+                                }}
+                                className="w-3.5 h-3.5 rounded border-border text-[var(--pm-primary)] focus:ring-[var(--pm-primary)] bg-surface-1"
+                              />
+                              <span>{func.replace('PeopleOperations', 'People Ops')}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
                 <div className="flex justify-between items-center mt-2 px-1 min-h-[20px]">
                   <span className="text-[11px] font-medium text-[var(--pm-on-surface-variant)] uppercase tracking-wide">
-                    {members.length} {members.length !== 1 ? 'ROLES' : 'ROLE'} CREATED
+                    {members.length} {members.length !== 1 ? 'PROFILES' : 'PROFILE'} CONFIGURED
                   </span>
                 </div>
               </>

@@ -5,7 +5,7 @@ import { useDashboard } from '../../context/DashboardContext';
 import { Icon } from '../../components/ui/Icon';
 import { activityLogService } from '../../services/activityLogService';
 import { sendNotification } from '../../services/notificationService';
-import { hasCapability } from '../../core/auth/permissions';
+import { hasCapability, hasAuthority } from '../../core/auth/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useOperationalData } from '../../context/OperationalDataContext';
@@ -202,10 +202,10 @@ export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => vo
               <option value="Client Meeting">Client Meeting</option>
               <option value="Standup">Standup</option>
               <option value="Sprint Review">Sprint Review</option>
-              {(hasCapability(profile?.role, 'manage_employees') || profile?.role === 'super_admin') && (
-                <option value="HR Review">HR Review</option>
+              {(hasCapability(profile, 'manage_employees') || hasAuthority(profile, 'admin')) && (
+                <option value="hr">Human Resources</option>
               )}
-              {(hasCapability(profile?.role, 'manage_finance') || profile?.role === 'super_admin') && (
+              {(hasCapability(profile, 'manage_finance') || hasAuthority(profile, 'admin')) && (
                 <option value="Finance Review">Finance Review</option>
               )}
             </select>

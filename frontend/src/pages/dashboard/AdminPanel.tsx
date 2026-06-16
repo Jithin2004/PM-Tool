@@ -132,7 +132,9 @@ export function AdminPanel() {
   // Invitation state
   const [invitations, setInvitations] = useState<any[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'pm' | 'developer' | 'viewer'>('developer');
+  const [inviteRole, setInviteRole] = useState<'admin' | 'manager' | 'member' | 'external'>('member');
+  const [inviteFunctions, setInviteFunctions] = useState<string[]>([]);
+  const [inviteDesignation, setInviteDesignation] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
@@ -311,11 +313,12 @@ export function AdminPanel() {
   const availableDevs = devs.filter(d => !assignedDevIds.has(d.id));
 
   const fetchInvitations = async () => {
-    if (!canGovernPlatform) return;
+    if (!canGovernPlatform || !workspace?.id) return;
     const { data, error } = await supabase
-      .from('invitations')
+      .from('users')
       .select('*')
-      .eq('status', 'pending');
+      .eq('status', 'invited')
+      .eq('workspace_id', workspace.id);
     if (!error && data) {
       setInvitations(data);
     }
@@ -342,18 +345,38 @@ export function AdminPanel() {
       if (!workspace?.id) throw new Error("Could not locate active workspace.");
       if (!currentUserProfile?.id) throw new Error("No active user profile.");
 
-      const result = await InviteService.createInvitation({
-        email,
-        workspaceId: workspace.id,
-        role: inviteRole,
-        createdBy: currentUserProfile.id
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { mapAuthorityToLegacyRole } = await import('../../core/types/workspace');
+
+      const backendUrl = import.meta.env.PROD ? import.meta.env.VITE_API_URL : (import.meta.env.VITE_API_URL || 'http://localhost:5001');
+      
+      const res = await fetch(`${backendUrl}/api/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          email,
+          role: mapAuthorityToLegacyRole(inviteRole),
+          capabilities: inviteFunctions,
+          designation: inviteDesignation,
+          source: 'manual'
+        })
       });
 
-      if (!result.success) {
-        throw new Error(result.error);
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || 'Failed to create invitation');
       }
 
       setInviteEmail('');
+      setInviteRole('member');
+      setInviteFunctions([]);
+      setInviteDesignation('');
       fetchInvitations();
     } catch (err: any) {
       setInviteError(err?.message || "Failed to send invitation.");
@@ -364,9 +387,15 @@ export function AdminPanel() {
 
   const handleRevokeInvitation = async (id: string) => {
     askConfirmation("Revoke Invitation", "Are you sure you want to revoke this invitation? The user will no longer be allowed to join.", async () => {
-      const success = await InviteService.revokeInvitation(id);
-      if (success) {
+      const { error } = await supabase
+        .from('users')
+        .update({ status: 'disabled', invite_token: null, invite_expires_at: null })
+        .eq('id', id);
+      if (!error) {
         fetchInvitations();
+        notify("Invitation revoked successfully", "success");
+      } else {
+        notify("Failed to revoke invitation", "error");
       }
     }, "Revoke");
   };
@@ -408,19 +437,18 @@ export function AdminPanel() {
   const customRoles: string[] = systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'];
   const userCustomRoles: Record<string, string> = systemData.userCustomRoles || {};
 
-  const handleAssignCustomRoleLocal = async (userId: string, roleName: string) => {
+  const handleAssignCustomRoleLocal = async (userId: string, designation: string) => {
     const userProfile = profiles.find(p => p.id === userId);
     const targetName = userProfile?.full_name || userProfile?.email || "this user";
 
-    askConfirmation("Confirm Designation Change", `Confirm action: Change designation of ${targetName} to '${roleName}'?`, async () => {
-      const updatedUserRoles = {
-        ...userCustomRoles,
-        [userId]: roleName
-      };
-      await handleSaveLogisticsData({
-        ...systemData,
-        userCustomRoles: updatedUserRoles
-      });
+    askConfirmation("Confirm Designation Change", `Confirm action: Change designation of ${targetName} to '${designation}'?`, async () => {
+      const { error } = await supabase.from('users').update({ designation }).eq('id', userId);
+      if (!error) {
+        notify("Designation updated successfully.", "success");
+        invalidateAll();
+      } else {
+        notify("Failed to update designation: " + error.message, "error");
+      }
       setActiveGearPopover(null);
     }, "Change");
   };
@@ -803,10 +831,17 @@ export function AdminPanel() {
                       </td>
                       {/* Role */}
                       <td className="px-8 py-5">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider"
-                          style={{ background: `${roleColor}12`, color: roleColor, border: `1px solid ${roleColor}25` }}>
-                          {getRoleLabel(p.role)}
-                        </span>
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider"
+                            style={{ background: `${roleColor}12`, color: roleColor, border: `1px solid ${roleColor}25` }}>
+                            {getRoleLabel(p.role)}
+                          </span>
+                          {p.designation && (
+                            <span className="text-[11px] font-mono-pm" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                              {p.designation}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       {/* Permissions bar */}
                       <td className="px-8 py-5">
@@ -848,36 +883,40 @@ export function AdminPanel() {
                                 {/* Role Calibration */}
                                 <div className="mb-4 space-y-3 border-b pb-4" style={{ borderColor: 'rgba(70,69,84,0.2)' }}>
                                   <div>
-                                    <label className="block text-[9px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Access Role</label>
+                                    <label className="block text-[9px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Authority Level</label>
                                     <select
-                                      value={p.role}
+                                      value={p.role === 'super_admin' ? 'admin' : p.role === 'pm' ? 'manager' : p.role === 'developer' ? 'member' : 'external'}
                                       onChange={(e) => {
-                                        const roleVal = e.target.value;
-                                        askConfirmation("Change Access Role", `Confirm action: Change access role of ${p.full_name || p.email} to '${roleVal}'?`, async () => {
-                                          await handleUpdateRole(p.id, roleVal as any);
-                                          notify("Access role updated successfully.", "success");
+                                        const authVal = e.target.value as any;
+                                        askConfirmation("Change Authority Level", `Confirm action: Change authority of ${p.full_name || p.email} to '${authVal}'?`, async () => {
+                                          const { mapAuthorityToLegacyRole } = await import('../../core/types/workspace');
+                                          await handleUpdateRole(p.id, mapAuthorityToLegacyRole(authVal) as any);
+                                          notify("Authority updated successfully.", "success");
                                         });
                                       }}
                                       className="w-full border rounded text-[11px] font-mono-pm px-2 py-1.5 outline-none bg-bg"
                                       style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)', background: 'var(--pm-surface-lowest)' }}
                                     >
-                                      <option value="viewer">External Access</option>
-                                      <option value="developer">Employee</option>
-                                      <option value="pm">Project Manager</option>
+                                      <option value="admin">Workspace Admin</option>
+                                      <option value="manager">Manager</option>
+                                      <option value="member">Member</option>
+                                      <option value="external">External / Client</option>
                                     </select>
                                   </div>
                                   <div>
                                     <label className="block text-[9px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Designation</label>
-                                    <select
-                                      value={userCustomRoles[p.id] || 'Viewer'}
-                                      onChange={(e) => handleAssignCustomRoleLocal(p.id, e.target.value)}
+                                    <input
+                                      type="text"
+                                      value={p.designation || ''}
+                                      onChange={(e) => {
+                                        // Update local state optimistic UI if needed, but easier to use onBlur or save button
+                                      }}
+                                      onBlur={(e) => handleAssignCustomRoleLocal(p.id, e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') handleAssignCustomRoleLocal(p.id, e.currentTarget.value) }}
                                       className="w-full border rounded text-[11px] font-mono-pm px-2 py-1.5 outline-none bg-bg"
                                       style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)', background: 'var(--pm-surface-lowest)' }}
-                                    >
-                                      {customRoles.map(r => (
-                                        <option key={r} value={r}>{r}</option>
-                                      ))}
-                                    </select>
+                                      placeholder="e.g. CTO"
+                                    />
                                   </div>
                                 </div>
                                 {/* Manage Capabilities Button */}
@@ -1090,7 +1129,7 @@ export function AdminPanel() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Assigned Role</label>
+                      <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Authority Level</label>
                       <select
                         required
                         value={inviteRole}
@@ -1098,10 +1137,43 @@ export function AdminPanel() {
                         className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
                         style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
                       >
-                        <option value="developer">Employee</option>
-                        <option value="pm">Project Manager</option>
-                        <option value="viewer">External Access</option>
+                        <option value="admin">Workspace Admin</option>
+                        <option value="manager">Manager</option>
+                        <option value="member">Member</option>
+                        <option value="external">External / Client</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Designation</label>
+                      <input
+                        type="text"
+                        value={inviteDesignation}
+                        onChange={e => setInviteDesignation(e.target.value)}
+                        className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
+                        style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                        placeholder="e.g. Senior Engineer"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Functional Access</label>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {['Projects', 'Engineering', 'Finance', 'PeopleOperations', 'Clients', 'Documents', 'Operations'].map(func => (
+                          <label key={func} className="flex items-center gap-2 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={inviteFunctions.includes(func)}
+                              onChange={(e) => {
+                                if (e.target.checked) setInviteFunctions(prev => [...prev, func]);
+                                else setInviteFunctions(prev => prev.filter(f => f !== func));
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                            />
+                            <span className="text-[11px] text-[var(--pm-on-surface)] group-hover:text-indigo-400 transition-colors">
+                              {func === 'PeopleOperations' ? 'People' : func}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
                     <button
                       type="submit"

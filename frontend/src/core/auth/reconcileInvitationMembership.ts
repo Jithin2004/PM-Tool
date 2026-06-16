@@ -37,27 +37,29 @@ export interface InvitationRecord {
   date_of_joining?: string;
 }
 
-function designationForRole(role: UserRole): string {
-  if (role === 'super_admin') return 'Super Admin';
-  if (role === 'pm') return 'Project Manager';
-  if (role === 'pending-workspace-setup') return 'Pending Setup';
-  if (role === 'uninvited') return 'Uninvited User';
-  if (role === 'hr') return 'Human Resources';
-  if (role === 'finance') return 'Finance';
-  if (role === 'client') return 'Client';
-  if (role === 'viewer') return 'Viewer';
-  return 'Developer';
-}
+import type { AuthorityRole, FunctionalAccess } from '../types/workspace';
 
-function rowToProfile(row: Record<string, unknown>): User {
-  const role = row.role as UserRole;
+export function rowToProfile(row: Record<string, unknown>): User {
+  const dbRole = row.role as string;
+  let authority: AuthorityRole = 'member';
+  if (dbRole === 'super_admin') {
+    authority = row.is_owner ? 'owner' : 'admin';
+  }
+  else if (dbRole === 'pm') authority = 'manager';
+  else if (dbRole === 'developer') authority = 'member';
+  else if (dbRole === 'hr' || dbRole === 'finance') authority = 'member';
+  else if (dbRole === 'client' || dbRole === 'viewer') authority = 'external';
+  else if (dbRole === 'pending-workspace-setup') authority = 'pending-workspace-setup';
+  else if (dbRole === 'uninvited') authority = 'uninvited';
+
   return {
     ...(row as unknown as User),
     auth_user_id: row.id as string,
-    designation: designationForRole(role),
+    authority,
+    functionalAccess: (row.functionalAccess as FunctionalAccess[]) || (row.capabilities as FunctionalAccess[]) || [],
+    designation: (row.designation as string) || 'Member',
   };
 }
-
 export async function findValidInvitation(email: string): Promise<InvitationRecord | null> {
   if (!isSupabaseConfigured || !email.trim()) return null;
 
@@ -321,5 +323,4 @@ export async function reconcileWorkspaceMembership(
   }
   return { repaired: false, workspaceId: null, reason: 'orphaned' };
 }
-
-export { designationForRole, rowToProfile };
+export { designationForRole };

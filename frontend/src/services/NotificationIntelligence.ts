@@ -49,9 +49,12 @@ export function evaluateNotification(
       const count = parseInt(localStorage.getItem(cacheKey) || '0', 10);
       
       let maxCount = 0;
-      if (role === 'developer') maxCount = 5;
-      else if (role === 'pm' || role === 'manager') maxCount = 15;
-      else if (role === 'super_admin' || role === 'admin') maxCount = 10;
+      const { getAuthorityRank } = require('../core/auth/permissions');
+      const rank = getAuthorityRank(role);
+      
+      if (rank >= getAuthorityRank('admin')) maxCount = 10;
+      else if (rank >= getAuthorityRank('manager')) maxCount = 15;
+      else if (rank >= getAuthorityRank('member')) maxCount = 5;
       else maxCount = 5;
 
       if (count >= maxCount) {

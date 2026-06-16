@@ -110,13 +110,16 @@ export function generateWaitingStates(inputs: WaitingStateInputs): WaitingState[
     });
   }
 
-  // Filter based on role
-  if (role === 'developer' || role === 'external_client') {
+  const { hasFunction } = require('../auth/permissions');
+  const userProfile = profiles.find(p => p.id === userId);
+
+  // Filter based on function
+  if (hasFunction(userProfile, 'Engineering')) {
     return states.filter(s => 
       s.affectedUsers.includes(userId) || 
       s.waitingForUserId === userId
     );
-  } else if (role === 'pm') {
+  } else if (hasFunction(userProfile, 'Projects')) {
     const managedProjectIds = projects.filter(p => p.owner_id === userId).map(p => p.id);
     return states.filter(s => 
       s.affectedProjects.some(pid => managedProjectIds.includes(pid)) || 

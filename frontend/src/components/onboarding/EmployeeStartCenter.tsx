@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
+import { hasAuthority } from '../../core/auth/permissions';
 import { supabase } from '../../lib/supabase';
 import { 
   User, 
@@ -313,7 +314,7 @@ export function EmployeeStartCenter() {
                       </div>
                     </div>
                     <span className="text-[9px] uppercase tracking-wider text-[var(--text-secondary)] bg-surface-3 px-2 py-0.5 rounded border border-border">
-                      {person.role === 'pm' ? 'PM' : person.role === 'super_admin' ? 'Admin' : 'Dev'}
+                      {hasAuthority(person, 'admin') ? 'Admin' : hasAuthority(person, 'manager') ? 'PM' : 'Dev'}
                     </span>
                   </div>
                 ))}

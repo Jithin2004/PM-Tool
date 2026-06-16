@@ -61,7 +61,7 @@ async function verifyRequester(req) {
 
 // Core Invite Engine Function
 async function processInvite(userData, requester, source) {
-    let { email, role, department, full_name } = userData;
+    let { email, role, department, full_name, capabilities, designation } = userData;
     email = email.trim().toLowerCase();
     const targetRole = role || 'developer';
 
@@ -97,6 +97,8 @@ async function processInvite(userData, requester, source) {
         email: email,
         role: targetRole,
         department: department || null,
+        designation: designation || null,
+        capabilities: Array.isArray(capabilities) ? capabilities : null,
         workspace_id: requester.workspace_id,
         invited_by: requester.id,
         status: 'invited',
@@ -123,11 +125,11 @@ async function processInvite(userData, requester, source) {
 app.post('/api/invite', provisionLimiter, async (req, res) => {
     try {
         const requester = await verifyRequester(req);
-        const { email, role, department, full_name, source = 'manual' } = req.body;
+        const { email, role, department, full_name, capabilities, designation, source = 'manual' } = req.body;
 
         if (!email) return res.status(400).json({ error: 'Email is required' });
 
-        const result = await processInvite({ email, role, department, full_name }, requester, source);
+        const result = await processInvite({ email, role, department, full_name, capabilities, designation }, requester, source);
 
         return res.status(200).json({ 
             success: true, 

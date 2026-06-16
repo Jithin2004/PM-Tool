@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { DocumentGeneratorDropdown } from '../hr/DocumentGeneratorDropdown';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { ExitHandoffEngine, HandoffAuditReport } from '../../core/system/ExitHandoffEngine';
+import { hasAuthority } from '../../core/auth/permissions';
 
 function getRoleLabel(role: string) {
   const labels: Record<string, string> = {
@@ -190,7 +191,7 @@ export function MemberDirectory() {
                   </div>
                   <div>
                     <div className="text-[10px] uppercase text-[var(--text-secondary)] font-mono mb-1">Employment Status</div>
-                    {currentUserProfile?.role === 'super_admin' && selectedMemberDetails.id !== currentUserProfile.id ? (
+                    {hasAuthority(currentUserProfile, 'admin') && selectedMemberDetails.id !== currentUserProfile.id ? (
                       <select
                         value={selectedMemberDetails.employment_status || 'active'}
                         onChange={async (e) => {
@@ -233,7 +234,7 @@ export function MemberDirectory() {
                   </div>
                   <div>
                     <div className="text-[10px] uppercase text-[var(--text-secondary)] font-mono mb-1">Date of Joining</div>
-                    {currentUserProfile?.role === 'super_admin' ? (
+                    {hasAuthority(currentUserProfile, 'admin') ? (
                       <div className="flex items-center gap-2 mt-1">
                         <div className="font-medium text-white">
                           {selectedMemberDetails.date_of_joining ? new Date(selectedMemberDetails.date_of_joining).toLocaleDateString() : 'N/A'}

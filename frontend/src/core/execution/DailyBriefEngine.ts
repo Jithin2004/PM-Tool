@@ -66,8 +66,11 @@ export function generateDailyBrief(inputs: DailyBriefInputs): DailyBrief {
     }
   }
 
+  const { getAuthorityRank } = require('../auth/permissions');
+  const rank = getAuthorityRank(role);
+
   // 2. Logic based on role
-  if (role === 'developer') {
+  if (rank <= getAuthorityRank('developer')) {
     const myTasks = tasks.filter(t => t.assignee_id === userId && t.status !== 'done');
     
     // Waiting on Others: My tasks that are blocked
@@ -138,7 +141,7 @@ export function generateDailyBrief(inputs: DailyBriefInputs): DailyBrief {
       });
     });
 
-  } else if (role === 'pm' || role === 'super_admin') {
+  } else if (rank >= getAuthorityRank('manager')) {
     // PMs/Admins:
     // Waiting on Others: Blockers in the system
     const openBlockers = blockers.filter(b => !b.resolved);

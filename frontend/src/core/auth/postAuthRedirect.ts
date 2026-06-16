@@ -48,10 +48,13 @@ export function buildOAuthRedirectUrl(): string {
 export function resolvePostAuthEntryPath(role: UserRole | undefined): string {
   if (role === 'pending-workspace-setup') return '/onboarding/workspace';
   if (role === 'uninvited') return '/login?error=uninvited';
-  if (role === 'developer') return '/execution';
-  if (role === 'pm') return '/overview';
-  if (role === 'super_admin') return '/control';
-  if (role === 'viewer') return '/workspace/portfolio';
+  const { getAuthorityRank } = require('./permissions');
+  const rank = getAuthorityRank(role);
+
+  if (rank >= getAuthorityRank('admin')) return '/control';
+  if (rank === getAuthorityRank('manager')) return '/overview';
+  if (rank === getAuthorityRank('member')) return '/execution';
+  if (rank <= getAuthorityRank('viewer')) return '/workspace/portfolio';
   return DEFAULT_ENTRY;
 }
 

@@ -28,7 +28,7 @@ export function DailyCommandCenter() {
     async function load() {
       if (!user || !workspace || !profile?.role) return;
       try {
-        const data = await getDailyIntelligence(user.id, workspace.id, profile.role as any, profile.full_name || profile.email || 'User');
+        const data = await getDailyIntelligence(user.id, workspace.id, profile);
         setIntel(data);
       } catch (err) {
         console.error('[DailyCommandCenter] getDailyIntelligence failed', err);

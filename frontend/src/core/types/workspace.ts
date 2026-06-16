@@ -1,13 +1,29 @@
-export type UserRole =
-  | 'super_admin'
-  | 'pm'
-  | 'developer'
-  | 'viewer'
-  | 'uninvited'
-  | 'pending-workspace-setup'
-  | 'hr'
-  | 'finance'
-  | 'client';
+export type AuthorityRole = 'owner' | 'admin' | 'manager' | 'member' | 'external' | 'pending-workspace-setup' | 'uninvited';
+
+// Map legacy DB strings to AuthorityRole for internal type safety where needed
+export type LegacyDBRole = 'super_admin' | 'pm' | 'developer' | 'viewer' | 'uninvited' | 'pending-workspace-setup' | 'hr' | 'finance' | 'client';
+
+export type UserRole = AuthorityRole | LegacyDBRole; // Transitional compatibility
+
+export type FunctionalAccess = 
+  | 'Projects'
+  | 'Engineering'
+  | 'Finance'
+  | 'PeopleOperations'
+  | 'Clients'
+  | 'Documents'
+  | 'Operations';
+
+export function mapAuthorityToLegacyRole(authority: AuthorityRole | string): string {
+  switch (authority) {
+    case 'owner':
+    case 'admin': return 'super_admin';
+    case 'manager': return 'pm';
+    case 'member': return 'developer';
+    case 'external': return 'client';
+    default: return authority;
+  }
+}
 
 export interface Workspace {
   id: string;
@@ -35,7 +51,9 @@ export interface Member {
   phone?: string;
   avatar_url?: string;
   role: UserRole;
-  capabilities?: string[];
+  authority?: AuthorityRole;
+  capabilities?: string[]; // Used for FunctionalAccess
+  functionalAccess?: FunctionalAccess[];
   designation?: string;
   department?: string;
   date_of_joining?: string;

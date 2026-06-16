@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { Users, BatteryMedium, ShieldAlert } from 'lucide-react';
 import type { Task } from '../../core/types/execution';
+import { getAuthorityRank } from '../../core/auth/permissions';
 
 export function TeamCapacityView({ projectId }: { projectId?: string }) {
   const { workspace } = useWorkspace();
@@ -97,7 +98,7 @@ export function TeamCapacityView({ projectId }: { projectId?: string }) {
     const baseCapacity = defaultWorkingHours * workingDays;
     
     // Apply role-based scaling
-    const capacityMultiplier = profile?.role === 'intern' ? 0.6 : 1.0;
+    const capacityMultiplier = profile && getAuthorityRank(profile.role) <= getAuthorityRank('viewer') ? 0.6 : 1.0;
     const totalCapacity = baseCapacity * capacityMultiplier;
 
     return {

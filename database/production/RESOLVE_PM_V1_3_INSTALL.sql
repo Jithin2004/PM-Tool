@@ -1894,7 +1894,8 @@ FOR EACH ROW EXECUTE FUNCTION public.update_workspace_storage();
 
 CREATE OR REPLACE FUNCTION public.update_workspace_storage_versions()
 RETURNS TRIGGER AS $$
-DECLAREv_workspace_id uuid;
+DECLARE
+v_workspace_id uuid;
 BEGIN
     IF TG_OP = 'INSERT' THEN
         SELECT workspace_id INTO v_workspace_id FROM public.workspace_files WHERE id = NEW.file_id;
@@ -2331,7 +2332,8 @@ RETURNS TABLE (
     owner_id uuid,
     rank real
 ) AS $$
-DECLAREv_workspace_id uuid;
+DECLARE
+v_workspace_id uuid;
     v_query text := '%' || p_query || '%';
 BEGIN
     v_workspace_id := public.current_workspace();
@@ -2876,7 +2878,8 @@ BEGIN
         END IF;
     ELSIF TG_TABLE_NAME = 'payments' THEN
         IF TG_OP = 'INSERT' THEN
-            DECLAREv_workspace_id uuid;
+            DECLARE
+v_workspace_id uuid;
             BEGIN
                 SELECT workspace_id INTO v_workspace_id FROM public.invoices WHERE id = NEW.invoice_id;
                 INSERT INTO public.activity_logs (workspace_id, actor_id, action, metadata)
@@ -2996,7 +2999,8 @@ RETURNS trigger AS $$
 DECLARE
     v_month integer;
     v_year integer;
-    v_status text;v_workspace_id uuid;
+    v_status text;
+v_workspace_id uuid;
     v_date date;
 BEGIN
     -- Determine the date and workspace based on the operation
@@ -3121,7 +3125,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 CREATE OR REPLACE FUNCTION log_financial_adjustment()
 RETURNS trigger AS $$
-DECLAREv_workspace_id uuid;
+DECLARE
+v_workspace_id uuid;
 BEGIN
     SELECT workspace_id INTO v_workspace_id FROM public.financial_periods WHERE id = NEW.period_id;
     
@@ -3337,7 +3342,8 @@ USING (
 CREATE OR REPLACE FUNCTION public.update_invoice_balance()
 RETURNS TRIGGER AS $$
 DECLARE
-    v_invoice_amount numeric;v_total_paid numeric;
+    v_invoice_amount numeric;
+v_total_paid numeric;
     v_new_balance numeric;
 BEGIN
     IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
@@ -4476,6 +4482,23 @@ CREATE POLICY "Super Admins can view workspace license"
     )
   );
 
+CREATE POLICY "Super Admins can insert workspace license"
+  ON workspace_license FOR INSERT
+  WITH CHECK (
+    workspace_id IN (
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
+    )
+  );
+
+CREATE POLICY "Super Admins can update workspace license"
+  ON workspace_license FOR UPDATE
+  USING (
+    workspace_id IN (
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
+    )
+  );
+
+
 -- 2. Add 'is_demo' to workspaces
 ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS is_demo boolean NOT NULL DEFAULT false;
 
@@ -4711,9 +4734,11 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_invoice_id uuid;v_total_paid numeric;
+  v_invoice_id uuid;
+v_total_paid numeric;
   v_invoice_total numeric;
-  v_invoice_status text;v_workspace_id uuid;
+  v_invoice_status text;
+v_workspace_id uuid;
 BEGIN
   v_invoice_id := COALESCE(NEW.invoice_id, OLD.invoice_id);
   IF v_invoice_id IS NULL THEN
@@ -4754,7 +4779,8 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = ''
 AS $$
 DECLARE
-  v_actor_id uuid;v_workspace_id uuid;
+  v_actor_id uuid;
+v_workspace_id uuid;
   v_old_json jsonb;
   v_new_json jsonb;
   v_record_id uuid;
@@ -6415,7 +6441,8 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = ''
 SET search_path = public
 AS $$
-DECLAREv_workspace_id uuid;
+DECLARE
+v_workspace_id uuid;
     v_current_status text;
 BEGIN
     -- Ensure the target status is a valid archived state
@@ -6620,12 +6647,14 @@ CREATE TABLE IF NOT EXISTS departments (
   UNIQUE(workspace_id, name)
 );
 ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
-
+
+
 
 -- -------------------------------------------------------------
 -- 3. TASK HANDOFF WORKFLOW
 -- -------------------------------------------------------------
-
+
+
 
 -- -------------------------------------------------------------
 -- 4. EMPLOYEE LIFECYCLE FINALIZATION
@@ -7111,7 +7140,8 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLAREv_workspace_id uuid;
+DECLARE
+v_workspace_id uuid;
   v_old_owner_id uuid;
   v_is_valid boolean;
 BEGIN

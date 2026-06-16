@@ -130,7 +130,8 @@ export function generateAdaptiveResponses(
       const assigneeName = currentAssignee?.full_name || 'Current Developer';
       
       // Find other developers in same team or project with fewer active tasks
-      const activeUnassignedDevs = profiles.filter(p => p.role === 'developer' && p.id !== taskObj.assignee_id);
+      const { hasFunction } = require('../auth/permissions');
+      const activeUnassignedDevs = profiles.filter(p => hasFunction(p, 'Engineering') && p.id !== taskObj.assignee_id);
       if (activeUnassignedDevs.length > 0) {
         const altDev = activeUnassignedDevs[0];
         const altDevName = altDev.full_name || altDev.email || 'Alternative Developer';

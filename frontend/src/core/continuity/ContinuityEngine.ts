@@ -109,11 +109,14 @@ export async function generateContinuityBrief(inputs: ContinuityInputs): Promise
     return brief;
   }
 
+  const { getAuthorityRank } = require('../auth/permissions');
+  const rank = getAuthorityRank(role);
+
   // 3. Filter Context based on Role
   let scopedTasks = tasks;
-  if (role === 'developer' || role === 'client' || role === 'super_admin') {
+  if (rank <= getAuthorityRank('developer') || rank >= getAuthorityRank('admin')) {
     scopedTasks = tasks.filter(t => t.assignee_id === userId);
-  } else if (role === 'pm') {
+  } else if (rank === getAuthorityRank('manager')) {
     const managedProjectIds = new Set(projects.filter(p => p.owner_id === userId).map(p => p.id));
     scopedTasks = tasks.filter(t => managedProjectIds.has(t.project_id) || t.assignee_id === userId);
   }
@@ -154,7 +157,7 @@ export async function generateContinuityBrief(inputs: ContinuityInputs): Promise
     if (bCreated > lastActive && !b.resolved) {
       // Check if it affects the user
       const task = tasks.find(t => t.id === b.task_id);
-      if (task && (role === 'super_admin' || task.assignee_id === userId || (role === 'pm' && projects.find(p => p.id === task.project_id)?.owner_id === userId))) {
+      if (task && (rank >= getAuthorityRank('admin') || task.assignee_id === userId || (rank === getAuthorityRank('manager') && projects.find(p => p.id === task.project_id)?.owner_id === userId))) {
         brief.newBlockers.push(b);
         changes.push({
           type: 'blocker' as const,

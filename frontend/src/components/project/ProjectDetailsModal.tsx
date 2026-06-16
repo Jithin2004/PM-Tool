@@ -22,6 +22,7 @@ import { TeamCapacityView } from '../reports/TeamCapacityView';
 import { ProjectShareModal } from './ProjectShareModal';
 import { SharedProjectDashboard } from '../../pages/shared/SharedProjectDashboard';
 import { ChangeRequestsTab } from './ChangeRequestsTab';
+import { hasAuthority } from '../../core/auth/permissions';
 
 function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; currentUserProfile?: any }) {
   const [loading, setLoading] = useState(true);
@@ -1084,7 +1085,7 @@ export function ProjectDetailsModal({
                 <Activity className="w-4 h-4" />
                 <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Preview as Client</span>
               </button>
-              {(currentUserProfile?.role === 'pm' || currentUserProfile?.role === 'super_admin') && (
+              {hasAuthority(currentUserProfile, 'manager') && (
                 <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
                   <Share2 className="w-4 h-4" />
                   <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Share</span>

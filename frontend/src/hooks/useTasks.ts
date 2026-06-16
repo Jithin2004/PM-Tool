@@ -9,7 +9,7 @@ import { fireEventWebhooks } from '../services/webhookService';
 import { evaluateTriggers } from '../services/automationEngine';
 import { useAuth } from '../context/AuthContext';
 import { sha256 } from '../utils/cryptoUtils';
-import { hasCapability, guardCapability } from '../core/auth/permissions';
+import { hasCapability, guardCapability, getAuthorityRank, hasAuthority } from '../core/auth/permissions';
 import { getFriendlyErrorMessage } from '../utils/errorUtils';
 import { WorkspaceLifecycleEngine } from '../core/system/WorkspaceLifecycleEngine';
 
@@ -59,7 +59,7 @@ export function useTasks(workspaceId?: string) {
   const { user, profile } = useAuth();
 
   // Wave 7/9 Hardening: Developer-scope ownership verification helpers
-  const isDeveloper = profile?.role === 'developer';
+  const isDeveloper = profile && getAuthorityRank(profile.role) <= getAuthorityRank('developer');
   const isAssignedTo = useCallback((taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     return task?.assignee_id === user?.id;
@@ -182,7 +182,7 @@ export function useTasks(workspaceId?: string) {
     const currentUserId = user?.id;
     const isCurrentlyDeveloper = currentRole === 'developer';
     const isCurrentlyViewer = currentRole === 'viewer';
-    const isPMOrAdmin = currentRole === 'super_admin' || currentRole === 'pm';
+    const isPMOrAdmin = hasAuthority(profile, 'manager');
 
     // Viewers cannot perform ANY task mutations — purge entire queue
     if (isCurrentlyViewer || !currentRole || !currentUserId) {
@@ -425,10 +425,10 @@ export function useTasks(workspaceId?: string) {
 
       // Batch 9 Launch Closure: Truncate Global State Memory
       // Only fetch active user's tasks or tasks from their projects to prevent OOM
-      if (profile && profile.role !== 'super_admin' && profile.role !== 'admin') {
-        if (profile.role === 'developer') {
+      if (profile && !hasAuthority(profile, 'admin')) {
+        if (getAuthorityRank(profile.role) <= getAuthorityRank('developer')) {
           tasksQuery = tasksQuery.eq('assignee_id', profile.id);
-        } else if (profile.role === 'pm') {
+        } else if (getAuthorityRank(profile.role) === getAuthorityRank('manager')) {
           // Can't do OR easily in postgrest with relations, so we fetch their projects first or use a subquery
           // Since we already enforce limits, we'll just restrict to a smaller limit
           tasksQuery = tasksQuery.limit(500); 
@@ -516,10 +516,10 @@ export function useTasks(workspaceId?: string) {
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
-      if (profile && profile.role !== 'super_admin' && profile.role !== 'admin') {
-        if (profile.role === 'developer') {
+      if (profile && !hasAuthority(profile, 'admin')) {
+        if (getAuthorityRank(profile.role) <= getAuthorityRank('developer')) {
           tasksQuery = tasksQuery.eq('assignee_id', profile.id);
-        } else if (profile.role === 'pm') {
+        } else if (getAuthorityRank(profile.role) === getAuthorityRank('manager')) {
           tasksQuery = tasksQuery.limit(500); 
         }
       }

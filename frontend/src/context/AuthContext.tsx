@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 1. Primary Query: Canonical users table
         let { data, error } = await supabase
           .from('users')
-          .select('*')
+          .select('*, workspaces!users_workspace_id_fkey(owner_id)')
           .eq('id', authUser.id)
           .maybeSingle();
 
@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await new Promise(r => setTimeout(r, delays[i]));
             const retry = await supabase
               .from('users')
-              .select('*')
+              .select('*, workspaces!users_workspace_id_fkey(owner_id)')
               .eq('id', authUser.id)
               .maybeSingle();
             if (retry.data) {
@@ -188,8 +188,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ...(userCaps?.map(u => u.capability_id) || [])
           ];
 
+          const is_owner = data.workspaces ? (Array.isArray(data.workspaces) ? data.workspaces[0]?.owner_id === data.id : data.workspaces.owner_id === data.id) : false;
+
           const extendedData = {
             ...data,
+            is_owner,
+            functionalAccess: data.capabilities,
             capabilities: dbCapabilities.length > 0 ? Array.from(new Set(dbCapabilities)) : undefined
           };
 
@@ -514,9 +518,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateRole = async (id: string, role: User['role']) => {
     if (!hasCapability(profile?.role, 'platform_governance') || !isSupabaseConfigured) return false;
 
+    // We must map AuthorityRole back to LegacyDBRole before persisting
+    const { mapAuthorityToLegacyRole } = await import('../core/types/workspace');
+    const dbRole = mapAuthorityToLegacyRole(role);
+
     const { error } = await supabase
       .from('users')
-      .update({ role })
+      .update({ role: dbRole })
       .eq('id', id);
 
     if (!error) {
@@ -559,9 +567,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (user) {
-      await syncProfile(user, true);
+      const p = await syncProfile(user, true);
+      if (p) {
+        await validateUserWorkspace(user, p);
+      }
     }
-  }, [user, syncProfile]);
+  }, [user, syncProfile, validateUserWorkspace]);
 
   return (
     <AuthContext.Provider value={{

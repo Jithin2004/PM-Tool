@@ -41,13 +41,31 @@ export function teamOutput(
   return Number(effectiveOutput.toFixed(3));
 }
 
-export function getProfileFromRole(role?: string, experience_years?: number): ResourceProfile {
-  if (!role) return getDefaultProfile('mid');
-  const skillLevel: SkillLevel = role.endsWith('intern') || role === 'intern' ? 'intern'
-    : role === 'super_admin' || role === 'pm' ? 'lead'
-    : role === 'senior' ? 'senior'
-    : role === 'junior' ? 'junior'
-    : 'mid';
+import { getAuthorityRank } from '../core/auth/permissions';
+
+export function getProfileFromRole(profile?: any, experience_years?: number): ResourceProfile {
+  if (!profile) return getDefaultProfile('mid');
+  const { hasFunction, getAuthorityRank } = require('../core/auth/permissions');
+  const roleStr = typeof profile === 'string' ? profile : (profile.authority || profile.role);
+  const rank = getAuthorityRank(roleStr);
+  
+  let skillLevel: SkillLevel = 'mid';
+  
+  if (hasFunction(profile, 'Engineering')) {
+      // If they are explicitly engineering, determine level based on authority but base it on being an engineer
+      skillLevel = rank >= getAuthorityRank('admin') ? 'lead'
+        : rank >= getAuthorityRank('manager') ? 'senior' // managers acting as engineers are senior
+        : rank === getAuthorityRank('member') ? 'mid'
+        : 'junior';
+  } else {
+      // Fallback for generic roles
+      skillLevel = rank <= getAuthorityRank('viewer') ? 'intern'
+        : rank >= getAuthorityRank('admin') ? 'lead'
+        : rank >= getAuthorityRank('manager') ? 'senior' // editor changed to manager
+        : rank === getAuthorityRank('member') ? 'junior'
+        : 'mid';
+  }
+
   const base = getDefaultProfile(skillLevel);
   return {
     ...base,

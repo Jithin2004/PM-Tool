@@ -27,7 +27,11 @@ export interface DailyIntelligence {
   recommendations: Recommendation[];
 }
 
-export async function getDailyIntelligence(userId: string, workspaceId: string, role: UserRole, userName: string): Promise<DailyIntelligence> {
+import { getAuthorityRank, hasCapability } from '../core/auth/permissions';
+
+export async function getDailyIntelligence(userId: string, workspaceId: string, profile: any): Promise<DailyIntelligence> {
+  const userName = profile?.full_name || profile?.email || 'User';
+  const role = profile?.role;
   const firstName = userName.split(' ')[0] || 'there';
   
   const baseIntelligence: DailyIntelligence = {
@@ -71,20 +75,23 @@ export async function getDailyIntelligence(userId: string, workspaceId: string, 
 
     const m = (metrics as any) || { today_tasks: 0, blockers: 0, approvals: 0, mentions: 0, recent_changes: 0, waiting_on_me: 0 };
 
+    const { getAuthorityRank, hasFunction } = require('../core/auth/permissions');
+    const rank = getAuthorityRank(role);
+
     // Role-specific routing
-    if (role === 'developer' || role === 'viewer') {
+    if (hasFunction(profile, 'Engineering') || role === 'developer') {
       await populateDeveloperIntelligence(userId, workspaceId, baseIntelligence, m);
     } 
-    else if (role === 'pm') {
+    if (hasFunction(profile, 'Projects') || role === 'pm') {
       await populatePMIntelligence(userId, workspaceId, baseIntelligence, m);
     } 
-    else if (role === 'super_admin' || role === 'admin' || role === 'founder') {
+    if (rank >= getAuthorityRank('admin')) {
       await populateFounderIntelligence(workspaceId, baseIntelligence, m);
     }
-    else if (role === 'hr' || role === 'finance') {
-      await populateAdminSupportIntelligence(workspaceId, role, baseIntelligence, m);
+    if (hasFunction(profile, 'PeopleOperations') || hasFunction(profile, 'Finance') || hasCapability(profile, 'manage_employees') || hasCapability(profile, 'manage_finance')) {
+      await populateAdminSupportIntelligence(workspaceId, profile, baseIntelligence, m);
     }
-    else if (role === 'client') {
+    if (role === 'client' || hasFunction(profile, 'Clients')) {
       await populateClientIntelligence(userId, workspaceId, baseIntelligence, m);
     }
 
@@ -272,17 +279,17 @@ async function populateFounderIntelligence(workspaceId: string, i: DailyIntellig
   }
 }
 
-async function populateAdminSupportIntelligence(workspaceId: string, role: string, i: DailyIntelligence, m: any) {
+async function populateAdminSupportIntelligence(workspaceId: string, profile: any, i: DailyIntelligence, m: any) {
   i.greeting.subMessage = "Logistics and operational support.";
 
-  if (role === 'hr') {
+  if (hasCapability(profile, 'manage_employees')) {
     i.primaryFocus = {
       id: 'hr-focus',
-      message: 'Review personnel changes and pending leave requests.',
-      type: 'info',
-      actionRoute: '/settings'
+      message: 'You have new onboarding tasks to review.',
+      type: 'action',
+      actionRoute: '/team/directory'
     };
-  } else if (role === 'finance') {
+  } else if (hasCapability(profile, 'manage_finance')) {
     if (m.approvals > 0) {
       i.primaryFocus = {
         id: 'fin-focus',

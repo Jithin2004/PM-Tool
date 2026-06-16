@@ -3,7 +3,10 @@ import { X } from 'lucide-react';
 
 export interface EmailChip {
   email: string;
-  role: 'Developer' | 'PM' | 'Viewer';
+  authority: 'admin' | 'manager' | 'member' | 'external';
+  functions: string[];
+  department: string;
+  designation: string;
 }
 
 interface EmailChipsInputProps {
@@ -35,7 +38,13 @@ export function EmailChipsInput({ value, onChange, placeholder }: EmailChipsInpu
       return;
     }
 
-    const newChips = [...value, { email: cleanEmail, role: 'Developer' as const }];
+    const newChips = [...value, { 
+      email: cleanEmail, 
+      authority: 'member' as const, 
+      functions: [], 
+      department: '', 
+      designation: '' 
+    }];
     onChange(newChips);
     setInputValue('');
     setError(null);
@@ -62,13 +71,6 @@ export function EmailChipsInput({ value, onChange, placeholder }: EmailChipsInpu
     setError(null);
   };
 
-  const updateRole = (emailToUpdate: string, newRole: EmailChip['role']) => {
-    const newChips = value.map(chip => 
-      chip.email === emailToUpdate ? { ...chip, role: newRole } : chip
-    );
-    onChange(newChips);
-  };
-
   return (
     <div className="w-full">
       <div 
@@ -80,21 +82,10 @@ export function EmailChipsInput({ value, onChange, placeholder }: EmailChipsInpu
             <span className="text-[var(--pm-on-surface)] truncate max-w-[150px] sm:max-w-[200px]" title={chip.email}>
               {chip.email}
             </span>
-            <select
-              value={chip.role}
-              onChange={(e) => updateRole(chip.email, e.target.value as EmailChip['role'])}
-              onClick={(e) => e.stopPropagation()}
-              className="text-[10px] uppercase font-semibold text-[var(--pm-primary)] bg-[var(--pm-primary)]/10 hover:bg-[var(--pm-primary)]/20 px-1.5 py-0.5 rounded-full ml-1 border-none outline-none cursor-pointer appearance-none text-center min-w-[70px] transition-colors focus:ring-1 focus:ring-[var(--pm-primary)]"
-              aria-label={`Select role for ${chip.email}`}
-            >
-              <option value="Developer" className="bg-surface-3 text-[var(--pm-text)] text-[var(--text-primary)]">Employee</option>
-              <option value="PM" className="bg-surface-3 text-[var(--pm-text)] text-[var(--text-primary)]">PM</option>
-              <option value="Viewer" className="bg-surface-3 text-[var(--pm-text)] text-[var(--text-primary)]">External Access</option>
-            </select>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); removeChip(chip.email); }}
-              className="p-0.5 hover:bg-red-500/20 rounded-full transition-colors text-[var(--pm-on-surface-variant)] hover:text-red-400 ml-0.5 focus:outline-none focus:ring-1 focus:ring-red-400"
+              className="p-0.5 hover:bg-red-500/20 rounded-full transition-colors text-[var(--pm-on-surface-variant)] hover:text-red-400 ml-1 focus:outline-none focus:ring-1 focus:ring-red-400"
               title={`Remove ${chip.email}`}
               aria-label={`Remove invitation for ${chip.email}`}
             >

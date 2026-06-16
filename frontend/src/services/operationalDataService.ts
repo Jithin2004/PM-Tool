@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { Project, Profile, Team } from '../types';
 import { normalizeProjectsFromRows } from '../core/types/normalize';
 import type { AttendanceRow, SalaryRow } from '../core/operational/types';
+import { getAuthorityRank } from '../core/auth/permissions';
 
 /** Canonical fetch — workspace scope is implied by workspaceId. */
 export async function fetchProjects(workspaceId: string): Promise<Project[]> {
@@ -130,9 +131,9 @@ export async function fetchWorkspaceTeams(workspaceId: string): Promise<Team[]> 
       }
 
       const teamMembers = membersList.filter((m: { team_id: string }) => m.team_id === team.id);
-      let pmId = teamMembers.find((m: { member_role: string }) => m.member_role === 'pm')?.user_id;
+      let pmId = teamMembers.find((m: { member_role: string }) => getAuthorityRank(m.member_role) >= getAuthorityRank('manager'))?.user_id;
       let devIds = teamMembers
-        .filter((m: { member_role: string }) => m.member_role === 'developer')
+        .filter((m: { member_role: string }) => getAuthorityRank(m.member_role) <= getAuthorityRank('developer'))
         .map((m: { user_id: string }) => m.user_id);
 
       const parsedLegacyData =
