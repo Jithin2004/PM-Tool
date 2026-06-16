@@ -457,13 +457,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Periodic background license verification
   useEffect(() => {
-    if (!user) return;
+    // Only verify license after the profile state is fully resolved
+    if (!user || !profileResolved) return;
 
     const verifyLicense = async () => {
-      // If the user is fully onboarded, skip product key check
+      // 1. If the user is fully onboarded and active, skip product key check (they have a workspace_id)
       if (profileRef.current?.workspace_id) return;
 
-      // If the app is active and has no valid license, clear state and logout
+      // 2. Detect onboarding state: Do not evaluate database licenses before a workspace exists
+      let pendingActivationValid = false;
+      try {
+        const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
+        if (pendingStr) {
+          const parsed = JSON.parse(pendingStr);
+          if (parsed.validated) {
+            pendingActivationValid = true;
+          }
+        }
+      } catch (e) {}
+
+      const isActivelyOnboarding = 
+        profileRef.current?.role === 'pending-workspace-setup' || 
+        pendingActivationValid;
+
+      if (isActivelyOnboarding) {
+        return; // Valid temporary state, allow setup to complete
+      }
+
+      // 3. Normal rejection flow for uninvited/unlicensed users
       if (!isProductKeyVerified()) return;
 
       const res = await checkLicenseOnline();
@@ -481,7 +502,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Re-verify every 10 minutes
     const interval = setInterval(verifyLicense, 10 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, profileResolved]);
 
   const logout = async () => {
     await handleSessionExpiry('expired');
