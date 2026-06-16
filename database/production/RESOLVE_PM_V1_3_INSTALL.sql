@@ -6763,10 +6763,12 @@ CREATE INDEX IF NOT EXISTS idx_invoices_ws_status ON public.invoices(workspace_i
 CREATE TABLE IF NOT EXISTS public.system_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id uuid REFERENCES public.workspaces(id) ON DELETE RESTRICT,
+    user_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
     severity text NOT NULL CHECK (severity IN ('info', 'warning', 'error', 'critical')),
     source text NOT NULL CHECK (source IN ('frontend', 'database', 'rpc', 'auth', 'edge_function', 'integration')),
     event_type text NOT NULL,
     message text NOT NULL,
+    stack_trace text,
     metadata jsonb DEFAULT '{}'::jsonb,
     resolved boolean DEFAULT false,
     resolved_at timestamptz,

@@ -37,7 +37,7 @@ export function WorkspaceSetupWizard() {
 
   const attachLicenseIfPending = async (workspaceId: string, userId: string): Promise<boolean> => {
     try {
-      console.log('[LICENSE ATTACH START]', sessionStorage.getItem('pendingLicenseActivation'));
+
       const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
       if (!pendingStr) return true;
 
@@ -84,7 +84,7 @@ export function WorkspaceSetupWizard() {
           });
       }
 
-      console.log('[LICENSE ATTACH RESULT]', { data: queryResult.data, error: queryResult.error });
+
 
       if (queryResult.error) {
         console.error('License attachment query error:', queryResult.error);

@@ -49,7 +49,7 @@ import { UserProfileModal } from '../../components/user/UserProfileModal';
 import { WelcomeCenter } from '../../components/onboarding/WelcomeCenter';
 import { SupportEscalationModal } from '../../components/support/SupportEscalationModal';
 import { calculateExpectedTime, calculateVariance, calculateHoursFromRange, getLocalDateString, getRelativeTime } from '../../utils/timeUtils';
-import { hasCapability, Capability } from '../../core/auth/permissions';
+import { hasCapability, hasAuthority, hasFunction, Capability } from '../../core/auth/permissions';
 import { Project, Team, Profile, User, UserRole } from '../../types';
 import {
   SIDEBAR_NAV,
@@ -985,7 +985,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   });
 
   if (loading) {
-    console.log('[DashboardLayout] Early Return - loading=', loading, 'workspace=', workspace?.id, 'profile=', profile?.id);
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-5 font-geist ">
         <div className="relative w-12 h-12">
