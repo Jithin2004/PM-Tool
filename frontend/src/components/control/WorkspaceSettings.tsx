@@ -8,7 +8,8 @@ import { supabase } from '../../lib/supabase';
 import { upsertCompanyBillingProfile } from '../../services/financeService';
 import { SandboxWorkspaceManager } from '../workspace/SandboxWorkspaceManager';
 import { PilotReadinessPanel } from '../workspace/PilotReadinessPanel';
-import { WorkspaceHealth } from './WorkspaceHealth';
+import { WorkspaceReadiness } from './WorkspaceReadiness';
+import { OperationalHealth } from './OperationalHealth';
 import { ExportCenter } from './ExportCenter';
 import { BillingSettings } from './BillingSettings';
 
@@ -162,7 +163,8 @@ export function WorkspaceSettings() {
         <p className="text-xs text-[var(--text-secondary)] tracking-wide max-w-2xl">Unified settings and operational rules for your organization.</p>
       </div>
 
-      <WorkspaceHealth />
+      <WorkspaceReadiness />
+      <OperationalHealth />
       
       <div className="flex premium-segmented-control w-full overflow-x-auto scrollbar-premium">
         {TABS.map(tab => (

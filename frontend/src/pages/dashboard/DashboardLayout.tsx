@@ -1144,7 +1144,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         style={{ color: 'var(--pm-on-surface)' }}>
 
         {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
-        <aside id="tour-sidebar" className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 ${isSidebarCollapsed ? 'lg:w-[4.5rem] sidebar-collapsed-premium' : 'lg:w-[15.5rem]'} border-r z-30 transition-[transform,opacity] duration-200 user-interface`}
+        <aside id="tour-sidebar" className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 ${isSidebarCollapsed ? 'lg:w-[4.5rem] sidebar-collapsed-premium' : 'lg:w-[15.5rem] 2xl:w-[17.5rem]'} border-r z-30 transition-[transform,opacity] duration-200 user-interface`}
           style={{ 
             background: isSidebarCollapsed ? 'rgba(8,12,25,0.85)' : 'rgba(5,7,18,0.7)', 
             borderColor: 'rgba(255,255,255,0.08)',
@@ -1354,7 +1354,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                           handleDomainClick(domain.id);
                           setMobileSidebarOpen(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${isActive ? 'shadow-sm' : 'hover:bg-surface-high hover:text-text-primary'
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 2xl:py-3 rounded-lg text-xs 2xl:text-sm font-medium transition-all ${isActive ? 'shadow-sm' : 'hover:bg-surface-high hover:text-text-primary'
                           }`}
                         style={isActive ? {
                           background: 'var(--pm-surface-high)',
@@ -1401,7 +1401,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <div id="tour-main-content" className={`flex flex-col flex-1 min-h-screen transition-[transform,opacity] duration-200 ${isSidebarCollapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-[15.5rem]'}`} style={{ background: 'transparent' }}>
+        <div id="tour-main-content" className={`flex flex-col flex-1 min-h-screen transition-[transform,opacity] duration-200 ${isSidebarCollapsed ? 'lg:pl-[4.5rem]' : 'lg:pl-[15.5rem] 2xl:pl-[17.5rem]'}`} style={{ background: 'transparent' }}>
           
           {/* OFFLINE / SYNC BANNER */}
           <AnimatePresence>
