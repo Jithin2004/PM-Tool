@@ -24,6 +24,10 @@ const licenseSchema = new mongoose.Schema({
     default: 3,
     required: true 
   },
+  activated_workspace_id: {
+    type: String,
+    default: null
+  },
   activated_devices: { 
     type: [String], 
     default: [] 

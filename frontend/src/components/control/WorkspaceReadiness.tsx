@@ -40,15 +40,18 @@ export function WorkspaceReadiness() {
     let licenseValid = false;
 
     if (isSandboxMode) {
-      licenseStateText = 'Sandbox environment active';
+      licenseStateText = 'Sandbox active';
       licenseValid = true;
     } else if (localLicense?.plan === 'Trial' || licenseData?.license_type === 'Trial') {
       licenseStateText = 'Trial workspace active';
       licenseValid = true;
+    } else if (localLicense?.status === 'Invalid' && localLicense?.error === 'License belongs to another workspace') {
+      licenseStateText = 'License belongs to another workspace';
+      licenseValid = false;
     } else if (licenseData?.activation_date || localLicense?.status === 'Activated') {
       const isExpired = licenseData?.support_until ? (new Date(licenseData.support_until).getTime() < Date.now()) : (localLicense?.status === 'Expired Support');
       if (isExpired) {
-        licenseStateText = 'License requires attention';
+        licenseStateText = 'License requires renewal';
         licenseValid = false;
       } else {
         licenseStateText = 'License verified';

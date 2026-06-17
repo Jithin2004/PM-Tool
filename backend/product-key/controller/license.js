@@ -70,10 +70,10 @@ exports.addLicense = async (req, res) => {
 
 // 2. License Key Activation
 exports.activateLicense = async (req, res) => {
-    const { productKey, fingerprint } = req.body;
+    const { productKey, workspaceId } = req.body;
 
-    if (!productKey || !fingerprint) {
-        return res.status(400).json({ error: 'Product key and device fingerprint are required.' });
+    if (!productKey || !workspaceId) {
+        return res.status(400).json({ error: 'Product key and workspace ID are required.' });
     }
 
     try {
@@ -83,7 +83,7 @@ exports.activateLicense = async (req, res) => {
             await AuditEvent.create({
                 event_type: 'verification_failed',
                 reason: 'Invalid product key provided',
-                device_hash: fingerprint,
+                device_hash: workspaceId,
                 license_key: productKey
             });
             return res.status(404).json({ error: 'Invalid product key' });
@@ -93,7 +93,7 @@ exports.activateLicense = async (req, res) => {
             await AuditEvent.create({
                 event_type: 'verification_failed',
                 reason: 'License has expired',
-                device_hash: fingerprint,
+                device_hash: workspaceId,
                 license_key: productKey
             });
             return res.status(403).json({ error: 'Key has expired' });
@@ -103,48 +103,57 @@ exports.activateLicense = async (req, res) => {
             await AuditEvent.create({
                 event_type: 'verification_failed',
                 reason: 'License has been revoked',
-                device_hash: fingerprint,
+                device_hash: workspaceId,
                 license_key: productKey
             });
             return res.status(403).json({ error: 'Key has been revoked' });
         }
 
-        // Check if device is already activated
-        const isAlreadyActivated = license.activated_devices.includes(fingerprint);
+        let isAlreadyActivated = false;
 
-        if (!isAlreadyActivated) {
-            // Check activation limits
-            if (license.activated_devices.length >= license.activation_limit) {
+        // Check if license is already bound to a workspace
+        if (license.activated_workspace_id) {
+            if (license.activated_workspace_id === workspaceId) {
+                isAlreadyActivated = true;
+            } else {
                 await AuditEvent.create({
-                    event_type: 'activation_limit_reached',
-                    reason: `Activation limit of ${license.activation_limit} reached`,
-                    device_hash: fingerprint,
+                    event_type: 'verification_failed',
+                    reason: 'License assigned to another workspace',
+                    device_hash: workspaceId,
                     license_key: productKey
                 });
-                return res.status(403).json({ error: 'Activation limit reached' });
+                return res.status(403).json({ error: 'License assigned to another workspace' });
             }
-
-            // Register device
-            license.activated_devices.push(fingerprint);
-            if (!license.activated_at) {
-                license.activated_at = new Date();
+        } else {
+            // Backward Compatibility Migration
+            if (license.activated_devices && license.activated_devices.length > 0) {
+                // Safely migrate the old fingerprint-based activation to workspace_id binding
+                license.activated_workspace_id = workspaceId;
+                isAlreadyActivated = true;
+                // Preserve existing activation_at date
+            } else {
+                // True first activation
+                license.activated_workspace_id = workspaceId;
+                if (!license.activated_at) {
+                    license.activated_at = new Date();
+                }
             }
         }
 
         license.last_verified_at = new Date();
         await license.save();
 
-        // Sign token containing only the key & fingerprint (no raw DB records)
+        // Sign token containing only the key & workspaceId (no raw DB records)
         const token = jwt.sign(
-            { key: license.key, fingerprint: fingerprint }, 
+            { key: license.key, workspaceId: workspaceId }, 
             JWT_SECRET, 
             { expiresIn: '30d' }
         );
 
         await AuditEvent.create({
             event_type: 'license_activated',
-            reason: isAlreadyActivated ? 'Existing device re-verified' : 'New device registered',
-            device_hash: fingerprint,
+            reason: isAlreadyActivated ? 'Existing workspace re-verified' : 'New workspace registered',
+            device_hash: workspaceId,
             license_key: productKey
         });
 
@@ -156,28 +165,16 @@ exports.activateLicense = async (req, res) => {
     }
 };
 
-
 // 3. License Key Verification
 exports.verifyLicense = async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Missing or invalid authorization token' });
+    const { productKey, workspaceId } = req.body;
+
+    if (!productKey || !workspaceId) {
+        return res.status(400).json({ error: 'Product key and workspace ID are required' });
     }
 
-    const token = authHeader.split(' ')[1];
-
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        
-        // Dynamic fallback: read keyId if key doesn't exist
-        const key = decoded.key || decoded.keyId;
-        const fingerprint = decoded.fingerprint || 'legacy_device';
-
-        if (!key) {
-            return res.status(400).json({ error: 'Invalid token structure: Missing license identifier' });
-        }
-
-        const license = await License.findOne({ key });
+        const license = await License.findOne({ key: productKey });
 
         // If license is missing or inactive, log audit event and exit cleanly
         if (!license || license.status !== 'ACTIVE') {
@@ -185,13 +182,21 @@ exports.verifyLicense = async (req, res) => {
                 await AuditEvent.create({
                     event_type: 'verification_failed',
                     reason: !license ? 'License key not found' : `License is in status ${license.status}`,
-                    device_hash: fingerprint,
-                    license_key: key
+                    device_hash: workspaceId,
+                    license_key: productKey
                 });
             } catch (auditErr) {
                 console.error('Audit logging failed background execution:', auditErr.message);
             }
             return res.status(401).json({ valid: false, message: 'Invalid or expired license' });
+        }
+
+        // Backward Compatibility Migration
+        if (!license.activated_workspace_id && license.activated_devices && license.activated_devices.length > 0) {
+            // Safely migrate to workspace_id binding
+            license.activated_workspace_id = workspaceId;
+        } else if (license.activated_workspace_id && license.activated_workspace_id !== workspaceId) {
+            return res.status(403).json({ valid: false, error: 'License belongs to another workspace' });
         }
 
         // Update verification time in the background safely
@@ -202,10 +207,20 @@ exports.verifyLicense = async (req, res) => {
             console.error('Failed to update last_verified_at timestamp:', saveErr.message);
         }
 
-        // Secure response payload matching frontend overview expectations
+        const token = jwt.sign(
+            { key: license.key, workspaceId: workspaceId }, 
+            JWT_SECRET, 
+            { expiresIn: '30d' }
+        );
+
+        // Secure response payload matching frontend overview expectations.
+        // TOKEN SEPARATION AUDIT: This token only proves license validity. It does NOT authenticate users in Supabase.
+        // It should never be used as a session token for accessing user data.
+        // Unauthenticated verification only returns safe fields (plan, features). It explicitly drops purchase_metadata.
         return res.status(200).json({
             valid: true,
-            activated: true,
+            activated: !!license.activated_workspace_id,
+            token: token,
             keyId: license.key,
             message: 'License verified',
             plan: license.plan || 'STANDARD',

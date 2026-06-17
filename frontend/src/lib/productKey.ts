@@ -240,12 +240,11 @@ export function clearLicense(): void {
 }
 
 // ── Activate new license key via server ──────────────────────────────────────
-export async function validateNewActivationKey(productKey: string): Promise<VerifyResult> {
-  if (!productKey.trim()) {
-    return { success: false, error: 'Product key is required.' };
+export async function validateNewActivationKey(productKey: string, workspaceId: string): Promise<VerifyResult> {
+  if (!productKey.trim() || !workspaceId) {
+    return { success: false, error: 'Product key and workspace ID are required.' };
   }
 
-  const fingerprint = getDeviceFingerprint();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -255,7 +254,7 @@ export async function validateNewActivationKey(productKey: string): Promise<Veri
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         productKey: productKey.trim(),
-        fingerprint
+        workspaceId
       }),
       signal: controller.signal,
     });
@@ -306,6 +305,68 @@ export async function validateNewActivationKey(productKey: string): Promise<Veri
   }
 }
 
+// ── Verify existing license key via server ──────────────────────────────────────
+export async function verifyLicenseKey(productKey: string, workspaceId: string): Promise<VerifyResult> {
+  if (!productKey.trim() || !workspaceId) {
+    return { success: false, error: 'Product key and workspace ID are required.' };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const res = await fetch(VERIFY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        productKey: productKey.trim(),
+        workspaceId
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      const errorMsg = body?.error || `Verification failed (${res.status}).`;
+      return { success: false, error: errorMsg };
+    }
+
+    const data = await res.json();
+    const token = data?.token;
+    const plan = data?.plan || 'BUSINESS';
+
+    const license: LicenseData = {
+      token,
+      verifiedAt: Date.now(),
+      productKey: productKey.trim(),
+      plan,
+      offlineVerified: false,
+      offlineLicense: false,
+      status: 'Activated',
+      companyName: data?.companyName || 'Enterprise Customer',
+      purchaseId: data?.purchaseId || `INV-${Math.floor(Math.random() * 100000)}`,
+      supportExpiry: data?.supportExpiry || Date.now() + 365 * 24 * 60 * 60 * 1000
+    };
+
+    memoryLicense = license;
+    return { success: true, token, plan, licenseData: license };
+
+  } catch (err: any) {
+    clearTimeout(timer);
+    if (err?.name === 'AbortError') {
+      return { success: false, error: 'Verification timed out. Server may be unavailable.' };
+    }
+    return {
+      success: false,
+      error: err?.message === 'Failed to fetch'
+        ? 'Unable to reach activation server. Check your connection and try again.'
+        : (err?.message || 'Verification failed. Please try again.'),
+    };
+  }
+}
+
 export async function validateWorkspaceLicenseUpdate(productKey: string, currentWorkspaceId: string): Promise<VerifyResult> {
   if (!productKey.trim() || !currentWorkspaceId) {
     return { success: false, error: 'Product key and workspace ID are required.' };
@@ -325,13 +386,12 @@ export async function validateWorkspaceLicenseUpdate(productKey: string, current
     if (localLicense.workspace_id && localLicense.workspace_id !== currentWorkspaceId) {
       return { success: false, error: 'This key is already attached to another workspace on this system.' };
     }
+    // Existing local license -> check /verify
+    return await verifyLicenseKey(productKey, currentWorkspaceId);
   }
 
-  // 2. We still need to verify globally with the licensing server.
-  // We can just use validateNewActivationKey to hit /activate and get the token.
-  // Since we already checked it doesn't belong to another workspace in THIS local system,
-  // we just need the global server to accept it (which it will if activation_limit is not reached or device matches).
-  return await validateNewActivationKey(productKey);
+  // No local license -> First activation
+  return await validateNewActivationKey(productKey, currentWorkspaceId);
 }
 
 // ── Background online license check ──────────────────────────────────────────
