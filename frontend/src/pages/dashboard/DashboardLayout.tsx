@@ -519,70 +519,168 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const tourSteps: TourStep[] = useMemo(() => {
     const role = profile?.role || 'viewer';
 
-    if (hasCapability(role, 'platform_governance')) {
-      // FOUNDER / EXECUTIVE TOUR
+    if (hasAuthority(role, 'admin') || hasAuthority(role, 'owner')) {
+      // OWNER / ADMIN TOUR
       return [
         {
-          title: "Executive Command Center",
-          description: "Welcome to Resolve PM. This view gives you full visibility into company health, adoption rates, and high-level strategy.",
+          title: "Your Operational Command Center",
+          description: "Start your day here. Monitor company activity, important actions, delivery signals, and areas requiring attention.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/overview')
         },
         {
-          title: "Decision Center",
-          description: "Monitor project health and review workload-balancing strategic decisions here.",
-          targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/decisions')
-        },
-        {
-          title: "Reporting & ROI",
-          description: "Check the Customer Success Dashboard to view business value, time saved, and adoption metrics.",
-          targetSelector: "#tour-sidebar",
-          actionBefore: () => navigateTo('/workspace/reports')
-        }
-      ];
-    } else if (hasCapability(role, 'manage_projects')) {
-      // PM TOUR
-      return [
-        {
-          title: "Project Manager Workspace",
-          description: "Welcome to your allocation workspace. Keep track of deadlines and manage client commitments.",
+          title: "Manage Delivery",
+          description: "Create projects, structure milestones, track ownership, and monitor execution progress.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace')
         },
         {
-          title: "Managing Blockers",
-          description: "Head to the Board to review team impediments and unblock your developers efficiently.",
+          title: "Coordinate Execution",
+          description: "Tasks represent real work ownership. Track progress, blockers, priorities, and responsibility.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/execution/board')
         },
         {
-          title: "Approvals & Risks",
-          description: "Review risks and approve changes before they impact the delivery timeline.",
+          title: "Manage Capacity",
+          description: "Understand team allocation, responsibilities, availability, and workload distribution.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/resources/teams')
+        },
+        {
+          title: "Track Operational Decisions",
+          description: "Record approvals, escalations, ownership changes, and important coordination decisions.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/workspace/decisions')
+        },
+        {
+          title: "Centralize Knowledge",
+          description: "Manage files, references, and operational documentation.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/workspace/documents')
+        },
+        {
+          title: "Reduce Repetitive Work",
+          description: "Configure rules and workflows that simplify operations.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/control/automations')
+        },
+        {
+          title: "Configure Workspace",
+          description: "Manage users, permissions, workspace settings, and governance.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/control/settings')
+        }
+      ];
+    } else if (hasFunction(role, 'project_management') || hasCapability(role, 'manage_projects')) {
+      // PM TOUR
+      return [
+        {
+          title: "Mission Control",
+          description: "Daily delivery overview.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/overview')
+        },
+        {
+          title: "Projects",
+          description: "Project planning and milestones.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/workspace')
+        },
+        {
+          title: "Tasks",
+          description: "Execution tracking.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/execution/board')
+        },
+        {
+          title: "Team",
+          description: "Capacity visibility.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/resources/teams')
+        },
+        {
+          title: "Decision Center",
+          description: "Delivery coordination decisions.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/workspace/decisions')
+        }
+      ];
+    } else if (hasFunction(role, 'finance')) {
+      // FINANCE TOUR
+      return [
+        {
+          title: "Mission Control",
+          description: "Daily overview.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/overview')
+        },
+        {
+          title: "Finance",
+          description: "Manage budgets, tracking, and financial health.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/resources/finance')
+        },
+        {
+          title: "Reports/Documents",
+          description: "Review financial reports and documentation.",
+          targetSelector: "#tour-sidebar",
+          actionBefore: () => navigateTo('/workspace/reports')
+        },
+        {
+          title: "Approvals",
+          description: "Review financial approvals and changes.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace/approvals')
+        }
+      ];
+    } else if (hasAuthority(role, 'client')) {
+      // CLIENT TOUR
+      return [
+        {
+          title: "Client Dashboard",
+          description: "Your daily overview.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/overview')
+        },
+        {
+          title: "Project Visibility",
+          description: "Check progress on your projects.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/workspace')
+        },
+        {
+          title: "Approvals",
+          description: "Approve deliverables or changes.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/workspace/approvals')
+        },
+        {
+          title: "Communication",
+          description: "Connect with the team.",
+          targetSelector: "#tour-main-content",
+          actionBefore: () => navigateTo('/workspace/meetings')
         }
       ];
     } else {
       // DEVELOPER / EMPLOYEE TOUR
       return [
         {
-          title: "Welcome to Resolve PM",
-          description: "Your daily hub for finding tasks and collaborating with the team.",
+          title: "Your Daily Workspace",
+          description: "See assigned work, updates, priorities, and items requiring your attention.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/overview')
         },
         {
-          title: "Finding Tasks",
-          description: "Access the Execution Board to find your assigned tasks and move them across lanes.",
+          title: "Your Execution Queue",
+          description: "Track assigned work, progress updates, blockers, and deadlines.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/execution/board')
         },
         {
-          title: "Updating Progress",
-          description: "Start timers, log work, and communicate progress directly on task cards.",
+          title: "Stay Connected",
+          description: "Access project information and collaborate with your team.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/execution/board')
+          actionBefore: () => navigateTo('/workspace/documents')
         }
       ];
     }

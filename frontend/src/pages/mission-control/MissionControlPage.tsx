@@ -22,12 +22,20 @@ import { getMissionFocus } from '../../core/mission-control/operationalFocus';
 import { getFocusConfig } from '../../core/dashboard/contextualFocus';
 import type { MissionControlView } from '../../core/mission-control/operationalFocus';
 import type { OperationalPresence } from '../../core/presence/types';
+import { OnboardingChecklist } from '../../components/onboarding/OnboardingChecklist';
+import { hasAuthority, hasFunction, hasCapability } from '../../core/auth/permissions';
+import { KanbanSquare, Users, Building2, Settings, Target, ListTodo, Calendar, Banknote, BarChart3, Play, MessageSquare } from 'lucide-react';
 
 function MissionControlContent() {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
   const { raw } = useOperationalData();
   const [view, setView] = useState<MissionControlView>('strategic');
+
+  const navigateTo = (path: string) => {
+    window.history.pushState(null, '', path);
+    window.dispatchEvent(new CustomEvent('popstate'));
+  };
 
   const presence = useOperationalPresence({
     userId: profile?.id || '',
@@ -163,18 +171,70 @@ function MissionControlContent() {
         </div>
       </div>
 
+      <OnboardingChecklist />
+
       {(raw.projects.length === 0 && raw.tasks.length === 0) ? (
-        <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-4">
-          <div className="w-16 h-16 rounded-full mb-6 flex items-center justify-center bg-indigo-500/10">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold mb-3 tracking-tight text-white">Company Health</h2>
-          <p className="text-sm max-w-md mx-auto leading-relaxed text-[var(--text-secondary)]">
-            Company health insights unlock as your workspace generates activity.
-          </p>
-        </div>
+        (() => {
+          const role = profile?.role || 'viewer';
+          let suggestions = [];
+          
+          if (hasAuthority(role, 'admin') || hasAuthority(role, 'owner')) {
+            suggestions = [
+              { label: 'Create your first project', icon: <KanbanSquare className="w-5 h-5" />, action: () => (window as any).openCreateProjectModal?.() },
+              { label: 'Invite your team', icon: <Users className="w-5 h-5" />, action: () => navigateTo('/resources/teams') },
+              { label: 'Configure departments', icon: <Building2 className="w-5 h-5" />, action: () => navigateTo('/resources/teams') },
+              { label: 'Review workspace settings', icon: <Settings className="w-5 h-5" />, action: () => navigateTo('/control/settings') },
+            ];
+          } else if (hasFunction(role, 'project_management') || hasCapability(role, 'manage_projects')) {
+            suggestions = [
+              { label: 'Create milestones', icon: <Target className="w-5 h-5" />, action: () => navigateTo('/workspace') },
+              { label: 'Assign tasks', icon: <ListTodo className="w-5 h-5" />, action: () => navigateTo('/execution/board') },
+              { label: 'Review project timeline', icon: <Calendar className="w-5 h-5" />, action: () => navigateTo('/execution/timeline') },
+            ];
+          } else if (hasFunction(role, 'finance')) {
+            suggestions = [
+              { label: 'Configure finance settings', icon: <Banknote className="w-5 h-5" />, action: () => navigateTo('/resources/finance') },
+              { label: 'Review project budgets', icon: <BarChart3 className="w-5 h-5" />, action: () => navigateTo('/workspace/reports') },
+            ];
+          } else {
+            // Developer / Employee
+            suggestions = [
+              { label: 'Check assigned tasks', icon: <ListTodo className="w-5 h-5" />, action: () => navigateTo('/execution/board') },
+              { label: 'Update progress', icon: <Play className="w-5 h-5" />, action: () => navigateTo('/execution/board') },
+              { label: 'Review mentions', icon: <MessageSquare className="w-5 h-5" />, action: () => navigateTo('/overview') },
+            ];
+          }
+
+          return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-4">
+              <div className="w-16 h-16 rounded-full mb-6 flex items-center justify-center bg-indigo-500/10">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold mb-3 tracking-tight text-white">Workspace Empty</h2>
+              <p className="text-sm max-w-md mx-auto leading-relaxed text-[var(--text-secondary)] mb-8">
+                Your workspace is ready. Here are a few suggestions to get started:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                {suggestions.map((s, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={s.action}
+                    className="flex items-center gap-4 p-4 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-left group"
+                  >
+                    <div className="text-indigo-400 group-hover:text-indigo-300 transition-colors">
+                      {s.icon}
+                    </div>
+                    <span className="text-sm font-medium text-[var(--pm-text)] group-hover:text-white transition-colors">
+                      {s.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()
       ) : (
         <>
 
