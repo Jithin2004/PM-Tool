@@ -139,6 +139,7 @@ export function settingsToWorkspaceRow(settings: WorkspaceSettings) {
 
   return {
     business_type: JSON.stringify(meta),
+    execution_mode: settings.executionMode || settings.default_mode || 'KANBAN',
     work_start: workStart,
     work_end: workEnd,
     lunch_duration: settings.lunchDuration !== undefined ? settings.lunchDuration : 60,
