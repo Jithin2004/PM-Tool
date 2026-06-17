@@ -245,7 +245,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     profileCreatedAt: profile?.created_at,
     projectCount: projects.length,
     taskCount: tasks.length,
-    tourCompleted: workspace?.metadata?.tourCompleted,
+    tourCompleted: profile?.metadata?.tourCompleted || (user ? localStorage.getItem(`resolve_tour_completed_${user.id}`) === 'true' : false),
   });
 
 
@@ -255,7 +255,15 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
     if (sessionStorage.getItem('resolve-pm-tour-active') === 'true') {
       return true;
     }
-    return workspace ? !workspace.metadata?.tourCompleted : false;
+    if (!user) return false;
+    if (profile?.preferences?.tourCompleted === true || profile?.metadata?.tourCompleted === true) {
+      return false;
+    }
+    const localFlag = localStorage.getItem(`resolve_tour_completed_${user.id}`);
+    if (localFlag === 'true') {
+      return false;
+    }
+    return true; // Not completed, auto start
   });
 
   const [currentTourStep, setCurrentTourStep] = useState(() => {
@@ -264,21 +272,26 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   });
 
   const dismissGuide = async () => {
-    if (workspace && !workspace.metadata?.tourCompleted) {
+    if (user) {
       try {
-        await updateWorkspaceSettings({
+        await updateProfile({
           metadata: {
-            ...workspace.metadata,
+            ...profile?.metadata,
             tourCompleted: true
           }
-        } as any);
+        });
       } catch (err) {
-        console.error('Failed to update tour status', err);
+        console.error('Failed to update profile tour status', err);
       }
+      localStorage.setItem(`resolve_tour_completed_${user.id}`, 'true');
     }
+
     sessionStorage.removeItem('resolve-pm-tour-active');
     sessionStorage.removeItem('resolve-pm-tour-step');
     setShowGuide(false);
+    
+    // Use existing router navigation
+    navigateTo('/overview');
   };
 
   useEffect(() => {
