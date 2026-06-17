@@ -24,7 +24,7 @@ import type { MissionControlView } from '../../core/mission-control/operationalF
 import type { OperationalPresence } from '../../core/presence/types';
 import { OnboardingChecklist } from '../../components/onboarding/OnboardingChecklist';
 import { hasAuthority, hasFunction, hasCapability } from '../../core/auth/permissions';
-import { KanbanSquare, Users, Building2, Settings, Target, ListTodo, Calendar, Banknote, BarChart3, Play, MessageSquare } from 'lucide-react';
+import { KanbanSquare, Users, Building2, Settings, Target, ListTodo, Calendar, Banknote, BarChart3, Play, MessageSquare, Rocket, ChevronRight } from 'lucide-react';
 
 function MissionControlContent() {
   const { profile } = useAuth();
