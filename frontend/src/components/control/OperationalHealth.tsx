@@ -49,7 +49,7 @@ export function OperationalHealth() {
       <div className="bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl p-6 mb-8 transition-all duration-300">
         <h3 className="text-xs font-bold tracking-widest uppercase text-text-secondary mb-4 flex items-center gap-2">
           <Database className="w-4 h-4 text-accent-primary" />
-          Operational Health
+          System Health
         </h3>
         <div className="flex items-center gap-3 p-4 bg-signal-safe/10 border border-signal-safe/20 rounded-xl">
           <ShieldCheck className="w-5 h-5 text-signal-safe" />
@@ -66,7 +66,7 @@ export function OperationalHealth() {
     <div className="bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl p-6 mb-8 transition-all duration-300">
       <h3 className="text-xs font-bold tracking-widest uppercase text-text-secondary mb-4 flex items-center gap-2">
         <Database className="w-4 h-4 text-accent-primary" />
-        Operational Health
+        System Health
       </h3>
 
       <div className="pt-2">

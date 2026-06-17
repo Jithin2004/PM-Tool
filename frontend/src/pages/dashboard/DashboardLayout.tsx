@@ -1354,7 +1354,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                           handleDomainClick(domain.id);
                           setMobileSidebarOpen(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 2xl:py-3 rounded-lg text-xs 2xl:text-sm font-medium transition-all ${isActive ? 'shadow-sm' : 'hover:bg-surface-high hover:text-text-primary'
+                        className={`w-full flex items-center gap-3 2xl:gap-4 px-3 2xl:px-4 py-2.5 2xl:py-3.5 rounded-lg text-xs 2xl:text-sm font-medium transition-all ${isActive ? 'shadow-sm' : 'hover:bg-surface-high hover:text-text-primary'
                           }`}
                         style={isActive ? {
                           background: 'var(--pm-surface-high)',
@@ -1365,7 +1365,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                           color: 'var(--pm-on-surface-variant)',
                         }}
                       >
-                        {renderRouteIcon(domain.iconName)}
+                        <div className="2xl:scale-110 transition-transform duration-200">
+                          {renderRouteIcon(domain.iconName)}
+                        </div>
                         {domain.label}
                       </button>
                     );
@@ -1380,18 +1382,18 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   )}
                 </div>
 
-                <div className="p-4 border-t border-border bg-bg shrink-0">
-                  <div className="flex items-center gap-3 p-2">
-                    <div className="w-9 h-9 rounded-full bg-[var(--pm-surface)]/5 border border-border flex items-center justify-center overflow-hidden shrink-0">
+                <div className="p-4 2xl:p-6 border-t border-border bg-bg shrink-0">
+                  <div className="flex items-center gap-3 2xl:gap-4 p-2 2xl:p-3">
+                    <div className="w-9 h-9 2xl:w-11 2xl:h-11 rounded-full bg-[var(--pm-surface)]/5 border border-border flex items-center justify-center overflow-hidden shrink-0">
                       {profile?.avatar_url ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> :
-                        <Users className="w-4 h-4 text-text-secondary" />}
+                        <Users className="w-4 h-4 2xl:w-5 2xl:h-5 text-text-secondary" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-text-primary truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
-                      <p className="text-[10px] text-text-tertiary truncate uppercase">{profile?.role || 'Viewer'}</p>
+                      <p className="text-xs 2xl:text-sm font-semibold text-text-primary truncate">{profile?.full_name || user.email?.split('@')[0]}</p>
+                      <p className="text-[10px] 2xl:text-xs text-text-tertiary truncate uppercase">{profile?.role || 'Viewer'}</p>
                     </div>
-                    <button onClick={() => { handleLogout(); setMobileSidebarOpen(false); }} className="p-1.5 hover:bg-rose-500/10 text-rose-400 rounded-lg">
-                      <LogOut className="w-3.5 h-3.5" />
+                    <button onClick={() => { handleLogout(); setMobileSidebarOpen(false); }} className="p-1.5 2xl:p-2 hover:bg-rose-500/10 text-rose-400 rounded-lg">
+                      <LogOut className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
                     </button>
                   </div>
                 </div>

@@ -171,66 +171,69 @@ function MissionControlContent() {
         </div>
       </div>
 
-      <OnboardingChecklist />
+
 
       {(raw.projects.length === 0 && raw.tasks.length === 0) ? (
         (() => {
-          const role = profile?.role || 'viewer';
-          let suggestions = [];
-          
-          if (hasAuthority(role, 'admin') || hasAuthority(role, 'owner')) {
-            suggestions = [
-              { label: 'Create your first project', icon: <KanbanSquare className="w-5 h-5" />, action: () => (window as any).openCreateProjectModal?.() },
-              { label: 'Invite your team', icon: <Users className="w-5 h-5" />, action: () => navigateTo('/resources/teams') },
-              { label: 'Configure departments', icon: <Building2 className="w-5 h-5" />, action: () => navigateTo('/resources/teams') },
-              { label: 'Review workspace settings', icon: <Settings className="w-5 h-5" />, action: () => navigateTo('/control/settings') },
-            ];
-          } else if (hasFunction(role, 'project_management') || hasCapability(role, 'manage_projects')) {
-            suggestions = [
-              { label: 'Create milestones', icon: <Target className="w-5 h-5" />, action: () => navigateTo('/workspace') },
-              { label: 'Assign tasks', icon: <ListTodo className="w-5 h-5" />, action: () => navigateTo('/execution/board') },
-              { label: 'Review project timeline', icon: <Calendar className="w-5 h-5" />, action: () => navigateTo('/execution/timeline') },
-            ];
-          } else if (hasFunction(role, 'finance')) {
-            suggestions = [
-              { label: 'Configure finance settings', icon: <Banknote className="w-5 h-5" />, action: () => navigateTo('/resources/finance') },
-              { label: 'Review project budgets', icon: <BarChart3 className="w-5 h-5" />, action: () => navigateTo('/workspace/reports') },
-            ];
-          } else {
-            // Developer / Employee
-            suggestions = [
-              { label: 'Check assigned tasks', icon: <ListTodo className="w-5 h-5" />, action: () => navigateTo('/execution/board') },
-              { label: 'Update progress', icon: <Play className="w-5 h-5" />, action: () => navigateTo('/execution/board') },
-              { label: 'Review mentions', icon: <MessageSquare className="w-5 h-5" />, action: () => navigateTo('/overview') },
-            ];
-          }
-
           return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-4">
+            <div className="flex flex-col items-center justify-center min-h-[500px] text-center px-4 py-8">
               <div className="w-16 h-16 rounded-full mb-6 flex items-center justify-center bg-indigo-500/10">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400">
-                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                </svg>
+                <Rocket className="w-8 h-8 text-indigo-400" />
               </div>
-              <h2 className="text-2xl font-bold mb-3 tracking-tight text-white">Workspace Empty</h2>
-              <p className="text-sm max-w-md mx-auto leading-relaxed text-[var(--text-secondary)] mb-8">
-                Your workspace is ready. Here are a few suggestions to get started:
+              <h2 className="text-3xl font-bold mb-3 tracking-tight text-white font-geist">Let's start building your workspace</h2>
+              <p className="text-base max-w-lg mx-auto leading-relaxed text-[var(--text-secondary)] mb-12 font-geist">
+                Follow the guided journey to initialize your delivery environment and bring your operations online.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                {suggestions.map((s, idx) => (
-                  <button 
-                    key={idx}
-                    onClick={s.action}
-                    className="flex items-center gap-4 p-4 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-left group"
-                  >
-                    <div className="text-indigo-400 group-hover:text-indigo-300 transition-colors">
-                      {s.icon}
-                    </div>
-                    <span className="text-sm font-medium text-[var(--pm-text)] group-hover:text-white transition-colors">
-                      {s.label}
-                    </span>
-                  </button>
-                ))}
+              
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-sm font-mono text-[var(--text-secondary)] mb-12">
+                <div className="flex items-center gap-2 text-indigo-400">
+                  <div className="w-8 h-8 rounded-full border border-indigo-500/30 flex items-center justify-center bg-indigo-500/10">1</div>
+                  <span className="font-semibold">Workspace</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[var(--border-soft)]" />
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-surface-3">2</div>
+                  <span>Projects</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[var(--border-soft)] hidden sm:block" />
+                <div className="flex items-center gap-2 hidden sm:flex">
+                  <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-surface-3">3</div>
+                  <span>Milestones</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[var(--border-soft)] hidden md:block" />
+                <div className="flex items-center gap-2 hidden md:flex">
+                  <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-surface-3">4</div>
+                  <span>Tasks</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[var(--border-soft)] hidden lg:block" />
+                <div className="flex items-center gap-2 hidden lg:flex">
+                  <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-surface-3">5</div>
+                  <span>Delivery Tracking</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto w-full">
+                <button 
+                  onClick={() => (window as any).openCreateProjectModal?.()}
+                  className="flex flex-col items-center gap-3 p-6 rounded-xl border border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors text-center group"
+                >
+                  <KanbanSquare className="w-6 h-6 text-indigo-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-semibold text-white">Create first project</span>
+                </button>
+                <button 
+                  onClick={() => navigateTo('/resources/teams')}
+                  className="flex flex-col items-center gap-3 p-6 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-center group"
+                >
+                  <Users className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-semibold text-white">Invite teammates</span>
+                </button>
+                <button 
+                  onClick={() => navigateTo('/control/settings')}
+                  className="flex flex-col items-center gap-3 p-6 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-center group"
+                >
+                  <Settings className="w-6 h-6 text-amber-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-semibold text-white">Configure workspace</span>
+                </button>
               </div>
             </div>
           );

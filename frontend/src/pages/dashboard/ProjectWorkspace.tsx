@@ -168,16 +168,43 @@ export function ProjectWorkspace() {
 
         {filteredProjects.length === 0 && (
           <div className="col-span-full">
-            <PremiumEmptyState 
-              icon={Briefcase}
-              title="No Active Projects"
-              description="A project acts as a container for milestones, tasks, and budgets. Create your first project to begin organizing work."
-              action={hasCapability(profile?.role as any, 'manage_projects') ? (
-                <button onClick={() => setIsAdding(true)} className="btn-premium-primary px-4 py-2 rounded text-xs mt-2">
+            <div className="flex flex-col items-center justify-center text-center py-16 px-4 w-full h-full bg-surface-2 rounded-xl border border-border">
+              <div className="w-12 h-12 rounded-xl bg-[var(--surface-hover)] border border-[var(--border-soft)] flex items-center justify-center mb-6 shadow-[var(--premium-shadow)]">
+                <Briefcase className="w-6 h-6 text-[var(--text-muted)]" />
+              </div>
+              <h3 className="text-lg font-semibold tracking-tight text-[var(--text-primary)] mb-2 font-geist">Start Your First Project</h3>
+              <p className="text-sm text-[var(--text-muted)] max-w-sm mx-auto mb-8 leading-relaxed font-geist">
+                Create your first delivery workspace and begin execution tracking.
+              </p>
+              
+              <div className="flex items-center gap-4 text-xs font-mono text-[var(--text-secondary)] mb-8">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-6 h-6 rounded-full border border-border flex items-center justify-center bg-surface-3">1</div>
+                  <span>Create project</span>
+                </div>
+                <div className="w-8 h-px bg-border"></div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-6 h-6 rounded-full border border-border flex items-center justify-center bg-surface-3">2</div>
+                  <span>Define milestones</span>
+                </div>
+                <div className="w-8 h-px bg-border"></div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-6 h-6 rounded-full border border-border flex items-center justify-center bg-surface-3">3</div>
+                  <span>Add tasks</span>
+                </div>
+                <div className="w-8 h-px bg-border"></div>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-6 h-6 rounded-full border border-border flex items-center justify-center bg-surface-3">4</div>
+                  <span>Assign owners</span>
+                </div>
+              </div>
+
+              {hasCapability(profile?.role as any, 'manage_projects') && (
+                <button onClick={() => setIsAdding(true)} className="btn-premium-primary px-6 py-2.5 rounded-lg text-sm font-semibold tracking-wide">
                   Create Project
                 </button>
-              ) : null}
-            />
+              )}
+            </div>
           </div>
         )}
       </div>
