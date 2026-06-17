@@ -1,4 +1,4 @@
-import { canAccessRoute } from './permissions';
+import { canAccessRoute, getAuthorityRank } from './permissions';
 import { isRegisteredPath, normalizePath } from '../../app/routeRegistry';
 import type { UserRole } from '../../types';
 
@@ -48,7 +48,7 @@ export function buildOAuthRedirectUrl(): string {
 export function resolvePostAuthEntryPath(role: UserRole | undefined): string {
   if (role === 'pending-workspace-setup') return '/onboarding/workspace';
   if (role === 'uninvited') return '/login?error=uninvited';
-  const { getAuthorityRank } = require('./permissions');
+
   const rank = getAuthorityRank(role);
 
   if (rank >= getAuthorityRank('admin')) return '/control';

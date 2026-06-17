@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { Task, Project, UserRole } from '../../types';
+import { getAuthorityRank } from '../auth/permissions';
 
 export interface ContinuityBrief {
   absenceDetected: boolean;
@@ -109,7 +110,7 @@ export async function generateContinuityBrief(inputs: ContinuityInputs): Promise
     return brief;
   }
 
-  const { getAuthorityRank } = require('../auth/permissions');
+
   const rank = getAuthorityRank(role);
 
   // 3. Filter Context based on Role

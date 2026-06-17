@@ -1,5 +1,6 @@
 import { Task, Project, Team, Profile } from '../../types';
 import { IsoDateTime } from '../types/temporal';
+import { hasFunction } from '../auth/permissions';
 
 export interface MitigationStrategy {
   id: string;
@@ -130,7 +131,7 @@ export function generateAdaptiveResponses(
       const assigneeName = currentAssignee?.full_name || 'Current Developer';
       
       // Find other developers in same team or project with fewer active tasks
-      const { hasFunction } = require('../auth/permissions');
+
       const activeUnassignedDevs = profiles.filter(p => hasFunction(p, 'Engineering') && p.id !== taskObj.assignee_id);
       if (activeUnassignedDevs.length > 0) {
         const altDev = activeUnassignedDevs[0];

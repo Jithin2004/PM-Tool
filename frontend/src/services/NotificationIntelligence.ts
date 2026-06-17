@@ -1,4 +1,5 @@
 export type NotificationPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+import { getAuthorityRank } from '../core/auth/permissions';
 
 export interface NotificationIntelligenceResult {
   shouldSend: boolean;
@@ -49,7 +50,7 @@ export function evaluateNotification(
       const count = parseInt(localStorage.getItem(cacheKey) || '0', 10);
       
       let maxCount = 0;
-      const { getAuthorityRank } = require('../core/auth/permissions');
+
       const rank = getAuthorityRank(role);
       
       if (rank >= getAuthorityRank('admin')) maxCount = 10;

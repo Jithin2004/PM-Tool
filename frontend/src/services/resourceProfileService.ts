@@ -41,11 +41,11 @@ export function teamOutput(
   return Number(effectiveOutput.toFixed(3));
 }
 
-import { getAuthorityRank } from '../core/auth/permissions';
+import { getAuthorityRank, hasFunction } from '../core/auth/permissions';
 
 export function getProfileFromRole(profile?: any, experience_years?: number): ResourceProfile {
   if (!profile) return getDefaultProfile('mid');
-  const { hasFunction, getAuthorityRank } = require('../core/auth/permissions');
+
   const roleStr = typeof profile === 'string' ? profile : (profile.authority || profile.role);
   const rank = getAuthorityRank(roleStr);
   

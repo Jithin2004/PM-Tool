@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { UserRole } from '../types';
 import { profitabilityService } from './profitabilityService';
-
+import { getAuthorityRank, hasFunction } from '../core/auth/permissions';
 export interface ActionableItem {
   id: string;
   title: string;
@@ -75,7 +75,6 @@ export async function getDailyIntelligence(userId: string, workspaceId: string, 
 
     const m = (metrics as any) || { today_tasks: 0, blockers: 0, approvals: 0, mentions: 0, recent_changes: 0, waiting_on_me: 0 };
 
-    const { getAuthorityRank, hasFunction } = require('../core/auth/permissions');
     const rank = getAuthorityRank(role);
 
     // Role-specific routing

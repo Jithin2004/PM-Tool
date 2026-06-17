@@ -1,5 +1,5 @@
 import { Task, Project, Profile } from '../../types';
-
+import { hasFunction } from '../auth/permissions';
 export interface WaitingState {
   id: string;
   sourceType: 'task' | 'project' | 'approval' | 'external';
@@ -110,7 +110,7 @@ export function generateWaitingStates(inputs: WaitingStateInputs): WaitingState[
     });
   }
 
-  const { hasFunction } = require('../auth/permissions');
+
   const userProfile = profiles.find(p => p.id === userId);
 
   // Filter based on function

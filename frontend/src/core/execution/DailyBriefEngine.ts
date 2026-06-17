@@ -1,3 +1,4 @@
+import { getAuthorityRank } from '../auth/permissions';
 export interface BriefItem {
   id: string;
   title: string;
@@ -66,7 +67,7 @@ export function generateDailyBrief(inputs: DailyBriefInputs): DailyBrief {
     }
   }
 
-  const { getAuthorityRank } = require('../auth/permissions');
+
   const rank = getAuthorityRank(role);
 
   // 2. Logic based on role
