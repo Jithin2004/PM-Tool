@@ -37,7 +37,7 @@ export function AIInsights({ insights, loading, error, onDismiss, emptyAction }:
 
   return (
     <WidgetCard
-      title="AI Insights"
+      title="Execution Signals"
       loading={loading}
       error={error}
       empty={!loading && !error && visible.length === 0}

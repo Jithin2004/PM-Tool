@@ -22,7 +22,14 @@ export function ActivityStream({ wsId, onItemClick, maxVirtualWindow = 50 }: Act
       entries={windowed}
       loading={loading}
       error={error}
-      emptyMessage="No activity yet. Team actions will appear here."
+      emptyMessage="Activity appears here when team members complete tasks, update milestones, or escalate risks."
+      emptyAction={{
+        label: "View Projects",
+        onClick: () => {
+          window.history.pushState(null, '', '/workspace');
+          window.dispatchEvent(new Event('popstate'));
+        }
+      }}
       onItemClick={onItemClick}
       maxItems={maxVirtualWindow}
     />

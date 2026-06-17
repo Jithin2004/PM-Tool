@@ -27,7 +27,7 @@ const SLIDES: Slide[] = [
   },
   {
     id: 'ai-insights',
-    title: 'AI Operational Insights',
+    title: 'Operational Insights',
     description: 'Embedded intelligence that surfaces blockers, imbalances, and risks without a chatbot interface.',
     icon: Sparkles,
     details: ['Confidence-ranked alerts', 'Blocked sprint detection', 'Workload imbalance warnings'],
@@ -37,7 +37,7 @@ const SLIDES: Slide[] = [
     title: 'Command Palette',
     description: 'Keyboard-first operational control. Slash commands, fuzzy search, and workflow triggers.',
     icon: Command,
-    details: ['Spotlight-style interface', 'Slash filters (/nav, /task, /ai)', 'Contextual suggestions'],
+    details: ['Spotlight-style interface', 'Slash filters (/nav, /task, /ops)', 'Contextual suggestions'],
   },
   {
     id: 'team-radar',

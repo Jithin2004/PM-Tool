@@ -73,7 +73,7 @@ export function QuickActionsRail({
       />
       <QuickActionButton
         icon={Sparkles}
-        label="AI Summary"
+        label="Operational Summary"
         onClick={onAISummary || (() => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action: 'ai-summary' } })))}
       />
     </motion.div>

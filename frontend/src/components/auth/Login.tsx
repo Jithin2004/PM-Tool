@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Activity, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { loginWithPassword } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
 
 function getErrorParam(): string | null {
   const params = new URLSearchParams(window.location.search);
@@ -10,10 +11,19 @@ function getErrorParam(): string | null {
 }
 
 export function Login() {
+  const { user, loading: authLoading } = useAuth();
+  
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      window.history.replaceState(null, '', '/overview');
+      window.dispatchEvent(new CustomEvent('popstate'));
+    }
+  }, [user, authLoading]);
 
   useEffect(() => {
     const err = getErrorParam();

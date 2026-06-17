@@ -535,12 +535,6 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/workspace')
         },
         {
-          title: "Coordinate Execution",
-          description: "Tasks represent real work ownership. Track progress, blockers, priorities, and responsibility.",
-          targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/execution/board')
-        },
-        {
           title: "Manage Capacity",
           description: "Understand team allocation, responsibilities, availability, and workload distribution.",
           targetSelector: "#tour-main-content",
@@ -553,20 +547,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/workspace/decisions')
         },
         {
-          title: "Centralize Knowledge",
-          description: "Manage files, references, and operational documentation.",
-          targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/documents')
-        },
-        {
-          title: "Reduce Repetitive Work",
-          description: "Configure rules and workflows that simplify operations.",
-          targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/control/automations')
-        },
-        {
           title: "Configure Workspace",
-          description: "Manage users, permissions, workspace settings, and governance.",
+          description: "Manage users, permissions, workspace settings, and governance. Your next step: Create your first project.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/control/settings')
         }
@@ -594,15 +576,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         },
         {
           title: "Team",
-          description: "Capacity visibility.",
+          description: "Capacity visibility. Your next step: Create your first project.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/resources/teams')
-        },
-        {
-          title: "Decision Center",
-          description: "Delivery coordination decisions.",
-          targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/decisions')
         }
       ];
     } else if (hasFunction(role, 'finance')) {
@@ -628,7 +604,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         },
         {
           title: "Approvals",
-          description: "Review financial approvals and changes.",
+          description: "Review financial approvals and changes. Your next step: Check pending approvals.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace/approvals')
         }
@@ -656,7 +632,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         },
         {
           title: "Communication",
-          description: "Connect with the team.",
+          description: "Connect with the team. Your next step: View your active projects.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace/meetings')
         }
@@ -678,7 +654,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
         },
         {
           title: "Stay Connected",
-          description: "Access project information and collaborate with your team.",
+          description: "Access project information and collaborate with your team. Your next step: Check your assigned tasks.",
           targetSelector: "#tour-main-content",
           actionBefore: () => navigateTo('/workspace/documents')
         }

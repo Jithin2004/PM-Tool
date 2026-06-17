@@ -130,7 +130,7 @@ function MissionControlContent() {
       <div className="flex items-end justify-between px-1 pt-2 pb-8 mb-10 border-b border-border/50">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
-            Mission Control
+            {(raw.projects.length === 0 && raw.tasks.length === 0) ? 'Build your execution workspace' : 'Daily Command Center'}
           </h1>
           <p className="text-sm mt-1 flex items-center gap-3" style={{ color: 'var(--pm-on-surface-variant)' }}>
              <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)] animate-pulse" /> {activeCount} active contributors</span>
@@ -153,20 +153,6 @@ function MissionControlContent() {
                 {v}
               </button>
             ))}
-          </div>
-          <div className="flex items-center gap-3 px-4 py-2 rounded-xl border border-border bg-surface-2"
-            style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-            <span className={`w-1.5 h-1.5 rounded-full shadow-lg operational-pulse ${
-              coordination.vitality.overall >= 70 ? 'bg-emerald-400' 
-              : coordination.vitality.overall >= 40 ? 'bg-amber-400' 
-              : 'bg-red-400'
-            }`} />
-            <div className="flex flex-col">
-              <span className="font-mono-pm text-[9px] uppercase tracking-widest text-[var(--pm-on-surface-variant)]">System Vitality</span>
-              <span className="text-sm font-bold text-[var(--pm-on-surface)] leading-none mt-0.5 font-geist">
-                {coordination.vitality.overall}<span className="text-[var(--pm-on-surface-variant)] text-[10px]">/100</span>
-              </span>
-            </div>
           </div>
         </div>
       </div>
@@ -246,7 +232,7 @@ function MissionControlContent() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
           <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
-            <div className="relative z-10"><VitalityOverview vitality={coordination.vitality} /></div>
+            <div className="relative z-10"><ExecutionPressureZones bottlenecks={coordination.bottlenecks} hotspots={coordination.hotspots} vitality={coordination.vitality} /></div>
           </div>
           <div className="relative group p-6 glass-panel rounded-xl bg-surface-2 border border-border overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />

@@ -6,9 +6,12 @@ import { DepartmentManagement } from '../../components/team/DepartmentManagement
 import { MemberDirectory } from '../../components/team/MemberDirectory';
 import { useAuth } from '../../context/AuthContext';
 import { hasCapability } from '../../core/auth/permissions';
+import { useOperationalData } from '../../context/OperationalDataContext';
+import { Users } from 'lucide-react';
 
 export default function TeamsPage() {
   const { profile } = useAuth();
+  const { raw } = useOperationalData();
   const isHR = hasCapability(profile?.role, 'manage_employees');
   
   const [activeTab, setActiveTab] = useState<'employees' | 'departments' | 'workloadPlanning' | 'skillsMatrix'>(() => {
@@ -76,7 +79,22 @@ export default function TeamsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 mt-8">
-        {TEAM_VIEWS[activeTab]}
+        {raw.profiles.length <= 1 ? (
+          <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2 p-8">
+             <PremiumEmptyState
+               icon={Users}
+               title="Build Your Team"
+               description="Your workspace currently has no other members. Invite teammates to unlock capacity planning, skills matrices, and department management."
+               action={
+                 <button onClick={() => (window as any).openTeamRosterModal?.()} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                   Invite Teammates
+                 </button>
+               }
+             />
+          </div>
+        ) : (
+          TEAM_VIEWS[activeTab]
+        )}
       </div>
     </div>
   );

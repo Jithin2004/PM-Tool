@@ -139,7 +139,7 @@ export function CommandPaletteDemo() {
                   <p className="text-[9px] font-mono text-[var(--pm-text)] dark:text-[var(--text-secondary)]">
                     <span className="text-[var(--pm-text)] dark:text-[var(--text-secondary)]">/nav</span> navigation &middot;{' '}
                     <span className="text-[var(--pm-text)] dark:text-[var(--text-secondary)]">/task</span> tasks &middot;{' '}
-                    <span className="text-[var(--pm-text)] dark:text-[var(--text-secondary)]">/ai</span> intelligence
+                    <span className="text-[var(--pm-text)] dark:text-[var(--text-secondary)]">/ops</span> intelligence
                   </p>
                 </div>
               </motion.div>

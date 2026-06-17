@@ -115,7 +115,7 @@ export function ImpactSimulationDrawer({ simulation, onApply, onDismiss, onApply
 
         {simulation.mitigations.length > 0 && (
           <div>
-            <div className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-wider mb-2">AI Mitigations</div>
+            <div className="text-[10px] font-mono text-cyan-400/60 uppercase tracking-wider mb-2">Suggested Actions</div>
             <div className="space-y-1.5">
               {simulation.mitigations.map(m => (
                 <div key={m.type} className={`flex items-center justify-between px-3 py-2 rounded-md border text-[11px] transition-all ${

@@ -254,6 +254,41 @@ export default function FinancePage() {
     }
   };
 
+  const isFinanceEmpty = data.invoices.length === 0 && data.expenses.length === 0 && data.payments.length === 0 && data.salaries.length === 0 && clients.length === 0;
+
+  if (isFinanceEmpty) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 bg-surface">
+        <div className="max-w-md w-full glass-panel rounded-xl border border-border p-8 text-center">
+          <PremiumEmptyState
+            icon={Landmark}
+            title="Setup Financial Tracking"
+            description="Your workspace currently has no financial data. Manage clients, generate invoices, track expenses, and monitor profitability."
+            action={
+              <button 
+                onClick={() => setShowManageClientsModal(true)} 
+                className="btn-premium-primary px-6 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 mx-auto"
+              >
+                <Building2 className="w-4 h-4" /> Add First Client
+              </button>
+            }
+          />
+        </div>
+        
+        {/* Manage Clients Modal */}
+        {workspace && (
+          <ManageClientsModal
+            isOpen={showManageClientsModal}
+            onClose={() => setShowManageClientsModal(false)}
+            workspaceId={workspace.id}
+            clients={clients}
+            onSuccess={() => { fetchClients(workspace.id).then(setClients); loadData(); }}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-16 h-full overflow-y-auto p-6 scrollbar-premium premium-fade-in-up">
       {/* Header */}
