@@ -123,10 +123,8 @@ export function DocumentCreationModal({ onClose, onSuccess }: { onClose: () => v
             <div className="flex-1">
               <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Type</label>
               <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none">
-                <option value="google_doc">Google Docs</option>
                 <option value="figma">Figma</option>
                 <option value="github">GitHub</option>
-                <option value="drive">Google Drive</option>
                 <option value="url">Other URL</option>
               </select>
             </div>

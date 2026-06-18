@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured, createRealtimeChannel } from '../lib/supabase';
 import type { CalendarEvent, CalendarEventType } from '../types';
+import { calendarEventService } from '../services/calendarEventService';
 
 export function useCalendarEvents(workspaceId?: string) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -10,25 +11,10 @@ export function useCalendarEvents(workspaceId?: string) {
     if (!workspaceId || !isSupabaseConfigured) { setEvents([]); setLoading(false); return; }
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const calendarApiUrl = import.meta.env.VITE_CALENDAR_API_URL || '/api/calendar';
-      let url: URL;
-      if (calendarApiUrl.startsWith('http://') || calendarApiUrl.startsWith('https://')) {
-        url = new URL(`${calendarApiUrl}/events`);
-      } else {
-        url = new URL(`${calendarApiUrl}/events`, window.location.origin);
-      }
-      url.searchParams.append('workspace_id', workspaceId);
-      url.searchParams.append('start_date', new Date(new Date().getFullYear() - 1, 0, 1).toISOString());
-      url.searchParams.append('end_date', new Date(new Date().getFullYear() + 2, 0, 1).toISOString());
-      
-      const res = await fetch(url.toString(), {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setEvents(data as CalendarEvent[]);
+      const startDate = new Date(new Date().getFullYear() - 1, 0, 1).toISOString();
+      const endDate = new Date(new Date().getFullYear() + 2, 0, 1).toISOString();
+      const data = await calendarEventService.getEventsInRange(workspaceId, startDate, endDate);
+      setEvents(data);
     } catch (e) {
       console.error('useCalendarEvents: fetch failed:', e);
     } finally {

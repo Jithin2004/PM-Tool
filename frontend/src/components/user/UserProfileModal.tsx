@@ -5,7 +5,7 @@ import { User, Profile } from '../../types';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
-export function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: { profile: Profile, googleAvatar?: string | null, onClose: () => void, onUpdate: (updates: Partial<Profile>) => void }) {
+export function UserProfileModal({ profile, onClose, onUpdate }: { profile: Profile, onClose: () => void, onUpdate: (updates: Partial<Profile>) => void }) {
   const [name, setName] = useState(profile.full_name || '');
   const [phone, setPhone] = useState(profile.phone || '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
@@ -99,15 +99,6 @@ export function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: {
             <div className="flex items-center justify-between mb-2">
               <label className="block text-[11px] uppercase tracking-widest font-bold text-[var(--text-secondary)]">Profile Source Overrides</label>
               <div className="flex gap-2">
-                {googleAvatar && avatarUrl !== googleAvatar && (
-                  <button
-                    type="button"
-                    onClick={() => setAvatarUrl(googleAvatar)}
-                    className="text-[10px] font-bold text-amber-400 border border-amber-500/20 rounded-lg px-2 py-1 hover:bg-amber-500/10 transition-all uppercase tracking-wider cursor-pointer"
-                  >
-                    Restore Google
-                  </button>
-                )}
                 <input type="file" accept="image/*" className="hidden" id="avatar-upload" onChange={handleFileChange} />
                 <label htmlFor="avatar-upload" className="text-[10px] font-bold text-purple-400 border border-purple-500/20 rounded-lg px-2 py-1 hover:bg-purple-500/10 cursor-pointer transition-all uppercase tracking-wider">
                   Select Photo
@@ -119,19 +110,6 @@ export function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: {
               <div className="flex items-center gap-2">
                 <div className="flex-1 bg-[var(--surface-glass)] border border-[var(--border-soft)] rounded-xl h-12 px-4 text-xs flex items-center text-purple-400 font-mono">
                   Local override active
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAvatarUrl('')}
-                  className="h-12 px-4 rounded-xl border border-rose-500/30 text-rose-400 text-xs font-bold uppercase tracking-wider hover:bg-rose-500/10 transition-all cursor-pointer"
-                >
-                  Clear
-                </button>
-              </div>
-            ) : avatarUrl === googleAvatar && googleAvatar ? (
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-[var(--surface-glass)] border border-[var(--border-soft)] rounded-xl h-12 px-4 text-xs flex items-center text-emerald-400 font-mono">
-                  Google account linked
                 </div>
                 <button
                   type="button"
@@ -153,7 +131,7 @@ export function UserProfileModal({ profile, googleAvatar, onClose, onUpdate }: {
           </div>
 
           <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 text-xs text-purple-200/80 leading-relaxed shadow-inner">
-            Note: Your profile picture is automatically synced from Google. Uploading from your gallery will create a temporary local override for this device.
+            Note: Uploading from your gallery will create a local override for this device.
           </div>
           <div className="flex gap-4 pt-4">
             <button type="submit" className="flex-1 btn-premium-primary h-12 text-xs font-bold uppercase tracking-wider">

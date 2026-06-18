@@ -101,7 +101,6 @@ function resolveSyncFn(service: string, payload: Record<string, any>, _workspace
     case 'github': return () => syncGitHubRepo(_workspaceId, (payload as any).repo_url || '', (payload as any).branch || 'main');
     case 'gitlab': return () => syncGitLabRepo(_workspaceId, (payload as any).repo_url || '', (payload as any).branch || 'main');
     case 'figma': return () => syncFigmaFrame(_workspaceId, (payload as any).frame_url || '');
-    case 'google_drive': return () => syncGoogleDrive(_workspaceId, _accessToken);
     default: return async () => ({ success: false, message: 'Unknown service' });
   }
 }
@@ -609,26 +608,6 @@ export async function syncFigmaFrame(workspaceId: string, frameUrl: string): Pro
   }
 }
 
-
-export async function syncGoogleDrive(workspaceId: string, accessToken?: string): Promise<SyncResult> {
-  await updateIntegrationHealth(workspaceId, 'google_drive', 'syncing');
-  try {
-    if (!accessToken) throw new Error('Connect pending — no access token');
-    const res = await fetch(
-      'https://www.googleapis.com/drive/v3/files?orderBy=modifiedTime_desc&pageSize=20&fields=' +
-      encodeURIComponent('files(id,name,mimeType,size,webViewLink,modifiedTime,version)'),
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    if (!res.ok) throw new Error(res.status === 401 ? 'Token expired' : 'Sync unavailable');
-    const data = await res.json();
-    const files = (data.files || []) as any[];
-    await syncUpdateHealth(workspaceId, 'google_drive', true, undefined, files.length);
-    return { success: true, message: `Indexed ${files.length} files`, itemsSynced: files.length };
-  } catch (e: any) {
-    await syncUpdateHealth(workspaceId, 'google_drive', false, e.message);
-    return { success: false, message: e.message };
-  }
-}
 
 export async function getRecentActivity(workspaceId: string, service: string, limit = 10): Promise<any[]> {
   return [];

@@ -57,8 +57,6 @@ export default function DocumentsPage() {
 
   const getIconForType = (type: string) => {
     switch (type) {
-      case 'google_doc': return <div className="text-blue-400"><Icon name="description" size={24} /></div>;
-      case 'drive': return <div className="text-green-400"><Icon name="folder_open" size={24} /></div>;
       case 'figma': return <div className="text-pink-400"><Icon name="draw" size={24} /></div>;
       case 'github': return <div className="text-[var(--text-muted)]"><Icon name="code" size={24} /></div>;
       default: return <div className="text-indigo-400"><Icon name="link" size={24} /></div>;

@@ -53,14 +53,4 @@ export const OPERATIONAL_CHANNELS: OperationalChannel[] = [
     lastIngestion: null,
     lastChecked: null,
   },
-  {
-    id: 'document_coordination',
-    key: 'google_drive',
-    label: 'Document Coordination',
-    description: 'Specifications, runbooks, operational documents',
-    scope: 'project',
-    state: 'awaiting_oauth',
-    lastIngestion: null,
-    lastChecked: null,
-  },
 ];

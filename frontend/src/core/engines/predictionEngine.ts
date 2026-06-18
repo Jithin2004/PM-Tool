@@ -70,7 +70,11 @@ export const predictionEngine = {
         } else if (isHoliday) {
           holidayDays++;
         } else {
-          workingDaysChecked++;
+          // Do not consume base estimates on weekends
+          const dayOfWeek = currentDate.getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            workingDaysChecked++;
+          }
         }
         
         currentDate.setDate(currentDate.getDate() + 1);

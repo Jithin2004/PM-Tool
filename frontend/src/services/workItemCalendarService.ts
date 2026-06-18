@@ -12,7 +12,7 @@
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
-export type VirtualEventSource = 'task' | 'milestone' | 'sprint' | 'project' | 'meeting';
+export type VirtualEventSource = 'task' | 'milestone' | 'sprint' | 'project' | 'meeting' | 'wait_state' | 'personal_leave';
 
 export interface VirtualCalendarItem {
   /** Unique key for React — not a real DB id */
@@ -234,6 +234,91 @@ async function fetchProjectDates(
   }
 }
 
+async function fetchWaitStates(
+  workspaceId: string,
+  startDate: string,
+  endDate: string
+): Promise<VirtualCalendarItem[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('wait_states')
+      .select('id, target_type, target_id, category, reason, status, started_at, resolved_at, waiting_on')
+      .eq('workspace_id', workspaceId)
+      .or(`and(started_at.lte.${endDate},resolved_at.gte.${startDate}),and(started_at.lte.${endDate},resolved_at.is.null)`)
+      .limit(100);
+
+    if (error || !data) return [];
+
+    return data.map((w) => {
+      const title = `Blocked: ${w.reason || w.category} (${w.waiting_on})`;
+      return {
+        id: `waitstate-${w.id}`,
+        title,
+        start_date: isoDay(w.started_at) || w.started_at,
+        end_date: w.resolved_at ? (isoDay(w.resolved_at) || w.resolved_at) : endOfDay(new Date().toISOString()),
+        source: 'wait_state' as VirtualEventSource,
+        source_id: w.id,
+        meta: {
+          status: w.status,
+          category: w.category,
+          waiting_on: w.waiting_on,
+          target_type: w.target_type,
+          target_id: w.target_id,
+        },
+        readonly: true as const,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function fetchAvailability(
+  workspaceId: string,
+  startDate: string,
+  endDate: string
+): Promise<VirtualCalendarItem[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    // Assuming personal_leave has user_id, leave_type, start_date, end_date
+    // Need to get user details to display name, but we can just use ID for now and let the UI handle it if needed.
+    // Or we can join with users table. Let's do a simple select first.
+    const { data, error } = await supabase
+      .from('personal_leave')
+      .select(`
+        id, user_id, leave_type, start_date, end_date, availability_factor,
+        users!inner ( workspace_id, full_name, email )
+      `)
+      .eq('users.workspace_id', workspaceId)
+      .or(`and(start_date.lte.${endDate},end_date.gte.${startDate})`)
+      .limit(100);
+
+    if (error || !data) return [];
+
+    return data.map((l: any) => {
+      const userName = l.users?.full_name || l.users?.email || 'User';
+      const title = `${userName} - ${l.leave_type} Leave`;
+      return {
+        id: `leave-${l.id}`,
+        title,
+        start_date: isoDay(l.start_date) || l.start_date,
+        end_date: endOfDay(l.end_date),
+        source: 'personal_leave' as VirtualEventSource,
+        source_id: l.id,
+        meta: {
+          user_id: l.user_id,
+          leave_type: l.leave_type,
+          availability_factor: l.availability_factor?.toString(),
+        },
+        readonly: true as const,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -247,11 +332,13 @@ export async function fetchWorkItemsForCalendar(
 ): Promise<VirtualCalendarItem[]> {
   if (!workspaceId) return [];
 
-  const [tasks, milestones, sprints, projects] = await Promise.allSettled([
+  const [tasks, milestones, sprints, projects, waitStates, availability] = await Promise.allSettled([
     fetchTaskDeadlines(workspaceId, startDate, endDate),
     fetchMilestones(workspaceId, startDate, endDate),
     fetchSprints(workspaceId, startDate, endDate),
     fetchProjectDates(workspaceId, startDate, endDate),
+    fetchWaitStates(workspaceId, startDate, endDate),
+    fetchAvailability(workspaceId, startDate, endDate),
   ]);
 
   return [
@@ -259,5 +346,7 @@ export async function fetchWorkItemsForCalendar(
     ...(milestones.status === 'fulfilled' ? milestones.value : []),
     ...(sprints.status === 'fulfilled' ? sprints.value : []),
     ...(projects.status === 'fulfilled' ? projects.value : []),
+    ...(waitStates.status === 'fulfilled' ? waitStates.value : []),
+    ...(availability.status === 'fulfilled' ? availability.value : []),
   ];
 }

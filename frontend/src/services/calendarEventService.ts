@@ -4,13 +4,7 @@ import { logServiceFailure } from '../utils/supabaseError';
 import { sha256 } from '../utils/cryptoUtils';
 import type { CalendarEvent, CalendarEventType } from '../types';
 
-/**
- * Resolved base URL for the calendar backend API.
- * Falls back to localhost only in dev mode so the URL never silently
- * becomes the string "undefined/events/..." when the env var is missing.
- */
-const RAW_URL = (import.meta.env.VITE_CALENDAR_API_URL || 'https://pm-tool-server.onrender.com').replace(/\/$/, '');
-const CALENDAR_API_BASE = RAW_URL.endsWith('/api/calendar') ? RAW_URL : `${RAW_URL}/api/calendar`;
+// CALENDAR_API_BASE has been removed as the calendar service is now internal.
 
 interface RecurrenceRule {
   freq: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
@@ -142,24 +136,44 @@ function overlapMinutes(
 
 export const calendarEventService = {
   /**
-   * Idempotent write by (workspace_id, source_table, source_id).
-   * Inserts only when missing; restores soft-deleted rows; patches metadata when present.
+   * Idempotent write by (workspace_id, date, name) for internal calendar events.
    */
   async upsertBySourceKey(
     event: Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at'>,
     actorId?: string,
   ): Promise<{ event: CalendarEvent | null; created: boolean }> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const res = await fetch(`${CALENDAR_API_BASE}/events/upsert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify(event)
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      return { event: data.event, created: data.created };
+      const dbEvent = {
+        workspace_id: event.workspace_id,
+        name: event.title,
+        date: event.start_date.split('T')[0],
+        event_type: event.event_type,
+        source: 'sync',
+        year: new Date(event.start_date).getFullYear()
+      };
+      
+      const { data, error } = await supabase
+        .from('company_calendar_events')
+        .upsert(dbEvent, { onConflict: 'workspace_id, date, name' })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      const mappedEvent: CalendarEvent = {
+        id: data.id,
+        workspace_id: data.workspace_id,
+        title: data.name,
+        event_type: data.event_type as CalendarEventType,
+        start_date: `${data.date}T00:00:00Z`,
+        end_date: `${data.date}T23:59:59Z`,
+        capacity_impact: data.event_type === 'holiday' ? 1 : 0,
+        source_table: 'company_calendar_events',
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+      
+      return { event: mappedEvent, created: true };
     } catch (e) {
       console.error('upsertBySourceKey error:', e);
       return { event: null, created: false };
@@ -171,15 +185,30 @@ export const calendarEventService = {
     actorId?: string
   ): Promise<CalendarEvent | null> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const res = await fetch(`${CALENDAR_API_BASE}/events`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify(event)
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return await res.json();
+      const dbEvent = {
+        workspace_id: event.workspace_id,
+        name: event.title,
+        date: event.start_date.split('T')[0],
+        event_type: event.event_type,
+        source: 'manual',
+        year: new Date(event.start_date).getFullYear()
+      };
+      
+      const { data, error } = await supabase.from('company_calendar_events').insert([dbEvent]).select().single();
+      if (error) throw error;
+      
+      return {
+        id: data.id,
+        workspace_id: data.workspace_id,
+        title: data.name,
+        event_type: data.event_type as CalendarEventType,
+        start_date: `${data.date}T00:00:00Z`,
+        end_date: `${data.date}T23:59:59Z`,
+        capacity_impact: data.event_type === 'holiday' ? 1 : 0,
+        source_table: 'company_calendar_events',
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
     } catch (e) {
       console.error('createEvent error:', e);
       return null;
@@ -188,15 +217,16 @@ export const calendarEventService = {
 
   async updateEvent(id: string, updates: Partial<CalendarEvent>, actorId?: string): Promise<boolean> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const res = await fetch(`${CALENDAR_API_BASE}/events/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify(updates)
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return true;
+      const dbUpdates: any = {};
+      if (updates.title) dbUpdates.name = updates.title;
+      if (updates.start_date) {
+        dbUpdates.date = updates.start_date.split('T')[0];
+        dbUpdates.year = new Date(updates.start_date).getFullYear();
+      }
+      if (updates.event_type) dbUpdates.event_type = updates.event_type;
+      
+      const { error } = await supabase.from('company_calendar_events').update(dbUpdates).eq('id', id);
+      return !error;
     } catch (e) {
       console.error('updateEvent error:', e);
       return false;
@@ -205,14 +235,8 @@ export const calendarEventService = {
 
   async deleteEvent(id: string, workspaceId: string, actorId?: string): Promise<boolean> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const res = await fetch(`${CALENDAR_API_BASE}/events/${id}`, {
-        method: 'DELETE',
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return true;
+      const { error } = await supabase.from('company_calendar_events').delete().eq('id', id);
+      return !error;
     } catch (e) {
       console.error('deleteEvent error:', e);
       return false;
@@ -226,27 +250,61 @@ export const calendarEventService = {
     eventType?: CalendarEventType
   ): Promise<CalendarEvent[]> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      let url: URL;
-      if (CALENDAR_API_BASE.startsWith('http://') || CALENDAR_API_BASE.startsWith('https://')) {
-        url = new URL(`${CALENDAR_API_BASE}/events`);
-      } else {
-        url = new URL(`${CALENDAR_API_BASE}/events`, window.location.origin);
-      }
-      url.searchParams.append('workspace_id', workspaceId);
-      url.searchParams.append('start_date', startDate);
-      url.searchParams.append('end_date', endDate);
-      if (eventType) url.searchParams.append('event_type', eventType);
+      const { data: companyEvents, error } = await supabase
+        .from('company_calendar_events')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .gte('date', startDate.split('T')[0])
+        .lte('date', endDate.split('T')[0]);
+        
+      if (error) throw error;
       
-      const res = await fetch(url.toString(), {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const events = await res.json() as CalendarEvent[];
-      return this.expandRecurringEventsInRange(events, startDate, endDate);
+      const mappedCompanyEvents: CalendarEvent[] = (companyEvents || []).map(e => ({
+        id: e.id,
+        workspace_id: e.workspace_id,
+        title: e.name,
+        event_type: e.event_type as CalendarEventType,
+        start_date: `${e.date}T00:00:00Z`,
+        end_date: `${e.date}T23:59:59Z`,
+        capacity_impact: e.event_type === 'holiday' || e.event_type === 'festival' ? 1 : 0,
+        source_table: 'company_calendar_events',
+        created_at: e.created_at,
+        updated_at: e.updated_at
+      }));
+
+      const { fetchWorkItemsForCalendar } = await import('./workItemCalendarService');
+      const workItems = await fetchWorkItemsForCalendar(workspaceId, startDate, endDate);
+      
+      const mappedWorkItems: CalendarEvent[] = workItems.map(w => ({
+        id: w.id,
+        workspace_id: workspaceId,
+        title: w.title,
+        event_type: (
+          w.source === 'task' ? 'custom' : 
+          w.source === 'wait_state' ? 'blocker' :
+          w.source === 'personal_leave' ? 'leave' :
+          w.source
+        ) as CalendarEventType,
+        start_date: w.start_date,
+        end_date: w.end_date,
+        capacity_impact: w.source === 'personal_leave' ? 1 : 0,
+        capacity_modifier: w.source === 'personal_leave' ? (1 - parseFloat(w.meta?.availability_factor as string || '0')) : 1,
+        participants: w.source === 'personal_leave' && w.meta?.user_id ? [w.meta.user_id as string] : [],
+        source_table: w.source,
+        source_id: w.source_id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+      
+      const allEvents = [...mappedCompanyEvents, ...mappedWorkItems];
+      let finalEvents = this.expandRecurringEventsInRange(allEvents, startDate, endDate);
+      
+      if (eventType) {
+         finalEvents = finalEvents.filter(e => e.event_type === eventType);
+      }
+      return finalEvents;
     } catch (e) {
-      // Optional calendar backend: fail silently on network errors
+      console.error('getEventsInRange error:', e);
       return [];
     }
   },

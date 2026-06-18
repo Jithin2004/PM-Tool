@@ -181,7 +181,12 @@ export type CalendarEventType =
   | 'sprint'
   | 'deployment'
   | 'client_review'
-  | 'approval';
+  | 'approval'
+  | 'blocker'
+  | 'custom'
+  | 'task'
+  | 'milestone'
+  | 'project';
 
 export interface CalendarEvent {
   id: string;
