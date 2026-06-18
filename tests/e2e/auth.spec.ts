@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
-
+test.use({ storageState: { cookies: [], origins: [] } });
 test.describe('Authentication Flow', () => {
   test('Login page renders correctly', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('h1')).toHaveText('RESOLVE PM');
+    await expect(page.getByRole('heading', { name: 'RESOLVE PM', exact: true })).toBeVisible();
     await expect(page.getByPlaceholder('Enter your email')).toBeVisible();
     await expect(page.getByPlaceholder('Enter your password')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();

@@ -7159,14 +7159,19 @@ CREATE INDEX IF NOT EXISTS idx_calendar_sync_logs_year
 ALTER TABLE public.calendar_sync_logs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Workspace members can view sync logs" ON public.calendar_sync_logs;
+DROP POLICY IF EXISTS "Workspace members can insert sync logs" ON public.calendar_sync_logs;
+DROP POLICY IF EXISTS "Workspace members can manage sync logs" ON public.calendar_sync_logs;
+
 CREATE POLICY "Workspace members can view sync logs"
   ON public.calendar_sync_logs FOR SELECT
   USING (workspace_id = public.current_workspace());
 
-DROP POLICY IF EXISTS "Workspace members can insert sync logs" ON public.calendar_sync_logs;
 CREATE POLICY "Workspace members can insert sync logs"
   ON public.calendar_sync_logs FOR INSERT
   WITH CHECK (workspace_id = public.current_workspace());
+
+GRANT SELECT, INSERT ON public.calendar_sync_logs TO authenticated;
+GRANT ALL ON public.calendar_sync_logs TO service_role;
 
 -- Append-only: no UPDATE or DELETE (audit integrity)
 -- (WORM rules omitted per schema precedent — see comments above system_audit_ledger)

@@ -249,6 +249,11 @@ app.post('/api/provision-employee', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-    console.log(`Universal Invite Engine API running on port ${PORT}`);
-});
+
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Universal Invite Engine API running on port ${PORT}`);
+    });
+} else {
+    module.exports = app;
+}

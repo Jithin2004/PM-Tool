@@ -3,7 +3,7 @@ export async function provisionTestEmployee(token: string, role: string = 'devel
   const email = `test.emp.${timestamp}@example.com`;
   const fullName = `Test Employee ${timestamp}`;
 
-  const res = await fetch('http://localhost:5001/api/provision-employee', {
+  const res = await fetch(`${process.env.TEST_API_URL}/api/invite`, {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',
@@ -21,5 +21,5 @@ export async function provisionTestEmployee(token: string, role: string = 'devel
     throw new Error(`Failed to provision test employee: ${data.error}`);
   }
 
-  return { email, password: data.tempPassword, userId: data.user_id, fullName };
+  return { email, password: 'AcceptInvitePassword123!', userId: data.data?.user_id, fullName, inviteLink: data.data?.invite_link };
 }

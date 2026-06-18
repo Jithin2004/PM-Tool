@@ -80,11 +80,11 @@ export function AdminDashboard({
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
-      // Provision user via backend API
-      const baseUrl = (import.meta as any).env.VITE_AUTH_ADMIN_API_URL;
-      if (!baseUrl && import.meta.env.PROD) throw new Error("Backend URL missing");
-      const finalUrl = baseUrl || 'http://localhost:5001';
-      const res = await fetch(`${baseUrl}/api/invite`, {
+      const finalUrl = import.meta.env.VITE_API_URL;
+      if (!finalUrl) {
+        throw new Error("Configuration Error: VITE_API_URL is missing.");
+      }
+      const res = await fetch(`${finalUrl}/api/invite`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

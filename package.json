@@ -6,7 +6,9 @@
   "directories": {
     "doc": "docs"
   },
-  "scripts": {},
+  "scripts": {
+    "test:prod-smoke": "npx cross-env TEST_ENV=production playwright test tests/e2e/01-auth.spec.ts tests/e2e/02-navigation.spec.ts tests/e2e/backend-health.spec.ts tests/e2e/invite-acceptance.spec.ts --project=chromium"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Jithin2004/PM-Tool.git"
@@ -21,6 +23,7 @@
   "homepage": "https://github.com/Jithin2004/PM-Tool#readme",
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "@types/node": "^25.9.2"
+    "@types/node": "^25.9.2",
+    "dotenv": "^17.4.2"
   }
 }

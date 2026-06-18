@@ -350,9 +350,12 @@ export function AdminPanel() {
 
       const { mapAuthorityToLegacyRole } = await import('../../core/types/workspace');
 
-      const backendUrl = import.meta.env.PROD ? import.meta.env.VITE_API_URL : (import.meta.env.VITE_API_URL || 'http://localhost:5001');
+      const finalUrl = import.meta.env.VITE_API_URL;
+      if (!finalUrl) {
+        throw new Error("Configuration Error: VITE_API_URL is missing.");
+      }
       
-      const res = await fetch(`${backendUrl}/api/invite`, {
+      const res = await fetch(`${finalUrl}/api/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
