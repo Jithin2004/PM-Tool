@@ -167,10 +167,10 @@ exports.activateLicense = async (req, res) => {
 
 // 3. License Key Verification
 exports.verifyLicense = async (req, res) => {
-    const { productKey, workspaceId } = req.body;
+    const { productKey } = req.body;
 
-    if (!productKey || !workspaceId) {
-        return res.status(400).json({ error: 'Product key and workspace ID are required' });
+    if (!productKey) {
+        return res.status(400).json({ error: 'Product key is required' });
     }
 
     try {
@@ -182,21 +182,13 @@ exports.verifyLicense = async (req, res) => {
                 await AuditEvent.create({
                     event_type: 'verification_failed',
                     reason: !license ? 'License key not found' : `License is in status ${license.status}`,
-                    device_hash: workspaceId,
+                    device_hash: 'unauthenticated',
                     license_key: productKey
                 });
             } catch (auditErr) {
                 console.error('Audit logging failed background execution:', auditErr.message);
             }
             return res.status(401).json({ valid: false, message: 'Invalid or expired license' });
-        }
-
-        // Backward Compatibility Migration
-        if (!license.activated_workspace_id && license.activated_devices && license.activated_devices.length > 0) {
-            // Safely migrate to workspace_id binding
-            license.activated_workspace_id = workspaceId;
-        } else if (license.activated_workspace_id && license.activated_workspace_id !== workspaceId) {
-            return res.status(403).json({ valid: false, error: 'License belongs to another workspace' });
         }
 
         // Update verification time in the background safely
@@ -207,23 +199,14 @@ exports.verifyLicense = async (req, res) => {
             console.error('Failed to update last_verified_at timestamp:', saveErr.message);
         }
 
-        const token = jwt.sign(
-            { key: license.key, workspaceId: workspaceId }, 
-            JWT_SECRET, 
-            { expiresIn: '30d' }
-        );
-
         // Secure response payload matching frontend overview expectations.
-        // TOKEN SEPARATION AUDIT: This token only proves license validity. It does NOT authenticate users in Supabase.
-        // It should never be used as a session token for accessing user data.
-        // Unauthenticated verification only returns safe fields (plan, features). It explicitly drops purchase_metadata.
         return res.status(200).json({
             valid: true,
-            activated: !!license.activated_workspace_id,
-            token: token,
-            keyId: license.key,
+            licenseId: license.key,
             message: 'License verified',
             plan: license.plan || 'STANDARD',
+            seats: license.activation_limit || 3,
+            supportUntil: license.support_until || null,
             features: getFeaturesForPlan(license.plan || 'STANDARD')
         });
 

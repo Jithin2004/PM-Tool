@@ -240,21 +240,20 @@ export function clearLicense(): void {
 }
 
 // ── Activate new license key via server ──────────────────────────────────────
-export async function validateNewActivationKey(productKey: string, workspaceId: string): Promise<VerifyResult> {
-  if (!productKey.trim() || !workspaceId) {
-    return { success: false, error: 'Product key and workspace ID are required.' };
+export async function validateNewActivationKey(productKey: string): Promise<VerifyResult> {
+  if (!productKey.trim()) {
+    return { success: false, error: 'Product key is required.' };
   }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const res = await fetch(ACTIVATE_URL, {
+    const res = await fetch(VERIFY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        productKey: productKey.trim(),
-        workspaceId
+        productKey: productKey.trim()
       }),
       signal: controller.signal,
     });
@@ -268,11 +267,11 @@ export async function validateNewActivationKey(productKey: string, workspaceId: 
     }
 
     const data = await res.json();
-    const token = data?.token;
+    const token = data?.licenseId || data?.token; // fallback for token
     const plan = data?.plan || 'BUSINESS';
 
     if (!token) {
-      return { success: false, error: 'Server did not return a verification token.' };
+      return { success: false, error: 'Server did not return a verification token or license ID.' };
     }
 
     const license: LicenseData = {
@@ -285,7 +284,7 @@ export async function validateNewActivationKey(productKey: string, workspaceId: 
       status: 'Activated',
       companyName: data?.companyName || 'Enterprise Customer',
       purchaseId: data?.purchaseId || `INV-${Math.floor(Math.random() * 100000)}`,
-      supportExpiry: data?.supportExpiry || Date.now() + 365 * 24 * 60 * 60 * 1000
+      supportExpiry: data?.supportUntil || data?.supportExpiry || Date.now() + 365 * 24 * 60 * 60 * 1000
     };
 
     memoryLicense = license;
@@ -306,9 +305,9 @@ export async function validateNewActivationKey(productKey: string, workspaceId: 
 }
 
 // ── Verify existing license key via server ──────────────────────────────────────
-export async function verifyLicenseKey(productKey: string, workspaceId: string): Promise<VerifyResult> {
-  if (!productKey.trim() || !workspaceId) {
-    return { success: false, error: 'Product key and workspace ID are required.' };
+export async function verifyLicenseKey(productKey: string): Promise<VerifyResult> {
+  if (!productKey.trim()) {
+    return { success: false, error: 'Product key is required.' };
   }
 
   const controller = new AbortController();
@@ -319,8 +318,7 @@ export async function verifyLicenseKey(productKey: string, workspaceId: string):
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        productKey: productKey.trim(),
-        workspaceId
+        productKey: productKey.trim()
       }),
       signal: controller.signal,
     });
@@ -334,7 +332,7 @@ export async function verifyLicenseKey(productKey: string, workspaceId: string):
     }
 
     const data = await res.json();
-    const token = data?.token;
+    const token = data?.licenseId || data?.token;
     const plan = data?.plan || 'BUSINESS';
 
     const license: LicenseData = {
@@ -347,7 +345,7 @@ export async function verifyLicenseKey(productKey: string, workspaceId: string):
       status: 'Activated',
       companyName: data?.companyName || 'Enterprise Customer',
       purchaseId: data?.purchaseId || `INV-${Math.floor(Math.random() * 100000)}`,
-      supportExpiry: data?.supportExpiry || Date.now() + 365 * 24 * 60 * 60 * 1000
+      supportExpiry: data?.supportUntil || data?.supportExpiry || Date.now() + 365 * 24 * 60 * 60 * 1000
     };
 
     memoryLicense = license;
@@ -387,11 +385,11 @@ export async function validateWorkspaceLicenseUpdate(productKey: string, current
       return { success: false, error: 'This key is already attached to another workspace on this system.' };
     }
     // Existing local license -> check /verify
-    return await verifyLicenseKey(productKey, currentWorkspaceId);
+    return await verifyLicenseKey(productKey);
   }
 
   // No local license -> First activation
-  return await validateNewActivationKey(productKey, currentWorkspaceId);
+  return await validateNewActivationKey(productKey);
 }
 
 // ── Background online license check ──────────────────────────────────────────
