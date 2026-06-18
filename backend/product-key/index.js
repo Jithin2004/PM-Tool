@@ -22,9 +22,6 @@ app.post('/verify', licenseController.verifyLicense);
 app.post('/activate', licenseController.activateLicense);
 app.get('/addLicense', licenseController.addLicense);
 
-// Mount Auth-Admin routes
-const authAdminApp = require('../auth-admin/index.js');
-app.use(authAdminApp);
 
 // App Startup Process
 let isDbConnected = false;
