@@ -279,8 +279,8 @@ export function WorkspaceSetupWizard() {
 
   return (
     <ResolveLayout eyebrow="Onboarding">
-      <div className="grid gap-8 lg:grid-cols-2 max-w-5xl mx-auto items-start">
-        <section className="premium-panel rounded-2xl p-8 font-geist">
+      <div className="flex flex-col items-center justify-center w-full min-h-[80vh] py-8 px-4">
+        <section className="premium-panel rounded-2xl p-8 font-geist w-full max-w-2xl">
           
           {/* Onboarding setup completion progress bar */}
           <div className="w-full h-1 bg-white/5 mb-6 rounded-full overflow-hidden">
@@ -596,112 +596,16 @@ export function WorkspaceSetupWizard() {
           )}
 
           <div className="mt-8 flex justify-between">
-            <button disabled={step === 1 || selectedTemplate !== null} onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded btn-premium-secondary disabled:opacity-50 transition-colors">Back</button>
+            <button disabled={step === 1} onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded btn-premium-secondary disabled:opacity-50 transition-colors">Back</button>
             {step < 7 ? (
-              <button disabled={selectedTemplate !== null || (step === 1 && !name.trim())} onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded btn-premium-primary disabled:opacity-50 transition-colors">Next</button>
+              <button disabled={step === 1 && !name.trim()} onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded btn-premium-primary disabled:opacity-50 transition-colors">Next</button>
             ) : (
-              <button onClick={handleFinish} disabled={loading || selectedTemplate !== null} className="px-4 py-2 rounded btn-premium-success flex items-center gap-2 disabled:opacity-50 transition-colors font-medium">
+              <button onClick={handleFinish} disabled={loading} className="px-4 py-2 rounded btn-premium-success flex items-center gap-2 disabled:opacity-50 transition-colors font-medium">
                 {loading ? 'Building...' : 'Complete Setup'} <Zap className="w-4 h-4 fill-white text-white" />
               </button>
             )}
           </div>
         </section>
-
-        <aside className="premium-panel rounded-2xl p-8 font-geist h-fit space-y-6 lg:sticky top-8">
-          <h3 className="font-semibold text-[var(--pm-on-surface)] flex items-center gap-2"><Zap className="w-4 h-4 text-amber-400"/> Instant Demo Workspaces</h3>
-          <p className="text-xs text-[var(--pm-on-surface-variant)]">Bypass manual configuration and instantiate a fully-loaded enterprise demo environment.</p>
-          
-          <div className="space-y-3">
-            {Object.keys(TEMPLATE_SUMMARIES).map(type => {
-              const isSelected = selectedTemplate === type;
-              const summary = TEMPLATE_SUMMARIES[type];
-              
-              return (
-                <button 
-                  key={type} 
-                  onClick={() => toggleTemplate(type)} 
-                  disabled={demoLoading} 
-                  className={`w-full p-4 border rounded-xl text-left flex flex-col group transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-[#080c19] ${
-                    isSelected 
-                      ? 'border-purple-500 bg-purple-500/10 shadow-sm ring-1 ring-purple-500/50' 
-                      : 'border-[var(--border-soft)] hover:border-purple-500/70 bg-[var(--surface-glass)] hover:bg-[var(--surface-hover)]'
-                  }`}
-                  aria-pressed={isSelected}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-3">
-                      <Briefcase className={`w-5 h-5 transition-colors ${isSelected ? 'text-[var(--pm-primary)]' : 'text-[var(--pm-on-surface-variant)] group-hover:text-[var(--pm-primary)]'}`} />
-                      <span className={`text-sm font-medium transition-colors ${isSelected ? 'text-[var(--pm-on-surface)]' : 'text-[var(--pm-on-surface-variant)] group-hover:text-[var(--pm-on-surface)]'}`}>{type}</span>
-                    </div>
-                    {isSelected ? (
-                      <X className="w-4 h-4 text-[var(--pm-primary)]" />
-                    ) : (
-                      <Plus className="w-4 h-4 opacity-0 group-hover:opacity-100 text-[var(--pm-on-surface-variant)] transition-all" />
-                    )}
-                  </div>
-                  
-                  {isSelected && (
-                    <div className="mt-4 pt-4 border-t border-[var(--pm-primary)]/20 animate-in fade-in slide-in-from-top-1">
-                      <div className="flex items-center gap-1.5 mb-4 text-[11px] font-medium text-[var(--pm-primary)] bg-[var(--pm-primary)]/10 inline-flex px-2 py-1 rounded-md">
-                        <span>Recommended For:</span>
-                        <span className="text-[var(--pm-on-surface)]">{summary.recommendedFor}</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-y-3 gap-x-2">
-                        <div className="text-xs">
-                           <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Projects</div>
-                           <div className="font-semibold text-[var(--pm-text)] text-[var(--text-primary)] mt-0.5">{summary.projects}</div>
-                        </div>
-                        <div className="text-xs">
-                           <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Milestones</div>
-                           <div className="font-semibold text-[var(--pm-text)] text-[var(--text-primary)] mt-0.5">{summary.milestones}</div>
-                        </div>
-                        <div className="text-xs">
-                           <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Tasks</div>
-                           <div className="font-semibold text-[var(--pm-text)] text-[var(--text-primary)] mt-0.5">{summary.tasks}</div>
-                        </div>
-                        <div className="text-xs">
-                           <div className="text-[var(--pm-on-surface-variant)] uppercase tracking-wider text-[10px]">Team Members</div>
-                           <div className="font-semibold text-[var(--pm-text)] text-[var(--text-primary)] mt-0.5">{summary.members}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          
-          <div className="pt-2 flex flex-col gap-2">
-            <button 
-              onClick={handleDemo}
-              disabled={!selectedTemplate || demoLoading}
-              className={`w-full p-3.5 rounded-xl font-semibold text-sm flex justify-center items-center gap-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-[#080c19] ${
-                selectedTemplate 
-                  ? 'btn-premium-primary cursor-pointer' 
-                  : 'bg-[var(--surface-glass)] text-[var(--text-secondary)] border border-[var(--border-soft)] cursor-not-allowed'
-              }`}
-            >
-              {demoLoading ? (
-                <>Building Environment...</>
-              ) : (
-                <>
-                  Create Demo Workspace <Zap className={`w-4 h-4 ${selectedTemplate ? 'text-[var(--pm-text)]' : 'opacity-50'}`} />
-                </>
-              )}
-            </button>
-            {demoLoading && !selectedTemplate && <p className="text-xs text-[var(--pm-primary)] animate-pulse text-center mt-1">Injecting demo topology...</p>}
-            
-            {selectedTemplate && (
-              <button
-                onClick={() => { setSelectedTemplate(null); setName(''); }}
-                disabled={demoLoading}
-                className="w-full p-3 rounded-xl font-medium text-sm text-[var(--pm-on-surface-variant)] hover:text-[var(--pm-text)] text-[var(--text-primary)] hover:bg-surface-4 border border-transparent transition-colors flex justify-center items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" /> Return to Manual Setup
-              </button>
-            )}
-          </div>
-        </aside>
       </div>
     </ResolveLayout>
   );
