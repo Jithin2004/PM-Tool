@@ -173,25 +173,35 @@ export function WorkspaceSetupWizard() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
-            const response = await fetch(`${(import.meta.env.PROD ? (() => { if (!import.meta.env.VITE_API_URL) throw new Error("Backend URL missing"); return import.meta.env.VITE_API_URL; })() : (import.meta.env.VITE_API_URL || ''))}/api/bulk-invite`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`
-              },
-              body: JSON.stringify({
-                users: payloadUsers,
-                source: 'onboarding'
-              })
-            });
-
-            const result = await response.json();
-            if (response.ok) {
-              imported = result.results?.length || 0;
-              failed = result.errors?.length || 0;
-              failReasons = result.errors?.map((e: any) => `${e.email}: ${e.error}`) || [];
+            const apiUrl = import.meta.env.VITE_API_URL;
+            if (!apiUrl) {
+              console.warn("VITE_API_URL missing. Skipping bulk invites.");
+              window.dispatchEvent(new CustomEvent('notify-toast', {
+                detail: { message: "Backend configuration missing. Team invites skipped.", type: 'warning' }
+              }));
+              failed = members.length;
+              failReasons.push("Backend URL missing in environment configuration.");
             } else {
-              throw new Error(result.error || 'Failed to bulk invite users');
+              const response = await fetch(`${apiUrl}/api/bulk-invite`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                  users: payloadUsers,
+                  source: 'onboarding'
+                })
+              });
+
+              const result = await response.json();
+              if (response.ok) {
+                imported = result.results?.length || 0;
+                failed = result.errors?.length || 0;
+                failReasons = result.errors?.map((e: any) => `${e.email}: ${e.error}`) || [];
+              } else {
+                throw new Error(result.error || 'Failed to bulk invite users');
+              }
             }
           } catch (err: any) {
             console.error("Bulk invite failed:", err);

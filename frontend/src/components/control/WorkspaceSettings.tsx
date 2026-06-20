@@ -12,6 +12,7 @@ import { WorkspaceReadiness } from './WorkspaceReadiness';
 import { OperationalHealth } from './OperationalHealth';
 import { ExportCenter } from './ExportCenter';
 import { BillingSettings } from './BillingSettings';
+import { showPrompt } from '../../components/common/Dialogs';
 
 const TABS = [
   { id: 'organization', label: 'Organization' },
@@ -412,7 +413,6 @@ export function WorkspaceSettings() {
 function WorkspaceDangerZone() {
   const { workspace } = useWorkspace();
   const { notify } = useDashboard();
-  const { showPrompt } = require('../../components/common/Dialogs');
 
   const handleTransferOwnership = async () => {
     const confirmation = await showPrompt(
