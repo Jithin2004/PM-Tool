@@ -21,6 +21,17 @@ const TEMPLATE_SUMMARIES: Record<string, { projects: number, milestones: number,
   'Client Delivery Agency': { projects: 5, milestones: 20, tasks: 85, members: 10, recommendedFor: 'Agencies & Consultancies' }
 };
 
+const roleMapping: Record<string, string[]> = {
+  owner: ['Founder', 'CEO', 'COO', 'CTO'],
+  admin: ['Director', 'Department Head', 'Operations Manager'],
+  manager: ['Director', 'Department Head', 'Operations Manager', 'Engineering Lead', 'Design Lead'],
+  employee: ['Operations Executive', 'Product Designer', 'UI Designer', 'Intern'],
+  developer: ['Engineering Lead', 'Senior Software Engineer', 'Software Engineer', 'Junior Software Engineer', 'Intern'],
+  finance: ['Finance Manager', 'Accountant'],
+  hr: ['HR Manager', 'HR Executive'],
+  client: ['Client Representative', 'External Stakeholder']
+};
+
 export function WorkspaceSetupWizard() {
   const { createWorkspace, error } = useWorkspace();
   const { refreshProfile, profile, user } = useAuth();
@@ -419,6 +430,7 @@ export function WorkspaceSetupWizard() {
                             onChange={(e) => {
                               const newMembers = [...members];
                               newMembers[idx].authority = e.target.value as any;
+                              newMembers[idx].designation = '';
                               setMembers(newMembers);
                             }}
                             className="input-premium w-full text-sm rounded px-3 py-2 outline-none"
@@ -447,45 +459,19 @@ export function WorkspaceSetupWizard() {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-[var(--pm-on-surface-variant)] uppercase tracking-wider">Job Title (Designation)</label>
                           <select 
-                            value={m.designation}
+                            value={m.designation || ''}
+                            disabled={!m.authority}
                             onChange={(e) => {
                               const newMembers = [...members];
                               newMembers[idx].designation = e.target.value;
                               setMembers(newMembers);
                             }}
-                            className="input-premium w-full text-sm rounded px-3 py-2 outline-none"
+                            className="input-premium w-full text-sm rounded px-3 py-2 outline-none disabled:opacity-50"
                           >
                             <option value="">Select Title...</option>
-                            <optgroup label="Leadership">
-                              <option value="Founder">Founder</option>
-                              <option value="CEO">CEO</option>
-                              <option value="COO">COO</option>
-                              <option value="CTO">CTO</option>
-                              <option value="Director">Director</option>
-                              <option value="Department Head">Department Head</option>
-                            </optgroup>
-                            <optgroup label="Engineering">
-                              <option value="Engineering Lead">Engineering Lead</option>
-                              <option value="Senior Software Engineer">Senior Software Engineer</option>
-                              <option value="Software Engineer">Software Engineer</option>
-                              <option value="Junior Software Engineer">Junior Software Engineer</option>
-                              <option value="Intern">Intern</option>
-                            </optgroup>
-                            <optgroup label="Design">
-                              <option value="Product Designer">Product Designer</option>
-                              <option value="UI Designer">UI Designer</option>
-                              <option value="Design Lead">Design Lead</option>
-                            </optgroup>
-                            <optgroup label="Finance & People">
-                              <option value="Finance Manager">Finance Manager</option>
-                              <option value="Accountant">Accountant</option>
-                              <option value="HR Manager">HR Manager</option>
-                              <option value="HR Executive">HR Executive</option>
-                            </optgroup>
-                            <optgroup label="Operations">
-                              <option value="Operations Manager">Operations Manager</option>
-                              <option value="Operations Executive">Operations Executive</option>
-                            </optgroup>
+                            {m.authority && roleMapping[m.authority]?.map((title) => (
+                              <option key={title} value={title}>{title}</option>
+                            ))}
                           </select>
                         </div>
                       </div>
