@@ -15,7 +15,6 @@ export default defineConfig(({ mode }) => {
     base,
     plugins: [react(), tailwindcss(), visualizer({ open: false, filename: 'stats.html' })],
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
     resolve: {
       alias: {

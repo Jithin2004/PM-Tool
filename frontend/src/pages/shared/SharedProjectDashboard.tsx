@@ -31,45 +31,24 @@ export function SharedProjectDashboard({ previewToken }: { previewToken?: string
 
         setData(sharedData);
 
-        const projectId = sharedData.project.id;
         const perms = sharedData.permissions;
 
         // 2. Fetch Client-Visible Documents
         if (perms.can_view_documents) {
-          const { data: docs } = await supabase
-            .from('document_references')
-            .select('*')
-            .eq('project_id', projectId)
-            .eq('visibility', 'client_visible');
-          if (docs) setDocuments(docs);
+          setDocuments(sharedData.documents || []);
         }
 
         // 3. Fetch Client Meetings
-        const { data: meets } = await supabase
-          .from('meetings')
-          .select('*')
-          .eq('project_id', projectId)
-          .eq('meeting_category', 'Client')
-          .order('start_time', { ascending: true });
-        if (meets) setMeetings(meets);
+        setMeetings(sharedData.meetings || []);
 
         // 4. Fetch Tasks (High-level)
         if (perms.can_view_tasks) {
-          const { data: taskData } = await supabase
-            .from('tasks')
-            .select('id, title, status, priority')
-            .eq('project_id', projectId);
-          if (taskData) setTasks(taskData);
+          setTasks(sharedData.tasks || []);
         }
 
         // 5. Fetch Approvals
         if (perms.can_approve) {
-          const { data: apprData } = await supabase
-            .from('universal_approvals')
-            .select('*')
-            .eq('entity_id', projectId)
-            .eq('status', 'pending');
-          if (apprData) setApprovals(apprData);
+          setApprovals(sharedData.approvals || []);
         }
 
       } catch (err: any) {

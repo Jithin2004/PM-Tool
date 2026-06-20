@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const apiKey = ''; // Disabled for security
+const ai = new GoogleGenAI({ apiKey });
 
 function isRateLimitError(error: any): boolean {
   if (!error) return false;
@@ -49,7 +50,7 @@ async function callGeminiWithRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export async function estimateProjectHours(name: string, description: string): Promise<number> {
-  if (!process.env.GEMINI_API_KEY) {
+  if (!apiKey) {
     return 8;
   }
 
