@@ -14,6 +14,7 @@ import { CreateInvoiceModal } from '../../components/finance/CreateInvoiceModal'
 import { ManageClientsModal } from '../../components/finance/ManageClientsModal';
 import { AddExpenseModal } from '../../components/finance/AddExpenseModal';
 import { RecordPaymentModal } from '../../components/finance/RecordPaymentModal';
+import { FinanceInitializationModal } from '../../components/finance/FinanceInitializationModal';
 import { generateInvoicePDF } from '../../services/invoicePdfService';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
@@ -67,6 +68,7 @@ export default function FinancePage() {
   const [showTimeInvoiceModal, setShowTimeInvoiceModal] = useState(false);
   const [selectedClientForTime, setSelectedClientForTime] = useState('');
   const [isGeneratingTimeInvoice, setIsGeneratingTimeInvoice] = useState(false);
+  const [showInitModal, setShowInitModal] = useState(false);
 
   useEffect(() => {
     if (!workspace?.id) return;
@@ -259,8 +261,39 @@ export default function FinancePage() {
   };
 
   const isFinanceEmpty = data.invoices.length === 0 && data.expenses.length === 0 && data.payments.length === 0 && data.salaries.length === 0 && clients.length === 0;
+  const isInitialized = workspace ? localStorage.getItem(`finance_init_${workspace.id}`) === 'true' : false;
 
   if (isFinanceEmpty) {
+    if (!isInitialized) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center p-6 bg-surface">
+          <div className="max-w-md w-full glass-panel rounded-xl border border-border p-8 text-center">
+            <PremiumEmptyState
+              icon={Landmark}
+              title="Initialize Financial Accounts"
+              description="Configure your baseline financial settings to begin tracking revenue, costs, and profitability."
+              action={
+                <button 
+                  onClick={() => setShowInitModal(true)} 
+                  className="btn-premium-primary px-6 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 mx-auto"
+                >
+                  <Landmark className="w-4 h-4" /> Initialize Financial Accounts
+                </button>
+              }
+            />
+          </div>
+          <FinanceInitializationModal
+            isOpen={showInitModal}
+            onClose={() => setShowInitModal(false)}
+            onSuccess={() => {
+              setShowInitModal(false);
+              loadData();
+            }}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 bg-surface">
         <div className="max-w-md w-full glass-panel rounded-xl border border-border p-8 text-center">
