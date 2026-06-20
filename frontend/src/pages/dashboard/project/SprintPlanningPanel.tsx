@@ -5,6 +5,7 @@ import { Task } from '../../../types';
 import { DroppableSprintZone } from '../../../components/execution/dragDrop/DroppableSprintZone';
 import { useAuth } from '../../../context/AuthContext';
 import { Calendar, AlertCircle, CheckCircle, Package } from 'lucide-react';
+import { showAlert, showConfirm } from '../../../components/common/Dialogs';
 
 interface SprintPlanningPanelProps {
   projectId: string;
@@ -55,7 +56,7 @@ export const SprintPlanningPanel: React.FC<SprintPlanningPanelProps> = ({
     if (item.type === 'task') {
       const task = item.data as Task;
       if (task.status === 'completed' || task.status === 'done') {
-        alert("Completed work cannot be planned into a new sprint.");
+        showAlert("Completed work cannot be planned into a new sprint.", { type: 'warning' });
         return;
       }
       onTaskDropped(task.id, sprint.id);
@@ -63,9 +64,15 @@ export const SprintPlanningPanel: React.FC<SprintPlanningPanelProps> = ({
   };
 
   const handleStartSprint = async (sprintId: string) => {
-    await sprintService.startSprint(sprintId, workspaceId, user?.id);
-    loadSprints();
-    triggerReload();
+    if (!await showConfirm("Start this sprint?")) return;
+    try {
+      await sprintService.startSprint(sprintId, workspaceId, user?.id);
+      showAlert("Sprint started successfully.", { type: "success" });
+      loadSprints();
+      triggerReload();
+    } catch (e: any) {
+      showAlert(`Failed to start sprint: ${e.message}`, { type: "error" });
+    }
   };
 
   if (loading) return <div className="p-4 text-slate-400">Loading Sprints...</div>;

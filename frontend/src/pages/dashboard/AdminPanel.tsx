@@ -56,7 +56,6 @@ export function AdminPanel() {
     teams,
     systemData,
     handleSaveLogisticsData,
-    askConfirmation,
     handleUpdateRole,
     handleCreateTeam,
     handleUpdateTeam,
@@ -64,6 +63,7 @@ export function AdminPanel() {
     notify,
     invalidateAll,
   } = useDashboard();
+  const { showConfirm, showPrompt } = require('../../components/common/Dialogs');
 
   const [activeTopTab, setActiveTopTab] = useState<TopTab>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -201,7 +201,7 @@ export function AdminPanel() {
   }, [activeSubTab]);
 
   const handleArchiveWorkspace = async (workspaceId: string) => {
-    askConfirmation("Archive Workspace", "Are you sure you want to archive/retire this workspace? Tasks updates will be disabled.", async () => {
+    if (await showConfirm("Are you sure you want to archive/retire this workspace? Tasks updates will be disabled.", { title: "Archive Workspace", confirmText: "Archive", type: 'warning' })) {
       const { error } = await supabase
         .from('workspaces')
         .update({ status: 'retired' })
@@ -212,11 +212,11 @@ export function AdminPanel() {
         notify("Workspace status set to retired.", "success");
         loadWorkspacesData();
       }
-    }, "Archive");
+    }
   };
 
   const handleResetSandbox = async (workspaceId: string) => {
-    askConfirmation("Reset Sandbox Workspace", "Are you sure you want to purge all projects, tasks, collaborators, and dependencies from this sandbox? This cannot be undone.", async () => {
+    if (await showConfirm("Are you sure you want to purge all projects, tasks, collaborators, and dependencies from this sandbox? This cannot be undone.", { title: "Reset Sandbox Workspace", confirmText: "Reset", type: 'error' })) {
       try {
         await supabase.from('task_collaborators').delete().eq('workspace_id', workspaceId);
         await supabase.from('task_dependencies').delete().eq('workspace_id', workspaceId);
@@ -227,11 +227,11 @@ export function AdminPanel() {
       } catch (err: any) {
         notify("Failed to reset sandbox: " + err.message, "error");
       }
-    }, "Reset");
+    }
   };
 
   const handleDeleteSandbox = async (workspaceId: string) => {
-    askConfirmation("Deactivate Sandbox", "Are you sure you want to set this sandbox workspace status to inactive?", async () => {
+    if (await showConfirm("Are you sure you want to set this sandbox workspace status to inactive?", { title: "Deactivate Sandbox", confirmText: "Deactivate", type: 'warning' })) {
       const { error } = await supabase
         .from('workspaces')
         .update({ status: 'inactive' })
@@ -242,11 +242,11 @@ export function AdminPanel() {
         notify("Sandbox set to inactive.", "success");
         loadWorkspacesData();
       }
-    }, "Deactivate");
+    }
   };
 
   const handleRestoreWorkspace = async (workspaceId: string) => {
-    askConfirmation("Restore Workspace", "Are you sure you want to restore this workspace to active status?", async () => {
+    if (await showConfirm("Are you sure you want to restore this workspace to active status?", { title: "Restore Workspace", confirmText: "Restore" })) {
       const { error } = await supabase
         .from('workspaces')
         .update({ status: 'active' })
@@ -257,7 +257,7 @@ export function AdminPanel() {
         notify("Workspace status set to active.", "success");
         loadWorkspacesData();
       }
-    }, "Restore");
+    }
   };
 
   const handleExportWorkspace = async (ws: any) => {
@@ -389,7 +389,7 @@ export function AdminPanel() {
   };
 
   const handleRevokeInvitation = async (id: string) => {
-    askConfirmation("Revoke Invitation", "Are you sure you want to revoke this invitation? The user will no longer be allowed to join.", async () => {
+    if (await showConfirm("Are you sure you want to revoke this invitation? The user will no longer be allowed to join.", { title: "Revoke Invitation", confirmText: "Revoke", type: 'warning' })) {
       const { error } = await supabase
         .from('users')
         .update({ status: 'disabled', invite_token: null, invite_expires_at: null })
@@ -400,7 +400,7 @@ export function AdminPanel() {
       } else {
         notify("Failed to revoke invitation", "error");
       }
-    }, "Revoke");
+    }
   };
 
   const handleCreateTeamSubmit = (e: React.FormEvent) => {
@@ -444,7 +444,7 @@ export function AdminPanel() {
     const userProfile = profiles.find(p => p.id === userId);
     const targetName = userProfile?.full_name || userProfile?.email || "this user";
 
-    askConfirmation("Confirm Designation Change", `Confirm action: Change designation of ${targetName} to '${designation}'?`, async () => {
+    if (await showConfirm(`Confirm action: Change designation of ${targetName} to '${designation}'?`, { title: "Confirm Designation Change", confirmText: "Change", type: 'warning' })) {
       const { error } = await supabase.from('users').update({ designation }).eq('id', userId);
       if (!error) {
         notify("Designation updated successfully.", "success");
@@ -453,7 +453,7 @@ export function AdminPanel() {
         notify("Failed to update designation: " + error.message, "error");
       }
       setActiveGearPopover(null);
-    }, "Change");
+    }
   };
 
   if (!hasCapability(profile?.role, 'platform_governance')) {
@@ -667,16 +667,11 @@ export function AdminPanel() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      askConfirmation(
-                        "Delete Delivery Unit",
-                        `Are you sure you want to delete the delivery unit "${team.name}"? This action cannot be undone.`,
-                        async () => {
-                          await handleDeleteTeam(team.id);
-                          notify("Delivery unit deleted successfully.", "success");
-                        },
-                        "Delete"
-                      );
+                    onClick={async () => {
+                      if (await showConfirm(`Are you sure you want to delete the delivery unit "${team.name}"? This action cannot be undone.`, { title: "Delete Delivery Unit", confirmText: "Delete", type: 'error' })) {
+                        await handleDeleteTeam(team.id);
+                        notify("Delivery unit deleted successfully.", "success");
+                      }
                     }}
                     className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded text-[10px] font-mono-pm uppercase tracking-wider transition-all"
                     style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)', color: 'var(--pm-error)' }}
@@ -889,13 +884,14 @@ export function AdminPanel() {
                                     <label className="block text-[9px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Authority Level</label>
                                     <select
                                       value={p.role === 'super_admin' ? 'admin' : p.role === 'pm' ? 'manager' : p.role === 'developer' ? 'member' : 'external'}
-                                      onChange={(e) => {
+                                      onChange={async (e) => {
                                         const authVal = e.target.value as any;
-                                        askConfirmation("Change Authority Level", `Confirm action: Change authority of ${p.full_name || p.email} to '${authVal}'?`, async () => {
+                                        if (await showConfirm(`Confirm action: Change authority of ${p.full_name || p.email} to '${authVal}'?`, { title: "Change Authority Level", confirmText: "Change", type: 'warning' })) {
                                           const { mapAuthorityToLegacyRole } = await import('../../core/types/workspace');
                                           await handleUpdateRole(p.id, mapAuthorityToLegacyRole(authVal) as any);
                                           notify("Authority updated successfully.", "success");
-                                        });
+                                          setActiveGearPopover(null);
+                                        }
                                       }}
                                       className="w-full border rounded text-[11px] font-mono-pm px-2 py-1.5 outline-none bg-bg"
                                       style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)', background: 'var(--pm-surface-lowest)' }}
@@ -940,20 +936,15 @@ export function AdminPanel() {
                                 {/* Enable / Disable Account Button */}
                                 <button
                                   type="button"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     setActiveGearPopover(null);
                                     const isDisabled = !hasCapability(p.role as UserRole, 'view_projects');
                                     const actionText = isDisabled ? "Enable" : "Disable";
-                                    askConfirmation(
-                                      `${actionText} Account`,
-                                      `Are you sure you want to ${actionText.toLowerCase()} access for ${p.full_name || p.email}?`,
-                                      async () => {
-                                        const targetRole = isDisabled ? 'developer' : 'uninvited';
-                                        await handleUpdateRole(p.id, targetRole);
-                                        notify(`Account for ${p.full_name || p.email} has been ${isDisabled ? 'enabled' : 'disabled'}.`, "success");
-                                      },
-                                      actionText
-                                    );
+                                    if (await showConfirm(`Are you sure you want to ${actionText.toLowerCase()} access for ${p.full_name || p.email}?`, { title: `${actionText} Account`, confirmText: actionText, type: 'warning' })) {
+                                      const targetRole = isDisabled ? 'developer' : 'uninvited';
+                                      await handleUpdateRole(p.id, targetRole);
+                                      notify(`Account for ${p.full_name || p.email} has been ${isDisabled ? 'enabled' : 'disabled'}.`, "success");
+                                    }
                                   }}
                                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-[11px] font-mono-pm uppercase tracking-widest transition-all"
                                   style={{
@@ -969,22 +960,20 @@ export function AdminPanel() {
                                 {/* Remove Person Button */}
                                 <button
                                   type="button"
-                                  onClick={() => {
+                                  onClick={async () => {
                                     setActiveGearPopover(null);
-                                    askConfirmation(
-                                      "Remove Person",
-                                      `Are you sure you want to delete ${p.full_name || p.email} entirely from the database? This action is irreversible.`,
-                                      async () => {
-                                        const { error } = await supabase.from('users').delete().eq('id', p.id);
-                                        if (!error) {
-                                          notify("Member removed entirely from database.", "success");
-                                          invalidateAll();
-                                        } else {
-                                          notify(`Failed to remove member: ${error.message}`, "error");
-                                        }
-                                      },
-                                      "Remove"
-                                    );
+                                    const answer = await showPrompt(`Are you sure you want to delete ${p.full_name || p.email} entirely from the database? Type "PERMANENTLY REMOVE" to continue.`, { title: "Remove Person", confirmText: "Remove", type: 'error' });
+                                    if (answer === 'PERMANENTLY REMOVE') {
+                                      const { error } = await supabase.from('users').delete().eq('id', p.id);
+                                      if (!error) {
+                                        notify("Member removed entirely from database.", "success");
+                                        invalidateAll();
+                                      } else {
+                                        notify(`Failed to remove member: ${error.message}`, "error");
+                                      }
+                                    } else if (answer !== null) {
+                                      notify("Confirmation failed. Incorrect phrase.", "error");
+                                    }
                                   }}
                                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-[11px] font-mono-pm uppercase tracking-widest transition-all"
                                   style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--pm-error)', border: '1px solid rgba(239,68,68,0.2)' }}

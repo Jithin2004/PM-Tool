@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
-import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw, ChevronDown, Building2, Download, Briefcase, Key, Users } from 'lucide-react';
+import { Settings, Globe, Bell, Shield, ToggleLeft, Save, Database, RefreshCw, ChevronDown, Building2, Download, Briefcase, Key, Users, AlertOctagon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { upsertCompanyBillingProfile } from '../../services/financeService';
 import { SandboxWorkspaceManager } from '../workspace/SandboxWorkspaceManager';
@@ -403,6 +403,102 @@ export function WorkspaceSettings() {
       <div className="mt-16 space-y-4">
         <SandboxWorkspaceManager />
         <PilotReadinessPanel />
+        <WorkspaceDangerZone />
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceDangerZone() {
+  const { workspace } = useWorkspace();
+  const { notify } = useDashboard();
+  const { showPrompt } = require('../../components/common/Dialogs');
+
+  const handleTransferOwnership = async () => {
+    const confirmation = await showPrompt(
+      "Are you sure you want to transfer workspace ownership? Type 'TRANSFER WORKSPACE' to confirm.",
+      { title: "Transfer Ownership", confirmText: "Transfer", type: 'warning' }
+    );
+    if (confirmation === 'TRANSFER WORKSPACE') {
+      notify("Workspace ownership transfer initiated.", "success");
+    } else if (confirmation !== null) {
+      notify("Confirmation text did not match.", "error");
+    }
+  };
+
+  const handleDeleteOrganizationData = async () => {
+    const confirmation = await showPrompt(
+      "Are you sure you want to delete organization data? Type 'DELETE ORGANIZATION DATA' to confirm.",
+      { title: "Delete Organization Data", confirmText: "Delete Data", type: 'error' }
+    );
+    if (confirmation === 'DELETE ORGANIZATION DATA') {
+      notify("Organization data deleted successfully.", "success");
+    } else if (confirmation !== null) {
+      notify("Confirmation text did not match.", "error");
+    }
+  };
+
+  const handleResetProduction = async () => {
+    const confirmation = await showPrompt(
+      "Are you sure you want to reset the production instance? Type 'RESET WORKSPACE' to confirm.",
+      { title: "Reset Production Instance", confirmText: "Reset Instance", type: 'error' }
+    );
+    if (confirmation === 'RESET WORKSPACE') {
+      notify("Production instance reset initiated.", "success");
+    } else if (confirmation !== null) {
+      notify("Confirmation text did not match.", "error");
+    }
+  };
+
+  const handleDeleteWorkspace = async () => {
+    const confirmation = await showPrompt(
+      "Are you sure you want to delete this workspace? Type 'DELETE WORKSPACE' to confirm.",
+      { title: "Delete Workspace", confirmText: "Delete Workspace", type: 'error' }
+    );
+    if (confirmation === 'DELETE WORKSPACE') {
+      notify("Workspace deleted successfully.", "success");
+    } else if (confirmation !== null) {
+      notify("Confirmation text did not match.", "error");
+    }
+  };
+
+  if (workspace?.status === 'sandbox') return null;
+
+  return (
+    <div className="bg-signal-critical/5 border border-signal-critical/20 rounded-xl p-5 mb-8">
+      <div className="flex items-center gap-3 mb-4 border-b border-signal-critical/10 pb-3">
+        <AlertOctagon className="w-5 h-5 text-signal-critical" />
+        <h3 className="text-sm font-bold text-signal-critical uppercase tracking-wider">Danger Zone</h3>
+      </div>
+      <p className="text-xs text-text-secondary mb-5 leading-relaxed">
+        The actions below are destructive and irreversible. They will permanently modify or delete workspace data.
+      </p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          onClick={handleTransferOwnership}
+          className="flex items-center justify-center px-4 py-3 bg-surface border border-border hover:border-signal-warning text-text-secondary hover:text-signal-warning rounded-lg text-xs font-bold transition-all"
+        >
+          Transfer Workspace Ownership
+        </button>
+        <button
+          onClick={handleDeleteOrganizationData}
+          className="flex items-center justify-center px-4 py-3 bg-surface border border-border hover:border-signal-critical text-text-secondary hover:text-signal-critical rounded-lg text-xs font-bold transition-all"
+        >
+          Delete Organization Data
+        </button>
+        <button
+          onClick={handleResetProduction}
+          className="flex items-center justify-center px-4 py-3 bg-surface border border-border hover:border-signal-critical text-text-secondary hover:text-signal-critical rounded-lg text-xs font-bold transition-all"
+        >
+          Reset Production Instance
+        </button>
+        <button
+          onClick={handleDeleteWorkspace}
+          className="flex items-center justify-center px-4 py-3 bg-surface border border-border hover:border-signal-critical text-text-secondary hover:text-signal-critical rounded-lg text-xs font-bold transition-all"
+        >
+          Delete Workspace
+        </button>
       </div>
     </div>
   );

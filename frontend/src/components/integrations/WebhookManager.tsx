@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Plus, Trash2, ShieldAlert } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { showAlert, showConfirm, showPrompt } from '../common/Dialogs';
 
 interface WebhookEndpoint {
   id: string;
@@ -33,21 +34,31 @@ export function WebhookManager() {
 
   const handleCreate = async () => {
     if (!workspace) return;
-    const name = prompt('Enter a name for the new webhook endpoint:');
+    const name = await showPrompt('Enter a name for the new webhook endpoint:');
     if (!name) return;
 
-    await supabase.from('webhook_endpoints').insert({
-      workspace_id: workspace.id,
-      name,
-      enabled: true
-    });
-    loadEndpoints();
+    try {
+      await supabase.from('webhook_endpoints').insert({
+        workspace_id: workspace.id,
+        name,
+        enabled: true
+      });
+      showAlert("Endpoint created successfully.", { type: "success" });
+      loadEndpoints();
+    } catch (e: any) {
+      showAlert(`Failed to create endpoint: ${e.message}`, { type: "error" });
+    }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this webhook endpoint?')) return;
-    await supabase.from('webhook_endpoints').delete().eq('id', id);
-    loadEndpoints();
+    if (!await showConfirm('Are you sure you want to delete this webhook endpoint?')) return;
+    try {
+      await supabase.from('webhook_endpoints').delete().eq('id', id);
+      showAlert("Endpoint deleted successfully.", { type: "success" });
+      loadEndpoints();
+    } catch (e: any) {
+      showAlert(`Failed to delete endpoint: ${e.message}`, { type: "error" });
+    }
   };
 
   if (loading) return <div>Loading webhooks...</div>;

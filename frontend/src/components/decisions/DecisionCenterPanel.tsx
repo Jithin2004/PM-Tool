@@ -18,9 +18,9 @@ export function DecisionCenterPanel() {
     profiles,
     notifications,
     updateTask,
-    askConfirmation,
     notify
   } = useDashboard();
+  const { showConfirm } = require('../../components/common/Dialogs');
 
   const [simulatingInsightId, setSimulatingInsightId] = useState<string | null>(null);
   const [activeRecommendationId, setActiveRecommendationId] = useState<string | null>(null);
@@ -75,39 +75,34 @@ export function DecisionCenterPanel() {
     }
   };
 
-  const handleAcceptSimulation = (insight: any) => {
+  const handleAcceptSimulation = async (insight: any) => {
     if (!insight.simulation || !workspace?.id || !activeRecommendationId) return;
 
-    askConfirmation(
-      'Execute Workload Balancing',
-      `Are you sure you want to offload "${insight.simulation.taskName}" to ${insight.simulation.toUserName}? This action is permanent and will trigger workload recalculations.`,
-      async () => {
+    if (await showConfirm(`Are you sure you want to offload "${insight.simulation.taskName}" to ${insight.simulation.toUserName}? This action is permanent and will trigger workload recalculations.`, { title: 'Execute Workload Balancing', confirmText: 'Execute', type: 'warning' })) {
+      try {
+        await aiRecommendationService.updateRecommendationStatus(workspace.id, activeRecommendationId, 'accepted');
+        await updateTask(insight.simulation.taskId, { assignee_id: insight.simulation.toUserId });
+
         try {
-          await aiRecommendationService.updateRecommendationStatus(workspace.id, activeRecommendationId, 'accepted');
-          await updateTask(insight.simulation.taskId, { assignee_id: insight.simulation.toUserId });
-
-          try {
-            await supabase.from('notifications').insert({
-              workspace_id: workspace.id,
-              user_id: insight.simulation.toUserId,
-              category: 'assignments',
-              title: 'Workload Rebalancing Assigned',
-              body: `You have been assigned "${insight.simulation.taskName}" by the Workload Balancing Optimizer to balance team capacity.`
-            });
-          } catch (notifErr) {
-          }
-
-          notify(`Balancing successful. Task offloaded to ${insight.simulation.toUserName}.`, 'success');
-        } catch (err) {
-          notify('Failed to execute balancing.', 'error');
-          console.error(err);
-        } finally {
-          setSimulatingInsightId(null);
-          setActiveRecommendationId(null);
+          await supabase.from('notifications').insert({
+            workspace_id: workspace.id,
+            user_id: insight.simulation.toUserId,
+            category: 'assignments',
+            title: 'Workload Rebalancing Assigned',
+            body: `You have been assigned "${insight.simulation.taskName}" by the Workload Balancing Optimizer to balance team capacity.`
+          });
+        } catch (notifErr) {
         }
-      },
-      'Execute'
-    );
+
+        notify(`Balancing successful. Task offloaded to ${insight.simulation.toUserName}.`, 'success');
+      } catch (err) {
+        notify('Failed to execute balancing.', 'error');
+        console.error(err);
+      } finally {
+        setSimulatingInsightId(null);
+        setActiveRecommendationId(null);
+      }
+    }
   };
 
   const handleRejectSimulation = async (insight: any) => {

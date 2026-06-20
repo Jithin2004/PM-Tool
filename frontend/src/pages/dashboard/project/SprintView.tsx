@@ -5,6 +5,7 @@ import { useWorkspace } from '../../../context/WorkspaceContext';
 import { Task, Sprint } from '../../../types';
 import { Calendar, AlertCircle, CheckCircle, Package, Flag, Target, ShieldAlert } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import { showAlert, showConfirm } from '../../../components/common/Dialogs';
 
 function getProjectIdFromPath(): string | null {
   const segments = window.location.pathname.split('/');
@@ -55,8 +56,8 @@ export const SprintView: React.FC = () => {
     const incompleteIds = incompleteTasks.map(t => t.id);
     
     // Simplistic prompt for carry forward
-    const confirm = window.confirm(`There are ${incompleteTasks.length} incomplete tasks. Move them back to the backlog and complete sprint?`);
-    if (!confirm) return;
+    const confirmed = await showConfirm(`There are ${incompleteTasks.length} incomplete tasks. Move them back to the backlog and complete sprint?`);
+    if (!confirmed) return;
 
     const snapshotData = {
       total_tasks: tasks.length,
@@ -67,17 +68,22 @@ export const SprintView: React.FC = () => {
       blockers: health?.blockers_count || 0
     };
 
-    await sprintService.completeSprint(
-      sprint.id, 
-      workspace.id, 
-      snapshotData, 
-      incompleteIds, 
-      'backlog', 
-      undefined, 
-      user?.id
-    );
-    
-    loadActiveSprint();
+    try {
+      await sprintService.completeSprint(
+        sprint.id, 
+        workspace.id, 
+        snapshotData, 
+        incompleteIds, 
+        'backlog', 
+        undefined, 
+        user?.id
+      );
+      
+      showAlert('Sprint completed successfully.', { type: 'success' });
+      loadActiveSprint();
+    } catch (e: any) {
+      showAlert(`Failed to complete sprint: ${e.message}`, { type: 'error' });
+    }
   };
 
   if (loading) return <div className="p-8 text-slate-400">Loading Active Sprint...</div>;

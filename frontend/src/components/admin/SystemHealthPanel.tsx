@@ -5,6 +5,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { supportService } from '../../services/supportService';
 import { DownloadCloud, Activity, ShieldAlert, Shield, DatabaseBackup } from 'lucide-react';
 import { TestDataGuardian, TestDataIssue } from '../../core/system/TestDataGuardian';
+import { showAlert, showConfirm } from '../common/Dialogs';
 
 export function SystemHealthPanel() {
   const { workspace } = useWorkspace();
@@ -31,24 +32,28 @@ export function SystemHealthPanel() {
   };
 
   const handleArchiveIssue = async (issue: TestDataIssue) => {
-    if (confirm(`Are you sure you want to archive this ${issue.entityType}?`)) {
-      let error = null;
-      if (issue.entityType === 'workspace') {
-        const { error: err } = await supabase.from('workspaces').update({ status: 'retired' }).eq('id', issue.id);
-        error = err;
-      } else if (issue.entityType === 'project') {
-        const { error: err } = await supabase.from('projects').update({ status: 'archived' }).eq('id', issue.id);
-        error = err;
-      } else if (issue.entityType === 'user' || issue.entityType === 'email') {
-        const { error: err } = await supabase.from('users').update({ role: 'viewer', workspace_id: null }).eq('id', issue.id);
-        error = err;
-      }
+    if (await showConfirm(`Are you sure you want to archive this ${issue.entityType}?`)) {
+      try {
+        let error = null;
+        if (issue.entityType === 'workspace') {
+          const { error: err } = await supabase.from('workspaces').update({ status: 'retired' }).eq('id', issue.id);
+          error = err;
+        } else if (issue.entityType === 'project') {
+          const { error: err } = await supabase.from('projects').update({ status: 'archived' }).eq('id', issue.id);
+          error = err;
+        } else if (issue.entityType === 'user' || issue.entityType === 'email') {
+          const { error: err } = await supabase.from('users').update({ role: 'viewer', workspace_id: null }).eq('id', issue.id);
+          error = err;
+        }
 
-      if (error) {
-        window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: `Failed to archive: ${error.message}`, type: 'error' } }));
-      } else {
-        window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: `Archived ${issue.entityName} successfully.`, type: 'success' } }));
-        scanHygiene();
+        if (error) {
+          showAlert(`Failed to archive: ${error.message}`, { type: 'error' });
+        } else {
+          showAlert(`Archived ${issue.entityName} successfully.`, { type: 'success' });
+          scanHygiene();
+        }
+      } catch (err: any) {
+        showAlert(`Failed to archive: ${err.message}`, { type: 'error' });
       }
     }
   };

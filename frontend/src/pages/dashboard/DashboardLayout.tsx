@@ -9,9 +9,10 @@ import {
   Briefcase, ListTodo, FileText, Link2, Bell, HelpCircle, LayoutDashboard,
   Truck, Route, GitBranch, Building2, Radar, Shield, BookOpen,
   Sparkles, MessageSquare, Terminal, Globe, Command, Sunset,
-  Archive, UserCog, Mail, WifiOff, RefreshCw, AlertCircle, ChevronDown,
+  Archive, UserCog, Mail, ChevronDown, WifiOff, RefreshCw,
   Link as LinkIcon
 } from 'lucide-react';
+import { showConfirm } from '../../components/common/Dialogs';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
@@ -873,25 +874,21 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       return;
     }
 
-    askConfirmation(
-      "Archive Project",
-      `Are you sure you want to archive this project? Reason: ${reason}`,
-      async () => {
-        const { error } = await supabase
-          .from('projects')
-          .delete()
-          .eq('id', id);
+    if (await showConfirm(`Are you sure you want to archive this project? Reason: ${reason}`)) {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', id);
 
-        if (!error) {
-          setProjects(projects.filter(p => p.id !== id));
-          notify("Project archived successfully.", "success");
-          setSelectedProject(null);
-        } else {
-          console.error("Project archive failed:", error);
-          notify(`Deletion failed: ${error.message}`, "error");
-        }
+      if (!error) {
+        setProjects(projects.filter(p => p.id !== id));
+        notify("Project archived successfully.", "success");
+        setSelectedProject(null);
+      } else {
+        console.error("Project archive failed:", error);
+        notify(`Deletion failed: ${error.message}`, "error");
       }
-    );
+    }
   };
 
 
@@ -922,6 +919,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       notify("No active workspace selected.", "error");
       return;
     }
+
+    if (!await showConfirm('Are you sure you want to create this project?')) return;
 
     if (!proposedStartDate) {
       notify("Proposed Start Date is required.", "error");

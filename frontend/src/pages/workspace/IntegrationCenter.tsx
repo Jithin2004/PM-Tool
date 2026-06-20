@@ -7,6 +7,7 @@ import { IntegrationCard } from '../../components/integrations/IntegrationCard';
 import { WebhookManager } from '../../components/integrations/WebhookManager';
 import { SyncHistory } from '../../components/integrations/SyncHistory';
 import { AppWindow, Layers, History, Globe } from 'lucide-react';
+import { showAlert, showConfirm } from '../../components/common/Dialogs';
 
 type Tab = 'connected' | 'available' | 'history' | 'webhooks';
 
@@ -49,18 +50,18 @@ export default function IntegrationCenter() {
       await integrationEngine.registerIntegration(workspace.id, provider, { token: 'mock-token' }, user.id);
       loadData();
     } catch (e: any) {
-      alert(`Failed to connect: ${e.message}`);
+      showAlert(`Failed to connect: ${e.message}`, { type: 'error' });
     }
   };
 
   const handleDisconnect = async (id: string) => {
     if (!workspace || !canManage) return;
-    if (!confirm('Are you sure you want to disconnect this integration?')) return;
+    if (!await showConfirm('Are you sure you want to disconnect this integration?')) return;
     try {
       await integrationEngine.disconnectIntegration(workspace.id, id);
       loadData();
     } catch (e: any) {
-      alert(`Failed to disconnect: ${e.message}`);
+      showAlert(`Failed to disconnect: ${e.message}`, { type: 'error' });
     }
   };
 
@@ -70,7 +71,7 @@ export default function IntegrationCenter() {
       await integrationEngine.registerIntegration(workspace.id, provider, { token: 'mock-reconnect-token' }, user.id);
       loadData();
     } catch (e: any) {
-      alert(`Failed to reconnect: ${e.message}`);
+      showAlert(`Failed to reconnect: ${e.message}`, { type: 'error' });
     }
   };
 

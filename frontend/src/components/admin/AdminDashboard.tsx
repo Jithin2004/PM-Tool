@@ -13,7 +13,6 @@ export function AdminDashboard({
   currentUserRole,
   systemData,
   onSaveSystemData,
-  askConfirmation,
   onUpdateRole,
   onCreateTeam,
   onUpdateTeam,
@@ -24,7 +23,6 @@ export function AdminDashboard({
   currentUserRole?: UserRole,
   systemData: any,
   onSaveSystemData: (data: any) => Promise<void>,
-  askConfirmation: (title: string, message: string, onConfirm: () => void, confirmText?: string) => void,
   onUpdateRole: (id: string, role: UserRole) => void,
   onCreateTeam: (name: string, pmId: string, devIds: string[]) => void,
   onUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => void,
@@ -115,7 +113,7 @@ export function AdminDashboard({
   };
 
   const handleRevokeInvitation = async (id: string) => {
-    askConfirmation("Revoke Invitation", "Are you sure you want to revoke this invitation? The user will no longer be allowed to join.", async () => {
+    if (await showConfirm("Are you sure you want to revoke this invitation? The user will no longer be allowed to join.", { title: "Revoke Invitation", confirmText: "Revoke", type: 'warning' })) {
       const { error } = await supabase
         .from('invitations')
         .delete()
@@ -123,7 +121,7 @@ export function AdminDashboard({
       if (!error) {
         fetchInvitations();
       }
-    }, "Revoke");
+    }
   };
 
   const customRoles: string[] = systemData.customRoles || ['Developer', 'Designer', 'QA Engineer', 'Viewer'];
@@ -151,7 +149,7 @@ export function AdminDashboard({
       return;
     }
 
-    askConfirmation("Confirm Deletion", `Are you sure you want to delete the custom designation '${roleToDelete}'? This will unassign it from all users.`, async () => {
+    if (await showConfirm(`Are you sure you want to delete the custom designation '${roleToDelete}'? This will unassign it from all users.`, { title: "Confirm Deletion", confirmText: "Delete", type: 'error' })) {
       const updatedRoles = customRoles.filter(r => r !== roleToDelete);
       const updatedUserRoles = { ...userCustomRoles };
       Object.keys(updatedUserRoles).forEach(userId => {
@@ -165,14 +163,14 @@ export function AdminDashboard({
         customRoles: updatedRoles,
         userCustomRoles: updatedUserRoles
       });
-    }, "Delete");
+    }
   };
 
   const handleAssignCustomRole = async (userId: string, roleName: string) => {
     const userProfile = profiles.find(p => p.id === userId);
     const targetName = userProfile?.full_name || userProfile?.email || "this user";
 
-    askConfirmation("Confirm Designation Change", `Confirm action: Change designation of ${targetName} to '${roleName}'?`, async () => {
+    if (await showConfirm(`Confirm action: Change designation of ${targetName} to '${roleName}'?`, { title: "Confirm Designation Change", confirmText: "Change", type: 'warning' })) {
       const updatedUserRoles = {
         ...userCustomRoles,
         [userId]: roleName
@@ -181,7 +179,7 @@ export function AdminDashboard({
         ...systemData,
         userCustomRoles: updatedUserRoles
       });
-    }, "Change");
+    }
   };
 
   const handleCreateTeam = (e: React.FormEvent) => {

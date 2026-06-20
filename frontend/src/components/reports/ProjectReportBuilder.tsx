@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { reportingEngine } from '../../core/engines/reportingEngine';
 import { reportExportService } from '../../services/reportExportService';
 import { Download, FileText, Activity, Layers, AlertTriangle } from 'lucide-react';
+import { showAlert } from '../common/Dialogs';
 
 export function ProjectReportBuilder({ workspaceId, projectId, currentUser }: any) {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -58,9 +59,10 @@ export function ProjectReportBuilder({ workspaceId, projectId, currentUser }: an
         reportData,
         { id: currentUser.id, name: currentUser.full_name || currentUser.email, role: currentUser.role }
       );
-      alert('Snapshot Saved to Database successfully.');
-    } catch (err) {
+      showAlert('Snapshot Saved to Database successfully.', { type: 'success' });
+    } catch (err: any) {
       console.error(err);
+      showAlert(`Failed to save snapshot: ${err.message}`, { type: 'error' });
     } finally {
       setSaving(false);
     }

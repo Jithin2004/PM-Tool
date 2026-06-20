@@ -9,6 +9,7 @@ import {
   Wallet, FolderSearch, Settings2, ShieldCheck, PlaySquare,
   BarChart2, Users, Receipt
 } from 'lucide-react';
+import { CommercialRequestModal } from './components/CommercialRequestModal';
 
 export function LandingPage() {
   const verified = isProductKeyVerified() || !!useAuth().user;
@@ -19,6 +20,10 @@ export function LandingPage() {
   const hasSession = authReady && !!user && !!profile && profile.role !== 'uninvited';
 
   const [activeSection, setActiveSection] = useState('');
+  
+  // Modal State
+  const [modalMode, setModalMode] = useState<'demo' | 'license' | 'none'>('none');
+  const [selectedPlan, setSelectedPlan] = useState<string | undefined>(undefined);
 
   // Scroll Spy for Nav
   useEffect(() => {
@@ -78,9 +83,9 @@ export function LandingPage() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <a href="/login" className="text-zinc-300 hover:text-white text-sm font-medium transition-colors">Log in</a>
-          <a href="/activate-license" className="text-zinc-300 hover:text-white text-sm font-medium transition-colors">Activate License</a>
-          <a href="#pricing" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Get Resolve PM</a>
+          <button onClick={() => setModalMode('demo')} className="text-zinc-300 hover:text-white text-sm font-medium transition-colors">Explore Demo</button>
+          <a href="/login" className="text-zinc-300 hover:text-white text-sm font-medium transition-colors">Login</a>
+          <a href="/activate-license" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Activate License</a>
         </div>
       </nav>
 
@@ -100,11 +105,11 @@ export function LandingPage() {
               Projects, teams, documents, approvals, finance, and daily priorities — organized together.
             </p>
             <div className="flex flex-wrap gap-4 mt-4">
-              <a href="#pricing" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-indigo-500/20 transition-all">
-                Get Resolve PM
-              </a>
-              <a href={verified ? "/login" : "/activate-license"} className="glass-panel text-white hover:bg-white/5 px-6 py-3 rounded-xl font-medium transition-all">
-                Explore Demo Workspace
+              <button onClick={() => setModalMode('demo')} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-indigo-500/20 transition-all">
+                Explore Demo
+              </button>
+              <a href="#pricing" className="glass-panel text-white hover:bg-white/5 px-6 py-3 rounded-xl font-medium transition-all">
+                View Pricing
               </a>
             </div>
           </div>
@@ -525,9 +530,9 @@ export function LandingPage() {
                 <p className="text-zinc-400 max-w-lg mx-auto mb-8">
                   Resolve PM includes a secure Sandbox Experience filled with sample projects, a sample team, sample finance ledgers, and activity history.
                 </p>
-                <a href={verified ? "/login" : "/activate-license"} className="bg-white text-black px-6 py-3 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors">
-                  Explore Demo Workspace
-                </a>
+                <button onClick={() => setModalMode('demo')} className="bg-white text-black px-6 py-3 rounded-lg text-sm font-bold hover:bg-zinc-200 transition-colors">
+                  Explore Demo
+                </button>
               </div>
             </div>
 
@@ -561,9 +566,9 @@ export function LandingPage() {
                 <li className="flex items-center gap-3"><CheckCircle2 className="text-indigo-400 w-5 h-5" /> <span className="text-zinc-300">Optional yearly support</span></li>
               </ul>
 
-              <a href="/activate-license" className="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-xl font-bold transition-all">
-                Choose Plan
-              </a>
+              <button onClick={() => { setSelectedPlan('Business License'); setModalMode('license'); }} className="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-xl font-bold transition-all">
+                License Request
+              </button>
               <p className="text-[10px] text-center text-zinc-500 mt-4 uppercase tracking-wider">
                 Configuration and deployment options may vary.
               </p>
@@ -590,6 +595,14 @@ export function LandingPage() {
           <a href="mailto:contact@resolvepm.app" className="text-sm text-zinc-500 hover:text-white transition-colors">Contact</a>
         </div>
       </footer>
+
+      {modalMode !== 'none' && (
+        <CommercialRequestModal
+          mode={modalMode}
+          selectedPlan={selectedPlan}
+          onClose={() => setModalMode('none')}
+        />
+      )}
     </div>
   );
 }

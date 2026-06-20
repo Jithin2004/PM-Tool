@@ -7,6 +7,7 @@ import { companyCalendarService, CompanyCalendarEvent, WorkspaceCalendarSettings
 import { hasCapability } from '../../core/auth/permissions';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Papa from 'papaparse';
+import { showAlert, showConfirm } from '../common/Dialogs';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -80,9 +81,18 @@ export function CompanyCalendarPanel() {
 
   const handleDeleteEvent = async (id: string) => {
     if (!canManageCalendar) return;
-    if (confirm("Remove this event?")) {
-      const ok = await companyCalendarService.deleteEvent(id);
-      if (ok) await loadData();
+    if (await showConfirm("Remove this event?")) {
+      try {
+        const ok = await companyCalendarService.deleteEvent(id);
+        if (ok) {
+          showAlert("Event removed successfully.", { type: "success" });
+          await loadData();
+        } else {
+          showAlert("Failed to remove event.", { type: "error" });
+        }
+      } catch (e: any) {
+        showAlert(`Failed to remove event: ${e.message}`, { type: "error" });
+      }
     }
   };
 
