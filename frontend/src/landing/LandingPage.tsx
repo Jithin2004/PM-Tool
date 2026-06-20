@@ -79,7 +79,8 @@ export function LandingPage() {
         </div>
         <div className="flex items-center gap-4">
           <a href="/login" className="text-zinc-300 hover:text-white text-sm font-medium transition-colors">Log in</a>
-          <a href="mailto:demo@resolvepm.app" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Request Demo</a>
+          <a href="/activate-license" className="text-zinc-300 hover:text-white text-sm font-medium transition-colors">Activate License</a>
+          <a href="#pricing" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Get Resolve PM</a>
         </div>
       </nav>
 
@@ -99,8 +100,8 @@ export function LandingPage() {
               Projects, teams, documents, approvals, finance, and daily priorities — organized together.
             </p>
             <div className="flex flex-wrap gap-4 mt-4">
-              <a href="mailto:demo@resolvepm.app" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-indigo-500/20 transition-all">
-                Request Demo
+              <a href="#pricing" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-indigo-500/20 transition-all">
+                Get Resolve PM
               </a>
               <a href={verified ? "/login" : "/activate-license"} className="glass-panel text-white hover:bg-white/5 px-6 py-3 rounded-xl font-medium transition-all">
                 Explore Demo Workspace
@@ -560,8 +561,8 @@ export function LandingPage() {
                 <li className="flex items-center gap-3"><CheckCircle2 className="text-indigo-400 w-5 h-5" /> <span className="text-zinc-300">Optional yearly support</span></li>
               </ul>
 
-              <a href="mailto:demo@resolvepm.app" className="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-xl font-bold transition-all">
-                Discuss Pricing
+              <a href="/activate-license" className="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-xl font-bold transition-all">
+                Choose Plan
               </a>
               <p className="text-[10px] text-center text-zinc-500 mt-4 uppercase tracking-wider">
                 Configuration and deployment options may vary.
@@ -585,6 +586,7 @@ export function LandingPage() {
         <div className="flex flex-wrap justify-center gap-6">
           <a href="/privacy" className="text-sm text-zinc-500 hover:text-white transition-colors">Privacy</a>
           <a href="/terms" className="text-sm text-zinc-500 hover:text-white transition-colors">Terms</a>
+          <a href="mailto:demo@resolvepm.app" className="text-sm text-zinc-500 hover:text-white transition-colors">Schedule Demo</a>
           <a href="mailto:contact@resolvepm.app" className="text-sm text-zinc-500 hover:text-white transition-colors">Contact</a>
         </div>
       </footer>
