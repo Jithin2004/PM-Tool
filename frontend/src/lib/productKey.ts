@@ -6,7 +6,11 @@ import { sha256 } from '../utils/cryptoUtils';
 
 const STORAGE_KEY = 'resolve-product-license';
 const FINGERPRINT_KEY = 'resolve-device-fingerprint';
-const API_BASE_URL = (import.meta as any).env.VITE_PRODUCT_KEY_API_URL || 'https://pm-tool-server.onrender.com';
+const envApiUrl = (import.meta as any).env.VITE_PRODUCT_KEY_API_URL;
+if (import.meta.env.PROD && !envApiUrl) {
+  throw new Error('VITE_PRODUCT_KEY_API_URL is missing in production environment. License verification cannot proceed.');
+}
+const API_BASE_URL = envApiUrl || 'http://localhost:10000'; // Development fallback
 const ACTIVATE_URL = `${API_BASE_URL}/activate`;
 const VERIFY_URL = `${API_BASE_URL}/verify`;
 const TIMEOUT_MS = 30_000;
