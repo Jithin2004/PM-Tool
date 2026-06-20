@@ -87,7 +87,7 @@ export const createTaskComment = async (
     workspace_id: workspaceId,
     actor_id: authorId,
     task_id: taskId,
-    action: 'comment_created',
+    action_type: 'comment_created',
     metadata: { comment_id: data.id, is_decision: analysis.isDecision }
   });
 
@@ -97,7 +97,7 @@ export const createTaskComment = async (
       workspace_id: workspaceId,
       actor_id: authorId,
       task_id: taskId,
-      action: 'decision_made',
+      action_type: 'decision_made',
       metadata: { 
         decision_text: content,
         comment_id: data.id,
@@ -193,7 +193,7 @@ export const updateTaskComment = async (
     workspace_id: workspaceId,
     actor_id: authorId,
     task_id: taskId,
-    action: 'comment_edited',
+    action_type: 'comment_edited',
     metadata: { comment_id: commentId }
   });
 
@@ -217,7 +217,7 @@ export const archiveTaskComment = async (
     workspace_id: workspaceId,
     actor_id: authorId,
     task_id: taskId,
-    action: 'comment_archived',
+    action_type: 'comment_archived',
     metadata: { comment_id: commentId }
   });
 

@@ -169,7 +169,7 @@ export function canWriteOperationally(role: UserRole | undefined): boolean {
 
 export function getCapabilities(role: UserRole | undefined): Capability[] {
   if (!role) return [];
-  return ROLE_CAPABILITIES[role] ?? [];
+  return AUTHORITY_CAPABILITIES[role as AuthorityRole] ?? [];
 }
 
 export function canAccessRoute(role: UserRole | undefined, pathname: string): boolean {

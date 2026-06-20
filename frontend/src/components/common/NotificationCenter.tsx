@@ -50,7 +50,7 @@ export function NotificationCenter() {
       activityLogService.appendLog({
         workspace_id: workspace.id,
         actor_id: 'system',
-        action: 'notifications_cleared',
+        action_type: 'notifications_cleared',
         metadata: { count: unreadIds.length }
       }).catch(() => {});
     }
@@ -77,7 +77,7 @@ export function NotificationCenter() {
       activityLogService.appendLog({
         workspace_id: workspace.id,
         actor_id: 'system',
-        action: 'notification_dismissed',
+        action_type: 'notification_dismissed',
         metadata: { notification_id: id }
       }).catch(() => {});
     }

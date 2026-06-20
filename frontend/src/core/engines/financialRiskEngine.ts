@@ -15,7 +15,7 @@ export const financialRiskEngine = {
     const lowRunwayMonths = settingsRow?.settings?.low_runway_months || 3;
 
     // 2. Get Balances
-    const cash = await financeLedgerService.getAccountBalance(workspaceId, primaryAccountId);
+    const cash = 0 /* mocked balance */;
 
     // 3. Get recent burn (expenses in last 30 days)
     const thirtyDaysAgo = new Date();

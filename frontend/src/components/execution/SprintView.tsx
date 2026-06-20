@@ -55,7 +55,7 @@ const SprintView = React.memo(function SprintView({
 
             await activityLogService.appendLog({
               workspace_id: project.workspace_id, actor_id: profile?.id,
-              project_id: project.id, task_id: taskId, action: 'task_status_changed',
+              project_id: project.id, task_id: taskId, action_type: 'task_status_changed',
               metadata: { new_status: status }
             });
           }}
@@ -65,7 +65,7 @@ const SprintView = React.memo(function SprintView({
             if (data) {
               await activityLogService.appendLog({
                 workspace_id: project.workspace_id, actor_id: profile?.id,
-                project_id: project.id, task_id: data.id, action: 'task_created',
+                project_id: project.id, task_id: data.id, action_type: 'task_created',
                 metadata: { name: taskData.name }
               });
             }
@@ -76,7 +76,7 @@ const SprintView = React.memo(function SprintView({
             if (data) {
               await activityLogService.appendLog({
                 workspace_id: project.workspace_id, actor_id: profile?.id,
-                project_id: project.id, action: 'sprint_created',
+                project_id: project.id, action_type: 'sprint_created',
                 metadata: { sprint_name: sprint.name }
               });
             }

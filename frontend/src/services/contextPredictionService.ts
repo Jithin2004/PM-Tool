@@ -99,7 +99,7 @@ export const contextPredictionService = {
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       task_id: taskId,
-      action: 'context_prediction_recorded',
+      action_type: 'context_prediction_recorded',
       metadata: {
         context_count: contexts.length,
         contexts: contexts.map(c => `${c.type}:${c.value}`),
@@ -185,7 +185,7 @@ export const contextPredictionService = {
 
     await activityLogService.appendLog({
       workspace_id: workspaceId,
-      action: 'context_adjustment_applied',
+      action_type: 'context_adjustment_applied',
       metadata: {
         raw_confidence: rawConfidence,
         adjusted_confidence: adjustedConfidence,

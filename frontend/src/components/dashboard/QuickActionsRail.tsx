@@ -52,13 +52,13 @@ export function QuickActionsRail({
         icon={Plus}
         label="New Task"
         shortcut="T"
-        onClick={onCreateTask || (() => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action: 'create-task' } })))}
+        onClick={onCreateTask || (() => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action_type: 'create-task' } })))}
       />
       <QuickActionButton
         icon={FolderPlus}
         label="New Project"
         shortcut="P"
-        onClick={onCreateProject || (() => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action: 'create-project' } })))}
+        onClick={onCreateProject || (() => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action_type: 'create-project' } })))}
       />
       <QuickActionButton
         icon={Zap}
@@ -74,7 +74,7 @@ export function QuickActionsRail({
       <QuickActionButton
         icon={Sparkles}
         label="Operational Summary"
-        onClick={onAISummary || (() => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action: 'ai-summary' } })))}
+        onClick={onAISummary || (() => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action_type: 'ai-summary' } })))}
       />
     </motion.div>
   );

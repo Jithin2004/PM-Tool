@@ -1,5 +1,5 @@
-import { supabase } from '../../lib/supabase';
-import { trackSupabaseOperation } from '../observability/telemetry';
+import { supabase } from '../lib/supabase';
+import { trackSupabaseOperation } from '../core/observability/telemetry';
 
 export interface NotificationEvent {
   id: string;

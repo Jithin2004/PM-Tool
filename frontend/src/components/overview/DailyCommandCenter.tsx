@@ -5,7 +5,6 @@ import { getDailyIntelligence, DailyIntelligence, ActionableItem, Recommendation
 import { ActivityStream } from '../dashboard/ActivityStream';
 import { ArrowRight, CheckCircle2, Clock, ShieldAlert, Terminal, Play, Flame, Bell, Target, TrendingUp, Activity } from 'lucide-react';
 import { RoleAwareQuickAccess } from './RoleAwareQuickAccess';
-import { useNavigate } from 'react-router-dom';
 
 export function DailyCommandCenter() {
   const { profile, user } = useAuth();
@@ -13,7 +12,7 @@ export function DailyCommandCenter() {
   const [intel, setIntel] = useState<DailyIntelligence | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentNotifications, setRecentNotifications] = useState<any[]>([]);
-  
+
   const [activeTab, setActiveTab] = useState<'overview' | 'activity'>(() => {
     return window.location.pathname === '/overview/activity' ? 'activity' : 'overview';
   });
@@ -103,11 +102,10 @@ export function DailyCommandCenter() {
 
           {/* Primary Focus */}
           {intel.primaryFocus && (
-            <div className={`glass-panel p-6 rounded-xl border relative overflow-hidden mb-6 ${
-              intel.primaryFocus.type === 'urgent' ? 'border-red-500/20 bg-red-500/5' : 
-              intel.primaryFocus.type === 'focus' ? 'border-amber-500/20 bg-amber-500/5' : 
-              'border-indigo-500/20 bg-surface-2'
-            }`}>
+            <div className={`glass-panel p-6 rounded-xl border relative overflow-hidden mb-6 ${intel.primaryFocus.type === 'urgent' ? 'border-red-500/20 bg-red-500/5' :
+                intel.primaryFocus.type === 'focus' ? 'border-amber-500/20 bg-amber-500/5' :
+                  'border-indigo-500/20 bg-surface-2'
+              }`}>
               <div className="flex items-start gap-4">
                 <div className="mt-1">
                   {renderRecommendationIcon(intel.primaryFocus.type)}
@@ -120,7 +118,7 @@ export function DailyCommandCenter() {
                     {intel.primaryFocus.message}
                   </p>
                   {intel.primaryFocus.actionRoute && (
-                    <button 
+                    <button
                       onClick={() => navigateTo(intel.primaryFocus!.actionRoute!)}
                       className="px-4 py-2 text-xs font-semibold rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors inline-flex items-center gap-1.5 shadow-sm"
                     >
@@ -133,10 +131,10 @@ export function DailyCommandCenter() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+
             {/* LEFT COLUMN: Actions & Needs Attention */}
             <div className="lg:col-span-2 space-y-6">
-              
+
               {/* Needs My Attention */}
               {intel.attentionItems.length > 0 && (
                 <div className="bg-surface-elevated rounded-lg border border-border shadow-sm overflow-hidden">
@@ -152,8 +150,8 @@ export function DailyCommandCenter() {
                             <p className="text-sm font-medium text-text-primary">{item.title}</p>
                             {item.subtitle && <p className="text-xs text-text-secondary mt-0.5">{item.subtitle}</p>}
                           </div>
-                          <button 
-                            onClick={() => navigateTo(item.actionRoute)} 
+                          <button
+                            onClick={() => navigateTo(item.actionRoute)}
                             className="px-3 py-1.5 bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 text-xs font-semibold rounded transition-colors"
                           >
                             {item.actionLabel}
@@ -178,17 +176,16 @@ export function DailyCommandCenter() {
                         <li key={item.id} className="p-4 hover:bg-surface-hover transition-colors flex justify-between items-center gap-4">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-[10px] uppercase font-mono tracking-widest px-1.5 py-0.5 rounded ${
-                                item.priority === 'High' ? 'bg-amber-500/10 text-amber-500' : 'bg-surface-3 text-text-secondary'
-                              }`}>
+                              <span className={`text-[10px] uppercase font-mono tracking-widest px-1.5 py-0.5 rounded ${item.priority === 'High' ? 'bg-amber-500/10 text-amber-500' : 'bg-surface-3 text-text-secondary'
+                                }`}>
                                 {item.priority} Priority
                               </span>
                             </div>
                             <p className="text-sm font-medium text-text-primary">{item.title}</p>
                             {item.subtitle && <p className="text-xs text-text-secondary mt-0.5">{item.subtitle}</p>}
                           </div>
-                          <button 
-                            onClick={() => navigateTo(item.actionRoute)} 
+                          <button
+                            onClick={() => navigateTo(item.actionRoute)}
                             className="px-3 py-1.5 bg-surface-3 text-text-primary hover:bg-surface-hover border border-border text-xs font-semibold rounded transition-colors"
                           >
                             {item.actionLabel}
@@ -203,7 +200,7 @@ export function DailyCommandCenter() {
 
             {/* RIGHT COLUMN: Changes & Recommendations */}
             <div className="space-y-6">
-              
+
               {/* Strategic Recommendations */}
               {intel.recommendations.length > 0 && (
                 <div className="bg-surface-elevated rounded-lg border border-border shadow-sm overflow-hidden">
@@ -270,7 +267,7 @@ export function DailyCommandCenter() {
                             <p className="text-[10px] text-text-secondary">{notif.message}</p>
                           </div>
                           {notif.action_url && (
-                             <button onClick={() => navigateTo(notif.action_url)} className="text-[10px] bg-accent-primary/10 text-accent-primary px-2 py-1 rounded font-bold h-fit mt-1">Review</button>
+                            <button onClick={() => navigateTo(notif.action_url)} className="text-[10px] bg-accent-primary/10 text-accent-primary px-2 py-1 rounded font-bold h-fit mt-1">Review</button>
                           )}
                         </li>
                       ))}

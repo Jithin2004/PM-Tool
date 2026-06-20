@@ -74,7 +74,7 @@ export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => vo
 
       await activityLogService.appendLog({
         workspace_id: workspace.id,
-        action: 'meeting_created',
+        action_type: 'meeting_created',
         metadata: { meeting_id: meeting.id, title: meeting.title }
       });
 

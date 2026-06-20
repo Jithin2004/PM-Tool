@@ -25,7 +25,7 @@ export const AdvancedAccountingPanel: React.FC = () => {
         .eq('workspace_id', workspace.id)
         .order('entry_date', { ascending: false })
         .limit(50);
-      
+
       if (!error && data) {
         setJournals(data);
       }
@@ -36,13 +36,18 @@ export const AdvancedAccountingPanel: React.FC = () => {
 
   const handleReverse = async (journal: any) => {
     if (!workspace?.id || !user?.id) return;
-    
-    const reason = await showPrompt("Reverse Entry", "No data is deleted. A correction entry will be created instead. Please provide a reason:");
+
+    const reason = await showPrompt(
+      "No data is deleted. A correction entry will be created instead. Please provide a reason:",
+      {
+        title: "Reverse Entry"
+      }
+    );
     if (!reason) return;
 
     try {
       await financeAccountingEngine.reverseEntry(workspace.id, journal.id, user.id, reason);
-      
+
       // Refresh journals
       const { data } = await supabase
         .from('journal_entries')
@@ -53,7 +58,7 @@ export const AdvancedAccountingPanel: React.FC = () => {
         .eq('workspace_id', workspace.id)
         .order('entry_date', { ascending: false })
         .limit(50);
-      
+
       if (data) setJournals(data);
     } catch (err: any) {
       await showAlert(err.message || "Failed to reverse entry", { type: "error" });
@@ -94,7 +99,7 @@ export const AdvancedAccountingPanel: React.FC = () => {
                 </div>
                 <div className="text-right flex items-center gap-3">
                   {j.status !== 'reversed' && isBalanced && (
-                    <button 
+                    <button
                       onClick={() => handleReverse(j)}
                       className="text-[10px] uppercase font-bold tracking-widest text-text-tertiary hover:text-rose-500 flex items-center gap-1 transition-colors px-2 py-1 border border-transparent hover:border-rose-500/30 rounded bg-transparent hover:bg-rose-500/10"
                     >

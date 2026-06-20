@@ -6,6 +6,7 @@ import { Search, Filter, Plus, Package, BookOpen, Layers, Columns } from 'lucide
 import { DraggableWorkItem } from '../../../components/execution/dragDrop/DraggableWorkItem';
 import { SprintPlanningPanel } from './SprintPlanningPanel';
 import { useAuth } from '../../../context/AuthContext';
+import { useWorkspace } from '../../../context/WorkspaceContext';
 import { Task } from '../../../types';
 import { PremiumEmptyState } from '../../../components/ui/PremiumEmptyState';
 
@@ -17,7 +18,7 @@ function getProjectIdFromPath(): string | null {
 
 export const BacklogView: React.FC = () => {
   const projectId = getProjectIdFromPath();
-  const { currentWorkspace } = useAuth();
+  const { workspace: currentWorkspace } = useWorkspace();
   const [data, setData] = useState<BacklogData | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

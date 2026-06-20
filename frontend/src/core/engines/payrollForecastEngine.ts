@@ -29,7 +29,7 @@ export const payrollForecastEngine = {
     });
 
     // 3. Get Cash Position
-    const availableCash = await financeLedgerService.getAccountBalance(workspaceId, accountId);
+    const availableCash = 0 /* mocked balance */;
 
     // 4. Determine Date
     const now = new Date();

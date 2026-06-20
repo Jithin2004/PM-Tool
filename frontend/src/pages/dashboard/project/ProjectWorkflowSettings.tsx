@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { workflowService, WorkflowTemplate, WorkflowState } from '../../../services/workflowService';
 import { workflowMigrationService, MigrationPreviewResult } from '../../../services/workflowMigrationService';
 import { useAuth } from '../../../context/AuthContext';
+import { useWorkspace } from '../../../context/WorkspaceContext';
 import { Project } from '../../../types';
 import { AlertTriangle, Settings2, ArrowRight } from 'lucide-react';
 import { hasCapability } from '../../../core/auth/permissions';
@@ -12,7 +13,8 @@ interface ProjectWorkflowSettingsProps {
 }
 
 export const ProjectWorkflowSettings: React.FC<ProjectWorkflowSettingsProps> = ({ project, onWorkflowUpdated }) => {
-  const { currentWorkspace, profile } = useAuth();
+  const { profile } = useAuth();
+  const { workspace: currentWorkspace } = useWorkspace();
   const [workflows, setWorkflows] = useState<WorkflowTemplate[]>([]);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>(project.workflow_template_id || '');
   const [preview, setPreview] = useState<MigrationPreviewResult | null>(null);

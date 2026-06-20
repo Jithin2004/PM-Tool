@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface EntityLink {
   id: string;
@@ -19,7 +18,7 @@ export const entityLinkService = {
     const { data, error } = await supabase
       .from('entity_links')
       .insert({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         ...link,
       })
       .select()

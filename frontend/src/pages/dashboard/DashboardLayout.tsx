@@ -29,7 +29,7 @@ import { activityEventService } from '../../services/activityEventService';
 import { activityLogService } from '../../services/activityLogService';
 import { getLicenseInfo } from '../../lib/productKey';
 import { errorMessageService } from '../../services/errorMessageService';
-import { sendNotification } from '../../services/notificationService';
+
 // Lucide imports merged above
 import { UniversalWorkInbox } from '../../components/inbox/UniversalWorkInbox';
 import { Login } from '../../components/auth/Login';
@@ -555,7 +555,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/control/settings')
         }
       ];
-    } else if (hasFunction(role, 'project_management') || hasCapability(role, 'manage_projects')) {
+    } else if (hasFunction(role, 'Projects') || hasCapability(role, 'manage_projects')) {
       // PM TOUR
       return [
         {
@@ -583,7 +583,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/resources/teams')
         }
       ];
-    } else if (hasFunction(role, 'finance')) {
+    } else if (hasFunction(role, 'Finance')) {
       // FINANCE TOUR
       return [
         {
@@ -611,7 +611,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/workspace/approvals')
         }
       ];
-    } else if (hasAuthority(role, 'client')) {
+    } else if (hasAuthority(role, 'external')) {
       // CLIENT TOUR
       return [
         {
@@ -1012,7 +1012,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       activityLogService.appendLog({
         workspace_id: workspace.id,
         actor_id: user.id,
-        action: 'project_created',
+        action_type: 'project_created',
         metadata: { project_id: data.id, name: data.name, execution_mode: data.execution_mode }
       }).catch(() => { });
 

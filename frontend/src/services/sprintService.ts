@@ -5,6 +5,14 @@ import { calculateDailyProductiveHours } from '../utils/productivity';
 import { logServiceFailure } from '../utils/supabaseError';
 import type { Sprint } from '../types';
 
+export interface SprintHealth {
+  status: 'healthy' | 'warning' | 'critical';
+  reasons: string[];
+  committed_hours?: number;
+  available_hours?: number;
+  blockers_count?: number;
+}
+
 export const sprintService = {
   async createSprint(sprint: Omit<Sprint, 'id' | 'created_at' | 'updated_at'>, actorId?: string): Promise<Sprint | null> {
     if (!isSupabaseConfigured) return null;
@@ -13,7 +21,7 @@ export const sprintService = {
     const created = data as Sprint;
     await activityLogService.appendLog({
       workspace_id: sprint.workspace_id, actor_id: actorId,
-      project_id: sprint.project_id, action: 'sprint_created',
+      project_id: sprint.project_id, action_type: 'sprint_created',
       metadata: { sprint_id: created.id, sprint_name: sprint.name, start_date: sprint.start_date, end_date: sprint.end_date }
     });
     return created;
@@ -26,7 +34,7 @@ export const sprintService = {
     if (updates.workspace_id) {
       await activityLogService.appendLog({
         workspace_id: updates.workspace_id, actor_id: actorId,
-        action: 'sprint_updated',
+        action_type: 'sprint_updated',
         metadata: { sprint_id: id, updates: Object.keys(updates) }
       });
     }
@@ -39,7 +47,7 @@ export const sprintService = {
     if (error) { console.error('sprintService.deleteSprint:', error); return false; }
     await activityLogService.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      project_id: projectId, action: 'sprint_deleted',
+      project_id: projectId, action_type: 'sprint_deleted',
       metadata: { sprint_id: id }
     });
     return true;

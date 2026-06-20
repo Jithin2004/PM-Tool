@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { ProjectModule } from '../core/types/project';
+export interface ProjectModule { id: string; workspace_id: string; project_id: string; name: string; code: string; created_at: string; }
 import { activityEventService } from './activityEventService';
 
 export const moduleService = {

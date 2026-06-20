@@ -39,7 +39,7 @@ export class CalendarAdapter extends BaseIntegrationAdapter {
   transformInbound(payload: any) {
     return {
       source: this.provider,
-      action: 'calendar_updated',
+      action_type: 'calendar_updated',
       raw: payload
     };
   }

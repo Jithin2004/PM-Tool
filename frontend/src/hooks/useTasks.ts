@@ -1317,14 +1317,7 @@ export function useTasks(workspaceId?: string) {
         throw insertError;
       }
       // Notification handled via trigger or we can send it here
-      await sendNotification(
-        workspaceId,
-        'assignments',
-        'Added as Collaborator',
-        `You have been added as a collaborator to a task. Reason: ${reason}`,
-        userId,
-        { type: 'collaborator_added', entity_id: taskId }
-      ).catch(() => {});
+      /* notification disabled */
     }
   };
 
@@ -1417,14 +1410,7 @@ export function useTasks(workspaceId?: string) {
 
       if (newAssigneeId) {
         try {
-          await sendNotification(
-            workspaceId,
-            'assignments',
-            'Task Assigned (Handover)',
-            `Task "${task.name}" has been transferred to you. Handover Notes: ${handoverNotes}`,
-            newAssigneeId,
-            { task_id: taskId, project_id: task.project_id }
-          );
+          /* notification disabled */
         } catch (err) {
           console.error("Failed to send notification:", err);
         }
@@ -1434,7 +1420,7 @@ export function useTasks(workspaceId?: string) {
         await supabase.from('activity_logs').insert({
           workspace_id: workspaceId,
           actor_id: user.id,
-          action: 'task_ownership_transferred',
+          action_type: 'task_ownership_transferred',
           task_id: taskId,
           project_id: task.project_id,
           metadata: {
@@ -1487,14 +1473,7 @@ export function useTasks(workspaceId?: string) {
       const task = tasks.find(t => t.id === taskId);
       if (task) {
         try {
-          await sendNotification(
-            workspaceId,
-            'system',
-            'New Task Suggestion',
-            `A collaborator suggested a change on task "${task.name}": ${reason}`,
-            undefined,
-            { task_id: taskId, project_id: task.project_id }
-          );
+          /* notification disabled */
         } catch (e) {
           console.error(e);
         }
@@ -1564,14 +1543,7 @@ export function useTasks(workspaceId?: string) {
 
       if (suggestion.suggested_by) {
         try {
-          await sendNotification(
-            workspaceId,
-            'system',
-            'Task Suggestion Reviewed',
-            `Your suggestion on task has been ${status}.`,
-            suggestion.suggested_by,
-            { task_id: suggestion.task_id }
-          );
+          /* notification disabled */
         } catch (e) {
           console.error(e);
         }

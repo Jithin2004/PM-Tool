@@ -151,9 +151,9 @@ export const sandboxSeedEngine = {
     // 7. Activity History (To make dashboards look alive)
     const thirtyMinsAgo = new Date(Date.now() - 30 * 60000).toISOString();
     await supabase.from('activity_events').insert([
-      { workspace_id: workspaceId, actor_id: devId, entity_type: 'task', action: 'status_changed', metadata: { from: 'todo', to: 'in_progress' }, created_at: thirtyMinsAgo },
-      { workspace_id: workspaceId, actor_id: hrId, entity_type: 'leave', action: 'approved', metadata: {}, created_at: thirtyMinsAgo },
-      { workspace_id: workspaceId, actor_id: finId, entity_type: 'invoice', action: 'paid', metadata: { amount: 15000 }, created_at: thirtyMinsAgo }
+      { workspace_id: workspaceId, actor_id: devId, entity_type: 'task', action_type: 'status_changed', metadata: { from: 'todo', to: 'in_progress' }, created_at: thirtyMinsAgo },
+      { workspace_id: workspaceId, actor_id: hrId, entity_type: 'leave', action_type: 'approved', metadata: {}, created_at: thirtyMinsAgo },
+      { workspace_id: workspaceId, actor_id: finId, entity_type: 'invoice', action_type: 'paid', metadata: { amount: 15000 }, created_at: thirtyMinsAgo }
     ]);
 
     console.log(`[SandboxSeed] Successfully completed simulation for ${workspaceId}`);

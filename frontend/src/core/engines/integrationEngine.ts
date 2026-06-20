@@ -8,6 +8,7 @@ import { WebhookPayload } from '../../integrations/providers/BaseIntegrationAdap
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { logServiceFailure } from '../../utils/supabaseError';
 import { calendarEventService } from '../../services/calendarEventService';
+import { activityLogService } from '../../services/activityLogService';
 
 
 export const getAdapter = (provider: string) => {
@@ -108,7 +109,11 @@ export const integrationEngine = {
       // 2. Provider normalization
       const result = await adapter.handleWebhook(workspaceId, integrationId, payload);
       if (!result.success) {
-        throw new Error(result.error);
+        if ('error' in result) {
+          throw new Error(result.error as string);
+        } else {
+          throw new Error('Sync failed');
+        }
       }
 
       // Update event record with normalized type
@@ -174,7 +179,11 @@ export const integrationEngine = {
       });
 
       if (!result.success) {
-        throw new Error(result.error);
+        if ('error' in result) {
+          throw new Error(result.error as string);
+        } else {
+          throw new Error('Sync failed');
+        }
       }
 
       // Update processing status
@@ -314,7 +323,7 @@ function resolveSyncFn(service: string, payload: Record<string, any>, _workspace
   if (service.startsWith('automation_')) {
     return async () => {
       const mod = await import('./automationEngine');
-      const result = await mod.executeAutomationRule(_workspaceId, payload.rule_id, payload.event, payload.payload || payload);
+      const result = await mod.evaluateTriggers(_workspaceId, payload.rule_id, payload.event, payload.payload || payload);
       return { success: result.success, message: result.message, itemsSynced: result.success ? 1 : 0 };
     };
   }
@@ -566,7 +575,7 @@ export async function saveConnectedAccount(account: Partial<ConnectedAccount>): 
     if (data) {
       await activityLogService.appendLog({
         workspace_id: account.workspace_id!, actor_id: account.user_id,
-        action: 'integration_connected',
+        action_type: 'integration_connected',
         metadata: { service: account.service, account_id: data.id },
       });
       return data as ConnectedAccount;
@@ -582,7 +591,7 @@ export async function disconnectService(accountId: string, workspaceId?: string,
     if (workspaceId && service) {
       await updateIntegrationHealth(workspaceId, service, 'disconnected', 'Disconnected by user');
       await activityLogService.appendLog({
-        workspace_id: workspaceId, action: 'integration_disconnected',
+        workspace_id: workspaceId, action_type: 'integration_disconnected',
         metadata: { account_id: accountId, service },
       });
     }
@@ -669,7 +678,7 @@ export async function updateIntegrationHealth(
       });
     }
     activityLogService.appendLog({
-      workspace_id: workspaceId, action: 'integration_health_checked',
+      workspace_id: workspaceId, action_type: 'integration_health_checked',
       metadata: { service, status, error, integration_last_checked: now },
     });
     return true;
@@ -721,7 +730,7 @@ async function syncUpdateHealth(workspaceId: string, service: string, success: b
   await updateIntegrationHealth(workspaceId, service, success ? 'connected' : 'failed', error);
   if (success) {
     await activityLogService.appendLog({
-      workspace_id: workspaceId, action: 'integration_sync',
+      workspace_id: workspaceId, action_type: 'integration_sync',
       metadata: { service, items_synced: itemsSynced ?? 0, last_sync: new Date().toISOString() },
     });
   }

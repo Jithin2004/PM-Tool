@@ -71,7 +71,7 @@ export function DocumentCreationModal({ onClose, onSuccess }: { onClose: () => v
 
       await activityLogService.appendLog({
         workspace_id: workspace.id,
-        action: 'document_referenced',
+        action_type: 'document_referenced',
         metadata: { document_id: doc.id, title: doc.title }
       });
 

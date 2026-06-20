@@ -16,7 +16,7 @@ export const exportToPDF = async (
   activityLogService.appendLog({
     workspace_id: workspaceId,
     actor_id: 'system',
-    action: 'pdf_generation_started',
+    action_type: 'pdf_generation_started',
     metadata: { reportType }
   }).catch(() => {});
 
@@ -80,7 +80,7 @@ export const exportToPDF = async (
   activityLogService.appendLog({
     workspace_id: workspaceId,
     actor_id: 'system',
-    action: 'pdf_generation_completed',
+    action_type: 'pdf_generation_completed',
     metadata: { reportType, success: true }
   }).catch(() => {});
 
@@ -95,7 +95,7 @@ export const exportToCSV = async (
   activityLogService.appendLog({
     workspace_id: workspaceId,
     actor_id: 'system',
-    action: 'csv_generation_started',
+    action_type: 'csv_generation_started',
     metadata: { reportType }
   }).catch(() => {});
 
@@ -129,7 +129,7 @@ export const exportToCSV = async (
   activityLogService.appendLog({
     workspace_id: workspaceId,
     actor_id: 'system',
-    action: 'csv_generation_completed',
+    action_type: 'csv_generation_completed',
     metadata: { reportType, success: true }
   }).catch(() => {});
 

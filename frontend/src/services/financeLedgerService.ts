@@ -59,7 +59,7 @@ export const financeLedgerService = {
         actor_id: params.userId,
         entity_type: 'invoice',
         entity_id: params.invoiceId,
-        action: 'invoice_created',
+        action_type: 'invoice_created',
         metadata: { totalAmount, journalId }
       });
     } catch (e) {
@@ -119,7 +119,7 @@ export const financeLedgerService = {
         actor_id: params.userId,
         entity_type: 'payment',
         entity_id: params.paymentId,
-        action: 'payment_received',
+        action_type: 'payment_received',
         metadata: { amount: params.amount, invoiceId: params.invoiceId, journalId }
       });
     } catch (e) {
@@ -180,7 +180,7 @@ export const financeLedgerService = {
         actor_id: params.userId,
         entity_type: 'expense',
         entity_id: params.expenseId,
-        action: 'expense_created',
+        action_type: 'expense_created',
         metadata: { amount: params.amount, category: expenseAccountName, journalId }
       });
     } catch (e) {

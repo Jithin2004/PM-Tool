@@ -91,7 +91,7 @@ async function deliverWebhook(wh: Webhook, event: string, payload: Record<string
     });
     await supabase.from('webhooks').update({ last_triggered_at: new Date().toISOString() }).eq('id', wh.id);
     await activityLogService.appendLog({
-      workspace_id: wh.workspace_id, action: 'webhook_sent',
+      workspace_id: wh.workspace_id, action_type: 'webhook_sent',
       metadata: { webhook_id: wh.id, webhook_name: wh.name, event, status_code: res.status, attempt: attempt + 1 },
     });
     if (!res.ok && attempt < WEBHOOK_RETRY_BACKOFFS.length) {
@@ -102,7 +102,7 @@ async function deliverWebhook(wh: Webhook, event: string, payload: Record<string
       setTimeout(() => deliverWebhook(wh, event, payload, attempt + 1), WEBHOOK_RETRY_BACKOFFS[attempt]);
     } else {
       await activityLogService.appendLog({
-        workspace_id: wh.workspace_id, action: 'webhook_failed',
+        workspace_id: wh.workspace_id, action_type: 'webhook_failed',
         metadata: { webhook_id: wh.id, webhook_name: wh.name, event, error: e.message, attempt: attempt + 1 },
       });
     }

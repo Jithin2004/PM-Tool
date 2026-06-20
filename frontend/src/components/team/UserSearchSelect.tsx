@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 import { searchWorkspaceUsers } from '../../services/operationalDataService';
-import { useAuth } from '../../context/AuthContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface UserSearchSelectProps {
   value: string;
@@ -15,8 +15,8 @@ export function UserSearchSelect({ value, onChange, excludeUserId }: UserSearchS
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { session } = useAuth();
-  const workspaceId = session?.user?.user_metadata?.workspace_id;
+  const { workspace } = useWorkspace();
+  const workspaceId = workspace?.id;
 
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
 

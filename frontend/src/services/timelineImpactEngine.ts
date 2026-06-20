@@ -391,7 +391,7 @@ export async function propagateAndPersist(
       workspace_id: input.workspaceId,
       actor_id: input.actorId,
       task_id: input.triggerEntityId,
-      action: 'timeline_impact_cascade',
+      action_type: 'timeline_impact_cascade',
       metadata: {
         trigger_type: input.triggerEntityType,
         affected_count: result.affectedEntities.length
@@ -445,7 +445,7 @@ export async function computeImpact(input: ImpactInput): Promise<ImpactResult> {
     import('./activityLogService').then(({ activityLogService }) => {
       activityLogService.appendLog({
         workspace_id: input.workspaceId,
-        action: 'timeline_impact_computed',
+        action_type: 'timeline_impact_computed',
         metadata: {
           task_count: input.tasks.length,
           duration_ms: durationMs,

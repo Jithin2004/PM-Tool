@@ -33,7 +33,7 @@ export function PasswordSetup() {
       
       await activityLogService.appendLog({
         workspace_id: profile?.workspace_id || '',
-        action: 'password_setup_completed',
+        action_type: 'password_setup_completed',
         metadata: { user_id: profile?.id }
       });
       

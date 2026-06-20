@@ -39,7 +39,7 @@ export async function createApiKey(
     if (data) {
       await activityLogService.appendLog({
         workspace_id: workspaceId, actor_id: createdBy,
-        action: 'api_key_created',
+        action_type: 'api_key_created',
         metadata: { key_id: data.id, name, permissions },
       });
       return { key: data as ApiKey, rawKey: raw };

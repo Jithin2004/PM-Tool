@@ -100,7 +100,7 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
 
       await activityLogService.appendLog({
         workspace_id: workspace!.id,
-        action: 'approval_decision',
+        action_type: 'approval_decision',
         metadata: { 
           approval_id: approval.id, 
           entity_type: approval.entity_type,

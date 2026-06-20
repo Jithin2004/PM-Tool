@@ -58,6 +58,8 @@ export interface Member {
   department?: string;
   date_of_joining?: string;
   employee_type?: string;
+  metadata?: Record<string, any>;
+  preferences?: Record<string, any>;
   contract_start?: string;
   contract_end?: string;
   probation_end?: string;

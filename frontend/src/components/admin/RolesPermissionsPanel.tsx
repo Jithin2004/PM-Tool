@@ -83,7 +83,7 @@ export function RolesPermissionsPanel() {
       // Record audit log
       if (actorId) {
         await supabase.from('activity_logs').insert({
-          action: 'PERMISSION_CHANGED',
+          action_type: 'PERMISSION_CHANGED',
           actor_id: actorId,
           metadata: { updated_roles: roles.map(r => r.id) }
         });

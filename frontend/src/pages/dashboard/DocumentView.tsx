@@ -67,11 +67,11 @@ export default function DocumentView() {
     if (!doc || !wsId) return;
     setIsSaving(true);
     const success = await updateDocument(doc.id, {
-      title: editTitle, content: editContent, author_id: profile?.id,
+      title: editTitle, content: editContent, owner_id: profile?.id,
     });
     if (success) {
       await activityLogService.appendLog({
-        workspace_id: wsId, actor_id: profile?.id, action: 'document_updated',
+        workspace_id: wsId, actor_id: profile?.id, action_type: 'document_updated',
         metadata: { doc_id: doc.id, title: editTitle },
       });
       setEditing(false);
@@ -82,7 +82,7 @@ export default function DocumentView() {
 
   const handleCreateVersion = async () => {
     if (!doc) return;
-    await createVersion(doc.id, doc.content, profile?.id, versionSummary || undefined);
+    await createVersion(doc.id, doc.content || '', versionSummary || undefined);
     setShowVersionComment(false);
     setVersionSummary('');
     await loadDoc();
@@ -103,7 +103,7 @@ export default function DocumentView() {
   const handleAddAnnotation = async () => {
     if (!doc || !commentText.trim() || selStart === selEnd) return;
     const ann = await createAnnotation({
-      doc_id: doc.id, author_id: profile?.id,
+      doc_id: doc.id, owner_id: profile?.id,
       selection_start: selStart, selection_end: selEnd,
       comment: commentText,
     });

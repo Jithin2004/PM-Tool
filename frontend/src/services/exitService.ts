@@ -110,7 +110,7 @@ export const transferAndArchiveEmployee = async (
   await activityLogService.appendLog({
     workspace_id: workspaceId,
     actor_id: performedBy,
-    action: 'employee_archived',
+    action_type: 'employee_archived',
     metadata: {
       archived_user_id: userId,
       tasks_transferred_to: transferMap.taskAssigneeId,

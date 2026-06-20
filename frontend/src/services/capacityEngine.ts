@@ -60,7 +60,7 @@ export const capacityEngine = {
       await activityLogService.appendLog({
         workspace_id: period.workspace_id,
         actor_id: actorId,
-        action: 'allocation_period_created',
+        action_type: 'allocation_period_created',
         metadata: { project_id: period.project_id, user_id: period.user_id }
       });
       return true;
@@ -77,7 +77,7 @@ export const capacityEngine = {
       await activityLogService.appendLog({
         workspace_id: workspaceId,
         actor_id: actorId,
-        action: 'allocation_period_modified',
+        action_type: 'allocation_period_modified',
         metadata: { period_id: id, updates }
       });
       return true;
@@ -94,7 +94,7 @@ export const capacityEngine = {
       await activityLogService.appendLog({
         workspace_id: workspaceId,
         actor_id: actorId,
-        action: 'allocation_period_removed',
+        action_type: 'allocation_period_removed',
         metadata: { period_id: id }
       });
       return true;

@@ -9,7 +9,7 @@ import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { calculateExpectedTime, calculateVariance } from '../../utils/timeUtils';
 import { addWorkingHours, getDailyCapacity } from '../../utils/productivity';
 import { activityLogService } from '../../services/activityLogService';
-import { 
+import {
   fetchFinanceData, Client, Invoice, Payment, Expense, BillingMilestone, ClientCredit, CompanyBillingProfile,
   cancelInvoice, applyAdvanceToInvoice, createCreditNote
 } from '../../services/financeService';
@@ -33,7 +33,7 @@ function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; 
   const [clientCredits, setClientCredits] = useState<ClientCredit[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyBillingProfile | null>(null);
-  
+
   const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = useState(false);
   const [prefillBillingType, setPrefillBillingType] = useState<string>('Final Settlement');
 
@@ -58,16 +58,16 @@ function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; 
   }
 
   const totalInvoiced = invoices.reduce((sum, inv) => sum + (inv.grand_total || inv.amount || 0), 0);
-  
+
   const projectPayments = payments.filter(p => invoices.some(i => i.id === p.invoice_id));
   const totalReceived = projectPayments.reduce((sum, p) => sum + p.amount, 0);
-  
+
   const totalPending = Math.max(0, totalInvoiced - totalReceived);
-  
+
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  
+
   const profitEstimate = (project.contract_value || 0) - totalExpenses;
-  
+
   const availableAdvance = clientCredits
     .filter(c => c.status === 'active')
     .reduce((sum, c) => sum + c.amount, 0);
@@ -152,7 +152,7 @@ function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; 
           </div>
           <div className="text-[9px] font-mono text-text-tertiary mt-1">Model: {project.billing_model || 'Fixed Price'}</div>
         </div>
-        
+
         <div className="p-4 bg-surface-3 border border-border rounded-xl">
           <div className="text-[10px] uppercase font-mono text-text-tertiary mb-1">Amount Invoiced</div>
           <div className="text-xl font-bold text-text-primary">
@@ -183,31 +183,31 @@ function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; 
             <span className="text-sm font-mono text-rose-400 font-bold">{project.billing_currency || 'INR'} {totalExpenses.toLocaleString()}</span>
           </div>
           <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm max-h-[160px] overflow-y-auto space-y-2">
-             {expenses.length === 0 ? (
-                <p className="text-[10px] font-mono text-text-tertiary italic text-center py-2">No expenses logged yet.</p>
-             ) : (
-                expenses.map(e => (
-                  <div key={e.id} className="flex justify-between items-center text-[10px] font-mono border-b border-border/50 pb-2 last:border-0 last:pb-0">
-                    <div>
-                      <span className="text-text-secondary font-bold uppercase">{e.category}</span>
-                      <p className="text-text-tertiary mt-0.5">{e.description}</p>
-                    </div>
-                    <div className="text-right flex items-center justify-end gap-2">
-                       <span className="text-text-primary">{(project.billing_currency || 'INR')} {e.amount.toLocaleString()}</span>
-                       <span className={`text-[8px] px-1 py-0.5 rounded ${e.billable ? 'bg-emerald-500/20 text-emerald-400' : 'bg-surface-3 text-text-tertiary'}`}>{e.billable ? 'BILLABLE' : 'INTERNAL'}</span>
-                       {e.billable && (
-                         <button 
-                           onClick={() => handleCreateInvoice('Expense Reimbursement')} 
-                           title="Bill to Client"
-                           className="text-text-tertiary hover:text-emerald-400 transition-colors"
-                         >
-                           <Plus className="w-3 h-3" />
-                         </button>
-                       )}
-                    </div>
+            {expenses.length === 0 ? (
+              <p className="text-[10px] font-mono text-text-tertiary italic text-center py-2">No expenses logged yet.</p>
+            ) : (
+              expenses.map(e => (
+                <div key={e.id} className="flex justify-between items-center text-[10px] font-mono border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                  <div>
+                    <span className="text-text-secondary font-bold uppercase">{e.category}</span>
+                    <p className="text-text-tertiary mt-0.5">{e.description}</p>
                   </div>
-                ))
-             )}
+                  <div className="text-right flex items-center justify-end gap-2">
+                    <span className="text-text-primary">{(project.billing_currency || 'INR')} {e.amount.toLocaleString()}</span>
+                    <span className={`text-[8px] px-1 py-0.5 rounded ${e.billable ? 'bg-emerald-500/20 text-emerald-400' : 'bg-surface-3 text-text-tertiary'}`}>{e.billable ? 'BILLABLE' : 'INTERNAL'}</span>
+                    {e.billable && (
+                      <button
+                        onClick={() => handleCreateInvoice('Expense Reimbursement')}
+                        title="Bill to Client"
+                        className="text-text-tertiary hover:text-emerald-400 transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -233,62 +233,61 @@ function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; 
           </div>
           <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm max-h-[220px] overflow-y-auto space-y-2">
             <h5 className="text-[10px] uppercase font-mono text-text-tertiary mb-2">Linked Invoices</h5>
-             {invoices.length === 0 ? (
-                <p className="text-[10px] font-mono text-text-tertiary italic text-center py-2">No invoices generated yet.</p>
-             ) : (
-                invoices.map(i => (
-                  <div key={i.id} className="flex justify-between items-center text-[10px] font-mono border-b border-border/50 pb-2 last:border-0 last:pb-0">
-                    <div>
-                      <span className="text-text-secondary font-bold">{i.invoice_number}</span>
-                      <p className="text-text-tertiary mt-0.5 uppercase">{i.billing_type || 'Invoice'}</p>
-                      
-                      <div className="flex gap-2 mt-2">
-                        {i.status !== 'paid' && i.status !== 'cancelled' && (
-                          <button onClick={() => handleCancelInvoiceAction(i)} className="text-[9px] px-1.5 py-0.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded">Cancel</button>
-                        )}
-                        {i.status === 'paid' && (
-                          <button onClick={() => handleCreateCreditNoteAction(i)} className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 rounded">Credit Note</button>
-                        )}
-                        {i.status !== 'paid' && i.status !== 'cancelled' && availableAdvance > 0 && (
-                          <button onClick={() => handleApplyAdvanceAction(i)} className="text-[9px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded">Apply Advance</button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                       <span className="text-text-primary block">{(i.grand_total || i.amount || 0).toLocaleString()}</span>
-                       <span className={`text-[8px] px-1 py-0.5 rounded uppercase ${
-                          i.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
-                          i.status === 'partial' ? 'bg-amber-500/20 text-amber-400' :
-                          i.status === 'overdue' ? 'bg-rose-500/20 text-rose-400' :
-                          i.status === 'cancelled' ? 'bg-surface-3 text-text-tertiary' :
-                          'bg-blue-500/20 text-blue-400'
-                       }`}>{i.status}</span>
+            {invoices.length === 0 ? (
+              <p className="text-[10px] font-mono text-text-tertiary italic text-center py-2">No invoices generated yet.</p>
+            ) : (
+              invoices.map(i => (
+                <div key={i.id} className="flex justify-between items-center text-[10px] font-mono border-b border-border/50 pb-2 last:border-0 last:pb-0">
+                  <div>
+                    <span className="text-text-secondary font-bold">{i.invoice_number}</span>
+                    <p className="text-text-tertiary mt-0.5 uppercase">{i.billing_type || 'Invoice'}</p>
+
+                    <div className="flex gap-2 mt-2">
+                      {i.status !== 'paid' && i.status !== 'cancelled' && (
+                        <button onClick={() => handleCancelInvoiceAction(i)} className="text-[9px] px-1.5 py-0.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded">Cancel</button>
+                      )}
+                      {i.status === 'paid' && (
+                        <button onClick={() => handleCreateCreditNoteAction(i)} className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 rounded">Credit Note</button>
+                      )}
+                      {i.status !== 'paid' && i.status !== 'cancelled' && availableAdvance > 0 && (
+                        <button onClick={() => handleApplyAdvanceAction(i)} className="text-[9px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded">Apply Advance</button>
+                      )}
                     </div>
                   </div>
-                ))
-             )}
+                  <div className="text-right">
+                    <span className="text-text-primary block">{(i.grand_total || i.amount || 0).toLocaleString()}</span>
+                    <span className={`text-[8px] px-1 py-0.5 rounded uppercase ${i.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400' :
+                      i.status === 'partial' ? 'bg-amber-500/20 text-amber-400' :
+                        i.status === 'overdue' ? 'bg-rose-500/20 text-rose-400' :
+                          i.status === 'cancelled' ? 'bg-surface-3 text-text-tertiary' :
+                            'bg-blue-500/20 text-blue-400'
+                      }`}>{i.status}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-          
+
           <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm space-y-3">
-             <h5 className="text-[10px] uppercase font-mono text-text-tertiary mb-2">Client Advance Balance</h5>
-             <div className="flex justify-between items-center mb-2">
-               <span className="text-sm font-semibold text-text-secondary">Available Advance</span>
-               <span className="text-sm font-mono font-bold text-emerald-400">{project.billing_currency || 'INR'} {availableAdvance.toLocaleString()}</span>
-             </div>
-             <p className="text-[9px] font-mono text-text-tertiary mb-3 italic">Advances are tracked per client and can be applied during invoice finalization or generated via Advance Payment Invoices.</p>
-             <button 
-               onClick={() => handleCreateInvoice('Advance Payment')}
-               className="w-full bg-surface-3 hover:bg-surface-highest text-text-secondary h-8 rounded text-[10px] uppercase font-bold tracking-wide transition-all border border-border/50"
-             >
-               Request Advance
-             </button>
+            <h5 className="text-[10px] uppercase font-mono text-text-tertiary mb-2">Client Advance Balance</h5>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-semibold text-text-secondary">Available Advance</span>
+              <span className="text-sm font-mono font-bold text-emerald-400">{project.billing_currency || 'INR'} {availableAdvance.toLocaleString()}</span>
+            </div>
+            <p className="text-[9px] font-mono text-text-tertiary mb-3 italic">Advances are tracked per client and can be applied during invoice finalization or generated via Advance Payment Invoices.</p>
+            <button
+              onClick={() => handleCreateInvoice('Advance Payment')}
+              className="w-full bg-surface-3 hover:bg-surface-highest text-text-secondary h-8 rounded text-[10px] uppercase font-bold tracking-wide transition-all border border-border/50"
+            >
+              Request Advance
+            </button>
           </div>
         </div>
       </div>
 
       {/* Invoice Actions */}
       <div className="flex justify-end pt-4 border-t border-border">
-        <button 
+        <button
           onClick={() => handleCreateInvoice('Final Settlement')}
           className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 px-6 py-2.5 rounded-xl font-medium transition-colors"
         >
@@ -309,10 +308,10 @@ function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; 
         currentUserIsSuperAdmin={true} // In real app, fetch from user profile
         onSuccess={() => {
           setIsCreateInvoiceOpen(false);
-            // Auto-refresh the component
-            refreshFinanceData();
-          }}
-        />
+          // Auto-refresh the component
+          refreshFinanceData();
+        }}
+      />
     </div>
   );
 }
@@ -437,7 +436,7 @@ export function ProjectDetailsModal({
     await updateWorkspaceSettings({
       project_state_durations: projectDurations,
     });
-    
+
     if (notify) notify(`Project state transitioned to: ${newState.toUpperCase()}`, "success");
   };
 
@@ -469,7 +468,7 @@ export function ProjectDetailsModal({
     await onUpdate(project.id, { delay_drift_days: newDrift });
 
     setBlockerReason('');
-    
+
     if (notify) notify(`Timeline shift of +${shiftAmount} days logged.`, "success");
   };
 
@@ -505,7 +504,7 @@ export function ProjectDetailsModal({
   }, []);
   const nowLive = useMemo(() => new Date(), [tick]);
   const workWindow = useMemo(() => ({ workStart: workingTimeFrom, workEnd: workingTimeTo, lunchDuration: 60, workingDays: [1, 2, 3, 4, 5], productivityFactor: 0.8, holidays: [], shutdowns: [] }), [workingTimeFrom, workingTimeTo]);
-  
+
   const startDate = proposedStartDate ? new Date(proposedStartDate) : new Date(project.created_at);
   const deadline = clientDeadline ? new Date(clientDeadline) : null;
 
@@ -545,8 +544,8 @@ export function ProjectDetailsModal({
         if (logs && logs.length > 0) {
           const mapped = logs.map(d => ({
             timestamp: d.created_at,
-            changes: { action: d.action, ...d.metadata },
-            reason: d.metadata?.reason || d.action,
+            changes: { action: d.action_type, ...d.metadata },
+            reason: d.metadata?.reason || d.action_type,
             authorName: d.actor_id,
             authorRole: '',
             previousHash: d.previous_hash || 'GENESIS_BLOCK',
@@ -719,7 +718,7 @@ export function ProjectDetailsModal({
         const { supabase } = await import('../../lib/supabase');
         await supabase.from('invoice_audit_logs').insert([{
           workspace_id: project.workspace_id,
-          action: 'project_completed_with_pending_finance',
+          action_type: 'project_completed_with_pending_finance',
           performed_by: currentUserProfile?.id || currentUserProfile?.email || 'unknown',
           reason: `Pending amount: ${pendingFinanceWarning.currency} ${pendingFinanceWarning.gap.toLocaleString()}`
         }]);
@@ -750,7 +749,7 @@ export function ProjectDetailsModal({
     });
 
     setChangeReasonPrompt({ changes: null, open: false });
-    
+
     if (finalUpdates.status === 'done' && project.status !== 'done') {
       setIsReviewModalOpen(true);
     } else {
@@ -763,10 +762,10 @@ export function ProjectDetailsModal({
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 modal-overlay-premium" />
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-        animate={{ opacity: 1, scale: 1, y: 0 }} 
-        exit={{ opacity: 0, scale: 0.95, y: 20 }} 
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className="relative modal-premium w-full max-w-2xl overflow-y-auto max-h-[90vh] md:max-h-none rounded-2xl my-auto scrollbar-premium"
       >
@@ -804,7 +803,7 @@ export function ProjectDetailsModal({
 
             {/* Main Content Area */}
             <div className="flex-1 p-6 overflow-y-auto space-y-6">
-              
+
               {/* Ledger Integrity Guard Panel */}
               <div className="border border-border bg-surface-3 backdrop-blur-md p-6 rounded-sm space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -851,13 +850,12 @@ export function ProjectDetailsModal({
                         type="button"
                         onClick={verifyLedger}
                         disabled={verificationState === 'VERIFYING'}
-                        className={`px-4 py-2 text-[10px] uppercase font-mono tracking-wide font-bold border transition-all ${
-                          verificationState === 'SECURED'
-                            ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/20'
-                            : verificationState === 'TAMPERED'
+                        className={`px-4 py-2 text-[10px] uppercase font-mono tracking-wide font-bold border transition-all ${verificationState === 'SECURED'
+                          ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/20'
+                          : verificationState === 'TAMPERED'
                             ? 'bg-signal-critical-bg border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/35 text-signal-critical hover:bg-signal-critical-bg'
                             : 'bg-[var(--pm-inverse-surface)] text-[var(--pm-inverse-on-surface)] border-transparent hover:opacity-90'
-                        }`}
+                          }`}
                       >
                         {verificationState === 'VERIFYING' ? "Scanning..." : verificationState === 'SECURED' ? "Re-Verify" : "Verify Ledger"}
                       </button>
@@ -901,15 +899,14 @@ export function ProjectDetailsModal({
                     return (
                       <div
                         key={originalIndex}
-                        className={`border p-5 flex flex-col gap-3 transition-all relative ${
-                          isScanning
-                            ? 'border-yellow-500 bg-yellow-500/[0.02] shadow-sm'
-                            : isTamperedBlock
+                        className={`border p-5 flex flex-col gap-3 transition-all relative ${isScanning
+                          ? 'border-yellow-500 bg-yellow-500/[0.02] shadow-sm'
+                          : isTamperedBlock
                             ? 'border-[var(--signal-critical)] bg-[var(--signal-critical-bg)] bg-red-500/[0.04] shadow-sm'
                             : isSecuredBlock
-                            ? 'border-emerald-500/20 bg-emerald-500/[0.01]'
-                            : 'border-border bg-[var(--pm-surface)]/5'
-                        }`}
+                              ? 'border-emerald-500/20 bg-emerald-500/[0.01]'
+                              : 'border-border bg-[var(--pm-surface)]/5'
+                          }`}
                       >
                         {/* Upper Details Row */}
                         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-[10px] font-mono">
@@ -917,7 +914,7 @@ export function ProjectDetailsModal({
                             <span className="text-text-quaternary uppercase tracking-wide font-bold">Block #{originalIndex + 1}</span>
                             <span className="text-text-tertiary">{new Date(log.timestamp).toLocaleString()}</span>
                           </div>
-                          
+
                           {/* Block Status Badge */}
                           <div className="flex items-center gap-2">
                             {isScanning && (
@@ -946,11 +943,11 @@ export function ProjectDetailsModal({
                         {/* Audit Details */}
                         <div className="space-y-1.5 py-1 border-y border-border-subtle">
                           <p className="text-xs font-mono text-text-secondary leading-relaxed">
-                            <span className="text-text-quaternary uppercase tracking-wide text-[9px] mr-2">Changes:</span> 
+                            <span className="text-text-quaternary uppercase tracking-wide text-[9px] mr-2">Changes:</span>
                             {log.changes}
                           </p>
                           <p className="text-xs font-mono text-signal-warning/90 leading-relaxed">
-                            <span className="text-text-quaternary uppercase tracking-wide text-[9px] mr-2">Reason:</span> 
+                            <span className="text-text-quaternary uppercase tracking-wide text-[9px] mr-2">Reason:</span>
                             {log.reason}
                           </p>
                         </div>
@@ -959,15 +956,14 @@ export function ProjectDetailsModal({
                         <div className="flex flex-wrap items-center gap-3 pt-1 text-[9px] font-mono">
                           <div className="flex items-center gap-1.5">
                             <span className="text-text-quaternary uppercase tracking-tighter">HASH:</span>
-                            <span className={`px-2 py-0.5 border rounded-sm font-mono tracking-tight transition-colors ${
-                              isTamperedBlock
-                                ? 'bg-signal-critical-bg border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/30 text-signal-critical'
-                                : 'bg-bg border-border text-text-secondary'
-                            }`} title={log.hash}>
+                            <span className={`px-2 py-0.5 border rounded-sm font-mono tracking-tight transition-colors ${isTamperedBlock
+                              ? 'bg-signal-critical-bg border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/30 text-signal-critical'
+                              : 'bg-bg border-border text-text-secondary'
+                              }`} title={log.hash}>
                               {log.hash ? `0x${log.hash.substring(0, 8)}...` : 'None'}
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center gap-1.5">
                             <span className="text-text-quaternary uppercase tracking-tighter">PREV HASH:</span>
                             {log.previousHash === 'GENESIS_BLOCK' ? (
@@ -1031,7 +1027,7 @@ export function ProjectDetailsModal({
                   This project still has <strong className="text-amber-400">{pendingFinanceWarning.currency} {pendingFinanceWarning.gap.toLocaleString()}</strong> remaining uninvoiced.
                 </p>
               </div>
-              
+
               <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-sm grid grid-cols-2 gap-4">
                 <div>
                   <span className="block text-[9px] uppercase font-mono text-text-tertiary mb-1">Contract Value</span>
@@ -1042,7 +1038,7 @@ export function ProjectDetailsModal({
                   <span className="block text-sm font-bold text-text-primary">{pendingFinanceWarning.currency} {pendingFinanceWarning.totalInv.toLocaleString()}</span>
                 </div>
               </div>
-              
+
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={handleReviewFinance} className="flex-1 bg-amber-500 text-black text-[11px] uppercase font-bold py-2.5 hover:bg-amber-400 transition-colors tracking-wide">
                   Review Finance
@@ -1067,7 +1063,7 @@ export function ProjectDetailsModal({
               </div>
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={async () => {
                   try {
                     const { data } = await supabase.from('external_access_links').select('token').eq('project_id', project.id).eq('is_active', true).limit(1).single();
@@ -1102,54 +1098,48 @@ export function ProjectDetailsModal({
             <button
               type="button"
               onClick={() => setActiveTab('general')}
-              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${
-                activeTab === 'general' ? 'active' : ''
-              }`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${activeTab === 'general' ? 'active' : ''
+                }`}
             >
               Scope & PERT
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('friction')}
-              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${
-                activeTab === 'friction' ? 'active' : ''
-              }`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${activeTab === 'friction' ? 'active' : ''
+                }`}
             >
               Friction & Shifts
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('files')}
-              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${
-                activeTab === 'files' ? 'active' : ''
-              }`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${activeTab === 'files' ? 'active' : ''
+                }`}
             >
               Files
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('finance')}
-              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${
-                activeTab === 'finance' ? 'active text-emerald-400' : ''
-              }`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${activeTab === 'finance' ? 'active text-emerald-400' : ''
+                }`}
             >
               <Activity className="w-3.5 h-3.5" /> Finance
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('insights')}
-              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${
-                activeTab === 'insights' ? 'active text-indigo-400' : ''
-              }`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${activeTab === 'insights' ? 'active text-indigo-400' : ''
+                }`}
             >
               <TrendingUp className="w-3.5 h-3.5" /> Insights
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('change_requests')}
-              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${
-                activeTab === 'change_requests' ? 'active text-amber-400' : ''
-              }`}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${activeTab === 'change_requests' ? 'active text-amber-400' : ''
+                }`}
             >
               CRs
             </button>
@@ -1309,35 +1299,35 @@ export function ProjectDetailsModal({
                   <div className="grid grid-cols-3 gap-2 mb-6">
                     <div>
                       <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">BEST (H)</p>
-                      <input 
-                        type="number" 
-                        step="0.1" 
-                        value={pBest} 
-                        onChange={e => setPBest(e.target.value)} 
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={pBest}
+                        onChange={e => setPBest(e.target.value)}
                         disabled={hasTasks}
-                        className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
+                        className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div>
                       <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">LIKELY (H)</p>
-                      <input 
-                        type="number" 
-                        step="0.1" 
-                        value={pLikely} 
-                        onChange={e => setPLikely(e.target.value)} 
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={pLikely}
+                        onChange={e => setPLikely(e.target.value)}
                         disabled={hasTasks}
-                        className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
+                        className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                     <div>
                       <p className="text-[9px] font-mono text-text-secondary uppercase tracking-tighter mb-1">WORST (H)</p>
-                      <input 
-                        type="number" 
-                        step="0.1" 
-                        value={pWorst} 
-                        onChange={e => setPWorst(e.target.value)} 
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={pWorst}
+                        onChange={e => setPWorst(e.target.value)}
                         disabled={hasTasks}
-                        className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed" 
+                        className="w-full bg-bg border border-border text-center py-1 font-mono text-[10px] text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -1363,46 +1353,42 @@ export function ProjectDetailsModal({
                   <p className="text-[11px] text-text-tertiary leading-relaxed mb-4">
                     Transition the current delivery state to model passive latency and contractually relevant wait-state friction.
                   </p>
-                  
+
                   {/* Current State Indicator */}
                   <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[10px] font-mono text-text-secondary uppercase">Current State</span>
-                      <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-sm font-bold ${
-                        currentMetric.currentState === 'active' ? 'bg-emerald-950/30 text-emerald-400 border border-emerald-500/20' :
+                      <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-sm font-bold ${currentMetric.currentState === 'active' ? 'bg-emerald-950/30 text-emerald-400 border border-emerald-500/20' :
                         currentMetric.currentState === 'passive_wait' ? 'bg-amber-950/30 text-amber-400 border border-amber-500/20' :
-                        'bg-rose-950/30 text-rose-400 border border-rose-500/20'
-                      }`}>
+                          'bg-rose-950/30 text-rose-400 border border-rose-500/20'
+                        }`}>
                         {currentMetric.currentState === 'active' ? 'Active Execution' :
-                         currentMetric.currentState === 'passive_wait' ? 'Passive Waiting' :
-                         'Blocked'}
+                          currentMetric.currentState === 'passive_wait' ? 'Passive Waiting' :
+                            'Blocked'}
                       </span>
                     </div>
                     <div className="flex gap-2 pt-2">
                       <button
                         type="button"
                         onClick={() => handleStateTransition('active')}
-                        className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${
-                          currentMetric.currentState === 'active' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
-                        }`}
+                        className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${currentMetric.currentState === 'active' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
+                          }`}
                       >
                         Active
                       </button>
                       <button
                         type="button"
                         onClick={() => handleStateTransition('passive_wait')}
-                        className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${
-                          currentMetric.currentState === 'passive_wait' ? 'bg-amber-950/40 text-amber-400 border-amber-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
-                        }`}
+                        className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${currentMetric.currentState === 'passive_wait' ? 'bg-amber-950/40 text-amber-400 border-amber-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
+                          }`}
                       >
                         Wait
                       </button>
                       <button
                         type="button"
                         onClick={() => handleStateTransition('blocked')}
-                        className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${
-                          currentMetric.currentState === 'blocked' ? 'bg-rose-950/40 text-rose-400 border-rose-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
-                        }`}
+                        className={`flex-1 text-[9px] font-mono uppercase py-1.5 border transition-all ${currentMetric.currentState === 'blocked' ? 'bg-rose-950/40 text-rose-400 border-rose-500/30 font-bold' : 'border-border text-text-tertiary hover:bg-[var(--pm-surface)]/5'
+                          }`}
                       >
                         Block
                       </button>
@@ -1460,7 +1446,7 @@ export function ProjectDetailsModal({
                 {/* Liability Ratio & Friction Visualizer */}
                 <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm">
                   <h5 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">Liability Analysis</h5>
-                  
+
                   {/* Visual Bar Split */}
                   <div className="h-2 w-full bg-surface-3 rounded-full flex overflow-hidden mb-3">
                     {Number(manActiveDays) > 0 && (
@@ -1511,7 +1497,7 @@ export function ProjectDetailsModal({
               <div className="space-y-6 text-left">
                 <div>
                   <h4 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide mb-3">Timeline Shift Ledger</h4>
-                  
+
                   {/* Ledger Audit Trail List */}
                   <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm max-h-[160px] overflow-y-auto space-y-2.5 mb-4">
                     {timelineShiftLedger.filter((e: any) => e.projectId === project.id).length === 0 ? (
@@ -1548,7 +1534,7 @@ export function ProjectDetailsModal({
                 {/* Log Timeline Shift Form */}
                 <div className="bg-[var(--pm-surface)]/5 border border-border p-4 rounded-sm space-y-3">
                   <h5 className="text-[10px] font-sans text-text-secondary uppercase tracking-wide">Log Defensive Timeline Shift</h5>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[9px] uppercase font-mono text-text-secondary mb-1">Delta Shift (Days)</label>
@@ -1606,7 +1592,7 @@ export function ProjectDetailsModal({
                     type="button"
                     onClick={(e) => {
                       const fakeForm = {
-                        preventDefault: () => {}
+                        preventDefault: () => { }
                       } as any;
                       handleAddShiftEvent(fakeForm);
                     }}
@@ -1619,11 +1605,11 @@ export function ProjectDetailsModal({
             </div>
           ) : activeTab === 'files' ? (
             <div className="h-64 overflow-y-auto pr-2">
-              <EntityAttachments 
-                workspaceId={workspace.id}
-                entityType="project" 
-                entityId={project.id} 
-                readOnly={!hasAuthority(currentUserProfile, 'manager')} 
+              <EntityAttachments
+                workspaceId={project.workspace_id}
+                 entityType="project"
+                entityId={project.id}
+                readOnly={!hasAuthority(currentUserProfile, 'manager')}
               />
             </div>
           ) : activeTab === 'finance' ? (
@@ -1634,7 +1620,7 @@ export function ProjectDetailsModal({
         </div>
       </motion.div>
 
-      <ProjectReviewModal 
+      <ProjectReviewModal
         project={project}
         workspaceId={project.workspace_id}
         userId={currentUserProfile?.id || ''}
@@ -1645,8 +1631,8 @@ export function ProjectDetailsModal({
         estimatedHours={expectedRealHours}
         actualHours={(Number(manActiveDays) + Number(manPassiveDays) + Number(manBlockedDays)) * 8}
       />
-      
-      <ProjectShareModal 
+
+      <ProjectShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
         projectId={project.id}

@@ -37,7 +37,7 @@ export function RequirementDetailsModal({ requirement, onClose, onUpdate }: { re
       
       await activityLogService.appendLog({
         workspace_id: workspace!.id,
-        action: 'requirement_status_changed',
+        action_type: 'requirement_status_changed',
         metadata: { requirement_id: requirement.id, old_status: status, new_status: newStatus }
       });
       
@@ -85,7 +85,7 @@ export function RequirementDetailsModal({ requirement, onClose, onUpdate }: { re
       
       await activityLogService.appendLog({
         workspace_id: workspace!.id,
-        action: 'project_created_from_requirement',
+        action_type: 'project_created_from_requirement',
         project_id: proj.id,
         metadata: { requirement_id: requirement.id }
       });

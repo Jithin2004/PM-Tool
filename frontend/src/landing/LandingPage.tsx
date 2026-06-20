@@ -6,7 +6,8 @@ import { navigateTo, resolveAuthenticatedDestination } from '../core/auth/postAu
 import { LiveCommandCenterSimulation } from './LiveCommandCenterSimulation';
 import { 
   CheckCircle2, Box, CalendarClock, MessageSquare, Briefcase, 
-  Wallet, FolderSearch, Settings2, ShieldCheck, PlaySquare 
+  Wallet, FolderSearch, Settings2, ShieldCheck, PlaySquare,
+  BarChart2, Users, Receipt
 } from 'lucide-react';
 
 export function LandingPage() {
@@ -253,7 +254,7 @@ export function LandingPage() {
             </div>
             <div className="order-1 lg:order-2 space-y-6">
               <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-                <BarChart3 className="text-orange-400 w-6 h-6" />
+                <BarChart2 className="text-orange-400 w-6 h-6" />
               </div>
               <h2 className="text-3xl font-bold text-white tracking-tight">Insights based on your workspace activity.</h2>
               <p className="text-lg text-zinc-400 leading-relaxed">

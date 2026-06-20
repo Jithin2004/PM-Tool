@@ -211,7 +211,7 @@ export function SprintBoard({
     });
     await activityLogService.appendLog({
       workspace_id: workspaceId, actor_id: currentUserProfile?.id,
-      project_id: projectId, action: 'sprint_created',
+      project_id: projectId, action_type: 'sprint_created',
       metadata: { sprint_name: sprintName, start_date: sprintStart, end_date: sprintEnd }
     });
     notify('Sprint created.', 'success');
@@ -224,7 +224,7 @@ export function SprintBoard({
       await onConvertToScrum(selectedProjectId);
       await activityLogService.appendLog({
         workspace_id: workspaceId, actor_id: currentUserProfile?.id,
-        project_id: selectedProjectId, action: 'converted_to_scrum',
+        project_id: selectedProjectId, action_type: 'converted_to_scrum',
         metadata: { previous_mode: 'KANBAN', new_mode: 'SCRUM' }
       });
       notify('Project converted to Scrum.', 'success');
@@ -239,7 +239,7 @@ export function SprintBoard({
       setActiveSprintId(sprintId);
       await activityLogService.appendLog({
         workspace_id: workspaceId, actor_id: currentUserProfile?.id,
-        project_id: projectId, action: 'sprint_started',
+        project_id: projectId, action_type: 'sprint_started',
         metadata: { sprint_id: sprintId }
       });
       notify('Sprint started.', 'success');
@@ -314,11 +314,10 @@ export function SprintBoard({
         {sprintWarnings.length > 0 && (
           <div className="mb-4 space-y-1">
             {sprintWarnings.map(w => (
-              <div key={w.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-sm text-[9px] font-mono ${
-                w.severity === 'high' ? 'bg-rose-950/30 border border-rose-500/20 text-rose-300' :
+              <div key={w.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-sm text-[9px] font-mono ${w.severity === 'high' ? 'bg-rose-950/30 border border-rose-500/20 text-rose-300' :
                 w.severity === 'medium' ? 'bg-signal-warning-bg border border-border text-amber-300' :
-                'bg-surface-3 border border-border text-blue-300'
-              }`}>
+                  'bg-surface-3 border border-border text-blue-300'
+                }`}>
                 <AlertTriangle className="w-3 h-3 shrink-0" />
                 <span>{w.message}</span>
               </div>
@@ -329,11 +328,10 @@ export function SprintBoard({
         {/* Tab navigation */}
         <div className="flex premium-segmented-control mb-5 overflow-x-auto max-w-max">
           {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer shrink-0 premium-segmented-control-btn ${
-              activeTab === tab.id
-                ? 'active'
-                : ''
-            }`}>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-1.5 px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer shrink-0 premium-segmented-control-btn ${activeTab === tab.id
+              ? 'active'
+              : ''
+              }`}>
               {tab.icon}
               {tab.label}
             </button>
@@ -411,12 +409,11 @@ export function SprintBoard({
                   <div key={col.id} className="premium-panel rounded-2xl p-4 flex flex-col min-h-[400px]">
                     <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-[var(--border-soft)]">
                       <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] font-semibold flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          col.id === 'todo' ? 'bg-[var(--surface-glass)]' :
+                        <span className={`w-1.5 h-1.5 rounded-full ${col.id === 'todo' ? 'bg-[var(--surface-glass)]' :
                           col.id === 'in_progress' ? 'bg-amber-500 shadow-[0_0_6px_#f59e0b]' :
-                          col.id === 'review' ? 'bg-purple-500 shadow-[0_0_6px_#a78bfa]' :
-                          'bg-emerald-500 shadow-[0_0_6px_#10b981]'
-                        }`} />
+                            col.id === 'review' ? 'bg-purple-500 shadow-[0_0_6px_#a78bfa]' :
+                              'bg-emerald-500 shadow-[0_0_6px_#10b981]'
+                          }`} />
                         {col.title}
                       </span>
                       <span className="px-2 py-0.5 bg-[var(--surface-glass)] text-[9px] font-mono text-[var(--text-secondary)] rounded-full border border-[var(--border-soft)]">{colTasks.length}</span>
@@ -440,7 +437,7 @@ export function SprintBoard({
                             columns={SCRUM_COLUMNS as any}
                             onTransitionTask={handleStatusChange}
                             onEditTask={setEditingTask}
-                            onClick={() => {}}
+                            onClick={() => { }}
                             assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
                             assigneeLoading={!!task.assignee_id && !userMap.has(task.assignee_id)}
                           />
@@ -602,11 +599,11 @@ export function SprintBoard({
             <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Sprint Files</h3>
             {activeSprintId ? (
               <div className="h-64 overflow-y-auto">
-                <EntityAttachments 
-                  workspaceId={workspace.id}
-                  entityType="sprint" 
-                  entityId={activeSprintId} 
-                  readOnly={!hasAuthority(profile, 'manager')} 
+                <EntityAttachments
+                  workspaceId={workspaceId}
+                  entityType="project"
+                  entityId={activeSprintId}
+                  readOnly={!hasWriteAccess}
                 />
               </div>
             ) : (

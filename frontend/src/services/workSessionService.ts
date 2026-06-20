@@ -91,7 +91,7 @@ export const workSessionService = {
       await activityLogService.appendLog({
         workspace_id: workspace.id,
         actor_id: userId,
-        action: 'work_session_started',
+        action_type: 'work_session_started',
         project_id: null,
         metadata: { task_id: taskId, session_type: sessionType }
       });
@@ -114,7 +114,7 @@ export const workSessionService = {
       await activityLogService.appendLog({
         workspace_id: workspaceId,
         actor_id: userId,
-        action: 'work_session_paused',
+        action_type: 'work_session_paused',
         project_id: null,
         metadata: { session_id: sessionId, reason }
       });
@@ -211,7 +211,7 @@ export const workSessionService = {
         await activityLogService.appendLog({
           workspace_id: workspaceId,
           actor_id: userId,
-          action: 'work_session_edit_approval_requested',
+          action_type: 'work_session_edit_approval_requested',
           metadata: { session_id: sessionId, updates, reason }
         });
         
@@ -231,7 +231,7 @@ export const workSessionService = {
       await activityLogService.appendLog({
         workspace_id: workspaceId,
         actor_id: userId,
-        action: 'work_session_edited',
+        action_type: 'work_session_edited',
         project_id: null,
         metadata: { 
           session_id: sessionId, 
@@ -274,7 +274,7 @@ export const workSessionService = {
         await activityLogService.appendLog({
           workspace_id: workspaceId,
           actor_id: userId,
-          action: 'work_session_manual_approval_requested',
+          action_type: 'work_session_manual_approval_requested',
           metadata: { task_id: taskId, duration_minutes: durationMins, reason }
         });
         
@@ -299,7 +299,7 @@ export const workSessionService = {
       await activityLogService.appendLog({
         workspace_id: workspaceId,
         actor_id: userId,
-        action: 'work_session_manual_added',
+        action_type: 'work_session_manual_added',
         metadata: { task_id: taskId, duration_minutes: durationMins, reason }
       });
       
@@ -322,7 +322,7 @@ export const workSessionService = {
       await activityLogService.appendLog({
         workspace_id: workspaceId,
         actor_id: userId,
-        action: 'work_session_locked',
+        action_type: 'work_session_locked',
         metadata: { session_id: sessionId }
       });
       return true;
@@ -361,7 +361,7 @@ export const workSessionService = {
       await activityLogService.appendLog({
         workspace_id: workspaceId,
         actor_id: userId,
-        action: 'work_session_adjusted',
+        action_type: 'work_session_adjusted',
         metadata: { session_id: sessionId, old_value_mins: oldValueMins, new_value_mins: newValueMins, reason }
       });
 

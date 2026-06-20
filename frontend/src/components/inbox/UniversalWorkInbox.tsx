@@ -5,16 +5,13 @@ import { useOperationalData } from '../../context/OperationalDataContext';
 import { generateWorkInbox, WorkInboxItem } from '../../core/execution/WorkInboxEngine';
 import { Inbox, AlertTriangle, CheckCircle2, Clock, AtSign, ArrowRight, ShieldAlert, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-
-import type { Notification } from '../../types';
 import { generatePriorityExplanation } from '../../core/intelligence/PriorityExplanationEngine';
 import { PriorityExplanationBadge } from '../ui/PriorityExplanationBadge';
 
 export function UniversalWorkInbox() {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
-  const { raw: { tasks, projects, profiles } } = useOperationalData();
-
+  const { raw: { tasks, projects, profiles }, dbNotifications } = useOperationalData();
   const [inboxItems, setInboxItems] = useState<WorkInboxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -27,10 +24,11 @@ export function UniversalWorkInbox() {
   const loadInbox = async () => {
     setLoading(true);
     try {
-      const [ { data: approvals }, notifs ] = await Promise.all([
-        supabase.from('universal_approvals').select('*').eq('workspace_id', workspace!.id),
-        fetchNotifications(workspace!.id, profile!.id)
+      const [{ data: approvals }] = await Promise.all([
+        supabase.from('universal_approvals').select('*').eq('workspace_id', workspace!.id)
       ]);
+
+      const notifs = dbNotifications;
 
       const items = generateWorkInbox({
         userId: profile!.id,
@@ -61,7 +59,7 @@ export function UniversalWorkInbox() {
 
   return (
     <div className="relative">
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-full hover:bg-[var(--pm-surface-hover)] transition-colors text-[var(--pm-text)] group"
       >
@@ -98,12 +96,12 @@ export function UniversalWorkInbox() {
                 </div>
               ) : (
                 inboxItems.map(item => (
-                  <div 
-                    key={item.id} 
+                  <div
+                    key={item.id}
                     className={`p-3 rounded-lg border flex flex-col gap-2 transition-colors cursor-pointer hover:bg-[var(--pm-surface-hover)]
-                      ${item.priority === 'CRITICAL' ? 'border-signal-error/30 bg-signal-error/5' : 
-                        item.priority === 'HIGH' ? 'border-amber-500/30 bg-amber-500/5' : 
-                        'border-border/50 bg-surface-highest'}`}
+                      ${item.priority === 'CRITICAL' ? 'border-signal-error/30 bg-signal-error/5' :
+                        item.priority === 'HIGH' ? 'border-amber-500/30 bg-amber-500/5' :
+                          'border-border/50 bg-surface-highest'}`}
                     onClick={() => navigateTo(item.actionRoute)}
                   >
                     <div className="flex items-start gap-3">
@@ -119,7 +117,7 @@ export function UniversalWorkInbox() {
                           <div className="flex items-center gap-2">
                             <h4 className="text-sm font-semibold text-text-primary line-clamp-1">{item.title}</h4>
                             {item.metadata?.taskId && (
-                              <PriorityExplanationBadge 
+                              <PriorityExplanationBadge
                                 explanation={generatePriorityExplanation(
                                   tasks.find(t => t.id === item.metadata.taskId) || { id: item.metadata.taskId },
                                   'task',
@@ -128,7 +126,7 @@ export function UniversalWorkInbox() {
                               />
                             )}
                             {item.metadata?.approvalId && (
-                              <PriorityExplanationBadge 
+                              <PriorityExplanationBadge
                                 explanation={generatePriorityExplanation(
                                   { id: item.metadata.approvalId, requested_from: profile?.id, status: 'pending', created_at: item.timestamp },
                                   'approval',
@@ -145,7 +143,7 @@ export function UniversalWorkInbox() {
                           <p className="text-xs text-text-secondary mt-1 line-clamp-2">{item.description}</p>
                         )}
                         <div className="mt-3 flex justify-end">
-                          <button 
+                          <button
                             className="text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors
                               bg-surface-3 text-text-primary hover:bg-surface-lowest border border-border"
                           >

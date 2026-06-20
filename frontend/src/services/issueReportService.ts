@@ -54,7 +54,7 @@ export const issueReportService = {
         actor_id: params.userId,
         entity_type: 'system_issue',
         entity_id: data.id,
-        action: 'system_issue_created',
+        action_type: 'system_issue_created',
         metadata: { module: params.module, severity: params.severity }
       });
     } catch (e) {

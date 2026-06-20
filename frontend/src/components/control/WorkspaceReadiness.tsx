@@ -18,7 +18,7 @@ export function WorkspaceReadiness() {
 
   const checks = useMemo(() => {
     if (!workspace) return [];
-    
+
     let companyName = '';
     let country = '';
     let baseCurrency = '';
@@ -35,7 +35,7 @@ export function WorkspaceReadiness() {
 
     const localLicense = getLicenseInfo();
     const isSandboxMode = localStorage.getItem('resolve-sandbox-mode') === 'true';
-    
+
     let licenseStateText = 'License requires attention';
     let licenseValid = false;
 
@@ -45,7 +45,7 @@ export function WorkspaceReadiness() {
     } else if (localLicense?.plan === 'Trial' || licenseData?.license_type === 'Trial') {
       licenseStateText = 'Trial workspace active';
       licenseValid = true;
-    } else if (localLicense?.status === 'Invalid' && localLicense?.error === 'License belongs to another workspace') {
+    } else if (localLicense?.status === 'Invalid' && undefined === 'License belongs to another workspace') {
       licenseStateText = 'License belongs to another workspace';
       licenseValid = false;
     } else if (licenseData?.activation_date || localLicense?.status === 'Activated') {
@@ -84,7 +84,7 @@ export function WorkspaceReadiness() {
           <p className="text-xs text-signal-warning/80">Finish recommended configuration before scaling your workspace.</p>
         </div>
       </div>
-      
+
       <div className="space-y-3 mt-4 ml-2">
         {checks.map(check => (
           <div key={check.id} className="flex items-center gap-3 py-1">

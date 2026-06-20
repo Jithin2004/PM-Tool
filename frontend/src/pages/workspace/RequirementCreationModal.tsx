@@ -45,7 +45,7 @@ export function RequirementCreationModal({ onClose, onSuccess }: { onClose: () =
 
       await activityLogService.appendLog({
         workspace_id: workspace.id,
-        action: 'requirement_created',
+        action_type: 'requirement_created',
         metadata: { requirement_id: req.id, title: req.title }
       });
 

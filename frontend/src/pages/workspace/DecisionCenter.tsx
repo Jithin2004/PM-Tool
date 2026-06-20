@@ -19,8 +19,6 @@ export default function DecisionCenter() {
       .limit(20)
       .then(({ data, error }) => {
         setApprovals(data || []);
-      })
-      .finally(() => {
         setLoading(false);
       });
   }, [workspace?.id]);

@@ -56,7 +56,7 @@ export async function createApprovalChain(chain: Partial<ApprovalChain>): Promis
     const { data } = await trackSupabaseOperation('supabase_from_approval_chains', () => supabase.from('approval_chains').insert(chain).select().single());
     if (data) {
       await activityLogService.appendLog({
-        workspace_id: chain.workspace_id!, action: 'approval_created',
+        workspace_id: chain.workspace_id!, action_type: 'approval_created',
         metadata: { chain_id: data.id, name: data.name, trigger_event: data.trigger_event },
       });
       return data as ApprovalChain;
@@ -149,7 +149,7 @@ export async function createApprovalInstance(
     if (data) {
       const wsId = workspaceId || '';
       await activityLogService.appendLog({
-        workspace_id: wsId, action: 'approval_created',
+        workspace_id: wsId, action_type: 'approval_created',
         metadata: { instance_id: data.id, target_type: instance.target_type, target_id: instance.target_id },
       });
       
@@ -177,7 +177,7 @@ export async function approveStep(instanceId: string, stepOrder: number, _userId
       }).eq('id', instanceId));
       const resolvedWorkspaceId = (instance as any).approval_chains?.workspace_id || '';
       await activityLogService.appendLog({
-        workspace_id: resolvedWorkspaceId, action: 'approval_completed',
+        workspace_id: resolvedWorkspaceId, action_type: 'approval_completed',
         metadata: { instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'approved' },
       });
       
@@ -202,7 +202,7 @@ export async function rejectStep(instanceId: string, _stepOrder: number, _userId
     }).eq('id', instanceId));
     const resolvedWorkspaceId = (instance as any).approval_chains?.workspace_id || '';
     await activityLogService.appendLog({
-      workspace_id: resolvedWorkspaceId, action: 'approval_completed',
+      workspace_id: resolvedWorkspaceId, action_type: 'approval_completed',
       metadata: { instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'rejected' },
     });
     

@@ -8,7 +8,7 @@ export interface ActivityLogEntry {
   actor_id?: string;
   project_id?: string;
   task_id?: string;
-  action: string;
+  action_type: string;
   metadata: Record<string, any>;
   previous_hash?: string;
   hash?: string;
@@ -146,7 +146,7 @@ export const activityLogService = {
     };
 
     const metadataStr = entry.metadata ? deterministicStringify(entry.metadata) : 'null';
-    const message = `${entry.workspace_id}${entry.actor_id ?? ''}${entry.project_id ?? ''}${entry.task_id ?? ''}${entry.action}${metadataStr}${previousHash}${ts}`;
+    const message = `${entry.workspace_id}${entry.actor_id ?? ''}${entry.project_id ?? ''}${entry.task_id ?? ''}${entry.action_type}${metadataStr}${previousHash}${ts}`;
     return sha256(message);
   },
 
@@ -162,7 +162,7 @@ export const activityLogService = {
         actor_id: entry.actor_id,
         project_id: entry.project_id,
         task_id: entry.task_id,
-        action: entry.action,
+        action: entry.action_type,
         metadata: entry.metadata,
         created_at: createdAt,
         hash: hash,
@@ -208,7 +208,7 @@ export const activityLogService = {
         actor_id: entry.actor_id,
         project_id: entry.project_id,
         task_id: entry.task_id,
-        action: entry.action,
+        action: entry.action_type,
         metadata: entry.metadata,
         created_at: createdAt,
         hash: hash,
@@ -442,7 +442,7 @@ export const activityLogService = {
     // Instead, we append a re-indexing block that explicitly resets the verification chain.
     const reindexSuccess = await this.appendLog({
       workspace_id: workspaceId,
-      action: 'ledger_chain_repaired',
+      action_type: 'ledger_chain_repaired',
       metadata: { 
         reason: 'Authorized manual re-index to clear historical tampering/forks',
         broken_index: status.brokenIndex 
@@ -462,7 +462,7 @@ export const activityLogService = {
   async logHeatmapView(workspaceId: string, actorId?: string, metadata?: Record<string, any>): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'command_heatmap_viewed',
+      action_type: 'command_heatmap_viewed',
       metadata: { ...metadata, event_type: 'heatmap_view' },
     });
   },
@@ -470,7 +470,7 @@ export const activityLogService = {
   async logPredictionUsed(workspaceId: string, actorId?: string, predictionId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'workflow_prediction_used',
+      action_type: 'workflow_prediction_used',
       metadata: { prediction_id: predictionId, event_type: 'prediction_used' },
     });
   },
@@ -478,7 +478,7 @@ export const activityLogService = {
   async logFrictionDetected(workspaceId: string, actorId?: string, frictionData?: Record<string, any>): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'workflow_friction_detected',
+      action_type: 'workflow_friction_detected',
       metadata: { ...frictionData, event_type: 'friction_detected' },
     });
   },
@@ -486,7 +486,7 @@ export const activityLogService = {
   async logHealthGenerated(workspaceId: string, actorId?: string, healthData?: Record<string, any>): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'command_health_generated',
+      action_type: 'command_health_generated',
       metadata: { ...healthData, event_type: 'health_generated' },
     });
   },
@@ -496,7 +496,7 @@ export const activityLogService = {
   async logIntegrationConnected(workspaceId: string, service: string, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'integration_connected',
+      action_type: 'integration_connected',
       metadata: { service },
     });
   },
@@ -504,7 +504,7 @@ export const activityLogService = {
   async logIntegrationSync(workspaceId: string, service: string, itemsSynced: number, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'integration_sync',
+      action_type: 'integration_sync',
       metadata: { service, items_synced: itemsSynced },
     });
   },
@@ -512,7 +512,7 @@ export const activityLogService = {
   async logFileUploaded(workspaceId: string, fileName: string, taskId?: string, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId, task_id: taskId,
-      action: 'file_uploaded',
+      action_type: 'file_uploaded',
       metadata: { file_name: fileName, task_id: taskId },
     });
   },
@@ -520,7 +520,7 @@ export const activityLogService = {
   async logFileVersionCreated(workspaceId: string, docId: string, version: number, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'file_version_created',
+      action_type: 'file_version_created',
       metadata: { doc_id: docId, version },
     });
   },
@@ -528,7 +528,7 @@ export const activityLogService = {
   async logDocumentCreated(workspaceId: string, docId: string, title: string, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'document_created',
+      action_type: 'document_created',
       metadata: { doc_id: docId, title },
     });
   },
@@ -536,7 +536,7 @@ export const activityLogService = {
   async logAnnotationAdded(workspaceId: string, docId: string, annotationId: string, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'annotation_added',
+      action_type: 'annotation_added',
       metadata: { doc_id: docId, annotation_id: annotationId },
     });
   },
@@ -546,7 +546,7 @@ export const activityLogService = {
   async logSyncQueued(workspaceId: string, queueId: string, service: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'integration_sync_queued',
+      action_type: 'integration_sync_queued',
       metadata: { queue_id: queueId, service },
     });
   },
@@ -554,7 +554,7 @@ export const activityLogService = {
   async logSyncStarted(workspaceId: string, queueId: string, service: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'integration_sync_started',
+      action_type: 'integration_sync_started',
       metadata: { queue_id: queueId, service },
     });
   },
@@ -562,7 +562,7 @@ export const activityLogService = {
   async logSyncCompleted(workspaceId: string, queueId: string, service: string, itemsSynced?: number): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'integration_sync_completed',
+      action_type: 'integration_sync_completed',
       metadata: { queue_id: queueId, service, items_synced: itemsSynced },
     });
   },
@@ -570,7 +570,7 @@ export const activityLogService = {
   async logSyncRetry(workspaceId: string, queueId: string, service: string, attempt: number, backoffMs: number, error?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'integration_sync_retry',
+      action_type: 'integration_sync_retry',
       metadata: { queue_id: queueId, service, attempt, backoff_ms: backoffMs, error },
     });
   },
@@ -578,7 +578,7 @@ export const activityLogService = {
   async logOAuthStateCreated(workspaceId: string, provider: string, expiresAt: string, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'oauth_state_created',
+      action_type: 'oauth_state_created',
       metadata: { provider, expires_at: expiresAt },
     });
   },
@@ -586,7 +586,7 @@ export const activityLogService = {
   async logOAuthStateVerified(workspaceId: string, sessionId: string, provider: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'oauth_state_verified',
+      action_type: 'oauth_state_verified',
       metadata: { oauth_session_id: sessionId, provider },
     });
   },
@@ -596,7 +596,7 @@ export const activityLogService = {
   async logJobCreated(workspaceId: string, jobId: string, service: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'integration_job_created',
+      action_type: 'integration_job_created',
       metadata: { job_id: jobId, service },
     });
   },
@@ -604,7 +604,7 @@ export const activityLogService = {
   async logJobRecovered(workspaceId: string, jobId: string, service: string, status: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'integration_job_recovered',
+      action_type: 'integration_job_recovered',
       metadata: { job_id: jobId, service, previous_status: status },
     });
   },
@@ -612,7 +612,7 @@ export const activityLogService = {
   async logJobCompleted(workspaceId: string, jobId: string, service: string, itemsSynced?: number): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'integration_job_completed',
+      action_type: 'integration_job_completed',
       metadata: { job_id: jobId, service, items_synced: itemsSynced },
     });
   },
@@ -620,7 +620,7 @@ export const activityLogService = {
   async logJobFailed(workspaceId: string, jobId: string, service: string, error: string, attempts: number): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'integration_job_failed',
+      action_type: 'integration_job_failed',
       metadata: { job_id: jobId, service, error, attempts },
     });
   },
@@ -630,7 +630,7 @@ export const activityLogService = {
   async logAutomationCreated(workspaceId: string, ruleId: string, name: string, triggerEvent: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'automation_created',
+      action_type: 'automation_created',
       metadata: { rule_id: ruleId, name, trigger_event: triggerEvent },
     });
   },
@@ -638,7 +638,7 @@ export const activityLogService = {
   async logAutomationExecuted(workspaceId: string, ruleId: string, ruleName: string, event: string, payloadKeys: string[]): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'automation_executed',
+      action_type: 'automation_executed',
       metadata: { rule_id: ruleId, rule_name: ruleName, event, payload_keys: payloadKeys },
     });
   },
@@ -646,7 +646,7 @@ export const activityLogService = {
   async logApprovalCreated(workspaceId: string, instanceId: string, targetType: string, targetId: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'approval_created',
+      action_type: 'approval_created',
       metadata: { instance_id: instanceId, target_type: targetType, target_id: targetId },
     });
   },
@@ -654,7 +654,7 @@ export const activityLogService = {
   async logApprovalCompleted(workspaceId: string, instanceId: string, targetType: string, targetId: string, result: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'approval_completed',
+      action_type: 'approval_completed',
       metadata: { instance_id: instanceId, target_type: targetType, target_id: targetId, result },
     });
   },
@@ -662,7 +662,7 @@ export const activityLogService = {
   async logApiKeyCreated(workspaceId: string, keyId: string, name: string, permissions: string[]): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'api_key_created',
+      action_type: 'api_key_created',
       metadata: { key_id: keyId, name, permissions },
     });
   },
@@ -670,7 +670,7 @@ export const activityLogService = {
   async logWebhookSent(workspaceId: string, webhookId: string, webhookName: string, event: string, statusCode: number, attempt: number): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'webhook_sent',
+      action_type: 'webhook_sent',
       metadata: { webhook_id: webhookId, webhook_name: webhookName, event, status_code: statusCode, attempt },
     });
   },
@@ -678,7 +678,7 @@ export const activityLogService = {
   async logTemplateInstalled(workspaceId: string, templateId: string, templateName: string, ruleId: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'workflow_template_installed',
+      action_type: 'workflow_template_installed',
       metadata: { template_id: templateId, template_name: templateName, rule_id: ruleId },
     });
   },
@@ -688,7 +688,7 @@ export const activityLogService = {
   async logWebhookTriggered(workspaceId: string, event: string, webhookCount: number, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'webhook_triggered',
+      action_type: 'webhook_triggered',
       metadata: { event, webhook_count: webhookCount },
     });
   },
@@ -696,7 +696,7 @@ export const activityLogService = {
   async logTriggerEvaluated(workspaceId: string, event: string, ruleCount: number, depth: number, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'automation_trigger_evaluated',
+      action_type: 'automation_trigger_evaluated',
       metadata: { event, rule_count: ruleCount, depth },
     });
   },
@@ -704,7 +704,7 @@ export const activityLogService = {
   async logApiRequest(workspaceId: string, endpoint: string, method: string, statusCode: number, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'api_request_processed',
+      action_type: 'api_request_processed',
       metadata: { endpoint, method, status_code: statusCode },
     });
   },
@@ -712,7 +712,7 @@ export const activityLogService = {
   async logRoleGuardRejected(workspaceId: string, action: string, userId: string, requiredRole: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'role_guard_rejected',
+      action_type: 'role_guard_rejected',
       metadata: { attempted_action: action, user_id: userId, required_role: requiredRole },
     });
   },
@@ -720,7 +720,7 @@ export const activityLogService = {
   async logSessionExpired(workspaceId: string, userId: string, reason: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'session_expired',
+      action_type: 'session_expired',
       metadata: { user_id: userId, reason },
     });
   },
@@ -728,7 +728,7 @@ export const activityLogService = {
   async logHashChainVerified(workspaceId: string, chainStatus: string, logCount: number, tamperedIndex?: number | null): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'hash_chain_verified',
+      action_type: 'hash_chain_verified',
       metadata: { chain_status: chainStatus, log_count: logCount, tampered_index: tamperedIndex },
     });
   },
@@ -736,7 +736,7 @@ export const activityLogService = {
   async logSimulationCompleted(workspaceId: string, successCount: number, failureCount: number, recoveryCount: number): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'system_simulation_completed',
+      action_type: 'system_simulation_completed',
       metadata: { success_count: successCount, failure_count: failureCount, recovery_count: recoveryCount },
     });
   },
@@ -746,7 +746,7 @@ export const activityLogService = {
   async logClientError(workspaceId: string, source: string, message: string, stack?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'client_error_events',
+      action_type: 'client_error_events',
       metadata: { source, message, stack: stack?.slice(0, 500) },
     });
   },
@@ -754,7 +754,7 @@ export const activityLogService = {
   async logQueueFailure(workspaceId: string, queueId: string, service: string, error: string, attempt: number): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'queue_failure_events',
+      action_type: 'queue_failure_events',
       metadata: { queue_id: queueId, service, error, attempt },
     });
   },
@@ -762,7 +762,7 @@ export const activityLogService = {
   async logApiFailure(workspaceId: string, endpoint: string, method: string, statusCode: number, error: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'api_failure_events',
+      action_type: 'api_failure_events',
       metadata: { endpoint, method, status_code: statusCode, error },
     });
   },
@@ -770,7 +770,7 @@ export const activityLogService = {
   async logRenderFailure(workspaceId: string, boundary: string, error: string, componentStack?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'render_failure_events',
+      action_type: 'render_failure_events',
       metadata: { boundary, error, component_stack: componentStack?.slice(0, 500) },
     });
   },
@@ -780,7 +780,7 @@ export const activityLogService = {
   async logDocumentDeleted(workspaceId: string, docId: string, title: string, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'document_deleted',
+      action_type: 'document_deleted',
       metadata: { doc_id: docId, title },
     });
   },
@@ -788,7 +788,7 @@ export const activityLogService = {
   async logDocumentRestored(workspaceId: string, docId: string, title: string, actorId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'document_restored',
+      action_type: 'document_restored',
       metadata: { doc_id: docId, title },
     });
   },
@@ -796,7 +796,7 @@ export const activityLogService = {
   async logDocumentArchivedViewed(workspaceId: string, actorId?: string, archivedCount?: number): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: actorId,
-      action: 'document_archived_viewed',
+      action_type: 'document_archived_viewed',
       metadata: { archived_count: archivedCount },
     });
   },
@@ -806,7 +806,7 @@ export const activityLogService = {
   async logStressTestBlocked(workspaceId: string, reason: string, runId?: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'stress_test_blocked',
+      action_type: 'stress_test_blocked',
       metadata: { reason, blocked_run_id: runId },
     });
   },
@@ -814,7 +814,7 @@ export const activityLogService = {
   async logStressTestDryRun(workspaceId: string, runId: string, estimate: Record<string, number>): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'stress_test_dry_run',
+      action_type: 'stress_test_dry_run',
       metadata: { run_id: runId, estimate },
     });
   },
@@ -822,7 +822,7 @@ export const activityLogService = {
   async logStressCleanupManual(workspaceId: string, runId: string, cleaned: Record<string, number>): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'stress_cleanup_manual',
+      action_type: 'stress_cleanup_manual',
       metadata: { run_id: runId, cleaned },
     });
   },
@@ -832,7 +832,7 @@ export const activityLogService = {
   async logWorkspaceRepaired(workspaceId: string, userId: string, reason: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId, actor_id: userId,
-      action: 'workspace_repaired',
+      action_type: 'workspace_repaired',
       metadata: { reason },
     });
   },
@@ -842,7 +842,7 @@ export const activityLogService = {
     if (!w?.id) return false;
     return this.appendLog({
       workspace_id: w.id, actor_id: userId,
-      action: 'workspace_orphan_detected',
+      action_type: 'workspace_orphan_detected',
       metadata: { email },
     });
   },
@@ -852,7 +852,7 @@ export const activityLogService = {
   async logStressRecoveryStarted(workspaceId: string): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'stress_recovery_started',
+      action_type: 'stress_recovery_started',
       metadata: { event_type: 'recovery' },
     });
   },
@@ -860,7 +860,7 @@ export const activityLogService = {
   async logStressRecoveryCompleted(workspaceId: string, deletedByTable: Record<string, number>, remainingCount: number): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'stress_recovery_completed',
+      action_type: 'stress_recovery_completed',
       metadata: { event_type: 'recovery', deleted_by_table: deletedByTable, remaining_count: remainingCount },
     });
   },
@@ -868,7 +868,7 @@ export const activityLogService = {
   async logStressCleanupSurvivorDetected(workspaceId: string, survivors: { table: string; id: string; name: string }[], fkFailures: { table: string; error: string }[]): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'stress_cleanup_survivor_detected',
+      action_type: 'stress_cleanup_survivor_detected',
       metadata: { survivor_count: survivors.length, survivors, fk_failures: fkFailures },
     });
   },
@@ -876,7 +876,7 @@ export const activityLogService = {
   async logStressLockExpiredCleanup(workspaceId: string, runId: string, ageMinutes: number): Promise<boolean> {
     return this.appendLog({
       workspace_id: workspaceId,
-      action: 'stress_lock_expired_cleanup',
+      action_type: 'stress_lock_expired_cleanup',
       metadata: { expired_run_id: runId, age_minutes: Math.round(ageMinutes * 10) / 10 },
     });
   },

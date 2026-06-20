@@ -18,7 +18,7 @@ export interface WorkspaceSettings {
   productivityFactor: number;
   completionPolicy?: 'flexible' | 'controlled' | 'strict' | 'enterprise';
   allowOverallocation?: boolean;
-  saturdayRule?: 'ALL_WORKING' | 'ALL_OFF' | 'FIRST_THIRD_OFF' | 'SECOND_FOURTH_OFF' | 'CUSTOM';
+  saturdayRule?: 'all' | 'off' | '1st_3rd' | '2nd_4th' | 'custom';
   country?: string;
   region?: string;
   city?: string;

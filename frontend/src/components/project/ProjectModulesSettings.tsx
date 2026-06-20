@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { moduleService } from '../../../services/moduleService';
-import { ProjectModule } from '../../../core/types/project';
+import { moduleService } from '../../services/moduleService';
+import type { ProjectModule } from '../../services/moduleService';
 import { Layers, Plus, Save } from 'lucide-react';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const ProjectModulesSettings: React.FC = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const projectId = window.location.pathname.split('/').pop() || '';
   const { user } = useAuth();
   const [modules, setModules] = useState<ProjectModule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,3 +129,8 @@ export const ProjectModulesSettings: React.FC = () => {
     </div>
   );
 };
+
+
+
+
+

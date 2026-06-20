@@ -60,7 +60,7 @@ export async function createAutomationRule(rule: Partial<AutomationRule>): Promi
     }
     if (data) {
       await activityLogService.appendLog({
-        workspace_id: rule.workspace_id!, action: 'automation_created',
+        workspace_id: rule.workspace_id!, action_type: 'automation_created',
         metadata: { rule_id: data.id, name: data.name, trigger_event: data.trigger_event },
       });
       return data as AutomationRule;
@@ -233,7 +233,7 @@ export async function executeAutomationRule(
       execution_count: (rule.execution_count || 0) + 1,
     }).eq('id', ruleId);
     await activityLogService.appendLog({
-      workspace_id: workspaceId, action: 'automation_executed',
+      workspace_id: workspaceId, action_type: 'automation_executed',
       metadata: { rule_id: ruleId, rule_name: rule.name, event, payload_keys: Object.keys(payload) },
     });
     fireEventWebhooks('automation_executed', workspaceId, {

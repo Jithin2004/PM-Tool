@@ -257,7 +257,7 @@ export const impactSimulationService = {
       workspace_id: input.workspaceId,
       actor_id: input.actorId,
       task_id: input.triggerEntityId,
-      action: 'impact_simulation_generated',
+      action_type: 'impact_simulation_generated',
       metadata: {
         simulation_id: (data as SimulationRow).id,
         trigger_type: result.triggerEntityType,
@@ -340,7 +340,7 @@ export const impactSimulationService = {
       workspace_id: simulation.workspace_id,
       actor_id: actorId,
       task_id: simulation.trigger_id || undefined,
-      action: 'impact_simulation_accepted',
+      action_type: 'impact_simulation_accepted',
       metadata: {
         simulation_id: simulationId,
         trigger_type: simulation.trigger_type,
@@ -379,7 +379,7 @@ export const impactSimulationService = {
       await activityLogService.appendLog({
         workspace_id: (sim as any).workspace_id,
         actor_id: actorId,
-        action: 'impact_simulation_rejected',
+        action_type: 'impact_simulation_rejected',
         metadata: { simulation_id: simulationId }
       });
     }
@@ -410,7 +410,7 @@ export const impactSimulationService = {
       await activityLogService.appendLog({
         workspace_id: (sim as any).workspace_id,
         actor_id: actorId,
-        action: 'impact_simulation_expired',
+        action_type: 'impact_simulation_expired',
         metadata: { simulation_id: simulationId }
       });
     }
@@ -454,7 +454,7 @@ export const impactSimulationService = {
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       actor_id: actorId,
-      action: 'mitigation_applied',
+      action_type: 'mitigation_applied',
       metadata: {
         simulation_id: simulationId,
         mitigation_type: mitigationType,

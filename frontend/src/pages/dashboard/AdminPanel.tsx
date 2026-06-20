@@ -132,7 +132,7 @@ export function AdminPanel() {
   // Invitation state
   const [invitations, setInvitations] = useState<any[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'admin' | 'manager' | 'member' | 'external'>('member');
+  const [inviteRole, setInviteRole] = useState<string>('member');
   const [inviteFunctions, setInviteFunctions] = useState<string[]>([]);
   const [inviteDesignation, setInviteDesignation] = useState('');
   const [inviting, setInviting] = useState(false);
@@ -1721,7 +1721,7 @@ export function AdminPanel() {
                     await import('../../services/activityLogService').then(m => 
                       m.activityLogService.appendLog({
                         workspace_id: activeProfiles[0]?.workspace_id || '',
-                        action: 'capability_changed',
+                        action_type: 'capability_changed',
                         metadata: { target_user: capabilityModal.userId, capabilities: capabilityModal.capabilities, reason: capabilityModal.reason }
                       })
                     );

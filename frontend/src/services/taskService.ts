@@ -71,7 +71,7 @@ export async function createTask(input: CreateTaskInput): Promise<{ id: string }
 
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
-        action: 'task_created',
+        action_type: 'task_created',
         metadata: { task_id: data.id, project_id: input.project_id, name: input.name, synthetic: input.synthetic, run_id: input.runId },
       });
       return data;
@@ -160,7 +160,7 @@ export async function archiveTask(taskId: string, workspaceId: string, actorId: 
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       actor_id: actorId,
-      action: 'task_archived',
+      action_type: 'task_archived',
       metadata: { task_id: taskId, cascade_triggered: true, dependencies_pruned: true },
     });
 

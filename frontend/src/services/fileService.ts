@@ -159,7 +159,7 @@ export const fileService = {
       await activityLogService.appendLog({
         workspace_id: workspaceId,
         actor_id: uploaderId,
-        action: 'file_uploaded',
+        action_type: 'file_uploaded',
         metadata: { file_name: file.name, entity_type: entityType, entity_id: entityId }
       }).catch(console.error);
 
@@ -240,7 +240,7 @@ export const fileService = {
       await activityLogService.appendLog({
         workspace_id: fileRecord.workspace_id,
         actor_id: uploaderId,
-        action: 'file_replaced',
+        action_type: 'file_replaced',
         metadata: { file_name: file.name, version: nextVersion }
       }).catch(console.error);
 
@@ -264,7 +264,7 @@ export const fileService = {
       await activityLogService.appendLog({
         workspace_id: fileRecord.workspace_id,
         actor_id: actorId,
-        action: 'file_archived',
+        action_type: 'file_archived',
         metadata: { file_name: fileRecord.file_name }
       }).catch(console.error);
 
@@ -315,7 +315,7 @@ export const fileService = {
       await activityLogService.appendLog({
         workspace_id: fileRecord.workspace_id,
         actor_id: restorerId,
-        action: 'version_restored',
+        action_type: 'version_restored',
         metadata: { file_name: fileRecord.file_name, restored_version: versionRecord.version_number, new_version: nextVersion }
       }).catch(console.error);
 

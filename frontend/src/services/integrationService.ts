@@ -120,7 +120,7 @@ async function processQueue(): Promise<void> {
     activeCount++;
     await updateJobStatus(item.id, 'processing', { started_at: new Date().toISOString() });
     activityLogService.appendLog({
-      workspace_id: item.workspaceId, action: 'integration_sync_started',
+      workspace_id: item.workspaceId, action_type: 'integration_sync_started',
       metadata: { queue_id: item.id, service: item.service },
     }).catch(() => {});
     if (process.env.NODE_ENV === 'development') {
@@ -130,7 +130,7 @@ async function processQueue(): Promise<void> {
         item.state = 'success';
         updateJobStatus(item.id, 'success', { completed_at: new Date().toISOString() }).catch(() => {});
         activityLogService.appendLog({
-          workspace_id: item.workspaceId, action: 'integration_sync_completed',
+          workspace_id: item.workspaceId, action_type: 'integration_sync_completed',
           metadata: { queue_id: item.id, service: item.service, items_synced: result.itemsSynced },
         }).catch(() => {});
         activityLogService.logJobCompleted(item.workspaceId, item.id, item.service, result.itemsSynced).catch(() => {});
@@ -150,7 +150,7 @@ async function processQueue(): Promise<void> {
           const nextRetry = new Date(Date.now() + backoff).toISOString();
           updateJobStatus(item.id, 'retrying', { attempts: item.attempt, next_retry_at: nextRetry, last_error: result.message }).catch(() => {});
           activityLogService.appendLog({
-            workspace_id: item.workspaceId, action: 'integration_sync_retry',
+            workspace_id: item.workspaceId, action_type: 'integration_sync_retry',
             metadata: { queue_id: item.id, service: item.service, attempt: item.attempt, backoff_ms: backoff, error: result.message },
           }).catch(() => {});
           if (process.env.NODE_ENV === 'development') {
@@ -167,7 +167,7 @@ async function processQueue(): Promise<void> {
         item.error = result.message;
         updateJobStatus(item.id, 'failed', { completed_at: new Date().toISOString(), last_error: result.message, attempts: item.attempt }).catch(() => {});
         activityLogService.appendLog({
-          workspace_id: item.workspaceId, action: 'integration_sync_failed',
+          workspace_id: item.workspaceId, action_type: 'integration_sync_failed',
           metadata: { queue_id: item.id, service: item.service, error: result.message },
         }).catch(() => {});
         activityLogService.logJobFailed(item.workspaceId, item.id, item.service, result.message, item.attempt).catch(() => {});
@@ -205,7 +205,7 @@ export async function enqueueSync(
       const fn = resolveSyncFn(service, payload, workspaceId, _accessToken);
       inMemoryQueue.push({ id, workspaceId, service, state: 'queued', attempt: 0, createdAt: Date.now(), fn, resolve });
       activityLogService.appendLog({
-        workspace_id: workspaceId, action: 'integration_sync_queued',
+        workspace_id: workspaceId, action_type: 'integration_sync_queued',
         metadata: { queue_id: id, service },
       }).catch(() => {});
       activityLogService.logJobCreated(workspaceId, id, service).catch(() => {});
@@ -248,7 +248,7 @@ export async function recoverJobs(): Promise<number> {
         resolve: () => {},
       });
       activityLogService.appendLog({
-        workspace_id: job.workspace_id, action: 'integration_job_recovered',
+        workspace_id: job.workspace_id, action_type: 'integration_job_recovered',
         metadata: { job_id: job.id, service: job.service },
       }).catch(() => {});
       recovered++;
@@ -326,7 +326,7 @@ export async function createOAuthState(workspaceId: string, provider: string, cr
       expires_at: expiresAt, created_by: createdBy,
     });
     activityLogService.appendLog({
-      workspace_id: workspaceId, actor_id: createdBy, action: 'oauth_state_created',
+      workspace_id: workspaceId, actor_id: createdBy, action_type: 'oauth_state_created',
       metadata: { provider, expires_at: expiresAt },
     }).catch(() => {});
     return stateToken;
@@ -347,7 +347,7 @@ export async function verifyOAuthState(stateToken: string, workspaceId: string):
     if (new Date(data.expires_at) < new Date()) return false;
     await supabase.from('oauth_sessions').update({ used: true }).eq('id', data.id);
     activityLogService.appendLog({
-      workspace_id: workspaceId, action: 'oauth_state_verified',
+      workspace_id: workspaceId, action_type: 'oauth_state_verified',
       metadata: { oauth_session_id: data.id, provider: data.provider },
     }).catch(() => {});
     return true;
@@ -380,7 +380,7 @@ export async function saveConnectedAccount(account: Partial<ConnectedAccount>): 
     if (data) {
       await activityLogService.appendLog({
         workspace_id: account.workspace_id!, actor_id: account.user_id,
-        action: 'integration_connected',
+        action_type: 'integration_connected',
         metadata: { service: account.service, account_id: data.id },
       });
       fireEventWebhooks('integration_connected', account.workspace_id!, {
@@ -399,7 +399,7 @@ export async function disconnectService(accountId: string, workspaceId?: string,
     if (workspaceId && service) {
       await updateIntegrationHealth(workspaceId, service, 'disconnected', 'Disconnected by user');
       await activityLogService.appendLog({
-        workspace_id: workspaceId, action: 'integration_disconnected',
+        workspace_id: workspaceId, action_type: 'integration_disconnected',
         metadata: { account_id: accountId, service },
       });
     }
@@ -486,7 +486,7 @@ export async function updateIntegrationHealth(
       });
     }
     activityLogService.appendLog({
-      workspace_id: workspaceId, action: 'integration_health_checked',
+      workspace_id: workspaceId, action_type: 'integration_health_checked',
       metadata: { service, status, error, integration_last_checked: now },
     });
     return true;
@@ -538,7 +538,7 @@ async function syncUpdateHealth(workspaceId: string, service: string, success: b
   await updateIntegrationHealth(workspaceId, service, success ? 'connected' : 'failed', error);
   if (success) {
     await activityLogService.appendLog({
-      workspace_id: workspaceId, action: 'integration_sync',
+      workspace_id: workspaceId, action_type: 'integration_sync',
       metadata: { service, items_synced: itemsSynced ?? 0, last_sync: new Date().toISOString() },
     });
   }

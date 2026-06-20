@@ -89,7 +89,7 @@ export function initSession(): string {
   activityLogService.appendLog({
     workspace_id: '',
     actor_id: undefined,
-    action: 'session_created',
+    action_type: 'session_created',
     metadata: { session_id: fresh },
   });
   return fresh;
@@ -219,7 +219,7 @@ async function flushTelemetry(): Promise<void> {
     activityLogService.appendLog({
       workspace_id: batch[0]?.event.workspace_id || '',
       actor_id: batch[0]?.event.user_id,
-      action: 'telemetry_flush',
+      action_type: 'telemetry_flush',
       metadata: { flushed, retried: batch.length - flushed - failed.length, failed: failed.length, duration_ms: stats.flushDurationMs },
     });
   }
@@ -231,7 +231,7 @@ async function flushTelemetry(): Promise<void> {
     activityLogService.appendLog({
       workspace_id: exhausted[0]?.event.workspace_id || '',
       actor_id: exhausted[0]?.event.user_id,
-      action: 'telemetry_retry',
+      action_type: 'telemetry_retry',
       metadata: { exhausted: exhausted.length, command_types: exhausted.map(e => e.event.command_type) },
     });
   }

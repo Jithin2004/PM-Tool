@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, ChevronDown, Check, Search, Loader2 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
 import { searchWorkspaceUsers } from '../../services/operationalDataService';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { formatUserName, isUserArchived } from '../../utils/userFormatting';
@@ -25,8 +25,8 @@ interface AssigneePickerProps {
 export function AssigneePicker({ users = [], value, onChange, disabled, contextText = '' }: AssigneePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { session } = useAuth();
-  const workspaceId = session?.user?.user_metadata?.workspace_id;
+  const { workspace } = useWorkspace();
+  const workspaceId = workspace?.id;
   const { raw: { skills = [], userSkills = [], tasks = [] } } = useOperationalData();
 
   const [searchQuery, setSearchQuery] = useState('');

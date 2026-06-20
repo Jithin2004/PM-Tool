@@ -3,10 +3,12 @@ import { X } from 'lucide-react';
 
 export interface EmailChip {
   email: string;
-  authority: 'admin' | 'manager' | 'member' | 'external';
+  authority: string;
   functions: string[];
   department: string;
   designation: string;
+    name?: string;
+    role?: string;
 }
 
 interface EmailChipsInputProps {

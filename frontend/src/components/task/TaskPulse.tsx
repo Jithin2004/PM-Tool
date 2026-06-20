@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { activityLogService, ActivityLogEntry } from '../../services/activityLogService';
@@ -25,7 +25,7 @@ interface PulseEvent {
 export function TaskPulse({ taskId, users, currentUserProfile, notify }: TaskPulseProps) {
   const { workspace } = useWorkspace() as any;
   const { raw: { workSessions = [] } } = useOperationalData();
-  
+
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [logs, setLogs] = useState<ActivityLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,10 +43,7 @@ export function TaskPulse({ taskId, users, currentUserProfile, notify }: TaskPul
   }, [taskId, workspace?.id]);
 
   const fetchPulse = useCallback(async () => {
-    if (!task) {
-      setLoading(false);
-      return;
-    }
+
     setLoading(true);
     try {
       const [fetchedComments, fetchedLogs] = await Promise.all([
@@ -58,7 +55,7 @@ export function TaskPulse({ taskId, users, currentUserProfile, notify }: TaskPul
     } finally {
       setLoading(false);
     }
-  }, [task, taskId, workspace?.id, fetchTaskComments]);
+  }, [taskId, workspace?.id, fetchTaskComments]);
 
   const pulseEvents = useMemo(() => {
     const events: PulseEvent[] = [];
@@ -153,14 +150,14 @@ export function TaskPulse({ taskId, users, currentUserProfile, notify }: TaskPul
   const handleDeleteComment = async (commentId: string, authorId: string) => {
     const canModerate = ['super_admin', 'pm'].includes(currentUserProfile?.role);
     const isOwner = currentUserProfile?.id === authorId;
-    
+
     if (!canModerate && !isOwner) {
       notify('You can only delete your own comments.', 'error');
       return;
     }
 
     if (!workspace?.id || !currentUserProfile?.id) return;
-    
+
     const success = await archiveTaskComment(commentId, workspace.id, currentUserProfile.id, taskId);
     if (success) {
       setComments(comments.filter(c => c.id !== commentId));
@@ -271,21 +268,20 @@ export function TaskPulse({ taskId, users, currentUserProfile, notify }: TaskPul
               );
             } else if (event.type === 'activity') {
               const l = event.data as ActivityLogEntry;
-              const isBlock = l.action.includes('blocked');
-              const isStatus = l.action.includes('status');
-              const isApproval = l.action.includes('approv');
-              
+              const isBlock = l.action_type.includes('blocked');
+              const isStatus = l.action_type.includes('status');
+              const isApproval = l.action_type.includes('approv');
+
               iconNode = (
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 ${
-                  isBlock ? 'bg-signal-error/20 text-signal-error' :
-                  isApproval ? 'bg-signal-success/20 text-signal-success' :
-                  isStatus ? 'bg-accent-primary/20 text-accent-primary' :
-                  'bg-surface-3 border border-border text-text-tertiary'
-                }`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 ${isBlock ? 'bg-signal-error/20 text-signal-error' :
+                    isApproval ? 'bg-signal-success/20 text-signal-success' :
+                      isStatus ? 'bg-accent-primary/20 text-accent-primary' :
+                        'bg-surface-3 border border-border text-text-tertiary'
+                  }`}>
                   {isBlock ? <ShieldAlert className="w-3 h-3" /> :
-                   isApproval ? <CheckCircle2 className="w-3 h-3" /> :
-                   isStatus ? <Tag className="w-3 h-3" /> :
-                   <div className="w-1.5 h-1.5 rounded-full bg-current" />}
+                    isApproval ? <CheckCircle2 className="w-3 h-3" /> :
+                      isStatus ? <Tag className="w-3 h-3" /> :
+                        <div className="w-1.5 h-1.5 rounded-full bg-current" />}
                 </div>
               );
 
@@ -293,7 +289,7 @@ export function TaskPulse({ taskId, users, currentUserProfile, notify }: TaskPul
                 <div className="flex-1 flex flex-col pt-1">
                   <div className="flex justify-between items-start">
                     <span className="text-[10px] font-mono text-text-secondary">
-                      <strong className="text-text-primary">{userName}</strong> {l.action.replace(/_/g, ' ')}
+                      <strong className="text-text-primary">{userName}</strong> {l.action_type.replace(/_/g, ' ')}
                     </span>
                     <span className="text-[9px] font-mono text-text-quaternary shrink-0">
                       {new Date(event.timestamp).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
@@ -313,9 +309,8 @@ export function TaskPulse({ taskId, users, currentUserProfile, notify }: TaskPul
             } else if (event.type === 'session_start' || event.type === 'session_end') {
               const isStart = event.type === 'session_start';
               iconNode = (
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 ${
-                  isStart ? 'bg-emerald-500/20 text-emerald-500' : 'bg-amber-500/20 text-amber-500'
-                }`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 ${isStart ? 'bg-emerald-500/20 text-emerald-500' : 'bg-amber-500/20 text-amber-500'
+                  }`}>
                   {isStart ? <Play className="w-3 h-3 translate-x-0.5" /> : <Square className="w-3 h-3" />}
                 </div>
               );

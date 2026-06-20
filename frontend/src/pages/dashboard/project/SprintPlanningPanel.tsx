@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { sprintService, Sprint, SprintHealth } from '../../../services/sprintService';
+import { sprintService, SprintHealth } from '../../../services/sprintService';
+import type { Sprint } from '../../../types';
 import { Task } from '../../../types';
 import { DroppableSprintZone } from '../../../components/execution/dragDrop/DroppableSprintZone';
 import { useAuth } from '../../../context/AuthContext';
@@ -34,7 +35,7 @@ export const SprintPlanningPanel: React.FC<SprintPlanningPanelProps> = ({
   const loadSprints = async () => {
     setLoading(true);
     const data = await sprintService.getSprints(workspaceId, projectId);
-    const planningSprints = data.filter(s => s.status === 'planning' || s.status === 'active');
+    const planningSprints = data.filter(s => s.status === 'planned' || s.status === 'active');
     setSprints(planningSprints);
     
     // Calculate Health for each sprint
@@ -140,7 +141,7 @@ export const SprintPlanningPanel: React.FC<SprintPlanningPanelProps> = ({
               )}
             </div>
             
-            {sprint.status === 'planning' && (
+            {sprint.status === 'planned' && (
               <div className="p-3 bg-slate-900/30 border-t border-slate-700/50">
                 <button 
                   onClick={() => handleStartSprint(sprint.id)}

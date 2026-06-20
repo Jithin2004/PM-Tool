@@ -534,7 +534,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
         supabase.from('activity_logs').insert([{
           workspace_id: workspace.id,
           actor_id: user.id,
-          action: 'role_changed',
+          action_type: 'role_changed',
           entity_type: 'user',
           entity_id: id,
           metadata: { oldRole, newRole: role }

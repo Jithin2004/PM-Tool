@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { Filter, Zap } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface DynamicBoardProps {
   tasks: Task[];
@@ -38,7 +39,7 @@ export const DynamicBoard: React.FC<DynamicBoardProps> = ({
   projectId,
   onRefreshIntelligence
 }) => {
-  const { currentWorkspace } = useAuth();
+  const { workspace: currentWorkspace } = useWorkspace();
   const { sprints } = useDashboard();
   const [workflow, setWorkflow] = useState<ResolvedWorkflow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,9 +71,9 @@ export const DynamicBoard: React.FC<DynamicBoardProps> = ({
     if (!task) return;
 
     if (typeof hasWriteAccess === 'function' ? !hasWriteAccess(task) : !hasWriteAccess) {
-       // Should Ideally notify error
-       console.error("Access Denied to move task");
-       return;
+      // Should Ideally notify error
+      console.error("Access Denied to move task");
+      return;
     }
 
     const success = await taskStateManager.moveTaskState(
@@ -120,7 +121,7 @@ export const DynamicBoard: React.FC<DynamicBoardProps> = ({
   // Map tasks to columns
   const unmappedTasks: Task[] = [];
   const stateTaskMap = new Map<string, Task[]>();
-  
+
   workflow.states.forEach(s => stateTaskMap.set(s.id, []));
 
   displayTasks.forEach(task => {
@@ -135,30 +136,30 @@ export const DynamicBoard: React.FC<DynamicBoardProps> = ({
     <div className="flex flex-col h-full">
       {/* Board Controls */}
       <div className="flex items-center justify-between mb-4 px-1 shrink-0">
-         <div className="flex items-center gap-4">
-           {workflow.isFallback && (
-             <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-lg text-[11px] font-medium">
-               <Zap size={12} />
-               Using Fallback Workflow
-             </div>
-           )}
-         </div>
-         <div className="flex items-center gap-3">
-           <div className="flex items-center gap-2 bg-surface-2 border border-border px-3 py-1.5 rounded-lg text-[11px] font-medium text-text-secondary">
-             <Filter size={14} />
-             <select 
-               value={sprintFilter} 
-               onChange={(e) => setSprintFilter(e.target.value)}
-               className="bg-transparent border-none outline-none focus:ring-0 cursor-pointer"
-             >
-               <option value="active">Active Sprint (Default)</option>
-               <option value="all">All Tasks</option>
-               {sprints?.map(s => (
-                 <option key={s.id} value={s.id}>{s.name}</option>
-               ))}
-             </select>
-           </div>
-         </div>
+        <div className="flex items-center gap-4">
+          {workflow.isFallback && (
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-lg text-[11px] font-medium">
+              <Zap size={12} />
+              Using Fallback Workflow
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-surface-2 border border-border px-3 py-1.5 rounded-lg text-[11px] font-medium text-text-secondary">
+            <Filter size={14} />
+            <select
+              value={sprintFilter}
+              onChange={(e) => setSprintFilter(e.target.value)}
+              className="bg-transparent border-none outline-none focus:ring-0 cursor-pointer"
+            >
+              <option value="active">Active Sprint (Default)</option>
+              <option value="all">All Tasks</option>
+              {sprints?.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Columns container */}
@@ -174,7 +175,7 @@ export const DynamicBoard: React.FC<DynamicBoardProps> = ({
               userMap={userMap}
               hasWriteAccess={hasWriteAccess}
               blockedByMap={blockedByMap}
-              onTransitionTask={() => {}} // Disabled legacy transition here
+              onTransitionTask={() => { }} // Disabled legacy transition here
               onEditTask={onEditTask}
               onTaskClick={onTaskClick}
               density={density}
@@ -188,12 +189,12 @@ export const DynamicBoard: React.FC<DynamicBoardProps> = ({
               key="unmapped"
               state={null} // Null state represents "Needs Mapping"
               tasks={unmappedTasks}
-              onDropTask={() => {}} // Can't drop into Needs Mapping
+              onDropTask={() => { }} // Can't drop into Needs Mapping
               projectMap={projectMap}
               userMap={userMap}
               hasWriteAccess={hasWriteAccess}
               blockedByMap={blockedByMap}
-              onTransitionTask={() => {}}
+              onTransitionTask={() => { }}
               onEditTask={onEditTask}
               onTaskClick={onTaskClick}
               density={density}

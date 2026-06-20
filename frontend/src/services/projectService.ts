@@ -125,7 +125,7 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
 
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
-        action: 'project_created',
+        action_type: 'project_created',
         metadata: { project_id: projectId, name: input.name, synthetic: input.synthetic, run_id: input.runId },
       });
       return data;
@@ -161,7 +161,7 @@ export async function updateProject(
     
     await activityLogService.appendLog({
       workspace_id: workspaceId,
-      action: 'project_updated',
+      action_type: 'project_updated',
       metadata: { project_id: projectId, updates },
     });
     return true;
@@ -195,7 +195,7 @@ export async function archiveProject(projectId: string, workspaceId: string, act
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       actor_id: actorId,
-      action: 'project_archived',
+      action_type: 'project_archived',
       metadata: { project_id: projectId, cascade_triggered: true },
     });
 
@@ -219,7 +219,7 @@ export async function deleteMilestone(milestoneId: string, workspaceId: string, 
     
     await activityLogService.appendLog({
       workspace_id: workspaceId,
-      action: 'milestone_deleted',
+      action_type: 'milestone_deleted',
       metadata: { milestone_id: milestoneId, performed_by: performedBy },
     });
     return true;
@@ -242,7 +242,7 @@ export async function restoreMilestone(milestoneId: string, workspaceId: string,
     
     await activityLogService.appendLog({
       workspace_id: workspaceId,
-      action: 'milestone_restored',
+      action_type: 'milestone_restored',
       metadata: { milestone_id: milestoneId, performed_by: performedBy },
     });
     return true;

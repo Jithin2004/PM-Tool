@@ -54,7 +54,7 @@ export const waitStateEngine = {
         await activityLogService.appendLog({
           workspace_id: params.workspaceId,
           actor_id: params.userId,
-          action: 'wait_state_created',
+          action_type: 'wait_state_created',
           metadata: { wait_state_id: data.id, target_type: params.targetType, target_id: params.targetId, category: params.category }
         });
         return data as WaitState;
@@ -88,7 +88,7 @@ export const waitStateEngine = {
         await activityLogService.appendLog({
           workspace_id: params.workspaceId,
           actor_id: params.userId,
-          action: 'wait_state_resolved',
+          action_type: 'wait_state_resolved',
           metadata: { wait_state_id: params.waitStateId, duration_hours: durationHours }
         });
         
@@ -123,7 +123,7 @@ export const waitStateEngine = {
         await activityLogService.appendLog({
           workspace_id: workspaceId,
           actor_id: actorId,
-          action: 'wait_state_archived',
+          action_type: 'wait_state_archived',
           metadata: { wait_state_id: waitStateId }
         });
         return true;

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { sprintService, Sprint, SprintHealth } from '../../../services/sprintService';
+import { sprintService, SprintHealth } from '../../../services/sprintService';
 import { useAuth } from '../../../context/AuthContext';
-import { Task } from '../../../types';
+import { useWorkspace } from '../../../context/WorkspaceContext';
+import { Task, Sprint } from '../../../types';
 import { Calendar, AlertCircle, CheckCircle, Package, Flag, Target, ShieldAlert } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 
@@ -13,7 +14,8 @@ function getProjectIdFromPath(): string | null {
 
 export const SprintView: React.FC = () => {
   const projectId = getProjectIdFromPath();
-  const { currentWorkspace, user } = useAuth();
+  const { user } = useAuth();
+  const { workspace } = useWorkspace();
   
   const [sprint, setSprint] = useState<Sprint | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -21,14 +23,14 @@ export const SprintView: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (projectId && currentWorkspace) {
+    if (projectId && workspace) {
       loadActiveSprint();
     }
-  }, [projectId, currentWorkspace]);
+  }, [projectId, workspace]);
 
   const loadActiveSprint = async () => {
     setLoading(true);
-    const active = await sprintService.getActiveSprint(currentWorkspace!.id, projectId!);
+    const active = await sprintService.getActiveSprint(workspace!.id, projectId!);
     setSprint(active);
     
     if (active) {
@@ -47,7 +49,7 @@ export const SprintView: React.FC = () => {
   };
 
   const handleCompleteSprint = async () => {
-    if (!sprint || !currentWorkspace) return;
+    if (!sprint || !workspace) return;
     
     const incompleteTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'done');
     const incompleteIds = incompleteTasks.map(t => t.id);
@@ -67,7 +69,7 @@ export const SprintView: React.FC = () => {
 
     await sprintService.completeSprint(
       sprint.id, 
-      currentWorkspace.id, 
+      workspace.id, 
       snapshotData, 
       incompleteIds, 
       'backlog', 

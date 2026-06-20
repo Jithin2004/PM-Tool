@@ -6,7 +6,7 @@ import { Icon } from '../../components/ui/Icon';
 import { hasCapability } from '../../core/auth/permissions';
 import { useOperationalDerived, useOperationalData } from '../../context/OperationalDataContext';
 import { useDashboard } from '../../context/DashboardContext';
-import { dependencyService, CrossProjectDependency } from '../../services/dependencyService';
+import { dependencyService, DependencyLink } from '../../services/dependencyService';
 
 import { deliverableService, Milestone } from '../../services/deliverableService';
 import { profitabilityService, ProjectProfitability } from '../../services/profitabilityService';
@@ -40,7 +40,7 @@ export default function PortfolioPage() {
   const [view, setView] = useState<ViewMode>('grid');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
-  const [crossDeps, setCrossDeps] = useState<CrossProjectDependency[]>([]);
+  const [crossDeps, setCrossDeps] = useState<DependencyLink[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [profitability, setProfitability] = useState<Record<string, ProjectProfitability>>({});
 
@@ -52,8 +52,8 @@ export default function PortfolioPage() {
 
   React.useEffect(() => {
     if (workspace?.id) {
-      dependencyService.getCrossProjectDependencies(workspace.id).then(res => {
-        if (res.data) setCrossDeps(res.data);
+      dependencyService.getDependencies(workspace.id).then(res => {
+        setCrossDeps(res);
       });
       profitabilityService.getWorkspaceProfitability(workspace.id).then(data => {
         const map = data.reduce((acc, curr) => ({ ...acc, [curr.project_id]: curr }), {});
@@ -453,7 +453,7 @@ export default function PortfolioPage() {
             <h2 className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Cross-Project Blockers</h2>
           </div>
           <div className="space-y-3">
-            {crossDeps.map(dep => (
+            {crossDeps.map((dep: any) => (
               <div key={dep.id} className="flex items-center justify-between p-4 rounded-lg bg-surface-2 border border-[var(--pm-border)]">
                 <div>
                   <div className="font-mono-pm text-[10px] uppercase text-text-quaternary mb-1">Blocked Project</div>

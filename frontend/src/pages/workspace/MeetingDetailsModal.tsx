@@ -41,7 +41,7 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
       
       await activityLogService.appendLog({
         workspace_id: workspace!.id,
-        action: 'meeting_updated',
+        action_type: 'meeting_updated',
         metadata: { meeting_id: meeting.id, title: meeting.title }
       });
 

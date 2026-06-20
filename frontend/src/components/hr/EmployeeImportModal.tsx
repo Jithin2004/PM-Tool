@@ -118,7 +118,7 @@ export function EmployeeImportModal({ workspaceId, isOpen, onClose, onSuccess }:
       
       await activityLogService.appendLog({
         workspace_id: workspaceId,
-        action: 'employee_import_executed',
+        action_type: 'employee_import_executed',
         metadata: { batch_id: batchData?.id, imported_count: validRows.length, total_attempted: previewData.length }
       });
 

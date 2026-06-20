@@ -901,7 +901,7 @@ export default function FinancePage() {
                       p_creator_id: profile?.id
                     });
                     if (error) throw error;
-                    showAlert("Draft invoice generated successfully.", "success");
+                    showAlert("Draft invoice generated successfully.", { type: "success" });
                     setShowTimeInvoiceModal(false);
                     loadData();
                   } catch (e: any) {

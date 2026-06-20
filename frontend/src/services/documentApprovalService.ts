@@ -60,7 +60,7 @@ export const documentApprovalService = {
         await activityEventService.recordActivity({
           workspace_id: doc.workspace_id,
           actor_id: userId,
-          action: 'document_approved',
+          action_type: 'document_approved',
           entity_type: 'document',
           entity_id: documentId,
           metadata: { version_id: versionId, title: doc.title }

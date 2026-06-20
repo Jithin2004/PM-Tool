@@ -8,24 +8,24 @@ import { hasCapability } from '../../core/auth/permissions';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Papa from 'papaparse';
 
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DAY_HEADERS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export function CompanyCalendarPanel() {
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
   const canManageCalendar = hasCapability(profile?.role, 'manage_settings');
-  
+
   const [tab, setTab] = useState<'calendar' | 'settings'>('calendar');
   const [year, setYear] = useState(new Date().getFullYear());
   const [events, setEvents] = useState<CompanyCalendarEvent[]>([]);
   const [settings, setSettings] = useState<WorkspaceCalendarSettings | null>(null);
-  
+
   const [syncing, setSyncing] = useState(false);
   const [lastSyncResult, setLastSyncResult] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newEvent, setNewEvent] = useState({ name: '', date: '', event_type: 'company' as const });
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEscapeKey(showCreateForm, () => setShowCreateForm(false));
@@ -89,7 +89,7 @@ export function CompanyCalendarPanel() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !workspace?.id) return;
-    
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -99,7 +99,7 @@ export function CompanyCalendarPanel() {
           date: row['Date'] || row.date,
           type: row['Type'] || row.type || 'company'
         })).filter(r => r.name && r.date);
-        
+
         if (parsed.length > 0) {
           const imported = await companyCalendarService.bulkImportEvents(workspace.id, parsed);
           setLastSyncResult(`Imported ${imported} events from CSV.`);
@@ -113,7 +113,7 @@ export function CompanyCalendarPanel() {
   const saveSettings = async () => {
     if (!workspace?.id || !settings) return;
     await companyCalendarService.updateSettings(workspace.id, settings);
-    window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Settings saved successfully.', type: 'success' }}));
+    window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: 'Settings saved successfully.', type: 'success' } }));
   };
 
   const toggleWorkingDay = (dayIndex: number) => {
@@ -126,7 +126,7 @@ export function CompanyCalendarPanel() {
 
   const calendarGrid = useMemo(() => {
     const weeks: Array<Array<{ day: number; isOff: boolean; events: CompanyCalendarEvent[] } | null>> = [];
-    const workingDays = settings?.working_days || [1,2,3,4,5,6];
+    const workingDays = settings?.working_days || [1, 2, 3, 4, 5, 6];
     const saturdayPolicy = settings?.saturday_policy || 'ALL_WORKING';
 
     for (let m = 0; m < 12; m++) {
@@ -134,22 +134,22 @@ export function CompanyCalendarPanel() {
       const daysInMonth = new Date(year, m + 1, 0).getDate();
       const startOffset = (firstDay.getDay() + 6) % 7;
       const days: Array<{ day: number; isOff: boolean; events: CompanyCalendarEvent[] } | null> = [];
-      
+
       for (let i = 0; i < startOffset; i++) days.push(null);
-      
+
       let satCount = 0;
       for (let d = 1; d <= daysInMonth; d++) {
         const current = new Date(year, m, d);
         const dayOfWeek = current.getDay(); // 0=Sun, 6=Sat
-        
+
         let isOff = !workingDays.includes(dayOfWeek);
-        
+
         if (dayOfWeek === 6 && workingDays.includes(6)) {
           satCount++;
           if (saturdayPolicy === 'ALL_OFF') isOff = true;
           else if (saturdayPolicy === 'FIRST_THIRD_OFF' && (satCount === 1 || satCount === 3)) isOff = true;
           else if (saturdayPolicy === 'SECOND_FOURTH_OFF' && (satCount === 2 || satCount === 4)) isOff = true;
-          else if (saturdayPolicy === 'CUSTOM' && settings?.custom_saturdays_off?.includes(satCount)) isOff = true;
+          else if (saturdayPolicy === 'CUSTOM' && settings?.custom_saturdays?.includes(satCount)) isOff = true;
         }
 
         const dateStr = `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -173,13 +173,13 @@ export function CompanyCalendarPanel() {
         <div className="flex items-center gap-3">
           {canManageCalendar && (
             <>
-              <button 
-                onClick={() => setShowCreateForm(true)} 
+              <button
+                onClick={() => setShowCreateForm(true)}
                 className="px-4 py-2 btn-premium-primary rounded-lg text-[12px] font-semibold flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" /> Add Event
               </button>
-              
+
             </>
           )}
           <div className="flex items-center bg-surface-2 border border-border rounded-lg p-1 shadow-sm">
@@ -191,20 +191,18 @@ export function CompanyCalendarPanel() {
       </div>
 
       <div className="flex gap-1 border-b border-border-subtle mb-8">
-        <button 
-          onClick={() => setTab('calendar')} 
-          className={`px-5 py-3 text-[12px] font-bold uppercase tracking-wider transition-all border-b-2 ${
-            tab === 'calendar' ? 'border-accent-primary text-text-primary bg-accent-primary/5' : 'border-transparent text-text-tertiary hover:text-text-secondary'
-          }`}
+        <button
+          onClick={() => setTab('calendar')}
+          className={`px-5 py-3 text-[12px] font-bold uppercase tracking-wider transition-all border-b-2 ${tab === 'calendar' ? 'border-accent-primary text-text-primary bg-accent-primary/5' : 'border-transparent text-text-tertiary hover:text-text-secondary'
+            }`}
         >
           Calendar View
         </button>
         {canManageCalendar && (
-          <button 
-            onClick={() => setTab('settings')} 
-            className={`px-5 py-3 text-[12px] font-bold uppercase tracking-wider transition-all border-b-2 ${
-              tab === 'settings' ? 'border-accent-primary text-text-primary bg-accent-primary/5' : 'border-transparent text-text-tertiary hover:text-text-secondary'
-            }`}
+          <button
+            onClick={() => setTab('settings')}
+            className={`px-5 py-3 text-[12px] font-bold uppercase tracking-wider transition-all border-b-2 ${tab === 'settings' ? 'border-accent-primary text-text-primary bg-accent-primary/5' : 'border-transparent text-text-tertiary hover:text-text-secondary'
+              }`}
           >
             Working Rules
           </button>
@@ -213,7 +211,7 @@ export function CompanyCalendarPanel() {
 
       {tab === 'calendar' && (
         <div className="space-y-8">
-          
+
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {calendarGrid.map((monthDays, mi) => (
@@ -224,11 +222,10 @@ export function CompanyCalendarPanel() {
                   {monthDays.map((cell, ci) => (
                     <div key={ci} className="aspect-square flex items-center justify-center text-[11px] font-bold relative group">
                       {cell && (
-                        <div className={`w-full h-full flex items-center justify-center rounded-lg transition-all ${
-                          cell.events.length > 0 ? 'bg-accent-primary text-white shadow-sm' 
-                          : cell.isOff ? 'bg-signal-critical/10 text-signal-critical'
-                          : 'text-text-tertiary hover:bg-surface-3 hover:text-text-primary'
-                        }`}>
+                        <div className={`w-full h-full flex items-center justify-center rounded-lg transition-all ${cell.events.length > 0 ? 'bg-accent-primary text-white shadow-sm'
+                            : cell.isOff ? 'bg-signal-critical/10 text-signal-critical'
+                              : 'text-text-tertiary hover:bg-surface-3 hover:text-text-primary'
+                          }`}>
                           {cell.day}
                         </div>
                       )}
@@ -272,15 +269,15 @@ export function CompanyCalendarPanel() {
             <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm">
               <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary mb-4 border-b border-border-subtle pb-2">Working Week</h3>
               <div className="flex flex-wrap gap-4">
-                {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((day, i) => (
+                {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, i) => (
                   <label key={day} className="flex items-center gap-2 text-sm font-medium text-text-secondary cursor-pointer">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={settings.working_days.includes(i)}
                       onChange={() => toggleWorkingDay(i)}
                       className="w-4 h-4 rounded text-accent-primary focus:ring-accent-primary bg-surface border-border"
                     />
-                    {day.substring(0,3)}
+                    {day.substring(0, 3)}
                   </label>
                 ))}
               </div>
@@ -289,7 +286,7 @@ export function CompanyCalendarPanel() {
             {settings.working_days.includes(6) && (
               <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary mb-4 border-b border-border-subtle pb-2">Saturday Policy</h3>
-                <select 
+                <select
                   value={settings.saturday_policy}
                   onChange={(e: any) => setSettings({ ...settings, saturday_policy: e.target.value })}
                   className="w-full input-premium h-10 px-3 text-sm mb-4"
@@ -305,15 +302,15 @@ export function CompanyCalendarPanel() {
                   <div className="p-4 rounded-lg bg-surface-3 border border-border mt-2 flex flex-wrap gap-3">
                     {[1, 2, 3, 4, 5].map(week => (
                       <label key={week} className="flex items-center gap-2 text-xs font-bold text-text-secondary cursor-pointer bg-surface-2 px-3 py-1.5 rounded-md border border-border hover:border-accent-primary/50 transition-colors">
-                        <input 
+                        <input
                           type="checkbox"
-                          checked={settings.custom_saturdays_off?.includes(week)}
+                          checked={settings.custom_saturdays?.includes(week)}
                           onChange={(e) => {
-                            const current = settings.custom_saturdays_off || [];
-                            const updated = e.target.checked 
-                              ? [...current, week] 
+                            const current = settings.custom_saturdays || [];
+                            const updated = e.target.checked
+                              ? [...current, week]
                               : current.filter(w => w !== week);
-                            setSettings({ ...settings, custom_saturdays_off: updated });
+                            setSettings({ ...settings, custom_saturdays: updated });
                           }}
                           className="w-3.5 h-3.5 rounded text-accent-primary bg-surface"
                         />
@@ -330,39 +327,39 @@ export function CompanyCalendarPanel() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Office Start Time</label>
-                  <input 
-                    type="time" 
+                  <input
+                    type="time"
                     value={settings.working_hours?.office_start_time || '09:00'}
                     onChange={e => setSettings({
-                      ...settings, 
+                      ...settings,
                       working_hours: { ...settings.working_hours, office_start_time: e.target.value } as any
                     })}
-                    className="w-full input-premium h-10 px-3 text-sm" 
+                    className="w-full input-premium h-10 px-3 text-sm"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Office End Time</label>
-                  <input 
-                    type="time" 
+                  <input
+                    type="time"
                     value={settings.working_hours?.office_end_time || '17:00'}
                     onChange={e => setSettings({
-                      ...settings, 
+                      ...settings,
                       working_hours: { ...settings.working_hours, office_end_time: e.target.value } as any
                     })}
-                    className="w-full input-premium h-10 px-3 text-sm" 
+                    className="w-full input-premium h-10 px-3 text-sm"
                   />
                 </div>
                 <div className="col-span-2">
                   <label className="text-[10px] font-mono uppercase text-text-tertiary mb-1 block">Daily Working Hours</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     step="0.5"
                     value={settings.working_hours?.daily_working_hours || 8}
                     onChange={e => setSettings({
-                      ...settings, 
+                      ...settings,
                       working_hours: { ...settings.working_hours, daily_working_hours: parseFloat(e.target.value) } as any
                     })}
-                    className="w-full input-premium h-10 px-3 text-sm" 
+                    className="w-full input-premium h-10 px-3 text-sm"
                   />
                   <p className="text-[10px] text-text-tertiary mt-1">Used for capacity and sprint point calculations.</p>
                 </div>
@@ -374,7 +371,7 @@ export function CompanyCalendarPanel() {
           <div className="space-y-6 flex flex-col h-full">
             <div className="bg-surface-2 border border-border rounded-xl p-6 shadow-sm flex-1">
               <h3 className="text-sm font-bold uppercase tracking-wider text-text-primary mb-4 border-b border-border-subtle pb-2">Holiday Configuration</h3>
-              
+
               <div className="space-y-6">
                 <div className="p-5 rounded-xl border border-border bg-surface flex flex-col">
                   <div className="flex items-center gap-3 mb-3">
@@ -386,9 +383,9 @@ export function CompanyCalendarPanel() {
                       <p className="text-[11px] text-text-tertiary">Based on workspace location ({workspace?.settings?.country || 'Unconfigured'})</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={handleSyncNow} 
-                    disabled={syncing || !workspace?.settings?.country} 
+                  <button
+                    onClick={handleSyncNow}
+                    disabled={syncing || !workspace?.settings?.country}
                     className="w-full py-2.5 bg-surface-3 border border-border rounded-lg text-xs font-bold hover:bg-surface-4 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-auto"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
@@ -409,8 +406,8 @@ export function CompanyCalendarPanel() {
                       <p className="text-[11px] text-text-tertiary">Upload HR calendars via CSV format</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => fileInputRef.current?.click()} 
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
                     className="w-full py-2.5 bg-surface-3 border border-border rounded-lg text-xs font-bold hover:bg-surface-4 transition-all flex items-center justify-center gap-2 mt-auto"
                   >
                     <Upload className="w-3.5 h-3.5" /> Select File

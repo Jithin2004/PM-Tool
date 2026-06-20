@@ -4,8 +4,6 @@ import { CheckCircle2, Circle, Trophy } from 'lucide-react';
 import { useOperationalRaw } from '../../context/OperationalDataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { useNavigate } from '../../hooks/useNavigate';
-
 export function OnboardingChecklist() {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
@@ -14,7 +12,7 @@ export function OnboardingChecklist() {
 
   const metrics = useMemo(() => {
     if (!user || !workspace) return { checks: [], total: 0, completed: 0, score: 0 };
-    
+
     // Check 1: Create workspace
     // Check 2: Setup profile
     // Check 3: Create first project
@@ -26,7 +24,7 @@ export function OnboardingChecklist() {
     // Check 6: Create first task
     const hasTask = raw.tasks && raw.tasks.length > 0;
     // Check 7: Assign ownership
-    const hasAssignment = raw.tasks && raw.tasks.some(t => t.assignee_id || t.owner_id);
+    const hasAssignment = raw.tasks && raw.tasks.some(t => t.assignee_id);
 
     const allChecks = [
       { id: 'workspace', label: 'Create workspace', done: true },
@@ -37,10 +35,10 @@ export function OnboardingChecklist() {
       { id: 'task', label: 'Create first task', done: hasTask },
       { id: 'assign', label: 'Assign ownership', done: hasAssignment },
     ];
-    
+
     const completed = allChecks.filter(c => c.done).length;
     const total = allChecks.length;
-    
+
     return { checks: allChecks, completed, total, score: Math.round((completed / total) * 100) };
   }, [user, workspace, raw.projects, raw.tasks, raw.profiles]);
 
@@ -58,7 +56,7 @@ export function OnboardingChecklist() {
   if (!isVisible) {
     return null;
   }
-  
+
   const pendingChecks = metrics.checks.filter(c => !c.done);
 
   return (
@@ -81,7 +79,7 @@ export function OnboardingChecklist() {
               Progress: {metrics.completed} / {metrics.total} Complete
             </div>
             <div className="w-48 h-2 bg-[var(--pm-surface-high)] rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-blue-500 transition-all duration-1000 ease-out"
                 style={{ width: `${metrics.score}%` }}
               />
@@ -94,7 +92,7 @@ export function OnboardingChecklist() {
         <div className="space-y-3">
           <AnimatePresence>
             {pendingChecks.map(check => (
-              <motion.div 
+              <motion.div
                 key={check.id}
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}

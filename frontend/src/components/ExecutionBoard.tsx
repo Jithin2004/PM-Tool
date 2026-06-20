@@ -188,7 +188,7 @@ export default function ExecutionBoard({
         workspace_id: workspace.id,
         actor_id: currentUserProfile.id,
         task_id: result.id || undefined,
-        action: 'task_created',
+        action_type: 'task_created',
         metadata: { name: taskData.name, project_id: taskData.project_id, estimated_hours: taskData.estimated_hours }
       }).catch(() => {});
     }
@@ -234,7 +234,7 @@ export default function ExecutionBoard({
         actor_id: currentUserProfile?.id,
         task_id: task.id,
         project_id: task.project_id,
-        action: 'task_completed_with_feedback',
+        action_type: 'task_completed_with_feedback',
         metadata: feedback
       });
       notify("Task completed with feedback recorded.", "success");

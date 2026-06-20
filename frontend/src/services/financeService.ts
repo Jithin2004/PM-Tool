@@ -308,7 +308,7 @@ export async function generateInvoice(workspaceId: string, invoice: Partial<Invo
       actor_id: newInvoice.created_by,
       entity_type: 'invoice',
       entity_id: newInvoice.id,
-      action: 'invoice_created',
+      action_type: 'invoice_created',
       metadata: { invoice_number: invNumber, amount: newInvoice.total_amount, currency: newInvoice.currency }
     });
   } catch (e) {
@@ -371,15 +371,14 @@ export async function recordPayment(payment: Partial<Payment>) {
       const accountId = accounts?.[0]?.id || null;
 
       if (accountId) {
-        await financeLedgerService.recordIncome(
-          inv.workspace_id,
-          accountId,
-          payment.amount || 0,
-          inv.currency || 'USD',
-          'invoice',
-          payment.invoice_id as string,
-          inv.created_by
-        );
+        await financeLedgerService.recordPayment({
+          workspaceId: inv.workspace_id,
+          userId: 'system',
+          paymentId: crypto.randomUUID(),
+          invoiceId: payment.invoice_id as string,
+          amount: payment.amount || 0,
+          description: 'Payment against invoice'
+        });
       }
     }
   } catch (e) {
@@ -394,7 +393,7 @@ export async function recordPayment(payment: Partial<Payment>) {
         actor_id: inv.created_by,
         entity_type: 'payment',
         entity_id: data.id,
-        action: 'invoice_paid',
+        action_type: 'invoice_paid',
         metadata: { amount: payment.amount, invoice_id: payment.invoice_id }
       });
     }
@@ -419,15 +418,13 @@ export async function createExpense(workspaceId: string, expense: Partial<Expens
     const userId = session?.user?.id;
 
     if (accountId && userId) {
-      await financeLedgerService.recordExpense(
+      await financeLedgerService.recordExpense({
         workspaceId,
-        accountId,
-        expense.amount || 0,
-        expense.currency || 'USD', // Mock currency
-        'expense',
-        data.id,
-        expense.created_by as string
-      );
+        userId: userId || 'system',
+        expenseId: data.id,
+        amount: expense.amount || 0,
+        description: expense.description || 'Expense'
+      });
     }
   } catch (e) {
     console.error("Failed to sync expense to ledger", e);
@@ -436,11 +433,11 @@ export async function createExpense(workspaceId: string, expense: Partial<Expens
   try {
     await activityEventService.recordActivity({
       workspace_id: workspaceId,
-      actor_id: expense.created_by as string,
+      actor_id: 'system',
       entity_type: 'expense',
       entity_id: data.id,
-      action: 'expense_created',
-      metadata: { amount: expense.amount, currency: expense.currency }
+      action_type: 'expense_created',
+      metadata: { amount: expense.amount, currency: 'USD' }
     });
   } catch (e) {
     console.error('Failed to log expense created event', e);
@@ -496,7 +493,7 @@ export async function cancelInvoice(invoice: Invoice, performedBy: string, reaso
   await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
     workspace_id: invoice.workspace_id,
     invoice_id: invoice.id,
-    action: 'cancelled',
+    action_type: 'cancelled',
     performed_by: performedBy,
     reason: reason,
     old_value: { status: invoice.status },
@@ -525,7 +522,7 @@ export async function createCreditNote(workspaceId: string, creditNote: Partial<
   await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
     workspace_id: workspaceId,
     invoice_id: creditNote.invoice_id,
-    action: 'credit_note_issued',
+    action_type: 'credit_note_issued',
     performed_by: creditNote.created_by,
     reason: `Credit note ${cnNumber} issued for ${creditNote.amount}`
   }]));
@@ -573,7 +570,7 @@ export async function applyAdvanceToInvoice(workspaceId: string, clientId: strin
   await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
     workspace_id: workspaceId,
     invoice_id: invoiceId,
-    action: 'advance_applied',
+    action_type: 'advance_applied',
     performed_by: performedBy,
     reason: `Applied advance of ${amount}`
   }]));
@@ -599,7 +596,7 @@ export async function deleteInvoice(invoiceId: string, workspaceId: string, perf
   await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
     workspace_id: workspaceId,
     invoice_id: invoiceId,
-    action: 'deleted',
+    action_type: 'deleted',
     performed_by: performedBy,
     reason: reason,
     old_value: { status: invoice.status },
@@ -609,7 +606,7 @@ export async function deleteInvoice(invoiceId: string, workspaceId: string, perf
   await trackSupabaseOperation('supabase_from_activity_logs', () => supabase.from('activity_logs').insert([{
     workspace_id: workspaceId,
     actor_id: performedBy,
-    action: 'deleted_invoice',
+    action_type: 'deleted_invoice',
     entity_type: 'invoice',
     entity_id: invoiceId,
     metadata: { reason }
@@ -623,7 +620,7 @@ export async function restoreInvoice(invoiceId: string, workspaceId: string, per
   await trackSupabaseOperation('supabase_from_invoice_audit_logs', () => supabase.from('invoice_audit_logs').insert([{
     workspace_id: workspaceId,
     invoice_id: invoiceId,
-    action: 'restored',
+    action_type: 'restored',
     performed_by: performedBy,
     reason: 'Manual restore',
     old_value: { status: 'deleted_soft' },

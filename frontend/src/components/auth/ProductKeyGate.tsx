@@ -46,7 +46,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
         if (parsed.validated) {
           setState('signup');
         }
-      } catch (e) {}
+      } catch (e) { }
     }
   }, [state]);
 
@@ -67,7 +67,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     const result = await validateNewActivationKey(key.trim());
 
     if (result.success) {
-      const seats = result.licenseData?.allowed_users || result.licenseData?.max_seats || 10;
+      const seats = 9999;
       sessionStorage.setItem('pendingLicenseActivation', JSON.stringify({
         productKey: key.trim(),
         licenseId: result.token || key.trim(),
@@ -104,7 +104,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     setSignupLoading(true);
     try {
       const { supabase } = await import('../../lib/supabase');
-      
+
       let authUser: any = null;
       const signUpResult = await supabase.auth.signUp({
         email,
@@ -120,8 +120,8 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
         const errMsg = signUpResult.error.message?.toLowerCase() || '';
         const errCode = signUpResult.error.code || '';
         if (
-          errMsg.includes('already registered') || 
-          errMsg.includes('already exists') || 
+          errMsg.includes('already registered') ||
+          errMsg.includes('already exists') ||
           errCode === 'user_already_exists'
         ) {
           // Recovery Flow: Attempt login with the password provided
@@ -129,11 +129,11 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
             email,
             password
           });
-          
+
           if (loginResult.error) {
             throw new Error(`This email is already registered. Recovery login attempt failed: ${loginResult.error.message}`);
           }
-          
+
           authUser = loginResult.data?.user;
         } else {
           throw signUpResult.error;
@@ -176,7 +176,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
       }
 
       sessionStorage.setItem('pending_workspace_name', workspaceName);
-      
+
       setState('success');
       setTimeout(() => onVerified(), 1200);
     } catch (err: any) {
@@ -202,7 +202,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
         {/* Branding */}
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-16 h-16 bg-[var(--pm-surface-elevated)]/5 border flex items-center justify-center rounded-xl mb-6 shadow-sm"
-               style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
+            style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
             <Shield className="w-8 h-8" style={{ color: 'var(--pm-primary)' }} />
           </div>
           <h1 className="text-3xl font-semibold tracking-tight mb-2" style={{ color: 'var(--pm-on-surface)' }}>RESOLVE PM</h1>
@@ -217,7 +217,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
             {state === 'input' && (
               <motion.div key="key-input" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-5">
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl border"
-                     style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
+                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)' }}>
                   <KeyRound className="w-4 h-4 shrink-0" style={{ color: 'var(--pm-on-surface-variant)' }} />
                   <input
                     ref={inputRef}

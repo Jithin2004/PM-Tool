@@ -140,7 +140,8 @@ export async function refreshOperationalPartial(
     teams: () => safeFetch(fetchWorkspaceTeams(workspaceId), []),
     attendanceRows: () => safeFetch(fetchWorkspaceAttendance(workspaceId), []),
     workspaceSettingsBlob: () => safeFetch(fetchWorkspaceSettingsBlob(workspaceId), {}),
-    serverMetrics: async () => {
+    operationalSummary: () => safeFetch(fetchOperationalSummary(workspaceId), {}),
+      serverMetrics: async () => {
       const summary = await safeFetch(fetchOperationalSummary(workspaceId), {});
       return summary?.server_metrics || {
         deliveryConfidence: 0, executionPressure: 0, dailyFatigue: 0, riskForecast: 0

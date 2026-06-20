@@ -1,6 +1,8 @@
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { logServiceFailure } from '../../utils/supabaseError';
+import { activityLogService } from '../../services/activityLogService';
 import { ActivityEvent } from '../../services/activityEventService';
-import { notificationService } from '../../services/notificationService';
+import { notificationEngine } from './notificationEngine';
 
 export const MAX_EXECUTION_DEPTH = 3;
 
@@ -306,7 +308,7 @@ export async function createAutomationRule(rule: Partial<AutomationRule>): Promi
     }
     if (data) {
       await activityLogService.appendLog({
-        workspace_id: rule.workspace_id!, action: 'automation_created',
+        workspace_id: rule.workspace_id!, action_type: 'automation_created',
         metadata: { rule_id: data.id, name: data.name, trigger_event: data.trigger_event },
       });
       return data as AutomationRule;
@@ -323,6 +325,37 @@ export async function toggleAutomationRule(ruleId: string, enabled: boolean): Pr
   } catch { return false; }
 }
 
+export async function evaluateTriggers(
+  arg1: string,
+  arg2: any,
+  arg3?: string,
+  arg4?: any
+): Promise<{ success: boolean; message: string }> {
+  let eventName = arg1;
+  let payload = arg2;
+
+  if (arg3 && typeof arg3 === 'string') {
+    eventName = arg3;
+    payload = arg4 || {};
+    payload.workspace_id = arg1;
+  }
+
+  try {
+    await automationEngine.evaluateTrigger({
+      id: crypto.randomUUID(),
+      workspace_id: payload.workspace_id || payload.workspaceId || '',
+      actor_id: 'system',
+      entity_type: 'automation',
+      entity_id: 'system',
+      action_type: eventName,
+      metadata: payload,
+      created_at: new Date().toISOString()
+    } as any);
+    return { success: true, message: 'Triggers evaluated' };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Error' };
+  }
+}
 export async function deleteAutomationRule(ruleId: string): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
   try {

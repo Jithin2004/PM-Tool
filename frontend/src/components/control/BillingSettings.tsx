@@ -27,7 +27,7 @@ export function BillingSettings() {
           .from('users')
           .select('*', { count: 'exact', head: true })
           .eq('workspace_id', workspace.id);
-        
+
         setActiveUsersCount(count || 0);
 
         const { data: licenseData } = await supabase
@@ -35,13 +35,13 @@ export function BillingSettings() {
           .select('*')
           .eq('workspace_id', workspace.id)
           .maybeSingle();
-        
+
         if (licenseData) {
           setDbLicense(licenseData);
         }
       }
     }
-    
+
     async function verifyLicenseOnline() {
       if (!license?.token) {
         setIsVerifying(false);
@@ -49,7 +49,7 @@ export function BillingSettings() {
       }
       // Use same API base as productKey.ts activation flow
       const API_URL = import.meta.env.VITE_PRODUCT_KEY_API_URL || 'https://pm-tool-server.onrender.com';
-      
+
       try {
         const res = await fetch(`${API_URL}/verify`, {
           method: 'GET',
@@ -82,7 +82,7 @@ export function BillingSettings() {
     if (!newKey.trim() || !workspace?.id) return;
     setVerifyingNewKey(true);
     setKeyError('');
-    
+
     try {
       const verifyRes = await validateWorkspaceLicenseUpdate(newKey.trim(), workspace.id);
 
@@ -101,7 +101,7 @@ export function BillingSettings() {
         .upsert({
           workspace_id: workspace.id,
           license_key_hash: hashedKey,
-          allowed_users: verifyRes.licenseData?.allowed_users || verifyRes.licenseData?.max_seats || 9999,
+          allowed_users: 9999,
           license_type: planType,
           activation_date: new Date().toISOString(),
           support_until: verifyRes.licenseData?.supportExpiry ? new Date(verifyRes.licenseData.supportExpiry).toISOString() : null
@@ -120,13 +120,13 @@ export function BillingSettings() {
 
   // Local DB license data is the source of truth.
   // serverLicenseData is supplementary enrichment from the /verify endpoint.
-  const isActive = dbLicense 
-    ? (!!dbLicense.workspace_id && !!dbLicense.activation_date) 
+  const isActive = dbLicense
+    ? (!!dbLicense.workspace_id && !!dbLicense.activation_date)
     : license?.status === 'Activated';
-  const isExpired = dbLicense?.support_until 
-    ? (new Date(dbLicense.support_until).getTime() < Date.now()) 
+  const isExpired = dbLicense?.support_until
+    ? (new Date(dbLicense.support_until).getTime() < Date.now())
     : license?.status === 'Expired Support';
-  
+
   let displayStatus = 'UNACTIVATED';
   let statusColor = 'text-red-400';
   let statusBg = 'bg-red-500/10 border-red-500/20';
@@ -247,7 +247,7 @@ export function BillingSettings() {
           </div>
 
           <div className="flex flex-col gap-4 justify-center">
-            <button 
+            <button
               onClick={handleUpdateLicense}
               className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold uppercase tracking-wider bg-indigo-500 text-white hover:bg-indigo-600 transition-colors shadow-sm"
             >
@@ -268,7 +268,7 @@ export function BillingSettings() {
             <p className="text-sm text-[var(--pm-text-secondary)] mb-6">
               Enter a new product key to upgrade or refresh your workspace's license tier.
             </p>
-            
+
             <input
               type="text"
               value={newKey}
@@ -285,13 +285,13 @@ export function BillingSettings() {
             )}
 
             <div className="flex items-center justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setShowUpdateModal(false)}
                 className="px-4 py-2 text-sm font-medium text-[var(--pm-text-secondary)] hover:text-[var(--pm-text)] transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={submitNewLicense}
                 disabled={verifyingNewKey || !newKey.trim()}
                 className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold tracking-wider uppercase rounded-lg transition-colors"

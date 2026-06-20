@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { 
-  Plus, 
-  Filter, 
-  Search, 
-  ChevronDown, 
-  LayoutGrid, 
-  List as ListIcon, 
-  GanttChart, 
-  Calendar as CalendarIcon, 
+import {
+  Plus,
+  Filter,
+  Search,
+  ChevronDown,
+  LayoutGrid,
+  List as ListIcon,
+  GanttChart,
+  Calendar as CalendarIcon,
   Layers,
   Settings2,
   AlertTriangle,
@@ -70,11 +70,11 @@ export function ExecutionSystem({
   initialView = 'board'
 }: ExecutionSystemProps) {
   const { workspace } = useWorkspace();
-  const { 
-    loading, 
-    raw: { tasks, dependencies, teams, workspaceSettingsBlob }, 
+  const {
+    loading,
+    raw: { tasks, dependencies, teams, workspaceSettingsBlob },
     taskActions: { addTask, updateTask, updateTaskStatus },
-    updateWorkspaceSettings 
+    updateWorkspaceSettings
   } = useOperationalData();
 
   const visibilityContext = useMemo(() => {
@@ -96,7 +96,7 @@ export function ExecutionSystem({
   }, [tasks, visibilityContext]);
 
   const { events: calendarEvents } = useCalendarEvents(workspace?.id);
-  
+
   const [activeView, setActiveView] = useState<ExecutionViewType>(initialView);
 
   React.useEffect(() => {
@@ -129,7 +129,7 @@ export function ExecutionSystem({
   const [filterByProject, setFilterByProject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [groupBy, setGroupBy] = useState<'status' | 'assignee' | 'priority' | 'risk'>('status');
-  
+
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -137,10 +137,10 @@ export function ExecutionSystem({
 
   const [confidenceTask, setConfidenceTask] = useState<Task | null>(null);
   const [blockerTask, setBlockerTask] = useState<Task | null>(null);
-  const [reviewTask, setReviewTask] = useState<{task: Task, action: 'completed' | 'changes_requested'} | null>(null);
+  const [reviewTask, setReviewTask] = useState<{ task: Task, action_type: 'completed' | 'changes_requested' } | null>(null);
   const [evidenceTask, setEvidenceTask] = useState<Task | null>(null);
   const [delayReasonTask, setDelayReasonTask] = useState<Task | null>(null);
-  
+
   const [columnLimits, setColumnLimits] = useState<Record<string, number>>({});
 
   const role = currentUserProfile?.role || 'viewer';
@@ -179,13 +179,13 @@ export function ExecutionSystem({
   // Execution Intelligence logic
   const executionIntel = useMemo(() => {
     const insights: any[] = [];
-    
+
     // Check for overloaded users
     users.forEach(user => {
       const userTasks = filteredTasks.filter(t => t.assignee_id === user.id && t.status !== 'done');
       const totalEstimated = userTasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
       const capacity = 40 * (user.availability_factor || 1);
-      
+
       if (totalEstimated > capacity) {
         insights.push({
           type: 'overload',
@@ -234,7 +234,7 @@ export function ExecutionSystem({
   const tasksByGroup = useMemo(() => {
     const map = new Map<string, Task[]>();
     const taskSubStates = workspaceSettingsBlob?.task_substates || {};
-    
+
     for (const t of filteredTasks) {
       let key: string = t.status;
       if (groupBy === 'status') {
@@ -246,7 +246,7 @@ export function ExecutionSystem({
       } else if (groupBy === 'risk') {
         key = t.risk || 'low';
       }
-      
+
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(t);
     }
@@ -266,8 +266,8 @@ export function ExecutionSystem({
     // Mutation Guard
     const task = tasks.find(t => t.id === taskId);
     if (!task || !canUserModifyTask(task)) {
-       notify("Access Denied: You do not have permission to modify this task.", "error");
-       return;
+      notify("Access Denied: You do not have permission to modify this task.", "error");
+      return;
     }
     if (targetStatus === 'in_progress') {
       const task = tasks.find(t => t.id === taskId);
@@ -285,10 +285,10 @@ export function ExecutionSystem({
       const task = tasks.find(t => t.id === taskId);
       if (task) {
         if (targetStatus === 'completed' && task.actual_effort_minutes && task.estimated_effort_minutes && task.actual_effort_minutes > task.estimated_effort_minutes * 1.2 && !task.delay_reason) {
-           setDelayReasonTask(task);
-           return;
+          setDelayReasonTask(task);
+          return;
         }
-        setReviewTask({ task, action: targetStatus as 'completed' | 'changes_requested' });
+        setReviewTask({ task, action_type: targetStatus as 'completed' | 'changes_requested' });
         return;
       }
     } else if (targetStatus === 'done') {
@@ -317,18 +317,18 @@ export function ExecutionSystem({
     // Mutation Guard
     const task = tasks.find(t => t.id === taskId);
     if (!task || !canUserModifyTask(task)) {
-       notify("Access Denied: You do not have permission to modify this task.", "error");
-       return;
+      notify("Access Denied: You do not have permission to modify this task.", "error");
+      return;
     }
 
     const updatedSubStates = {
       ...(workspaceSettingsBlob?.task_substates as Record<string, string> || {}),
       [taskId]: substate
     };
-    
+
     const { mapToTaskStatus } = await import('../../../core/execution/executionBrain');
     const legacyStatus = mapToTaskStatus(substate as any);
-    
+
     try {
       if (updateTask) {
         await updateTask(taskId, { status: legacyStatus });
@@ -397,7 +397,7 @@ export function ExecutionSystem({
         activeView={activeView}
         onViewChange={setActiveView}
         onAddTask={() => setIsAddingTask(true)}
-        onOpenSettings={() => {}}
+        onOpenSettings={() => { }}
         taskCount={filteredTasks.length}
         projectName={filterByProject ? projectMap.get(filterByProject)?.name : 'All Projects'}
         onSearchChange={setSearchQuery}
@@ -416,11 +416,10 @@ export function ExecutionSystem({
           </div>
           <div className="flex items-center gap-3">
             {executionIntel.map((intel, i) => (
-              <div key={i} className={`flex items-center gap-2 px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap border ${
-                intel.severity === 'high' ? 'bg-signal-critical-bg border-signal-critical/20 text-signal-critical' :
+              <div key={i} className={`flex items-center gap-2 px-2.5 py-1 rounded-md text-[11px] font-medium whitespace-nowrap border ${intel.severity === 'high' ? 'bg-signal-critical-bg border-signal-critical/20 text-signal-critical' :
                 intel.severity === 'medium' ? 'bg-signal-warning-bg border-signal-warning/20 text-signal-warning' :
-                'bg-signal-info-bg border-signal-info/20 text-signal-info'
-              }`}>
+                  'bg-signal-info-bg border-signal-info/20 text-signal-info'
+                }`}>
                 <AlertTriangle className="w-3.5 h-3.5" />
                 {intel.message}
               </div>
@@ -440,8 +439,8 @@ export function ExecutionSystem({
             onEditTask={setEditingTask}
             onTaskClick={handleTaskClick}
             density={density}
-            taskSubstates={workspaceSettingsBlob?.task_substates || {}}
-            blockers={workspaceSettingsBlob?.execution_blockers || []}
+            taskSubstates={(workspaceSettingsBlob?.task_substates as Record<string, string>) || {}}
+            blockers={(workspaceSettingsBlob?.execution_blockers as any[]) || []}
             projectId={filterByProject || undefined}
             onRefreshIntelligence={onRecalibrateAnalytics}
           />
@@ -489,7 +488,7 @@ export function ExecutionSystem({
             tasks={filteredTasks}
           />
         )}
-        
+
         {activeView === 'calendar' && (
           <CalendarView
             tasks={filteredTasks}
@@ -513,9 +512,9 @@ export function ExecutionSystem({
           onSubmit={async (confidence, discoveryNotes, estimatedEffort) => {
             if (!confidenceTask) return;
             try {
-              await updateTask(confidenceTask.id, { 
-                confidence, 
-                discovery_notes: discoveryNotes, 
+              await updateTask(confidenceTask.id, {
+                confidence,
+                discovery_notes: discoveryNotes,
                 estimated_effort_minutes: estimatedEffort,
                 first_started_at: new Date().toISOString()
               });
@@ -537,8 +536,8 @@ export function ExecutionSystem({
           onSubmit={async (blockedReason, needsHelpFrom) => {
             if (!blockerTask) return;
             try {
-              await updateTask(blockerTask.id, { 
-                blocked_reason: blockedReason, 
+              await updateTask(blockerTask.id, {
+                blocked_reason: blockedReason,
                 needs_help_from: needsHelpFrom,
                 blocked_since: new Date().toISOString()
               });
@@ -555,17 +554,17 @@ export function ExecutionSystem({
         <TaskReviewModal
           isOpen={!!reviewTask}
           task={reviewTask?.task!}
-          actionType={reviewTask?.action!}
+          actionType={reviewTask?.action_type!}
           onClose={() => setReviewTask(null)}
           onSubmit={async (notes) => {
             if (!reviewTask) return;
             try {
-              await updateTask(reviewTask.task.id, { 
+              await updateTask(reviewTask.task.id, {
                 completion_notes: notes,
-                completed_at: reviewTask.action === 'completed' ? new Date().toISOString() : undefined
+                completed_at: reviewTask.action_type === 'completed' ? new Date().toISOString() : undefined
               });
-              await updateTaskStatus(reviewTask.task.id, reviewTask.action);
-              notify(`Task status updated to ${reviewTask.action.replace('_', ' ')}.`, "success");
+              await updateTaskStatus(reviewTask.task.id, reviewTask.action_type);
+              notify(`Task status updated to ${reviewTask.action_type.replace('_', ' ')}.`, "success");
               onRecalibrateAnalytics();
             } catch (err) {
               notify("Failed to update task review status.", "error");
@@ -629,7 +628,7 @@ export function ExecutionSystem({
             onSubmit={async (evidence) => {
               try {
                 if (updateTask) {
-                  await updateTask(evidenceTask.id, { 
+                  await updateTask(evidenceTask.id, {
                     status: 'ready_for_review',
                     completion_evidence_summary: evidence.summary,
                     completion_evidence_link: evidence.link,
@@ -652,7 +651,7 @@ export function ExecutionSystem({
               try {
                 if (updateTask) {
                   await updateTask(delayReasonTask.id, { delay_reason: reason as any });
-                  setReviewTask({ task: delayReasonTask, action: 'completed' });
+                  setReviewTask({ task: delayReasonTask, action_type: 'completed' });
                 }
               } catch (error) {
                 notify('Failed to save delay reason.', 'error');
@@ -665,14 +664,14 @@ export function ExecutionSystem({
   );
 }
 
-function BoardView({ 
-  tasksByGroup, 
+function BoardView({
+  tasksByGroup,
   groupBy,
-  projectMap, 
-  userMap, 
-  hasWriteAccess, 
-  blockedByMap, 
-  onTransitionTask, 
+  projectMap,
+  userMap,
+  hasWriteAccess,
+  blockedByMap,
+  onTransitionTask,
   onEditTask,
   onTaskClick,
   density,
@@ -732,7 +731,7 @@ function BoardView({
                 </span>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto pr-1 space-y-3 scrollbar-thin">
               {colTasks.length === 0 ? (
                 <div className="h-24 border border-dashed border-border rounded-lg flex items-center justify-center text-[11px] text-text-quaternary font-medium uppercase tracking-widest">
@@ -755,11 +754,11 @@ function BoardView({
                       density={density}
                       substate={taskSubstates[task.id]}
                       blockers={blockers}
-                      
+
                     />
                   ))}
                   {colTasks.length > (columnLimits[col.id] || 50) && (
-                    <button 
+                    <button
                       onClick={() => setColumnLimits(prev => ({ ...prev, [col.id]: (prev[col.id] || 50) + 50 }))}
                       className="w-full py-2 bg-surface-3 hover:bg-surface-high border border-border rounded-lg text-xs font-semibold transition-colors mt-2"
                     >
@@ -776,14 +775,14 @@ function BoardView({
   );
 }
 
-function SprintView({ 
-  tasks, 
-  projects, 
-  userMap, 
-  hasWriteAccess, 
-  onTransitionTask, 
-  onEditTask, 
-  onTaskClick, 
+function SprintView({
+  tasks,
+  projects,
+  userMap,
+  hasWriteAccess,
+  onTransitionTask,
+  onEditTask,
+  onTaskClick,
   notify,
   taskSubstates,
   blockers,
@@ -794,7 +793,7 @@ function SprintView({
 
   // Simple Sprint view implementation
   const sprintTasks = tasks.filter((t: any) => t.sprint_id || t.status !== 'done');
-  
+
   return (
     <div className="flex flex-col gap-6 h-full overflow-y-auto pr-2 scrollbar-thin">
       {!activeSprint ? (
@@ -804,67 +803,67 @@ function SprintView({
           <p className="text-xs text-text-tertiary">Plan and launch a sprint from the backlog to track velocity and execution risks.</p>
         </div>
       ) : (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Layers className="w-5 h-5 text-accent-primary" />
-            <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Active Sprint</h3>
-          </div>
-          <div className="space-y-4">
-            <div className="flex justify-between items-end">
-              <div>
-                <p className="text-[10px] font-medium text-text-tertiary uppercase mb-1">Velocity</p>
-                <p className="text-2xl font-bold text-text-primary">24 / 32 <span className="text-sm font-medium text-text-tertiary">SP</span></p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-medium text-text-tertiary uppercase mb-1">Days Left</p>
-                <p className="text-lg font-bold text-accent-primary">4d</p>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Layers className="w-5 h-5 text-accent-primary" />
+              <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Active Sprint</h3>
             </div>
-            <div className="w-full h-2 bg-surface-3 rounded-full overflow-hidden">
-              <div className="h-full bg-accent-primary rounded-full transition-all" style={{ width: '75%' }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5 text-signal-warning" />
-            <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Execution Risks</h3>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[12px] text-text-secondary">
-              <div className="w-1.5 h-1.5 rounded-full bg-signal-critical" />
-              <span>3 Blocked items in critical path</span>
-            </div>
-            <div className="flex items-center gap-2 text-[12px] text-text-secondary">
-              <div className="w-1.5 h-1.5 rounded-full bg-signal-warning" />
-              <span>Developer workload imbalance detected</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-accent-secondary" />
-            <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Velocity Trajectory</h3>
-          </div>
-          <div className="flex items-end gap-1 h-12">
-            {[40, 65, 35, 80, 55, 90, 70].map((h, i) => (
-              <div key={i} className="flex-1 bg-accent-secondary/20 rounded-t-sm relative group">
-                <div className="absolute bottom-0 left-0 right-0 bg-accent-secondary rounded-t-sm transition-all" style={{ height: `${h}%` }} />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-surface border border-border px-1.5 py-0.5 rounded text-[8px] font-bold text-text-primary z-10 whitespace-nowrap">
-                  Sprint {i+1}: {h} SP
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-medium text-text-tertiary uppercase mb-1">Velocity</p>
+                  <p className="text-2xl font-bold text-text-primary">24 / 32 <span className="text-sm font-medium text-text-tertiary">SP</span></p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-medium text-text-tertiary uppercase mb-1">Days Left</p>
+                  <p className="text-lg font-bold text-accent-primary">4d</p>
                 </div>
               </div>
-            ))}
+              <div className="w-full h-2 bg-surface-3 rounded-full overflow-hidden">
+                <div className="h-full bg-accent-primary rounded-full transition-all" style={{ width: '75%' }} />
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between mt-2 text-[9px] font-bold text-text-quaternary uppercase tracking-widest">
-            <span>Past 7 Sprints</span>
-            <span>Avg: 62 SP</span>
+
+          <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="w-5 h-5 text-signal-warning" />
+              <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Execution Risks</h3>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-[12px] text-text-secondary">
+                <div className="w-1.5 h-1.5 rounded-full bg-signal-critical" />
+                <span>3 Blocked items in critical path</span>
+              </div>
+              <div className="flex items-center gap-2 text-[12px] text-text-secondary">
+                <div className="w-1.5 h-1.5 rounded-full bg-signal-warning" />
+                <span>Developer workload imbalance detected</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-5 h-5 text-accent-secondary" />
+              <h3 className="text-sm font-semibold text-text-primary uppercase tracking-wider">Velocity Trajectory</h3>
+            </div>
+            <div className="flex items-end gap-1 h-12">
+              {[40, 65, 35, 80, 55, 90, 70].map((h, i) => (
+                <div key={i} className="flex-1 bg-accent-secondary/20 rounded-t-sm relative group">
+                  <div className="absolute bottom-0 left-0 right-0 bg-accent-secondary rounded-t-sm transition-all" style={{ height: `${h}%` }} />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-surface border border-border px-1.5 py-0.5 rounded text-[8px] font-bold text-text-primary z-10 whitespace-nowrap">
+                    Sprint {i + 1}: {h} SP
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between mt-2 text-[9px] font-bold text-text-quaternary uppercase tracking-widest">
+              <span>Past 7 Sprints</span>
+              <span>Avg: 62 SP</span>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-10">
@@ -890,7 +889,7 @@ function SprintView({
                     assigneeProfile={task.assignee_id ? userMap.get(task.assignee_id) : null}
                     substate={taskSubstates[task.id]}
                     blockers={blockers}
-                    
+
                   />
                 ))}
               </div>
@@ -909,7 +908,7 @@ function RoadmapView({ projects, tasks }: any) {
       const pTasks = tasks.filter((t: any) => t.project_id === p.id);
       const doneTasks = pTasks.filter((t: any) => t.status === 'done');
       const progress = pTasks.length > 0 ? (doneTasks.length / pTasks.length) * 100 : 0;
-      
+
       return {
         ...p,
         taskCount: pTasks.length,
@@ -951,7 +950,7 @@ function RoadmapView({ projects, tasks }: any) {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-8 pl-13">
                 <div className="flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5 text-text-tertiary" />
@@ -976,10 +975,10 @@ function RoadmapView({ projects, tasks }: any) {
 
 function CalendarView({ tasks, events }: any) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  
+
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-  
+
   const monthName = currentDate.toLocaleString('default', { month: 'long' });
   const year = currentDate.getFullYear();
 
@@ -994,7 +993,7 @@ function CalendarView({ tasks, events }: any) {
       const dateStr = `${year}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const dayTasks = tasks.filter((t: any) => (t.deadline || t.due_date)?.startsWith(dateStr));
       const dayEvents = events.filter((e: any) => e.start_date?.startsWith(dateStr));
-      
+
       days.push({
         type: 'day',
         day: i,
@@ -1036,20 +1035,18 @@ function CalendarView({ tasks, events }: any) {
 
       <div className="flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto scrollbar-thin">
         {calendarDays.map((d: any) => (
-          <div 
-            key={d.key} 
-            className={`min-h-[120px] p-2 border-r border-b border-border-subtle group hover:bg-surface-3/30 transition-colors ${
-              d.type === 'pad' ? 'bg-bg/50' : 'bg-surface'
-            }`}
+          <div
+            key={d.key}
+            className={`min-h-[120px] p-2 border-r border-b border-border-subtle group hover:bg-surface-3/30 transition-colors ${d.type === 'pad' ? 'bg-bg/50' : 'bg-surface'
+              }`}
           >
             {d.type === 'day' && (
               <>
                 <span className="text-[11px] font-bold text-text-tertiary group-hover:text-text-primary transition-colors">{d.day}</span>
                 <div className="mt-2 space-y-1">
                   {d.events.map((e: any) => (
-                    <div key={e.id} className={`text-[9px] p-1 rounded border px-1.5 font-bold truncate ${
-                      e.event_type === 'holiday' ? 'bg-signal-critical-bg border-signal-critical/20 text-signal-critical' : 'bg-signal-warning-bg border-signal-warning/20 text-signal-warning'
-                    }`}>
+                    <div key={e.id} className={`text-[9px] p-1 rounded border px-1.5 font-bold truncate ${e.event_type === 'holiday' ? 'bg-signal-critical-bg border-signal-critical/20 text-signal-critical' : 'bg-signal-warning-bg border-signal-warning/20 text-signal-warning'
+                      }`}>
                       {e.title}
                     </div>
                   ))}
@@ -1075,7 +1072,7 @@ function AllocationView({ users, tasks }: any) {
       const totalHrs = uTasks.reduce((sum: number, t: any) => sum + (t.estimated_hours || 0), 0);
       const capacity = 40 * (u.availability_factor || 1);
       const load = (totalHrs / capacity) * 100;
-      
+
       return {
         ...u,
         totalHrs,
@@ -1120,9 +1117,9 @@ function AllocationView({ users, tasks }: any) {
               </div>
 
               <div className="w-full h-2 bg-surface-3 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full transition-all ${user.load > 100 ? 'bg-signal-critical' : user.load > 80 ? 'bg-signal-warning' : 'bg-accent-primary'}`} 
-                  style={{ width: `${Math.min(100, user.load)}%` }} 
+                <div
+                  className={`h-full transition-all ${user.load > 100 ? 'bg-signal-critical' : user.load > 80 ? 'bg-signal-warning' : 'bg-accent-primary'}`}
+                  style={{ width: `${Math.min(100, user.load)}%` }}
                 />
               </div>
 
@@ -1154,8 +1151,8 @@ function ListView({ tasks, projectMap, userMap, hasWriteAccess, onTransitionTask
           const project = projectMap.get(task.project_id);
           const assignee = task.assignee_id ? userMap.get(task.assignee_id) : null;
           return (
-            <div 
-              key={task.id} 
+            <div
+              key={task.id}
               onClick={() => onTaskClick(task)}
               className="grid grid-cols-12 gap-4 px-4 py-3 border border-border-subtle bg-surface hover:bg-surface-3 transition-colors rounded-md cursor-pointer items-center"
             >

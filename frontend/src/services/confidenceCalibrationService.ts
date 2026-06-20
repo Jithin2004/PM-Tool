@@ -54,7 +54,7 @@ export const confidenceCalibrationService = {
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       task_id: taskId,
-      action: 'prediction_recorded',
+      action_type: 'prediction_recorded',
       metadata: {
         predicted_confidence: predictedConfidence,
         prediction_error_days: predictionErrorDays,
@@ -128,7 +128,7 @@ export const confidenceCalibrationService = {
 
     await activityLogService.appendLog({
       workspace_id: workspaceId,
-      action: 'confidence_calibrated',
+      action_type: 'confidence_calibrated',
       metadata: {
         raw_confidence: rawConfidence,
         adjusted_confidence: adjustedConfidence,

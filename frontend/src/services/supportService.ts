@@ -49,7 +49,7 @@ export const supportService = {
     // Log the generation
     await activityLogService.appendLog({
       workspace_id: workspaceId,
-      action: 'support_package_generated',
+      action_type: 'support_package_generated',
       metadata: { generated_at: pkg.generatedAt, events_count: pkg.diagnostics.systemEvents.length }
     });
 

@@ -139,16 +139,11 @@ const FileCenterPage: React.FC = () => {
   const handleReportIssue = async () => {
     setIsReporting(true);
     try {
-      await issueReportService.reportIssue({
-        module_name: 'File Center',
-        error_message: errorMsg || 'Unknown upload/network failure',
-        severity: 'high',
-        browser_metadata: {
+      await issueReportService.createIssueReport({ workspaceId: workspaceId, userId: userId || 'system', module: 'File Center', severity: 'high', title: 'File Center Error', description: errorMsg || 'Unknown upload/network failure', browserMetadata: {
           userAgent: navigator.userAgent,
           url: window.location.href,
           timestamp: new Date().toISOString()
-        }
-      }, workspaceId);
+        } });
       await showAlert("Issue reported successfully to the workspace admin.", { type: "success" });
       setErrorMsg(null);
     } catch (err: any) {

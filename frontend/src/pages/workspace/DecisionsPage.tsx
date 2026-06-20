@@ -767,8 +767,8 @@ export default function DecisionsPage() {
               {/* Files panel for decision */}
               <div className="h-64 overflow-y-auto">
                 <EntityAttachments 
-                  workspaceId={workspace.id}
-                  entityType="decision" 
+                  workspaceId={(workspaceSettingsBlob?.workspace_id as string) || 'ws-default'}
+                  entityType={"decision" as any} 
                   entityId={selectedDecision.id} 
                   readOnly={!hasCapability(profile?.role, 'manage_projects')} 
                 />

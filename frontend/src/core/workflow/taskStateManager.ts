@@ -62,7 +62,7 @@ export const taskStateManager = {
         action_type: 'state_changed',
         before_value: {
           workflow_state_id: task.workflow_state_id,
-          state_name: task.workflow_state?.name || task.status,
+          state_name: (task.workflow_state as any)?.name || task.status,
           legacy_status: task.status
         },
         after_value: {
@@ -93,7 +93,7 @@ export const taskStateManager = {
         .eq('id', taskId)
         .single();
 
-      if (!task || !task.project?.workflow_template_id) return false;
+      if (!task || !(task.project as any)?.workflow_template_id) return false;
 
       // Find logical category for the legacy status
       const targetCategory = statusResolver.getLogicalStatus({ status: newLegacyStatus }).category;
@@ -102,7 +102,7 @@ export const taskStateManager = {
       const { data: states } = await supabase
         .from('workflow_states')
         .select('id, state_category')
-        .eq('workflow_template_id', task.project.workflow_template_id);
+        .eq('workflow_template_id', (task.project as any)?.workflow_template_id);
 
       if (!states || states.length === 0) return false;
 

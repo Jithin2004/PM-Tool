@@ -61,12 +61,12 @@ export const universalSearchEngine = {
 
     // Financial Data
     if (entity.entity_type === 'invoice' || entity.entity_type === 'finance' || entity.entity_type === 'ledger') {
-      return hasCapability(role, 'manage_finance') || hasCapability(role, 'manage_billing');
+      return hasCapability(role, 'manage_finance') || hasCapability(role, 'manage_finance');
     }
 
     // HR Data
     if (entity.entity_type === 'hr' || entity.entity_type === 'salary' || entity.entity_type === 'attendance') {
-      return hasCapability(role, 'manage_hr');
+      return hasCapability(role, 'manage_employees');
     }
 
     // If it's a general entity like task, epic, project, it is typically visible if they are in the workspace
@@ -88,7 +88,7 @@ export const universalSearchEngine = {
 
     // Finance/HR cares about invoices/people
     if (hasCapability(role, 'manage_finance') && entity.entity_type === 'invoice') return 1.5;
-    if (hasCapability(role, 'manage_hr') && entity.entity_type === 'user') return 1.5;
+    if (hasCapability(role, 'manage_employees') && entity.entity_type === 'user') return 1.5;
 
     return 1.0;
   }

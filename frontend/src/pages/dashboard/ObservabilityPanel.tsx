@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { searchSyncService } from '../../services/searchSyncService';
-import { IssueManagementPanel } from '../../components/admin/IssueManagementPanel';
-
 import { searchHealthService, SearchHealthStatus } from '../../services/searchHealthService';
 import { IssueManagementPanel } from '../../components/admin/IssueManagementPanel';
 

@@ -77,7 +77,7 @@ export function EndOfDayModal({ isOpen, onClose, currentUser, workspaceId, notif
       await activityLogService.appendLog({
         workspace_id: workspaceId,
         actor_id: currentUser.id,
-        action: 'end_of_day_summary',
+        action_type: 'end_of_day_summary',
         metadata: {
           completed_count: summary.completedToday.length,
           in_progress_count: summary.inProgress.length,

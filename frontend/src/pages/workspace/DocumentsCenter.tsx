@@ -43,16 +43,11 @@ export default function DocumentsCenter() {
     if (!workspace) return;
     setIsReporting(true);
     try {
-      await issueReportService.reportIssue({
-        module_name: 'Documents Center',
-        error_message: errorMsg || 'Unknown document fetch/network failure',
-        severity: 'high',
-        browser_metadata: {
+      await issueReportService.createIssueReport({ workspaceId: workspace.id, userId: 'system', module: 'Documents Center', severity: 'high', title: 'Document Error', description: errorMsg || 'Unknown document fetch/network failure', browserMetadata: {
           userAgent: navigator.userAgent,
           url: window.location.href,
           timestamp: new Date().toISOString()
-        }
-      }, workspace.id);
+        } });
       await showAlert("Issue reported successfully to the workspace admin.", { type: "success" });
       setErrorMsg(null);
     } catch (err: any) {

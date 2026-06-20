@@ -56,7 +56,7 @@ export async function exportWorkspace(wsId: string): Promise<WorkspaceExport | n
   };
 
   await activityLogService.appendLog({
-    workspace_id: wsId, action: 'workspace_exported',
+    workspace_id: wsId, action_type: 'workspace_exported',
     metadata: {
       projects: pack.projects.length, tasks: pack.tasks.length,
       users: pack.users.length, exported_at: pack.exportedAt,
@@ -177,7 +177,7 @@ export async function importWorkspace(data: unknown): Promise<{ success: boolean
     }
 
     await activityLogService.appendLog({
-      workspace_id: wsId, action: 'workspace_imported',
+      workspace_id: wsId, action_type: 'workspace_imported',
       metadata: { imported: result.imported, errors: result.errors.length },
     });
 

@@ -81,16 +81,7 @@ function MissionControlContent() {
 
   
 
-  const riskInsights = useMemo(
-    () => analyzeExecutionRisks(
-      presence.collaborators,
-      presence.signals,
-      presence.feed,
-      coordination.vitality,
-      coordination.bottlenecks,
-    ),
-    [presence.collaborators, presence.signals, presence.feed, coordination.vitality, coordination.bottlenecks],
-  );
+  
 
   const [predictions, setPredictions] = useState<any[]>([]);
   const [riskInsightsData, setRiskInsightsData] = useState<any[]>([]);
@@ -107,7 +98,7 @@ function MissionControlContent() {
   }, [workspace?.id, presence.collaborators]);
 
   const allInsights = useMemo(
-    () => [...insights, ...riskInsights].sort((a, b) => {
+    () => [...insights, ...riskInsightsData].sort((a, b) => {
       const order = { critical: 0, warning: 1, notice: 2, info: 3 };
       return (order[a.severity] ?? 4) - (order[b.severity] ?? 4);
     }),

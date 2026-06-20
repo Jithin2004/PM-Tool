@@ -15,6 +15,10 @@ export interface Document {
   owner_id: string;
   visibility: 'workspace' | 'team' | 'restricted';
   metadata?: Record<string, any>;
+  content?: string;
+  pinned?: boolean;
+  deleted_at?: string;
+  tags?: string[];
   archived_at?: string;
   archived_by?: string;
   created_at: string;
@@ -86,14 +90,14 @@ export const documentService = {
       await activityEventService.recordActivity({
         workspace_id: doc.workspace_id!,
         actor_id: userId,
-        action: 'document_created',
+        action_type: 'document_created',
         entity_type: 'document',
         entity_id: docId,
         metadata: { title: doc.title, document_type: doc.document_type }
       });
       
       // Indexing via searchService (simulated or actual integration)
-      searchIndexService.indexEntity(doc.workspace_id!, 'document', docId, doc.title!, initialContent, { document_type: doc.document_type });
+      searchIndexService.indexEntity({ workspace_id: doc.workspace_id!, entity_type: 'document', entity_id: docId, title: doc.title!, content: initialContent, metadata: { document_type: doc.document_type } });
 
       return finalDoc;
     } catch (err) {
@@ -116,7 +120,7 @@ export const documentService = {
     }
     
     if (updates.title && data) {
-      searchIndexService.indexEntity(data.workspace_id, 'document', documentId, updates.title, '', { document_type: data.document_type });
+      searchIndexService.indexEntity({ workspace_id: data.workspace_id, entity_type: 'document', entity_id: documentId, title: updates.title, content: '', metadata: { document_type: data.document_type } });
     }
     
     return data;
@@ -168,13 +172,13 @@ export const documentService = {
         await activityEventService.recordActivity({
           workspace_id: updatedDoc.workspace_id,
           actor_id: userId,
-          action: 'document_version_created',
+          action_type: 'document_version_created',
           entity_type: 'document',
           entity_id: documentId,
           metadata: { version: nextVersionNum, summary: changeSummary }
         });
         
-        searchIndexService.indexEntity(updatedDoc.workspace_id, 'document', documentId, updatedDoc.title, content, { document_type: updatedDoc.document_type });
+        searchIndexService.indexEntity({ workspace_id: updatedDoc.workspace_id, entity_type: 'document', entity_id: documentId, title: updatedDoc.title, content: content, metadata: { document_type: updatedDoc.document_type } });
       }
 
       return newVersion;

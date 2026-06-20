@@ -56,7 +56,7 @@ export async function createEpic(input: CreateEpicInput): Promise<{ id: string }
       // Legacy activity log
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
-        action: 'epic_created',
+        action_type: 'epic_created',
         metadata: { epic_id: data.id, project_id: input.project_id, name: input.name, synthetic: input.synthetic, run_id: input.runId },
       });
       // V2 Activity Event
@@ -87,7 +87,7 @@ export async function deleteEpic(epicId: string, workspaceId: string, performedB
     
     await activityLogService.appendLog({
       workspace_id: workspaceId,
-      action: 'epic_deleted',
+      action_type: 'epic_deleted',
       metadata: { epic_id: epicId, performed_by: performedBy },
     });
     return true;
@@ -107,7 +107,7 @@ export async function restoreEpic(epicId: string, workspaceId: string, performed
     
     await activityLogService.appendLog({
       workspace_id: workspaceId,
-      action: 'epic_restored',
+      action_type: 'epic_restored',
       metadata: { epic_id: epicId, performed_by: performedBy },
     });
     return true;

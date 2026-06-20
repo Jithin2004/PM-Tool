@@ -31,7 +31,7 @@ export class ReminderEngine {
           entity_type: 'system',
           entity_id: 'global',
           action_type: 'notification_event',
-          metadata: { title: 'Morning Digest', message: `${myPendingTasks.length} tasks need your attention today.`, target_user: userId, { priority: 'medium' } }
+          metadata: { title: 'Morning Digest', message: `${myPendingTasks.length} tasks need your attention today.`, target_user: userId, priority: 'medium' }
         });
     }
   }
@@ -54,9 +54,7 @@ export class ReminderEngine {
           entity_type: 'system',
           entity_id: 'global',
           action_type: 'notification_event',
-          metadata: { title: 'Deadline Approaching', message: `'${task.name}' is due in 2 hours.`, target_user: userId, 
-          { taskId: task.id, priority: 'high' }
-         }
+          metadata: { title: 'Deadline Approaching', message: `'${task.name}' is due in 2 hours.`, target_user: userId, taskId: task.id, priority: 'high' }
         });
       }
     }
@@ -80,9 +78,7 @@ export class ReminderEngine {
           entity_type: 'system',
           entity_id: 'global',
           action_type: 'notification_event',
-          metadata: { title: 'Timer Still Running', message: `You've had a timer running for over 4 hours. Did you forget to stop it?`, target_user: userId, 
-          { priority: 'medium' }
-         }
+          metadata: { title: 'Timer Still Running', message: `You've had a timer running for over 4 hours. Did you forget to stop it?`, target_user: userId, priority: 'medium' }
         });
       }
     }

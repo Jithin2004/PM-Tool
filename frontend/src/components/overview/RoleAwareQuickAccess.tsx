@@ -152,8 +152,8 @@ export function RoleAwareQuickAccess() {
   if (!profile) return null;
 
   const isOwnerOrAdmin = hasAuthority(role, 'owner') || hasAuthority(role, 'admin');
-  const isHR = hasFunction(role, 'hr') || role === 'hr';
-  const isFinance = hasFunction(role, 'finance') || role === 'finance';
+  const isHR = hasFunction(role, 'PeopleOperations') || role === 'hr';
+  const isFinance = hasFunction(role, 'Finance') || role === 'finance';
   const isPM = hasCapability(profile, 'manage_projects') && !isOwnerOrAdmin;
 
   let content: React.ReactNode;

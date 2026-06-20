@@ -37,7 +37,7 @@ export function useKeyboard(shortcuts: Shortcut[], enabled = true) {
 
 export function useGlobalShortcuts(onOpenPalette: () => void) {
   useKeyboard([
-    { key: 't', handler: () => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action: 'create-task' } })) },
-    { key: 'p', handler: () => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action: 'create-project' } })) },
+    { key: 't', handler: () => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action_type: 'create-task' } })) },
+    { key: 'p', handler: () => window.dispatchEvent(new CustomEvent('quick-action', { detail: { action_type: 'create-project' } })) },
   ]);
 }

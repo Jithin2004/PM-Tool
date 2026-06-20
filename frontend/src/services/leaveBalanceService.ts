@@ -49,7 +49,7 @@ export const leaveBalanceService = {
         actor_id: userId,
         entity_type: 'personal_leave',
         entity_id: leaveRow.id,
-        action: 'leave_requested',
+        action_type: 'leave_requested',
         metadata: { leaveType, startDate, endDate, reason }
       });
     } catch (e) {
@@ -80,7 +80,7 @@ export const leaveBalanceService = {
         actor_id: userId,
         entity_type: 'leave_balances',
         entity_id: balance.id,
-        action: 'leave_balance_changed',
+        action_type: 'leave_balance_changed',
         metadata: { type: 'consume', leaveType, days_used: days }
       });
     } catch (e) {
@@ -106,7 +106,7 @@ export const leaveBalanceService = {
         actor_id: userId,
         entity_type: 'leave_balances',
         entity_id: balance.id,
-        action: 'leave_balance_changed',
+        action_type: 'leave_balance_changed',
         metadata: { type: 'restore', leaveType, days_restored: days }
       });
     } catch (e) {

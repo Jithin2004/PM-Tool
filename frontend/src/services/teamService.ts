@@ -25,7 +25,7 @@ export async function createTeam(input: CreateTeamInput): Promise<{ id: string }
     if (data) {
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
-        action: 'team_created',
+        action_type: 'team_created',
         metadata: { team_id: data.id, name: input.name, synthetic: input.synthetic, run_id: input.runId },
       });
       return data;
