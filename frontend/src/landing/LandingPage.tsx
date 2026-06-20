@@ -213,20 +213,73 @@ export function LandingPage() {
                 <li className="flex items-center gap-2 text-sm text-zinc-300"><CheckCircle2 className="w-4 h-4 text-purple-400" /> Progress tracking</li>
               </ul>
             </div>
-            <div className="glass-panel p-2 rounded-xl">
-              <div className="bg-[#131620] rounded-lg border border-white/5 p-6 h-64 flex flex-col relative overflow-hidden">
+            <div className="glass-panel p-2 rounded-xl overflow-hidden hidden md:block">
+              <div className="bg-[#131620] rounded-lg border border-white/5 p-4 h-72 flex flex-col relative overflow-hidden">
                  <div className="flex gap-4 h-full">
-                   <div className="flex-1 bg-white/5 rounded p-3">
-                     <div className="h-3 w-16 bg-white/10 rounded mb-4"></div>
-                     <div className="h-16 w-full bg-white/5 rounded border border-white/5 mb-2"></div>
-                     <div className="h-16 w-full bg-white/5 rounded border border-white/5"></div>
+                   {/* Column 1: Planning */}
+                   <div className="flex-1 bg-[#0f111a]/80 rounded-lg p-3 border border-white/5">
+                     <div className="flex items-center justify-between mb-4">
+                       <span className="text-xs font-medium text-zinc-400">Planning <span className="ml-1 text-zinc-600">2</span></span>
+                       <span className="w-4 h-1 bg-white/10 rounded-full"></span>
+                     </div>
+                     <div className="w-full bg-[#1c1f29] rounded-lg border border-white/5 mb-3 p-3 shadow-sm shadow-black/20">
+                       <div className="text-xs text-white mb-2 font-medium">Homepage redesign</div>
+                       <div className="flex items-center justify-between mt-3">
+                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">P2</span>
+                         <div className="flex -space-x-1">
+                           <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border border-[#1c1f29] text-[8px] flex items-center justify-center font-bold text-white">AM</div>
+                         </div>
+                       </div>
+                     </div>
+                     <div className="w-full bg-[#1c1f29] rounded-lg border border-white/5 p-3 shadow-sm shadow-black/20">
+                       <div className="text-xs text-white mb-2 font-medium">Q3 launch checklist</div>
+                       <div className="flex items-center justify-between mt-3">
+                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">P1</span>
+                         <div className="flex -space-x-1">
+                           <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 border border-[#1c1f29] text-[8px] flex items-center justify-center font-bold text-white">DT</div>
+                         </div>
+                       </div>
+                     </div>
                    </div>
-                   <div className="flex-1 bg-white/5 rounded p-3">
-                     <div className="h-3 w-20 bg-white/10 rounded mb-4"></div>
-                     <div className="h-16 w-full bg-white/5 rounded border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)] mb-2"></div>
+
+                   {/* Column 2: In Progress */}
+                   <div className="flex-1 bg-[#0f111a]/80 rounded-lg p-3 border border-white/5 relative">
+                     <div className="flex items-center justify-between mb-4">
+                       <span className="text-xs font-medium text-zinc-400">In Progress <span className="ml-1 text-zinc-600">1</span></span>
+                       <span className="w-4 h-1 bg-white/10 rounded-full"></span>
+                     </div>
+                     <div className="w-full bg-[#1c1f29] rounded-lg border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)] p-3 relative overflow-hidden">
+                       <div className="absolute top-0 left-0 w-full h-0.5 bg-purple-500/50"></div>
+                       <div className="text-xs text-white mb-2 font-medium">Finance dashboard update</div>
+                       <div className="flex items-center gap-2 mb-3">
+                         <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-purple-500/70 w-2/3"></div></div>
+                         <span className="text-[9px] text-zinc-500">66%</span>
+                       </div>
+                       <div className="flex items-center justify-between mt-3">
+                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400">P0</span>
+                         <div className="flex -space-x-1">
+                           <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-pink-500 to-rose-500 border border-[#1c1f29] text-[8px] flex items-center justify-center font-bold text-white">MI</div>
+                           <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 border border-[#1c1f29] text-[8px] flex items-center justify-center font-bold text-white">AM</div>
+                         </div>
+                       </div>
+                     </div>
                    </div>
-                   <div className="flex-1 bg-white/5 rounded p-3 hidden sm:block">
-                     <div className="h-3 w-12 bg-white/10 rounded mb-4"></div>
+
+                   {/* Column 3: Review */}
+                   <div className="flex-1 bg-[#0f111a]/80 rounded-lg p-3 border border-white/5 hidden sm:block">
+                     <div className="flex items-center justify-between mb-4">
+                       <span className="text-xs font-medium text-zinc-400">Review <span className="ml-1 text-zinc-600">1</span></span>
+                       <span className="w-4 h-1 bg-white/10 rounded-full"></span>
+                     </div>
+                     <div className="w-full bg-[#1c1f29] opacity-70 hover:opacity-100 transition-opacity rounded-lg border border-white/5 p-3 shadow-sm shadow-black/20">
+                       <div className="text-xs text-white mb-2 font-medium">Client feedback review</div>
+                       <div className="flex items-center justify-between mt-3">
+                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">P2</span>
+                         <div className="flex -space-x-1">
+                           <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-500 border border-[#1c1f29] text-[8px] flex items-center justify-center font-bold text-white">SR</div>
+                         </div>
+                       </div>
+                     </div>
                    </div>
                  </div>
               </div>
@@ -294,22 +347,51 @@ export function LandingPage() {
                 <span className="text-white font-medium">Team Roster</span>
                 <span className="text-xs bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded">12 Active</span>
               </div>
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-white/10"></div>
-                      <div>
-                        <div className="text-white">Team Member {i}</div>
-                        <div className="text-xs text-zinc-500">Design Dept</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-zinc-300">Available</div>
-                      <div className="text-xs text-zinc-500">80% capacity</div>
+              <div className="space-y-5">
+                {/* Team Member 1 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-inner shadow-white/20">AM</div>
+                    <div>
+                      <div className="text-white font-medium">Aarav Menon</div>
+                      <div className="text-xs text-zinc-500">Product Lead</div>
                     </div>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <div className="text-emerald-400 text-xs flex items-center justify-end gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Available</div>
+                    <div className="text-[11px] text-zinc-500 mt-0.5">85% capacity</div>
+                  </div>
+                </div>
+
+                {/* Team Member 2 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold text-xs shadow-inner shadow-white/20">MI</div>
+                    <div>
+                      <div className="text-white font-medium">Maya Iyer</div>
+                      <div className="text-xs text-zinc-500">Designer</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-amber-400 text-xs flex items-center justify-end gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>In Meeting</div>
+                    <div className="text-[11px] text-zinc-500 mt-0.5">100% capacity</div>
+                  </div>
+                </div>
+
+                {/* Team Member 3 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs shadow-inner shadow-white/20">DT</div>
+                    <div>
+                      <div className="text-white font-medium">Daniel Thomas</div>
+                      <div className="text-xs text-zinc-500">Engineer</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-emerald-400 text-xs flex items-center justify-end gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Available</div>
+                    <div className="text-[11px] text-zinc-500 mt-0.5">60% capacity</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
