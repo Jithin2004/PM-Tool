@@ -33,7 +33,7 @@ import {
   ThumbsUp,
   X
 } from 'lucide-react';
-import { FilePanel } from '../../components/common/FilePanel';
+import { EntityAttachments } from '../../components/files/EntityAttachments';
 import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 import { CheckCircle2, FolderGit2 } from 'lucide-react';
 
@@ -765,12 +765,12 @@ export default function DecisionsPage() {
               </div>
 
               {/* Files panel for decision */}
-              <div className="mt-2">
-                <FilePanel 
-                  entityType="decision"
-                  entityId={selectedDecision.id}
-                  currentUserId={userId}
-                  canEdit={canCoordinate}
+              <div className="h-64 overflow-y-auto">
+                <EntityAttachments 
+                  workspaceId={workspace.id}
+                  entityType="decision" 
+                  entityId={selectedDecision.id} 
+                  readOnly={!hasCapability(profile?.role, 'manage_projects')} 
                 />
               </div>
             </div>

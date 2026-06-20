@@ -65,42 +65,52 @@ export function ProjectEffortSummary({ projectId }: { projectId: string }) {
     loadData();
   }, [workspace?.id, projectId]);
 
-  if (loading) return <div className="p-8 text-center text-xs text-text-tertiary animate-pulse">Loading Effort Data...</div>;
-
   const totalMins = sessions.reduce((acc, s) => acc + (s.duration_minutes || 0), 0);
   const totalHours = Math.round((totalMins / 60) * 10) / 10;
   const estimatedHours = tasks.reduce((acc, t) => acc + (t.estimated_hours || 0), 0);
 
-  // Delivery Insights calculation
-  let totalMinDays = 0;
-  let totalMaxDays = 0;
-  let avgConfidence = 0;
-  const allRisks = new Set<string>();
-  const allExplanations = new Set<string>();
+  const [totalMinDays, setTotalMinDays] = useState(0);
+  const [totalMaxDays, setTotalMaxDays] = useState(0);
+  const [allRisks, setAllRisks] = useState<string[]>([]);
+  const [allExplanations, setAllExplanations] = useState<string[]>([]);
+  const [predictionsLoading, setPredictionsLoading] = useState(false);
 
   const activeTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'done');
-  
   const mappedLeaves = leaves.map(l => ({ ...l, event_type: 'leave' }));
   const mappedHolidays = holidays.map(h => ({ ...h, event_type: 'holiday' }));
 
-  if (activeTasks.length > 0) {
-    activeTasks.forEach(t => {
-      const pred = predictionEngine.predictCompletionRange(t, { insights: [] }, mappedLeaves, mappedHolidays);
-      totalMinDays += pred.minDays;
-      totalMaxDays += pred.maxDays;
-      avgConfidence += pred.confidenceScore;
-      pred.riskFactors.forEach(r => allRisks.add(r));
-      // Extract main reason part for brevity
-      if (pred.explanation.includes('Because: ')) {
-        const parts = pred.explanation.split('Because: ')[1].split(', ');
-        parts.forEach(p => allExplanations.add(p));
-      }
-    });
-    avgConfidence = Math.round(avgConfidence / activeTasks.length);
-  }
+  useEffect(() => {
+    async function loadPredictions() {
+      if (!workspace?.id || activeTasks.length === 0) return;
+      setPredictionsLoading(true);
+      let sumMin = 0;
+      let sumMax = 0;
+      const risks = new Set<string>();
+      const expls = new Set<string>();
 
-  const confidenceLabel = avgConfidence > 75 ? 'High' : avgConfidence > 50 ? 'Medium' : 'Low';
-  const confidenceColor = avgConfidence > 75 ? 'text-emerald-400' : avgConfidence > 50 ? 'text-amber-400' : 'text-red-400';
+      const promises = activeTasks.map(t => predictionEngine.predictCompletionRange(workspace.id, t, mappedLeaves, mappedHolidays));
+      const results = await Promise.all(promises);
+
+      results.forEach(pred => {
+        sumMin += pred.minDays;
+        sumMax += pred.maxDays;
+        pred.riskFactors.forEach(r => risks.add(r));
+        if (pred.explanation.includes('Because: ')) {
+          const parts = pred.explanation.split('Because: ')[1].split(', ');
+          parts.forEach(p => expls.add(p));
+        }
+      });
+
+      setTotalMinDays(sumMin);
+      setTotalMaxDays(sumMax);
+      setAllRisks(Array.from(risks));
+      setAllExplanations(Array.from(expls));
+      setPredictionsLoading(false);
+    }
+    loadPredictions();
+  }, [tasks, workspace?.id]);
+
+  if (loading) return <div className="p-8 text-center text-xs text-text-tertiary animate-pulse">Loading Effort Data...</div>;
 
   return (
     <div className="p-4 bg-surface-2 rounded-xl border border-border mt-6">
@@ -140,23 +150,18 @@ export function ProjectEffortSummary({ projectId }: { projectId: string }) {
             <div className="bg-surface p-4 rounded-lg border border-border">
               <p className="text-xs font-medium text-text-tertiary mb-1">Estimated Completion Range (Active Work)</p>
               <p className="text-xl font-bold text-text-primary">{totalMinDays.toFixed(1)} - {totalMaxDays.toFixed(1)} <span className="text-xs font-medium text-text-secondary">days</span></p>
-              
-              <div className="mt-3 flex items-center gap-2">
-                <span className="text-xs text-text-secondary">Confidence:</span>
-                <span className={`text-xs font-bold uppercase tracking-wide ${confidenceColor}`}>{confidenceLabel}</span>
-              </div>
             </div>
 
             <div className="bg-surface p-4 rounded-lg border border-border">
               <p className="text-xs font-medium text-text-tertiary mb-2">Why?</p>
               <ul className="space-y-1">
-                {Array.from(allExplanations).slice(0, 4).map((expl, i) => (
+                {allExplanations.slice(0, 4).map((expl, i) => (
                   <li key={i} className="text-[11px] text-text-secondary flex items-start gap-1.5">
                     <span className="text-purple-400 mt-0.5">•</span>
                     {expl}
                   </li>
                 ))}
-                {allExplanations.size === 0 && <li className="text-[11px] text-text-secondary">Standard estimates applying.</li>}
+                {allExplanations.length === 0 && <li className="text-[11px] text-text-secondary">Standard estimates applying.</li>}
               </ul>
             </div>
           </div>

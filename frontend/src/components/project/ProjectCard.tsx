@@ -189,9 +189,9 @@ export function ProjectCard({
             </span>
           </div>
           
-          <button className="flex items-center gap-1 text-[10px] uppercase font-medium text-[var(--text-secondary)] group-hover:text-purple-400 transition-all font-mono">
-            Forecast <ChevronRight className="w-3 h-3 transform group-hover:translate-x-0.5 transition-transform" />
-          </button>
+          <div className="text-[10px] uppercase font-bold tracking-widest text-[var(--pm-primary)] group-hover:text-indigo-400 flex items-center gap-1 transition-colors">
+            Open <ChevronRight className="w-3 h-3 transform group-hover:translate-x-0.5 transition-transform" />
+          </div>
         </div>
  
       </div>

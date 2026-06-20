@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
+import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
 import { activityLogService } from '../../services/activityLogService';
-import { sendNotification } from '../../services/notificationService';
+import { activityEventService } from '../../services/activityEventService';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export function DocumentCreationModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
   const { workspace } = useWorkspace();
   const { projects, notify } = useDashboard();
+  const { profile } = useAuth();
   const [requirements, setRequirements] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
@@ -79,15 +81,21 @@ export function DocumentCreationModal({ onClose, onSuccess }: { onClose: () => v
           const { data: teamMembers } = await supabase.from('team_members').select('user_id').eq('team_id', project.team_id);
           if (teamMembers) {
             for (const member of teamMembers) {
-              if (member.user_id !== userResp.user?.id) {
-                await sendNotification(
-                  workspace.id,
-                  'system',
-                  `New Document in ${project.name}`,
-                  `A new ${formData.type} document "${doc.title}" was added.`,
-                  member.user_id,
-                  { type: 'document_added', entity_id: doc.id }
-                );
+              if (member.user_id !== profile?.id) {
+                await activityEventService.recordActivity({
+                  workspace_id: workspace.id,
+                  actor_id: 'system',
+                  entity_type: 'system',
+                  entity_id: 'global',
+                  action_type: 'notification_event',
+                  metadata: { 
+                    title: `New Document in ${project.name}`, 
+                    message: `A new ${formData.type} document "${doc.title}" was added.`, 
+                    target_user: member.user_id,
+                    type: 'document_added', 
+                    entity_id: doc.id 
+                  }
+                });
               }
             }
           }

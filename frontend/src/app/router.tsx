@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
+import { ModuleErrorBoundary } from '../components/error/ModuleErrorBoundary';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { useOperationalData } from '../context/OperationalDataContext';
@@ -47,8 +48,8 @@ const withRetry = (componentImport: () => Promise<any>) => {
   });
 };
 
-import { WorkspaceSetupWizard } from '../pages/onboarding/WorkspaceSetupWizard';
-import { AcceptInvitePage } from '../pages/onboarding/AcceptInvitePage';
+const WorkspaceSetupWizard = withRetry(() => import('../pages/onboarding/WorkspaceSetupWizard').then(m => ({ default: m.WorkspaceSetupWizard })));
+const AcceptInvitePage = withRetry(() => import('../pages/onboarding/AcceptInvitePage').then(m => ({ default: m.AcceptInvitePage })));
 import { LandingPage } from '../landing/LandingPage';
 import { PrivacyPage } from '../landing/PrivacyPage';
 import { TermsPage } from '../landing/TermsPage';
@@ -57,51 +58,57 @@ import { SecurityPage } from '../landing/SecurityPage';
 
 import { DailyCommandCenter } from '../components/overview/DailyCommandCenter';
 
-import { AdminPanel } from '../pages/dashboard/AdminPanel';
-import { LogisticsPanel } from '../pages/dashboard/LogisticsPanel';
-import ProjectsPage from '../pages/workspace/ProjectsPage';
-import PortfolioPage from '../pages/workspace/PortfolioPage';
-import KnowledgePage from '../pages/workspace/KnowledgePage';
-import DecisionsPage from '../pages/workspace/DecisionsPage';
-import MeetingsPage from '../pages/workspace/MeetingsPage';
-import RequirementsPage from '../pages/workspace/RequirementsPage';
-import DocumentsPage from '../pages/workspace/DocumentsPage';
-import ApprovalsPage from '../pages/workspace/ApprovalsPage';
+const AdminPanel = withRetry(() => import('../pages/dashboard/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const LogisticsPanel = withRetry(() => import('../pages/dashboard/LogisticsPanel').then(m => ({ default: m.LogisticsPanel })));
+const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
+const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage'));
+const KnowledgePage = withRetry(() => import('../pages/workspace/KnowledgePage'));
+const DecisionsPage = withRetry(() => import('../pages/workspace/DecisionsPage'));
+const MeetingsPage = withRetry(() => import('../pages/workspace/MeetingsPage'));
+const RequirementsPage = withRetry(() => import('../pages/workspace/RequirementsPage'));
+const DocumentsCenter = withRetry(() => import('../pages/workspace/DocumentsCenter'));
+const ApprovalsPage = withRetry(() => import('../pages/workspace/ApprovalsPage'));
+const AutomationCenter = withRetry(() => import('../pages/workspace/AutomationCenter'));
+const FileCenterPage = withRetry(() => import('../pages/workspace/FileCenter'));
 import { EmployeeStartCenter } from '../components/onboarding/EmployeeStartCenter';
 
 
-import { ProductAdoptionDashboard } from '../pages/workspace/ProductAdoptionDashboard';
-import ReportsCenter from '../pages/workspace/ReportsCenter';
+const ProductAdoptionDashboard = withRetry(() => import('../pages/workspace/ProductAdoptionDashboard').then(m => ({ default: m.ProductAdoptionDashboard })));
+const ReportsCenter = withRetry(() => import('../pages/workspace/ReportsCenter'));
 
-import BoardPage from '../pages/execution/BoardPage';
-import TimelinePage from '../pages/execution/TimelinePage';
-import GanttPage from '../pages/execution/GanttPage';
-import SprintPage from '../pages/execution/SprintPage';
+const BoardPage = withRetry(() => import('../pages/execution/BoardPage'));
+const TimelinePage = withRetry(() => import('../pages/execution/TimelinePage'));
+const GanttPage = withRetry(() => import('../pages/execution/GanttPage'));
+const SprintPage = withRetry(() => import('../pages/execution/SprintPage'));
 
-import TeamsPage from '../pages/resources/TeamsPage';
-import CapacityPage from '../pages/resources/CapacityPage';
-import WorkLogsPage from '../pages/resources/WorkLogsPage';
-import FinancePage from '../pages/resources/FinancePage';
+const TeamsPage = withRetry(() => import('../pages/resources/TeamsPage'));
+const CapacityPage = withRetry(() => import('../pages/resources/CapacityPage'));
+const WorkLogsPage = withRetry(() => import('../pages/resources/WorkLogsPage'));
+const FinancePage = withRetry(() => import('../pages/resources/FinancePage'));
+const EmployeeDashboard = withRetry(() => import('../pages/resources/EmployeeDashboard'));
+const FinanceCommandCenter = withRetry(() => import('../pages/resources/FinanceCommandCenter'));
+const NotificationInbox = withRetry(() => import('../pages/workspace/NotificationInbox'));
 
-import AnalyticsPage from '../pages/control/AnalyticsPage';
-import AuditPage from '../pages/control/AuditPage';
-import DocumentTemplatesPage from '../pages/control/DocumentTemplatesPage';
-import { ObservabilityPanel } from '../pages/dashboard/ObservabilityPanel';
-import SettingsPage from '../pages/control/SettingsPage';
+const AnalyticsPage = withRetry(() => import('../pages/control/AnalyticsPage'));
+const AuditPage = withRetry(() => import('../pages/control/AuditPage'));
+const DocumentTemplatesPage = withRetry(() => import('../pages/control/DocumentTemplatesPage'));
+const ObservabilityPanel = withRetry(() => import('../pages/dashboard/ObservabilityPanel').then(m => ({ default: m.ObservabilityPanel })));
+const SettingsPage = withRetry(() => import('../pages/control/SettingsPage'));
 
-import DocumentView from '../pages/dashboard/DocumentView';
-import AutomationsPanel from '../pages/dashboard/AutomationsPanel';
-import ConnectionsPanel from '../pages/dashboard/ConnectionsPanel';
-import NotificationSettings from '../pages/dashboard/NotificationSettings';
-import ModeSettings from '../pages/dashboard/ModeSettings';
-import MissionControlPage from '../pages/mission-control/MissionControlPage';
+const DocumentView = withRetry(() => import('../pages/dashboard/DocumentView'));
+const AutomationsPanel = withRetry(() => import('../pages/dashboard/AutomationsPanel'));
+const ConnectionsPanel = withRetry(() => import('../pages/dashboard/ConnectionsPanel'));
+const NotificationSettings = withRetry(() => import('../pages/dashboard/NotificationSettings'));
+const ModeSettings = withRetry(() => import('../pages/dashboard/ModeSettings'));
+const MissionControlPage = withRetry(() => import('../pages/mission-control/MissionControlPage'));
+const IntegrationCenter = withRetry(() => import('../pages/workspace/IntegrationCenter'));
 
-import ExecutionSetupPage from '../pages/setup/ExecutionSetupPage';
-import BacklogPage from '../pages/backlog/BacklogPage';
-import ProjectBoardPage from '../pages/board/ProjectBoardPage';
-import ProjectSprintPage from '../pages/sprints/ProjectSprintPage';
-import ProjectTimelinePage from '../pages/timeline/ProjectTimelinePage';
-import { SharedProjectDashboard } from '../pages/shared/SharedProjectDashboard';
+const ExecutionSetupPage = withRetry(() => import('../pages/setup/ExecutionSetupPage'));
+const BacklogView = withRetry(() => import('../pages/dashboard/project/BacklogView').then(m => ({ default: m.BacklogView })));
+const ProjectBoardPage = withRetry(() => import('../pages/board/ProjectBoardPage'));
+const SprintView = withRetry(() => import('../pages/dashboard/project/SprintView').then(m => ({ default: m.SprintView })));
+const ProjectTimelinePage = withRetry(() => import('../pages/timeline/ProjectTimelinePage'));
+const SharedProjectDashboard = withRetry(() => import('../pages/shared/SharedProjectDashboard').then(m => ({ default: m.SharedProjectDashboard })));
 
 const DEFAULT_AUTH_REDIRECT = '/overview';
 
@@ -186,7 +193,9 @@ function guardRoute(role: UserRole | undefined, path: string): boolean {
 function RouteShell({ children }: { children: React.ReactNode }) {
   return (
     <DashboardLayout>
-      {children}
+      <Suspense fallback={<RouteFallback />}>
+        {children}
+      </Suspense>
     </DashboardLayout>
   );
 }
@@ -441,13 +450,22 @@ export function ResolveRouter() {
 
     if (pathname === '/workspace/reports') {
       if (!guardRoute(role, '/workspace/reports')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><ReportsCenter /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="ReportsCenter"><ReportsCenter /></ModuleErrorBoundary></RouteShell>;
+    }
+    if (pathname === '/workspace/employee') {
+      return <RouteShell><ModuleErrorBoundary module="EmployeeDashboard"><EmployeeDashboard /></ModuleErrorBoundary></RouteShell>;
+    }
+    if (pathname === '/workspace/finance/command-center') {
+      return <RouteShell><ModuleErrorBoundary module="FinanceCommandCenter"><FinanceCommandCenter /></ModuleErrorBoundary></RouteShell>;
+    }
+    if (pathname === '/workspace/notifications') {
+      return <RouteShell><NotificationInbox /></RouteShell>;
     }
     if (pathname === '/workspace/knowledge') {
-      return <RouteShell><KnowledgePage /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="KnowledgePage"><KnowledgePage /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname.startsWith('/workspace/knowledge/')) {
-      return <RouteShell><DocumentView /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="DocumentView"><DocumentView /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/workspace/decisions') {
       if (!guardRoute(role, '/workspace/decisions')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -459,11 +477,11 @@ export function ResolveRouter() {
     }
     if (pathname === '/workspace/requirements') {
       if (!guardRoute(role, '/workspace/requirements')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><RequirementsPage /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="RequirementsPage"><RequirementsPage /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/workspace/documents') {
       if (!guardRoute(role, '/workspace/documents')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><DocumentsPage /></RouteShell>;
+      return <RouteShell><DocumentsCenter /></RouteShell>;
     }
     if (pathname === '/workspace/approvals') {
       if (!guardRoute(role, '/workspace/approvals')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -472,6 +490,18 @@ export function ResolveRouter() {
     if (pathname === '/workspace/onboarding') {
       if (!guardRoute(role, '/workspace/onboarding')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><EmployeeStartCenter /></RouteShell>;
+    }
+    if (pathname === '/workspace/automation') {
+      if (!guardRoute(role, '/workspace/automation')) return <RouteShell><AccessRestricted /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="AutomationCenter"><AutomationCenter /></ModuleErrorBoundary></RouteShell>;
+    }
+    if (pathname === '/workspace/files') {
+      if (!guardRoute(role, '/workspace/files')) return <RouteShell><AccessRestricted /></RouteShell>;
+      return <RouteShell><FileCenterPage /></RouteShell>;
+    }
+    if (pathname === '/workspace/integrations') {
+      if (!guardRoute(role, '/workspace/integrations')) return <RouteShell><AccessRestricted /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="IntegrationCenter"><IntegrationCenter /></ModuleErrorBoundary></RouteShell>;
     }
 
     // ── EXECUTION ──
@@ -482,7 +512,7 @@ export function ResolveRouter() {
     }
     if (pathname === '/execution/timeline') {
       if (!guardRoute(role, '/execution/timeline')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><TimelinePage /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="TimelinePage"><TimelinePage /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/execution/gantt') {
       if (!guardRoute(role, '/execution/gantt')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -501,7 +531,7 @@ export function ResolveRouter() {
     }
     if (pathname === '/resources/teams' || pathname === '/resources/capacity' || pathname === '/resources/teams/departments' || pathname === '/resources/teams/skills') {
       if (!guardRoute(role, '/resources/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><TeamsPage /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="TeamsPage"><TeamsPage /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/resources/work-logs') {
       if (!guardRoute(role, '/resources/work-logs')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -509,7 +539,7 @@ export function ResolveRouter() {
     }
     if (pathname === '/resources/finance') {
       if (!guardRoute(role, '/resources/finance')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><FinancePage /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="FinancePage"><FinancePage /></ModuleErrorBoundary></RouteShell>;
     }
 
     // ── CONTROL ──
@@ -520,7 +550,7 @@ export function ResolveRouter() {
     }
     if (pathname === '/control/analytics') {
       if (!guardRoute(role, '/control/analytics')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><AnalyticsPage /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="AnalyticsPage"><AnalyticsPage /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/control/audit') {
       if (!guardRoute(role, '/control/audit')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -536,7 +566,7 @@ export function ResolveRouter() {
     }
     if (pathname === '/control/automations' || pathname.startsWith('/control/automations/')) {
       if (!guardRoute(role, '/control/automations')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><AutomationsPanel /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="AutomationsPanel"><AutomationsPanel /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/control/settings') {
       if (!guardRoute(role, '/control/settings')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -569,16 +599,16 @@ export function ResolveRouter() {
         return <RouteShell><ExecutionSetupPage /></RouteShell>;
       }
       if (subRoute === 'backlog') {
-        return <RouteShell><BacklogPage /></RouteShell>;
+        return <RouteShell><BacklogView /></RouteShell>;
       }
       if (subRoute === 'board') {
         return <RouteShell><ProjectBoardPage /></RouteShell>;
       }
       if (subRoute === 'sprints') {
-        return <RouteShell><ProjectSprintPage /></RouteShell>;
+        return <RouteShell><SprintView /></RouteShell>;
       }
       if (subRoute === 'timeline') {
-        return <RouteShell><ProjectTimelinePage /></RouteShell>;
+        return <RouteShell><ModuleErrorBoundary module="ProjectTimelinePage"><ProjectTimelinePage /></ModuleErrorBoundary></RouteShell>;
       }
 
       return <Redirect to={`/projects/${projectRoute.projectId}/board`} />;

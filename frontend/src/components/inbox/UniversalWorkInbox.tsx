@@ -5,7 +5,7 @@ import { useOperationalData } from '../../context/OperationalDataContext';
 import { generateWorkInbox, WorkInboxItem } from '../../core/execution/WorkInboxEngine';
 import { Inbox, AlertTriangle, CheckCircle2, Clock, AtSign, ArrowRight, ShieldAlert, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { fetchNotifications } from '../../services/notificationService';
+
 import type { Notification } from '../../types';
 import { generatePriorityExplanation } from '../../core/intelligence/PriorityExplanationEngine';
 import { PriorityExplanationBadge } from '../ui/PriorityExplanationBadge';

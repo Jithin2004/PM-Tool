@@ -287,10 +287,11 @@ async function fetchAvailability(
     const { data, error } = await supabase
       .from('personal_leave')
       .select(`
-        id, user_id, leave_type, start_date, end_date, availability_factor,
+        id, user_id, leave_type, start_date, end_date, availability_factor, status,
         users!inner ( workspace_id, full_name, email )
       `)
       .eq('users.workspace_id', workspaceId)
+      .or(`status.eq.approved,status.is.null`)
       .or(`and(start_date.lte.${endDate},end_date.gte.${startDate})`)
       .limit(100);
 

@@ -5,7 +5,7 @@ import {
   AlertTriangle, Calendar, Clock, BookOpen, ListChecks, BarChart3, GitBranch, CheckCircle2,
   LayoutList, Layers, FileText
 } from 'lucide-react';
-import { FilePanel } from '../common/FilePanel';
+import { EntityAttachments } from '../files/EntityAttachments';
 import { PremiumEmptyState } from '../common/PremiumEmptyState';
 import type { Sprint, Task, User, Epic, Project, CalendarEvent } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -601,12 +601,14 @@ export function SprintBoard({
           <div className="bg-surface-3 border border-border-subtle rounded-sm p-4">
             <h3 className="text-[10px] font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Sprint Files</h3>
             {activeSprintId ? (
-              <FilePanel 
-                entityType="sprint"
-                entityId={activeSprintId}
-                currentUserId={currentUserProfile?.id || ''}
-                canEdit={hasWriteAccess}
-              />
+              <div className="h-64 overflow-y-auto">
+                <EntityAttachments 
+                  workspaceId={workspace.id}
+                  entityType="sprint" 
+                  entityId={activeSprintId} 
+                  readOnly={!hasAuthority(profile, 'manager')} 
+                />
+              </div>
             ) : (
               <div className="py-12 text-center text-text-quaternary font-mono text-[9px] uppercase">Please select a sprint to manage files</div>
             )}

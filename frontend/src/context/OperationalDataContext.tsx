@@ -19,11 +19,8 @@ import type { OperationalDerivedState, OperationalRawState } from '../core/opera
 import { compileCoherentPlatformState, GovernanceCache } from '../core/execution/governanceEngine';
 import { refreshOperationalSnapshot, refreshOperationalPartial, refreshOperationalCritical, refreshOperationalSecondary } from '../services/operationalSyncService';
 import { saveLogisticsData } from '../services/logisticsService';
-import {
-  loadWorkspaceNotifications,
-  subscribeToWorkspaceNotifications,
-} from '../services/realtimeNotificationService';
-import { markAsRead } from '../services/notificationService';
+import { notificationEngine } from '../core/engines/notificationEngine';
+
 import type { Project, Profile, Team, UserRole, Notification } from '../types';
 
 interface OperationalDataContextValue {
@@ -212,14 +209,15 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 
   const fetchNotifications = useCallback(async () => {
     if (!workspace?.id) return;
-    const data = await loadWorkspaceNotifications(workspace.id, user?.id);
+    const data = await notificationEngine.loadWorkspaceNotifications(workspace.id, user?.id);
     setDbNotifications(data);
   }, [workspace?.id, user?.id]);
 
   const markNotificationRead = useCallback(
     async (notificationId: string) => {
-      if (!workspace?.id) return;
-      const success = await markAsRead(notificationId, workspace.id);
+      if (!workspace?.id || !user?.id) return;
+      await notificationEngine.markRead(notificationId, user.id);
+      const success = true; // DB handles it
       if (success) {
         setDbNotifications(prev =>
           prev.map(n =>
@@ -337,14 +335,14 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 
   useEffect(() => {
     fetchNotifications();
-    if (!workspace?.id) return;
+    if (!workspace?.id || !user?.id) return;
 
-    return subscribeToWorkspaceNotifications(workspace.id, user?.id, row => {
+    return notificationEngine.subscribeToWorkspaceNotifications(workspace.id, user.id, (row: any) => {
       setDbNotifications(prev => [row, ...prev]);
       window.dispatchEvent(
         new CustomEvent('notify-toast', {
           detail: {
-            message: `${String(row.title || '').toUpperCase()}: ${row.body || ''}`,
+            message: `${String(row.title || '').toUpperCase()}: ${row.message || ''}`,
             type: 'warning',
           },
         }),

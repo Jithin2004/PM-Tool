@@ -12,11 +12,11 @@ export default function DecisionCenter() {
   useEffect(() => {
     if (!workspace?.id) return;
     supabase
-      .from('approvals')
-      .select('id, title, status, created_at, requested_by')
+      .from('universal_approvals')
+      .select('*')
       .eq('workspace_id', workspace.id)
       .order('created_at', { ascending: false })
-      .limit(10)
+      .limit(20)
       .then(({ data, error }) => {
         setApprovals(data || []);
       })
@@ -93,14 +93,25 @@ export default function DecisionCenter() {
             {approvals.filter(a => a.status === 'pending').map(approval => (
               <div key={approval.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl gap-4"
                 style={{ background: 'var(--pm-surface-high)', borderColor: 'rgba(70,69,84,0.3)', border: '1px solid' }}>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>{approval.title}</span>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--pm-on-surface)' }}>
+                      {approval.type === 'risk_escalation' ? `Escalation: ${approval.metadata?.escalationType || 'Unknown Risk'}` : approval.type}
+                    </span>
                     <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-mono-pm bg-amber-500/10 text-amber-400 border border-amber-500/20">PENDING</span>
                   </div>
-                  <div className="font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)]">
+                  {approval.type === 'risk_escalation' && approval.metadata?.message && (
+                    <div className="text-xs text-text-secondary mt-1">
+                      {approval.metadata.message}
+                    </div>
+                  )}
+                  <div className="font-mono-pm text-[11px] text-[var(--pm-on-surface-variant)] mt-1">
                     Submitted: {new Date(approval.created_at).toLocaleDateString()}
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="px-3 py-1.5 bg-signal-safe/10 text-signal-safe hover:bg-signal-safe/20 border border-signal-safe/20 rounded font-bold text-xs uppercase tracking-wider">Acknowledge</button>
+                  <button className="px-3 py-1.5 bg-signal-critical/10 text-signal-critical hover:bg-signal-critical/20 border border-signal-critical/20 rounded font-bold text-xs uppercase tracking-wider">Reject</button>
                 </div>
               </div>
             ))}

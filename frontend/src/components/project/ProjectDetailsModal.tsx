@@ -13,7 +13,7 @@ import {
   fetchFinanceData, Client, Invoice, Payment, Expense, BillingMilestone, ClientCredit, CompanyBillingProfile,
   cancelInvoice, applyAdvanceToInvoice, createCreditNote
 } from '../../services/financeService';
-import { FilePanel } from '../common/FilePanel';
+import { EntityAttachments } from '../files/EntityAttachments';
 import { CreateInvoiceModal } from '../finance/CreateInvoiceModal';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 import { ProjectReviewModal } from './ProjectReviewModal';
@@ -1618,12 +1618,12 @@ export function ProjectDetailsModal({
               </div>
             </div>
           ) : activeTab === 'files' ? (
-            <div className="mt-4">
-              <FilePanel 
-                entityType="project"
-                entityId={project.id}
-                currentUserId={currentUserProfile?.id || ''}
-                canEdit={true}
+            <div className="h-64 overflow-y-auto pr-2">
+              <EntityAttachments 
+                workspaceId={workspace.id}
+                entityType="project" 
+                entityId={project.id} 
+                readOnly={!hasAuthority(currentUserProfile, 'manager')} 
               />
             </div>
           ) : activeTab === 'finance' ? (

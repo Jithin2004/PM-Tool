@@ -1140,11 +1140,25 @@ export function AdminPanel() {
                         className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
                         style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
                       >
-                        <option value="admin">Workspace Admin</option>
+                        <option value="owner">Owner</option>
+                        <option value="admin">Admin</option>
                         <option value="manager">Manager</option>
-                        <option value="member">Member</option>
-                        <option value="external">External / Client</option>
+                        <option value="employee">Employee</option>
+                        <option value="developer">Developer</option>
+                        <option value="finance">Finance</option>
+                        <option value="hr">HR</option>
+                        <option value="client">Client</option>
                       </select>
+                      <p className="mt-2 text-[10px] font-mono-pm text-text-tertiary">
+                        {inviteRole === 'owner' && "Full workspace control"}
+                        {inviteRole === 'admin' && "Manage workspace settings and users"}
+                        {inviteRole === 'manager' && "Manage projects and team work"}
+                        {inviteRole === 'employee' && "Complete assigned work"}
+                        {inviteRole === 'developer' && "Build and complete technical tasks"}
+                        {inviteRole === 'finance' && "Manage money, invoices, and reports"}
+                        {inviteRole === 'hr' && "Manage people, attendance, and approvals"}
+                        {inviteRole === 'client' && "View shared progress"}
+                      </p>
                     </div>
                     <div>
                       <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Designation</label>
@@ -1158,24 +1172,30 @@ export function AdminPanel() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Functional Access</label>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {['Projects', 'Engineering', 'Finance', 'PeopleOperations', 'Clients', 'Documents', 'Operations'].map(func => (
-                          <label key={func} className="flex items-center gap-2 cursor-pointer group">
-                            <input
-                              type="checkbox"
-                              checked={inviteFunctions.includes(func)}
-                              onChange={(e) => {
-                                if (e.target.checked) setInviteFunctions(prev => [...prev, func]);
-                                else setInviteFunctions(prev => prev.filter(f => f !== func));
-                              }}
-                              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                            />
-                            <span className="text-[11px] text-[var(--pm-on-surface)] group-hover:text-indigo-400 transition-colors">
-                              {func === 'PeopleOperations' ? 'People' : func}
-                            </span>
-                          </label>
-                        ))}
+                      <div>
+                        <details className="group">
+                          <summary className="text-[10px] font-mono-pm uppercase tracking-widest mb-2 cursor-pointer hover:text-indigo-400 transition-colors list-none" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                            Customize Permissions <span className="inline-block transition-transform group-open:rotate-180">▼</span>
+                          </summary>
+                          <div className="grid grid-cols-2 gap-2 mt-2 pl-2 border-l border-[var(--border-soft)]">
+                            {['Projects', 'Engineering', 'Finance', 'PeopleOperations', 'Clients', 'Documents', 'Operations'].map(func => (
+                              <label key={func} className="flex items-center gap-2 cursor-pointer group/item">
+                                <input
+                                  type="checkbox"
+                                  checked={inviteFunctions.includes(func)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) setInviteFunctions(prev => [...prev, func]);
+                                    else setInviteFunctions(prev => prev.filter(f => f !== func));
+                                  }}
+                                  className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                                />
+                                <span className="text-[11px] text-[var(--pm-on-surface)] group-hover/item:text-indigo-400 transition-colors">
+                                  {func === 'PeopleOperations' ? 'People' : func}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </details>
                       </div>
                     </div>
                     <button

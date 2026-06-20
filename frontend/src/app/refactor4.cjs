@@ -19,7 +19,6 @@ if (startIdx !== -1 && endIdx !== -1) {
   
   lines.splice(startIdx, endIdx - startIdx, replacement);
   fs.writeFileSync('router.tsx', lines.join('\n'));
-  console.log('Successfully replaced SuspenseWrapper by line index!');
 } else {
-  console.log('Could not find start/end bounds for SuspenseWrapper');
 }
+

@@ -29,10 +29,8 @@ export function SupportEscalationModal({ isOpen, onClose, notify }: SupportEscal
       // If employee, we just simulate sending an internal ticket to their company IT.
       if (isAdmin) {
         const diagnostics = await supportService.generateSupportPackage(profile?.workspace_id || '');
-        console.log("Escalating to Resolve PM HQ with diagnostics:", diagnostics);
         notify("Ticket escalated to Resolve PM Support with attached system diagnostics.", "success");
       } else {
-        console.log("Sending internal ticket to Company Admin:", issue);
         notify("Support ticket submitted to your internal Company Administrator.", "success");
       }
       onClose();
@@ -103,3 +101,4 @@ export function SupportEscalationModal({ isOpen, onClose, notify }: SupportEscal
     </div>
   );
 }
+

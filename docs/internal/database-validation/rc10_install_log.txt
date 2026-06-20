@@ -1,0 +1,1916 @@
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 26 other objects
+DETAIL:  drop cascades to constraint users_workspace_id_fkey on table users
+drop cascades to constraint teams_workspace_id_fkey on table teams
+drop cascades to constraint team_members_workspace_id_fkey on table team_members
+drop cascades to policy Users can view departments on table departments
+drop cascades to policy Admins can manage departments on table departments
+drop cascades to constraint projects_workspace_id_fkey on table projects
+drop cascades to constraint tasks_workspace_id_fkey on table tasks
+drop cascades to constraint task_dependencies_workspace_id_fkey on table task_dependencies
+drop cascades to constraint wait_states_workspace_id_fkey on table wait_states
+drop cascades to constraint project_signoffs_workspace_id_fkey on table project_signoffs
+drop cascades to constraint project_allocations_workspace_id_fkey on table project_allocations
+drop cascades to constraint allocation_periods_workspace_id_fkey on table allocation_periods
+drop cascades to constraint comments_workspace_id_fkey on table comments
+drop cascades to constraint task_comments_workspace_id_fkey on table task_comments
+drop cascades to constraint files_workspace_id_fkey on table files
+drop cascades to constraint notifications_workspace_id_fkey on table notifications
+drop cascades to constraint activity_logs_workspace_id_fkey on table activity_logs
+drop cascades to constraint attendance_workspace_id_fkey on table attendance
+drop cascades to constraint salaries_workspace_id_fkey on table salaries
+drop cascades to constraint invitations_workspace_id_fkey on table invitations
+drop cascades to constraint workspace_holidays_workspace_id_fkey on table workspace_holidays
+drop cascades to constraint workspace_settings_workspace_id_fkey on table workspace_settings
+drop cascades to constraint system_audit_ledger_workspace_id_fkey on table system_audit_ledger
+drop cascades to policy Workspace owner can create first super admin user on table users
+drop cascades to policy Users can update their own safe profile fields on table users
+drop cascades to constraint compensation_records_workspace_id_fkey on table compensation_records
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 69 other objects
+DETAIL:  drop cascades to constraint team_members_user_id_fkey on table team_members
+drop cascades to constraint projects_owner_id_fkey on table projects
+drop cascades to constraint projects_deleted_by_fkey on table projects
+drop cascades to constraint tasks_assignee_id_fkey on table tasks
+drop cascades to constraint project_signoffs_approver_id_fkey on table project_signoffs
+drop cascades to constraint project_allocations_user_id_fkey on table project_allocations
+drop cascades to constraint allocation_periods_user_id_fkey on table allocation_periods
+drop cascades to constraint comments_author_id_fkey on table comments
+drop cascades to constraint task_comments_author_id_fkey on table task_comments
+drop cascades to constraint files_uploaded_by_fkey on table files
+drop cascades to constraint notifications_user_id_fkey on table notifications
+drop cascades to constraint activity_logs_actor_id_fkey on table activity_logs
+drop cascades to constraint attendance_user_id_fkey on table attendance
+drop cascades to constraint salaries_user_id_fkey on table salaries
+drop cascades to constraint invitations_created_by_fkey on table invitations
+drop cascades to constraint personal_leave_user_id_fkey on table personal_leave
+drop cascades to constraint system_audit_ledger_actor_id_fkey on table system_audit_ledger
+drop cascades to policy Teams can be managed by PMs and Admins on table teams
+drop cascades to policy Team members can be managed by PMs and Admins on table team_members
+drop cascades to policy Projects can be mutated by PMs and Admins on table projects
+drop cascades to policy Tasks can be created by PMs and Admins on table tasks
+drop cascades to policy Tasks can be fully updated by PMs and Admins on table tasks
+drop cascades to policy Developers can update their assigned tasks on table tasks
+drop cascades to policy Tasks can be deleted by PMs and Admins on table tasks
+drop cascades to policy Task dependencies can be managed by PMs and Admins on table task_dependencies
+drop cascades to policy Comments can be moderated by PMs and Admins on table comments
+drop cascades to policy Files are visible to workspace on table files
+drop cascades to policy Files can be managed by PMs and Admins on table files
+drop cascades to policy Notifications can be managed by PMs and Admins on table notifications
+drop cascades to policy Attendance can be managed by PMs and Admins on table attendance
+drop cascades to policy Salaries are visible to admins on table salaries
+drop cascades to policy Salaries can be managed by PMs and Admins on table salaries
+drop cascades to policy Workspace super admins can manage invitations on table invitations
+drop cascades to policy Workspace holidays can be managed by PMs and Admins on table workspace_holidays
+drop cascades to policy Personal leave is visible to workspace on table personal_leave
+drop cascades to policy PMs and Admins can manage all leave on table personal_leave
+drop cascades to policy Workspace settings can be managed by PMs and Admins on table workspace_settings
+drop cascades to policy System audit ledger is viewable by workspace admins on table system_audit_ledger
+drop cascades to policy Super Admins have full access to employment_records on table employment_records
+drop cascades to policy Workspace managers can view employment_records on table employment_records
+drop cascades to policy Super Admins have full access to employment_change_logs on table employment_change_logs
+drop cascades to constraint compensation_records_employee_id_fkey on table compensation_records
+drop cascades to constraint compensation_records_created_by_fkey on table compensation_records
+drop cascades to constraint compensation_records_updated_by_fkey on table compensation_records
+drop cascades to policy Super Admins have full access to compensation_records on table compensation_records
+drop cascades to policy Workspace users can view their workspace files on table workspace_files
+drop cascades to policy Workspace users can insert workspace files on table workspace_files
+drop cascades to policy Workspace users can update workspace files on table workspace_files
+drop cascades to policy Workspace users can view file versions on table file_versions
+drop cascades to policy Workspace users can insert file versions on table file_versions
+drop cascades to policy Workspace users can access workspace_files bucket objects on table storage.objects
+drop cascades to policy Workspace users can insert workspace_files bucket objects on table storage.objects
+drop cascades to policy Workspace users can view comment_versions on table comment_versions
+drop cascades to constraint notifications_recipient_id_fkey on table notifications
+drop cascades to policy Users can view their own notifications on table notifications
+drop cascades to policy Workspace users can view universal_comments on table universal_comments
+drop cascades to policy Workspace users can insert universal_comments on table universal_comments
+drop cascades to policy Authors and admins can delete universal_comments on table universal_comments
+drop cascades to policy Super admins and HR can modify employment records on table employment_records
+drop cascades to policy Workspace members can view employment change logs on table employment_change_logs
+drop cascades to constraint tasks_needs_help_from_fkey on table tasks
+drop cascades to policy PMs and HR can update any work session in workspace on table work_sessions
+drop cascades to policy PMs and HR can delete work sessions on table work_sessions
+drop cascades to policy PMs and HR can update any session pause in workspace on table work_session_pauses
+drop cascades to policy PMs can insert work session adjustments on table work_session_adjustments
+drop cascades to policy PMs can insert project reviews on table project_reviews
+drop cascades to policy Workspace members can view external access links on table external_access_links
+drop cascades to policy Project Managers can insert external access links on table external_access_links
+drop cascades to policy Project Managers can update external access links on table external_access_links
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to constraint team_members_team_id_fkey on table team_members
+drop cascades to constraint projects_team_id_fkey on table projects
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to constraint tasks_project_id_fkey on table tasks
+drop cascades to policy Enable write access for authorized users on recurring_task_temp on table recurring_task_templates
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to constraint recurring_task_history_template_id_fkey on table recurring_task_history
+drop cascades to policy Enable read access for history on table recurring_task_history
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 3 other objects
+DETAIL:  drop cascades to constraint user_skills_skill_id_fkey on table user_skills
+drop cascades to policy Enable read access for workspace members on table user_skills
+drop cascades to policy Managers can verify and manage team skills on table user_skills
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 4 other objects
+DETAIL:  drop cascades to constraint invoices_client_id_fkey on table invoices
+drop cascades to constraint payments_client_id_fkey on table payments
+drop cascades to constraint client_credits_client_id_fkey on table client_credits
+drop cascades to constraint credit_notes_client_id_fkey on table credit_notes
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 4 other objects
+DETAIL:  drop cascades to constraint financial_snapshots_period_id_fkey on table financial_snapshots
+drop cascades to constraint financial_adjustments_period_id_fkey on table financial_adjustments
+drop cascades to policy Enable read access for authorized users on table financial_adjustments
+drop cascades to policy Enable write access for authorized users on table financial_adjustments
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to constraint document_references_requirement_id_fkey on table document_references
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to constraint work_session_adjustments_session_id_fkey on table work_session_adjustments
+drop cascades to constraint session_quality_flags_session_id_fkey on table session_quality_flags
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to policy Users can access their entity objects on table storage.objects
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 7 other objects
+DETAIL:  drop cascades to constraint payments_invoice_id_fkey on table payments
+drop cascades to constraint advance_applications_invoice_id_fkey on table advance_applications
+drop cascades to constraint credit_notes_invoice_id_fkey on table credit_notes
+drop cascades to constraint billing_milestones_invoice_id_fkey on table billing_milestones
+drop cascades to constraint invoice_audit_logs_invoice_id_fkey on table invoice_audit_logs
+drop cascades to constraint exchange_rate_audits_invoice_id_fkey on table exchange_rate_audits
+drop cascades to policy Enable access for authorized users via invoice on table payments
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to constraint client_credits_source_payment_id_fkey on table client_credits
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to constraint advance_applications_client_credit_id_fkey on table advance_applications
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to constraint role_capabilities_role_id_fkey on table role_capabilities
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to constraint role_capabilities_capability_id_fkey on table role_capabilities
+drop cascades to constraint user_capability_overrides_capability_id_fkey on table user_capability_overrides
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to constraint milestones_sprint_id_fkey on table milestones
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function strict_word_similarity_op
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function strict_word_similarity_commutator_op
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function word_similarity_dist_commutator_op
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_in
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function show_trgm
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function similarity
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function similarity_op
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function word_similarity
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function word_similarity_op
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function word_similarity_commutator_op
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function similarity_dist
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function word_similarity_dist_op
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_compress
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_decompress
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_penalty
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_picksplit
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_union
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_same
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gin_extract_value_trgm
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gin_extract_query_trgm
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gin_trgm_consistent
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_out
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_consistent
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_distance
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gin_trgm_triconsistent
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function strict_word_similarity
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function strict_word_similarity_dist_op
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function strict_word_similarity_dist_commutator_op
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function gtrgm_options
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function set_limit
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  Skipped function show_limit
+psql:C:/Users/jithi/.gemini/antigravity-ide/brain/3625b073-e9c5-4d78-a2fd-ea6423617657/RC10_RESET_DATABASE.sql:50: NOTICE:  drop cascades to policy Users can upload objects if they have insert permission on table storage.objects
+DO
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:22: NOTICE:  extension "uuid-ossp" already exists, skipping
+CREATE EXTENSION
+CREATE EXTENSION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:23: NOTICE:  extension "pgcrypto" already exists, skipping
+CREATE EXTENSION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:24: NOTICE:  extension "pg_trgm" already exists, skipping
+DROP FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:34: NOTICE:  function public.handle_new_user() does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:35: NOTICE:  function current_workspace() does not exist, skipping
+DROP FUNCTION
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:38: NOTICE:  table "system_audit_ledger" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:39: NOTICE:  table "workspace_settings" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:40: NOTICE:  table "personal_leave" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:41: NOTICE:  table "workspace_holidays" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:42: NOTICE:  table "invitations" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:43: NOTICE:  table "salaries" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:44: NOTICE:  table "attendance" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:45: NOTICE:  table "activity_logs" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:46: NOTICE:  table "notifications" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:47: NOTICE:  table "files" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:48: NOTICE:  table "comments" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:49: NOTICE:  table "task_comments" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:50: NOTICE:  table "task_dependencies" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:51: NOTICE:  table "wait_states" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:52: NOTICE:  table "tasks" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:53: NOTICE:  table "project_signoffs" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:54: NOTICE:  table "project_allocations" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:55: NOTICE:  table "allocation_periods" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:56: NOTICE:  table "projects" does not exist, skipping
+DROP TABLE
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:57: NOTICE:  table "team_members" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:58: NOTICE:  table "teams" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:59: NOTICE:  table "users" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:60: NOTICE:  table "workspaces" does not exist, skipping
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:62: NOTICE:  table "profiles" does not exist, skipping
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:213: NOTICE:  policy "Users can view departments" for relation "public.departments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:216: NOTICE:  policy "Admins can manage departments" for relation "public.departments" does not exist, skipping
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:619: NOTICE:  trigger "check_role_escalation" for relation "users" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:678: NOTICE:  trigger "check_developer_task_restrictions" for relation "tasks" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:725: NOTICE:  policy "Workspace members can view their workspace" for relation "workspaces" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:728: NOTICE:  policy "Workspace owner can update workspace" for relation "workspaces" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:731: NOTICE:  policy "Workspace owner can create workspace" for relation "workspaces" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:740: NOTICE:  policy "Users visible within workspace" for relation "users" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:746: NOTICE:  policy "Workspace owner can create first super admin user" for relation "users" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:757: NOTICE:  policy "Workspace admins can insert users" for relation "users" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:767: NOTICE:  policy "Workspace admins can update users" for relation "users" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:777: NOTICE:  policy "Workspace admins can delete users" for relation "users" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:787: NOTICE:  policy "Users can insert their own pending user row" for relation "users" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:794: NOTICE:  policy "Invited users can bootstrap their own user row" for relation "users" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:812: NOTICE:  policy "Users can update their own safe profile fields" for relation "users" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:828: NOTICE:  policy "Teams are visible to workspace" for relation "teams" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:831: NOTICE:  policy "Teams can be managed by PMs and Admins" for relation "teams" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:845: NOTICE:  policy "Team members are visible to workspace" for relation "team_members" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:848: NOTICE:  policy "Team members can be managed by PMs and Admins" for relation "team_members" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:861: NOTICE:  policy "Projects are visible to workspace" for relation "projects" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:864: NOTICE:  policy "Projects can be mutated by PMs and Admins" for relation "projects" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:880: NOTICE:  policy "Tasks are visible to workspace" for relation "tasks" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:885: NOTICE:  policy "Tasks can be created by PMs and Admins" for relation "tasks" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:894: NOTICE:  policy "Tasks can be fully updated by PMs and Admins" for relation "tasks" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:903: NOTICE:  policy "Developers can update their assigned tasks" for relation "tasks" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:913: NOTICE:  policy "Tasks can be deleted by PMs and Admins" for relation "tasks" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:924: NOTICE:  policy "Task dependencies are visible to workspace" for relation "task_dependencies" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:927: NOTICE:  policy "Task dependencies can be managed by PMs and Admins" for relation "task_dependencies" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:941: NOTICE:  policy "Comments are visible to workspace" for relation "comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:946: NOTICE:  policy "Comments can be created by authenticated users" for relation "comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:955: NOTICE:  policy "Comments can be moderated by PMs and Admins" for relation "comments" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:969: NOTICE:  policy "Users can edit their own comments" for relation "comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:972: NOTICE:  policy "Users can delete their own comments" for relation "comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:979: NOTICE:  policy "Files are visible to workspace" for relation "files" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:996: NOTICE:  policy "Files can be uploaded by authenticated users" for relation "files" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1003: NOTICE:  policy "Files can be managed by PMs and Admins" for relation "files" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1019: NOTICE:  policy "Notifications are visible to workspace members" for relation "notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1024: NOTICE:  policy "Notifications can be self-targeted" for relation "notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1032: NOTICE:  policy "Notifications can be managed by PMs and Admins" for relation "notifications" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1044: NOTICE:  policy "Users can update own notifications" for relation "notifications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1051: NOTICE:  policy "Activity logs are readable by workspace" for relation "activity_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1054: NOTICE:  policy "Activity logs can be inserted with verified actor" for relation "activity_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1064: NOTICE:  policy "Attendance is visible to workspace" for relation "attendance" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1067: NOTICE:  policy "Attendance can be managed by PMs and Admins" for relation "attendance" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1081: NOTICE:  policy "Salaries are visible to admins" for relation "salaries" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1087: NOTICE:  policy "Salaries can be managed by PMs and Admins" for relation "salaries" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1100: NOTICE:  policy "Invitations are readable by the invited email or workspace memb" for relation "invitations" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1103: NOTICE:  policy "Workspace super admins can manage invitations" for relation "invitations" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1121: NOTICE:  policy "Invited users can accept their own invitation" for relation "invitations" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1129: NOTICE:  policy "Workspace holidays are visible to workspace" for relation "workspace_holidays" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1132: NOTICE:  policy "Workspace holidays can be managed by PMs and Admins" for relation "workspace_holidays" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1149: NOTICE:  policy "Personal leave is visible to workspace" for relation "personal_leave" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1152: NOTICE:  policy "Users can manage their own leave" for relation "personal_leave" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1156: NOTICE:  policy "PMs and Admins can manage all leave" for relation "personal_leave" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1170: NOTICE:  policy "Workspace settings are visible to workspace" for relation "workspace_settings" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1173: NOTICE:  policy "Workspace settings can be managed by PMs and Admins" for relation "workspace_settings" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1187: NOTICE:  policy "System audit ledger is viewable by workspace admins" for relation "system_audit_ledger" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1198: NOTICE:  policy "System audit ledger is insertable by authenticated users" for relation "system_audit_ledger" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+INSERT 0 0
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1259: NOTICE:  trigger "trigger_enforce_task_completion" for relation "tasks" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1339: NOTICE:  policy "Super Admins have full access to employment_records" for relation "public.employment_records" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1357: NOTICE:  policy "Users can view their own employment_records" for relation "public.employment_records" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1369: NOTICE:  policy "Workspace managers can view employment_records" for relation "public.employment_records" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1389: NOTICE:  policy "Super Admins have full access to employment_change_logs" for relation "public.employment_change_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1403: NOTICE:  policy "Users can view their own change logs" for relation "public.employment_change_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+INSERT 0 0
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1429: NOTICE:  column "date_of_joining" of relation "invitations" already exists, skipping
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1443: NOTICE:  relation "employment_records" already exists, skipping
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1455: NOTICE:  relation "employment_change_logs" already exists, skipping
+ALTER TABLE
+ALTER TABLE
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+DROP TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1511: NOTICE:  table "compensation_records" does not exist, skipping
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1536: NOTICE:  policy "Super Admins have full access to compensation_records" for relation "public.compensation_records" does not exist, skipping
+CREATE POLICY
+INSERT 0 0
+CREATE TABLE
+CREATE EXTENSION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1589: NOTICE:  extension "pg_trgm" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1620: NOTICE:  policy "Workspace users can view their workspace files" for relation "public.workspace_files" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1629: NOTICE:  policy "Workspace users can insert workspace files" for relation "public.workspace_files" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1638: NOTICE:  policy "Workspace users can update workspace files" for relation "public.workspace_files" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1647: NOTICE:  policy "Workspace users can view file versions" for relation "public.file_versions" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1657: NOTICE:  policy "Workspace users can insert file versions" for relation "public.file_versions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1669: NOTICE:  policy "Workspace users can access workspace_files bucket objects" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1679: NOTICE:  policy "Workspace users can insert workspace_files bucket objects" for relation "storage.objects" does not exist, skipping
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1721: NOTICE:  trigger "trigger_workspace_file_storage" for relation "public.workspace_files" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1744: NOTICE:  trigger "trigger_workspace_file_version_storage" for relation "public.file_versions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1901: NOTICE:  policy "Users can view accessible entity files" for relation "public.workspace_files" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1907: NOTICE:  policy "Users can insert files to accessible entities" for relation "public.workspace_files" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1913: NOTICE:  policy "Users can update their files or if they have permission" for relation "public.workspace_files" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1919: NOTICE:  policy "Users can delete their files or if they have permission" for relation "public.workspace_files" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1928: NOTICE:  policy "Users can view accessible file versions" for relation "public.file_versions" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1938: NOTICE:  policy "Users can insert file versions if they can manage the file" for relation "public.file_versions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1948: NOTICE:  policy "Users can delete file versions if they can manage the file" for relation "public.file_versions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1961: NOTICE:  policy "Users can access their entity objects" for relation "storage.objects" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:1972: NOTICE:  policy "Users can upload objects if they have insert permission" for relation "storage.objects" does not exist, skipping
+CREATE POLICY
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2020: NOTICE:  policy "Workspace users can view comment_versions" for relation "public.comment_versions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2058: NOTICE:  policy "Users can view their own notifications" for relation "public.notifications" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2074: NOTICE:  policy "Workspace users can view universal_comments" for relation "public.universal_comments" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2086: NOTICE:  policy "Workspace users can insert universal_comments" for relation "public.universal_comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2098: NOTICE:  policy "Authors can update their own universal_comments" for relation "public.universal_comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2105: NOTICE:  policy "Authors and admins can delete universal_comments" for relation "public.universal_comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TABLE
+CREATE TABLE
+CREATE FUNCTION
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2306: NOTICE:  trigger "on_recurring_task_change" for relation "recurring_task_templates" does not exist, skipping
+CREATE TRIGGER
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2313: NOTICE:  policy "Enable read access for project members on recurring_task_templa" for relation "public.recurring_task_templates" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2316: NOTICE:  policy "Enable write access for authorized users on recurring_task_temp" for relation "public.recurring_task_templates" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2328: NOTICE:  policy "Enable read access for history" for relation "public.recurring_task_history" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2440: NOTICE:  policy "Users can view reports they generated or if they are admin" for relation "public.generated_reports" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2446: NOTICE:  policy "Users can insert reports" for relation "public.generated_reports" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2474: NOTICE:  policy "Enable read access for all workspace members" for relation "public.skills" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2477: NOTICE:  policy "Enable write access for managers and admins" for relation "public.skills" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2495: NOTICE:  policy "Enable read access for workspace members" for relation "public.user_skills" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2502: NOTICE:  policy "Users can manage their own skills" for relation "public.user_skills" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2506: NOTICE:  policy "Managers can verify and manage team skills" for relation "public.user_skills" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2542: NOTICE:  policy "Enable read access for authorized users" for relation "public.clients" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2545: NOTICE:  policy "Enable write access for authorized users" for relation "public.clients" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2557: NOTICE:  column "workspace_id" of relation "projects" already exists, skipping
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2578: NOTICE:  policy "Enable read access for authorized users" for relation "public.invoices" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2581: NOTICE:  policy "Enable write access for authorized users" for relation "public.invoices" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2596: NOTICE:  policy "Enable access for authorized users via invoice" for relation "public.invoice_line_items" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2617: NOTICE:  policy "Enable access for authorized users via invoice" for relation "public.payments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2638: NOTICE:  policy "Enable read access for authorized users" for relation "public.expenses" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2641: NOTICE:  policy "Enable write access for authorized users" for relation "public.expenses" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2681: NOTICE:  trigger "trigger_log_invoice_activity" for relation "public.invoices" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2682: NOTICE:  trigger "trigger_log_payment_activity" for relation "public.payments" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2683: NOTICE:  trigger "trigger_log_expense_activity" for relation "public.expenses" does not exist, skipping
+CREATE TRIGGER
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2705: NOTICE:  policy "Enable read access for authorized users" for relation "public.financial_periods" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2708: NOTICE:  policy "Enable write access for authorized users" for relation "public.financial_periods" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2730: NOTICE:  policy "Enable read access for authorized users" for relation "public.financial_snapshots" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2733: NOTICE:  policy "Enable write access for authorized users" for relation "public.financial_snapshots" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2749: NOTICE:  policy "Enable read access for authorized users" for relation "public.financial_adjustments" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2757: NOTICE:  policy "Enable write access for authorized users" for relation "public.financial_adjustments" does not exist, skipping
+CREATE POLICY
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2809: NOTICE:  trigger "enforce_invoice_lock" for relation "public.invoices" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2810: NOTICE:  trigger "enforce_payment_lock" for relation "public.payments" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2811: NOTICE:  trigger "enforce_expense_lock" for relation "public.expenses" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2904: NOTICE:  trigger "trigger_log_financial_adjustment" for relation "public.financial_adjustments" does not exist, skipping
+CREATE TRIGGER
+BEGIN
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2934: NOTICE:  policy "Enable read access for authorized users" for relation "public.document_templates" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2937: NOTICE:  policy "Enable write access for super admin" for relation "public.document_templates" does not exist, skipping
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2957: NOTICE:  policy "Enable read access for authorized users" for relation "public.document_template_history" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2960: NOTICE:  policy "Enable write access for super admin" for relation "public.document_template_history" does not exist, skipping
+CREATE POLICY
+CREATE FUNCTION
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:2973: NOTICE:  trigger "set_timestamp" for relation "public.document_templates" does not exist, skipping
+CREATE TRIGGER
+COMMIT
+BEGIN
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3005: NOTICE:  policy "Enable read access for authorized users" for relation "public.company_billing_profile" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3008: NOTICE:  policy "Enable write access for super admin" for relation "public.company_billing_profile" does not exist, skipping
+CREATE POLICY
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE FUNCTION
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3077: NOTICE:  relation "invoice_line_items" already exists, skipping
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3079: NOTICE:  policy "Enable read access for authorized users via invoice" for relation "public.invoice_line_items" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3086: NOTICE:  policy "Enable write access for authorized users via invoice" for relation "public.invoice_line_items" does not exist, skipping
+CREATE POLICY
+CREATE FUNCTION
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3154: NOTICE:  trigger "trg_update_invoice_balance" for relation "public.payments" does not exist, skipping
+CREATE TRIGGER
+DO
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3206: NOTICE:  trigger "trg_audit_gst_invoices" for relation "public.invoices" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+COMMIT
+BEGIN
+ALTER TABLE
+ALTER TABLE
+COMMIT
+BEGIN
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3238: NOTICE:  column "billing_currency" of relation "projects" already exists, skipping
+ALTER TABLE
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3261: NOTICE:  relation "payments" already exists, skipping
+ALTER TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3286: NOTICE:  relation "expenses" already exists, skipping
+CREATE TABLE
+ALTER TABLE
+COMMIT
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3335: NOTICE:  policy "Users can view advance applications in their workspace" for relation "public.advance_applications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3338: NOTICE:  policy "Users can create advance applications in their workspace" for relation "public.advance_applications" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3365: NOTICE:  policy "Users can view credit notes in their workspace" for relation "public.credit_notes" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3368: NOTICE:  policy "Users can create credit notes in their workspace" for relation "public.credit_notes" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+BEGIN
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+COMMIT
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3451: NOTICE:  relation "employment_records" already exists, skipping
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3456: NOTICE:  policy "Workspace members can view employment records" for relation "employment_records" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3459: NOTICE:  policy "Super admins and HR can modify employment records" for relation "employment_records" does not exist, skipping
+CREATE POLICY
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+ALTER TABLE
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3517: NOTICE:  trigger "audit_capabilities_trigger" for relation "users" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3533: NOTICE:  relation "employment_change_logs" already exists, skipping
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3535: NOTICE:  policy "Workspace members can view employment change logs" for relation "employment_change_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3649: NOTICE:  policy "Workspace isolation for import_batches" for relation "import_batches" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3651: NOTICE:  policy "Workspace isolation for meetings" for relation "meetings" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3653: NOTICE:  policy "Workspace isolation for meeting_attendees" for relation "meeting_attendees" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3655: NOTICE:  policy "Workspace isolation for requirements" for relation "requirements" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3657: NOTICE:  policy "Workspace isolation for document_references" for relation "document_references" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3659: NOTICE:  policy "Workspace isolation for universal_approvals" for relation "universal_approvals" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+NOTIFY
+ALTER TABLE
+ALTER TABLE
+UPDATE 0
+UPDATE 0
+UPDATE 0
+UPDATE 0
+ALTER TABLE
+NOTIFY
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3760: NOTICE:  policy "Workspace members can view work sessions" for relation "work_sessions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3763: NOTICE:  policy "Users can insert their own work sessions" for relation "work_sessions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3769: NOTICE:  policy "Users can update their own work sessions" for relation "work_sessions" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3775: NOTICE:  policy "PMs and HR can update any work session in workspace" for relation "work_sessions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3786: NOTICE:  policy "PMs and HR can delete work sessions" for relation "work_sessions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3817: NOTICE:  policy "Workspace members can view session pauses" for relation "work_session_pauses" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3826: NOTICE:  policy "Users can insert pauses for their sessions" for relation "work_session_pauses" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3836: NOTICE:  policy "Users can update pauses for their sessions" for relation "work_session_pauses" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3846: NOTICE:  policy "PMs and HR can update any session pause in workspace" for relation "work_session_pauses" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE INDEX
+NOTIFY
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3882: NOTICE:  constraint "work_session_pauses_reason_check" of relation "work_session_pauses" does not exist, skipping
+NOTIFY
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3911: NOTICE:  policy "Workspace members can view work session adjustments" for relation "work_session_adjustments" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3914: NOTICE:  policy "PMs can insert work session adjustments" for relation "work_session_adjustments" does not exist, skipping
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3942: NOTICE:  policy "Workspace members can view project reviews" for relation "project_reviews" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3945: NOTICE:  policy "PMs can insert project reviews" for relation "project_reviews" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3978: NOTICE:  policy "Workspace members can view session quality flags" for relation "session_quality_flags" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:3981: NOTICE:  policy "System and PMs can manage session quality flags" for relation "session_quality_flags" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4032: NOTICE:  policy "Workspace members can view external access links" for relation "public.external_access_links" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4039: NOTICE:  policy "Project Managers can insert external access links" for relation "public.external_access_links" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4046: NOTICE:  policy "Project Managers can update external access links" for relation "public.external_access_links" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+GRANT
+CREATE FUNCTION
+GRANT
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4203: NOTICE:  policy "Super Admins can view workspace license" for relation "workspace_license" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4210: NOTICE:  policy "Super Admins can insert workspace license" for relation "workspace_license" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4217: NOTICE:  policy "Super Admins can update workspace license" for relation "workspace_license" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4268: NOTICE:  policy "Anyone in workspace can view activity logs" for relation "activity_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4276: NOTICE:  policy "Anyone in workspace can insert activity logs" for relation "activity_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4329: NOTICE:  relation "idx_users_workspace_id" already exists, skipping
+CREATE INDEX
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4330: NOTICE:  relation "idx_projects_workspace_id_status" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4331: NOTICE:  relation "idx_tasks_project_id_assignee_id" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4332: NOTICE:  relation "idx_activity_logs_workspace_id_created_at" already exists, skipping
+CREATE INDEX
+CREATE INDEX
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4333: NOTICE:  relation "idx_universal_approvals_entity" already exists, skipping
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4343: NOTICE:  policy "Clients can only view their projects" for relation "projects" does not exist, skipping
+CREATE POLICY
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4360: NOTICE:  policy "Clients can only view their invoices" for relation "invoices" does not exist, skipping
+CREATE POLICY
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4377: NOTICE:  policy "Anyone in workspace can view teams" for relation "teams" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4385: NOTICE:  policy "HR and Super Admin can manage teams" for relation "teams" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+ALTER TABLE
+BEGIN
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4420: NOTICE:  policy "Enable read for workspace members" for relation "public.task_collaborators" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4423: NOTICE:  policy "Enable write for PMs and Admins" for relation "public.task_collaborators" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+CREATE FUNCTION
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4476: NOTICE:  trigger "trg_update_invoice_status" for relation "public.payments" does not exist, skipping
+CREATE TRIGGER
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4541: NOTICE:  trigger "audit_users" for relation "public.users" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4542: NOTICE:  trigger "audit_compensation_records" for relation "public.compensation_records" does not exist, skipping
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4543: NOTICE:  trigger "audit_invoices" for relation "public.invoices" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4544: NOTICE:  trigger "audit_payments" for relation "public.payments" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4545: NOTICE:  trigger "audit_projects" for relation "public.projects" does not exist, skipping
+CREATE TRIGGER
+ALTER TABLE
+UPDATE 0
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4569: NOTICE:  policy "Enable read for workspace members" for relation "public.task_estimate_history" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4572: NOTICE:  policy "Enable write for workspace members" for relation "public.task_estimate_history" does not exist, skipping
+CREATE POLICY
+COMMIT
+BEGIN
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4585: NOTICE:  drop cascades to trigger trg_audit_gst_invoices on table invoices
+DROP FUNCTION
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4604: NOTICE:  policy "Enable read for workspace members" for relation "public.task_assignment_history" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4607: NOTICE:  policy "Enable write for workspace members" for relation "public.task_assignment_history" does not exist, skipping
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4629: NOTICE:  policy "Enable read for workspace members" for relation "public.task_suggestions" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4632: NOTICE:  policy "Enable write for workspace members" for relation "public.task_suggestions" does not exist, skipping
+CREATE POLICY
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4642: NOTICE:  column "revoked_by" of relation "external_access_links" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4642: NOTICE:  column "last_accessed_at" of relation "external_access_links" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4642: NOTICE:  column "access_count" of relation "external_access_links" already exists, skipping
+CREATE FUNCTION
+GRANT
+COMMIT
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4728: NOTICE:  column "exchange_rate" of relation "invoices" already exists, skipping
+ALTER TABLE
+BEGIN
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4740: NOTICE:  column "workspace_id" of relation "payments" already exists, skipping
+ALTER TABLE
+COMMIT
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4758: NOTICE:  column "billing_currency" of relation "projects" already exists, skipping
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4800: NOTICE:  policy "Users can view exchange rate audits for their workspace" for relation "public.exchange_rate_audits" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4807: NOTICE:  policy "Users can insert exchange rate audits for their workspace" for relation "public.exchange_rate_audits" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4816: NOTICE:  policy "Users can view financial report snapshots for their workspace" for relation "public.financial_report_snapshots" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:4823: NOTICE:  policy "Users can insert financial report snapshots for their workspace" for relation "public.financial_report_snapshots" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+INSERT 0 9
+INSERT 0 24
+INSERT 0 24
+INSERT 0 24
+INSERT 0 14
+INSERT 0 5
+INSERT 0 6
+INSERT 0 4
+INSERT 0 6
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+ALTER TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5364: NOTICE:  policy "Admins can view API keys" for relation "public.api_keys" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5367: NOTICE:  policy "Admins can manage API keys" for relation "public.api_keys" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5400: NOTICE:  policy "Workspace admins can view webhooks" for relation "public.webhooks" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5403: NOTICE:  policy "Workspace admins can manage webhooks" for relation "public.webhooks" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5407: NOTICE:  trigger "set_webhooks_updated_at" for relation "public.webhooks" does not exist, skipping
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "connected_accounts" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "documents" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "sprints" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "approval_instances" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "approval_chains" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "automation_rules" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "integration_sync_jobs" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "billing_milestones" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "client_credits" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "wait_states" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "project_signoffs" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "project_allocations" already exists, skipping
+DO
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5426: NOTICE:  column "workspace_id" of relation "allocation_periods" already exists, skipping
+DO
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5454: NOTICE:  policy "Connected accounts isolation" for relation "connected_accounts" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5460: NOTICE:  policy "Documents isolation select" for relation "documents" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5464: NOTICE:  policy "Documents isolation write" for relation "documents" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5468: NOTICE:  policy "Documents isolation update" for relation "documents" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5472: NOTICE:  policy "Documents isolation delete" for relation "documents" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5478: NOTICE:  policy "Sprints isolation select" for relation "sprints" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5482: NOTICE:  policy "Sprints isolation write" for relation "sprints" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5488: NOTICE:  policy "Approvals chains isolation" for relation "approval_chains" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5492: NOTICE:  policy "Approvals instances isolation" for relation "approval_instances" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5498: NOTICE:  policy "Automation rules isolation" for relation "automation_rules" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5504: NOTICE:  policy "Integrations isolation" for relation "integration_sync_jobs" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5510: NOTICE:  policy "Billing milestones isolation" for relation "billing_milestones" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5516: NOTICE:  policy "Client credits isolation" for relation "client_credits" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5522: NOTICE:  policy "Invoice audit isolation select" for relation "invoice_audit_logs" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5526: NOTICE:  policy "Invoice audit isolation insert" for relation "invoice_audit_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5534: NOTICE:  policy "Capability change isolation" for relation "capability_change_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5545: NOTICE:  policy "Wait states isolation select" for relation "wait_states" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5549: NOTICE:  policy "Wait states isolation write" for relation "wait_states" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5555: NOTICE:  policy "Project signoffs isolation select" for relation "project_signoffs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5559: NOTICE:  policy "Project signoffs isolation write" for relation "project_signoffs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5565: NOTICE:  policy "Project alloc isolation select" for relation "project_allocations" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5569: NOTICE:  policy "Project alloc isolation write" for relation "project_allocations" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5573: NOTICE:  policy "Alloc periods isolation select" for relation "allocation_periods" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5577: NOTICE:  policy "Alloc periods isolation write" for relation "allocation_periods" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP FUNCTION
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5662: NOTICE:  policy "Wait states visible to workspace" for relation "wait_states" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5665: NOTICE:  policy "Wait states managed by PMs and Admins" for relation "wait_states" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5679: NOTICE:  policy "Signoffs visible to workspace" for relation "project_signoffs" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5682: NOTICE:  policy "Signoffs managed by PMs and Admins" for relation "project_signoffs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5696: NOTICE:  policy "Allocations visible to workspace" for relation "project_allocations" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5699: NOTICE:  policy "Allocations managed by PMs and Admins" for relation "project_allocations" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5713: NOTICE:  policy "Allocation periods visible to workspace" for relation "allocation_periods" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5716: NOTICE:  policy "Allocation periods managed by PMs and Admins" for relation "allocation_periods" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5730: NOTICE:  policy "Billing milestones visible to workspace admins" for relation "public.billing_milestones" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5736: NOTICE:  policy "Billing milestones managed by admins" for relation "public.billing_milestones" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5750: NOTICE:  policy "Client credits visible to workspace admins" for relation "public.client_credits" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5756: NOTICE:  policy "Client credits managed by admins" for relation "public.client_credits" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5770: NOTICE:  policy "Invoice audit logs visible to admins" for relation "public.invoice_audit_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5776: NOTICE:  policy "Invoice audit logs insertable by workspace" for relation "public.invoice_audit_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5785: NOTICE:  policy "Capability logs visible to admins" for relation "capability_change_logs" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5795: NOTICE:  policy "Capability logs insertable by admins" for relation "capability_change_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+ALTER TABLE
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5927: NOTICE:  trigger "check_work_session_integrity" for relation "work_sessions" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5950: NOTICE:  trigger "worm_audit_ledger_no_update" for relation "system_audit_ledger" does not exist, skipping
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5953: NOTICE:  trigger "worm_audit_ledger_no_delete" for relation "system_audit_ledger" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5958: NOTICE:  trigger "worm_invoice_audit_no_update" for relation "public.invoice_audit_logs" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5961: NOTICE:  trigger "worm_invoice_audit_no_delete" for relation "public.invoice_audit_logs" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:5984: NOTICE:  trigger "check_invoice_deletion_governance" for relation "public.invoices" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6004: NOTICE:  trigger "check_invoice_modification_governance" for relation "public.invoices" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6025: NOTICE:  trigger "worm_activity_logs_immutable" for relation "activity_logs" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+ALTER TABLE
+DO
+ALTER TABLE
+CREATE FUNCTION
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6104: NOTICE:  trigger "prevent_user_hard_delete_trigger" for relation "public.users" does not exist, skipping
+CREATE TRIGGER
+CREATE FUNCTION
+REVOKE
+REVOKE
+REVOKE
+GRANT
+CREATE FUNCTION
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6217: NOTICE:  relation "company_billing_profile" already exists, skipping
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6232: NOTICE:  relation "financial_snapshots" already exists, skipping
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6242: NOTICE:  relation "financial_adjustments" already exists, skipping
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6254: NOTICE:  relation "billing_milestones" already exists, skipping
+ALTER TABLE
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6266: NOTICE:  relation "client_credits" already exists, skipping
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6278: NOTICE:  relation "advance_applications" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6292: NOTICE:  relation "credit_notes" already exists, skipping
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6304: NOTICE:  relation "invoice_audit_logs" already exists, skipping
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6316: NOTICE:  relation "exchange_rate_audits" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6328: NOTICE:  relation "requirements" already exists, skipping
+CREATE TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6339: NOTICE:  relation "external_access_links" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6353: NOTICE:  relation "departments" already exists, skipping
+CREATE TABLE
+ALTER TABLE
+DO
+CREATE FUNCTION
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6409: NOTICE:  trigger "worm_protect_system_audit_ledger_update" for relation "system_audit_ledger" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6412: NOTICE:  trigger "worm_protect_system_audit_ledger_delete" for relation "system_audit_ledger" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for company_billing_profile" for relation "company_billing_profile" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for clients" for relation "clients" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for milestones" for relation "milestones" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for invoices" for relation "invoices" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for payments" for relation "payments" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for expenses" for relation "expenses" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for financial_periods" for relation "financial_periods" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for financial_snapshots" for relation "financial_snapshots" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for billing_milestones" for relation "billing_milestones" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for client_credits" for relation "client_credits" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for advance_applications" for relation "advance_applications" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for credit_notes" for relation "credit_notes" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for invoice_audit_logs" for relation "invoice_audit_logs" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for exchange_rate_audits" for relation "exchange_rate_audits" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for external_access_links" for relation "external_access_links" does not exist, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6449: NOTICE:  policy "Workspace isolation for departments" for relation "departments" does not exist, skipping
+DO
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE TABLE
+ALTER TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6482: NOTICE:  policy "Enable insert for authenticated users" for relation "system_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6489: NOTICE:  policy "Enable select based on workspace_id" for relation "system_events" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6500: NOTICE:  policy "Enable delete for admins" for relation "system_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+CREATE TABLE
+CREATE FUNCTION
+CREATE RULE
+CREATE RULE
+CREATE RULE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6636: NOTICE:  policy "Platform admins can view migrations" for relation "system_migrations" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6639: NOTICE:  policy "Users can manage their own follow ups" for relation "follow_ups" does not exist, skipping
+CREATE POLICY
+CREATE TABLE
+CREATE TABLE
+CREATE FUNCTION
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6691: NOTICE:  trigger "on_workspace_created_calendar" for relation "public.workspaces" does not exist, skipping
+CREATE TRIGGER
+ALTER TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6700: NOTICE:  policy "Workspace members can read calendar settings" for relation "public.workspace_calendar_settings" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6703: NOTICE:  policy "Workspace members can insert calendar settings" for relation "public.workspace_calendar_settings" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6706: NOTICE:  policy "Workspace members can update calendar settings" for relation "public.workspace_calendar_settings" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6711: NOTICE:  policy "Workspace members can read company calendar events" for relation "public.company_calendar_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6714: NOTICE:  policy "Workspace members can insert company calendar events" for relation "public.company_calendar_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6717: NOTICE:  policy "Workspace members can update company calendar events" for relation "public.company_calendar_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6720: NOTICE:  policy "Workspace members can delete company calendar events" for relation "public.company_calendar_events" does not exist, skipping
+CREATE POLICY
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6758: NOTICE:  policy "Workspace members can view sync logs" for relation "public.calendar_sync_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6761: NOTICE:  policy "Workspace members can insert sync logs" for relation "public.calendar_sync_logs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+GRANT
+GRANT
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6778: NOTICE:  policy "Workspace members can view departments" for relation "public.departments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6781: NOTICE:  policy "Departments can be managed by PMs and Admins" for relation "public.departments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6794: NOTICE:  policy "Workspace members can view epics" for relation "public.epics" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6797: NOTICE:  policy "Epics can be managed by PMs and Admins" for relation "public.epics" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6810: NOTICE:  policy "Workspace members can view milestones" for relation "public.milestones" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6813: NOTICE:  policy "Milestones can be managed by PMs and Admins" for relation "public.milestones" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6826: NOTICE:  policy "Workspace members can view task comments" for relation "public.task_comments" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6829: NOTICE:  policy "Users can create their own task comments" for relation "public.task_comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6835: NOTICE:  policy "Users can update their own task comments" for relation "public.task_comments" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6838: NOTICE:  policy "Users can delete their own task comments" for relation "public.task_comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6841: NOTICE:  policy "Task comments can be managed by PMs and Admins" for relation "public.task_comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+DO
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6965: NOTICE:  policy "Client bounded visibility for comments" for relation "public.comments" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6974: NOTICE:  policy "Client bounded visibility for task_comments" for relation "public.task_comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:6983: NOTICE:  policy "Client bounded visibility for universal_comments" for relation "public.universal_comments" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7045: NOTICE:  trigger "trigger_cascade_subtask_status" for relation "public.tasks" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE VIEW
+CREATE FUNCTION
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7545: NOTICE:  trigger "check_last_super_admin_removal" for relation "public.users" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+DO
+CREATE INDEX
+DO
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7687: NOTICE:  column "client_id" of relation "projects" already exists, skipping
+ALTER TABLE
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7729: NOTICE:  policy "Documents are visible to workspace" for relation "public.documents" does not exist, skipping
+DO
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7747: NOTICE:  policy "Users can read their own notification events" for relation "public.notification_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7754: NOTICE:  policy "System can mutate notifications" for relation "public.notification_events" does not exist, skipping
+CREATE POLICY
+CREATE FUNCTION
+DROP TRIGGER
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7772: NOTICE:  trigger "trigger_notify_task_assignment" for relation "public.tasks" does not exist, skipping
+CREATE TRIGGER
+CREATE FUNCTION
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7787: NOTICE:  trigger "trigger_notify_task_blocked" for relation "public.tasks" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7815: NOTICE:  policy "Users can view change requests" for relation "public.change_requests" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7822: NOTICE:  policy "Users can insert change requests" for relation "public.change_requests" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7829: NOTICE:  policy "PMs and Admins can update change requests" for relation "public.change_requests" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7955: NOTICE:  policy "Workspace members can view handoffs" for relation "public.employee_handoffs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7958: NOTICE:  policy "Admins can insert handoffs" for relation "public.employee_handoffs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7978: NOTICE:  policy "Workspace storage settings viewable by members" for relation "public.workspace_storage_settings" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:7984: NOTICE:  policy "Workspace storage settings manageable by admin" for relation "public.workspace_storage_settings" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8004: NOTICE:  column "mime_type" of relation "workspace_files" already exists, skipping
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8004: NOTICE:  column "uploaded_by" of relation "workspace_files" already exists, skipping
+ALTER TABLE
+CREATE FUNCTION
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8072: NOTICE:  policy "Backup snapshots viewable by super_admin" for relation "public.backup_snapshots" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8078: NOTICE:  policy "Backup snapshots insertable by super_admin" for relation "public.backup_snapshots" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE FUNCTION
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8114: NOTICE:  policy "System events viewable by admin" for relation "public.system_events" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8122: NOTICE:  policy "Users can insert system events" for relation "public.system_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8125: NOTICE:  policy "Admins can update system events" for relation "public.system_events" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE INDEX
+ALTER TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8166: NOTICE:  policy "Working rules visible to workspace members" for relation "company_working_rules" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8169: NOTICE:  policy "Working rules editable by PMs and Admins" for relation "company_working_rules" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8177: NOTICE:  policy "Company holidays visible to workspace members" for relation "company_holidays" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8180: NOTICE:  policy "Company holidays editable by PMs and Admins" for relation "company_holidays" does not exist, skipping
+CREATE POLICY
+CREATE FUNCTION
+GRANT
+GRANT
+GRANT
+NOTIFY
+CREATE TABLE
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8286: NOTICE:  policy "View milestone signoffs (Internal)" for relation "public.milestone_signoffs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8294: NOTICE:  policy "View milestone signoffs (Client)" for relation "public.milestone_signoffs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8306: NOTICE:  policy "Insert milestone signoffs (Client)" for relation "public.milestone_signoffs" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8324: NOTICE:  column "budget" of relation "projects" already exists, skipping
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8486: NOTICE:  policy "Invitations are visible to workspace members" for relation "invitations" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8491: NOTICE:  policy "Invitations can be created by PMs and Admins" for relation "invitations" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8499: NOTICE:  policy "Invitations can be updated by PMs and Admins" for relation "invitations" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8507: NOTICE:  policy "Invitations can be deleted by PMs and Admins" for relation "invitations" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+NOTIFY
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8524: NOTICE:  policy "Users can view workspace files" for relation "public.workspace_files" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8527: NOTICE:  policy "Users can insert workspace files" for relation "public.workspace_files" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8530: NOTICE:  policy "Users can update workspace files" for relation "public.workspace_files" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8533: NOTICE:  policy "Users can delete workspace files" for relation "public.workspace_files" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8539: NOTICE:  policy "Users can view requirements" for relation "public.requirements" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8542: NOTICE:  policy "Users can insert requirements" for relation "public.requirements" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8545: NOTICE:  policy "Users can update requirements" for relation "public.requirements" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8548: NOTICE:  policy "Users can delete requirements" for relation "public.requirements" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8554: NOTICE:  policy "Users can view milestones" for relation "public.milestones" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8557: NOTICE:  policy "Users can insert milestones" for relation "public.milestones" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8560: NOTICE:  policy "Users can update milestones" for relation "public.milestones" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8563: NOTICE:  policy "Users can delete milestones" for relation "public.milestones" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8569: NOTICE:  policy "Users can view epics" for relation "public.epics" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8572: NOTICE:  policy "Users can insert epics" for relation "public.epics" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8575: NOTICE:  policy "Users can update epics" for relation "public.epics" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8578: NOTICE:  policy "Users can delete epics" for relation "public.epics" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+ALTER TABLE
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8584: NOTICE:  policy "Users can view work_sessions" for relation "public.work_sessions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8587: NOTICE:  policy "Users can insert work_sessions" for relation "public.work_sessions" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8590: NOTICE:  policy "Users can update work_sessions" for relation "public.work_sessions" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8593: NOTICE:  policy "Users can delete work_sessions" for relation "public.work_sessions" does not exist, skipping
+CREATE POLICY
+ALTER TABLE
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8599: NOTICE:  policy "Users can view billing_milestones" for relation "public.billing_milestones" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8602: NOTICE:  policy "Users can insert billing_milestones" for relation "public.billing_milestones" does not exist, skipping
+CREATE POLICY
+DROP POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8605: NOTICE:  policy "Users can update billing_milestones" for relation "public.billing_milestones" does not exist, skipping
+CREATE POLICY
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8608: NOTICE:  policy "Users can delete billing_milestones" for relation "public.billing_milestones" does not exist, skipping
+DROP POLICY
+CREATE POLICY
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8624: NOTICE:  relation "idx_tasks_workspace_active" already exists, skipping
+CREATE INDEX
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8625: NOTICE:  relation "idx_projects_workspace_active" already exists, skipping
+CREATE INDEX
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8626: NOTICE:  relation "idx_documents_workspace_active" already exists, skipping
+CREATE INDEX
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8627: NOTICE:  relation "idx_users_rls_lookup" already exists, skipping
+CREATE INDEX
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8628: NOTICE:  relation "idx_activity_logs_workspace_time" already exists, skipping
+GRANT
+GRANT
+GRANT
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "strict_word_similarity_op"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "strict_word_similarity_commutator_op"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "word_similarity_dist_commutator_op"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_in"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "show_trgm"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "similarity"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "similarity_op"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "word_similarity"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "word_similarity_op"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "word_similarity_commutator_op"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "similarity_dist"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "word_similarity_dist_op"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_compress"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_decompress"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_penalty"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_picksplit"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_union"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_same"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gin_extract_value_trgm"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gin_extract_query_trgm"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gin_trgm_consistent"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_out"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_consistent"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_distance"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gin_trgm_triconsistent"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "strict_word_similarity"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "strict_word_similarity_dist_op"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "strict_word_similarity_dist_commutator_op"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "gtrgm_options"
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "set_limit"
+GRANT
+psql:database/production/RESOLVE_PM_V1_3_INSTALL.sql:8638: WARNING:  no privileges were granted for "show_limit"

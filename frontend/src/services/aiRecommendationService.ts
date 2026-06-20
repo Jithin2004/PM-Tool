@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { sendNotification } from './notificationService';
+import { activityEventService } from './activityEventService';
 
 export interface AIRecommendation {
   id?: string;
@@ -54,7 +54,16 @@ export const aiRecommendationService = {
         timestamp: new Date().toISOString(),
         error: err
       });
-      sendNotification(rec.workspace_id, 'system', 'AI Service Failure', 'Failed to generate AI strategy recommendation. Cache unavailable.');
+      activityEventService.recordActivity({
+        workspace_id: rec.workspace_id,
+        entity_type: 'system',
+        entity_id: 'ai_service',
+        action_type: 'error',
+        metadata: {
+          title: 'AI Service Failure',
+          message: 'Failed to generate AI strategy recommendation. Cache unavailable.'
+        }
+      });
     }
 
     return newRec;
@@ -93,7 +102,16 @@ export const aiRecommendationService = {
         timestamp: new Date().toISOString(),
         error: err
       });
-      sendNotification(workspaceId, 'system', 'AI Sync Failure', 'Failed to save AI recommendation status. Cache unavailable.');
+      activityEventService.recordActivity({
+        workspace_id: workspaceId,
+        entity_type: 'system',
+        entity_id: 'ai_service',
+        action_type: 'error',
+        metadata: {
+          title: 'AI Sync Failure',
+          message: 'Failed to save AI recommendation status. Cache unavailable.'
+        }
+      });
     }
 
     return false;

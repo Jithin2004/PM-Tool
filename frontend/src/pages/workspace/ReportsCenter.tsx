@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase';
 import { showAlert } from '../../components/common/Dialogs';
 import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 import { generateWeeklyDigestMarkdown } from '../../core/reporting/WeeklyDigestEngine';
+import { ProjectReportBuilder } from '../../components/reports/ProjectReportBuilder';
 
 export default function ReportsCenter() {
   const { workspace } = useWorkspace();
@@ -23,6 +24,8 @@ export default function ReportsCenter() {
   const [previewData, setPreviewData] = useState<any[] | null>(null);
   const [previewColumns, setPreviewColumns] = useState<string[]>([]);
   const [digestMarkdown, setDigestMarkdown] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'legacy' | 'v2'>('v2');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   
   const canManageCompensation = hasCapability(profile?.role, 'manage_compensation');
 
@@ -177,7 +180,7 @@ export default function ReportsCenter() {
     }
 
       if (reportData.length === 0) {
-        await showAlert("No records found for selected filters.", { type: "info" });
+        await showAlert("Reports will appear as your team completes work.", { type: "info" });
         setExporting(false);
         return;
       }
@@ -236,6 +239,52 @@ export default function ReportsCenter() {
       </div>
 
 
+      <div className="flex gap-4 mb-6">
+        <button 
+          onClick={() => setViewMode('v2')}
+          className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${viewMode === 'v2' ? 'bg-accent-primary text-black' : 'bg-surface-2 text-text-secondary hover:bg-surface-3'}`}
+        >
+          V2 Intelligence Builder
+        </button>
+        <button 
+          onClick={() => setViewMode('legacy')}
+          className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${viewMode === 'legacy' ? 'bg-accent-primary text-black' : 'bg-surface-2 text-text-secondary hover:bg-surface-3'}`}
+        >
+          Legacy Reports
+        </button>
+      </div>
+
+      {viewMode === 'v2' ? (
+        <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border min-h-[500px]">
+          <div className="mb-4">
+            <label className="block text-xs font-semibold uppercase tracking-widest text-text-tertiary mb-2">Select Project Context</label>
+            <select 
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full max-w-md input-premium p-3 text-sm outline-none"
+            >
+              <option value="">Select a project...</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          
+          {selectedProjectId ? (
+            <ProjectReportBuilder 
+              workspaceId={workspace?.id} 
+              projectId={selectedProjectId} 
+              currentUser={profile} 
+            />
+          ) : (
+             <PremiumEmptyState 
+               icon={Activity} 
+               title="Select a Project" 
+               description="Choose a project to generate a V2 operational intelligence report." 
+             />
+          )}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
           <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border space-y-6">
@@ -329,12 +378,12 @@ export default function ReportsCenter() {
                 {exporting ? 'Generating...' : 'Preview & Download'}
               </button>
             </div>
-
             </>
             )}
           </div>
         </div>
       </div>
+      )}
 
       {/* Preview Section */}
       {previewData !== null && (

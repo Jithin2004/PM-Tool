@@ -313,16 +313,17 @@ export async function computeImpactLocal(input: ImpactInput): Promise<ImpactResu
 
 import { supabase } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
-import { sendNotification } from './notificationService';
+import { activityEventService } from './activityEventService';
+import { cascadeQueueEngine } from '../core/engines/cascadeQueueEngine';
 
-export async function propagateAndPersist(
+export async function persistBatch(
   input: ImpactInput,
-  existingResult?: ImpactResult
-): Promise<ImpactResult> {
+  result: ImpactResult,
+  entitiesChunk: AffectedEntity[]
+): Promise<void> {
+  const isLargeCascade = result.affectedEntities.length >= 50;
 
-  const result = existingResult || await computeImpact(input);
-
-  for (const entity of result.affectedEntities) {
+  for (const entity of entitiesChunk) {
     if (entity.deltaDays !== 0 || entity.newRisk !== entity.originalRisk) {
       const updates: Record<string, any> = {
         predicted_completion: entity.newEta,
@@ -342,34 +343,50 @@ export async function propagateAndPersist(
         .update(updates)
         .eq('id', entity.taskId);
 
-      await activityLogService.appendLog({
-        workspace_id: input.workspaceId,
-        actor_id: input.actorId,
-        task_id: entity.taskId,
-        action: 'timeline_impact_propagated',
-        metadata: {
-          trigger_type: input.triggerEntityType,
-          trigger_action: input.triggerAction,
-          delta_days: entity.deltaDays,
-          risk_delta: entity.newRisk !== entity.originalRisk ? `${entity.originalRisk}→${entity.newRisk}` : 'none',
-          confidence_delta: entity.newConfidence - entity.originalConfidence,
-          propagated_from: input.triggerEntityId
-        }
-      });
-
-      if (Math.abs(entity.deltaDays) >= 2 || entity.newRisk === 'high') {
-        await sendNotification(
-          input.workspaceId,
-          'risk',
-          'Timeline Impact Cascade',
-          `"${entity.taskName}" ${entity.deltaDays > 0 ? `delayed +${entity.deltaDays}d` : `accelerated ${entity.deltaDays}d`} due to ${input.triggerEntityType} change`,
-          undefined
-        );
+      if (!isLargeCascade) {
+        await activityEventService.recordActivity({
+          workspace_id: input.workspaceId,
+          actor_id: input.actorId || 'system',
+          entity_type: 'task',
+          entity_id: entity.taskId,
+          action_type: 'timeline_impact_propagated',
+          metadata: {
+            trigger_type: input.triggerEntityType,
+            delta_days: entity.deltaDays,
+            risk_delta: entity.newRisk !== entity.originalRisk ? `${entity.originalRisk}→${entity.newRisk}` : 'none'
+          }
+        });
       }
     }
   }
+}
 
-  if (result.affectedEntities.length > 0) {
+export async function propagateAndPersist(
+  input: ImpactInput,
+  existingResult?: ImpactResult,
+  onProgress?: (processed: number, total: number) => void
+): Promise<ImpactResult> {
+
+  const result = existingResult || await computeImpact(input);
+
+  // Route through Cascade Queue Engine
+  await cascadeQueueEngine.queueCascadeImpact(input, result, persistBatch, onProgress);
+
+  // Aggregated mass event for large cascades
+  if (result.affectedEntities.length >= 50) {
+    await activityEventService.recordActivity({
+      workspace_id: input.workspaceId,
+      actor_id: input.actorId || 'system',
+      entity_type: input.triggerEntityType,
+      entity_id: input.triggerEntityId || 'global',
+      action_type: 'timeline_mass_recalculation',
+      metadata: {
+        affected_count: result.affectedEntities.length,
+        total_eta_delta_days: result.etaDelta,
+        message: `Timeline recalculation updated ${result.affectedEntities.length} linked items`
+      }
+    });
+  } else if (result.affectedEntities.length > 0) {
     await activityLogService.appendLog({
       workspace_id: input.workspaceId,
       actor_id: input.actorId,
@@ -377,13 +394,7 @@ export async function propagateAndPersist(
       action: 'timeline_impact_cascade',
       metadata: {
         trigger_type: input.triggerEntityType,
-        trigger_action: input.triggerAction,
-        affected_count: result.affectedEntities.length,
-        total_eta_delta_days: result.etaDelta,
-        capacity_delta_hours: result.capacityDelta,
-        risk_delta_count: result.riskDelta,
-        avg_confidence_delta: result.confidenceDelta,
-        affected_task_ids: result.affectedEntities.map(e => e.taskId)
+        affected_count: result.affectedEntities.length
       }
     });
   }

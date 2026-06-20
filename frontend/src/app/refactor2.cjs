@@ -30,4 +30,4 @@ content = content.replace(/function RouteFallback\(\) \{[\s\S]*?const FALLBACK =
 content = content.replace(/<Suspense fallback=\{FALLBACK\}>\s*(<[A-Za-z0-9_]+ \/>)\s*<\/Suspense>/g, '$1');
 
 fs.writeFileSync('router.tsx', content);
-console.log('Done refactoring router.tsx');
+

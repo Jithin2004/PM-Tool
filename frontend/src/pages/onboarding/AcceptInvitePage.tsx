@@ -268,9 +268,9 @@ export function AcceptInvitePage() {
                 {loading ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black" />
-                    Securely Provisioning...
+                    Connecting to workspace...
                   </>
-                ) : 'Complete Provisioning'}
+                ) : 'Join Workspace'}
               </button>
             </form>
           )}

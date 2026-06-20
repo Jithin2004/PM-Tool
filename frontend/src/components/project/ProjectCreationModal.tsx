@@ -442,12 +442,17 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
                     <div>
                       <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Methodology</label>
                       <select value={formData.execution_mode} onChange={e => handleUpdate('execution_mode', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm outline-none">
-                        <option value="KANBAN">Kanban</option>
-                        <option value="SCRUM">Scrum</option>
+                        <option value="KANBAN">Board (Kanban)</option>
+                        <option value="SCRUM">Work Cycles (Sprint)</option>
                         <option value="HYBRID">Hybrid</option>
-                        <option value="SDLC">SDLC</option>
-                        <option value="CUSTOM">Custom</option>
+                        <option value="SDLC">Custom Phases</option>
                       </select>
+                      <p className="mt-2 text-xs text-text-tertiary">
+                        {formData.execution_mode === 'KANBAN' && "Move work through simple stages like To Do, Doing, Done."}
+                        {formData.execution_mode === 'SCRUM' && "Plan work in weekly or monthly cycles."}
+                        {formData.execution_mode === 'HYBRID' && "Combine boards and cycles for flexible planning."}
+                        {formData.execution_mode === 'SDLC' && "Create your own steps for your team's process."}
+                      </p>
                     </div>
                     <div>
                       <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Approval Workflow</label>

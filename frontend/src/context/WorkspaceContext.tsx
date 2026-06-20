@@ -7,6 +7,7 @@ import { useAuth } from './AuthContext';
 import { hasCapability } from '../core/auth/permissions';
 //import { buildOAuthRedirectUrl, setRedirectToAfterAuth } from '../core/auth/postAuthRedirect';
 import { companyCalendarService } from '../services/companyCalendarService';
+import { workspaceMemberCache } from '../core/engines/workspaceMemberCache';
 
 interface WorkspaceContextValue {
   user: User | null;
@@ -93,6 +94,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!profile.workspace_id) {
       setWorkspace(null);
       setLoading(false);
+      workspaceMemberCache.destroy();
       return;
     }
 
@@ -120,6 +122,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             }
             return parsed;
           });
+
+          // Initialize workspace member cache
+          workspaceMemberCache.hydrate(parsed.id);
+          workspaceMemberCache.initializeRealtimeSync(parsed.id);
 
           // Auto-fetch next year's holidays in background (owner / super_admin only)
           if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || hasCapability(profile.role, 'manage_settings'))) {
@@ -195,6 +201,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setWorkspace(null);
+    workspaceMemberCache.destroy();
   }, []);
 
   const t = useCallback((key: string, fallback?: string): string => {

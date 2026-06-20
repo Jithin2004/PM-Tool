@@ -117,7 +117,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: Props) {
     switch (type) {
       case 'project': return <FolderOpen className="w-4 h-4 text-indigo-400" />;
       case 'task': return <Check className="w-4 h-4 text-emerald-400" />;
-      case 'document': return <FileText className="w-4 h-4 text-blue-400" />;
+      case 'document': 
+      case 'file': return <FileText className="w-4 h-4 text-blue-400" />;
       case 'user': return <Users className="w-4 h-4 text-purple-400" />;
       case 'comment': return <Activity className="w-4 h-4 text-orange-400" />;
       case 'decision': return <BrainCircuit className="w-4 h-4 text-cyan-400" />;

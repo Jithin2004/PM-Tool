@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    worker: {
+      format: 'es',
+    },
     build: {
       sourcemap: true,
       // Use esbuild minifier — faster and smaller than default

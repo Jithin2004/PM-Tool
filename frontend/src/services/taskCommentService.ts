@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
-import { sendNotification } from './notificationService';
+import { activityEventService } from './activityEventService';
 import { WorkConversationEngine } from '../core/system/WorkConversationEngine';
 import { FollowUpEngine } from '../core/system/FollowUpEngine';
 
@@ -156,13 +156,18 @@ export const createTaskComment = async (
   if (analysis.mentions.length > 0) {
     for (const m of analysis.mentions) {
       if (m.userId !== authorId) {
-        await sendNotification(
-          workspaceId,
-          'assignments',
-          'You were mentioned',
-          `You were mentioned in a task comment: "${content.substring(0, 50)}..."`,
-          m.userId
-        );
+        await activityEventService.recordActivity({
+          workspace_id: workspaceId,
+          actor_id: authorId,
+          entity_type: 'task',
+          entity_id: taskId,
+          action_type: 'mention',
+          metadata: {
+            mentioned_user_id: m.userId,
+            author_name: users.find(u => u.id === authorId)?.full_name || 'Someone',
+            comment_snippet: content.substring(0, 50)
+          }
+        });
       }
     }
   }

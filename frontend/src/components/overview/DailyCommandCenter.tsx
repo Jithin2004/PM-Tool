@@ -4,6 +4,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { getDailyIntelligence, DailyIntelligence, ActionableItem, Recommendation } from '../../services/dailyCommandService';
 import { ActivityStream } from '../dashboard/ActivityStream';
 import { ArrowRight, CheckCircle2, Clock, ShieldAlert, Terminal, Play, Flame, Bell, Target, TrendingUp, Activity } from 'lucide-react';
+import { RoleAwareQuickAccess } from './RoleAwareQuickAccess';
 import { useNavigate } from 'react-router-dom';
 
 export function DailyCommandCenter() {
@@ -11,6 +12,7 @@ export function DailyCommandCenter() {
   const { workspace } = useWorkspace();
   const [intel, setIntel] = useState<DailyIntelligence | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recentNotifications, setRecentNotifications] = useState<any[]>([]);
   
   const [activeTab, setActiveTab] = useState<'overview' | 'activity'>(() => {
     return window.location.pathname === '/overview/activity' ? 'activity' : 'overview';
@@ -28,10 +30,20 @@ export function DailyCommandCenter() {
     async function load() {
       if (!user || !workspace || !profile?.role) return;
       try {
-        const data = await getDailyIntelligence(user.id, workspace.id, profile);
-        setIntel(data);
+        const [intelData, notifData] = await Promise.all([
+          getDailyIntelligence(user.id, workspace.id, profile),
+          import('../../lib/supabase').then(s => s.supabase.from('notification_events')
+            .select('*')
+            .eq('workspace_id', workspace.id)
+            .eq('recipient_id', profile.id)
+            .is('read_at', null)
+            .order('created_at', { ascending: false })
+            .limit(5))
+        ]);
+        setIntel(intelData);
+        if (notifData.data) setRecentNotifications(notifData.data);
       } catch (err) {
-        console.error('[DailyCommandCenter] getDailyIntelligence failed', err);
+        console.error('[DailyCommandCenter] load failed', err);
       } finally {
         setLoading(false);
       }
@@ -86,6 +98,9 @@ export function DailyCommandCenter() {
 
       {activeTab === 'overview' ? (
         <>
+          {/* Role-Aware Quick Access — above primary focus */}
+          <RoleAwareQuickAccess />
+
           {/* Primary Focus */}
           {intel.primaryFocus && (
             <div className={`glass-panel p-6 rounded-xl border relative overflow-hidden mb-6 ${
@@ -229,6 +244,34 @@ export function DailyCommandCenter() {
                         <li key={change.id} className="p-3 hover:bg-surface-hover transition-colors">
                           <p className="text-xs font-medium text-text-primary mb-1">{change.description}</p>
                           <p className="text-[10px] text-text-tertiary">{change.time}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Notification Intelligence Stream */}
+              {recentNotifications.length > 0 && (
+                <div className="bg-surface-elevated rounded-lg border border-border shadow-sm overflow-hidden">
+                  <div className="p-4 border-b border-border bg-surface flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-accent-primary" />
+                      <h2 className="text-sm font-semibold text-text-primary">Actionable Alerts</h2>
+                    </div>
+                    <button onClick={() => navigateTo('/workspace/notifications')} className="text-[10px] text-accent-primary hover:underline">View Inbox</button>
+                  </div>
+                  <div className="p-0">
+                    <ul className="divide-y divide-border-subtle">
+                      {recentNotifications.map(notif => (
+                        <li key={notif.id} className="p-3 hover:bg-surface-hover transition-colors flex gap-3">
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-text-primary mb-0.5">{notif.title}</p>
+                            <p className="text-[10px] text-text-secondary">{notif.message}</p>
+                          </div>
+                          {notif.action_url && (
+                             <button onClick={() => navigateTo(notif.action_url)} className="text-[10px] bg-accent-primary/10 text-accent-primary px-2 py-1 rounded font-bold h-fit mt-1">Review</button>
+                          )}
                         </li>
                       ))}
                     </ul>

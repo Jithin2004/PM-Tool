@@ -17,7 +17,7 @@ export function SecurityPage() {
         <div className="text-center space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white">Security & Infrastructure Disclosure</h1>
           <p className="text-[#a1a1aa] max-w-2xl mx-auto">
-            Resolve PM is engineered for absolute zero-trust environments. As an on-premise, self-hosted platform, your security perimeter is completely under your control.
+            Resolve PM is engineered for absolute zero-trust environments. With flexible deployment options, your security perimeter is completely under your control.
           </p>
         </div>
 
@@ -46,9 +46,9 @@ export function SecurityPage() {
             <div className="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center mb-4">
               <Shield className="w-6 h-6 text-purple-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">Role-Based Access Control (RBAC)</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">Role-Based Access</h3>
             <p className="text-[#a1a1aa] leading-relaxed text-sm">
-              Our capability-driven governance engine ensures that users only access what they strictly need. From Super Admins to external viewers, permissions are continuously verified at both the UI and database row-level security (RLS) layers.
+              Our capability-driven governance engine ensures that users only access what they strictly need. From Super Admins to external viewers, permissions are continuously verified at both the UI and workspace data secure access rules.
             </p>
           </div>
 

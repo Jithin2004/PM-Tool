@@ -50,6 +50,7 @@ import { reconstructProjectTimeline } from '../../../core/execution/flowEngine';
 import type { DeliveryTimeline } from '../../../core/execution/flowEngine';
 
 import ExecutionTimelineView from './ExecutionTimelineView';
+import { DynamicBoard } from '../../board/DynamicBoard';
 
 interface ExecutionSystemProps {
   projects: Project[];
@@ -430,19 +431,19 @@ export function ExecutionSystem({
 
       <div className="flex-1 overflow-hidden">
         {activeView === 'board' && (
-          <BoardView
-            tasksByGroup={tasksByGroup}
-            groupBy={groupBy}
+          <DynamicBoard
+            tasks={filteredTasks}
             projectMap={projectMap}
             userMap={userMap}
             hasWriteAccess={canUserModifyTask}
             blockedByMap={blockedByMap}
-            onTransitionTask={handleTransitionTask}
+            onEditTask={setEditingTask}
             onTaskClick={handleTaskClick}
             density={density}
             taskSubstates={workspaceSettingsBlob?.task_substates || {}}
             blockers={workspaceSettingsBlob?.execution_blockers || []}
-            onUpdateSubstate={handleUpdateSubstate}
+            projectId={filterByProject || undefined}
+            onRefreshIntelligence={onRecalibrateAnalytics}
           />
         )}
 

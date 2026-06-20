@@ -37,4 +37,4 @@ const replacementStr = `function RouteShell({ children }: { children: React.Reac
 
 content = content.replace(targetStr, replacementStr);
 fs.writeFileSync('router.tsx', content);
-console.log('Replaced RouteShell manually via node');
+

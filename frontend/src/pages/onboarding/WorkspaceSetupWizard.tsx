@@ -3,14 +3,16 @@ import React, { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
-import { Check, Layers, Users, Zap, Briefcase, Plus, X, ArrowLeft } from 'lucide-react';
+import { Check, Layers, Users, Zap, Briefcase, Plus, X, ArrowLeft, LayoutTemplate } from 'lucide-react';
 import { EmailChipsInput, EmailChip } from '../../components/ui/EmailChipsInput';
 import { ProjectChipsInput } from '../../components/ui/ProjectChipsInput';
-import { demoWorkspacesService } from '../../services/demoWorkspacesService';
+import { sandboxSeedEngine } from '../../core/engines/sandboxSeedEngine';
 import { clearLicense } from '../../lib/productKey';
 import { supabase } from '../../lib/supabase';
 import { sha256 } from '../../utils/cryptoUtils';
 import { navigateTo } from '../../core/auth/postAuthRedirect';
+import { onboardingService, ONBOARDING_STEPS } from '../../services/onboardingService';
+import { TemplatePreview, OperatingTemplate } from '../../components/setup/TemplatePreview';
 const TEMPLATE_SUMMARIES: Record<string, { projects: number, milestones: number, tasks: number, members: number, recommendedFor: string }> = {
   'ERP Implementation': { projects: 3, milestones: 12, tasks: 45, members: 8, recommendedFor: 'Enterprise Transformation' },
   'Software Product Launch': { projects: 2, milestones: 8, tasks: 34, members: 5, recommendedFor: 'Product Teams' },
@@ -28,6 +30,7 @@ export function WorkspaceSetupWizard() {
   const [departments, setDepartments] = useState<string[]>([]);
   const [workingTimeFrom, setWorkingTimeFrom] = useState('09:00');
   const [workingTimeTo, setWorkingTimeTo] = useState('17:00');
+  const [selectedOperatingTemplates, setSelectedOperatingTemplates] = useState<OperatingTemplate[]>([]);
   const [members, setMembers] = useState<EmailChip[]>([]);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -159,7 +162,7 @@ export function WorkspaceSetupWizard() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("Not authenticated");
 
-            const response = await fetch(`${(import.meta.env.PROD ? (() => { if (!import.meta.env.VITE_API_URL) throw new Error("Backend URL missing"); return import.meta.env.VITE_API_URL; })() : (import.meta.env.VITE_API_URL || 'http://localhost:5001'))}/api/bulk-invite`, {
+            const response = await fetch(`${(import.meta.env.PROD ? (() => { if (!import.meta.env.VITE_API_URL) throw new Error("Backend URL missing"); return import.meta.env.VITE_API_URL; })() : (import.meta.env.VITE_API_URL || ''))}/api/bulk-invite`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -202,6 +205,11 @@ export function WorkspaceSetupWizard() {
           return;
         }
         await refreshProfile();
+        // Persist onboarding state — mark setup complete
+        await onboardingService.completeSetup(created.id);
+        if (selectedOperatingTemplates.length > 0) {
+          await onboardingService.saveTemplates(created.id, selectedOperatingTemplates);
+        }
         navigateTo('/overview');
       }
     } catch (err: any) {
@@ -223,7 +231,7 @@ export function WorkspaceSetupWizard() {
         settings: { companyName: selectedTemplate } as any
       });
       if (ws) {
-        await demoWorkspacesService.injectDemoData(ws.id, profile!.id, selectedTemplate);
+        await sandboxSeedEngine.seedSandboxEnvironment(ws.id, profile!.id, selectedTemplate);
         const licenseSuccess = await attachLicenseIfPending(ws.id, user?.id || '');
         if (!licenseSuccess) {
           setDbError("Workspace created but license activation failed. Please retry activation.");
@@ -284,9 +292,10 @@ export function WorkspaceSetupWizard() {
               <span className={step >= 1 ? "text-[var(--pm-primary)] font-bold" : ""}>Details {step > 1 ? '✓' : '○'}</span>
               <span className={step >= 2 ? "text-[var(--pm-primary)] font-bold" : ""}>Departments {step > 2 ? '✓' : '○'}</span>
               <span className={step >= 3 ? "text-[var(--pm-primary)] font-bold" : ""}>Hours {step > 3 ? '✓' : '○'}</span>
-              <span className={step >= 4 ? "text-[var(--pm-primary)] font-bold" : ""}>Team Import {step > 4 ? '✓' : '○'}</span>
-              <span className={step >= 5 ? "text-[var(--pm-primary)] font-bold" : ""}>Roles {step > 5 ? '✓' : '○'}</span>
-              <span className={step >= 6 ? "text-[var(--pm-primary)] font-bold" : ""}>Launch {step > 6 ? '✓' : '○'}</span>
+              <span className={step >= 4 ? "text-[var(--pm-primary)] font-bold" : ""}>Templates {step > 4 ? '✓' : '○'}</span>
+              <span className={step >= 5 ? "text-[var(--pm-primary)] font-bold" : ""}>Team {step > 5 ? '✓' : '○'}</span>
+              <span className={step >= 6 ? "text-[var(--pm-primary)] font-bold" : ""}>Roles {step > 6 ? '✓' : '○'}</span>
+              <span className={step >= 7 ? "text-[var(--pm-primary)] font-bold" : ""}>Launch {step > 7 ? '✓' : '○'}</span>
             </div>
             <div className="text-right hidden sm:block shrink-0 pl-4">
               <span className="block opacity-50">Estimated setup time:</span>
@@ -360,7 +369,23 @@ export function WorkspaceSetupWizard() {
 
           {step === 4 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-              <label className="block text-sm font-semibold">Step 4: Import Employees</label>
+              <div className="flex items-center gap-2 mb-1">
+                <LayoutTemplate className="w-4 h-4 text-indigo-400" />
+                <label className="block text-sm font-semibold">Step 4: Operating Templates</label>
+              </div>
+              <p className="text-[11px] text-[var(--pm-on-surface-variant)] italic mb-3">
+                Choose how your team works. These configure your workflow views — no sample data is inserted.
+              </p>
+              <TemplatePreview
+                selected={selectedOperatingTemplates}
+                onChange={setSelectedOperatingTemplates}
+              />
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+              <label className="block text-sm font-semibold">Step 5: Invite Team (Optional)</label>
               <EmailChipsInput 
                 value={members} 
                 onChange={setMembers} 
@@ -372,9 +397,9 @@ export function WorkspaceSetupWizard() {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-              <label className="block text-sm font-semibold">Step 5: Assign Permissions & Roles</label>
+              <label className="block text-sm font-semibold">Step 6: Assign Permissions & Roles</label>
               {members.length === 0 ? (
                 <p className="text-sm text-[var(--pm-on-surface-variant)] italic">No team members added. You can skip this step.</p>
               ) : (
@@ -398,11 +423,25 @@ export function WorkspaceSetupWizard() {
                             }}
                             className="input-premium w-full text-sm rounded px-3 py-2 outline-none"
                           >
-                            <option value="admin">Workspace Admin</option>
+                            <option value="owner">Owner</option>
+                            <option value="admin">Admin</option>
                             <option value="manager">Manager</option>
-                            <option value="member">Member</option>
-                            <option value="external">External / Client</option>
+                            <option value="employee">Employee</option>
+                            <option value="developer">Developer</option>
+                            <option value="finance">Finance</option>
+                            <option value="hr">HR</option>
+                            <option value="client">Client</option>
                           </select>
+                          <p className="mt-1 text-[10px] font-mono-pm text-text-tertiary">
+                            {m.authority === 'owner' && "Full workspace control"}
+                            {m.authority === 'admin' && "Manage workspace settings and users"}
+                            {m.authority === 'manager' && "Manage projects and team work"}
+                            {m.authority === 'employee' && "Complete assigned work"}
+                            {m.authority === 'developer' && "Build and complete technical tasks"}
+                            {m.authority === 'finance' && "Manage money, invoices, and reports"}
+                            {m.authority === 'hr' && "Manage people, attendance, and approvals"}
+                            {m.authority === 'client' && "View shared progress"}
+                          </p>
                         </div>
                         
                         <div className="space-y-1">
@@ -452,28 +491,32 @@ export function WorkspaceSetupWizard() {
                       </div>
 
                       <div className="space-y-2 mt-2">
-                        <label className="text-[11px] font-semibold text-[var(--pm-on-surface-variant)] uppercase tracking-wider">Functional Responsibilities</label>
-                        <div className="flex flex-wrap gap-2">
-                          {['Projects', 'Engineering', 'Finance', 'PeopleOperations', 'Clients', 'Documents', 'Operations'].map((func) => (
-                            <label key={func} className="flex items-center gap-1.5 cursor-pointer bg-surface-3 hover:bg-surface-4 border border-border/50 rounded-full px-3 py-1.5 text-xs transition-colors">
-                              <input 
-                                type="checkbox"
-                                checked={m.functions.includes(func)}
-                                onChange={(e) => {
-                                  const newMembers = [...members];
-                                  if (e.target.checked) {
-                                    newMembers[idx].functions = [...m.functions, func];
-                                  } else {
-                                    newMembers[idx].functions = m.functions.filter(f => f !== func);
-                                  }
-                                  setMembers(newMembers);
-                                }}
-                                className="w-3.5 h-3.5 rounded border-border text-[var(--pm-primary)] focus:ring-[var(--pm-primary)] bg-surface-1"
-                              />
-                              <span>{func.replace('PeopleOperations', 'People Ops')}</span>
-                            </label>
-                          ))}
-                        </div>
+                        <details className="group">
+                          <summary className="text-[11px] font-semibold text-[var(--pm-on-surface-variant)] uppercase tracking-wider cursor-pointer list-none flex items-center gap-2">
+                            Customize Permissions <span className="inline-block transition-transform group-open:rotate-180">▼</span>
+                          </summary>
+                          <div className="flex flex-wrap gap-2 mt-2 pl-2 border-l border-[var(--border-soft)]">
+                            {['Projects', 'Engineering', 'Finance', 'PeopleOperations', 'Clients', 'Documents', 'Operations'].map((func) => (
+                              <label key={func} className="flex items-center gap-1.5 cursor-pointer bg-surface-3 hover:bg-surface-4 border border-border/50 rounded-full px-3 py-1.5 text-xs transition-colors">
+                                <input 
+                                  type="checkbox"
+                                  checked={m.functions.includes(func)}
+                                  onChange={(e) => {
+                                    const newMembers = [...members];
+                                    if (e.target.checked) {
+                                      newMembers[idx].functions = [...m.functions, func];
+                                    } else {
+                                      newMembers[idx].functions = m.functions.filter(f => f !== func);
+                                    }
+                                    setMembers(newMembers);
+                                  }}
+                                  className="w-3.5 h-3.5 rounded border-border text-[var(--pm-primary)] focus:ring-[var(--pm-primary)] bg-surface-1"
+                                />
+                                <span>{func.replace('PeopleOperations', 'People Ops')}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </details>
                       </div>
                     </div>
                   ))}
@@ -488,7 +531,7 @@ export function WorkspaceSetupWizard() {
             </div>
           )}
           
-          {step === 6 && (
+          {step === 7 && (
             <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
               <div className="text-center">
                 <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -533,6 +576,17 @@ export function WorkspaceSetupWizard() {
                   </div>
                 )}
                 
+                {selectedOperatingTemplates.length > 0 && (
+                  <div className="border-b border-border/50 pb-3">
+                    <span className="text-xs font-mono uppercase text-[var(--pm-on-surface-variant)] block mb-2">Operating Templates</span>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedOperatingTemplates.map(t => (
+                        <span key={t} className="text-xs bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full">{t.replace(/_/g, ' ')}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center pb-1">
                   <span className="text-xs font-mono uppercase text-[var(--pm-on-surface-variant)]">Template</span>
                   <span className="font-semibold text-[var(--pm-on-surface)]">Manual Configuration</span>
@@ -543,7 +597,7 @@ export function WorkspaceSetupWizard() {
 
           <div className="mt-8 flex justify-between">
             <button disabled={step === 1 || selectedTemplate !== null} onClick={() => setStep(s => s - 1)} className="px-4 py-2 rounded btn-premium-secondary disabled:opacity-50 transition-colors">Back</button>
-            {step < 6 ? (
+            {step < 7 ? (
               <button disabled={selectedTemplate !== null || (step === 1 && !name.trim())} onClick={() => setStep(s => s + 1)} className="px-4 py-2 rounded btn-premium-primary disabled:opacity-50 transition-colors">Next</button>
             ) : (
               <button onClick={handleFinish} disabled={loading || selectedTemplate !== null} className="px-4 py-2 rounded btn-premium-success flex items-center gap-2 disabled:opacity-50 transition-colors font-medium">
@@ -652,3 +706,5 @@ export function WorkspaceSetupWizard() {
     </ResolveLayout>
   );
 }
+
+

@@ -3,7 +3,7 @@ import {
   fetchAutomationRules, createAutomationRule, toggleAutomationRule, deleteAutomationRule,
   fetchTemplates, installTemplate,
   AutomationRule, AutomationTemplate, BUILTIN_TEMPLATES,
-} from '../../services/automationEngine';
+} from '../../core/engines/automationEngine';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { Zap, Plus, Settings2, Trash2, Shield, Activity, Power, Download } from 'lucide-react';
@@ -257,3 +257,4 @@ export default function AutomationsPanel() {
     </div>
   );
 }
+

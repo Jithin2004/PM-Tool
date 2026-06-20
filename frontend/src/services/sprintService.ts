@@ -148,5 +148,117 @@ export const sprintService = {
       points.push({ date: dateStr, ideal: Math.round(ideal * 10) / 10, actual: totalPoints - actual, effectiveIdeal: Math.round(effectiveIdeal * 10) / 10 });
     }
     return points;
+  },
+
+  async addTaskToSprint(taskId: string, sprintId: string, workspaceId: string, actorId?: string, isSprintActive = false): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+    const { error } = await supabase.from('tasks').update({ sprint_id: sprintId }).eq('id', taskId);
+    if (error) { console.error('[sprintService.addTaskToSprint]', error); return false; }
+    
+    const { activityEventService } = await import('./activityEventService');
+    await activityEventService.recordActivity({
+      workspace_id: workspaceId, actor_id: actorId, entity_type: 'task', entity_id: taskId,
+      action_type: 'task_added_to_sprint', after_value: { sprint_id: sprintId }
+    });
+
+    if (isSprintActive) {
+      await activityEventService.recordActivity({
+        workspace_id: workspaceId, actor_id: actorId, entity_type: 'sprint', entity_id: sprintId,
+        action_type: 'scope_changed', after_value: { added_after_start: true, task_id: taskId }
+      });
+    }
+    return true;
+  },
+
+  async removeTaskFromSprint(taskId: string, sprintId: string, workspaceId: string, actorId?: string, isSprintActive = false): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+    const { error } = await supabase.from('tasks').update({ sprint_id: null }).eq('id', taskId);
+    if (error) { console.error('[sprintService.removeTaskFromSprint]', error); return false; }
+    
+    const { activityEventService } = await import('./activityEventService');
+    await activityEventService.recordActivity({
+      workspace_id: workspaceId, actor_id: actorId, entity_type: 'task', entity_id: taskId,
+      action_type: 'task_removed_from_sprint', before_value: { sprint_id: sprintId }
+    });
+
+    if (isSprintActive) {
+      await activityEventService.recordActivity({
+        workspace_id: workspaceId, actor_id: actorId, entity_type: 'sprint', entity_id: sprintId,
+        action_type: 'scope_changed', after_value: { removed_after_start: true, task_id: taskId }
+      });
+    }
+    return true;
+  },
+
+  async startSprint(sprintId: string, workspaceId: string, actorId?: string): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+    const { error } = await supabase.from('sprints').update({ status: 'active' }).eq('id', sprintId);
+    if (error) return false;
+
+    const { activityEventService } = await import('./activityEventService');
+    await activityEventService.recordActivity({
+      workspace_id: workspaceId, actor_id: actorId, entity_type: 'sprint', entity_id: sprintId,
+      action_type: 'sprint_started', after_value: { status: 'active' }
+    });
+    return true;
+  },
+
+  async completeSprint(
+    sprintId: string,
+    workspaceId: string,
+    snapshotData: any,
+    incompleteTaskIds: string[],
+    actionForIncomplete: 'backlog' | 'next_sprint',
+    nextSprintId?: string,
+    actorId?: string
+  ): Promise<boolean> {
+    if (!isSupabaseConfigured) return false;
+
+    await supabase.from('sprint_snapshots').insert({
+      workspace_id: workspaceId, sprint_id: sprintId, snapshot: snapshotData
+    });
+
+    const { error } = await supabase.from('sprints').update({ status: 'completed' }).eq('id', sprintId);
+    if (error) return false;
+
+    if (incompleteTaskIds.length > 0) {
+      if (actionForIncomplete === 'backlog') {
+        await supabase.from('tasks').update({ sprint_id: null }).in('id', incompleteTaskIds);
+      } else if (actionForIncomplete === 'next_sprint' && nextSprintId) {
+        await supabase.from('tasks').update({ sprint_id: nextSprintId }).in('id', incompleteTaskIds);
+      }
+    }
+
+    const { activityEventService } = await import('./activityEventService');
+    await activityEventService.recordActivity({
+      workspace_id: workspaceId, actor_id: actorId, entity_type: 'sprint', entity_id: sprintId,
+      action_type: 'sprint_completed', after_value: { snapshot: snapshotData, carried_forward: incompleteTaskIds.length }
+    });
+
+    return true;
+  },
+
+  async getSprintHealth(sprintTasks: any[], capacityHours: number) {
+    const committedHours = sprintTasks.reduce((sum, t) => sum + (Number(t.estimated_hours) || 0), 0);
+    const blockersCount = sprintTasks.filter(t => t.status === 'blocked').length;
+    
+    const reasons: string[] = [];
+    let status: 'healthy' | 'warning' | 'critical' = 'healthy';
+
+    if (committedHours > capacityHours) {
+      status = 'warning';
+      reasons.push(`Sprint overloaded by ${Math.ceil(committedHours - capacityHours)}h`);
+      if (committedHours > capacityHours * 1.2) status = 'critical';
+    }
+
+    if (blockersCount > 0) {
+      reasons.push(`${blockersCount} tasks blocked`);
+      if (blockersCount > 2) status = 'critical';
+      else if (status === 'healthy') status = 'warning';
+    }
+
+    if (reasons.length === 0) reasons.push('Capacity is healthy and no active blockers.');
+
+    return { status, available_hours: capacityHours, committed_hours: committedHours, blockers_count: blockersCount, reasons };
   }
 };

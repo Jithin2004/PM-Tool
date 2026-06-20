@@ -4,9 +4,9 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { Icon } from '../../components/ui/Icon';
 import { activityLogService } from '../../services/activityLogService';
+import { activityEventService } from '../../services/activityEventService';
 import { TaskCreateModal } from '../../components/task/TaskCreateModal';
 import { createTask } from '../../services/taskService';
-import { sendNotification } from '../../services/notificationService';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 import { useAuth } from '../../context/AuthContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -48,14 +48,20 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
       if (meeting.meeting_attendees) {
         for (const attendee of meeting.meeting_attendees) {
           if (attendee.user_id !== profile?.id) {
-             await sendNotification(
-               workspace!.id,
-               'system',
-               `Meeting Updated: ${meeting.title}`,
-               `Meeting notes or action items were updated.`,
-               attendee.user_id,
-               { type: 'meeting_update', entity_id: meeting.id }
-             );
+            await activityEventService.recordActivity({
+              workspace_id: workspace!.id,
+              actor_id: 'system',
+              entity_type: 'system',
+              entity_id: 'global',
+              action_type: 'notification_event',
+              metadata: { 
+                title: `Meeting Updated: ${meeting.title}`, 
+                message: `Meeting notes or action items were updated.`, 
+                target_user: attendee.user_id,
+                type: 'meeting_update', 
+                entity_id: meeting.id 
+              }
+            });
           }
         }
       }
@@ -76,14 +82,20 @@ export function MeetingDetailsModal({ meeting, onClose, onUpdate }: { meeting: a
       if (!error) {
         if (meeting.meeting_attendees) {
           for (const attendee of meeting.meeting_attendees) {
-             await sendNotification(
-               workspace!.id,
-               'system',
-               `Meeting Cancelled: ${meeting.title}`,
-               `The meeting has been cancelled.`,
-               attendee.user_id,
-               { type: 'meeting_cancelled', entity_id: meeting.id }
-             );
+             await activityEventService.recordActivity({
+               workspace_id: workspace!.id,
+               actor_id: 'system',
+               entity_type: 'system',
+               entity_id: 'global',
+               action_type: 'notification_event',
+               metadata: { 
+                 title: `Meeting Cancelled: ${meeting.title}`, 
+                 message: `The meeting has been cancelled.`, 
+                 target_user: attendee.user_id,
+                 type: 'meeting_cancelled', 
+                 entity_id: meeting.id 
+               }
+             });
           }
         }
         onUpdate();

@@ -20,7 +20,6 @@ export const WorkspaceFileEngine = {
     );
 
     if (collision) {
-      console.log(`WorkspaceFileEngine: Collision detected for "${file.name}". Uploading as version.`);
       // Upload as a new version of the existing record
       return await fileService.replaceFile(
         collision,
@@ -29,7 +28,6 @@ export const WorkspaceFileEngine = {
         'Uploaded via auto-versioning file engine'
       );
     } else {
-      console.log(`WorkspaceFileEngine: Uploading new file "${file.name}".`);
       // Upload as a brand new workspace file record
       return await fileService.uploadFile(
         workspaceId,
@@ -41,3 +39,4 @@ export const WorkspaceFileEngine = {
     }
   }
 };
+

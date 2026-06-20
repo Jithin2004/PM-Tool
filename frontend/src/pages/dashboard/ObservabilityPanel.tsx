@@ -3,10 +3,38 @@ import { useObservability } from '../../core/observability/ObservabilityProvider
 import { Activity, Server, Database, Network, ShieldCheck, ShieldAlert, History, AlertTriangle, CheckCircle, RefreshCcw, Info, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { searchSyncService } from '../../services/searchSyncService';
+import { IssueManagementPanel } from '../../components/admin/IssueManagementPanel';
+
+import { searchHealthService, SearchHealthStatus } from '../../services/searchHealthService';
+import { IssueManagementPanel } from '../../components/admin/IssueManagementPanel';
 
 export const ObservabilityPanel: React.FC = () => {
   const { profile } = useAuth();
+  const { workspace } = useWorkspace();
   const { health, realtime, audit, replay, metrics, incidents, resolveIncident } = useObservability();
+
+  const [searchHealth, setSearchHealth] = React.useState<SearchHealthStatus | null>(null);
+  const [syncProgress, setSyncProgress] = React.useState<{ current: number, total: number, phase: string } | null>(null);
+  const [isSyncing, setIsSyncing] = React.useState(false);
+
+  React.useEffect(() => {
+    if (workspace?.id && (profile?.role === 'owner' || profile?.role === 'admin' || profile?.role === 'super_admin')) {
+      searchHealthService.checkSearchHealth(workspace.id).then(setSearchHealth);
+    }
+  }, [workspace?.id, profile?.role]);
+
+  const handleRebuildIndex = async () => {
+    if (!workspace?.id || isSyncing) return;
+    setIsSyncing(true);
+    await searchSyncService.rebuildWorkspaceIndex(workspace.id, (current, total, phase) => {
+      setSyncProgress({ current, total, phase });
+    });
+    setSyncProgress(null);
+    setIsSyncing(false);
+    searchHealthService.checkSearchHealth(workspace.id).then(setSearchHealth);
+  };
 
   if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
     return (
@@ -98,10 +126,10 @@ export const ObservabilityPanel: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Component Health */}
+        {/* Component Health & Search Index */}
         <div className="col-span-1 space-y-6">
           <h2 className="text-lg font-medium text-[var(--pm-text)] text-[var(--text-primary)]">Component Health</h2>
-          <div className="bg-surface-2 border border-border rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-surface-2 border border-border rounded-xl overflow-hidden shadow-sm mb-6">
             <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
               {[
                 { label: 'API Services', status: health.apiHealth, icon: Server },
@@ -122,6 +150,45 @@ export const ObservabilityPanel: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+
+          <h2 className="text-lg font-medium text-[var(--pm-text)] text-[var(--text-primary)] mt-6">Search Index Maintenance</h2>
+          <div className="bg-surface-2 border border-border rounded-xl p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[var(--pm-text-secondary)]">Index Health</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium capitalize">{searchHealth?.status || 'checking...'}</span>
+                {searchHealth && <StatusIcon status={searchHealth.status} />}
+              </div>
+            </div>
+            {searchHealth && searchHealth.recommendations.length > 0 && (
+              <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                {searchHealth.recommendations[0]}
+              </div>
+            )}
+            
+            {isSyncing && syncProgress ? (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-[var(--pm-text-secondary)]">
+                  <span>{syncProgress.phase}</span>
+                  <span>{syncProgress.current} / {syncProgress.total}</span>
+                </div>
+                <div className="h-2 w-full bg-surface-3 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-indigo-500 transition-all duration-300" 
+                    style={{ width: `${Math.min(100, Math.max(0, (syncProgress.current / (syncProgress.total || 1)) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={handleRebuildIndex}
+                disabled={isSyncing}
+                className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-sm font-medium transition-colors border border-indigo-200"
+              >
+                Rebuild Search Index
+              </button>
+            )}
           </div>
         </div>
 
@@ -190,6 +257,15 @@ export const ObservabilityPanel: React.FC = () => {
         </div>
 
       </div>
+
+      <div className="mt-12">
+        <h2 className="text-xl font-semibold tracking-tight text-[var(--pm-text)] mb-4 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-amber-500" />
+          System Issues & Bug Reports
+        </h2>
+        <IssueManagementPanel />
+      </div>
     </div>
   );
 };
+

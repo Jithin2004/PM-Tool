@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { dedupPayload } from '../lib/realtimeDedup';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { realtimeOrchestrator } from '../services/realtimeOrchestrator';
 
 type EventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
 
@@ -24,21 +25,23 @@ export function useRealtime({ table, event = '*', filter, onChange, enabled = tr
       return;
     }
 
-    const channel = supabase
-      .channel(`realtime:${table}:${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes' as any,
-        { event, schema: 'public', table, filter },
-        (payload: RealtimePostgresChangesPayload<any>) => {
+    const channelId = `realtime:${table}:${filter || 'all'}`;
+    
+    const unsubscribe = realtimeOrchestrator.subscribe(
+      channelId,
+      table,
+      filter || '',
+      (payload) => {
+        if (event === '*' || payload.eventType === event) {
           dedupPayload(payload, () => onChangeRef.current(payload));
         }
-      )
-      .subscribe((status) => {
-        setStatus(status === 'SUBSCRIBED' ? 'connected' : 'connecting');
-      });
+      }
+    );
+
+    setStatus('connected');
 
     return () => {
-      supabase.removeChannel(channel);
+      unsubscribe();
       setStatus('error');
     };
   }, [table, event, filter, enabled]);
@@ -68,6 +71,55 @@ export function useTasksRealtime(wsId: string | undefined, onEvent: (payload: Re
 export function useApprovalsRealtime(wsId: string | undefined, onEvent: (payload: RealtimePostgresChangesPayload<any>) => void) {
   return useRealtime({
     table: 'approval_instances',
+    filter: wsId ? `workspace_id=eq.${wsId}` : undefined,
+    onChange: onEvent,
+    enabled: !!wsId,
+  });
+}
+
+// RC4 Additions
+export function useNotificationsRealtime(wsId: string | undefined, userId: string | undefined, onEvent: (payload: RealtimePostgresChangesPayload<any>) => void) {
+  return useRealtime({
+    table: 'notification_events',
+    filter: wsId && userId ? `workspace_id=eq.${wsId}` : undefined, // RLS handles user scoped, but filter helps if RLS is bypassed via realtime. Or we can filter here.
+    onChange: (payload) => {
+      if (payload.new && payload.new.user_id !== userId) return;
+      onEvent(payload);
+    },
+    enabled: !!wsId && !!userId,
+  });
+}
+
+export function useCommentsRealtime(wsId: string | undefined, onEvent: (payload: RealtimePostgresChangesPayload<any>) => void) {
+  return useRealtime({
+    table: 'entity_comments',
+    filter: wsId ? `workspace_id=eq.${wsId}` : undefined,
+    onChange: onEvent,
+    enabled: !!wsId,
+  });
+}
+
+export function useDocumentsRealtime(wsId: string | undefined, onEvent: (payload: RealtimePostgresChangesPayload<any>) => void) {
+  return useRealtime({
+    table: 'documents',
+    filter: wsId ? `workspace_id=eq.${wsId}` : undefined,
+    onChange: onEvent,
+    enabled: !!wsId,
+  });
+}
+
+export function useFileEventsRealtime(wsId: string | undefined, onEvent: (payload: RealtimePostgresChangesPayload<any>) => void) {
+  return useRealtime({
+    table: 'file_events',
+    filter: wsId ? `workspace_id=eq.${wsId}` : undefined,
+    onChange: onEvent,
+    enabled: !!wsId,
+  });
+}
+
+export function useIntegrationEventsRealtime(wsId: string | undefined, onEvent: (payload: RealtimePostgresChangesPayload<any>) => void) {
+  return useRealtime({
+    table: 'integration_events',
     filter: wsId ? `workspace_id=eq.${wsId}` : undefined,
     onChange: onEvent,
     enabled: !!wsId,

@@ -38,7 +38,7 @@ export function TermsPage() {
         <section className="space-y-4 premium-panel p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">3. Administrator Responsibility</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            As a self-hosted platform, your Workspace Owner / Super Administrator is entirely responsible for backing up data, securing infrastructure access, applying operating system updates, and provisioning users. Resolve PM HQ cannot recover deleted data or lost passwords from your private instance.
+            With flexible deployment options, your Workspace Owner / Super Administrator is entirely responsible for backing up data, securing infrastructure access, applying operating system updates, and provisioning users. Resolve PM HQ cannot recover deleted data or lost passwords from your private instance.
           </p>
         </section>
 
@@ -59,7 +59,7 @@ export function TermsPage() {
         <section className="space-y-4 premium-panel p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">6. Limitation of Liability</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            In no event shall Resolve PM HQ be liable for any indirect, incidental, special, or consequential damages, including but not limited to loss of profits, data, or business interruption, arising out of the use or inability to use the self-hosted software. Our maximum liability shall not exceed the original purchase price of the license.
+            In no event shall Resolve PM HQ be liable for any indirect, incidental, special, or consequential damages, including but not limited to loss of profits, data, or business interruption, arising out of the use or inability to use the software. Our maximum liability shall not exceed the original purchase price of the license.
           </p>
         </section>
 

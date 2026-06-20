@@ -4,7 +4,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { Icon } from '../../components/ui/Icon';
 import { activityLogService } from '../../services/activityLogService';
-import { sendNotification } from '../../services/notificationService';
+import { activityEventService } from '../../services/activityEventService';
 import { hasCapability, hasAuthority } from '../../core/auth/permissions';
 import { useAuth } from '../../context/AuthContext';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -80,14 +80,21 @@ export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => vo
 
       // Notify attendees
       for (const pid of formData.participants) {
-        await sendNotification(
-          workspace.id,
-          'system',
-          `New Meeting: ${meeting.title}`,
-          `You have been invited to a meeting on ${meeting.date} at ${meeting.time}`,
-          pid,
-          { type: 'meeting_invite', entity_id: meeting.id, deep_link: '/workspace/meetings' }
-        );
+        await activityEventService.recordActivity({
+          workspace_id: workspace.id,
+          actor_id: 'system',
+          entity_type: 'system',
+          entity_id: 'global',
+          action_type: 'notification_event',
+          metadata: { 
+            title: `New Meeting: ${meeting.title}`, 
+            message: `You have been invited to a meeting on ${meeting.date} at ${meeting.time}`, 
+            target_user: pid,
+            type: 'meeting_invite', 
+            entity_id: meeting.id, 
+            deep_link: '/workspace/meetings' 
+          }
+        });
       }
 
       onSuccess();

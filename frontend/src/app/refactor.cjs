@@ -52,4 +52,4 @@ content = content.replace(/<Suspense fallback=\{FALLBACK\}>/g, '');
 content = content.replace(/<\/Suspense>/g, '');
 
 fs.writeFileSync('router.tsx', content);
-console.log('Done refactoring router.tsx');
+

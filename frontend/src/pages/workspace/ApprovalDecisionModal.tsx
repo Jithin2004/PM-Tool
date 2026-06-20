@@ -6,7 +6,7 @@ import { useDashboard } from '../../context/DashboardContext';
 import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
 import { activityLogService } from '../../services/activityLogService';
-import { sendNotification } from '../../services/notificationService';
+import { activityEventService } from '../../services/activityEventService';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 
 export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approval: any, onClose: () => void, onUpdate: () => void }) {
@@ -112,14 +112,21 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
       });
 
       if (approval.requested_by) {
-        await sendNotification(
-          workspace!.id,
-          'system',
-          `Approval ${decisionStr}`,
-          `Your request for ${approval.entity_type} was ${decisionStr.toLowerCase()}.`,
-          approval.requested_by,
-          { type: 'approval_decision', entity_id: approval.id, deep_link: '/workspace/approvals' }
-        );
+        await activityEventService.recordActivity({
+          workspace_id: workspace!.id,
+          actor_id: 'system',
+          entity_type: 'system',
+          entity_id: 'global',
+          action_type: 'notification_event',
+          metadata: { 
+            title: `Approval ${decisionStr}`, 
+            message: `Your request for ${approval.entity_type} was ${decisionStr.toLowerCase()}.`, 
+            target_user: approval.requested_by,
+            type: 'approval_decision', 
+            entity_id: approval.id, 
+            deep_link: '/workspace/approvals'
+          }
+        });
       }
 
       // Simple notification system integration (simulated via notify or real insert if there's a notifications table)

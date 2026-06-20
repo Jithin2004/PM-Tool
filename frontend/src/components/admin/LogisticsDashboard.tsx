@@ -632,18 +632,7 @@ export function LogisticsDashboard({
           </button>
               </>
             )}
-          {hasCapability(role, 'manage_compensation') && isPayrollRoute && (
-              <button
-                onClick={() => setActiveTab('paySlab')}
-                role="tab"
-                aria-selected={activeTab === 'paySlab'}
-                aria-controls="tabpanel-paySlab"
-                id="tab-paySlab"
-                className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-wide transition-all ${activeTab === 'paySlab' ? 'bg-[var(--pm-surface)] text-[var(--pm-text)] font-semibold' : 'text-text-tertiary hover:text-text-primary'}`}
-              >
-                Rules &amp; Slabs
-              </button>
-            )}
+            {/* Rules & Slabs hidden as unsupported */}
             {hasCapability(role, 'manage_compensation') && isPayrollRoute && (
             <button
               onClick={() => setActiveTab('payroll')}
@@ -653,7 +642,7 @@ export function LogisticsDashboard({
               id="tab-payroll"
               className={`flex-1 md:flex-initial text-center whitespace-nowrap px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-wide transition-all ${activeTab === 'payroll' ? 'bg-[var(--pm-surface)] text-[var(--pm-text)] font-semibold' : 'text-text-tertiary hover:text-text-primary'}`}
             >
-              Payroll Compliance
+              Compensation Records
             </button>
             )}
         </div>
@@ -1253,8 +1242,8 @@ export function LogisticsDashboard({
             {/* Payroll filters */}
             <div className="flex flex-col md:flex-row gap-6 items-center bg-surface border border-border p-6 justify-between">
               <div>
-                <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary font-semibold font-bold mb-1">Payroll Analytics</h3>
-                <p className="text-[10px] font-mono text-text-tertiary uppercase">MONTHLY TEAM COMPENSATION COMPLIANCE</p>
+                <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary font-semibold font-bold mb-1">Compensation Records</h3>
+                <p className="text-[10px] font-mono text-text-tertiary uppercase">MONTHLY TEAM COMPENSATION</p>
               </div>
 
               <div className="flex flex-col xl:flex-row items-center gap-4">
@@ -1315,24 +1304,7 @@ export function LogisticsDashboard({
               </div>
             </div>
 
-            {/* Payroll Aggregate Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-surface border border-border p-6 flex flex-col justify-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10"><Calculator className="w-16 h-16" /></div>
-                <p className="text-[10px] font-mono uppercase text-text-tertiary tracking-wide mb-2 relative z-10">Total Gross Liability</p>
-                <p className="text-2xl font-sans tracking-tight text-text-primary font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.baseSalary, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-              </div>
-              <div className="bg-surface border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 p-6 flex flex-col justify-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10 text-signal-critical"><TrendingDown className="w-16 h-16" /></div>
-                <p className="text-[10px] font-mono uppercase text-signal-critical/80 tracking-wide mb-2 relative z-10">Total Deductions</p>
-                <p className="text-2xl font-sans tracking-tight text-signal-critical font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.totalDeductions, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-              </div>
-              <div className="bg-signal-safe-bg border border-border p-6 flex flex-col justify-center relative overflow-hidden shadow-sm">
-                <div className="absolute top-0 right-0 p-4 opacity-20 text-signal-safe"><Banknote className="w-16 h-16" /></div>
-                <p className="text-[10px] font-mono uppercase text-signal-safe tracking-wide mb-2 relative z-10">Total Net Payable</p>
-                <p className="text-2xl font-sans tracking-tight text-text-primary font-bold relative z-10">{activeSymbol}{payrollData.reduce((sum, item) => sum + item.netPayable, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-              </div>
-            </div>
+            {/* Aggregate Summary Hidden */}
 
             {/* Payroll Data Grid */}
             <div className="border border-border bg-surface overflow-hidden">
@@ -1349,11 +1321,6 @@ export function LogisticsDashboard({
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary">System Profile</th>
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-right">Base Salary ({activeSymbol.trim()})</th>
                       <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center">Actions</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center">Attendance Summary (Days)</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center">Leaves / Exceeded Allowed</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-center font-bold text-signal-critical/90">Deductible Days</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-right font-bold text-signal-critical">Total Deductions ({activeSymbol.trim()})</th>
-                      <th className="p-4 text-[10px] font-mono uppercase tracking-wider text-text-tertiary text-right font-bold text-signal-safe">Net Payable ({activeSymbol.trim()})</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -1466,46 +1433,7 @@ export function LogisticsDashboard({
                             />
                           </td>
 
-                          {/* Attendance */}
-                          <td className="p-4 text-center">
-                            <div className="flex flex-col items-center gap-1 font-mono">
-                              <div className="flex items-center justify-center gap-2 text-[10px]">
-                                <span className="bg-signal-safe-bg text-signal-safe px-2 py-0.5 border border-border" title="Present Days">P: {presentCount}</span>
-                                <span className="bg-signal-warning-bg text-signal-warning px-2 py-0.5 border border-yellow-500/15" title="Half Days">HD: {halfDayCount}</span>
-                                <span className="bg-signal-critical-bg text-signal-critical px-2 py-0.5 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/15" title="Unexcused Absences">UU: {uuCount}</span>
-                              </div>
-                              <span className="text-[8px] text-text-quaternary uppercase tracking-wider">Bandwidth: {expectedWorkingDays} working days</span>
-                            </div>
-                          </td>
-
-                          {/* Leaves */}
-                          <td className="p-4 text-center">
-                            <div className="flex flex-col items-center justify-center gap-1 text-[9px] font-mono">
-                              <div>
-                                <span className="text-text-tertiary">CL: {clCount}</span>
-                                <span className="text-text-quaternary"> / Allowed: {allowedCasualLeaves}</span>
-                              </div>
-                              <div>
-                                <span className="text-text-tertiary">ML: {mlCount}</span>
-                                <span className="text-text-quaternary"> / Allowed: {allowedMedicalLeaves}</span>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Deductible Days */}
-                          <td className="p-4 text-center font-bold font-mono text-xs text-signal-critical">
-                            {totalUnpaidDays > 0 ? `${totalUnpaidDays.toFixed(1)} Days` : '0 Days'}
-                          </td>
-
-                          {/* Deductions */}
-                          <td className="p-4 text-right font-mono text-xs text-signal-critical font-bold">
-                            {totalDeductions > 0 ? `-${activeSymbol}${totalDeductions.toFixed(2)}` : `${activeSymbol}0.00`}
-                          </td>
-
-                          {/* Net Payable */}
-                          <td className="p-4 text-right font-mono text-xs text-signal-safe font-bold">
-                            {activeSymbol}{netPayable.toFixed(2)}
-                          </td>
+                          {/* Hidden Actions / Deductions */}
                         </tr>
                       );
                     })}

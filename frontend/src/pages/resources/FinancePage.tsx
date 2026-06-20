@@ -12,6 +12,8 @@ import { Plus, Landmark, Receipt, CreditCard, TrendingUp, TrendingDown,
   AlertCircle, History, Download, X, Trash2, FileText, Clock } from 'lucide-react';
 import { CreateInvoiceModal } from '../../components/finance/CreateInvoiceModal';
 import { ManageClientsModal } from '../../components/finance/ManageClientsModal';
+import { AddExpenseModal } from '../../components/finance/AddExpenseModal';
+import { RecordPaymentModal } from '../../components/finance/RecordPaymentModal';
 import { generateInvoicePDF } from '../../services/invoicePdfService';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
@@ -56,6 +58,8 @@ export default function FinancePage() {
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showManageClientsModal, setShowManageClientsModal] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [adjustmentForm, setAdjustmentForm] = useState({ type: 'expense', amount: '', reason: '' });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [billableMilestones, setBillableMilestones] = useState<Milestone[]>([]);
@@ -285,6 +289,44 @@ export default function FinancePage() {
             onSuccess={() => { fetchClients(workspace.id).then(setClients); loadData(); }}
           />
         )}
+        
+        {workspace && (
+          <AddExpenseModal
+            isOpen={showExpenseModal}
+            onClose={() => setShowExpenseModal(false)}
+            workspaceId={workspace.id}
+            onSuccess={loadData}
+          />
+        )}
+
+        {workspace && (
+          <RecordPaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            workspaceId={workspace.id}
+            invoices={data?.invoices || []}
+            onSuccess={loadData}
+          />
+        )}
+
+        {workspace && (
+          <AddExpenseModal
+            isOpen={showExpenseModal}
+            onClose={() => setShowExpenseModal(false)}
+            workspaceId={workspace.id}
+            onSuccess={loadData}
+          />
+        )}
+
+        {workspace && (
+          <RecordPaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            workspaceId={workspace.id}
+            invoices={data?.invoices || []}
+            onSuccess={loadData}
+          />
+        )}
       </div>
     );
   }
@@ -315,6 +357,20 @@ export default function FinancePage() {
               >
                 <Clock className="w-4 h-4" />
                 Bill Time
+              </button>
+              <button 
+                onClick={() => setShowExpenseModal(true)} 
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-[var(--pm-text)] bg-rose-500/10 hover:bg-rose-500/20 transition-all active:scale-[0.98]"
+              >
+                <Plus className="w-4 h-4" />
+                Add Expense
+              </button>
+              <button 
+                onClick={() => setShowPaymentModal(true)} 
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-[var(--pm-text)] bg-emerald-500/10 hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
+              >
+                <Plus className="w-4 h-4" />
+                Record Payment
               </button>
               <button 
                 onClick={() => setShowInvoiceModal(true)} 
@@ -872,6 +928,25 @@ export default function FinancePage() {
           workspaceId={workspace.id}
           clients={clients}
           onSuccess={() => { fetchClients(workspace.id).then(setClients); loadData(); }}
+        />
+      )}
+
+      {workspace && (
+        <AddExpenseModal
+          isOpen={showExpenseModal}
+          onClose={() => setShowExpenseModal(false)}
+          workspaceId={workspace.id}
+          onSuccess={loadData}
+        />
+      )}
+
+      {workspace && (
+        <RecordPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          workspaceId={workspace.id}
+          invoices={data?.invoices || []}
+          onSuccess={loadData}
         />
       )}
     </div>

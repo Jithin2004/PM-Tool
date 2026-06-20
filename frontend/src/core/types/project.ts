@@ -35,6 +35,8 @@ export interface Project {
   priority: ProjectPriority;
   template: string;
   execution_mode: ExecutionMode;
+  workflow_template_id?: string;
+  project_code?: string;
   /**
    * @deprecated Legacy mirror of client_deadline. Use getProjectClientDeadline().
    */

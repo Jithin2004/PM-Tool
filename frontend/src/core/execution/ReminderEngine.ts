@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import { sendNotification } from '../../services/notificationService';
+import { activityEventService } from '../../services/activityEventService';
 
 export interface ReminderContext {
   userId: string;
@@ -25,7 +25,14 @@ export class ReminderEngine {
 
     const myPendingTasks = tasks.filter(t => t.assignee_id === userId && t.status !== 'done');
     if (myPendingTasks.length > 0) {
-      await sendNotification(workspaceId, 'system', 'Morning Digest', `${myPendingTasks.length} tasks need your attention today.`, userId, { priority: 'medium' });
+      await activityEventService.recordActivity({
+          workspace_id: workspaceId,
+          actor_id: 'system',
+          entity_type: 'system',
+          entity_id: 'global',
+          action_type: 'notification_event',
+          metadata: { title: 'Morning Digest', message: `${myPendingTasks.length} tasks need your attention today.`, target_user: userId, { priority: 'medium' } }
+        });
     }
   }
 
@@ -41,14 +48,16 @@ export class ReminderEngine {
 
       // Trigger if deadline is between 1.5 and 2.5 hours away
       if (hoursRemaining > 1.5 && hoursRemaining <= 2.5) {
-        await sendNotification(
-          workspaceId, 
-          'system',
-          'Deadline Approaching', 
-          `'${task.name}' is due in 2 hours.`, 
-          userId, 
+        await activityEventService.recordActivity({
+          workspace_id: workspaceId,
+          actor_id: 'system',
+          entity_type: 'system',
+          entity_id: 'global',
+          action_type: 'notification_event',
+          metadata: { title: 'Deadline Approaching', message: `'${task.name}' is due in 2 hours.`, target_user: userId, 
           { taskId: task.id, priority: 'high' }
-        );
+         }
+        });
       }
     }
   }
@@ -65,14 +74,16 @@ export class ReminderEngine {
 
       // If timer is running for more than 4 hours straight, remind them
       if (hoursRunning > 4) {
-        await sendNotification(
-          workspaceId, 
-          'system',
-          'Timer Still Running', 
-          `You've had a timer running for over 4 hours. Did you forget to stop it?`, 
-          userId, 
+        await activityEventService.recordActivity({
+          workspace_id: workspaceId,
+          actor_id: 'system',
+          entity_type: 'system',
+          entity_id: 'global',
+          action_type: 'notification_event',
+          metadata: { title: 'Timer Still Running', message: `You've had a timer running for over 4 hours. Did you forget to stop it?`, target_user: userId, 
           { priority: 'medium' }
-        );
+         }
+        });
       }
     }
   }

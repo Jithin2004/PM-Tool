@@ -22,37 +22,37 @@ export function PrivacyPage() {
         </div>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-white">1. Self-Hosted & Private Workspace Architecture</h2>
+          <h2 className="text-xl font-semibold text-white">1. Flexible Deployment & Private Workspace Architecture</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            Resolve PM is provided as self-hosted, perpetual enterprise software. Because the software runs entirely within your isolated database and infrastructure, you retain 100% ownership and control over your data. Resolve PM HQ cannot access, view, intercept, or harvest your operational data.
+            Resolve PM is provided as flexible, perpetual enterprise software. Because the software runs entirely within your isolated workspace data and infrastructure, you retain 100% ownership and control over your data. Resolve PM HQ cannot access, view, intercept, or harvest your operational data.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">2. Account Information & Authentication</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            Account provisioning, authentication tokens, and profile management are handled exclusively by your configured Identity Provider (IdP) and your instance of the Resolve PM database. We do not store, process, or proxy your credentials.
+            Account provisioning, authentication tokens, and profile management are handled exclusively by your configured Identity Provider (IdP) and your instance of the Resolve PM workspace data. We do not store, process, or proxy your credentials.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">3. Operational Data & Files</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            All operational data—including projects, tasks, comments, financial metrics, and uploaded files—reside permanently on your secure storage buckets and database. Your instance's Row-Level Security (RLS) policies enforce strict data isolation between your users. No project data is ever transmitted to Resolve PM HQ.
+            All operational data—including projects, tasks, comments, financial metrics, and uploaded files—reside permanently on your secure storage buckets and workspace data. Your instance's secure access rules enforce strict data isolation between your users. No project data is ever transmitted to Resolve PM HQ.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">4. Audit Logs</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            The application maintains an immutable internal audit ledger of actions performed by users. This is retained on your own database strictly for your security and compliance review. It is not shared externally.
+            The application maintains an immutable internal audit ledger of actions performed by users. This is retained on your own workspace data strictly for your security and compliance review. It is not shared externally.
           </p>
         </section>
 
         <section className="space-y-4 premium-panel p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">5. Retention and Deletion Rights</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
-            Since you own the infrastructure, you dictate your own data retention and deletion policies. The workspace administrator has the full authority to wipe the database, archive records, or destroy instances without interference or retention policies enforced by Resolve PM HQ.
+            Since you own the infrastructure, you dictate your own data retention and deletion policies. The workspace administrator has the full authority to wipe the workspace data, archive records, or destroy instances without interference or retention policies enforced by Resolve PM HQ.
           </p>
         </section>
 

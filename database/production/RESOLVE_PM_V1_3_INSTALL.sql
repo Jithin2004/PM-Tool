@@ -117,8 +117,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 -- =============================================================
 
 -- 1. workspaces
---    Root of all data isolation. Every table references this via workspace_id.
-CREATE TABLE workspaces (
+--    Root of all data isolation. Every table references this via workspace_id.CREATE TABLE IF NOT EXISTS workspaces (
   is_sandbox          boolean     NOT NULL DEFAULT false,
   parent_workspace_id uuid        REFERENCES workspaces(id) ON DELETE RESTRICT,
   status              text        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'onboarding', 'inactive', 'retired', 'sandbox')),
@@ -149,8 +148,7 @@ CREATE TABLE workspaces (
 
 
 -- 2. users
---    Canonical identity + RBAC profile. Role 'uninvited' is a client-only ephemeral state.
-CREATE TABLE users (
+--    Canonical identity + RBAC profile. Role 'uninvited' is a client-only ephemeral state.CREATE TABLE IF NOT EXISTS users (
   id                  uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE RESTRICT,
   workspace_id        uuid        REFERENCES workspaces(id) ON DELETE RESTRICT,
   email               text        NOT NULL,
@@ -174,8 +172,7 @@ CREATE TABLE users (
 
 -- 3. teams
 --    Operational groups of users.
---    'data' JSONB stores pm_id and developer_ids (membership roster managed by the application layer).
-CREATE TABLE teams (
+--    'data' JSONB stores pm_id and developer_ids (membership roster managed by the application layer).CREATE TABLE IF NOT EXISTS teams (
   id                       uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id             uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   name                     text        NOT NULL,
@@ -187,8 +184,7 @@ CREATE TABLE teams (
 
 
 -- 4. team_members
---    Explicit join table for many-to-many team ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â user relations.
-CREATE TABLE team_members (
+--    Explicit join table for many-to-many team ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Â user relations.CREATE TABLE IF NOT EXISTS team_members (
   workspace_id  uuid  NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   team_id       uuid  NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   user_id       uuid  NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
@@ -214,16 +210,14 @@ CREATE TABLE IF NOT EXISTS public.departments (
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(workspace_id, name)
 );
-ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view departments" ON public.departments FOR SELECT
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = departments.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Admins can manage departments" ON public.departments FOR ALL
+ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can view departments" ON public.departments;
+CREATE POLICY "Users can view departments" 
+ON public.departments FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = departments.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Admins can manage departments" ON public.departments;
+CREATE POLICY "Admins can manage departments" 
+ON public.departments FOR ALL
   USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = departments.workspace_id AND public.is_active_workspace_member()))
-  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = departments.workspace_id AND public.is_active_workspace_member()));
-
-
-CREATE TABLE projects (
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = departments.workspace_id AND public.is_active_workspace_member()));CREATE TABLE IF NOT EXISTS projects (
   external_id           text,
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
@@ -265,8 +259,7 @@ ADD COLUMN IF NOT EXISTS target_date date;
 
 -- 6. tasks
 --    Executable work items carrying task-level PERT for micro-estimation.
---    Aggregated globally by get_operational_intelligence() RPC.
-CREATE TABLE tasks (
+--    Aggregated globally by get_operational_intelligence() RPC.CREATE TABLE IF NOT EXISTS tasks (
   external_id           text,
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
@@ -318,8 +311,7 @@ CREATE TABLE tasks (
 
 
 -- 7. task_dependencies
---    Directed acyclic graph of task blockers.
-CREATE TABLE task_dependencies (
+--    Directed acyclic graph of task blockers.CREATE TABLE IF NOT EXISTS task_dependencies (
   workspace_id          uuid  NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   task_id               uuid  NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   depends_on_task_id    uuid  NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -329,8 +321,7 @@ CREATE TABLE task_dependencies (
 );
 
 -- 7.1. wait_states
---    Polymorphic wait state tracking for Phase 1A Enterprise Delivery Model.
-CREATE TABLE wait_states (
+--    Polymorphic wait state tracking for Phase 1A Enterprise Delivery Model.CREATE TABLE IF NOT EXISTS wait_states (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   target_type         text        NOT NULL CHECK (target_type IN ('project', 'milestone', 'task')),
@@ -345,8 +336,7 @@ CREATE TABLE wait_states (
 );
 ALTER TABLE public.wait_states ENABLE ROW LEVEL SECURITY;
 
--- 7.2. project_signoffs
-CREATE TABLE project_signoffs (
+-- 7.2. project_signoffsCREATE TABLE IF NOT EXISTS project_signoffs (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
@@ -357,8 +347,7 @@ CREATE TABLE project_signoffs (
 );
 ALTER TABLE public.project_signoffs ENABLE ROW LEVEL SECURITY;
 
--- 7.3. project_allocations
-CREATE TABLE project_allocations (
+-- 7.3. project_allocationsCREATE TABLE IF NOT EXISTS project_allocations (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -370,8 +359,7 @@ CREATE TABLE project_allocations (
 );
 ALTER TABLE public.project_allocations ENABLE ROW LEVEL SECURITY;
 
--- 7.4. allocation_periods
-CREATE TABLE allocation_periods (
+-- 7.4. allocation_periodsCREATE TABLE IF NOT EXISTS allocation_periods (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id          uuid        NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -387,8 +375,7 @@ CREATE TABLE allocation_periods (
 ALTER TABLE public.allocation_periods ENABLE ROW LEVEL SECURITY;
 
 
--- 8. comments
-CREATE TABLE comments (
+-- 8. commentsCREATE TABLE IF NOT EXISTS comments (
   is_internal boolean NOT NULL DEFAULT false,
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
@@ -399,8 +386,7 @@ CREATE TABLE comments (
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 
--- 8.1 task_comments
-CREATE TABLE task_comments (
+-- 8.1 task_commentsCREATE TABLE IF NOT EXISTS task_comments (
   is_internal boolean NOT NULL DEFAULT false,
   metadata            jsonb       DEFAULT '{}'::jsonb,
   id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -415,8 +401,7 @@ CREATE TABLE task_comments (
 );
 
 
--- 9. files
-CREATE TABLE files (
+-- 9. filesCREATE TABLE IF NOT EXISTS files (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id    uuid        REFERENCES projects(id) ON DELETE SET NULL,
@@ -432,8 +417,7 @@ CREATE TABLE files (
 );
 
 
--- 10. notifications
-CREATE TABLE notifications (
+-- 10. notificationsCREATE TABLE IF NOT EXISTS notifications (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   user_id       uuid        REFERENCES users(id) ON DELETE RESTRICT,
@@ -442,10 +426,7 @@ CREATE TABLE notifications (
   body          text,
   read_at       timestamptz,
   created_at    timestamptz NOT NULL DEFAULT now()
-);
-
-
-CREATE TABLE activity_logs (
+);CREATE TABLE IF NOT EXISTS activity_logs (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   actor_id      uuid        REFERENCES users(id) ON DELETE RESTRICT,
@@ -470,8 +451,7 @@ ADD COLUMN IF NOT EXISTS entity_id uuid;
 -- CREATE RULE activity_logs_no_delete AS ON DELETE TO activity_logs DO INSTEAD NOTHING;
 
 
--- 12. attendance
-CREATE TABLE attendance (
+-- 12. attendanceCREATE TABLE IF NOT EXISTS attendance (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id        uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   user_id             uuid        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
@@ -484,8 +464,7 @@ CREATE TABLE attendance (
 );
 
 
--- 13. salaries
-CREATE TABLE salaries (
+-- 13. salariesCREATE TABLE IF NOT EXISTS salaries (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   user_id       uuid        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
@@ -495,8 +474,7 @@ CREATE TABLE salaries (
 );
 
 
--- 14. invitations
-CREATE TABLE invitations (
+-- 14. invitationsCREATE TABLE IF NOT EXISTS invitations (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   email         text        NOT NULL,
@@ -512,8 +490,7 @@ CREATE TABLE invitations (
 
 
 -- 15. workspace_holidays
---    Auto-ingested public holidays and manually defined company events.
-CREATE TABLE workspace_holidays (
+--    Auto-ingested public holidays and manually defined company events.CREATE TABLE IF NOT EXISTS workspace_holidays (
   id            uuid  PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid  NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   date          date  NOT NULL,
@@ -525,8 +502,7 @@ CREATE TABLE workspace_holidays (
 
 
 
--- 17. personal_leave
-CREATE TABLE personal_leave (
+-- 17. personal_leaveCREATE TABLE IF NOT EXISTS personal_leave (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id             uuid        NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   leave_type          text        NOT NULL,
@@ -538,8 +514,7 @@ CREATE TABLE personal_leave (
 
 
 -- 18. workspace_settings
---    Singleton JSONB blob per workspace (logistics and system settings).
-CREATE TABLE workspace_settings (
+--    Singleton JSONB blob per workspace (logistics and system settings).CREATE TABLE IF NOT EXISTS workspace_settings (
   workspace_id          uuid    PRIMARY KEY REFERENCES workspaces(id) ON DELETE RESTRICT,
   working_hours         numeric DEFAULT 8,
   working_time_from     text    DEFAULT '09:00',
@@ -554,8 +529,7 @@ CREATE TABLE workspace_settings (
 -- 19. system_audit_ledger
 --    Append-only cryptographic audit chain.
 --    INSERT: permitted (write new blocks).
---    UPDATE/DELETE: permanently prohibited via WORM rules below.
-CREATE TABLE system_audit_ledger (
+--    UPDATE/DELETE: permanently prohibited via WORM rules below.CREATE TABLE IF NOT EXISTS system_audit_ledger (
   id             uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id   uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id     uuid        REFERENCES projects(id) ON DELETE SET NULL,
@@ -642,9 +616,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS check_role_escalation ON users;
+$$;DROP TRIGGER IF EXISTS check_role_escalation ON users;
 CREATE TRIGGER check_role_escalation
   BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION prevent_role_escalation();
@@ -703,9 +675,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS check_developer_task_restrictions ON tasks;
+$$;DROP TRIGGER IF EXISTS check_developer_task_restrictions ON tasks;
 CREATE TRIGGER check_developer_task_restrictions
   BEFORE UPDATE ON tasks
   FOR EACH ROW EXECUTE FUNCTION enforce_developer_task_restrictions();
@@ -752,41 +722,30 @@ ALTER TABLE system_audit_ledger ENABLE ROW LEVEL SECURITY;
 -- SECURITY POLICIES
 -- =============================================================
 
--- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Workspaces ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-
-DROP POLICY IF EXISTS "Workspace members can view their workspace" ON workspaces;
-CREATE POLICY "Workspace members can view their workspace"
-  ON workspaces FOR SELECT
-  USING (id = current_workspace() OR owner_id = auth.uid());
-
-DROP POLICY IF EXISTS "Workspace owner can update workspace" ON workspaces;
-CREATE POLICY "Workspace owner can update workspace"
-  ON workspaces FOR UPDATE
-  USING (owner_id = auth.uid());
-
-DROP POLICY IF EXISTS "Workspace owner can create workspace" ON workspaces;
-CREATE POLICY "Workspace owner can create workspace"
-  ON workspaces FOR INSERT
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Workspaces ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬DROP POLICY IF EXISTS "Workspace members can view their workspace" ON workspaces;
+CREATE POLICY "Workspace members can view their workspace" 
+ON workspaces FOR SELECT
+  USING (id = current_workspace() OR owner_id = auth.uid());DROP POLICY IF EXISTS "Workspace owner can update workspace" ON workspaces;
+CREATE POLICY "Workspace owner can update workspace" 
+ON workspaces FOR UPDATE
+  USING (owner_id = auth.uid());DROP POLICY IF EXISTS "Workspace owner can create workspace" ON workspaces;
+CREATE POLICY "Workspace owner can create workspace" 
+ON workspaces FOR INSERT
   WITH CHECK (owner_id = auth.uid());
 
 
 -- ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ Users ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬
 -- Wave 7.5: P0-1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  Users SELECT restricted to same workspace + self
 -- Wave 7.5: P0-2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  Pending user workspace hijack prevention
--- Wave 7.5: P0-3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  Self-update restricted to safe profile fields only
-
-DROP POLICY IF EXISTS "Users are visible within the platform" ON users;
-DROP POLICY IF EXISTS "Users visible within workspace" ON users;
-CREATE POLICY "Users visible within workspace"
-  ON users FOR SELECT
+-- Wave 7.5: P0-3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  Self-update restricted to safe profile fields onlyDROP POLICY IF EXISTS "Users visible within workspace" ON users;
+CREATE POLICY "Users visible within workspace" 
+ON users FOR SELECT
   USING (
     id = auth.uid()
     OR workspace_id = current_workspace()
-  );
-
-DROP POLICY IF EXISTS "Workspace owner can create first super admin user" ON users;
-CREATE POLICY "Workspace owner can create first super admin user"
-  ON users FOR INSERT
+  );DROP POLICY IF EXISTS "Workspace owner can create first super admin user" ON users;
+CREATE POLICY "Workspace owner can create first super admin user" 
+ON users FOR INSERT
   WITH CHECK (
     id = auth.uid()
     AND role = 'super_admin'
@@ -795,11 +754,9 @@ CREATE POLICY "Workspace owner can create first super admin user"
       WHERE workspaces.id = users.workspace_id
         AND workspaces.owner_id = auth.uid()
     )
-  );
-
-DROP POLICY IF EXISTS "Workspace admins can insert users" ON users;
-CREATE POLICY "Workspace admins can insert users"
-  ON users FOR INSERT
+  );DROP POLICY IF EXISTS "Workspace admins can insert users" ON users;
+CREATE POLICY "Workspace admins can insert users" 
+ON users FOR INSERT
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users me
@@ -807,11 +764,9 @@ CREATE POLICY "Workspace admins can insert users"
         AND me.workspace_id = users.workspace_id
         AND me.role IN ('super_admin', 'pm')
     )
-  );
-
-DROP POLICY IF EXISTS "Workspace admins can update users" ON users;
-CREATE POLICY "Workspace admins can update users"
-  ON users FOR UPDATE
+  );DROP POLICY IF EXISTS "Workspace admins can update users" ON users;
+CREATE POLICY "Workspace admins can update users" 
+ON users FOR UPDATE
   USING (
     EXISTS (
       SELECT 1 FROM users me
@@ -819,11 +774,9 @@ CREATE POLICY "Workspace admins can update users"
         AND me.workspace_id = users.workspace_id
         AND me.role IN ('super_admin', 'pm')
     )
-  );
-
-DROP POLICY IF EXISTS "Workspace admins can delete users" ON users;
-CREATE POLICY "Workspace admins can delete users"
-  ON users FOR DELETE
+  );DROP POLICY IF EXISTS "Workspace admins can delete users" ON users;
+CREATE POLICY "Workspace admins can delete users" 
+ON users FOR DELETE
   USING (
     EXISTS (
       SELECT 1 FROM users me
@@ -831,20 +784,16 @@ CREATE POLICY "Workspace admins can delete users"
         AND me.workspace_id = users.workspace_id
         AND me.role IN ('super_admin', 'pm')
     )
-  );
-
-DROP POLICY IF EXISTS "Users can insert their own pending user row" ON users;
-CREATE POLICY "Users can insert their own pending user row"
-  ON users FOR INSERT
+  );DROP POLICY IF EXISTS "Users can insert their own pending user row" ON users;
+CREATE POLICY "Users can insert their own pending user row" 
+ON users FOR INSERT
   WITH CHECK (
     id = auth.uid()
     AND role = 'pending-workspace-setup'
     AND workspace_id IS NULL
-  );
-
-DROP POLICY IF EXISTS "Invited users can bootstrap their own user row" ON users;
-CREATE POLICY "Invited users can bootstrap their own user row"
-  ON users FOR INSERT
+  );DROP POLICY IF EXISTS "Invited users can bootstrap their own user row" ON users;
+CREATE POLICY "Invited users can bootstrap their own user row" 
+ON users FOR INSERT
   WITH CHECK (
     id = auth.uid()
     AND lower(email) = lower(auth.email())
@@ -860,10 +809,9 @@ CREATE POLICY "Invited users can bootstrap their own user row"
 -- P0-3: Self-update ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â users may only modify safe profile fields.
 -- role, workspace_id are immutable via self-update.
 -- The trigger prevent_role_escalation provides defense-in-depth,
--- but this WITH CHECK enforces it at the RLS layer.
-DROP POLICY IF EXISTS "Users can update their own user row" ON users;
-CREATE POLICY "Users can update their own safe profile fields"
-  ON users FOR UPDATE
+-- but this WITH CHECK enforces it at the RLS layer.DROP POLICY IF EXISTS "Users can update their own safe profile fields" ON users;
+CREATE POLICY "Users can update their own safe profile fields" 
+ON users FOR UPDATE
   USING (id = auth.uid())
   WITH CHECK (
     id = auth.uid()
@@ -877,18 +825,12 @@ CREATE POLICY "Users can update their own safe profile fields"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Teams ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P0-7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Team mutations restricted to PM/Admin
-
-DROP POLICY IF EXISTS "Teams are isolated by workspace" ON teams;
-DROP POLICY IF EXISTS "Teams are visible to workspace" ON teams;
-DROP POLICY IF EXISTS "Teams can be managed by PMs and Admins" ON teams;
-
-CREATE POLICY "Teams are visible to workspace"
-  ON teams FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Teams can be managed by PMs and Admins"
-  ON teams FOR ALL
+-- Wave 7.5: P0-7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Team mutations restricted to PM/AdminDROP POLICY IF EXISTS "Teams are visible to workspace" ON teams;
+CREATE POLICY "Teams are visible to workspace" 
+ON teams FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Teams can be managed by PMs and Admins" ON teams;
+CREATE POLICY "Teams can be managed by PMs and Admins" 
+ON teams FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -900,18 +842,12 @@ CREATE POLICY "Teams can be managed by PMs and Admins"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Team Members ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P0-7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Team member mutations restricted to PM/Admin
-
-DROP POLICY IF EXISTS "Team members are isolated by workspace" ON team_members;
-DROP POLICY IF EXISTS "Team members are visible to workspace" ON team_members;
-DROP POLICY IF EXISTS "Team members can be managed by PMs and Admins" ON team_members;
-
-CREATE POLICY "Team members are visible to workspace"
-  ON team_members FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Team members can be managed by PMs and Admins"
-  ON team_members FOR ALL
+-- Wave 7.5: P0-7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Team member mutations restricted to PM/AdminDROP POLICY IF EXISTS "Team members are visible to workspace" ON team_members;
+CREATE POLICY "Team members are visible to workspace" 
+ON team_members FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Team members can be managed by PMs and Admins" ON team_members;
+CREATE POLICY "Team members can be managed by PMs and Admins" 
+ON team_members FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -922,16 +858,12 @@ CREATE POLICY "Team members can be managed by PMs and Admins"
   );
 
 
--- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Projects ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-
-DROP POLICY IF EXISTS "Projects are isolated by workspace" ON projects;
--- Fix 2: RLS Validation (Added strict role gating for mutations)
-CREATE POLICY "Projects are visible to workspace"
-  ON projects FOR SELECT
-  USING (workspace_id = current_workspace() AND deleted_at IS NULL AND public.is_active_workspace_member());
-
-CREATE POLICY "Projects can be mutated by PMs and Admins"
-  ON projects FOR ALL
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Projects ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬-- Fix 2: RLS Validation (Added strict role gating for mutations)DROP POLICY IF EXISTS "Projects are visible to workspace" ON projects;
+CREATE POLICY "Projects are visible to workspace" 
+ON projects FOR SELECT
+  USING (workspace_id = current_workspace() AND deleted_at IS NULL AND public.is_active_workspace_member());DROP POLICY IF EXISTS "Projects can be mutated by PMs and Admins" ON projects;
+CREATE POLICY "Projects can be mutated by PMs and Admins" 
+ON projects FOR ALL
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
@@ -945,38 +877,32 @@ CREATE POLICY "Projects can be mutated by PMs and Admins"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Tasks ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7/9 Hardening: Granular developer permission scoping
-
-DROP POLICY IF EXISTS "Tasks are isolated by workspace" ON tasks;
-DROP POLICY IF EXISTS "Tasks are visible to workspace" ON tasks;
-DROP POLICY IF EXISTS "Tasks can be mutated by developers, PMs, and Admins" ON tasks;
-
--- SELECT: All workspace members can read tasks
-CREATE POLICY "Tasks are visible to workspace"
-  ON tasks FOR SELECT
+-- Wave 7/9 Hardening: Granular developer permission scoping-- SELECT: All workspace members can read tasksDROP POLICY IF EXISTS "Tasks are visible to workspace" ON tasks;
+CREATE POLICY "Tasks are visible to workspace" 
+ON tasks FOR SELECT
   USING (workspace_id = current_workspace() AND deleted_at IS NULL AND public.is_active_workspace_member());
 
--- INSERT: Only PMs and Admins can create tasks
-CREATE POLICY "Tasks can be created by PMs and Admins"
-  ON tasks FOR INSERT
+-- INSERT: Only PMs and Admins can create tasksDROP POLICY IF EXISTS "Tasks can be created by PMs and Admins" ON tasks;
+CREATE POLICY "Tasks can be created by PMs and Admins" 
+ON tasks FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
--- UPDATE for PMs/Admins: Full update access
-CREATE POLICY "Tasks can be fully updated by PMs and Admins"
-  ON tasks FOR UPDATE
+-- UPDATE for PMs/Admins: Full update accessDROP POLICY IF EXISTS "Tasks can be fully updated by PMs and Admins" ON tasks;
+CREATE POLICY "Tasks can be fully updated by PMs and Admins" 
+ON tasks FOR UPDATE
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
--- UPDATE for Developers: ONLY tasks assigned to them
-CREATE POLICY "Developers can update their assigned tasks"
-  ON tasks FOR UPDATE
+-- UPDATE for Developers: ONLY tasks assigned to themDROP POLICY IF EXISTS "Developers can update their assigned tasks" ON tasks;
+CREATE POLICY "Developers can update their assigned tasks" 
+ON tasks FOR UPDATE
   USING (
     workspace_id = current_workspace() AND
     assignee_id = auth.uid() AND
@@ -984,9 +910,9 @@ CREATE POLICY "Developers can update their assigned tasks"
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role = 'developer')
   );
 
--- DELETE: Only PMs and Admins can delete tasks
-CREATE POLICY "Tasks can be deleted by PMs and Admins"
-  ON tasks FOR DELETE
+-- DELETE: Only PMs and Admins can delete tasksDROP POLICY IF EXISTS "Tasks can be deleted by PMs and Admins" ON tasks;
+CREATE POLICY "Tasks can be deleted by PMs and Admins" 
+ON tasks FOR DELETE
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
@@ -995,16 +921,12 @@ CREATE POLICY "Tasks can be deleted by PMs and Admins"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Task Dependencies ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7/9 Hardening: Developers cannot create or remove dependencies
-
-DROP POLICY IF EXISTS "Task dependencies are isolated by workspace" ON task_dependencies;
-
-CREATE POLICY "Task dependencies are visible to workspace"
-  ON task_dependencies FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Task dependencies can be managed by PMs and Admins"
-  ON task_dependencies FOR ALL
+-- Wave 7/9 Hardening: Developers cannot create or remove dependenciesDROP POLICY IF EXISTS "Task dependencies are visible to workspace" ON task_dependencies;
+CREATE POLICY "Task dependencies are visible to workspace" 
+ON task_dependencies FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Task dependencies can be managed by PMs and Admins" ON task_dependencies;
+CREATE POLICY "Task dependencies can be managed by PMs and Admins" 
+ON task_dependencies FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -1016,27 +938,23 @@ CREATE POLICY "Task dependencies can be managed by PMs and Admins"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Comments ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7/9 Hardening: Author-only mutation for non-admins
-
-DROP POLICY IF EXISTS "Comments are isolated by workspace" ON comments;
-
--- SELECT: All workspace members can read comments
-CREATE POLICY "Comments are visible to workspace"
-  ON comments FOR SELECT
+-- Wave 7/9 Hardening: Author-only mutation for non-admins-- SELECT: All workspace members can read commentsDROP POLICY IF EXISTS "Comments are visible to workspace" ON comments;
+CREATE POLICY "Comments are visible to workspace" 
+ON comments FOR SELECT
   USING (workspace_id = current_workspace() AND public.is_active_workspace_member());
 
--- INSERT: Authenticated workspace members can create comments (author_id must be self)
-CREATE POLICY "Comments can be created by authenticated users"
-  ON comments FOR INSERT
+-- INSERT: Authenticated workspace members can create comments (author_id must be self)DROP POLICY IF EXISTS "Comments can be created by authenticated users" ON comments;
+CREATE POLICY "Comments can be created by authenticated users" 
+ON comments FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
     author_id = auth.uid() AND
     public.is_active_workspace_member()
   );
 
--- UPDATE/DELETE for PMs/Admins: Full moderation access
-CREATE POLICY "Comments can be moderated by PMs and Admins"
-  ON comments FOR ALL
+-- UPDATE/DELETE for PMs/Admins: Full moderation accessDROP POLICY IF EXISTS "Comments can be moderated by PMs and Admins" ON comments;
+CREATE POLICY "Comments can be moderated by PMs and Admins" 
+ON comments FOR ALL
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
@@ -1048,26 +966,19 @@ CREATE POLICY "Comments can be moderated by PMs and Admins"
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
--- UPDATE/DELETE for non-admins: Own comments only
-CREATE POLICY "Users can edit their own comments"
-  ON comments FOR UPDATE
-  USING (workspace_id = current_workspace() AND author_id = auth.uid() AND public.is_active_workspace_member());
-
-CREATE POLICY "Users can delete their own comments"
-  ON comments FOR DELETE
+-- UPDATE/DELETE for non-admins: Own comments onlyDROP POLICY IF EXISTS "Users can edit their own comments" ON comments;
+CREATE POLICY "Users can edit their own comments" 
+ON comments FOR UPDATE
+  USING (workspace_id = current_workspace() AND author_id = auth.uid() AND public.is_active_workspace_member());DROP POLICY IF EXISTS "Users can delete their own comments" ON comments;
+CREATE POLICY "Users can delete their own comments" 
+ON comments FOR DELETE
   USING (workspace_id = current_workspace() AND author_id = auth.uid() AND public.is_active_workspace_member());
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Files ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: Files ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SELECT for all, mutations restricted to uploader + PM/Admin
-
-DROP POLICY IF EXISTS "Files are isolated by workspace" ON files;
-DROP POLICY IF EXISTS "Files are visible to workspace" ON files;
-DROP POLICY IF EXISTS "Files can be uploaded by authenticated users" ON files;
-DROP POLICY IF EXISTS "Files can be managed by PMs and Admins" ON files;
-
-CREATE POLICY "Files are visible to workspace"
-  ON files FOR SELECT
+-- Wave 7.5: Files ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â SELECT for all, mutations restricted to uploader + PM/AdminDROP POLICY IF EXISTS "Files are visible to workspace" ON files;
+CREATE POLICY "Files are visible to workspace" 
+ON files FOR SELECT
   USING (
     workspace_id = current_workspace() 
     AND public.is_active_workspace_member()
@@ -1082,18 +993,16 @@ CREATE POLICY "Files are visible to workspace"
         )
       )
     )
-  );
-
-CREATE POLICY "Files can be uploaded by authenticated users"
-  ON files FOR INSERT
+  );DROP POLICY IF EXISTS "Files can be uploaded by authenticated users" ON files;
+CREATE POLICY "Files can be uploaded by authenticated users" 
+ON files FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
     uploaded_by = auth.uid() AND
     public.is_active_workspace_member()
-  );
-
-CREATE POLICY "Files can be managed by PMs and Admins"
-  ON files FOR ALL
+  );DROP POLICY IF EXISTS "Files can be managed by PMs and Admins" ON files;
+CREATE POLICY "Files can be managed by PMs and Admins" 
+ON files FOR ALL
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
@@ -1107,28 +1016,22 @@ CREATE POLICY "Files can be managed by PMs and Admins"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Notifications ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P1-1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Notification INSERT restricted: user_id must be self or by PM/Admin
-
-DROP POLICY IF EXISTS "Notifications are isolated by workspace" ON notifications;
-DROP POLICY IF EXISTS "Notifications are visible to workspace members" ON notifications;
-DROP POLICY IF EXISTS "Notifications can be self-targeted" ON notifications;
-DROP POLICY IF EXISTS "Notifications can be managed by PMs and Admins" ON notifications;
-
-CREATE POLICY "Notifications are visible to workspace members"
-  ON notifications FOR SELECT
+-- Wave 7.5: P1-1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Notification INSERT restricted: user_id must be self or by PM/AdminDROP POLICY IF EXISTS "Notifications are visible to workspace members" ON notifications;
+CREATE POLICY "Notifications are visible to workspace members" 
+ON notifications FOR SELECT
   USING (workspace_id = current_workspace());
 
--- Non-admins can only create notifications targeted at themselves
-CREATE POLICY "Notifications can be self-targeted"
-  ON notifications FOR INSERT
+-- Non-admins can only create notifications targeted at themselvesDROP POLICY IF EXISTS "Notifications can be self-targeted" ON notifications;
+CREATE POLICY "Notifications can be self-targeted" 
+ON notifications FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
     user_id = auth.uid()
   );
 
--- PM/Admin can create notifications for anyone and manage them
-CREATE POLICY "Notifications can be managed by PMs and Admins"
-  ON notifications FOR ALL
+-- PM/Admin can create notifications for anyone and manage themDROP POLICY IF EXISTS "Notifications can be managed by PMs and Admins" ON notifications;
+CREATE POLICY "Notifications can be managed by PMs and Admins" 
+ON notifications FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -1138,26 +1041,19 @@ CREATE POLICY "Notifications can be managed by PMs and Admins"
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
--- Users can mark their own notifications as read
-DROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
-CREATE POLICY "Users can update own notifications"
-  ON notifications FOR UPDATE
+-- Users can mark their own notifications as readDROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
+CREATE POLICY "Users can update own notifications" 
+ON notifications FOR UPDATE
   USING (workspace_id = current_workspace() AND user_id = auth.uid());
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Activity Logs ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P1-3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â actor_id must match auth.uid() to prevent forgery
-
-DROP POLICY IF EXISTS "Activity logs are isolated by workspace" ON activity_logs;
-DROP POLICY IF EXISTS "Activity logs are readable by workspace" ON activity_logs;
-DROP POLICY IF EXISTS "Activity logs can be inserted with verified actor" ON activity_logs;
-
-CREATE POLICY "Activity logs are readable by workspace"
-  ON activity_logs FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Activity logs can be inserted with verified actor"
-  ON activity_logs FOR INSERT
+-- Wave 7.5: P1-3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â actor_id must match auth.uid() to prevent forgeryDROP POLICY IF EXISTS "Activity logs are readable by workspace" ON activity_logs;
+CREATE POLICY "Activity logs are readable by workspace" 
+ON activity_logs FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Activity logs can be inserted with verified actor" ON activity_logs;
+CREATE POLICY "Activity logs can be inserted with verified actor" 
+ON activity_logs FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
     (actor_id IS NULL OR actor_id = auth.uid())
@@ -1165,18 +1061,12 @@ CREATE POLICY "Activity logs can be inserted with verified actor"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Attendance ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P0-6 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Attendance mutations restricted to PM/Admin
-
-DROP POLICY IF EXISTS "Attendance is isolated by workspace" ON attendance;
-DROP POLICY IF EXISTS "Attendance is visible to workspace" ON attendance;
-DROP POLICY IF EXISTS "Attendance can be managed by PMs and Admins" ON attendance;
-
-CREATE POLICY "Attendance is visible to workspace"
-  ON attendance FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Attendance can be managed by PMs and Admins"
-  ON attendance FOR ALL
+-- Wave 7.5: P0-6 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Attendance mutations restricted to PM/AdminDROP POLICY IF EXISTS "Attendance is visible to workspace" ON attendance;
+CREATE POLICY "Attendance is visible to workspace" 
+ON attendance FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Attendance can be managed by PMs and Admins" ON attendance;
+CREATE POLICY "Attendance can be managed by PMs and Admins" 
+ON attendance FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -1188,21 +1078,15 @@ CREATE POLICY "Attendance can be managed by PMs and Admins"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Salaries ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P0-5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Salary mutations restricted to PM/Admin
-
-DROP POLICY IF EXISTS "Salaries are isolated by workspace" ON salaries;
-DROP POLICY IF EXISTS "Salaries are visible to admins" ON salaries;
-DROP POLICY IF EXISTS "Salaries can be managed by PMs and Admins" ON salaries;
-
-CREATE POLICY "Salaries are visible to admins"
-  ON salaries FOR SELECT
+-- Wave 7.5: P0-5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Salary mutations restricted to PM/AdminDROP POLICY IF EXISTS "Salaries are visible to admins" ON salaries;
+CREATE POLICY "Salaries are visible to admins" 
+ON salaries FOR SELECT
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
-  );
-
-CREATE POLICY "Salaries can be managed by PMs and Admins"
-  ON salaries FOR ALL
+  );DROP POLICY IF EXISTS "Salaries can be managed by PMs and Admins" ON salaries;
+CREATE POLICY "Salaries can be managed by PMs and Admins" 
+ON salaries FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -1213,16 +1097,12 @@ CREATE POLICY "Salaries can be managed by PMs and Admins"
   );
 
 
--- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Invitations ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
-
-DROP POLICY IF EXISTS "Invitations are readable by the invited email or workspace members" ON invitations;
-CREATE POLICY "Invitations are readable by the invited email or workspace members"
-  ON invitations FOR SELECT
-  USING (lower(email) = lower(auth.email()) OR workspace_id = current_workspace());
-
-DROP POLICY IF EXISTS "Workspace super admins can manage invitations" ON invitations;
-CREATE POLICY "Workspace super admins can manage invitations"
-  ON invitations FOR ALL
+-- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Invitations ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬DROP POLICY IF EXISTS "Invitations are readable by the invited email or workspace memb" ON invitations;
+CREATE POLICY "Invitations are readable by the invited email or workspace memb" 
+ON invitations FOR SELECT
+  USING (lower(email) = lower(auth.email()) OR workspace_id = current_workspace());DROP POLICY IF EXISTS "Workspace super admins can manage invitations" ON invitations;
+CREATE POLICY "Workspace super admins can manage invitations" 
+ON invitations FOR ALL
   USING (
     workspace_id = current_workspace()
     AND EXISTS (
@@ -1238,28 +1118,20 @@ CREATE POLICY "Workspace super admins can manage invitations"
       WHERE users.id = auth.uid()
         AND users.role = 'super_admin'
     )
-  );
-
-DROP POLICY IF EXISTS "Invited users can accept their own invitation" ON invitations;
-CREATE POLICY "Invited users can accept their own invitation"
-  ON invitations FOR UPDATE
+  );DROP POLICY IF EXISTS "Invited users can accept their own invitation" ON invitations;
+CREATE POLICY "Invited users can accept their own invitation" 
+ON invitations FOR UPDATE
   USING (lower(email) = lower(auth.email()) AND status = 'pending')
   WITH CHECK (lower(email) = lower(auth.email()) AND status = 'accepted');
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Workspace Holidays ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: Holidays mutations restricted to PM/Admin
-
-DROP POLICY IF EXISTS "Workspace holidays are isolated by workspace" ON workspace_holidays;
-DROP POLICY IF EXISTS "Workspace holidays are visible to workspace" ON workspace_holidays;
-DROP POLICY IF EXISTS "Workspace holidays can be managed by PMs and Admins" ON workspace_holidays;
-
-CREATE POLICY "Workspace holidays are visible to workspace"
-  ON workspace_holidays FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Workspace holidays can be managed by PMs and Admins"
-  ON workspace_holidays FOR ALL
+-- Wave 7.5: Holidays mutations restricted to PM/AdminDROP POLICY IF EXISTS "Workspace holidays are visible to workspace" ON workspace_holidays;
+CREATE POLICY "Workspace holidays are visible to workspace" 
+ON workspace_holidays FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Workspace holidays can be managed by PMs and Admins" ON workspace_holidays;
+CREATE POLICY "Workspace holidays can be managed by PMs and Admins" 
+ON workspace_holidays FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -1274,24 +1146,16 @@ CREATE POLICY "Workspace holidays can be managed by PMs and Admins"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Personal Leave ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P1-2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Self-only mutation for non-admins
-
-DROP POLICY IF EXISTS "Personal leaves are isolated by user workspace" ON personal_leave;
-DROP POLICY IF EXISTS "Personal leave is visible to workspace" ON personal_leave;
-DROP POLICY IF EXISTS "Users can manage their own leave" ON personal_leave;
-DROP POLICY IF EXISTS "PMs and Admins can manage all leave" ON personal_leave;
-
-CREATE POLICY "Personal leave is visible to workspace"
-  ON personal_leave FOR SELECT
-  USING (user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()));
-
-CREATE POLICY "Users can manage their own leave"
-  ON personal_leave FOR ALL
+-- Wave 7.5: P1-2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Self-only mutation for non-adminsDROP POLICY IF EXISTS "Personal leave is visible to workspace" ON personal_leave;
+CREATE POLICY "Personal leave is visible to workspace" 
+ON personal_leave FOR SELECT
+  USING (user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()));DROP POLICY IF EXISTS "Users can manage their own leave" ON personal_leave;
+CREATE POLICY "Users can manage their own leave" 
+ON personal_leave FOR ALL
   USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "PMs and Admins can manage all leave"
-  ON personal_leave FOR ALL
+  WITH CHECK (user_id = auth.uid());DROP POLICY IF EXISTS "PMs and Admins can manage all leave" ON personal_leave;
+CREATE POLICY "PMs and Admins can manage all leave" 
+ON personal_leave FOR ALL
   USING (
     user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()) AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -1303,18 +1167,12 @@ CREATE POLICY "PMs and Admins can manage all leave"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Workspace Settings ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P0-4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Workspace settings mutations restricted to PM/Admin
-
-DROP POLICY IF EXISTS "Workspace settings are isolated by workspace" ON workspace_settings;
-DROP POLICY IF EXISTS "Workspace settings are visible to workspace" ON workspace_settings;
-DROP POLICY IF EXISTS "Workspace settings can be managed by PMs and Admins" ON workspace_settings;
-
-CREATE POLICY "Workspace settings are visible to workspace"
-  ON workspace_settings FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Workspace settings can be managed by PMs and Admins"
-  ON workspace_settings FOR ALL
+-- Wave 7.5: P0-4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Workspace settings mutations restricted to PM/AdminDROP POLICY IF EXISTS "Workspace settings are visible to workspace" ON workspace_settings;
+CREATE POLICY "Workspace settings are visible to workspace" 
+ON workspace_settings FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Workspace settings can be managed by PMs and Admins" ON workspace_settings;
+CREATE POLICY "Workspace settings can be managed by PMs and Admins" 
+ON workspace_settings FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -1326,11 +1184,9 @@ CREATE POLICY "Workspace settings can be managed by PMs and Admins"
 
 
 -- ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ System Audit Ledger ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
--- Wave 7.5: P1-4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Audit ledger SELECT binds BOTH role AND workspace_id
-
-DROP POLICY IF EXISTS "System audit ledger is viewable by workspace admins" ON system_audit_ledger;
-CREATE POLICY "System audit ledger is viewable by workspace admins"
-  ON system_audit_ledger FOR SELECT
+-- Wave 7.5: P1-4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Audit ledger SELECT binds BOTH role AND workspace_idDROP POLICY IF EXISTS "System audit ledger is viewable by workspace admins" ON system_audit_ledger;
+CREATE POLICY "System audit ledger is viewable by workspace admins" 
+ON system_audit_ledger FOR SELECT
   USING (
     workspace_id = current_workspace()
     AND EXISTS (
@@ -1339,11 +1195,9 @@ CREATE POLICY "System audit ledger is viewable by workspace admins"
         AND users.workspace_id = current_workspace()
         AND users.role IN ('super_admin', 'pm')
     )
-  );
-
-DROP POLICY IF EXISTS "System audit ledger is insertable by authenticated users" ON system_audit_ledger;
-CREATE POLICY "System audit ledger is insertable by authenticated users"
-  ON system_audit_ledger FOR INSERT
+  );DROP POLICY IF EXISTS "System audit ledger is insertable by authenticated users" ON system_audit_ledger;
+CREATE POLICY "System audit ledger is insertable by authenticated users" 
+ON system_audit_ledger FOR INSERT
   WITH CHECK (workspace_id = current_workspace());
 
 
@@ -1402,10 +1256,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_enforce_task_completion ON tasks;
-
+$$ LANGUAGE plpgsql;DROP TRIGGER IF EXISTS trigger_enforce_task_completion ON tasks;
 CREATE TRIGGER trigger_enforce_task_completion
   BEFORE UPDATE ON tasks
   FOR EACH ROW
@@ -1429,7 +1280,7 @@ CREATE TABLE IF NOT EXISTS public.employment_records (
 
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    profile_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
 
     workspace_id UUID REFERENCES public.workspaces(id) ON DELETE SET NULL,
 
@@ -1445,7 +1296,7 @@ CREATE TABLE IF NOT EXISTS public.employment_records (
 
     updated_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
 
-    CONSTRAINT unique_profile_workspace_employment UNIQUE (profile_id, workspace_id)
+    CONSTRAINT unique_profile_workspace_employment UNIQUE (user_id, workspace_id)
 
 );
 
@@ -1485,9 +1336,9 @@ ALTER TABLE public.employment_change_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for employment_records
 
--- Super Admins can do anything
-
-CREATE POLICY "Super Admins have full access to employment_records" ON public.employment_records
+-- Super Admins can do anythingDROP POLICY IF EXISTS "Super Admins have full access to employment_records" ON public.employment_records;
+CREATE POLICY "Super Admins have full access to employment_records" 
+ON public.employment_records
 
 FOR ALL USING (
 
@@ -1503,21 +1354,21 @@ FOR ALL USING (
 
 
 
--- Users can view their own record
-
-CREATE POLICY "Users can view their own employment_records" ON public.employment_records
+-- Users can view their own recordDROP POLICY IF EXISTS "Users can view their own employment_records" ON public.employment_records;
+CREATE POLICY "Users can view their own employment_records" 
+ON public.employment_records
 
 FOR SELECT USING (
 
-  profile_id = auth.uid()
+  user_id = auth.uid()
 
 );
 
 
 
--- Project Managers and Admins can view records in their workspace
-
-CREATE POLICY "Workspace managers can view employment_records" ON public.employment_records
+-- Project Managers and Admins can view records in their workspaceDROP POLICY IF EXISTS "Workspace managers can view employment_records" ON public.employment_records;
+CREATE POLICY "Workspace managers can view employment_records" 
+ON public.employment_records
 
 FOR SELECT USING (
 
@@ -1535,9 +1386,9 @@ FOR SELECT USING (
 
 
 
--- RLS Policies for employment_change_logs
-
-CREATE POLICY "Super Admins have full access to employment_change_logs" ON public.employment_change_logs
+-- RLS Policies for employment_change_logsDROP POLICY IF EXISTS "Super Admins have full access to employment_change_logs" ON public.employment_change_logs;
+CREATE POLICY "Super Admins have full access to employment_change_logs" 
+ON public.employment_change_logs
 
 FOR ALL USING (
 
@@ -1549,11 +1400,9 @@ FOR ALL USING (
 
   )
 
-);
-
-
-
-CREATE POLICY "Users can view their own change logs" ON public.employment_change_logs
+);DROP POLICY IF EXISTS "Users can view their own change logs" ON public.employment_change_logs;
+CREATE POLICY "Users can view their own change logs" 
+ON public.employment_change_logs
 
 FOR SELECT USING (
 
@@ -1561,11 +1410,11 @@ FOR SELECT USING (
 
 );
 
-INSERT INTO public.employment_records (profile_id, workspace_id, date_of_joining, employment_status, created_at, updated_at)
+INSERT INTO public.employment_records (user_id, workspace_id, date_of_joining, employment_status, created_at, updated_at)
 SELECT id, workspace_id, created_at, 'active', now(), now()
 FROM public.users
 WHERE workspace_id IS NOT NULL
-ON CONFLICT (profile_id, workspace_id) DO NOTHING;
+ON CONFLICT (user_id, workspace_id) DO NOTHING;
 
 
 
@@ -1582,7 +1431,7 @@ ALTER TABLE public.invitations ADD COLUMN IF NOT EXISTS date_of_joining TIMESTAM
 -- 2. Create employment_records table
 CREATE TABLE IF NOT EXISTS public.employment_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    profile_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
     workspace_id UUID REFERENCES public.workspaces(id) ON DELETE SET NULL,
     date_of_joining TIMESTAMP WITH TIME ZONE NOT NULL,
     employment_status TEXT NOT NULL DEFAULT 'active' CHECK (employment_status IN ('active', 'resigned', 'terminated')),
@@ -1590,7 +1439,7 @@ CREATE TABLE IF NOT EXISTS public.employment_records (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     created_by UUID REFERENCES public.users(id) ON DELETE RESTRICT,
     updated_by UUID REFERENCES public.users(id) ON DELETE RESTRICT,
-    CONSTRAINT unique_profile_workspace_employment UNIQUE (profile_id, workspace_id)
+    CONSTRAINT unique_profile_workspace_employment UNIQUE (user_id, workspace_id)
 );
 
 -- 3. Create employment_change_logs table
@@ -1610,9 +1459,9 @@ ALTER TABLE public.employment_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.employment_change_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for employment_records
--- Super Admins can do anything
-DROP POLICY IF EXISTS "Super Admins have full access to employment_records" ON public.employment_records;
-CREATE POLICY "Super Admins have full access to employment_records" ON public.employment_records
+-- Super Admins can do anythingDROP POLICY IF EXISTS "Super Admins have full access to employment_records" ON public.employment_records;
+CREATE POLICY "Super Admins have full access to employment_records" 
+ON public.employment_records
 FOR ALL USING (
   EXISTS (
     SELECT 1 FROM public.users
@@ -1620,16 +1469,16 @@ FOR ALL USING (
   )
 );
 
--- Users can view their own record
-DROP POLICY IF EXISTS "Users can view their own employment_records" ON public.employment_records;
-CREATE POLICY "Users can view their own employment_records" ON public.employment_records
+-- Users can view their own recordDROP POLICY IF EXISTS "Users can view their own employment_records" ON public.employment_records;
+CREATE POLICY "Users can view their own employment_records" 
+ON public.employment_records
 FOR SELECT USING (
-  profile_id = auth.uid()
+  user_id = auth.uid()
 );
 
--- Project Managers and Admins can view records in their workspace
-DROP POLICY IF EXISTS "Workspace managers can view employment_records" ON public.employment_records;
-CREATE POLICY "Workspace managers can view employment_records" ON public.employment_records
+-- Project Managers and Admins can view records in their workspaceDROP POLICY IF EXISTS "Workspace managers can view employment_records" ON public.employment_records;
+CREATE POLICY "Workspace managers can view employment_records" 
+ON public.employment_records
 FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM public.users
@@ -1638,18 +1487,17 @@ FOR SELECT USING (
   )
 );
 
--- RLS Policies for employment_change_logs
-DROP POLICY IF EXISTS "Super Admins have full access to employment_change_logs" ON public.employment_change_logs;
-CREATE POLICY "Super Admins have full access to employment_change_logs" ON public.employment_change_logs
+-- RLS Policies for employment_change_logsDROP POLICY IF EXISTS "Super Admins have full access to employment_change_logs" ON public.employment_change_logs;
+CREATE POLICY "Super Admins have full access to employment_change_logs" 
+ON public.employment_change_logs
 FOR ALL USING (
   EXISTS (
     SELECT 1 FROM public.users
     WHERE users.id = auth.uid() AND users.role = 'super_admin'
   )
-);
-
-DROP POLICY IF EXISTS "Users can view their own change logs" ON public.employment_change_logs;
-CREATE POLICY "Users can view their own change logs" ON public.employment_change_logs
+);DROP POLICY IF EXISTS "Users can view their own change logs" ON public.employment_change_logs;
+CREATE POLICY "Users can view their own change logs" 
+ON public.employment_change_logs
 FOR SELECT USING (
   employee_id = auth.uid()
 );
@@ -1662,8 +1510,7 @@ FOR SELECT USING (
 -- 1. Drop existing table to ensure fresh schema
 DROP TABLE IF EXISTS public.compensation_records CASCADE;
 
--- 2. Create compensation_records table
-CREATE TABLE public.compensation_records (
+-- 2. Create compensation_records tableCREATE TABLE IF NOT EXISTS public.compensation_records (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id uuid NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
@@ -1686,9 +1533,8 @@ WHERE effective_to IS NULL;
 -- 4. Enable RLS on compensation_records
 ALTER TABLE public.compensation_records ENABLE ROW LEVEL SECURITY;
 
--- 5. Super Admin Policy for compensation_records
-DROP POLICY IF EXISTS "Super Admins have full access to compensation_records" ON public.compensation_records;
-CREATE POLICY "Super Admins have full access to compensation_records"
+-- 5. Super Admin Policy for compensation_recordsDROP POLICY IF EXISTS "Super Admins have full access to compensation_records" ON public.compensation_records;
+CREATE POLICY "Super Admins have full access to compensation_records" 
 ON public.compensation_records
 FOR ALL
 USING (
@@ -1771,10 +1617,8 @@ ALTER TABLE public.file_versions ENABLE ROW LEVEL SECURITY;
 -- and let the app strictly enforce fetching by entity (since PMs only see their projects, etc).
 -- However, "No frontend-only security. Use RLS."
 -- We will write a function to check access or simply rely on workspace visibility for now as baseline, 
--- and add deeper checks if needed. The request says "Files inherit visibility from parent entities... Integrate with existing canViewFile() / canEditFile()". Wait, if we use `canViewFile()`, that's application code. Let's do workspace-level RLS to protect cross-tenant, and app-level `canViewFile` for role checks.
-
-DROP POLICY IF EXISTS "Workspace users can view their workspace files" ON public.workspace_files;
-CREATE POLICY "Workspace users can view their workspace files"
+-- and add deeper checks if needed. The request says "Files inherit visibility from parent entities... Integrate with existing canViewFile() / canEditFile()". Wait, if we use `canViewFile()`, that's application code. Let's do workspace-level RLS to protect cross-tenant, and app-level `canViewFile` for role checks.DROP POLICY IF EXISTS "Workspace users can view their workspace files" ON public.workspace_files;
+CREATE POLICY "Workspace users can view their workspace files" 
 ON public.workspace_files FOR SELECT
 USING (
   EXISTS (
@@ -1782,10 +1626,8 @@ USING (
     WHERE users.id = auth.uid()
       AND users.workspace_id = workspace_files.workspace_id
   )
-);
-
-DROP POLICY IF EXISTS "Workspace users can insert workspace files" ON public.workspace_files;
-CREATE POLICY "Workspace users can insert workspace files"
+);DROP POLICY IF EXISTS "Workspace users can insert workspace files" ON public.workspace_files;
+CREATE POLICY "Workspace users can insert workspace files" 
 ON public.workspace_files FOR INSERT
 WITH CHECK (
   EXISTS (
@@ -1793,10 +1635,8 @@ WITH CHECK (
     WHERE users.id = auth.uid()
       AND users.workspace_id = workspace_files.workspace_id
   )
-);
-
-DROP POLICY IF EXISTS "Workspace users can update workspace files" ON public.workspace_files;
-CREATE POLICY "Workspace users can update workspace files"
+);DROP POLICY IF EXISTS "Workspace users can update workspace files" ON public.workspace_files;
+CREATE POLICY "Workspace users can update workspace files" 
 ON public.workspace_files FOR UPDATE
 USING (
   EXISTS (
@@ -1804,10 +1644,8 @@ USING (
     WHERE users.id = auth.uid()
       AND users.workspace_id = workspace_files.workspace_id
   )
-);
-
-DROP POLICY IF EXISTS "Workspace users can view file versions" ON public.file_versions;
-CREATE POLICY "Workspace users can view file versions"
+);DROP POLICY IF EXISTS "Workspace users can view file versions" ON public.file_versions;
+CREATE POLICY "Workspace users can view file versions" 
 ON public.file_versions FOR SELECT
 USING (
   EXISTS (
@@ -1816,10 +1654,8 @@ USING (
     WHERE wf.id = file_versions.file_id
       AND u.id = auth.uid()
   )
-);
-
-DROP POLICY IF EXISTS "Workspace users can insert file versions" ON public.file_versions;
-CREATE POLICY "Workspace users can insert file versions"
+);DROP POLICY IF EXISTS "Workspace users can insert file versions" ON public.file_versions;
+CREATE POLICY "Workspace users can insert file versions" 
 ON public.file_versions FOR INSERT
 WITH CHECK (
   EXISTS (
@@ -1830,9 +1666,8 @@ WITH CHECK (
   )
 );
 
--- 5. Storage RLS Policies
-DROP POLICY IF EXISTS "Workspace users can access workspace_files bucket objects" ON storage.objects;
-CREATE POLICY "Workspace users can access workspace_files bucket objects"
+-- 5. Storage RLS PoliciesDROP POLICY IF EXISTS "Workspace users can access workspace_files bucket objects" ON storage.objects;
+CREATE POLICY "Workspace users can access workspace_files bucket objects" 
 ON storage.objects FOR SELECT
 USING (
   bucket_id = 'workspace_files' AND
@@ -1841,10 +1676,8 @@ USING (
     WHERE users.id = auth.uid()
       AND storage.objects.name LIKE (users.workspace_id::text || '/%')
   )
-);
-
-DROP POLICY IF EXISTS "Workspace users can insert workspace_files bucket objects" ON storage.objects;
-CREATE POLICY "Workspace users can insert workspace_files bucket objects"
+);DROP POLICY IF EXISTS "Workspace users can insert workspace_files bucket objects" ON storage.objects;
+CREATE POLICY "Workspace users can insert workspace_files bucket objects" 
 ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'workspace_files' AND
@@ -1885,9 +1718,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_workspace_file_storage ON public.workspace_files;
+$$ LANGUAGE plpgsql;DROP TRIGGER IF EXISTS trigger_workspace_file_storage ON public.workspace_files;
 CREATE TRIGGER trigger_workspace_file_storage
 AFTER INSERT OR UPDATE OR DELETE ON public.workspace_files
 FOR EACH ROW EXECUTE FUNCTION public.update_workspace_storage();
@@ -1910,9 +1741,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_workspace_file_version_storage ON public.file_versions;
+$$ LANGUAGE plpgsql;DROP TRIGGER IF EXISTS trigger_workspace_file_version_storage ON public.file_versions;
 CREATE TRIGGER trigger_workspace_file_version_storage
 AFTER INSERT OR DELETE ON public.file_versions
 FOR EACH ROW EXECUTE FUNCTION public.update_workspace_storage_versions();
@@ -2069,36 +1898,26 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 
--- 2. workspace_files RLS
-DROP POLICY IF EXISTS "Workspace users can view their workspace files" ON public.workspace_files;
-DROP POLICY IF EXISTS "Users can view accessible entity files" ON public.workspace_files;
-CREATE POLICY "Users can view accessible entity files"
+-- 2. workspace_files RLSDROP POLICY IF EXISTS "Users can view accessible entity files" ON public.workspace_files;
+CREATE POLICY "Users can view accessible entity files" 
 ON public.workspace_files FOR SELECT
 USING (
   workspace_id = current_workspace() AND
   public.can_access_entity(entity_type, entity_id)
-);
-
-DROP POLICY IF EXISTS "Workspace users can insert workspace files" ON public.workspace_files;
-DROP POLICY IF EXISTS "Users can insert files to accessible entities" ON public.workspace_files;
-CREATE POLICY "Users can insert files to accessible entities"
+);DROP POLICY IF EXISTS "Users can insert files to accessible entities" ON public.workspace_files;
+CREATE POLICY "Users can insert files to accessible entities" 
 ON public.workspace_files FOR INSERT
 WITH CHECK (
   workspace_id = current_workspace() AND
   public.can_insert_entity_file(entity_type, entity_id)
-);
-
-DROP POLICY IF EXISTS "Workspace users can update workspace files" ON public.workspace_files;
-DROP POLICY IF EXISTS "Users can update their files or if they have permission" ON public.workspace_files;
-CREATE POLICY "Users can update their files or if they have permission"
+);DROP POLICY IF EXISTS "Users can update their files or if they have permission" ON public.workspace_files;
+CREATE POLICY "Users can update their files or if they have permission" 
 ON public.workspace_files FOR UPDATE
 USING (
   workspace_id = current_workspace() AND
   public.can_manage_entity_file(entity_type, entity_id, uploaded_by)
-);
-
-DROP POLICY IF EXISTS "Users can delete their files or if they have permission" ON public.workspace_files;
-CREATE POLICY "Users can delete their files or if they have permission"
+);DROP POLICY IF EXISTS "Users can delete their files or if they have permission" ON public.workspace_files;
+CREATE POLICY "Users can delete their files or if they have permission" 
 ON public.workspace_files FOR DELETE
 USING (
   workspace_id = current_workspace() AND
@@ -2106,10 +1925,8 @@ USING (
 );
 
 
--- 3. file_versions RLS
-DROP POLICY IF EXISTS "Workspace users can view file versions" ON public.file_versions;
-DROP POLICY IF EXISTS "Users can view accessible file versions" ON public.file_versions;
-CREATE POLICY "Users can view accessible file versions"
+-- 3. file_versions RLSDROP POLICY IF EXISTS "Users can view accessible file versions" ON public.file_versions;
+CREATE POLICY "Users can view accessible file versions" 
 ON public.file_versions FOR SELECT
 USING (
   EXISTS (
@@ -2118,11 +1935,8 @@ USING (
       AND wf.workspace_id = current_workspace() 
       AND public.can_access_entity(wf.entity_type, wf.entity_id)
   )
-);
-
-DROP POLICY IF EXISTS "Workspace users can insert file versions" ON public.file_versions;
-DROP POLICY IF EXISTS "Users can insert file versions if they can manage the file" ON public.file_versions;
-CREATE POLICY "Users can insert file versions if they can manage the file"
+);DROP POLICY IF EXISTS "Users can insert file versions if they can manage the file" ON public.file_versions;
+CREATE POLICY "Users can insert file versions if they can manage the file" 
 ON public.file_versions FOR INSERT
 WITH CHECK (
   EXISTS (
@@ -2131,10 +1945,8 @@ WITH CHECK (
       AND wf.workspace_id = current_workspace() 
       AND public.can_manage_entity_file(wf.entity_type, wf.entity_id, wf.uploaded_by)
   )
-);
-
-DROP POLICY IF EXISTS "Users can delete file versions if they can manage the file" ON public.file_versions;
-CREATE POLICY "Users can delete file versions if they can manage the file"
+);DROP POLICY IF EXISTS "Users can delete file versions if they can manage the file" ON public.file_versions;
+CREATE POLICY "Users can delete file versions if they can manage the file" 
 ON public.file_versions FOR DELETE
 USING (
   EXISTS (
@@ -2146,10 +1958,8 @@ USING (
 );
 
 
--- 4. Storage Bucket Policy Hardening
-DROP POLICY IF EXISTS "Workspace users can access workspace_files bucket objects" ON storage.objects;
-DROP POLICY IF EXISTS "Users can access their entity objects" ON storage.objects;
-CREATE POLICY "Users can access their entity objects"
+-- 4. Storage Bucket Policy HardeningDROP POLICY IF EXISTS "Users can access their entity objects" ON storage.objects;
+CREATE POLICY "Users can access their entity objects" 
 ON storage.objects FOR SELECT
 USING (
   bucket_id = 'workspace_files' AND
@@ -2159,11 +1969,8 @@ USING (
       AND wf.workspace_id = current_workspace()
       AND public.can_access_entity(wf.entity_type, wf.entity_id)
   )
-);
-
-DROP POLICY IF EXISTS "Workspace users can insert workspace_files bucket objects" ON storage.objects;
-DROP POLICY IF EXISTS "Users can upload objects if they have insert permission" ON storage.objects;
-CREATE POLICY "Users can upload objects if they have insert permission"
+);DROP POLICY IF EXISTS "Users can upload objects if they have insert permission" ON storage.objects;
+CREATE POLICY "Users can upload objects if they have insert permission" 
 ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'workspace_files' AND
@@ -2210,9 +2017,8 @@ CREATE TABLE IF NOT EXISTS public.comment_versions (
 -- Enable RLS for comment_versions
 ALTER TABLE public.comment_versions ENABLE ROW LEVEL SECURITY;
 
--- Workspace users can view comment versions
-DROP POLICY IF EXISTS "Workspace users can view comment_versions" ON public.comment_versions;
-CREATE POLICY "Workspace users can view comment_versions"
+-- Workspace users can view comment versionsDROP POLICY IF EXISTS "Workspace users can view comment_versions" ON public.comment_versions;
+CREATE POLICY "Workspace users can view comment_versions" 
 ON public.comment_versions
 FOR SELECT
 USING (
@@ -2249,9 +2055,8 @@ ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS opened_at timestamptz;
 ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS dismissed_at timestamptz;
 
 -- Notification Security Verification:
--- Users can only read their own notifications. Super admin may audit globally.
-DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
-CREATE POLICY "Users can view their own notifications"
+-- Users can only read their own notifications. Super admin may audit globally.DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
+CREATE POLICY "Users can view their own notifications" 
 ON public.notifications
 FOR SELECT
 USING (
@@ -2266,9 +2071,8 @@ USING (
 );
 
 -- 3. Universal Comments RLS Policies
--- Workspace users can view comments in their workspace
-DROP POLICY IF EXISTS "Workspace users can view universal_comments" ON public.universal_comments;
-CREATE POLICY "Workspace users can view universal_comments"
+-- Workspace users can view comments in their workspaceDROP POLICY IF EXISTS "Workspace users can view universal_comments" ON public.universal_comments;
+CREATE POLICY "Workspace users can view universal_comments" 
 ON public.universal_comments
 FOR SELECT
 USING (
@@ -2279,9 +2083,8 @@ USING (
   )
 );
 
--- Workspace users can insert comments
-DROP POLICY IF EXISTS "Workspace users can insert universal_comments" ON public.universal_comments;
-CREATE POLICY "Workspace users can insert universal_comments"
+-- Workspace users can insert commentsDROP POLICY IF EXISTS "Workspace users can insert universal_comments" ON public.universal_comments;
+CREATE POLICY "Workspace users can insert universal_comments" 
 ON public.universal_comments
 FOR INSERT
 WITH CHECK (
@@ -2292,17 +2095,15 @@ WITH CHECK (
   )
 );
 
--- Authors can edit their own comments
-DROP POLICY IF EXISTS "Authors can update their own universal_comments" ON public.universal_comments;
-CREATE POLICY "Authors can update their own universal_comments"
+-- Authors can edit their own commentsDROP POLICY IF EXISTS "Authors can update their own universal_comments" ON public.universal_comments;
+CREATE POLICY "Authors can update their own universal_comments" 
 ON public.universal_comments
 FOR UPDATE
 USING (author_id = auth.uid())
 WITH CHECK (author_id = auth.uid());
 
--- Authors and admins can delete comments
-DROP POLICY IF EXISTS "Authors and admins can delete universal_comments" ON public.universal_comments;
-CREATE POLICY "Authors and admins can delete universal_comments"
+-- Authors and admins can delete commentsDROP POLICY IF EXISTS "Authors and admins can delete universal_comments" ON public.universal_comments;
+CREATE POLICY "Authors and admins can delete universal_comments" 
 ON public.universal_comments
 FOR DELETE
 USING (
@@ -2502,22 +2303,18 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
-
-DROP TRIGGER IF EXISTS on_recurring_task_change ON public.recurring_task_templates;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';DROP TRIGGER IF EXISTS on_recurring_task_change ON recurring_task_templates;
 CREATE TRIGGER on_recurring_task_change
 AFTER INSERT OR UPDATE ON recurring_task_templates
 FOR EACH ROW EXECUTE FUNCTION log_recurring_task_activity();
 
 
 -- 4. RLS for Templates
-ALTER TABLE public.recurring_task_templates ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Enable read access for project members on recurring_task_templates" 
+ALTER TABLE public.recurring_task_templates ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for project members on recurring_task_templa" ON public.recurring_task_templates;
+CREATE POLICY "Enable read access for project members on recurring_task_templa" 
 ON public.recurring_task_templates FOR SELECT 
-USING (public.can_access_entity('project', project_id) AND deleted_at IS NULL);
-
-CREATE POLICY "Enable write access for authorized users on recurring_task_templates" 
+USING (public.can_access_entity('project', project_id) AND deleted_at IS NULL);DROP POLICY IF EXISTS "Enable write access for authorized users on recurring_task_temp" ON public.recurring_task_templates;
+CREATE POLICY "Enable write access for authorized users on recurring_task_temp" 
 ON public.recurring_task_templates FOR ALL 
 USING (
   public.can_access_entity('project', project_id) AND (
@@ -2528,8 +2325,7 @@ USING (
 );
 
 -- 5. RLS for History
-ALTER TABLE public.recurring_task_history ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.recurring_task_history ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for history" ON public.recurring_task_history;
 CREATE POLICY "Enable read access for history" 
 ON public.recurring_task_history FOR SELECT 
 USING (
@@ -2641,15 +2437,13 @@ CREATE TABLE IF NOT EXISTS public.generated_reports (
 );
 
 -- RLS
-ALTER TABLE public.generated_reports ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.generated_reports ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can view reports they generated or if they are admin" ON public.generated_reports;
 CREATE POLICY "Users can view reports they generated or if they are admin" 
 ON public.generated_reports FOR SELECT 
 USING (
     generated_by = auth.uid() OR
     public.get_user_role(workspace_id) IN ('super_admin', 'pm')
-);
-
+);DROP POLICY IF EXISTS "Users can insert reports" ON public.generated_reports;
 CREATE POLICY "Users can insert reports" 
 ON public.generated_reports FOR INSERT 
 WITH CHECK (
@@ -2677,12 +2471,10 @@ CREATE TABLE IF NOT EXISTS public.skills (
 );
 
 -- RLS for Skills Dictionary
-ALTER TABLE public.skills ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.skills ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for all workspace members" ON public.skills;
 CREATE POLICY "Enable read access for all workspace members" 
 ON public.skills FOR SELECT 
-USING (public.get_user_role(workspace_id) IS NOT NULL);
-
+USING (public.get_user_role(workspace_id) IS NOT NULL);DROP POLICY IF EXISTS "Enable write access for managers and admins" ON public.skills;
 CREATE POLICY "Enable write access for managers and admins" 
 ON public.skills FOR ALL 
 USING (public.get_user_role(workspace_id) IN ('super_admin', 'pm'));
@@ -2700,21 +2492,18 @@ CREATE TABLE IF NOT EXISTS public.user_skills (
 );
 
 -- RLS for User Skills
-ALTER TABLE public.user_skills ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.user_skills ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for workspace members" ON public.user_skills;
 CREATE POLICY "Enable read access for workspace members" 
 ON public.user_skills FOR SELECT 
 USING (
   EXISTS (
     SELECT 1 FROM skills s WHERE s.id = skill_id AND public.get_user_role(s.workspace_id) IS NOT NULL
   )
-);
-
+);DROP POLICY IF EXISTS "Users can manage their own skills" ON public.user_skills;
 CREATE POLICY "Users can manage their own skills" 
 ON public.user_skills FOR ALL 
 USING (user_id = auth.uid())
-WITH CHECK (user_id = auth.uid());
-
+WITH CHECK (user_id = auth.uid());DROP POLICY IF EXISTS "Managers can verify and manage team skills" ON public.user_skills;
 CREATE POLICY "Managers can verify and manage team skills" 
 ON public.user_skills FOR ALL 
 USING (
@@ -2750,12 +2539,10 @@ CREATE TABLE IF NOT EXISTS public.clients (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.clients;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.clients FOR SELECT 
-USING (public.get_user_role(workspace_id) = 'super_admin');
-
+USING (public.get_user_role(workspace_id) = 'super_admin');DROP POLICY IF EXISTS "Enable write access for authorized users" ON public.clients;
 CREATE POLICY "Enable write access for authorized users" 
 ON public.clients FOR ALL 
 USING (public.get_user_role(workspace_id) = 'super_admin');
@@ -2788,12 +2575,10 @@ CREATE TABLE IF NOT EXISTS public.invoices (
     UNIQUE(workspace_id, invoice_number)
 );
 
-ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.invoices;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.invoices FOR SELECT 
-USING (public.get_user_role(workspace_id) = 'super_admin');
-
+USING (public.get_user_role(workspace_id) = 'super_admin');DROP POLICY IF EXISTS "Enable write access for authorized users" ON public.invoices;
 CREATE POLICY "Enable write access for authorized users" 
 ON public.invoices FOR ALL 
 USING (public.get_user_role(workspace_id) = 'super_admin');
@@ -2808,8 +2593,7 @@ CREATE TABLE IF NOT EXISTS public.invoice_line_items (
     total numeric NOT NULL DEFAULT 0
 );
 
-ALTER TABLE public.invoice_line_items ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.invoice_line_items ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable access for authorized users via invoice" ON public.invoice_line_items;
 CREATE POLICY "Enable access for authorized users via invoice" 
 ON public.invoice_line_items FOR ALL 
 USING (
@@ -2830,8 +2614,7 @@ CREATE TABLE IF NOT EXISTS public.payments (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable access for authorized users via invoice" ON public.payments;
 CREATE POLICY "Enable access for authorized users via invoice" 
 ON public.payments FOR ALL 
 USING (
@@ -2852,12 +2635,10 @@ CREATE TABLE IF NOT EXISTS public.expenses (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.expenses;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.expenses FOR SELECT 
-USING (public.get_user_role(workspace_id) = 'super_admin');
-
+USING (public.get_user_role(workspace_id) = 'super_admin');DROP POLICY IF EXISTS "Enable write access for authorized users" ON public.expenses;
 CREATE POLICY "Enable write access for authorized users" 
 ON public.expenses FOR ALL 
 USING (public.get_user_role(workspace_id) = 'super_admin');
@@ -2897,13 +2678,9 @@ v_workspace_id uuid;
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
-
-DROP TRIGGER IF EXISTS trigger_log_invoice_activity ON public.invoices;
-CREATE TRIGGER trigger_log_invoice_activity AFTER INSERT OR UPDATE ON public.invoices FOR EACH ROW EXECUTE FUNCTION public.log_finance_activity();
-DROP TRIGGER IF EXISTS trigger_log_payment_activity ON public.payments;
-CREATE TRIGGER trigger_log_payment_activity AFTER INSERT ON public.payments FOR EACH ROW EXECUTE FUNCTION public.log_finance_activity();
-DROP TRIGGER IF EXISTS trigger_log_expense_activity ON public.expenses;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';DROP TRIGGER IF EXISTS trigger_log_invoice_activity ON public.invoices;
+CREATE TRIGGER trigger_log_invoice_activity AFTER INSERT OR UPDATE ON public.invoices FOR EACH ROW EXECUTE FUNCTION public.log_finance_activity();DROP TRIGGER IF EXISTS trigger_log_payment_activity ON public.payments;
+CREATE TRIGGER trigger_log_payment_activity AFTER INSERT ON public.payments FOR EACH ROW EXECUTE FUNCTION public.log_finance_activity();DROP TRIGGER IF EXISTS trigger_log_expense_activity ON public.expenses;
 CREATE TRIGGER trigger_log_expense_activity AFTER INSERT OR DELETE ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.log_finance_activity();
 
 
@@ -2925,12 +2702,10 @@ CREATE TABLE IF NOT EXISTS public.financial_periods (
     UNIQUE(workspace_id, month, year)
 );
 
-ALTER TABLE public.financial_periods ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.financial_periods ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.financial_periods;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.financial_periods FOR SELECT 
-USING (public.get_user_role(workspace_id) = 'super_admin');
-
+USING (public.get_user_role(workspace_id) = 'super_admin');DROP POLICY IF EXISTS "Enable write access for authorized users" ON public.financial_periods;
 CREATE POLICY "Enable write access for authorized users" 
 ON public.financial_periods FOR ALL 
 USING (public.get_user_role(workspace_id) = 'super_admin');
@@ -2952,12 +2727,10 @@ CREATE TABLE IF NOT EXISTS public.financial_snapshots (
     UNIQUE(period_id)
 );
 
-ALTER TABLE public.financial_snapshots ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.financial_snapshots ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.financial_snapshots;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.financial_snapshots FOR SELECT 
-USING (public.get_user_role(workspace_id) = 'super_admin');
-
+USING (public.get_user_role(workspace_id) = 'super_admin');DROP POLICY IF EXISTS "Enable write access for authorized users" ON public.financial_snapshots;
 CREATE POLICY "Enable write access for authorized users" 
 ON public.financial_snapshots FOR ALL 
 USING (public.get_user_role(workspace_id) = 'super_admin');
@@ -2973,8 +2746,7 @@ CREATE TABLE IF NOT EXISTS public.financial_adjustments (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.financial_adjustments ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.financial_adjustments ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.financial_adjustments;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.financial_adjustments FOR SELECT 
 USING (
@@ -2982,8 +2754,7 @@ USING (
     SELECT 1 FROM public.financial_periods p 
     WHERE p.id = period_id AND public.get_user_role(p.workspace_id) = 'super_admin'
   )
-);
-
+);DROP POLICY IF EXISTS "Enable write access for authorized users" ON public.financial_adjustments;
 CREATE POLICY "Enable write access for authorized users" 
 ON public.financial_adjustments FOR ALL 
 USING (
@@ -3035,14 +2806,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
--- Apply locking triggers
-DROP TRIGGER IF EXISTS enforce_invoice_lock ON public.invoices;
-CREATE TRIGGER enforce_invoice_lock BEFORE INSERT OR UPDATE OR DELETE ON public.invoices FOR EACH ROW EXECUTE FUNCTION check_financial_period_lock();
-
-DROP TRIGGER IF EXISTS enforce_payment_lock ON public.payments;
-CREATE TRIGGER enforce_payment_lock BEFORE INSERT OR UPDATE OR DELETE ON public.payments FOR EACH ROW EXECUTE FUNCTION check_financial_period_lock();
-
-DROP TRIGGER IF EXISTS enforce_expense_lock ON public.expenses;
+-- Apply locking triggersDROP TRIGGER IF EXISTS enforce_invoice_lock ON public.invoices;
+CREATE TRIGGER enforce_invoice_lock BEFORE INSERT OR UPDATE OR DELETE ON public.invoices FOR EACH ROW EXECUTE FUNCTION check_financial_period_lock();DROP TRIGGER IF EXISTS enforce_payment_lock ON public.payments;
+CREATE TRIGGER enforce_payment_lock BEFORE INSERT OR UPDATE OR DELETE ON public.payments FOR EACH ROW EXECUTE FUNCTION check_financial_period_lock();DROP TRIGGER IF EXISTS enforce_expense_lock ON public.expenses;
 CREATE TRIGGER enforce_expense_lock BEFORE INSERT OR UPDATE OR DELETE ON public.expenses FOR EACH ROW EXECUTE FUNCTION check_financial_period_lock();
 
 -- Function to safely close a financial period and generate a snapshot
@@ -3135,9 +2901,7 @@ BEGIN
     
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
-
-DROP TRIGGER IF EXISTS trigger_log_financial_adjustment ON public.financial_adjustments;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';DROP TRIGGER IF EXISTS trigger_log_financial_adjustment ON public.financial_adjustments;
 CREATE TRIGGER trigger_log_financial_adjustment
 AFTER INSERT ON public.financial_adjustments
 FOR EACH ROW EXECUTE FUNCTION log_financial_adjustment();
@@ -3167,12 +2931,10 @@ CREATE TABLE IF NOT EXISTS public.document_templates (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.document_templates ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.document_templates ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.document_templates;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.document_templates FOR SELECT 
-USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
-
+USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));DROP POLICY IF EXISTS "Enable write access for super admin" ON public.document_templates;
 CREATE POLICY "Enable write access for super admin" 
 ON public.document_templates FOR ALL 
 USING (public.get_user_role(workspace_id) = 'super_admin');
@@ -3192,12 +2954,10 @@ CREATE TABLE IF NOT EXISTS public.document_template_history (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.document_template_history ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.document_template_history ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.document_template_history;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.document_template_history FOR SELECT 
-USING (public.get_user_role((SELECT workspace_id FROM public.document_templates WHERE id = template_id)) IN ('super_admin', 'admin', 'manager', 'member'));
-
+USING (public.get_user_role((SELECT workspace_id FROM public.document_templates WHERE id = template_id)) IN ('super_admin', 'admin', 'manager', 'member'));DROP POLICY IF EXISTS "Enable write access for super admin" ON public.document_template_history;
 CREATE POLICY "Enable write access for super admin" 
 ON public.document_template_history FOR ALL 
 USING (public.get_user_role((SELECT workspace_id FROM public.document_templates WHERE id = template_id)) = 'super_admin');
@@ -3210,8 +2970,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
-
+$$ LANGUAGE plpgsql;DROP TRIGGER IF EXISTS set_timestamp ON public.document_templates;
 CREATE TRIGGER set_timestamp
 BEFORE UPDATE ON public.document_templates
 FOR EACH ROW
@@ -3243,12 +3002,10 @@ CREATE TABLE IF NOT EXISTS public.company_billing_profile (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.company_billing_profile ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.company_billing_profile ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.company_billing_profile;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.company_billing_profile FOR SELECT 
-USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
-
+USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));DROP POLICY IF EXISTS "Enable write access for super admin" ON public.company_billing_profile;
 CREATE POLICY "Enable write access for super admin" 
 ON public.company_billing_profile FOR ALL 
 USING (public.get_user_role(workspace_id) = 'super_admin');
@@ -3319,16 +3076,14 @@ CREATE TABLE IF NOT EXISTS public.invoice_line_items (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.invoice_line_items ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE public.invoice_line_items ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read access for authorized users via invoice" ON public.invoice_line_items;
 CREATE POLICY "Enable read access for authorized users via invoice" 
 ON public.invoice_line_items FOR SELECT 
 USING (
   EXISTS (
     SELECT 1 FROM public.invoices i WHERE i.id = invoice_id AND public.get_user_role(i.workspace_id) IN ('super_admin', 'admin', 'manager', 'member')
   )
-);
-
+);DROP POLICY IF EXISTS "Enable write access for authorized users via invoice" ON public.invoice_line_items;
 CREATE POLICY "Enable write access for authorized users via invoice" 
 ON public.invoice_line_items FOR ALL 
 USING (
@@ -3396,9 +3151,7 @@ BEGIN
     
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
-
-DROP TRIGGER IF EXISTS trg_update_invoice_balance ON public.payments;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';DROP TRIGGER IF EXISTS trg_update_invoice_balance ON public.payments;
 CREATE TRIGGER trg_update_invoice_balance
 AFTER INSERT OR UPDATE OR DELETE ON public.payments
 FOR EACH ROW EXECUTE FUNCTION public.update_invoice_balance();
@@ -3450,9 +3203,7 @@ BEGIN
     END IF;
     RETURN NULL; -- AFTER trigger
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
-
-DROP TRIGGER IF EXISTS trg_audit_gst_invoices ON public.invoices;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';DROP TRIGGER IF EXISTS trg_audit_gst_invoices ON public.invoices;
 CREATE TRIGGER trg_audit_gst_invoices
 AFTER INSERT OR UPDATE ON public.invoices
 FOR EACH ROW EXECUTE FUNCTION public.audit_gst_invoice_changes();
@@ -3581,13 +3332,12 @@ CREATE INDEX IF NOT EXISTS idx_advance_applications_credit ON public.advance_app
 -- Enable RLS
 ALTER TABLE public.advance_applications ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
-DROP POLICY IF EXISTS "Users can view advance applications in their workspace" ON public.advance_applications;
-CREATE POLICY "Users can view advance applications in their workspace" ON public.advance_applications
-    FOR SELECT USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
-
-DROP POLICY IF EXISTS "Users can create advance applications in their workspace" ON public.advance_applications;
-CREATE POLICY "Users can create advance applications in their workspace" ON public.advance_applications
+-- RLS PoliciesDROP POLICY IF EXISTS "Users can view advance applications in their workspace" ON public.advance_applications;
+CREATE POLICY "Users can view advance applications in their workspace" 
+ON public.advance_applications
+    FOR SELECT USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));DROP POLICY IF EXISTS "Users can create advance applications in their workspace" ON public.advance_applications;
+CREATE POLICY "Users can create advance applications in their workspace" 
+ON public.advance_applications
     FOR INSERT WITH CHECK (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
 
 -- 2. Credit Notes
@@ -3612,13 +3362,12 @@ CREATE INDEX IF NOT EXISTS idx_credit_notes_invoice ON public.credit_notes(invoi
 -- Enable RLS
 ALTER TABLE public.credit_notes ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
-DROP POLICY IF EXISTS "Users can view credit notes in their workspace" ON public.credit_notes;
-CREATE POLICY "Users can view credit notes in their workspace" ON public.credit_notes
-    FOR SELECT USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
-
-DROP POLICY IF EXISTS "Users can create credit notes in their workspace" ON public.credit_notes;
-CREATE POLICY "Users can create credit notes in their workspace" ON public.credit_notes
+-- RLS PoliciesDROP POLICY IF EXISTS "Users can view credit notes in their workspace" ON public.credit_notes;
+CREATE POLICY "Users can view credit notes in their workspace" 
+ON public.credit_notes
+    FOR SELECT USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));DROP POLICY IF EXISTS "Users can create credit notes in their workspace" ON public.credit_notes;
+CREATE POLICY "Users can create credit notes in their workspace" 
+ON public.credit_notes
     FOR INSERT WITH CHECK (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
 
 -- 3. Extend `invoices` status enum (safe casting)
@@ -3681,12 +3430,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS capabilities text[] DEFAULT '{}';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change boolean DEFAULT false;
 
 -- 2. Create employment_records table
-DO $$ 
-BEGIN
-  IF EXISTS(SELECT * FROM information_schema.columns WHERE table_name='employment_records' and column_name='profile_id') THEN
-    ALTER TABLE employment_records RENAME COLUMN profile_id TO user_id;
-  END IF;
-END $$;
+-- [RC10 FIX] profile_id → user_id rename removed (already consolidated)
 
 CREATE TABLE IF NOT EXISTS employment_records (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -3709,15 +3453,12 @@ CREATE TABLE IF NOT EXISTS employment_records (
 -- Enable RLS
 ALTER TABLE employment_records ENABLE ROW LEVEL SECURITY;
 
--- 3. RLS Policies for employment_records
-DROP POLICY IF EXISTS "Workspace members can view employment records" ON employment_records;
-CREATE POLICY "Workspace members can view employment records"
-  ON employment_records FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-DROP POLICY IF EXISTS "Super admins and HR can modify employment records" ON employment_records;
-CREATE POLICY "Super admins and HR can modify employment records"
-  ON employment_records FOR ALL
+-- 3. RLS Policies for employment_recordsDROP POLICY IF EXISTS "Workspace members can view employment records" ON employment_records;
+CREATE POLICY "Workspace members can view employment records" 
+ON employment_records FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Super admins and HR can modify employment records" ON employment_records;
+CREATE POLICY "Super admins and HR can modify employment records" 
+ON employment_records FOR ALL
   USING (
     workspace_id = public.current_workspace()
     AND EXISTS (
@@ -3773,9 +3514,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
-
-DROP TRIGGER IF EXISTS audit_capabilities_trigger ON users;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';DROP TRIGGER IF EXISTS audit_capabilities_trigger ON users;
 CREATE TRIGGER audit_capabilities_trigger
   BEFORE UPDATE ON users
   FOR EACH ROW
@@ -3793,9 +3532,9 @@ CREATE TABLE IF NOT EXISTS employment_change_logs (
   created_at timestamptz DEFAULT now()
 );
 
-ALTER TABLE employment_change_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Workspace members can view employment change logs"
-  ON employment_change_logs FOR SELECT
+ALTER TABLE employment_change_logs ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view employment change logs" ON employment_change_logs;
+CREATE POLICY "Workspace members can view employment change logs" 
+ON employment_change_logs FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM users u
@@ -3907,13 +3646,19 @@ ALTER TABLE requirements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document_references ENABLE ROW LEVEL SECURITY;
 ALTER TABLE universal_approvals ENABLE ROW LEVEL SECURITY;
 
--- Fallback simple policies ensuring workspace isolation
-CREATE POLICY "Workspace isolation for import_batches" ON import_batches USING (true);
-CREATE POLICY "Workspace isolation for meetings" ON meetings USING (true);
-CREATE POLICY "Workspace isolation for meeting_attendees" ON meeting_attendees USING (true);
-CREATE POLICY "Workspace isolation for requirements" ON requirements USING (true);
-CREATE POLICY "Workspace isolation for document_references" ON document_references USING (true);
-CREATE POLICY "Workspace isolation for universal_approvals" ON universal_approvals USING (true);
+-- Fallback simple policies ensuring workspace isolationDROP POLICY IF EXISTS "Workspace isolation for import_batches" ON import_batches;
+CREATE POLICY "Workspace isolation for import_batches" 
+ON import_batches USING (true);DROP POLICY IF EXISTS "Workspace isolation for meetings" ON meetings;
+CREATE POLICY "Workspace isolation for meetings" 
+ON meetings USING (true);DROP POLICY IF EXISTS "Workspace isolation for meeting_attendees" ON meeting_attendees;
+CREATE POLICY "Workspace isolation for meeting_attendees" 
+ON meeting_attendees USING (true);DROP POLICY IF EXISTS "Workspace isolation for requirements" ON requirements;
+CREATE POLICY "Workspace isolation for requirements" 
+ON requirements USING (true);DROP POLICY IF EXISTS "Workspace isolation for document_references" ON document_references;
+CREATE POLICY "Workspace isolation for document_references" 
+ON document_references USING (true);DROP POLICY IF EXISTS "Workspace isolation for universal_approvals" ON universal_approvals;
+CREATE POLICY "Workspace isolation for universal_approvals" 
+ON universal_approvals USING (true);
 
 -- END OF MERGED FILE: MIGRATION_SPRINT2_WORKFLOW.sql --
 
@@ -4012,28 +3757,24 @@ CREATE TABLE IF NOT EXISTS work_sessions (
 );
 
 -- Enable RLS
-ALTER TABLE work_sessions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view work sessions"
-  ON work_sessions FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-CREATE POLICY "Users can insert their own work sessions"
-  ON work_sessions FOR INSERT
+ALTER TABLE work_sessions ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view work sessions" ON work_sessions;
+CREATE POLICY "Workspace members can view work sessions" 
+ON work_sessions FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Users can insert their own work sessions" ON work_sessions;
+CREATE POLICY "Users can insert their own work sessions" 
+ON work_sessions FOR INSERT
   WITH CHECK (
     workspace_id = public.current_workspace()
     AND user_id = auth.uid()
-  );
-
-CREATE POLICY "Users can update their own work sessions"
-  ON work_sessions FOR UPDATE
+  );DROP POLICY IF EXISTS "Users can update their own work sessions" ON work_sessions;
+CREATE POLICY "Users can update their own work sessions" 
+ON work_sessions FOR UPDATE
   USING (
     workspace_id = public.current_workspace()
     AND user_id = auth.uid()
-  );
-
-CREATE POLICY "PMs and HR can update any work session in workspace"
-  ON work_sessions FOR UPDATE
+  );DROP POLICY IF EXISTS "PMs and HR can update any work session in workspace" ON work_sessions;
+CREATE POLICY "PMs and HR can update any work session in workspace" 
+ON work_sessions FOR UPDATE
   USING (
     workspace_id = public.current_workspace()
     AND EXISTS (
@@ -4042,10 +3783,9 @@ CREATE POLICY "PMs and HR can update any work session in workspace"
         AND workspace_id = public.current_workspace()
         AND (role IN ('super_admin', 'pm') OR 'manage_employees' = ANY(capabilities))
     )
-  );
-
-CREATE POLICY "PMs and HR can delete work sessions"
-  ON work_sessions FOR DELETE
+  );DROP POLICY IF EXISTS "PMs and HR can delete work sessions" ON work_sessions;
+CREATE POLICY "PMs and HR can delete work sessions" 
+ON work_sessions FOR DELETE
   USING (
     workspace_id = public.current_workspace()
     AND EXISTS (
@@ -4074,20 +3814,18 @@ CREATE TABLE IF NOT EXISTS work_session_pauses (
 );
 
 -- Enable RLS
-ALTER TABLE work_session_pauses ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view session pauses"
-  ON work_session_pauses FOR SELECT
+ALTER TABLE work_session_pauses ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view session pauses" ON work_session_pauses;
+CREATE POLICY "Workspace members can view session pauses" 
+ON work_session_pauses FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM work_sessions
       WHERE work_sessions.id = work_session_pauses.session_id
       AND work_sessions.workspace_id = public.current_workspace()
     )
-  );
-
-CREATE POLICY "Users can insert pauses for their sessions"
-  ON work_session_pauses FOR INSERT
+  );DROP POLICY IF EXISTS "Users can insert pauses for their sessions" ON work_session_pauses;
+CREATE POLICY "Users can insert pauses for their sessions" 
+ON work_session_pauses FOR INSERT
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM work_sessions
@@ -4095,10 +3833,9 @@ CREATE POLICY "Users can insert pauses for their sessions"
       AND work_sessions.user_id = auth.uid()
       AND work_sessions.workspace_id = public.current_workspace()
     )
-  );
-
-CREATE POLICY "Users can update pauses for their sessions"
-  ON work_session_pauses FOR UPDATE
+  );DROP POLICY IF EXISTS "Users can update pauses for their sessions" ON work_session_pauses;
+CREATE POLICY "Users can update pauses for their sessions" 
+ON work_session_pauses FOR UPDATE
   USING (
     EXISTS (
       SELECT 1 FROM work_sessions
@@ -4106,10 +3843,9 @@ CREATE POLICY "Users can update pauses for their sessions"
       AND work_sessions.user_id = auth.uid()
       AND work_sessions.workspace_id = public.current_workspace()
     )
-  );
-
-CREATE POLICY "PMs and HR can update any session pause in workspace"
-  ON work_session_pauses FOR UPDATE
+  );DROP POLICY IF EXISTS "PMs and HR can update any session pause in workspace" ON work_session_pauses;
+CREATE POLICY "PMs and HR can update any session pause in workspace" 
+ON work_session_pauses FOR UPDATE
   USING (
     EXISTS (
       SELECT 1 FROM work_sessions ws
@@ -4172,14 +3908,12 @@ CREATE TABLE IF NOT EXISTS work_session_adjustments (
 );
 
 -- Enable RLS for adjustments
-ALTER TABLE work_session_adjustments ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view work session adjustments"
-  ON work_session_adjustments FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-CREATE POLICY "PMs can insert work session adjustments"
-  ON work_session_adjustments FOR INSERT
+ALTER TABLE work_session_adjustments ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view work session adjustments" ON work_session_adjustments;
+CREATE POLICY "Workspace members can view work session adjustments" 
+ON work_session_adjustments FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "PMs can insert work session adjustments" ON work_session_adjustments;
+CREATE POLICY "PMs can insert work session adjustments" 
+ON work_session_adjustments FOR INSERT
   WITH CHECK (
     workspace_id = public.current_workspace()
     AND EXISTS (
@@ -4205,14 +3939,12 @@ CREATE TABLE IF NOT EXISTS project_reviews (
 );
 
 -- Enable RLS for project reviews
-ALTER TABLE project_reviews ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view project reviews"
-  ON project_reviews FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-CREATE POLICY "PMs can insert project reviews"
-  ON project_reviews FOR INSERT
+ALTER TABLE project_reviews ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view project reviews" ON project_reviews;
+CREATE POLICY "Workspace members can view project reviews" 
+ON project_reviews FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "PMs can insert project reviews" ON project_reviews;
+CREATE POLICY "PMs can insert project reviews" 
+ON project_reviews FOR INSERT
   WITH CHECK (
     workspace_id = public.current_workspace()
     AND EXISTS (
@@ -4243,14 +3975,12 @@ CREATE TABLE IF NOT EXISTS session_quality_flags (
 );
 
 -- Enable RLS
-ALTER TABLE session_quality_flags ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view session quality flags"
-  ON session_quality_flags FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-CREATE POLICY "System and PMs can manage session quality flags"
-  ON session_quality_flags FOR ALL
+ALTER TABLE session_quality_flags ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view session quality flags" ON session_quality_flags;
+CREATE POLICY "Workspace members can view session quality flags" 
+ON session_quality_flags FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "System and PMs can manage session quality flags" ON session_quality_flags;
+CREATE POLICY "System and PMs can manage session quality flags" 
+ON session_quality_flags FOR ALL
   USING (workspace_id = public.current_workspace())
   WITH CHECK (workspace_id = public.current_workspace());
 
@@ -4299,26 +4029,23 @@ CREATE TABLE IF NOT EXISTS public.external_access_links (
 );
 
 -- Enable RLS
-ALTER TABLE public.external_access_links ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view external access links"
-  ON public.external_access_links FOR SELECT
+ALTER TABLE public.external_access_links ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view external access links" ON public.external_access_links;
+CREATE POLICY "Workspace members can view external access links" 
+ON public.external_access_links FOR SELECT
   USING (
     workspace_id IN (
       SELECT workspace_id FROM users WHERE id = auth.uid()
     )
-  );
-
-CREATE POLICY "Project Managers can insert external access links"
-  ON public.external_access_links FOR INSERT
+  );DROP POLICY IF EXISTS "Project Managers can insert external access links" ON public.external_access_links;
+CREATE POLICY "Project Managers can insert external access links" 
+ON public.external_access_links FOR INSERT
   WITH CHECK (
     workspace_id IN (
       SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
     )
-  );
-
-CREATE POLICY "Project Managers can update external access links"
-  ON public.external_access_links FOR UPDATE
+  );DROP POLICY IF EXISTS "Project Managers can update external access links" ON public.external_access_links;
+CREATE POLICY "Project Managers can update external access links" 
+ON public.external_access_links FOR UPDATE
   USING (
     workspace_id IN (
       SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
@@ -4473,25 +4200,23 @@ CREATE TABLE IF NOT EXISTS workspace_license (
 -- Enable RLS
 ALTER TABLE workspace_license ENABLE ROW LEVEL SECURITY;
 
--- Super Admins can view license
-CREATE POLICY "Super Admins can view workspace license"
-  ON workspace_license FOR SELECT
+-- Super Admins can view licenseDROP POLICY IF EXISTS "Super Admins can view workspace license" ON workspace_license;
+CREATE POLICY "Super Admins can view workspace license" 
+ON workspace_license FOR SELECT
   USING (
     workspace_id IN (
       SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
     )
-  );
-
-CREATE POLICY "Super Admins can insert workspace license"
-  ON workspace_license FOR INSERT
+  );DROP POLICY IF EXISTS "Super Admins can insert workspace license" ON workspace_license;
+CREATE POLICY "Super Admins can insert workspace license" 
+ON workspace_license FOR INSERT
   WITH CHECK (
     workspace_id IN (
       SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
     )
-  );
-
-CREATE POLICY "Super Admins can update workspace license"
-  ON workspace_license FOR UPDATE
+  );DROP POLICY IF EXISTS "Super Admins can update workspace license" ON workspace_license;
+CREATE POLICY "Super Admins can update workspace license" 
+ON workspace_license FOR UPDATE
   USING (
     workspace_id IN (
       SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
@@ -4540,24 +4265,16 @@ CREATE INDEX IF NOT EXISTS idx_universal_approvals_entity ON universal_approvals
 
 -- 3. AUDIT IMMUTABILITY (activity_logs)
 -- We enforce that NO ONE can UPDATE or DELETE from activity_logs, even Super Admins.
-ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Anyone in workspace can view activity logs" ON activity_logs;
-DROP POLICY IF EXISTS "Anyone in workspace can insert activity logs" ON activity_logs;
-DROP POLICY IF EXISTS "No one can update activity logs" ON activity_logs;
-DROP POLICY IF EXISTS "No one can delete activity logs" ON activity_logs;
-
--- Recreate policies strictly
-CREATE POLICY "Anyone in workspace can view activity logs"
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;-- Recreate policies strictlyDROP POLICY IF EXISTS "Anyone in workspace can view activity logs" ON activity_logs;
+CREATE POLICY "Anyone in workspace can view activity logs" 
 ON activity_logs FOR SELECT
 USING (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid() AND users.workspace_id = activity_logs.workspace_id
   )
-);
-
-CREATE POLICY "Anyone in workspace can insert activity logs"
+);DROP POLICY IF EXISTS "Anyone in workspace can insert activity logs" ON activity_logs;
+CREATE POLICY "Anyone in workspace can insert activity logs" 
 ON activity_logs FOR INSERT
 WITH CHECK (
   EXISTS (
@@ -4623,9 +4340,8 @@ CREATE INDEX IF NOT EXISTS idx_universal_approvals_entity ON universal_approvals
 -- Ensure 'client' roles can only view their specific entities.
 
 -- Projects
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Clients can only view their projects" ON projects;
-CREATE POLICY "Clients can only view their projects"
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Clients can only view their projects" ON projects;
+CREATE POLICY "Clients can only view their projects" 
 ON projects FOR SELECT
 USING (
   EXISTS (
@@ -4641,9 +4357,8 @@ USING (
 );
 
 -- Invoices
-ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Clients can only view their invoices" ON invoices;
-CREATE POLICY "Clients can only view their invoices"
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Clients can only view their invoices" ON invoices;
+CREATE POLICY "Clients can only view their invoices" 
 ON invoices FOR SELECT
 USING (
   EXISTS (
@@ -4659,19 +4374,16 @@ USING (
 );
 
 -- Teams
-ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Anyone in workspace can view teams" ON teams;
-CREATE POLICY "Anyone in workspace can view teams"
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Anyone in workspace can view teams" ON teams;
+CREATE POLICY "Anyone in workspace can view teams" 
 ON teams FOR SELECT
 USING (
   EXISTS (
     SELECT 1 FROM users
     WHERE users.id = auth.uid() AND users.workspace_id = teams.workspace_id
   )
-);
-
-DROP POLICY IF EXISTS "HR and Super Admin can manage teams" ON teams;
-CREATE POLICY "HR and Super Admin can manage teams"
+);DROP POLICY IF EXISTS "HR and Super Admin can manage teams" ON teams;
+CREATE POLICY "HR and Super Admin can manage teams" 
 ON teams FOR ALL
 USING (
   EXISTS (
@@ -4705,14 +4417,10 @@ CREATE TABLE IF NOT EXISTS public.task_collaborators (
     UNIQUE(task_id, user_id)
 );
 
-ALTER TABLE public.task_collaborators ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_collaborators;
+ALTER TABLE public.task_collaborators ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_collaborators;
 CREATE POLICY "Enable read for workspace members" 
 ON public.task_collaborators FOR SELECT 
-USING (workspace_id = current_workspace());
-
-DROP POLICY IF EXISTS "Enable write for PMs and Admins" ON public.task_collaborators;
+USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Enable write for PMs and Admins" ON public.task_collaborators;
 CREATE POLICY "Enable write for PMs and Admins" 
 ON public.task_collaborators FOR ALL 
 USING (
@@ -4765,9 +4473,7 @@ BEGIN
 
   RETURN COALESCE(NEW, OLD);
 END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_update_invoice_status ON public.payments;
+$$;DROP TRIGGER IF EXISTS trg_update_invoice_status ON public.payments;
 CREATE TRIGGER trg_update_invoice_status
 AFTER INSERT OR UPDATE OR DELETE ON public.payments
 FOR EACH ROW EXECUTE FUNCTION public.fn_update_invoice_status_on_payment();
@@ -4832,21 +4538,11 @@ BEGIN
   
   RETURN NULL;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS audit_users ON public.users;
-CREATE TRIGGER audit_users AFTER UPDATE ON public.users FOR EACH ROW WHEN (OLD.role IS DISTINCT FROM NEW.role) EXECUTE FUNCTION public.fn_audit_sensitive_changes();
-
-DROP TRIGGER IF EXISTS audit_compensation_records ON public.compensation_records;
-CREATE TRIGGER audit_compensation_records AFTER UPDATE ON public.compensation_records FOR EACH ROW WHEN (OLD.base_salary IS DISTINCT FROM NEW.base_salary) EXECUTE FUNCTION public.fn_audit_sensitive_changes();
-
-DROP TRIGGER IF EXISTS audit_invoices ON public.invoices;
-CREATE TRIGGER audit_invoices AFTER UPDATE ON public.invoices FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status OR OLD.grand_total IS DISTINCT FROM NEW.grand_total) EXECUTE FUNCTION public.fn_audit_sensitive_changes();
-
-DROP TRIGGER IF EXISTS audit_payments ON public.payments;
-CREATE TRIGGER audit_payments AFTER UPDATE OR DELETE ON public.payments FOR EACH ROW EXECUTE FUNCTION public.fn_audit_sensitive_changes();
-
-DROP TRIGGER IF EXISTS audit_projects ON public.projects;
+$$;DROP TRIGGER IF EXISTS audit_users ON public.users;
+CREATE TRIGGER audit_users AFTER UPDATE ON public.users FOR EACH ROW WHEN (OLD.role IS DISTINCT FROM NEW.role) EXECUTE FUNCTION public.fn_audit_sensitive_changes();DROP TRIGGER IF EXISTS audit_compensation_records ON public.compensation_records;
+CREATE TRIGGER audit_compensation_records AFTER UPDATE ON public.compensation_records FOR EACH ROW WHEN (OLD.base_salary IS DISTINCT FROM NEW.base_salary) EXECUTE FUNCTION public.fn_audit_sensitive_changes();DROP TRIGGER IF EXISTS audit_invoices ON public.invoices;
+CREATE TRIGGER audit_invoices AFTER UPDATE ON public.invoices FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status OR OLD.grand_total IS DISTINCT FROM NEW.grand_total) EXECUTE FUNCTION public.fn_audit_sensitive_changes();DROP TRIGGER IF EXISTS audit_payments ON public.payments;
+CREATE TRIGGER audit_payments AFTER UPDATE OR DELETE ON public.payments FOR EACH ROW EXECUTE FUNCTION public.fn_audit_sensitive_changes();DROP TRIGGER IF EXISTS audit_projects ON public.projects;
 CREATE TRIGGER audit_projects AFTER UPDATE ON public.projects FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'completed') EXECUTE FUNCTION public.fn_audit_sensitive_changes();
 
 -- 4. SMART TASK ESTIMATION LEARNING
@@ -4870,14 +4566,10 @@ CREATE TABLE IF NOT EXISTS public.task_estimate_history (
     changed_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.task_estimate_history ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_estimate_history;
+ALTER TABLE public.task_estimate_history ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_estimate_history;
 CREATE POLICY "Enable read for workspace members" 
 ON public.task_estimate_history FOR SELECT 
-USING (workspace_id = current_workspace());
-
-DROP POLICY IF EXISTS "Enable write for workspace members" ON public.task_estimate_history;
+USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Enable write for workspace members" ON public.task_estimate_history;
 CREATE POLICY "Enable write for workspace members" 
 ON public.task_estimate_history FOR INSERT 
 WITH CHECK (workspace_id = current_workspace());
@@ -4909,14 +4601,10 @@ CREATE TABLE IF NOT EXISTS public.task_assignment_history (
     transferred_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.task_assignment_history ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_assignment_history;
+ALTER TABLE public.task_assignment_history ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_assignment_history;
 CREATE POLICY "Enable read for workspace members" 
 ON public.task_assignment_history FOR SELECT 
-USING (workspace_id = current_workspace());
-
-DROP POLICY IF EXISTS "Enable write for workspace members" ON public.task_assignment_history;
+USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Enable write for workspace members" ON public.task_assignment_history;
 CREATE POLICY "Enable write for workspace members" 
 ON public.task_assignment_history FOR INSERT 
 WITH CHECK (workspace_id = current_workspace());
@@ -4938,14 +4626,10 @@ CREATE TABLE IF NOT EXISTS public.task_suggestions (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.task_suggestions ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_suggestions;
+ALTER TABLE public.task_suggestions ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Enable read for workspace members" ON public.task_suggestions;
 CREATE POLICY "Enable read for workspace members" 
 ON public.task_suggestions FOR SELECT 
-USING (workspace_id = current_workspace());
-
-DROP POLICY IF EXISTS "Enable write for workspace members" ON public.task_suggestions;
+USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Enable write for workspace members" ON public.task_suggestions;
 CREATE POLICY "Enable write for workspace members" 
 ON public.task_suggestions FOR ALL 
 USING (workspace_id = current_workspace());
@@ -5113,15 +4797,14 @@ CREATE INDEX IF NOT EXISTS idx_financial_report_snapshots_workspace_type ON publ
 ALTER TABLE public.exchange_rate_audits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_report_snapshots ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for exchange_rate_audits
+-- RLS Policies for exchange_rate_auditsDROP POLICY IF EXISTS "Users can view exchange rate audits for their workspace" ON public.exchange_rate_audits;
 CREATE POLICY "Users can view exchange rate audits for their workspace" 
 ON public.exchange_rate_audits FOR SELECT 
 USING (
   workspace_id IN (
     SELECT workspace_id FROM users WHERE id = auth.uid()
   )
-);
-
+);DROP POLICY IF EXISTS "Users can insert exchange rate audits for their workspace" ON public.exchange_rate_audits;
 CREATE POLICY "Users can insert exchange rate audits for their workspace" 
 ON public.exchange_rate_audits FOR INSERT 
 WITH CHECK (
@@ -5130,15 +4813,14 @@ WITH CHECK (
   )
 );
 
--- RLS Policies for financial_report_snapshots
+-- RLS Policies for financial_report_snapshotsDROP POLICY IF EXISTS "Users can view financial report snapshots for their workspace" ON public.financial_report_snapshots;
 CREATE POLICY "Users can view financial report snapshots for their workspace" 
 ON public.financial_report_snapshots FOR SELECT 
 USING (
   workspace_id IN (
     SELECT workspace_id FROM users WHERE id = auth.uid()
   )
-);
-
+);DROP POLICY IF EXISTS "Users can insert financial report snapshots for their workspace" ON public.financial_report_snapshots;
 CREATE POLICY "Users can insert financial report snapshots for their workspace" 
 ON public.financial_report_snapshots FOR INSERT 
 WITH CHECK (
@@ -5679,16 +5361,12 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_workspace
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash
   ON public.api_keys(key_hash);
 
-ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Admins can view API keys" ON public.api_keys;
-CREATE POLICY "Admins can view API keys"
-  ON public.api_keys FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-DROP POLICY IF EXISTS "Admins can manage API keys" ON public.api_keys;
-CREATE POLICY "Admins can manage API keys"
-  ON public.api_keys FOR ALL
+ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Admins can view API keys" ON public.api_keys;
+CREATE POLICY "Admins can view API keys" 
+ON public.api_keys FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Admins can manage API keys" ON public.api_keys;
+CREATE POLICY "Admins can manage API keys" 
+ON public.api_keys FOR ALL
   USING (workspace_id = public.current_workspace())
   WITH CHECK (workspace_id = public.current_workspace());
 
@@ -5719,20 +5397,14 @@ CREATE TABLE IF NOT EXISTS public.webhooks (
 CREATE INDEX IF NOT EXISTS idx_webhooks_workspace
   ON public.webhooks(workspace_id) WHERE enabled = true;
 
-ALTER TABLE public.webhooks ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Workspace admins can view webhooks" ON public.webhooks;
-CREATE POLICY "Workspace admins can view webhooks"
-  ON public.webhooks FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-DROP POLICY IF EXISTS "Workspace admins can manage webhooks" ON public.webhooks;
-CREATE POLICY "Workspace admins can manage webhooks"
-  ON public.webhooks FOR ALL
+ALTER TABLE public.webhooks ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace admins can view webhooks" ON public.webhooks;
+CREATE POLICY "Workspace admins can view webhooks" 
+ON public.webhooks FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Workspace admins can manage webhooks" ON public.webhooks;
+CREATE POLICY "Workspace admins can manage webhooks" 
+ON public.webhooks FOR ALL
   USING (workspace_id = public.current_workspace())
-  WITH CHECK (workspace_id = public.current_workspace());
-
-DROP TRIGGER IF EXISTS set_webhooks_updated_at ON public.webhooks;
+  WITH CHECK (workspace_id = public.current_workspace());DROP TRIGGER IF EXISTS set_webhooks_updated_at ON public.webhooks;
 CREATE TRIGGER set_webhooks_updated_at
   BEFORE UPDATE ON public.webhooks
   FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
@@ -5779,90 +5451,89 @@ END $$;
 
 -- 2. Apply Strict DB-backed Capability Policies
 
--- connected_accounts: Only admin/owner (manage_settings)
-DROP POLICY IF EXISTS "Connected accounts isolation" ON connected_accounts;
-CREATE POLICY "Connected accounts isolation" ON connected_accounts FOR ALL USING (
+-- connected_accounts: Only admin/owner (manage_settings)DROP POLICY IF EXISTS "Connected accounts isolation" ON connected_accounts;
+CREATE POLICY "Connected accounts isolation" 
+ON connected_accounts FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_settings')
 ) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_settings'));
 
--- documents: View projects to read, manage_projects to write
-DROP POLICY IF EXISTS "Documents isolation select" ON documents;
-CREATE POLICY "Documents isolation select" ON documents FOR SELECT USING (
+-- documents: View projects to read, manage_projects to writeDROP POLICY IF EXISTS "Documents isolation select" ON documents;
+CREATE POLICY "Documents isolation select" 
+ON documents FOR SELECT USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_projects')
-);
-DROP POLICY IF EXISTS "Documents isolation write" ON documents;
-CREATE POLICY "Documents isolation write" ON documents FOR INSERT WITH CHECK (
+);DROP POLICY IF EXISTS "Documents isolation write" ON documents;
+CREATE POLICY "Documents isolation write" 
+ON documents FOR INSERT WITH CHECK (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
-);
-DROP POLICY IF EXISTS "Documents isolation update" ON documents;
-CREATE POLICY "Documents isolation update" ON documents FOR UPDATE USING (
+);DROP POLICY IF EXISTS "Documents isolation update" ON documents;
+CREATE POLICY "Documents isolation update" 
+ON documents FOR UPDATE USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
-);
-DROP POLICY IF EXISTS "Documents isolation delete" ON documents;
-CREATE POLICY "Documents isolation delete" ON documents FOR DELETE USING (
+);DROP POLICY IF EXISTS "Documents isolation delete" ON documents;
+CREATE POLICY "Documents isolation delete" 
+ON documents FOR DELETE USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
 );
 
--- sprints: View tasks to read, manage_tasks to write
-DROP POLICY IF EXISTS "Sprints isolation select" ON sprints;
-CREATE POLICY "Sprints isolation select" ON sprints FOR SELECT USING (
+-- sprints: View tasks to read, manage_tasks to writeDROP POLICY IF EXISTS "Sprints isolation select" ON sprints;
+CREATE POLICY "Sprints isolation select" 
+ON sprints FOR SELECT USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_tasks')
-);
-DROP POLICY IF EXISTS "Sprints isolation write" ON sprints;
-CREATE POLICY "Sprints isolation write" ON sprints FOR ALL USING (
+);DROP POLICY IF EXISTS "Sprints isolation write" ON sprints;
+CREATE POLICY "Sprints isolation write" 
+ON sprints FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_tasks')
 ) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_tasks'));
 
--- approval_chains & approval_instances: platform_governance or manage_projects
-DROP POLICY IF EXISTS "Approvals chains isolation" ON approval_chains;
-CREATE POLICY "Approvals chains isolation" ON approval_chains FOR ALL USING (
+-- approval_chains & approval_instances: platform_governance or manage_projectsDROP POLICY IF EXISTS "Approvals chains isolation" ON approval_chains;
+CREATE POLICY "Approvals chains isolation" 
+ON approval_chains FOR ALL USING (
+    workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects'))
+) WITH CHECK (workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects')));DROP POLICY IF EXISTS "Approvals instances isolation" ON approval_instances;
+CREATE POLICY "Approvals instances isolation" 
+ON approval_instances FOR ALL USING (
     workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects'))
 ) WITH CHECK (workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects')));
 
-DROP POLICY IF EXISTS "Approvals instances isolation" ON approval_instances;
-CREATE POLICY "Approvals instances isolation" ON approval_instances FOR ALL USING (
-    workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects'))
-) WITH CHECK (workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects')));
-
--- automation_rules: manage_automations
-DROP POLICY IF EXISTS "Automation rules isolation" ON automation_rules;
-CREATE POLICY "Automation rules isolation" ON automation_rules FOR ALL USING (
+-- automation_rules: manage_automationsDROP POLICY IF EXISTS "Automation rules isolation" ON automation_rules;
+CREATE POLICY "Automation rules isolation" 
+ON automation_rules FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_automations')
 ) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_automations'));
 
--- integration_sync_jobs: manage_integrations
-DROP POLICY IF EXISTS "Integrations isolation" ON integration_sync_jobs;
-CREATE POLICY "Integrations isolation" ON integration_sync_jobs FOR ALL USING (
+-- integration_sync_jobs: manage_integrationsDROP POLICY IF EXISTS "Integrations isolation" ON integration_sync_jobs;
+CREATE POLICY "Integrations isolation" 
+ON integration_sync_jobs FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_integrations')
 ) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_integrations'));
 
--- billing_milestones: manage_finance
-DROP POLICY IF EXISTS "Billing milestones isolation" ON billing_milestones;
-CREATE POLICY "Billing milestones isolation" ON billing_milestones FOR ALL USING (
+-- billing_milestones: manage_financeDROP POLICY IF EXISTS "Billing milestones isolation" ON billing_milestones;
+CREATE POLICY "Billing milestones isolation" 
+ON billing_milestones FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance')
 ) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance'));
 
--- client_credits: manage_finance
-DROP POLICY IF EXISTS "Client credits isolation" ON client_credits;
-CREATE POLICY "Client credits isolation" ON client_credits FOR ALL USING (
+-- client_credits: manage_financeDROP POLICY IF EXISTS "Client credits isolation" ON client_credits;
+CREATE POLICY "Client credits isolation" 
+ON client_credits FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance')
 ) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance'));
 
--- invoice_audit_logs: view_audit_log or manage_finance
-DROP POLICY IF EXISTS "Invoice audit isolation select" ON invoice_audit_logs;
-CREATE POLICY "Invoice audit isolation select" ON invoice_audit_logs FOR SELECT USING (
+-- invoice_audit_logs: view_audit_log or manage_financeDROP POLICY IF EXISTS "Invoice audit isolation select" ON invoice_audit_logs;
+CREATE POLICY "Invoice audit isolation select" 
+ON invoice_audit_logs FOR SELECT USING (
     workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'view_audit_log') OR public.has_capability(auth.uid(), 'manage_finance'))
-);
-DROP POLICY IF EXISTS "Invoice audit isolation insert" ON invoice_audit_logs;
-CREATE POLICY "Invoice audit isolation insert" ON invoice_audit_logs FOR INSERT WITH CHECK (
+);DROP POLICY IF EXISTS "Invoice audit isolation insert" ON invoice_audit_logs;
+CREATE POLICY "Invoice audit isolation insert" 
+ON invoice_audit_logs FOR INSERT WITH CHECK (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance')
 );
 
 -- capability_change_logs: view_audit_log or platform_governance
 -- NOTE: capability_change_logs doesn't have workspace_id inherently in our prior design, 
--- but it MUST be scoped. Assuming it has user_id. We map through users.
-DROP POLICY IF EXISTS "Capability change isolation" ON capability_change_logs;
-CREATE POLICY "Capability change isolation" ON capability_change_logs FOR SELECT USING (
+-- but it MUST be scoped. Assuming it has user_id. We map through users.DROP POLICY IF EXISTS "Capability change isolation" ON capability_change_logs;
+CREATE POLICY "Capability change isolation" 
+ON capability_change_logs FOR SELECT USING (
     EXISTS (
         SELECT 1 FROM public.users me 
         WHERE me.id = auth.uid() 
@@ -5871,42 +5542,41 @@ CREATE POLICY "Capability change isolation" ON capability_change_logs FOR SELECT
     )
 );
 
--- wait_states: view_projects to read, manage_projects to write
-DROP POLICY IF EXISTS "Wait states isolation select" ON wait_states;
-CREATE POLICY "Wait states isolation select" ON wait_states FOR SELECT USING (
+-- wait_states: view_projects to read, manage_projects to writeDROP POLICY IF EXISTS "Wait states isolation select" ON wait_states;
+CREATE POLICY "Wait states isolation select" 
+ON wait_states FOR SELECT USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_projects')
-);
-DROP POLICY IF EXISTS "Wait states isolation write" ON wait_states;
-CREATE POLICY "Wait states isolation write" ON wait_states FOR ALL USING (
+);DROP POLICY IF EXISTS "Wait states isolation write" ON wait_states;
+CREATE POLICY "Wait states isolation write" 
+ON wait_states FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
 ) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects'));
 
--- project_signoffs: view_projects to read, manage_projects to write
-DROP POLICY IF EXISTS "Project signoffs isolation select" ON project_signoffs;
-CREATE POLICY "Project signoffs isolation select" ON project_signoffs FOR SELECT USING (
+-- project_signoffs: view_projects to read, manage_projects to writeDROP POLICY IF EXISTS "Project signoffs isolation select" ON project_signoffs;
+CREATE POLICY "Project signoffs isolation select" 
+ON project_signoffs FOR SELECT USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_projects')
-);
-DROP POLICY IF EXISTS "Project signoffs isolation write" ON project_signoffs;
-CREATE POLICY "Project signoffs isolation write" ON project_signoffs FOR ALL USING (
+);DROP POLICY IF EXISTS "Project signoffs isolation write" ON project_signoffs;
+CREATE POLICY "Project signoffs isolation write" 
+ON project_signoffs FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
 ) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects'));
 
--- project_allocations & allocation_periods: view_scheduling to read, manage_scheduling to write
-DROP POLICY IF EXISTS "Project alloc isolation select" ON project_allocations;
-CREATE POLICY "Project alloc isolation select" ON project_allocations FOR SELECT USING (
+-- project_allocations & allocation_periods: view_scheduling to read, manage_scheduling to writeDROP POLICY IF EXISTS "Project alloc isolation select" ON project_allocations;
+CREATE POLICY "Project alloc isolation select" 
+ON project_allocations FOR SELECT USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_scheduling')
-);
-DROP POLICY IF EXISTS "Project alloc isolation write" ON project_allocations;
-CREATE POLICY "Project alloc isolation write" ON project_allocations FOR ALL USING (
+);DROP POLICY IF EXISTS "Project alloc isolation write" ON project_allocations;
+CREATE POLICY "Project alloc isolation write" 
+ON project_allocations FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_scheduling')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_scheduling'));
-
-DROP POLICY IF EXISTS "Alloc periods isolation select" ON allocation_periods;
-CREATE POLICY "Alloc periods isolation select" ON allocation_periods FOR SELECT USING (
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_scheduling'));DROP POLICY IF EXISTS "Alloc periods isolation select" ON allocation_periods;
+CREATE POLICY "Alloc periods isolation select" 
+ON allocation_periods FOR SELECT USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_scheduling')
-);
-DROP POLICY IF EXISTS "Alloc periods isolation write" ON allocation_periods;
-CREATE POLICY "Alloc periods isolation write" ON allocation_periods FOR ALL USING (
+);DROP POLICY IF EXISTS "Alloc periods isolation write" ON allocation_periods;
+CREATE POLICY "Alloc periods isolation write" 
+ON allocation_periods FOR ALL USING (
     workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_scheduling')
 ) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_scheduling'));
 
@@ -5989,16 +5659,12 @@ $$;
 -- ##############################################################################
 
 -- â€” wait_states â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
--- Has workspace_id column
-
-DROP POLICY IF EXISTS "Wait states visible to workspace" ON wait_states;
-CREATE POLICY "Wait states visible to workspace"
-  ON wait_states FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-DROP POLICY IF EXISTS "Wait states managed by PMs and Admins" ON wait_states;
-CREATE POLICY "Wait states managed by PMs and Admins"
-  ON wait_states FOR ALL
+-- Has workspace_id columnDROP POLICY IF EXISTS "Wait states visible to workspace" ON wait_states;
+CREATE POLICY "Wait states visible to workspace" 
+ON wait_states FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Wait states managed by PMs and Admins" ON wait_states;
+CREATE POLICY "Wait states managed by PMs and Admins" 
+ON wait_states FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -6010,16 +5676,12 @@ CREATE POLICY "Wait states managed by PMs and Admins"
 
 
 -- â€” project_signoffs â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
--- Has workspace_id column
-
-DROP POLICY IF EXISTS "Signoffs visible to workspace" ON project_signoffs;
-CREATE POLICY "Signoffs visible to workspace"
-  ON project_signoffs FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-DROP POLICY IF EXISTS "Signoffs managed by PMs and Admins" ON project_signoffs;
-CREATE POLICY "Signoffs managed by PMs and Admins"
-  ON project_signoffs FOR ALL
+-- Has workspace_id columnDROP POLICY IF EXISTS "Signoffs visible to workspace" ON project_signoffs;
+CREATE POLICY "Signoffs visible to workspace" 
+ON project_signoffs FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Signoffs managed by PMs and Admins" ON project_signoffs;
+CREATE POLICY "Signoffs managed by PMs and Admins" 
+ON project_signoffs FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -6031,16 +5693,12 @@ CREATE POLICY "Signoffs managed by PMs and Admins"
 
 
 -- â€” project_allocations â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
--- Has workspace_id column
-
-DROP POLICY IF EXISTS "Allocations visible to workspace" ON project_allocations;
-CREATE POLICY "Allocations visible to workspace"
-  ON project_allocations FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-DROP POLICY IF EXISTS "Allocations managed by PMs and Admins" ON project_allocations;
-CREATE POLICY "Allocations managed by PMs and Admins"
-  ON project_allocations FOR ALL
+-- Has workspace_id columnDROP POLICY IF EXISTS "Allocations visible to workspace" ON project_allocations;
+CREATE POLICY "Allocations visible to workspace" 
+ON project_allocations FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Allocations managed by PMs and Admins" ON project_allocations;
+CREATE POLICY "Allocations managed by PMs and Admins" 
+ON project_allocations FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -6052,16 +5710,12 @@ CREATE POLICY "Allocations managed by PMs and Admins"
 
 
 -- â€” allocation_periods â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
--- Has workspace_id column
-
-DROP POLICY IF EXISTS "Allocation periods visible to workspace" ON allocation_periods;
-CREATE POLICY "Allocation periods visible to workspace"
-  ON allocation_periods FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-DROP POLICY IF EXISTS "Allocation periods managed by PMs and Admins" ON allocation_periods;
-CREATE POLICY "Allocation periods managed by PMs and Admins"
-  ON allocation_periods FOR ALL
+-- Has workspace_id columnDROP POLICY IF EXISTS "Allocation periods visible to workspace" ON allocation_periods;
+CREATE POLICY "Allocation periods visible to workspace" 
+ON allocation_periods FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Allocation periods managed by PMs and Admins" ON allocation_periods;
+CREATE POLICY "Allocation periods managed by PMs and Admins" 
+ON allocation_periods FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -6073,19 +5727,15 @@ CREATE POLICY "Allocation periods managed by PMs and Admins"
 
 
 -- â€” billing_milestones â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
--- Has workspace_id column
-
-DROP POLICY IF EXISTS "Billing milestones visible to workspace admins" ON public.billing_milestones;
-CREATE POLICY "Billing milestones visible to workspace admins"
-  ON public.billing_milestones FOR SELECT
+-- Has workspace_id columnDROP POLICY IF EXISTS "Billing milestones visible to workspace admins" ON public.billing_milestones;
+CREATE POLICY "Billing milestones visible to workspace admins" 
+ON public.billing_milestones FOR SELECT
   USING (
     workspace_id = public.current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
-  );
-
-DROP POLICY IF EXISTS "Billing milestones managed by admins" ON public.billing_milestones;
-CREATE POLICY "Billing milestones managed by admins"
-  ON public.billing_milestones FOR ALL
+  );DROP POLICY IF EXISTS "Billing milestones managed by admins" ON public.billing_milestones;
+CREATE POLICY "Billing milestones managed by admins" 
+ON public.billing_milestones FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -6097,19 +5747,15 @@ CREATE POLICY "Billing milestones managed by admins"
 
 
 -- â€” client_credits â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
--- Has workspace_id column
-
-DROP POLICY IF EXISTS "Client credits visible to workspace admins" ON public.client_credits;
-CREATE POLICY "Client credits visible to workspace admins"
-  ON public.client_credits FOR SELECT
+-- Has workspace_id columnDROP POLICY IF EXISTS "Client credits visible to workspace admins" ON public.client_credits;
+CREATE POLICY "Client credits visible to workspace admins" 
+ON public.client_credits FOR SELECT
   USING (
     workspace_id = public.current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
-  );
-
-DROP POLICY IF EXISTS "Client credits managed by admins" ON public.client_credits;
-CREATE POLICY "Client credits managed by admins"
-  ON public.client_credits FOR ALL
+  );DROP POLICY IF EXISTS "Client credits managed by admins" ON public.client_credits;
+CREATE POLICY "Client credits managed by admins" 
+ON public.client_credits FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -6121,32 +5767,24 @@ CREATE POLICY "Client credits managed by admins"
 
 
 -- â€” invoice_audit_logs â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
--- Has workspace_id column. Read: admin only. Insert: workspace members (to log actions).
-
-DROP POLICY IF EXISTS "Invoice audit logs visible to admins" ON public.invoice_audit_logs;
-CREATE POLICY "Invoice audit logs visible to admins"
-  ON public.invoice_audit_logs FOR SELECT
+-- Has workspace_id column. Read: admin only. Insert: workspace members (to log actions).DROP POLICY IF EXISTS "Invoice audit logs visible to admins" ON public.invoice_audit_logs;
+CREATE POLICY "Invoice audit logs visible to admins" 
+ON public.invoice_audit_logs FOR SELECT
   USING (
     workspace_id = public.current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
-  );
-
-DROP POLICY IF EXISTS "Invoice audit logs insertable by workspace" ON public.invoice_audit_logs;
-CREATE POLICY "Invoice audit logs insertable by workspace"
-  ON public.invoice_audit_logs FOR INSERT
+  );DROP POLICY IF EXISTS "Invoice audit logs insertable by workspace" ON public.invoice_audit_logs;
+CREATE POLICY "Invoice audit logs insertable by workspace" 
+ON public.invoice_audit_logs FOR INSERT
   WITH CHECK (workspace_id = public.current_workspace());
 
--- WORM: No update or delete on invoice audit logs
-DROP POLICY IF EXISTS "Invoice audit logs are immutable" ON public.invoice_audit_logs;
--- (No UPDATE/DELETE policies = blocked by RLS default deny)
+-- WORM: No update or delete on invoice audit logs-- (No UPDATE/DELETE policies = blocked by RLS default deny)
 
 
 -- â€” capability_change_logs â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”â€”
--- Has user_id but needs workspace join
-
-DROP POLICY IF EXISTS "Capability logs visible to admins" ON capability_change_logs;
-CREATE POLICY "Capability logs visible to admins"
-  ON capability_change_logs FOR SELECT
+-- Has user_id but needs workspace joinDROP POLICY IF EXISTS "Capability logs visible to admins" ON capability_change_logs;
+CREATE POLICY "Capability logs visible to admins" 
+ON capability_change_logs FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM public.users me 
@@ -6154,11 +5792,9 @@ CREATE POLICY "Capability logs visible to admins"
         AND me.workspace_id = public.current_workspace() 
         AND me.role = 'super_admin'
     )
-  );
-
-DROP POLICY IF EXISTS "Capability logs insertable by admins" ON capability_change_logs;
-CREATE POLICY "Capability logs insertable by admins"
-  ON capability_change_logs FOR INSERT
+  );DROP POLICY IF EXISTS "Capability logs insertable by admins" ON capability_change_logs;
+CREATE POLICY "Capability logs insertable by admins" 
+ON capability_change_logs FOR INSERT
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.users me 
@@ -6288,9 +5924,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS check_work_session_integrity ON work_sessions;
+$$;DROP TRIGGER IF EXISTS check_work_session_integrity ON work_sessions;
 CREATE TRIGGER check_work_session_integrity
   BEFORE UPDATE ON work_sessions
   FOR EACH ROW EXECUTE FUNCTION enforce_work_session_integrity();
@@ -6313,24 +5947,18 @@ BEGIN
 END;
 $$;
 
--- system_audit_ledger: Block UPDATE and DELETE
-DROP TRIGGER IF EXISTS worm_audit_ledger_no_update ON system_audit_ledger;
+-- system_audit_ledger: Block UPDATE and DELETEDROP TRIGGER IF EXISTS worm_audit_ledger_no_update ON system_audit_ledger;
 CREATE TRIGGER worm_audit_ledger_no_update
   BEFORE UPDATE ON system_audit_ledger
-  FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();
-
-DROP TRIGGER IF EXISTS worm_audit_ledger_no_delete ON system_audit_ledger;
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();DROP TRIGGER IF EXISTS worm_audit_ledger_no_delete ON system_audit_ledger;
 CREATE TRIGGER worm_audit_ledger_no_delete
   BEFORE DELETE ON system_audit_ledger
   FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();
 
--- invoice_audit_logs: Block UPDATE and DELETE
-DROP TRIGGER IF EXISTS worm_invoice_audit_no_update ON public.invoice_audit_logs;
+-- invoice_audit_logs: Block UPDATE and DELETEDROP TRIGGER IF EXISTS worm_invoice_audit_no_update ON public.invoice_audit_logs;
 CREATE TRIGGER worm_invoice_audit_no_update
   BEFORE UPDATE ON public.invoice_audit_logs
-  FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();
-
-DROP TRIGGER IF EXISTS worm_invoice_audit_no_delete ON public.invoice_audit_logs;
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();DROP TRIGGER IF EXISTS worm_invoice_audit_no_delete ON public.invoice_audit_logs;
 CREATE TRIGGER worm_invoice_audit_no_delete
   BEFORE DELETE ON public.invoice_audit_logs
   FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();
@@ -6353,9 +5981,7 @@ BEGIN
   END IF;
   RETURN OLD;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS check_invoice_deletion_governance ON public.invoices;
+$$;DROP TRIGGER IF EXISTS check_invoice_deletion_governance ON public.invoices;
 CREATE TRIGGER check_invoice_deletion_governance
   BEFORE DELETE ON public.invoices
   FOR EACH ROW EXECUTE FUNCTION prevent_non_draft_invoice_deletion();
@@ -6375,9 +6001,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS check_invoice_modification_governance ON public.invoices;
+$$;DROP TRIGGER IF EXISTS check_invoice_modification_governance ON public.invoices;
 CREATE TRIGGER check_invoice_modification_governance
   BEFORE UPDATE ON public.invoices
   FOR EACH ROW EXECUTE FUNCTION prevent_finalized_invoice_modification();
@@ -6398,11 +6022,7 @@ BEGIN
   RAISE EXCEPTION 'Audit logs are immutable';
   RETURN NULL;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS worm_activity_logs_no_update ON activity_logs;
-DROP TRIGGER IF EXISTS worm_activity_logs_immutable ON activity_logs;
-
+$$;DROP TRIGGER IF EXISTS worm_activity_logs_immutable ON activity_logs;
 CREATE TRIGGER worm_activity_logs_immutable
   BEFORE UPDATE OR DELETE ON activity_logs
   FOR EACH ROW EXECUTE FUNCTION enforce_audit_logs_immutable();
@@ -6481,9 +6101,7 @@ BEGIN
     -- Block all other deletions
     RAISE EXCEPTION 'Users cannot be deleted. Use archive_employee() instead.';
 END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS prevent_user_hard_delete_trigger ON public.users;
+$$ LANGUAGE plpgsql;DROP TRIGGER IF EXISTS prevent_user_hard_delete_trigger ON public.users;
 CREATE TRIGGER prevent_user_hard_delete_trigger
     BEFORE DELETE ON public.users
     FOR EACH ROW
@@ -6767,9 +6385,7 @@ BEGIN
   RAISE EXCEPTION 'Hard deletes of users are strictly prohibited. Use archive_employee() instead to maintain historical referential integrity.';
   RETURN NULL;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS prevent_user_hard_delete_trigger ON users;
+$$;DROP TRIGGER IF EXISTS prevent_user_hard_delete_trigger ON users;
 CREATE TRIGGER prevent_user_hard_delete_trigger
   BEFORE DELETE ON users
   FOR EACH ROW EXECUTE FUNCTION prevent_user_hard_delete();
@@ -6790,14 +6406,10 @@ BEGIN
 END;
 $$;
 
--- Activity logs WORM protection has been moved to the unified worm_activity_logs_immutable trigger in MASTER_SCHEMA.
-
-DROP TRIGGER IF EXISTS worm_protect_system_audit_ledger_update ON system_audit_ledger;
+-- Activity logs WORM protection has been moved to the unified worm_activity_logs_immutable trigger in MASTER_SCHEMA.DROP TRIGGER IF EXISTS worm_protect_system_audit_ledger_update ON system_audit_ledger;
 CREATE TRIGGER worm_protect_system_audit_ledger_update
   BEFORE UPDATE ON system_audit_ledger
-  FOR EACH ROW EXECUTE FUNCTION enforce_worm_protection();
-
-DROP TRIGGER IF EXISTS worm_protect_system_audit_ledger_delete ON system_audit_ledger;
+  FOR EACH ROW EXECUTE FUNCTION enforce_worm_protection();DROP TRIGGER IF EXISTS worm_protect_system_audit_ledger_delete ON system_audit_ledger;
 CREATE TRIGGER worm_protect_system_audit_ledger_delete
   BEFORE DELETE ON system_audit_ledger
   FOR EACH ROW EXECUTE FUNCTION enforce_worm_protection();
@@ -6863,22 +6475,18 @@ CREATE TABLE IF NOT EXISTS public.system_events (
 );
 ALTER TABLE public.system_events ENABLE ROW LEVEL SECURITY;
 
--- Sprint 8.12 Observability Pipeline
-
-CREATE INDEX idx_system_events_severity ON system_events(severity);
-CREATE INDEX idx_system_events_created_at ON system_events(created_at DESC);
-CREATE INDEX idx_system_events_workspace_id ON system_events(workspace_id);
+-- Sprint 8.12 Observability PipelineCREATE INDEX IF NOT EXISTS idx_system_events_severity ON system_events(severity);CREATE INDEX IF NOT EXISTS idx_system_events_created_at ON system_events(created_at DESC);CREATE INDEX IF NOT EXISTS idx_system_events_workspace_id ON system_events(workspace_id);
 
 ALTER TABLE system_events ENABLE ROW LEVEL SECURITY;
 
--- 1. INSERT policy for authenticated users (Telemetry writes)
+-- 1. INSERT policy for authenticated users (Telemetry writes)DROP POLICY IF EXISTS "Enable insert for authenticated users" ON system_events;
 CREATE POLICY "Enable insert for authenticated users" 
 ON system_events 
 FOR INSERT 
 TO authenticated 
 WITH CHECK (true);
 
--- 2. SELECT policy (Workspace-scoped read access)
+-- 2. SELECT policy (Workspace-scoped read access)DROP POLICY IF EXISTS "Enable select based on workspace_id" ON system_events;
 CREATE POLICY "Enable select based on workspace_id" 
 ON system_events 
 FOR SELECT 
@@ -6889,7 +6497,7 @@ USING (
   )
 );
 
--- 3. DELETE policy (Admin cleanup)
+-- 3. DELETE policy (Admin cleanup)DROP POLICY IF EXISTS "Enable delete for admins" ON system_events;
 CREATE POLICY "Enable delete for admins" 
 ON system_events 
 FOR DELETE 
@@ -6907,8 +6515,7 @@ USING (
 -- SPRINT 11-21 CONSOLIDATED ADDITIONS (APPENDED)
 -- =============================================================
 
--- 12. system_migrations
-CREATE TABLE system_migrations (
+-- 12. system_migrationsCREATE TABLE IF NOT EXISTS system_migrations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   version text NOT NULL,
   description text,
@@ -6918,8 +6525,7 @@ CREATE TABLE system_migrations (
   logs jsonb DEFAULT '{}'::jsonb
 );
 
--- 13. follow_ups
-CREATE TABLE follow_ups (
+-- 13. follow_upsCREATE TABLE IF NOT EXISTS follow_ups (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id    uuid        NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   source_type text        NOT NULL CHECK (source_type IN ('task_comment', 'task', 'project')),
@@ -7027,12 +6633,12 @@ CREATE INDEX IF NOT EXISTS idx_follow_ups_remind_at ON follow_ups(remind_at);
 
 -- Extra Tables RLS Enablement & Policies
 ALTER TABLE system_migrations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE follow_ups ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Platform admins can view migrations" ON system_migrations
-  FOR SELECT USING (true);
-
-CREATE POLICY "Users can manage their own follow ups" ON follow_ups
+ALTER TABLE follow_ups ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Platform admins can view migrations" ON system_migrations;
+CREATE POLICY "Platform admins can view migrations" 
+ON system_migrations
+  FOR SELECT USING (true);DROP POLICY IF EXISTS "Users can manage their own follow ups" ON follow_ups;
+CREATE POLICY "Users can manage their own follow ups" 
+ON follow_ups
   FOR ALL TO authenticated
   USING (auth.uid() = owner_id)
   WITH CHECK (auth.uid() = owner_id);
@@ -7082,9 +6688,7 @@ BEGIN
   ON CONFLICT DO NOTHING;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS on_workspace_created_calendar ON public.workspaces;
+$$ LANGUAGE plpgsql SECURITY DEFINER;DROP TRIGGER IF EXISTS on_workspace_created_calendar ON public.workspaces;
 CREATE TRIGGER on_workspace_created_calendar
   AFTER INSERT ON public.workspaces
   FOR EACH ROW EXECUTE FUNCTION public.create_default_calendar_settings();
@@ -7093,34 +6697,29 @@ CREATE TRIGGER on_workspace_created_calendar
 ALTER TABLE public.workspace_calendar_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.company_calendar_events ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for workspace_calendar_settings
-CREATE POLICY "Workspace members can read calendar settings"
-  ON public.workspace_calendar_settings FOR SELECT
+-- RLS Policies for workspace_calendar_settingsDROP POLICY IF EXISTS "Workspace members can read calendar settings" ON public.workspace_calendar_settings;
+CREATE POLICY "Workspace members can read calendar settings" 
+ON public.workspace_calendar_settings FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Workspace members can insert calendar settings" ON public.workspace_calendar_settings;
+CREATE POLICY "Workspace members can insert calendar settings" 
+ON public.workspace_calendar_settings FOR INSERT
+  WITH CHECK (workspace_id = current_workspace());DROP POLICY IF EXISTS "Workspace members can update calendar settings" ON public.workspace_calendar_settings;
+CREATE POLICY "Workspace members can update calendar settings" 
+ON public.workspace_calendar_settings FOR UPDATE
   USING (workspace_id = current_workspace());
 
-CREATE POLICY "Workspace members can insert calendar settings"
-  ON public.workspace_calendar_settings FOR INSERT
-  WITH CHECK (workspace_id = current_workspace());
-
-CREATE POLICY "Workspace members can update calendar settings"
-  ON public.workspace_calendar_settings FOR UPDATE
-  USING (workspace_id = current_workspace());
-
--- RLS Policies for company_calendar_events
-CREATE POLICY "Workspace members can read company calendar events"
-  ON public.company_calendar_events FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Workspace members can insert company calendar events"
-  ON public.company_calendar_events FOR INSERT
-  WITH CHECK (workspace_id = current_workspace());
-
-CREATE POLICY "Workspace members can update company calendar events"
-  ON public.company_calendar_events FOR UPDATE
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Workspace members can delete company calendar events"
-  ON public.company_calendar_events FOR DELETE
+-- RLS Policies for company_calendar_eventsDROP POLICY IF EXISTS "Workspace members can read company calendar events" ON public.company_calendar_events;
+CREATE POLICY "Workspace members can read company calendar events" 
+ON public.company_calendar_events FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Workspace members can insert company calendar events" ON public.company_calendar_events;
+CREATE POLICY "Workspace members can insert company calendar events" 
+ON public.company_calendar_events FOR INSERT
+  WITH CHECK (workspace_id = current_workspace());DROP POLICY IF EXISTS "Workspace members can update company calendar events" ON public.company_calendar_events;
+CREATE POLICY "Workspace members can update company calendar events" 
+ON public.company_calendar_events FOR UPDATE
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Workspace members can delete company calendar events" ON public.company_calendar_events;
+CREATE POLICY "Workspace members can delete company calendar events" 
+ON public.company_calendar_events FOR DELETE
   USING (workspace_id = current_workspace());
 
 
@@ -7156,18 +6755,12 @@ CREATE INDEX IF NOT EXISTS idx_calendar_sync_logs_workspace
 CREATE INDEX IF NOT EXISTS idx_calendar_sync_logs_year
   ON public.calendar_sync_logs(workspace_id, year);
 
-ALTER TABLE public.calendar_sync_logs ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Workspace members can view sync logs" ON public.calendar_sync_logs;
-DROP POLICY IF EXISTS "Workspace members can insert sync logs" ON public.calendar_sync_logs;
-DROP POLICY IF EXISTS "Workspace members can manage sync logs" ON public.calendar_sync_logs;
-
-CREATE POLICY "Workspace members can view sync logs"
-  ON public.calendar_sync_logs FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-CREATE POLICY "Workspace members can insert sync logs"
-  ON public.calendar_sync_logs FOR INSERT
+ALTER TABLE public.calendar_sync_logs ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view sync logs" ON public.calendar_sync_logs;
+CREATE POLICY "Workspace members can view sync logs" 
+ON public.calendar_sync_logs FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Workspace members can insert sync logs" ON public.calendar_sync_logs;
+CREATE POLICY "Workspace members can insert sync logs" 
+ON public.calendar_sync_logs FOR INSERT
   WITH CHECK (workspace_id = public.current_workspace());
 
 GRANT SELECT, INSERT ON public.calendar_sync_logs TO authenticated;
@@ -7182,13 +6775,12 @@ GRANT ALL ON public.calendar_sync_logs TO service_role;
 -- ==============================================================================
 
 -- 1. Departments Policies
--- (ENABLE ROW LEVEL SECURITY was already added in Batch 1A)
-CREATE POLICY "Workspace members can view departments"
-  ON public.departments FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Departments can be managed by PMs and Admins"
-  ON public.departments FOR ALL
+-- (ENABLE ROW LEVEL SECURITY was already added in Batch 1A)DROP POLICY IF EXISTS "Workspace members can view departments" ON public.departments;
+CREATE POLICY "Workspace members can view departments" 
+ON public.departments FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Departments can be managed by PMs and Admins" ON public.departments;
+CREATE POLICY "Departments can be managed by PMs and Admins" 
+ON public.departments FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -7199,14 +6791,12 @@ CREATE POLICY "Departments can be managed by PMs and Admins"
   );
 
 -- 2. Epics Policies
-ALTER TABLE public.epics ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view epics"
-  ON public.epics FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Epics can be managed by PMs and Admins"
-  ON public.epics FOR ALL
+ALTER TABLE public.epics ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view epics" ON public.epics;
+CREATE POLICY "Workspace members can view epics" 
+ON public.epics FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Epics can be managed by PMs and Admins" ON public.epics;
+CREATE POLICY "Epics can be managed by PMs and Admins" 
+ON public.epics FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -7217,14 +6807,12 @@ CREATE POLICY "Epics can be managed by PMs and Admins"
   );
 
 -- 3. Milestones Policies
-ALTER TABLE public.milestones ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view milestones"
-  ON public.milestones FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Milestones can be managed by PMs and Admins"
-  ON public.milestones FOR ALL
+ALTER TABLE public.milestones ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view milestones" ON public.milestones;
+CREATE POLICY "Workspace members can view milestones" 
+ON public.milestones FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Milestones can be managed by PMs and Admins" ON public.milestones;
+CREATE POLICY "Milestones can be managed by PMs and Admins" 
+ON public.milestones FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -7235,29 +6823,24 @@ CREATE POLICY "Milestones can be managed by PMs and Admins"
   );
 
 -- 4. Task Comments Policies
-ALTER TABLE public.task_comments ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view task comments"
-  ON public.task_comments FOR SELECT
-  USING (workspace_id = current_workspace());
-
-CREATE POLICY "Users can create their own task comments"
-  ON public.task_comments FOR INSERT
+ALTER TABLE public.task_comments ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view task comments" ON public.task_comments;
+CREATE POLICY "Workspace members can view task comments" 
+ON public.task_comments FOR SELECT
+  USING (workspace_id = current_workspace());DROP POLICY IF EXISTS "Users can create their own task comments" ON public.task_comments;
+CREATE POLICY "Users can create their own task comments" 
+ON public.task_comments FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
     author_id = auth.uid()
-  );
-
-CREATE POLICY "Users can update their own task comments"
-  ON public.task_comments FOR UPDATE
-  USING (workspace_id = current_workspace() AND author_id = auth.uid());
-
-CREATE POLICY "Users can delete their own task comments"
-  ON public.task_comments FOR DELETE
-  USING (workspace_id = current_workspace() AND author_id = auth.uid());
-
-CREATE POLICY "Task comments can be managed by PMs and Admins"
-  ON public.task_comments FOR ALL
+  );DROP POLICY IF EXISTS "Users can update their own task comments" ON public.task_comments;
+CREATE POLICY "Users can update their own task comments" 
+ON public.task_comments FOR UPDATE
+  USING (workspace_id = current_workspace() AND author_id = auth.uid());DROP POLICY IF EXISTS "Users can delete their own task comments" ON public.task_comments;
+CREATE POLICY "Users can delete their own task comments" 
+ON public.task_comments FOR DELETE
+  USING (workspace_id = current_workspace() AND author_id = auth.uid());DROP POLICY IF EXISTS "Task comments can be managed by PMs and Admins" ON public.task_comments;
+CREATE POLICY "Task comments can be managed by PMs and Admins" 
+ON public.task_comments FOR ALL
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -7379,26 +6962,27 @@ BEGIN
 END
 $$;
 
--- Create secure client-bounded SELECT policies
-CREATE POLICY "Client bounded visibility for comments" ON public.comments FOR SELECT
+-- Create secure client-bounded SELECT policiesDROP POLICY IF EXISTS "Client bounded visibility for comments" ON public.comments;
+CREATE POLICY "Client bounded visibility for comments" 
+ON public.comments FOR SELECT
 USING (
   workspace_id = current_workspace() AND 
   (
     is_internal = false OR 
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role != 'client')
   )
-);
-
-CREATE POLICY "Client bounded visibility for task_comments" ON public.task_comments FOR SELECT
+);DROP POLICY IF EXISTS "Client bounded visibility for task_comments" ON public.task_comments;
+CREATE POLICY "Client bounded visibility for task_comments" 
+ON public.task_comments FOR SELECT
 USING (
   workspace_id = current_workspace() AND 
   (
     is_internal = false OR 
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role != 'client')
   )
-);
-
-CREATE POLICY "Client bounded visibility for universal_comments" ON public.universal_comments FOR SELECT
+);DROP POLICY IF EXISTS "Client bounded visibility for universal_comments" ON public.universal_comments;
+CREATE POLICY "Client bounded visibility for universal_comments" 
+ON public.universal_comments FOR SELECT
 USING (
   workspace_id = current_workspace() AND 
   (
@@ -7458,9 +7042,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS trigger_cascade_subtask_status ON public.tasks;
+$$;DROP TRIGGER IF EXISTS trigger_cascade_subtask_status ON public.tasks;
 CREATE TRIGGER trigger_cascade_subtask_status
   BEFORE UPDATE OF status ON public.tasks
   FOR EACH ROW
@@ -7892,12 +7474,7 @@ BEGIN
   RETURN NULL;
 
 END;
-$$;
-
-
-DROP TRIGGER IF EXISTS trigger_update_project_pert ON public.tasks;
-
-CREATE TRIGGER trigger_update_project_pert
+$$;CREATE TRIGGER trigger_update_project_pert
 AFTER INSERT OR DELETE OR UPDATE OF
     pert_best,
     pert_likely,
@@ -7965,9 +7542,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$;
-
-DROP TRIGGER IF EXISTS check_last_super_admin_removal ON public.users;
+$$;DROP TRIGGER IF EXISTS check_last_super_admin_removal ON public.users;
 CREATE TRIGGER check_last_super_admin_removal
   BEFORE UPDATE OR DELETE ON public.users
   FOR EACH ROW EXECUTE FUNCTION public.prevent_last_super_admin_removal();
@@ -8111,10 +7686,9 @@ END $$;
 -- 1. Add client_id to projects
 ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES public.users(id) ON DELETE SET NULL;
 
--- 2. Update Projects Policy
-DROP POLICY IF EXISTS "Projects are visible to workspace" ON public.projects;
-CREATE POLICY "Projects are visible to workspace"
-  ON public.projects FOR SELECT
+-- 2. Update Projects PolicyDROP POLICY IF EXISTS "Projects are visible to workspace" ON public.projects;
+CREATE POLICY "Projects are visible to workspace" 
+ON public.projects FOR SELECT
   USING (
     workspace_id = current_workspace() 
     AND deleted_at IS NULL
@@ -8126,10 +7700,9 @@ CREATE POLICY "Projects are visible to workspace"
     )
   );
 
--- 3. Update Files Policy
-DROP POLICY IF EXISTS "Files are visible to workspace" ON public.files;
-CREATE POLICY "Files are visible to workspace"
-  ON public.files FOR SELECT
+-- 3. Update Files PolicyDROP POLICY IF EXISTS "Files are visible to workspace" ON public.files;
+CREATE POLICY "Files are visible to workspace" 
+ON public.files FOR SELECT
   USING (
     workspace_id = current_workspace() 
     AND public.is_active_workspace_member()
@@ -8171,20 +7744,16 @@ CREATE TABLE IF NOT EXISTS public.notification_events (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.notification_events ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Users can read their own notification events" ON public.notification_events;
-CREATE POLICY "Users can read their own notification events"
-  ON public.notification_events FOR SELECT
+ALTER TABLE public.notification_events ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can read their own notification events" ON public.notification_events;
+CREATE POLICY "Users can read their own notification events" 
+ON public.notification_events FOR SELECT
   USING (
     workspace_id = current_workspace() 
     AND user_id = auth.uid() 
     AND public.is_active_workspace_member()
-  );
-
-DROP POLICY IF EXISTS "System can mutate notifications" ON public.notification_events;
-CREATE POLICY "System can mutate notifications"
-  ON public.notification_events FOR ALL
+  );DROP POLICY IF EXISTS "System can mutate notifications" ON public.notification_events;
+CREATE POLICY "System can mutate notifications" 
+ON public.notification_events FOR ALL
   USING (workspace_id = current_workspace() AND user_id = auth.uid())
   WITH CHECK (workspace_id = current_workspace() AND user_id = auth.uid());
 
@@ -8200,9 +7769,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$FUNC$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS trigger_notify_task_assignment ON public.tasks;
+$FUNC$ LANGUAGE plpgsql SECURITY DEFINER;DROP TRIGGER IF EXISTS trigger_notify_task_assignment ON public.tasks;
 CREATE TRIGGER trigger_notify_task_assignment
   AFTER UPDATE OF assignee_id ON public.tasks
   FOR EACH ROW EXECUTE FUNCTION public.notify_on_task_assignment();
@@ -8217,9 +7784,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$FUNC$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS trigger_notify_task_blocked ON public.tasks;
+$FUNC$ LANGUAGE plpgsql SECURITY DEFINER;DROP TRIGGER IF EXISTS trigger_notify_task_blocked ON public.tasks;
 CREATE TRIGGER trigger_notify_task_blocked
   AFTER UPDATE OF status ON public.tasks
   FOR EACH ROW EXECUTE FUNCTION public.notify_on_task_blocked();
@@ -8247,26 +7812,23 @@ CREATE TABLE IF NOT EXISTS public.change_requests (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.change_requests ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view change requests"
-  ON public.change_requests FOR SELECT
+ALTER TABLE public.change_requests ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can view change requests" ON public.change_requests;
+CREATE POLICY "Users can view change requests" 
+ON public.change_requests FOR SELECT
   USING (
     workspace_id = public.current_workspace()
     OR
     project_id IN (SELECT id FROM projects WHERE client_id = auth.uid())
-  );
-
-CREATE POLICY "Users can insert change requests"
-  ON public.change_requests FOR INSERT
+  );DROP POLICY IF EXISTS "Users can insert change requests" ON public.change_requests;
+CREATE POLICY "Users can insert change requests" 
+ON public.change_requests FOR INSERT
   WITH CHECK (
     workspace_id = public.current_workspace()
     OR
     project_id IN (SELECT id FROM projects WHERE client_id = auth.uid())
-  );
-
-CREATE POLICY "PMs and Admins can update change requests"
-  ON public.change_requests FOR UPDATE
+  );DROP POLICY IF EXISTS "PMs and Admins can update change requests" ON public.change_requests;
+CREATE POLICY "PMs and Admins can update change requests" 
+ON public.change_requests FOR UPDATE
   USING (
     workspace_id = public.current_workspace() AND
     public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'pm')
@@ -8390,14 +7952,12 @@ CREATE TABLE IF NOT EXISTS public.employee_handoffs (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.employee_handoffs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Workspace members can view handoffs"
-  ON public.employee_handoffs FOR SELECT
-  USING (workspace_id = public.current_workspace());
-
-CREATE POLICY "Admins can insert handoffs"
-  ON public.employee_handoffs FOR INSERT
+ALTER TABLE public.employee_handoffs ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace members can view handoffs" ON public.employee_handoffs;
+CREATE POLICY "Workspace members can view handoffs" 
+ON public.employee_handoffs FOR SELECT
+  USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Admins can insert handoffs" ON public.employee_handoffs;
+CREATE POLICY "Admins can insert handoffs" 
+ON public.employee_handoffs FOR INSERT
   WITH CHECK (
     workspace_id = public.current_workspace() AND
     public.get_user_role(workspace_id) IN ('super_admin', 'admin')
@@ -8415,17 +7975,15 @@ CREATE TABLE IF NOT EXISTS public.workspace_storage_settings (
     updated_at timestamptz DEFAULT now(),
     UNIQUE(workspace_id)
 );
-ALTER TABLE public.workspace_storage_settings ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Workspace storage settings viewable by members" ON public.workspace_storage_settings;
-CREATE POLICY "Workspace storage settings viewable by members"
-    ON public.workspace_storage_settings FOR SELECT
+ALTER TABLE public.workspace_storage_settings ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Workspace storage settings viewable by members" ON public.workspace_storage_settings;
+CREATE POLICY "Workspace storage settings viewable by members" 
+ON public.workspace_storage_settings FOR SELECT
     USING (EXISTS (
         SELECT 1 FROM public.users
         WHERE users.id = auth.uid() AND users.workspace_id = workspace_storage_settings.workspace_id
-    ));
-DROP POLICY IF EXISTS "Workspace storage settings manageable by admin" ON public.workspace_storage_settings;
-CREATE POLICY "Workspace storage settings manageable by admin"
-    ON public.workspace_storage_settings FOR ALL
+    ));DROP POLICY IF EXISTS "Workspace storage settings manageable by admin" ON public.workspace_storage_settings;
+CREATE POLICY "Workspace storage settings manageable by admin" 
+ON public.workspace_storage_settings FOR ALL
     USING (EXISTS (
         SELECT 1 FROM public.users
         WHERE users.id = auth.uid() AND users.workspace_id = workspace_storage_settings.workspace_id AND users.role IN ('super_admin', 'admin')
@@ -8511,17 +8069,15 @@ CREATE TABLE IF NOT EXISTS public.backup_snapshots (
     completed_at timestamptz,
     metadata jsonb DEFAULT '{}'::jsonb
 );
-ALTER TABLE public.backup_snapshots ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Backup snapshots viewable by super_admin" ON public.backup_snapshots;
-CREATE POLICY "Backup snapshots viewable by super_admin"
-    ON public.backup_snapshots FOR SELECT
+ALTER TABLE public.backup_snapshots ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Backup snapshots viewable by super_admin" ON public.backup_snapshots;
+CREATE POLICY "Backup snapshots viewable by super_admin" 
+ON public.backup_snapshots FOR SELECT
     USING (EXISTS (
         SELECT 1 FROM public.users
         WHERE users.id = auth.uid() AND users.workspace_id = backup_snapshots.workspace_id AND users.role = 'super_admin'
-    ));
-DROP POLICY IF EXISTS "Backup snapshots insertable by super_admin" ON public.backup_snapshots;
-CREATE POLICY "Backup snapshots insertable by super_admin"
-    ON public.backup_snapshots FOR INSERT
+    ));DROP POLICY IF EXISTS "Backup snapshots insertable by super_admin" ON public.backup_snapshots;
+CREATE POLICY "Backup snapshots insertable by super_admin" 
+ON public.backup_snapshots FOR INSERT
     WITH CHECK (EXISTS (
         SELECT 1 FROM public.users
         WHERE users.id = auth.uid() AND users.workspace_id = backup_snapshots.workspace_id AND users.role = 'super_admin'
@@ -8555,24 +8111,20 @@ END;
 $$;
 
 
--- Part 3: Observability Layer
-
-DROP POLICY IF EXISTS "System events viewable by admin" ON public.system_events;
-CREATE POLICY "System events viewable by admin"
-    ON public.system_events FOR SELECT
+-- Part 3: Observability LayerDROP POLICY IF EXISTS "System events viewable by admin" ON public.system_events;
+CREATE POLICY "System events viewable by admin" 
+ON public.system_events FOR SELECT
     USING (EXISTS (
         SELECT 1 FROM public.users
         WHERE users.id = auth.uid() 
           AND (system_events.workspace_id IS NULL OR users.workspace_id = system_events.workspace_id)
           AND users.role IN ('super_admin', 'admin')
-    ));
-DROP POLICY IF EXISTS "Users can insert system events" ON public.system_events;
-CREATE POLICY "Users can insert system events"
-    ON public.system_events FOR INSERT
-    WITH CHECK (true);
-DROP POLICY IF EXISTS "Admins can update system events" ON public.system_events;
-CREATE POLICY "Admins can update system events"
-    ON public.system_events FOR UPDATE
+    ));DROP POLICY IF EXISTS "Users can insert system events" ON public.system_events;
+CREATE POLICY "Users can insert system events" 
+ON public.system_events FOR INSERT
+    WITH CHECK (true);DROP POLICY IF EXISTS "Admins can update system events" ON public.system_events;
+CREATE POLICY "Admins can update system events" 
+ON public.system_events FOR UPDATE
     USING (EXISTS (
         SELECT 1 FROM public.users
         WHERE users.id = auth.uid() 
@@ -8592,9 +8144,7 @@ CREATE TABLE IF NOT EXISTS company_working_rules (
     effective_from DATE NOT NULL DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_company_working_rules_workspace_date ON company_working_rules(workspace_id, effective_from);
+);CREATE INDEX IF NOT EXISTS idx_company_working_rules_workspace_date ON company_working_rules(workspace_id, effective_from);
 
 -- Create company_holidays table
 CREATE TABLE IF NOT EXISTS company_holidays (
@@ -8607,33 +8157,29 @@ CREATE TABLE IF NOT EXISTS company_holidays (
     year INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(workspace_id, date, name)
-);
-
-CREATE INDEX idx_company_holidays_workspace_date ON company_holidays(workspace_id, date);
+);CREATE INDEX IF NOT EXISTS idx_company_holidays_workspace_date ON company_holidays(workspace_id, date);
 
 -- Enable RLS
 ALTER TABLE company_working_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE company_holidays ENABLE ROW LEVEL SECURITY;
 
--- Policies for company_working_rules
-CREATE POLICY "Working rules visible to workspace members"
-    ON company_working_rules FOR SELECT
-    USING (workspace_id = public.current_workspace());
-
-CREATE POLICY "Working rules editable by PMs and Admins"
-    ON company_working_rules FOR ALL
+-- Policies for company_working_rulesDROP POLICY IF EXISTS "Working rules visible to workspace members" ON company_working_rules;
+CREATE POLICY "Working rules visible to workspace members" 
+ON company_working_rules FOR SELECT
+    USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Working rules editable by PMs and Admins" ON company_working_rules;
+CREATE POLICY "Working rules editable by PMs and Admins" 
+ON company_working_rules FOR ALL
     USING (
         workspace_id = public.current_workspace() AND
         EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
     );
 
--- Policies for company_holidays
-CREATE POLICY "Company holidays visible to workspace members"
-    ON company_holidays FOR SELECT
-    USING (workspace_id = public.current_workspace());
-
-CREATE POLICY "Company holidays editable by PMs and Admins"
-    ON company_holidays FOR ALL
+-- Policies for company_holidaysDROP POLICY IF EXISTS "Company holidays visible to workspace members" ON company_holidays;
+CREATE POLICY "Company holidays visible to workspace members" 
+ON company_holidays FOR SELECT
+    USING (workspace_id = public.current_workspace());DROP POLICY IF EXISTS "Company holidays editable by PMs and Admins" ON company_holidays;
+CREATE POLICY "Company holidays editable by PMs and Admins" 
+ON company_holidays FOR ALL
     USING (
         workspace_id = public.current_workspace() AND
         EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -8737,17 +8283,17 @@ CREATE TABLE IF NOT EXISTS public.milestone_signoffs (
 
 ALTER TABLE public.milestone_signoffs ENABLE ROW LEVEL SECURITY;
 
--- Admins and PMs can view all signoffs in their workspace
-CREATE POLICY "View milestone signoffs (Internal)"
-    ON public.milestone_signoffs FOR SELECT
+-- Admins and PMs can view all signoffs in their workspaceDROP POLICY IF EXISTS "View milestone signoffs (Internal)" ON public.milestone_signoffs;
+CREATE POLICY "View milestone signoffs (Internal)" 
+ON public.milestone_signoffs FOR SELECT
     USING (
         workspace_id = public.current_workspace() AND
         (public.has_capability(auth.uid(), 'manage_projects') OR public.has_capability(auth.uid(), 'manage_settings'))
     );
 
--- Clients can view signoffs for milestones on projects they own/have access to
-CREATE POLICY "View milestone signoffs (Client)"
-    ON public.milestone_signoffs FOR SELECT
+-- Clients can view signoffs for milestones on projects they own/have access toDROP POLICY IF EXISTS "View milestone signoffs (Client)" ON public.milestone_signoffs;
+CREATE POLICY "View milestone signoffs (Client)" 
+ON public.milestone_signoffs FOR SELECT
     USING (
         workspace_id = public.current_workspace() AND
         EXISTS (
@@ -8757,9 +8303,9 @@ CREATE POLICY "View milestone signoffs (Client)"
         )
     );
 
--- Clients can insert signoffs for milestones on projects they own
-CREATE POLICY "Insert milestone signoffs (Client)"
-    ON public.milestone_signoffs FOR INSERT
+-- Clients can insert signoffs for milestones on projects they ownDROP POLICY IF EXISTS "Insert milestone signoffs (Client)" ON public.milestone_signoffs;
+CREATE POLICY "Insert milestone signoffs (Client)" 
+ON public.milestone_signoffs FOR INSERT
     WITH CHECK (
         workspace_id = public.current_workspace() AND
         client_id = auth.uid() AND
@@ -8937,34 +8483,30 @@ GRANT EXECUTE ON FUNCTION accept_invitation(text) TO authenticated;
 -- Add RLS Policies for Invitations to allow PMs/Admins to manage them securely
 -- Previously there were no policies, causing reads/inserts to fail silently or throw errors
 
--- Select: Visible to workspace members
-DROP POLICY IF EXISTS "Invitations are visible to workspace members" ON invitations;
-CREATE POLICY "Invitations are visible to workspace members"
-  ON invitations FOR SELECT
+-- Select: Visible to workspace membersDROP POLICY IF EXISTS "Invitations are visible to workspace members" ON invitations;
+CREATE POLICY "Invitations are visible to workspace members" 
+ON invitations FOR SELECT
   USING (workspace_id = current_workspace());
 
--- Insert: PMs and Admins can create invitations
-DROP POLICY IF EXISTS "Invitations can be created by PMs and Admins" ON invitations;
-CREATE POLICY "Invitations can be created by PMs and Admins"
-  ON invitations FOR INSERT
+-- Insert: PMs and Admins can create invitationsDROP POLICY IF EXISTS "Invitations can be created by PMs and Admins" ON invitations;
+CREATE POLICY "Invitations can be created by PMs and Admins" 
+ON invitations FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
--- Update: PMs and Admins can update/revoke invitations
-DROP POLICY IF EXISTS "Invitations can be updated by PMs and Admins" ON invitations;
-CREATE POLICY "Invitations can be updated by PMs and Admins"
-  ON invitations FOR UPDATE
+-- Update: PMs and Admins can update/revoke invitationsDROP POLICY IF EXISTS "Invitations can be updated by PMs and Admins" ON invitations;
+CREATE POLICY "Invitations can be updated by PMs and Admins" 
+ON invitations FOR UPDATE
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
--- Delete: PMs and Admins can delete invitations
-DROP POLICY IF EXISTS "Invitations can be deleted by PMs and Admins" ON invitations;
-CREATE POLICY "Invitations can be deleted by PMs and Admins"
-  ON invitations FOR DELETE
+-- Delete: PMs and Admins can delete invitationsDROP POLICY IF EXISTS "Invitations can be deleted by PMs and Admins" ON invitations;
+CREATE POLICY "Invitations can be deleted by PMs and Admins" 
+ON invitations FOR DELETE
   USING (
     workspace_id = current_workspace() AND
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
@@ -8979,93 +8521,93 @@ NOTIFY pgrst, 'reload schema';
 -- ==============================================================================
 
 -- workspace_files
-ALTER TABLE public.workspace_files ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view workspace files"
-  ON public.workspace_files FOR SELECT
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can insert workspace files"
-  ON public.workspace_files FOR INSERT
-  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can update workspace files"
-  ON public.workspace_files FOR UPDATE
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can delete workspace files"
-  ON public.workspace_files FOR DELETE
+ALTER TABLE public.workspace_files ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can view workspace files" ON public.workspace_files;
+CREATE POLICY "Users can view workspace files" 
+ON public.workspace_files FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can insert workspace files" ON public.workspace_files;
+CREATE POLICY "Users can insert workspace files" 
+ON public.workspace_files FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can update workspace files" ON public.workspace_files;
+CREATE POLICY "Users can update workspace files" 
+ON public.workspace_files FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can delete workspace files" ON public.workspace_files;
+CREATE POLICY "Users can delete workspace files" 
+ON public.workspace_files FOR DELETE
   USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_files.workspace_id AND public.is_active_workspace_member()));
 
 -- requirements
-ALTER TABLE public.requirements ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view requirements"
-  ON public.requirements FOR SELECT
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can insert requirements"
-  ON public.requirements FOR INSERT
-  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can update requirements"
-  ON public.requirements FOR UPDATE
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can delete requirements"
-  ON public.requirements FOR DELETE
+ALTER TABLE public.requirements ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can view requirements" ON public.requirements;
+CREATE POLICY "Users can view requirements" 
+ON public.requirements FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can insert requirements" ON public.requirements;
+CREATE POLICY "Users can insert requirements" 
+ON public.requirements FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can update requirements" ON public.requirements;
+CREATE POLICY "Users can update requirements" 
+ON public.requirements FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can delete requirements" ON public.requirements;
+CREATE POLICY "Users can delete requirements" 
+ON public.requirements FOR DELETE
   USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = requirements.workspace_id AND public.is_active_workspace_member()));
 
 -- milestones
-ALTER TABLE public.milestones ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view milestones"
-  ON public.milestones FOR SELECT
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can insert milestones"
-  ON public.milestones FOR INSERT
-  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can update milestones"
-  ON public.milestones FOR UPDATE
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can delete milestones"
-  ON public.milestones FOR DELETE
+ALTER TABLE public.milestones ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can view milestones" ON public.milestones;
+CREATE POLICY "Users can view milestones" 
+ON public.milestones FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can insert milestones" ON public.milestones;
+CREATE POLICY "Users can insert milestones" 
+ON public.milestones FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can update milestones" ON public.milestones;
+CREATE POLICY "Users can update milestones" 
+ON public.milestones FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can delete milestones" ON public.milestones;
+CREATE POLICY "Users can delete milestones" 
+ON public.milestones FOR DELETE
   USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = milestones.workspace_id AND public.is_active_workspace_member()));
 
 -- epics
-ALTER TABLE public.epics ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view epics"
-  ON public.epics FOR SELECT
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can insert epics"
-  ON public.epics FOR INSERT
-  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can update epics"
-  ON public.epics FOR UPDATE
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can delete epics"
-  ON public.epics FOR DELETE
+ALTER TABLE public.epics ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can view epics" ON public.epics;
+CREATE POLICY "Users can view epics" 
+ON public.epics FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can insert epics" ON public.epics;
+CREATE POLICY "Users can insert epics" 
+ON public.epics FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can update epics" ON public.epics;
+CREATE POLICY "Users can update epics" 
+ON public.epics FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can delete epics" ON public.epics;
+CREATE POLICY "Users can delete epics" 
+ON public.epics FOR DELETE
   USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = epics.workspace_id AND public.is_active_workspace_member()));
 
 -- work_sessions
-ALTER TABLE public.work_sessions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view work_sessions"
-  ON public.work_sessions FOR SELECT
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can insert work_sessions"
-  ON public.work_sessions FOR INSERT
-  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can update work_sessions"
-  ON public.work_sessions FOR UPDATE
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can delete work_sessions"
-  ON public.work_sessions FOR DELETE
+ALTER TABLE public.work_sessions ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can view work_sessions" ON public.work_sessions;
+CREATE POLICY "Users can view work_sessions" 
+ON public.work_sessions FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can insert work_sessions" ON public.work_sessions;
+CREATE POLICY "Users can insert work_sessions" 
+ON public.work_sessions FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can update work_sessions" ON public.work_sessions;
+CREATE POLICY "Users can update work_sessions" 
+ON public.work_sessions FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can delete work_sessions" ON public.work_sessions;
+CREATE POLICY "Users can delete work_sessions" 
+ON public.work_sessions FOR DELETE
   USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = work_sessions.workspace_id AND public.is_active_workspace_member()));
 
 -- billing_milestones
-ALTER TABLE public.billing_milestones ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can view billing_milestones"
-  ON public.billing_milestones FOR SELECT
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can insert billing_milestones"
-  ON public.billing_milestones FOR INSERT
-  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can update billing_milestones"
-  ON public.billing_milestones FOR UPDATE
-  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));
-CREATE POLICY "Users can delete billing_milestones"
-  ON public.billing_milestones FOR DELETE
+ALTER TABLE public.billing_milestones ENABLE ROW LEVEL SECURITY;DROP POLICY IF EXISTS "Users can view billing_milestones" ON public.billing_milestones;
+CREATE POLICY "Users can view billing_milestones" 
+ON public.billing_milestones FOR SELECT
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can insert billing_milestones" ON public.billing_milestones;
+CREATE POLICY "Users can insert billing_milestones" 
+ON public.billing_milestones FOR INSERT
+  WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can update billing_milestones" ON public.billing_milestones;
+CREATE POLICY "Users can update billing_milestones" 
+ON public.billing_milestones FOR UPDATE
+  USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));DROP POLICY IF EXISTS "Users can delete billing_milestones" ON public.billing_milestones;
+CREATE POLICY "Users can delete billing_milestones" 
+ON public.billing_milestones FOR DELETE
   USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = billing_milestones.workspace_id AND public.is_active_workspace_member()));
 
 

@@ -1,8 +1,6 @@
 import { trackSupabaseOperation } from '../core/observability/telemetry';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
-import { evaluateTriggers } from './automationEngine';
-import { fireEventWebhooks } from './webhookService';
 import { logServiceFailure } from '../utils/supabaseError';
 
 export interface ApprovalChain {
@@ -154,9 +152,7 @@ export async function createApprovalInstance(
         workspace_id: wsId, action: 'approval_created',
         metadata: { instance_id: data.id, target_type: instance.target_type, target_id: instance.target_id },
       });
-      fireEventWebhooks('approval_created', wsId, {
-        instance_id: data.id, target_type: instance.target_type, target_id: instance.target_id,
-      }).catch(() => {});
+      
       return data as ApprovalInstance;
     }
   } catch (error) { logServiceFailure('createApprovalInstance', instance, error); }
@@ -184,12 +180,8 @@ export async function approveStep(instanceId: string, stepOrder: number, _userId
         workspace_id: resolvedWorkspaceId, action: 'approval_completed',
         metadata: { instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'approved' },
       });
-      fireEventWebhooks('approval_completed', resolvedWorkspaceId, {
-        instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'approved',
-      }).catch(() => {});
-      evaluateTriggers('approval.completed', {
-        workspace_id: resolvedWorkspaceId, target_type: instance.target_type, target_id: instance.target_id,
-      }).catch(() => {});
+      
+      
     } else {
       await trackSupabaseOperation('supabase_from_approval_instances', () => supabase.from('approval_instances').update({
         current_step: stepOrder + 1,
@@ -213,9 +205,7 @@ export async function rejectStep(instanceId: string, _stepOrder: number, _userId
       workspace_id: resolvedWorkspaceId, action: 'approval_completed',
       metadata: { instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'rejected' },
     });
-    fireEventWebhooks('approval_completed', resolvedWorkspaceId, {
-      instance_id: instanceId, target_type: instance.target_type, target_id: instance.target_id, result: 'rejected',
-    }).catch(() => {});
+    
     return true;
   } catch { return false; }
 }
@@ -240,3 +230,5 @@ export const PRESET_CHAINS = [
   { name: 'Client Approval', trigger_event: 'task.status_changed', steps: [{ role: 'pm' }] },
   { name: 'Document Approval', trigger_event: 'document.updated', steps: [{ role: 'pm' }, { role: 'super_admin' }] },
 ];
+
+

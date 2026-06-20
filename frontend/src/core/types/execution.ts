@@ -61,6 +61,10 @@ export interface Task {
   story_id?: string;
   parent_task_id?: string;
   milestone_id?: string;
+  uid?: string;
+  module_id?: string;
+  workflow_state_id?: string;
+  workflow_state?: any;
   definition_of_done?: string;
   acceptance_criteria?: string;
   work_time_hours?: number;

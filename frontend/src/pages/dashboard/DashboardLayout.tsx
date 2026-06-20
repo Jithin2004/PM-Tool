@@ -25,9 +25,11 @@ import { ProgressiveUnlockHint } from '../../components/dashboard/ProgressiveUnl
 import { useProgressiveDisclosure } from '../../hooks/useProgressiveDisclosure';
 import { enableFullDisclosure } from '../../core/dashboard/progressiveDisclosure';
 import { sha256 } from '../../utils/cryptoUtils';
-import { sendNotification } from '../../services/notificationService';
+import { activityEventService } from '../../services/activityEventService';
 import { activityLogService } from '../../services/activityLogService';
 import { getLicenseInfo } from '../../lib/productKey';
+import { errorMessageService } from '../../services/errorMessageService';
+import { sendNotification } from '../../services/notificationService';
 // Lucide imports merged above
 import { UniversalWorkInbox } from '../../components/inbox/UniversalWorkInbox';
 import { Login } from '../../components/auth/Login';
@@ -117,7 +119,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     iconName: 'Kanban',
     subsections: [
       { label: 'Task Board', path: '/execution/board', capability: 'view_tasks' },
-      { label: 'Gantt Chart', path: '/execution/gantt', capability: 'view_scheduling' },
+      { label: 'Timeline', path: '/execution/gantt', capability: 'view_scheduling' },
       { label: 'Calendar', path: '/execution/timeline', capability: 'view_tasks' }
     ]
   },
@@ -128,7 +130,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Employees', path: '/resources/teams', capability: 'view_teams' },
       { label: 'Departments', path: '/resources/teams/departments', capability: 'view_teams' },
-      { label: 'Workload Planning', path: '/resources/capacity', capability: 'view_reports' },
+      { label: 'Team Workload', path: '/resources/capacity', capability: 'view_reports' },
       { label: 'Skills Matrix', path: '/resources/teams/skills', capability: 'view_teams' }
     ]
   },
@@ -175,7 +177,7 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     iconName: 'Cpu',
     subsections: [
       { label: 'Workload Recommendations', path: '/workspace/decisions', capability: 'view_decision_center' },
-      { label: 'Automations & Rules', path: '/control/automations', capability: 'manage_automations' }
+      { label: 'Automations', path: '/control/automations', capability: 'manage_automations' }
     ]
   },
   {
@@ -185,8 +187,8 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Workspace Settings', path: '/control/settings', capability: 'manage_settings' },
       { label: 'Roles & Permissions', path: '/control/identity?tab=roles', capability: 'manage_settings' },
-      { label: 'Audit Logs', path: '/control/audit', capability: 'view_audit_log' },
-      { label: 'System Health', path: '/control/system-health', capability: 'platform_governance' }
+      { label: 'Activity History', path: '/control/audit', capability: 'view_audit_log' },
+      { label: 'System Status', path: '/control/system-health', capability: 'platform_governance' }
     ]
   }
 ];
@@ -740,16 +742,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       ? (message.message || JSON.stringify(message))
       : String(message);
 
-    // Sprint 5: Error Experience Refinement
     if (type === 'error') {
-      const lowerMsg = msgString.toLowerCase();
-      if (lowerMsg.includes('rls') || lowerMsg.includes('policy') || lowerMsg.includes('permission denied') || lowerMsg.includes('new row violates')) {
-        msgString = "You don't have permission to perform this action.";
-      } else if (lowerMsg.includes('jwt') || lowerMsg.includes('token expired')) {
-        msgString = "Session expired. Please log in again.";
-      } else if (lowerMsg.includes('postgres') || lowerMsg.includes('duplicate key') || lowerMsg.includes('relation "')) {
-        msgString = "Internal system error occurred.";
-      }
+      msgString = errorMessageService.translate(message);
     }
 
     setNotifications(prev => [...prev, { id, message: msgString, type }]);
@@ -1197,7 +1191,14 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   <div className={`flex items-center justify-center ${isSidebarCollapsed ? 'w-8 h-8 rounded-lg' : ''}`}>
                     {renderRouteIcon(domain.iconName)}
                   </div>
-                  {!isSidebarCollapsed && <span className="whitespace-nowrap premium-fade-in">{domain.label}</span>}
+                  {!isSidebarCollapsed && (
+                    <div className="flex flex-col text-left">
+                      <span className="whitespace-nowrap premium-fade-in">{domain.label}</span>
+                      {domain.id === 'mission-control' && (
+                        <span className="text-[9px] text-[var(--text-secondary)] font-normal leading-tight mt-0.5 whitespace-normal break-words pr-2 opacity-70">Your daily overview of work, team, and priorities</span>
+                      )}
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -1344,7 +1345,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                         <div className="2xl:scale-110 transition-transform duration-200">
                           {renderRouteIcon(domain.iconName)}
                         </div>
-                        {domain.label}
+                        <div className="flex flex-col text-left">
+                          <span>{domain.label}</span>
+                          {domain.id === 'mission-control' && (
+                            <span className="text-[10px] text-[var(--text-secondary)] font-normal leading-tight mt-0.5 whitespace-normal break-words pr-2">Your daily overview of work, team, and priorities</span>
+                          )}
+                        </div>
                       </button>
                     );
                   })}

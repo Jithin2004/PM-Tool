@@ -47,6 +47,21 @@ export interface Epic {
   priority: TaskPriority;
   start_date?: IsoDateTime;
   deadline?: IsoDateTime;
+  uid_code?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Story {
+  id: string;
+  workspace_id: string;
+  project_id: string;
+  epic_id: string;
+  uid?: string;
+  title: string;
+  description?: string;
+  status: string;
+  created_by?: string;
   created_at: string;
   updated_at: string;
 }

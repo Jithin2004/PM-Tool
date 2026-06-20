@@ -103,8 +103,8 @@ export function Login() {
           ) : (
             <>
               <div className="rounded-xl border p-6 text-center text-sm leading-relaxed bg-[var(--surface-glass)] border-[var(--border-soft)] text-[var(--text-secondary)]">
-                <p className="mb-3 font-medium text-white">Welcome to Resolve PM</p>
-                <p>Sign in to access your workspace, manage projects, and collaborate with your team.</p>
+                <p className="mb-3 font-medium text-white">Your company workspace, organized.</p>
+                <p>Continue to your workspace.</p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">

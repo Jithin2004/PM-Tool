@@ -36,6 +36,7 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'requirements', path: '/workspace/requirements', label: 'Requirements', iconName: 'FileText', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
   { id: 'documents', path: '/workspace/documents', label: 'Documents', iconName: 'FolderOpen', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
   { id: 'approvals', path: '/workspace/approvals', label: 'Approvals', iconName: 'CheckCircle', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
+  { id: 'files', path: '/workspace/files', label: 'File Center', iconName: 'FolderOpen', capability: 'view_projects', group: 'core', disclosureTier: 'operational' },
   { id: 'employee-onboarding', path: '/workspace/onboarding', label: 'Onboarding Center', iconName: 'Compass', capability: 'view_projects', group: 'core', disclosureTier: 'essential' },
   
   // Extra core (legacy/other)

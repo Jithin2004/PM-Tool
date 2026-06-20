@@ -3,10 +3,8 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { realtimeOrchestrator } from '../services/realtimeOrchestrator';
 import { Task, TaskStatus, TaskDependency, TaskCollaborator } from '../types';
 import { normalizeTaskFromRow, normalizeTasksFromRows, taskToDbRow } from '../core/types/normalize';
-import { sendNotification } from '../services/notificationService';
+import { activityEventService } from '../services/activityEventService';
 import { predictionValidationService } from '../services/predictionValidationService';
-import { fireEventWebhooks } from '../services/webhookService';
-import { evaluateTriggers } from '../services/automationEngine';
 import { useAuth } from '../context/AuthContext';
 import { sha256 } from '../utils/cryptoUtils';
 import { hasCapability, guardCapability, getAuthorityRank, hasAuthority } from '../core/auth/permissions';
@@ -720,31 +718,32 @@ export function useTasks(workspaceId?: string) {
       // Write canonical task history log
       if (data) {
         if (data.assignee_id) {
-          sendNotification(
-            workspaceId,
-            'system',
-            'New Task Assigned',
-            `You have been assigned to task: ${data.name}`,
-            data.assignee_id,
-            { task_id: data.id, project_id: data.project_id }
-          ).catch(console.error);
+          activityEventService.recordActivity({
+            workspace_id: workspaceId,
+            actor_id: 'system',
+            entity_type: 'system',
+            entity_id: 'global',
+            action_type: 'notification_event',
+            metadata: { 
+              title: 'New Task Assigned', 
+              message: `You have been assigned to task: ${data.name}`, 
+              target_user: data.assignee_id,
+              type: 'task_assigned', 
+              task_id: data.id, 
+              project_id: data.project_id 
+            }
+          }).catch(console.error);
         }
 
-        await insertTaskHistoryLog(
-          data.id,
-          'task',
-          null,
-          'created',
-          { timestamp: new Date().toISOString(), name: data.name, status: data.status }
-        );
-        fireEventWebhooks('task_created', workspaceId, {
-          task_id: data.id, project_id: data.project_id, name: data.name, status: data.status,
-        }).catch(() => {});
-        evaluateTriggers('task.created', {
-          workspace_id: workspaceId, task_id: data.id, project_id: data.project_id,
-          name: data.name, status: data.status,
-        }).catch(() => {});
-      }
+        await activityEventService.recordActivity({
+          workspace_id: workspaceId,
+          actor_id: profile?.id || 'system',
+          entity_type: 'task',
+          entity_id: data.id,
+          action_type: 'task_created',
+          after_value: { name: data.name, status: data.status, project_id: data.project_id }
+        });
+        }
 
       return normalizeTaskFromRow(data as Record<string, unknown>);
     } else {
@@ -807,34 +806,31 @@ export function useTasks(workspaceId?: string) {
       
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
 
-      // Write canonical task history log
-      await insertTaskHistoryLog(
-        taskId,
-        'status',
-        oldStatus,
-        status,
-        { timestamp: new Date().toISOString() }
-      );
-
-      fireEventWebhooks('task_updated', workspaceId, {
-        task_id: taskId, status, previous_status: oldStatus,
-      }).catch(() => {});
-      evaluateTriggers('task.status_changed', {
-        workspace_id: workspaceId, task_id: taskId, status, previous_status: oldStatus,
-      }).catch(() => {});
+      await activityEventService.recordActivity({
+        workspace_id: workspaceId,
+        actor_id: profile?.id || 'system',
+        entity_type: 'task',
+        entity_id: taskId,
+        action_type: 'task_updated',
+        before_value: { status: oldStatus },
+        after_value: { status }
+      });
 
       if (status === 'completed') {
         const task = tasks.find(t => t.id === taskId);
         if (task) {
           await predictionValidationService.recordCompletion(task);
+          
+          await activityEventService.recordActivity({
+            workspace_id: workspaceId,
+            actor_id: profile?.id || 'system',
+            entity_type: 'task',
+            entity_id: taskId,
+            action_type: 'task_completed',
+            after_value: { name: task.name }
+          });
         }
-        fireEventWebhooks('task_completed', workspaceId, {
-          task_id: taskId, task_name: task?.name,
-        }).catch(() => {});
-        evaluateTriggers('task.completed', {
-          workspace_id: workspaceId, task_id: taskId, task_name: task?.name,
-        }).catch(() => {});
-      }
+        }
 
       // Sprint 2.2 Notifications
       const task = tasks.find(t => t.id === taskId);
@@ -842,16 +838,70 @@ export function useTasks(workspaceId?: string) {
         try {
           if (status === 'ready_for_review') {
             // Notify Project Manager (in a real app, query project owner, for now system broadcast to PM role or just generic)
-            await sendNotification(workspaceId, 'assignments', 'Task Ready for Review', `Task "${task.name}" is ready for PM review.`, undefined, { type: 'task_review', entity_id: taskId, deep_link: `/workspace/projects/${task.project_id}` });
+            await activityEventService.recordActivity({
+              workspace_id: workspaceId,
+              actor_id: 'system',
+              entity_type: 'system',
+              entity_id: 'global',
+              action_type: 'notification_event',
+              metadata: { 
+                title: 'Task Ready for Review', 
+                message: `Task "${task.name}" is ready for PM review.`, 
+                type: 'task_review', 
+                entity_id: taskId, 
+                deep_link: `/workspace/projects/${task.project_id}` 
+              }
+            });
           } else if (status === 'blocked') {
-            await sendNotification(workspaceId, 'risk', 'Task Blocked', `Task "${task.name}" has been blocked.`, undefined, { type: 'task_blocked', entity_id: taskId, deep_link: `/workspace/projects/${task.project_id}` });
+            await activityEventService.recordActivity({
+              workspace_id: workspaceId,
+              actor_id: 'system',
+              entity_type: 'system',
+              entity_id: 'global',
+              action_type: 'notification_event',
+              metadata: { 
+                title: 'Task Blocked', 
+                message: `Task "${task.name}" has been blocked.`, 
+                type: 'task_blocked', 
+                entity_id: taskId, 
+                deep_link: `/workspace/projects/${task.project_id}` 
+              }
+            });
           } else if (status === 'changes_requested') {
             if (task.assignee_id) {
-              await sendNotification(workspaceId, 'assignments', 'Changes Requested', `Changes were requested on your task "${task.name}".`, task.assignee_id, { type: 'task_changes', entity_id: taskId, deep_link: `/workspace/projects/${task.project_id}` });
+              await activityEventService.recordActivity({
+                workspace_id: workspaceId,
+                actor_id: 'system',
+                entity_type: 'system',
+                entity_id: 'global',
+                action_type: 'notification_event',
+                metadata: { 
+                  title: 'Changes Requested', 
+                  message: `Changes were requested on your task "${task.name}".`, 
+                  target_user: task.assignee_id, 
+                  type: 'task_changes', 
+                  entity_id: taskId, 
+                  deep_link: `/workspace/projects/${task.project_id}` 
+                }
+              });
             }
           } else if (status === 'completed') {
             if (task.assignee_id) {
-              await sendNotification(workspaceId, 'assignments', 'Task Approved', `Your task "${task.name}" was approved and marked completed.`, task.assignee_id, { type: 'task_approved', entity_id: taskId, deep_link: `/workspace/projects/${task.project_id}` });
+              await activityEventService.recordActivity({
+                workspace_id: workspaceId,
+                actor_id: 'system',
+                entity_type: 'system',
+                entity_id: 'global',
+                action_type: 'notification_event',
+                metadata: { 
+                  title: 'Task Approved', 
+                  message: `Your task "${task.name}" was approved and marked completed.`, 
+                  target_user: task.assignee_id, 
+                  type: 'task_approved', 
+                  entity_id: taskId, 
+                  deep_link: `/workspace/projects/${task.project_id}` 
+                }
+              });
             }
           }
         } catch (err) {
@@ -908,34 +958,19 @@ export function useTasks(workspaceId?: string) {
 
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, start_date: startDate ?? undefined, deadline: deadline ?? undefined } : t));
 
-      // Write canonical task history log
-      if (oldStartDate !== startDate) {
-        await insertTaskHistoryLog(
-          taskId,
-          'start_date',
-          oldStartDate,
-          startDate,
-          { timestamp: new Date().toISOString() }
-        );
-      }
-      if (oldDeadline !== deadline) {
-        await insertTaskHistoryLog(
-          taskId,
-          'deadline',
-          oldDeadline,
-          deadline,
-          { timestamp: new Date().toISOString() }
-        );
-      }
-
       // Dispatch notification
       try {
-        await sendNotification(
-          workspaceId,
-          'deadlines',
-          'Task Schedule Modified',
-          `Task "${task?.name.toUpperCase()}" timeline updated to: ${startDate || 'Unset'} - ${deadline || 'Unset'}`
-        );
+        await activityEventService.recordActivity({
+          workspace_id: workspaceId,
+          actor_id: 'system',
+          entity_type: 'system',
+          entity_id: 'global',
+          action_type: 'notification_event',
+          metadata: { 
+            title: 'Task Schedule Modified', 
+            message: `Task "${task?.name.toUpperCase()}" timeline updated to: ${startDate || 'Unset'} - ${deadline || 'Unset'}`
+          }
+        });
       } catch (err) {
       }
     } else {
@@ -1027,17 +1062,23 @@ export function useTasks(workspaceId?: string) {
       
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
 
-      // Write canonical task history log for metadata updates
       if (originalTask) {
         if (updates.assignee_id && updates.assignee_id !== originalTask.assignee_id) {
-          sendNotification(
-            workspaceId,
-            'system',
-            'Task Reassigned',
-            `You have been assigned to task: ${updates.name || originalTask.name}`,
-            updates.assignee_id,
-            { task_id: taskId, project_id: originalTask.project_id }
-          ).catch(console.error);
+          activityEventService.recordActivity({
+            workspace_id: workspaceId,
+            actor_id: 'system',
+            entity_type: 'system',
+            entity_id: 'global',
+            action_type: 'notification_event',
+            metadata: { 
+              title: 'Task Reassigned', 
+              message: `You have been assigned to task: ${updates.name || originalTask.name}`, 
+              target_user: updates.assignee_id,
+              type: 'task_reassigned', 
+              task_id: taskId, 
+              project_id: originalTask.project_id 
+            }
+          }).catch(console.error);
         }
 
         if (strippedUpdates.current_estimate !== undefined && originalTask.current_estimate !== strippedUpdates.current_estimate) {
@@ -1050,24 +1091,17 @@ export function useTasks(workspaceId?: string) {
             changed_by: user?.id
           });
         }
-
-        for (const [key, value] of Object.entries(strippedUpdates)) {
-          if (key === 'updated_at' || key === 'id' || key === 'workspace_id') continue;
-          const oldVal = (originalTask as any)[key];
-          if (oldVal !== value) {
-            await insertTaskHistoryLog(
-              taskId,
-              key,
-              oldVal !== undefined && oldVal !== null ? String(oldVal) : null,
-              value !== undefined && value !== null ? String(value) : null,
-              { timestamp: new Date().toISOString() }
-            );
-          }
-        }
       }
-      fireEventWebhooks('task_updated', workspaceId, {
-        task_id: taskId, updates: Object.keys(updates),
-      }).catch(() => {});
+
+      await activityEventService.recordActivity({
+        workspace_id: workspaceId,
+        actor_id: profile?.id || 'system',
+        entity_type: 'task',
+        entity_id: taskId,
+        action_type: 'task_updated',
+        after_value: { updates: Object.keys(updates) }
+      });
+      
     } else {
       const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, ...updates } : t);
       setTasks(updatedTasks);
@@ -1110,10 +1144,15 @@ export function useTasks(workspaceId?: string) {
       }
       
       setTasks(prev => prev.filter(t => t.id !== taskId));
-      fireEventWebhooks('task_updated', workspaceId, {
-        task_id: taskId, status: 'deleted',
-      }).catch(() => {});
-    } else {
+      
+      await activityEventService.recordActivity({
+        workspace_id: workspaceId,
+        actor_id: profile?.id || 'system',
+        entity_type: 'task',
+        entity_id: taskId,
+        action_type: 'task_deleted'
+      });
+      } else {
       const updatedTasks = tasks.filter(t => t.id !== taskId);
       setTasks(updatedTasks);
       localStorage.setItem(`tasks_${workspaceId}`, JSON.stringify(updatedTasks));
@@ -1186,12 +1225,17 @@ export function useTasks(workspaceId?: string) {
       try {
         const taskA = tasks.find(t => t.id === taskId);
         const taskB = tasks.find(t => t.id === dependsOnTaskId);
-        await sendNotification(
-          workspaceId,
-          'assignments',
-          'Dependency Vector Wired',
-          `Task "${taskA?.name.toUpperCase()}" is now linked to depend on "${taskB?.name.toUpperCase()}"`
-        );
+        await activityEventService.recordActivity({
+          workspace_id: workspaceId,
+          actor_id: 'system',
+          entity_type: 'system',
+          entity_id: 'global',
+          action_type: 'notification_event',
+          metadata: { 
+            title: 'Dependency Vector Wired', 
+            message: `Task "${taskA?.name.toUpperCase()}" is now linked to depend on "${taskB?.name.toUpperCase()}"`
+          }
+        });
       } catch (err) {
       }
     } else {
@@ -1553,3 +1597,5 @@ export function useTasks(workspaceId?: string) {
 
   return { tasks, dependencies, collaborators, loading, error, page, hasMore, loadMore, fetchTasks, addTask, updateTask, updateTaskStatus, updateTaskDates, deleteTask, restoreTask, addDependency, removeDependency, addCollaborator, removeCollaborator, transferTaskOwnership, createTaskSuggestion, reviewTaskSuggestion };
 }
+
+

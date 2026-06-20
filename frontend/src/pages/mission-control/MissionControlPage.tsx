@@ -2,12 +2,12 @@ import { useMemo, useState, useEffect } from 'react';
 import { useOperationalPresence } from '../../core/presence/presenceEngine';
 import { useCoordinationEngine } from '../../core/coordination/coordinationEngine';
 import { generateCoordinationInsights } from '../../core/ai/coordinationInsights';
-import { forecastCoordinationTrend } from '../../core/ai/operationalForecasting';
+
 import { analyzeExecutionRisks } from '../../core/ai/executionRiskAnalysis';
-import { forecastCoordination } from '../../core/prediction/coordinationForecasting';
-import { predictSprintInstability } from '../../core/prediction/sprintInstability';
+
+
 import { predictOverload } from '../../core/prediction/overloadPrediction';
-import { forecastDependencyRisk } from '../../core/prediction/dependencyRiskForecast';
+
 import { VitalityOverview } from '../../components/mission-control/VitalityOverview';
 import { CoordinationRadar } from '../../components/mission-control/CoordinationRadar';
 import { OperationalTopologyMap } from '../../components/mission-control/OperationalTopologyMap';
@@ -79,10 +79,7 @@ function MissionControlContent() {
     [coordination.density, coordination.patterns, coordination.bottlenecks, coordination.vitality, presence.signals],
   );
 
-  const forecasts = useMemo(
-    () => forecastCoordinationTrend(presence.signals, presence.feed),
-    [presence.signals, presence.feed],
-  );
+  
 
   const riskInsights = useMemo(
     () => analyzeExecutionRisks(
@@ -95,22 +92,26 @@ function MissionControlContent() {
     [presence.collaborators, presence.signals, presence.feed, coordination.vitality, coordination.bottlenecks],
   );
 
-  const predictions = useMemo(() => {
-    const allPredictions = [
-      ...forecastCoordination(presence.signals, presence.feed, coordination.vitality),
-      ...predictSprintInstability(presence.signals, presence.feed, coordination.vitality),
-      ...predictOverload(presence.collaborators, presence.signals, presence.feed),
-      ...forecastDependencyRisk(presence.signals, presence.feed),
-    ];
-    return allPredictions.sort((a, b) => b.probability - a.probability);
-  }, [presence.collaborators, presence.signals, presence.feed, coordination.vitality]);
+  const [predictions, setPredictions] = useState<any[]>([]);
+  const [riskInsightsData, setRiskInsightsData] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchRealData() {
+      if (!workspace?.id) return;
+      const overload = await predictOverload(workspace.id, presence.collaborators, presence.signals, presence.feed);
+      const risks = await analyzeExecutionRisks(workspace.id, presence.collaborators, presence.signals, presence.feed, coordination.vitality, coordination.bottlenecks);
+      setPredictions(overload);
+      setRiskInsightsData(risks);
+    }
+    fetchRealData();
+  }, [workspace?.id, presence.collaborators]);
 
   const allInsights = useMemo(
     () => [...insights, ...riskInsights].sort((a, b) => {
       const order = { critical: 0, warning: 1, notice: 2, info: 3 };
       return (order[a.severity] ?? 4) - (order[b.severity] ?? 4);
     }),
-    [insights, riskInsights],
+    [insights, riskInsightsData],
   );
 
   const missionFocus = getMissionFocus(view);
@@ -331,3 +332,5 @@ export default function MissionControlPage() {
     </DensityProvider>
   );
 }
+
+

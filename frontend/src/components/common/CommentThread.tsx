@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, MoreHorizontal, Trash2, Edit2, MessageSquare, Paperclip } from 'lucide-react';
 import { collaborationService, UniversalComment, Mention } from '../../services/collaborationService';
-import { FilePanel } from './FilePanel';
+import { EntityAttachments } from '../files/EntityAttachments';
 import { MentionSelector } from './MentionSelector';
 import { Profile } from '../../types';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -242,11 +242,11 @@ export function CommentThread({ entityType, entityId, profiles, currentUserId, r
                 </div>
                 {expandedFiles[comment.id] && (
                   <div className="mt-3 p-3 bg-bg border border-[var(--pm-border)] rounded-md">
-                    <FilePanel 
+                    <EntityAttachments 
+                      workspaceId={workspace.id}
                       entityType="comment"
                       entityId={comment.id}
-                      currentUserId={currentUserId}
-                      canEdit={comment.author_id === currentUserId}
+                      readOnly={comment.author_id !== currentUserId}
                     />
                   </div>
                 )}

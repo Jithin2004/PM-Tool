@@ -1,6 +1,7 @@
-import { Task, Notification, Profile } from '../../types';
-import { evaluateNotification, NotificationPriority } from '../../services/NotificationIntelligence';
+import { Task, Profile } from '../../types';
 import { generateWaitingStates } from '../waiting/WaitingStateEngine';
+
+export type NotificationPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 export interface WorkInboxItem {
   id: string;
@@ -19,7 +20,7 @@ export interface WorkInboxInputs {
   tasks: Task[];
   projects: any[];
   approvals: any[];
-  notifications: Notification[];
+  notifications: any[]; // Expecting notification_events
   workspaceSettingsBlob: any;
   profiles: Profile[];
 }
@@ -98,24 +99,28 @@ export function generateWorkInbox(inputs: WorkInboxInputs): WorkInboxItem[] {
     }
   });
 
-  // 4. Notifications & Mentions
-  const unreadNotifications = notifications.filter(n => n.user_id === userId && !n.read_at);
+  // 4. Notifications & Mentions (from notification_events)
+  const unreadNotifications = notifications.filter(n => n.recipient_id === userId && !n.read_at);
   unreadNotifications.forEach(n => {
-    // Determine if it's actionable via intelligence engine
-    const intel = evaluateNotification(n.category || 'system', n.title, n.body);
-    const isMention = n.title.toLowerCase().includes('mention') || n.body?.toLowerCase().includes('mention');
+    const isMention = n.category === 'system' && n.title.toLowerCase().includes('mention');
     
+    // Map db priority to inbox priority
+    let pri: NotificationPriority = 'MEDIUM';
+    if (n.priority === 'critical') pri = 'CRITICAL';
+    else if (n.priority === 'high') pri = 'HIGH';
+    else if (n.priority === 'low') pri = 'LOW';
+
     // Rule: If user must act, show it. If info only, hide it.
-    if (isMention || intel.shouldSend || intel.priority === 'CRITICAL' || intel.priority === 'HIGH') {
+    if (isMention || pri === 'CRITICAL' || pri === 'HIGH') {
       items.push({
         id: `notif_${n.id}`,
         type: isMention ? 'mention' : 'notification' as any,
-        title: intel.modifiedTitle || n.title,
-        description: n.body,
+        title: n.title,
+        description: n.message || n.body,
         actionRequired: true,
-        actionRoute: (n as any).action_url || (n as any).route_path || (n.metadata as any)?.route_path || `/execution/board`,
+        actionRoute: n.action_url || `/execution/board`,
         timestamp: n.created_at,
-        priority: isMention ? 'HIGH' : intel.priority,
+        priority: isMention ? 'HIGH' : pri,
         metadata: { notificationId: n.id }
       });
     }

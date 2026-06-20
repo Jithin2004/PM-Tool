@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 
 export interface UniversalSearchResult {
   id: string;
-  type: 'project' | 'task' | 'document' | 'user' | 'comment' | 'decision';
+  type: 'project' | 'task' | 'document' | 'file' | 'user' | 'comment' | 'decision';
   title: string;
   subtitle?: string;
   matchedContext: string;
@@ -35,7 +35,7 @@ export const universalSearchService = {
           url = `/projects/${item.entity_id}/board`;
         } else if (item.entity_type === 'task') {
           url = `/execution?task=${item.entity_id}`;
-        } else if (item.entity_type === 'document') {
+        } else if (item.entity_type === 'document' || item.entity_type === 'file') {
           url = `/workspace?file=${item.entity_id}`;
         } else if (item.entity_type === 'user') {
           url = `/resources/teams?user=${item.entity_id}`;

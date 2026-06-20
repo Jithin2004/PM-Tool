@@ -46,5 +46,5 @@ filesToUpdate.forEach(file => {
 
   fs.writeFileSync(filePath, content, 'utf8');
 });
-console.log('Done refactoring');
+
 

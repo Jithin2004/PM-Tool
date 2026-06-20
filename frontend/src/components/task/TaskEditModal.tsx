@@ -6,7 +6,7 @@ import { hasCapability } from '../../core/auth/permissions';
 import { AssigneePicker } from './AssigneePicker';
 import { TaskPulse } from './TaskPulse';
 import { generateHandoffBrief, HandoffBrief } from '../../core/handoff/HandoffEngine';
-import { FilePanel } from '../common/FilePanel';
+import { EntityAttachments } from '../files/EntityAttachments';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { TaskTimerUI } from './TaskTimerUI';
@@ -14,6 +14,7 @@ import { useOperationalData } from '../../context/OperationalDataContext';
 import { showPrompt } from '../common/Dialogs';
 import { supabase } from '../../lib/supabase';
 import { SubtasksPanel } from './SubtasksPanel';
+import { UnifiedTimeline } from '../collaboration/UnifiedTimeline';
 
 interface TaskEditModalProps {
   isOpen: boolean;
@@ -44,7 +45,7 @@ export function TaskEditModal({
   const [estimateReason, setEstimateReason] = useState('');
   const [assigneeId, setAssigneeId] = useState(task.assignee_id || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'pulse' | 'files'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'pulse' | 'files' | 'discussion'>('details');
 
   // Task Handover states
   const [showTransferOverlay, setShowTransferOverlay] = useState(false);
@@ -313,6 +314,12 @@ export function TaskEditModal({
             className={`pb-2 text-[10px] font-mono tracking-wide uppercase transition-colors ${activeTab === 'pulse' ? 'text-accent-primary border-b-2 border-accent-primary' : 'text-text-quaternary hover:text-text-secondary'}`}
           >
             Pulse
+          </button>
+          <button
+            onClick={() => setActiveTab('discussion')}
+            className={`pb-2 text-[10px] font-mono tracking-wide uppercase transition-colors ${activeTab === 'discussion' ? 'text-accent-primary border-b-2 border-accent-primary' : 'text-text-quaternary hover:text-text-secondary'}`}
+          >
+            Discussion
           </button>
           <button
             onClick={() => setActiveTab('files')}
@@ -706,14 +713,20 @@ export function TaskEditModal({
           />
         )}
 
-        {activeTab === 'files' && (
+        {activeTab === 'files' && workspace && (
           <div className="h-[400px] overflow-y-auto">
-            <FilePanel 
+            <EntityAttachments 
+              workspaceId={workspace.id}
               entityType="task" 
               entityId={task.id} 
-              currentUserId={currentUserProfile?.id} 
-              canEdit={!isDeveloper} 
+              readOnly={isDeveloper && !isPrimaryAssignee} 
             />
+          </div>
+        )}
+
+        {activeTab === 'discussion' && (
+          <div className="h-[400px] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>
+            <UnifiedTimeline entityType="task" entityId={task.id} />
           </div>
         )}
 

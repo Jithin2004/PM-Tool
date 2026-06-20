@@ -1,5 +1,7 @@
 import React from 'react';
 import ExecutionBoard from '../ExecutionBoard';
+import { PremiumEmptyState } from '../ui/PremiumEmptyState';
+import { LayoutGrid } from 'lucide-react';
 
 interface BoardViewProps {
   projects: any[];
@@ -11,6 +13,18 @@ interface BoardViewProps {
 }
 
 const BoardView = React.memo(function BoardView({ projects, profiles, profile, notify, onRecalibrateAnalytics, onPromoteToAsset }: BoardViewProps) {
+  if (!projects || projects.length === 0) {
+    return (
+      <div className="max-w-md mx-auto mt-12">
+        <PremiumEmptyState
+          icon={LayoutGrid}
+          title="No Active Projects"
+          description="Create a project to start managing tasks in the Kanban board."
+        />
+      </div>
+    );
+  }
+
   return (
     <ExecutionBoard
       projects={projects}

@@ -1,5 +1,6 @@
 import { trackSupabaseOperation } from '../core/observability/telemetry';
 import { supabase } from '../lib/supabase';
+import { activityEventService } from './activityEventService';
 import type { PostgrestError } from '@supabase/supabase-js';
 
 export interface CompanyBillingProfile {
@@ -301,6 +302,38 @@ export async function generateInvoice(workspaceId: string, invoice: Partial<Invo
     }
   }
 
+  try {
+    await activityEventService.recordActivity({
+      workspace_id: workspaceId,
+      actor_id: newInvoice.created_by,
+      entity_type: 'invoice',
+      entity_id: newInvoice.id,
+      action: 'invoice_created',
+      metadata: { invoice_number: invNumber, amount: newInvoice.total_amount, currency: newInvoice.currency }
+    });
+  } catch (e) {
+    console.error('Failed to log invoice created event', e);
+  }
+
+  try {
+    const { financeLedgerService } = await import('./financeLedgerService');
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id || newInvoice.created_by;
+
+    if (userId) {
+      await financeLedgerService.createInvoice({
+        workspaceId,
+        userId,
+        invoiceId: newInvoice.id,
+        subtotal: newInvoice.subtotal || 0,
+        taxAmount: newInvoice.total_tax || 0,
+        description: `${prefix}-${invNumber}`
+      });
+    }
+  } catch (e) {
+    console.error('Failed to post invoice to accounting ledger', e);
+  }
+
   return newInvoice;
 }
 
@@ -327,12 +360,92 @@ export async function logPayment(workspaceId: string, payment: any) {
 export async function recordPayment(payment: Partial<Payment>) {
   const { data, error } = await trackSupabaseOperation('supabase_from_payments', () => supabase.from('payments').insert([payment]).select().single());
   if (error) throw error;
+  
+  try {
+    const { financeLedgerService } = await import('./financeLedgerService');
+    const { data: inv } = await supabase.from('invoices').select('workspace_id, currency, created_by').eq('id', payment.invoice_id).single();
+    
+    if (inv) {
+      // Find a default account. In reality this would be selected in the UI. We mock fetching one or just insert null if RLS allows.
+      const { data: accounts } = await supabase.from('finance_accounts').select('id').eq('workspace_id', inv.workspace_id).limit(1);
+      const accountId = accounts?.[0]?.id || null;
+
+      if (accountId) {
+        await financeLedgerService.recordIncome(
+          inv.workspace_id,
+          accountId,
+          payment.amount || 0,
+          inv.currency || 'USD',
+          'invoice',
+          payment.invoice_id as string,
+          inv.created_by
+        );
+      }
+    }
+  } catch (e) {
+    console.error("Failed to sync payment to ledger", e);
+  }
+
+  try {
+    const { data: inv } = await supabase.from('invoices').select('workspace_id, created_by').eq('id', payment.invoice_id).single();
+    if (inv) {
+      await activityEventService.recordActivity({
+        workspace_id: inv.workspace_id,
+        actor_id: inv.created_by,
+        entity_type: 'payment',
+        entity_id: data.id,
+        action: 'invoice_paid',
+        metadata: { amount: payment.amount, invoice_id: payment.invoice_id }
+      });
+    }
+  } catch (e) {
+    console.error('Failed to log payment event', e);
+  }
+
   return data;
 }
 
 export async function createExpense(workspaceId: string, expense: Partial<Expense>) {
   const { data, error } = await trackSupabaseOperation('supabase_from_expenses', () => supabase.from('expenses').insert([{ ...expense, workspace_id: workspaceId }]).select().single());
   if (error) throw error;
+
+  try {
+    const { financeLedgerService } = await import('./financeLedgerService');
+    const { data: accounts } = await supabase.from('finance_accounts').select('id').eq('workspace_id', workspaceId).limit(1);
+    const accountId = accounts?.[0]?.id || null;
+    
+    // We assume the caller's ID is available via auth or we pass it. For now, default to a system call or fetch from auth.
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+
+    if (accountId && userId) {
+      await financeLedgerService.recordExpense(
+        workspaceId,
+        accountId,
+        expense.amount || 0,
+        expense.currency || 'USD', // Mock currency
+        'expense',
+        data.id,
+        expense.created_by as string
+      );
+    }
+  } catch (e) {
+    console.error("Failed to sync expense to ledger", e);
+  }
+
+  try {
+    await activityEventService.recordActivity({
+      workspace_id: workspaceId,
+      actor_id: expense.created_by as string,
+      entity_type: 'expense',
+      entity_id: data.id,
+      action: 'expense_created',
+      metadata: { amount: expense.amount, currency: expense.currency }
+    });
+  } catch (e) {
+    console.error('Failed to log expense created event', e);
+  }
+
   return data;
 }
 

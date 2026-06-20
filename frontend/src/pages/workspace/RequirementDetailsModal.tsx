@@ -5,7 +5,7 @@ import { useDashboard } from '../../context/DashboardContext';
 import { Icon } from '../../components/ui/Icon';
 import { activityLogService } from '../../services/activityLogService';
 import { TaskCreateModal } from '../../components/task/TaskCreateModal';
-import { sendNotification } from '../../services/notificationService';
+import { activityEventService } from '../../services/activityEventService';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
@@ -42,14 +42,19 @@ export function RequirementDetailsModal({ requirement, onClose, onUpdate }: { re
       });
       
       // Notify about requirement status change
-      await sendNotification(
-        workspace!.id,
-        'system',
-        `Requirement ${newStatus}: ${requirement.title}`,
-        `The requirement has been moved to ${newStatus}.`,
-        undefined, // Notify workspace/PMs generally
-        { type: 'requirement_status', entity_id: requirement.id }
-      );
+      await activityEventService.recordActivity({
+        workspace_id: workspace!.id,
+        actor_id: 'system',
+        entity_type: 'system',
+        entity_id: 'global',
+        action_type: 'notification_event',
+        metadata: {
+          title: `Requirement ${newStatus}: ${requirement.title}`,
+          message: `The requirement has been moved to ${newStatus}.`,
+          type: 'requirement_status',
+          entity_id: requirement.id
+        }
+      });
       
       setStatus(newStatus);
       notify(`Status updated to ${newStatus}`, "success");

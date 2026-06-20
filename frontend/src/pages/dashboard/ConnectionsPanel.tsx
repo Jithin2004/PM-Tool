@@ -3,7 +3,7 @@ import {
   fetchConnectedAccounts, fetchIntegrationHealth, updateIntegrationHealth,
   disconnectService,
   ConnectedAccount, IntegrationHealth,
-} from '../../services/integrationService';
+} from '../../core/engines/integrationEngine';
 import { Network, Link2, Unplug, AlertTriangle, ShieldCheck, Activity } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -180,3 +180,4 @@ export default function ConnectionsPanel() {
     </div>
   );
 }
+

@@ -98,6 +98,36 @@ export const TaskCard = React.memo(function TaskCard({
 
   const isBlocked = task.status === 'blocked' || activeBlocker;
 
+  const [breadcrumb, setBreadcrumb] = useState<{epic?: string, story?: string, module?: string}>({});
+  
+  useEffect(() => {
+    let mounted = true;
+    async function loadIdentity() {
+      if (!task.epic_id && !task.story_id && !task.module_id) return;
+      
+      const identity: {epic?: string, story?: string, module?: string} = {};
+      
+      if (task.epic_id) {
+        const { data } = await import('../../lib/supabase').then(m => m.supabase.from('epics').select('name').eq('id', task.epic_id).single());
+        if (data) identity.epic = data.name;
+      }
+      
+      if (task.story_id) {
+        const { data } = await import('../../lib/supabase').then(m => m.supabase.from('stories').select('title').eq('id', task.story_id).single());
+        if (data) identity.story = data.title;
+      }
+
+      if (task.module_id) {
+        const { data } = await import('../../lib/supabase').then(m => m.supabase.from('project_modules').select('name').eq('id', task.module_id).single());
+        if (data) identity.module = data.name;
+      }
+      
+      if (mounted) setBreadcrumb(identity);
+    }
+    loadIdentity();
+    return () => { mounted = false; };
+  }, [task.epic_id, task.story_id, task.module_id]);
+
   return (
     <motion.div
       onClick={() => onClick(task)}
@@ -136,15 +166,32 @@ export const TaskCard = React.memo(function TaskCard({
         {/* Top metadata */}
         {!isCompact && (
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-1.5 overflow-hidden">
-              <span className="text-[10px] font-mono text-[var(--text-secondary)] truncate uppercase tracking-widest">
-                {project?.name || 'No Project'}
+            <div className="flex flex-wrap items-center gap-1.5 overflow-hidden">
+              <span className="text-[10px] font-mono font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded truncate uppercase tracking-widest">
+                {task.uid || task.id.substring(0, 8)}
               </span>
-              {task.epic_id && (
+              
+              {breadcrumb.epic && (
                 <>
-                  <span className="text-[var(--text-secondary)]">/</span>
-                  <span className="text-[9px] font-bold text-purple-400 truncate uppercase tracking-widest font-mono">
-                    Epic
+                  <span className="text-[var(--text-secondary)] text-[10px]">|</span>
+                  <span className="text-[10px] font-medium text-[var(--text-secondary)] truncate">
+                    {breadcrumb.epic}
+                  </span>
+                </>
+              )}
+              {breadcrumb.story && (
+                <>
+                  <span className="text-[var(--text-secondary)] text-[10px]">&gt;</span>
+                  <span className="text-[10px] font-medium text-[var(--text-secondary)] truncate">
+                    {breadcrumb.story}
+                  </span>
+                </>
+              )}
+              {breadcrumb.module && (
+                <>
+                  <span className="text-[var(--text-secondary)] text-[10px]">M:</span>
+                  <span className="text-[10px] font-medium text-indigo-400 truncate">
+                    {breadcrumb.module}
                   </span>
                 </>
               )}
