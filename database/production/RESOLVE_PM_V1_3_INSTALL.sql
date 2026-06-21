@@ -549,6 +549,34 @@ CREATE TABLE IF NOT EXISTS workspace_settings (
   updated_at            timestamptz DEFAULT now()
 );
 
+-- ==========================================
+-- WORKSPACE FINANCE SETTINGS
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.workspace_finance_settings (
+    workspace_id UUID PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    base_currency TEXT NOT NULL DEFAULT 'INR',
+    fiscal_year_start_month TEXT NOT NULL DEFAULT 'April',
+    primary_account_name TEXT NOT NULL,
+    starting_balance NUMERIC NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.workspace_finance_settings ENABLE ROW LEVEL SECURITY;
+
+-- 1. Drop existing policies
+DROP POLICY IF EXISTS "Users can view their workspace finance settings" ON public.workspace_finance_settings;
+DROP POLICY IF EXISTS "Admins can update workspace finance settings" ON public.workspace_finance_settings;
+
+-- 2. Create the fresh policies
+CREATE POLICY "Users can view their workspace finance settings" 
+ON public.workspace_finance_settings FOR SELECT 
+USING (workspace_id = (SELECT workspace_id FROM public.users WHERE id = auth.uid()));
+
+CREATE POLICY "Admins can update workspace finance settings" 
+ON public.workspace_finance_settings FOR ALL 
+USING (workspace_id = (SELECT workspace_id FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'super_admin')));
+
 
 -- 19. system_audit_ledger
 --    Append-only cryptographic audit chain.

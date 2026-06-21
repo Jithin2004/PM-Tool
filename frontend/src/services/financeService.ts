@@ -16,6 +16,16 @@ export interface CompanyBillingProfile {
   invoice_prefix: string;
 }
 
+export interface WorkspaceFinanceSettings {
+  workspace_id: string;
+  base_currency: string;
+  fiscal_year_start_month: string;
+  primary_account_name: string;
+  starting_balance: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Client {
   id: string;
   workspace_id: string;
@@ -199,7 +209,7 @@ export interface CreditNote {
 }
 
 export async function fetchFinanceData(workspaceId: string) {
-  const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments, billingMilestones, clientCredits, advanceApplications, creditNotes, employmentRecords] = await Promise.all([
+  const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments, billingMilestones, clientCredits, advanceApplications, creditNotes, employmentRecords, financeSettings] = await Promise.all([
     supabase.from('company_billing_profile').select('*').limit(50).eq('workspace_id', workspaceId).maybeSingle(),
     supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null),
     supabase.from('invoices').select('*, invoice_line_items(*)').eq('workspace_id', workspaceId).is('deleted_at', null),
@@ -213,7 +223,8 @@ export async function fetchFinanceData(workspaceId: string) {
     supabase.from('client_credits').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('advance_applications').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('credit_notes').select('*').limit(50).eq('workspace_id', workspaceId),
-    supabase.from('employment_records').select('user_id, employment_status').eq('workspace_id', workspaceId)
+    supabase.from('employment_records').select('user_id, employment_status').eq('workspace_id', workspaceId),
+    supabase.from('workspace_finance_settings').select('*').eq('workspace_id', workspaceId).maybeSingle()
   ]);
 
   if (companyProfile.error && companyProfile.error.code !== 'PGRST116') throw companyProfile.error;
@@ -231,8 +242,14 @@ export async function fetchFinanceData(workspaceId: string) {
   if (advanceApplications.error && advanceApplications.error.code !== '42P01') throw advanceApplications.error;
   if (creditNotes.error && creditNotes.error.code !== '42P01') throw creditNotes.error;
   if (employmentRecords.error && employmentRecords.error.code !== '42P01') throw employmentRecords.error;
+  
+  // The 'workspace_finance_settings' error check is handled carefully, since it might not exist yet
+  if (financeSettings && financeSettings.error && financeSettings.error.code !== 'PGRST116' && financeSettings.error.code !== '42P01') {
+    throw financeSettings.error;
+  }
 
   return {
+    workspaceFinanceSettings: financeSettings?.data as WorkspaceFinanceSettings | null,
     companyProfile: companyProfile.data as CompanyBillingProfile | null,
     clients: clients.data as Client[],
     invoices: invoices.data as Invoice[],
@@ -249,6 +266,17 @@ export async function fetchFinanceData(workspaceId: string) {
     employmentRecords: (employmentRecords.data || []) as { user_id: string; employment_status: string }[],
   };
 }
+
+export const initializeWorkspaceFinanceSettings = async (workspaceId: string, settings: Partial<WorkspaceFinanceSettings>): Promise<WorkspaceFinanceSettings> => {
+  const { data, error } = await trackSupabaseOperation('supabase_upsert_workspace_finance_settings', () => 
+    supabase.from('workspace_finance_settings').upsert({
+      workspace_id: workspaceId,
+      ...settings
+    }, { onConflict: 'workspace_id' }).select().single()
+  );
+  if (error) throw error;
+  return data as WorkspaceFinanceSettings;
+};
 
 export const createClient = async (workspaceId: string, client: Partial<Client>): Promise<Client> => {
   const { data, error } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').insert([{ ...client, workspace_id: workspaceId }]).select().single());

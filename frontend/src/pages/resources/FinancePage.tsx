@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { 
   fetchFinanceData, closeFinancialPeriod, createFinancialAdjustment, deleteInvoice, cancelInvoice,
-  Client, Invoice, Payment, Expense, FinancialPeriod, FinancialSnapshot, FinancialAdjustment, CompanyBillingProfile, fetchClients
+  Client, Invoice, Payment, Expense, FinancialPeriod, FinancialSnapshot, FinancialAdjustment, CompanyBillingProfile, fetchClients, WorkspaceFinanceSettings
 } from '../../services/financeService';
 import { Plus, Landmark, Receipt, CreditCard, TrendingUp, TrendingDown, 
   Wallet, Building2, ChevronLeft, ChevronRight, Lock, 
@@ -53,6 +53,7 @@ export default function FinancePage() {
     snapshots: FinancialSnapshot[];
     adjustments: FinancialAdjustment[];
     companyProfile: CompanyBillingProfile;
+    workspaceFinanceSettings?: WorkspaceFinanceSettings | null;
   } | null>(null);
 
   const [clients, setClients] = useState<Client[]>([]);
@@ -261,7 +262,7 @@ export default function FinancePage() {
   };
 
   const isFinanceEmpty = data.invoices.length === 0 && data.expenses.length === 0 && data.payments.length === 0 && data.salaries.length === 0 && clients.length === 0;
-  const isInitialized = workspace ? localStorage.getItem(`finance_init_${workspace.id}`) === 'true' : false;
+  const isInitialized = !!data.workspaceFinanceSettings;
 
   if (isFinanceEmpty) {
     if (!isInitialized) {

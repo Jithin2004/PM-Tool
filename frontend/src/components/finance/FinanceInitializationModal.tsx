@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Landmark } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { initializeWorkspaceFinanceSettings } from '../../services/financeService';
 
 interface FinanceInitializationModalProps {
   isOpen: boolean;
@@ -26,14 +27,12 @@ export function FinanceInitializationModal({ isOpen, onClose, onSuccess }: Finan
     
     setLoading(true);
     try {
-      // Placeholder service call to save baseline financial data
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // We would normally dispatch this to a finance service 
-      // e.g. await initializeFinanceAccounts(workspace.id, formData);
-      
-      // Update local storage or trigger a refetch to unlock the dashboard
-      localStorage.setItem(`finance_init_${workspace.id}`, 'true');
+      await initializeWorkspaceFinanceSettings(workspace.id, {
+        base_currency: formData.baseCurrency,
+        fiscal_year_start_month: formData.fiscalYearStart,
+        primary_account_name: formData.accountName,
+        starting_balance: formData.startingBalance
+      });
       
       onSuccess();
       onClose();
