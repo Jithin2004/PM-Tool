@@ -52,16 +52,8 @@ export default function FinanceCommandCenter() {
   if (loading) return <div className="p-8 text-center animate-pulse">Loading intelligence...</div>;
 
   return (
-    <div className="space-y-8 pb-16 font-geist p-6 bg-surface">
-      <div className="flex items-end justify-between px-1 pt-2 border-b border-border pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary flex items-center gap-2">
-            <DollarSign className="w-6 h-6 text-emerald-400" /> Finance Command Center
-          </h1>
-          <p className="text-sm mt-1 text-text-secondary">
-            Global operational finance, runway calculation, and payroll forecasting.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-end">
         <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2">
           <span className={`w-2 h-2 rounded-full ${(riskData?.risks?.length || 0) > 0 ? 'bg-amber-500 animate-pulse' : 'bg-signal-safe animate-pulse'}`} />
           <span className="font-mono-pm text-xs uppercase tracking-widest text-text-secondary">

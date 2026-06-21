@@ -18,6 +18,7 @@ app.get('/health', (req, res) => {
 
 // ── Public Licensing Endpoints ──
 app.post('/verify', licenseController.verifyLicense);
+app.get('/verify', licenseController.verifyLicenseToken);
 
 app.post('/activate', licenseController.activateLicense);
 app.get('/addLicense', licenseController.addLicense);

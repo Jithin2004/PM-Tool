@@ -21,6 +21,7 @@ import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 import { deliverableService, Milestone } from '../../services/deliverableService';
 import { profitabilityService, ProjectProfitability } from '../../services/profitabilityService';
 import { Icon } from '../../components/ui/Icon';
+import FinanceCommandCenter from './FinanceCommandCenter';
 
 export default function FinancePage() {
   const { workspace } = useWorkspace();
@@ -433,7 +434,32 @@ export default function FinancePage() {
         </div>
       )}
 
-      {/* Period Selector */}
+      {/* Tabs */}
+      <div className="flex items-center gap-6 border-b border-[var(--border-soft)] mb-6 px-1">
+        {[
+          { id: 'reports', label: 'Ledgers & Reports' },
+          { id: 'invoices', label: 'Invoices & Receivables' },
+          { id: 'budgets', label: 'Expenses' },
+          { id: 'forecast', label: 'Forecast & Intelligence' }
+        ].map(tab => (
+          <button 
+            key={tab.id}
+            onClick={() => {
+              setActiveTab(tab.id);
+              window.history.pushState(null, '', `?tab=${tab.id}`);
+            }}
+            className={`pb-3 text-sm font-semibold uppercase tracking-wider transition-all relative ${activeTab === tab.id ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-[var(--text-secondary)] hover:text-white'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'forecast' ? (
+        <FinanceCommandCenter />
+      ) : (
+        <>
+          {/* Period Selector */}
       <div className="flex items-center justify-between p-4 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-glass)] backdrop-blur-md">
         <div className="flex items-center gap-4">
           <button onClick={prevMonth} className="p-1 hover:bg-[var(--surface-hover)] rounded-full transition-colors"><ChevronLeft className="w-5 h-5" /></button>
@@ -828,6 +854,8 @@ export default function FinancePage() {
         )}
 
       </div>
+        </>
+      )}
  
       {/* Adjustment Modal */}
       {showAdjustmentModal && (

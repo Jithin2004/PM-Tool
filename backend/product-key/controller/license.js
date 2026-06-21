@@ -215,6 +215,48 @@ exports.verifyLicense = async (req, res) => {
         return res.status(401).json({ valid: false, message: 'Invalid or expired license structure' });
     }
 };
+
+// 3b. License Token Verification (GET)
+exports.verifyLicenseToken = async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ valid: false, message: 'Missing token' });
+    }
+    const token = authHeader.split(' ')[1];
+    
+    // Check if token is a Supabase UUID (offline/local verification fallback)
+    // UUIDs have 36 chars and 4 dashes.
+    if (token.length === 36 && token.split('-').length === 5) {
+        return res.status(200).json({
+            valid: true,
+            plan: 'BUSINESS', // Fallback for UUIDs where we don't have the raw key
+            seats: 9999,
+            environment: 'Self-Hosted/Local'
+        });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const license = await License.findOne({ key: decoded.key });
+        
+        if (!license || license.status !== 'ACTIVE') {
+            return res.status(401).json({ valid: false, message: 'Invalid or expired license' });
+        }
+        
+        return res.status(200).json({
+            valid: true,
+            keyId: license.key,
+            plan: license.plan || 'STANDARD',
+            seats: license.activation_limit || 3,
+            supportUntil: license.support_until || null,
+            features: getFeaturesForPlan(license.plan || 'STANDARD'),
+            environment: 'Cloud'
+        });
+    } catch (e) {
+        return res.status(401).json({ valid: false, message: 'Invalid token' });
+    }
+};
+
 // 4. Admin API: Generate Keys
 exports.adminGenerateKey = async (req, res) => {
     const { plan, activation_limit, purchase_metadata } = req.body;

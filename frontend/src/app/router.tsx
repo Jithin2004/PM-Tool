@@ -59,7 +59,7 @@ import { SecurityPage } from '../landing/SecurityPage';
 import { DailyCommandCenter } from '../components/overview/DailyCommandCenter';
 
 const AdminPanel = withRetry(() => import('../pages/dashboard/AdminPanel').then(m => ({ default: m.AdminPanel })));
-const LogisticsPanel = withRetry(() => import('../pages/dashboard/LogisticsPanel').then(m => ({ default: m.LogisticsPanel })));
+const PeopleOpsCenter = withRetry(() => import('../pages/resources/PeopleOpsCenter'));
 const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
 const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage'));
 const KnowledgePage = withRetry(() => import('../pages/workspace/KnowledgePage'));
@@ -70,13 +70,13 @@ const DocumentsCenter = withRetry(() => import('../pages/workspace/DocumentsCent
 const ApprovalsPage = withRetry(() => import('../pages/workspace/ApprovalsPage'));
 const AutomationCenter = withRetry(() => import('../pages/workspace/AutomationCenter'));
 const FileCenterPage = withRetry(() => import('../pages/workspace/FileCenter'));
-import { EmployeeStartCenter } from '../components/onboarding/EmployeeStartCenter';
+
 
 
 const ProductAdoptionDashboard = withRetry(() => import('../pages/workspace/ProductAdoptionDashboard').then(m => ({ default: m.ProductAdoptionDashboard })));
 const ReportsCenter = withRetry(() => import('../pages/workspace/ReportsCenter'));
 
-const BoardPage = withRetry(() => import('../pages/execution/BoardPage'));
+const ExecutionBoardPage = withRetry(() => import('../pages/execution/ExecutionBoardPage'));
 const TimelinePage = withRetry(() => import('../pages/execution/TimelinePage'));
 const GanttPage = withRetry(() => import('../pages/execution/GanttPage'));
 const SprintPage = withRetry(() => import('../pages/execution/SprintPage'));
@@ -85,8 +85,8 @@ const TeamsPage = withRetry(() => import('../pages/resources/TeamsPage'));
 const CapacityPage = withRetry(() => import('../pages/resources/CapacityPage'));
 const WorkLogsPage = withRetry(() => import('../pages/resources/WorkLogsPage'));
 const FinancePage = withRetry(() => import('../pages/resources/FinancePage'));
-const EmployeeDashboard = withRetry(() => import('../pages/resources/EmployeeDashboard'));
-const FinanceCommandCenter = withRetry(() => import('../pages/resources/FinanceCommandCenter'));
+
+
 const NotificationInbox = withRetry(() => import('../pages/workspace/NotificationInbox'));
 
 const AnalyticsPage = withRetry(() => import('../pages/control/AnalyticsPage'));
@@ -105,7 +105,7 @@ const IntegrationCenter = withRetry(() => import('../pages/workspace/Integration
 
 const ExecutionSetupPage = withRetry(() => import('../pages/setup/ExecutionSetupPage'));
 const BacklogView = withRetry(() => import('../pages/dashboard/project/BacklogView').then(m => ({ default: m.BacklogView })));
-const ProjectBoardPage = withRetry(() => import('../pages/board/ProjectBoardPage'));
+
 const SprintView = withRetry(() => import('../pages/dashboard/project/SprintView').then(m => ({ default: m.SprintView })));
 const ProjectTimelinePage = withRetry(() => import('../pages/timeline/ProjectTimelinePage'));
 const SharedProjectDashboard = withRetry(() => import('../pages/shared/SharedProjectDashboard').then(m => ({ default: m.SharedProjectDashboard })));
@@ -453,11 +453,9 @@ export function ResolveRouter() {
       return <RouteShell><ModuleErrorBoundary module="ReportsCenter"><ReportsCenter /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/workspace/employee') {
-      return <RouteShell><ModuleErrorBoundary module="EmployeeDashboard"><EmployeeDashboard /></ModuleErrorBoundary></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="PeopleOpsCenter"><PeopleOpsCenter /></ModuleErrorBoundary></RouteShell>;
     }
-    if (pathname === '/workspace/finance/command-center') {
-      return <RouteShell><ModuleErrorBoundary module="FinanceCommandCenter"><FinanceCommandCenter /></ModuleErrorBoundary></RouteShell>;
-    }
+
     if (pathname === '/workspace/notifications') {
       return <RouteShell><NotificationInbox /></RouteShell>;
     }
@@ -489,7 +487,7 @@ export function ResolveRouter() {
     }
     if (pathname === '/workspace/onboarding') {
       if (!guardRoute(role, '/workspace/onboarding')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><EmployeeStartCenter /></RouteShell>;
+      return <RouteShell><PeopleOpsCenter /></RouteShell>;
     }
     if (pathname === '/workspace/automation') {
       if (!guardRoute(role, '/workspace/automation')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -508,7 +506,7 @@ export function ResolveRouter() {
 
     if (pathname === '/execution' || pathname === '/execution/board') {
       if (!guardRoute(role, '/execution')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><BoardPage /></RouteShell>;
+      return <RouteShell><ExecutionBoardPage /></RouteShell>;
     }
     if (pathname === '/execution/timeline') {
       if (!guardRoute(role, '/execution/timeline')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -527,7 +525,7 @@ export function ResolveRouter() {
 
     if (pathname === '/resources' || pathname === '/resources/attendance' || pathname === '/resources/payroll') {
       if (!guardRoute(role, '/resources')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><LogisticsPanel /></RouteShell>;
+      return <RouteShell><PeopleOpsCenter /></RouteShell>;
     }
     if (pathname === '/resources/teams' || pathname === '/resources/capacity' || pathname === '/resources/teams/departments' || pathname === '/resources/teams/skills') {
       if (!guardRoute(role, '/resources/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -602,7 +600,7 @@ export function ResolveRouter() {
         return <RouteShell><BacklogView /></RouteShell>;
       }
       if (subRoute === 'board') {
-        return <RouteShell><ProjectBoardPage /></RouteShell>;
+        return <RouteShell><ExecutionBoardPage /></RouteShell>;
       }
       if (subRoute === 'sprints') {
         return <RouteShell><SprintView /></RouteShell>;
