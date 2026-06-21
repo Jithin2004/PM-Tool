@@ -16,6 +16,7 @@ import { StorageSettingsPanel } from '../../components/admin/StorageSettingsPane
 import { RolesPermissionsPanel } from '../../components/admin/RolesPermissionsPanel';
 import { BillingSettings } from '../../components/control/BillingSettings';
 import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
+import { showConfirm, showPrompt } from '../../components/common/Dialogs';
 type TopTab = 'company' | 'people' | 'workspace' | 'system';
 
 function getInitials(name: string) {
@@ -63,7 +64,6 @@ export function AdminPanel() {
     notify,
     invalidateAll,
   } = useDashboard();
-  const { showConfirm, showPrompt } = require('../../components/common/Dialogs');
 
   const [activeTopTab, setActiveTopTab] = useState<TopTab>(() => {
     const params = new URLSearchParams(window.location.search);
