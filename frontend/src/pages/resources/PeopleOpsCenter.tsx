@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { attendanceEngine } from '../../core/engines/attendanceEngine';
 import { leaveBalanceService } from '../../services/leaveBalanceService';
 import { LogisticsDashboard } from '../../components/admin/LogisticsDashboard';
+import { WorkLogsPanel } from '../../components/resources/WorkLogsPanel';
 import { showAlert } from '../../components/common/Dialogs';
 import { 
   User, 
@@ -37,7 +38,7 @@ export default function PeopleOpsCenter() {
   const isAdmin = hasCapability(profile?.role, 'manage_logistics');
   
   // Start with 'admin' if route indicates logistics/attendance/payroll, else 'journey'
-  const [activeTab, setActiveTab] = useState<'journey' | 'admin'>(() => {
+  const [activeTab, setActiveTab] = useState<'journey' | 'admin' | 'timesheets'>(() => {
     const path = window.location.pathname;
     if (isAdmin && (path.includes('resources') && !path.includes('employee'))) {
       return 'admin';
@@ -219,6 +220,12 @@ export default function PeopleOpsCenter() {
             >
               HR Admin
             </button>
+            <button 
+              onClick={() => setActiveTab('timesheets')}
+              className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${activeTab === 'timesheets' ? 'bg-indigo-500 text-white' : 'text-[var(--text-secondary)] hover:text-white'}`}
+            >
+              Timesheets
+            </button>
           </div>
         )}
       </div>
@@ -236,6 +243,10 @@ export default function PeopleOpsCenter() {
             role={profile?.role}
             defaultTab={window.location.pathname.includes('attendance') ? 'attendance' : window.location.pathname.includes('payroll') ? 'payroll' : 'members'}
           />
+        </div>
+      ) : activeTab === 'timesheets' ? (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <WorkLogsPanel />
         </div>
       ) : (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">

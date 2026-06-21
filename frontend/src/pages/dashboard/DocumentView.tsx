@@ -132,7 +132,7 @@ export default function DocumentView() {
 
   if (!doc) return (
     <div className="p-6">
-      <button onClick={handleBack} className="text-[10px] font-medium text-signal-info hover:text-blue-300 mb-4">&larr; Back to Knowledge Hub</button>
+      <button onClick={handleBack} className="text-[10px] font-medium text-signal-info hover:text-blue-300 mb-4">&larr; Back to Knowledge Base</button>
       <div className="border border-border bg-surface-3 p-12 text-center">
         <span className="text-[11px] font-mono text-text-quaternary">Document not found</span>
       </div>
@@ -143,7 +143,7 @@ export default function DocumentView() {
     <div className="p-6 max-w-4xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={handleBack} className="text-[10px] font-medium text-signal-info hover:text-blue-300">&larr; Knowledge Hub</button>
+        <button onClick={handleBack} className="text-[10px] font-medium text-signal-info hover:text-blue-300">&larr; Knowledge Base</button>
         <span className="text-text-quaternary">/</span>
         <span className="text-[10px] font-mono text-text-tertiary truncate">{doc.title}</span>
       </div>

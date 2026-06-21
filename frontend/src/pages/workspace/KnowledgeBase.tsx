@@ -22,7 +22,7 @@ function timeAgo(dateStr?: string): string {
   return `${days}d ago`;
 }
 
-export default function KnowledgeHubPanel() {
+export default function KnowledgeBase() {
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
   const wsId = workspace?.id || '';
@@ -111,7 +111,7 @@ export default function KnowledgeHubPanel() {
             <div className="w-10 h-10 rounded-xl bg-accent-primary/20 flex items-center justify-center border border-accent-primary/30">
               <BookOpen className="w-5 h-5 text-accent-primary" />
             </div>
-            <h2 className="text-3xl font-semibold tracking-tight text-text-primary">Knowledge Hub</h2>
+            <h2 className="text-3xl font-semibold tracking-tight text-text-primary">Knowledge Base</h2>
           </div>
           <p className="text-sm font-medium text-text-tertiary">
             Centralized intelligence, markdown documentation, and architectural blueprints.

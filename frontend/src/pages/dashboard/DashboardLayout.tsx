@@ -100,7 +100,8 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Company Health', path: '/overview', capability: 'view_projects' },
       { label: 'Daily Command', path: '/overview/executive', capability: 'view_analytics' },
-      { label: 'Activity Feed', path: '/overview/activity', capability: 'view_reports' }
+      { label: 'Activity Feed', path: '/overview/activity', capability: 'view_reports' },
+      { label: 'Workspace Reports', path: '/workspace/reports', capability: 'view_reports' }
     ]
   },
   {
@@ -120,7 +121,8 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Task Board', path: '/execution/board', capability: 'view_tasks' },
       { label: 'Timeline', path: '/execution/gantt', capability: 'view_scheduling' },
-      { label: 'Calendar', path: '/execution/timeline', capability: 'view_tasks' }
+      { label: 'Calendar', path: '/execution/timeline', capability: 'view_tasks' },
+      { label: 'Sprints', path: '/execution/sprints', capability: 'view_tasks' }
     ]
   },
   {
@@ -131,7 +133,8 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
       { label: 'Employees', path: '/resources/teams', capability: 'view_teams' },
       { label: 'Departments', path: '/resources/teams/departments', capability: 'view_teams' },
       { label: 'Team Workload', path: '/resources/capacity', capability: 'view_reports' },
-      { label: 'Skills Matrix', path: '/resources/teams/skills', capability: 'view_teams' }
+      { label: 'Skills Matrix', path: '/resources/teams/skills', capability: 'view_teams' },
+      { label: 'Meetings', path: '/workspace/meetings', capability: 'view_teams' }
     ]
   },
   {
@@ -166,9 +169,9 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     label: 'Documents',
     iconName: 'FileText',
     subsections: [
-      { label: 'Files & Documents', path: '/workspace/documents', capability: 'view_projects' },
-      { label: 'Templates', path: '/control/document-templates', capability: 'manage_settings' },
-      { label: 'Knowledge Hub', path: '/workspace/knowledge', capability: 'view_projects' }
+      { label: 'File Center', path: '/workspace/files', capability: 'view_projects' },
+      { label: 'Knowledge Base', path: '/workspace/knowledge', capability: 'view_projects' },
+      { label: 'Templates', path: '/control/document-templates', capability: 'manage_settings' }
     ]
   },
   {
@@ -177,7 +180,8 @@ const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
     iconName: 'Cpu',
     subsections: [
       { label: 'Workload Recommendations', path: '/workspace/decisions', capability: 'view_decision_center' },
-      { label: 'Automations', path: '/control/automations', capability: 'manage_automations' }
+      { label: 'Automations', path: '/control/automations', capability: 'manage_automations' },
+      { label: 'Workspace Automation', path: '/workspace/automation', capability: 'manage_automations' }
     ]
   },
   {

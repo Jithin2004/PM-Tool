@@ -176,6 +176,9 @@ const FileCenterPage: React.FC = () => {
               <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--pm-on-surface)' }}>
                 File Center
               </h1>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
+                Cloud Storage for Binary Assets (PDFs, Images, Archives)
+              </p>
               {storageUsage && (
                 <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-tertiary)' }}>
                   {filePreviewService.formatSize(storageUsage.used_bytes)} used of {filePreviewService.formatSize(storageUsage.quota_bytes)}
