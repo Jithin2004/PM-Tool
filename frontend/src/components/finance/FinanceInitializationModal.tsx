@@ -9,6 +9,13 @@ interface FinanceInitializationModalProps {
   onSuccess: () => void;
 }
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$',
+  INR: '₹',
+  EUR: '€',
+  GBP: '£'
+};
+
 export function FinanceInitializationModal({ isOpen, onClose, onSuccess }: FinanceInitializationModalProps) {
   const { workspace } = useWorkspace();
   const [loading, setLoading] = useState(false);
@@ -115,7 +122,7 @@ export function FinanceInitializationModal({ isOpen, onClose, onSuccess }: Finan
                 Starting Bank Balance
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] font-mono">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] font-mono">{CURRENCY_SYMBOLS[formData.baseCurrency] || '$'}</span>
                 <input 
                   type="number"
                   required

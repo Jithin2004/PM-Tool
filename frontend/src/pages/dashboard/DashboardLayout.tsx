@@ -43,7 +43,6 @@ import { LiveClock } from '../../components/ui/LiveClock';
 import { StatsGrid, StatCard } from '../../components/dashboard/StatsGrid';
 import { ProjectCard } from '../../components/project/ProjectCard';
 import { TeamMember } from '../../components/team/TeamMember';
-import { AdminDashboard } from '../../components/admin/AdminDashboard';
 import { LogisticsDashboard } from '../../components/admin/LogisticsDashboard';
 import { ProjectDetailsModal } from '../../components/project/ProjectDetailsModal';
 import { ProjectCreationModal } from '../../components/project/ProjectCreationModal';

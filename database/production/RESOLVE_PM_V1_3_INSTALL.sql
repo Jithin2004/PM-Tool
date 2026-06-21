@@ -8975,6 +8975,363 @@ ON invitations FOR DELETE
     EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
   );
 
+-- ==========================================
+-- INTELLIGENCE QUERY ENGINE RPCs
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION get_delivery_health_trend(p_workspace_id UUID)
+RETURNS JSON AS $$
+DECLARE
+  v_recent_blocked INT;
+  v_recent_reopened INT;
+  v_recent_completed INT;
+  v_old_blocked INT;
+  v_old_completed INT;
+BEGIN
+  SELECT COUNT(*) INTO v_recent_completed FROM tasks WHERE workspace_id = p_workspace_id AND status = 'done' AND updated_at >= NOW() - INTERVAL '7 days';
+  SELECT COUNT(*) INTO v_old_completed FROM tasks WHERE workspace_id = p_workspace_id AND status = 'done' AND updated_at >= NOW() - INTERVAL '14 days' AND updated_at < NOW() - INTERVAL '7 days';
+  
+  SELECT COUNT(*) INTO v_recent_blocked FROM system_audit_ledger WHERE workspace_id = p_workspace_id AND action = 'task_status_changed' AND payload->>'to' = 'blocked' AND created_at >= NOW() - INTERVAL '7 days';
+  SELECT COUNT(*) INTO v_old_blocked FROM system_audit_ledger WHERE workspace_id = p_workspace_id AND action = 'task_status_changed' AND payload->>'to' = 'blocked' AND created_at >= NOW() - INTERVAL '14 days' AND created_at < NOW() - INTERVAL '7 days';
+  
+  SELECT COUNT(*) INTO v_recent_reopened FROM system_audit_ledger WHERE workspace_id = p_workspace_id AND action = 'task_reopened' AND created_at >= NOW() - INTERVAL '7 days';
+
+  RETURN json_build_object(
+    'recent_blocked', COALESCE(v_recent_blocked, 0),
+    'recent_reopened', COALESCE(v_recent_reopened, 0),
+    'recent_completed', COALESCE(v_recent_completed, 0),
+    'old_blocked', COALESCE(v_old_blocked, 0),
+    'old_completed', COALESCE(v_old_completed, 0)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_user_workload_baseline(p_workspace_id UUID, p_user_id UUID, p_role TEXT)
+RETURNS JSON AS $$
+DECLARE
+  v_user_tasks INT := 0;
+  v_user_hours NUMERIC := 0;
+  v_role_tasks NUMERIC := 0;
+  v_role_hours NUMERIC := 0;
+  v_ws_tasks NUMERIC := 0;
+  v_ws_hours NUMERIC := 0;
+BEGIN
+  SELECT COUNT(*), COALESCE(SUM(estimated_hours), 0) INTO v_user_tasks, v_user_hours 
+  FROM tasks WHERE workspace_id = p_workspace_id AND assignee_id = p_user_id AND status = 'done' AND updated_at >= NOW() - INTERVAL '30 days';
+
+  SELECT COALESCE(AVG(cnt), 0), COALESCE(AVG(hrs), 0) INTO v_role_tasks, v_role_hours FROM (
+    SELECT assignee_id, COUNT(*) as cnt, SUM(estimated_hours) as hrs 
+    FROM tasks t
+    JOIN users u ON t.assignee_id = u.id
+    WHERE t.workspace_id = p_workspace_id AND t.status = 'done' AND t.updated_at >= NOW() - INTERVAL '30 days' AND u.role = p_role
+    GROUP BY assignee_id
+  ) x;
+
+  SELECT COALESCE(AVG(cnt), 0), COALESCE(AVG(hrs), 0) INTO v_ws_tasks, v_ws_hours FROM (
+    SELECT assignee_id, COUNT(*) as cnt, SUM(estimated_hours) as hrs 
+    FROM tasks t
+    WHERE t.workspace_id = p_workspace_id AND t.status = 'done' AND t.updated_at >= NOW() - INTERVAL '30 days'
+    GROUP BY assignee_id
+  ) x;
+
+  RETURN json_build_object(
+    'user_history', json_build_object('tasks_completed', v_user_tasks, 'hours_completed', v_user_hours),
+    'role_history', json_build_object('avg_tasks_completed', v_role_tasks, 'avg_hours_completed', v_role_hours),
+    'workspace_history', json_build_object('avg_tasks_completed', v_ws_tasks, 'avg_hours_completed', v_ws_hours)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_estimate_history_lookup(p_workspace_id UUID, p_assignee_id UUID, p_project_id UUID, p_current_estimate NUMERIC)
+RETURNS JSON AS $$
+DECLARE
+  v_samples INT := 0;
+  v_variance NUMERIC := 1;
+BEGIN
+  SELECT COUNT(*), COALESCE(AVG(actual_hours / NULLIF(estimated_hours, 0)), 1) INTO v_samples, v_variance
+  FROM tasks
+  WHERE workspace_id = p_workspace_id 
+    AND assignee_id = p_assignee_id 
+    AND project_id = p_project_id
+    AND status = 'done'
+    AND estimated_hours BETWEEN p_current_estimate * 0.8 AND p_current_estimate * 1.2
+    AND actual_hours IS NOT NULL;
+    
+  RETURN json_build_object('samples', v_samples, 'variance', v_variance);
+EXCEPTION WHEN undefined_column THEN
+  RETURN json_build_object('samples', 0, 'variance', 1);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_workspace_activity_baseline(p_workspace_id UUID)
+RETURNS JSON AS $$
+DECLARE
+  v_recent JSON;
+  v_avg JSON;
+BEGIN
+  SELECT COALESCE(json_object_agg(action, cnt), '{}'::json) INTO v_recent
+  FROM (
+    SELECT action, COUNT(*) as cnt
+    FROM system_audit_ledger
+    WHERE workspace_id = p_workspace_id AND created_at >= NOW() - INTERVAL '24 hours'
+    GROUP BY action
+  ) r;
+
+  SELECT COALESCE(json_object_agg(action, avg_cnt), '{}'::json) INTO v_avg
+  FROM (
+    SELECT action, COUNT(*) / 30.0 as avg_cnt
+    FROM system_audit_ledger
+    WHERE workspace_id = p_workspace_id AND created_at >= NOW() - INTERVAL '30 days'
+    GROUP BY action
+  ) a;
+
+  RETURN json_build_object(
+    'recent_24h', v_recent,
+    'daily_avg_30d', v_avg
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ==========================================
+-- ENTITY LINKS
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.entity_links (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    source_type TEXT NOT NULL,
+    source_id UUID NOT NULL,
+    target_type TEXT NOT NULL,
+    target_id UUID NOT NULL,
+    relationship_type TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.entity_links ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view entity links in their workspace" ON public.entity_links;
+CREATE POLICY "Users can view entity links in their workspace" 
+ON public.entity_links FOR SELECT 
+USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = entity_links.workspace_id AND public.is_active_workspace_member()));
+
+DROP POLICY IF EXISTS "Users can insert entity links in their workspace" ON public.entity_links;
+CREATE POLICY "Users can insert entity links in their workspace" 
+ON public.entity_links FOR INSERT 
+WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = entity_links.workspace_id AND public.is_active_workspace_member()));
+
+DROP POLICY IF EXISTS "Users can update entity links in their workspace" ON public.entity_links;
+CREATE POLICY "Users can update entity links in their workspace" 
+ON public.entity_links FOR UPDATE 
+USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = entity_links.workspace_id AND public.is_active_workspace_member()));
+
+DROP POLICY IF EXISTS "Users can delete entity links in their workspace" ON public.entity_links;
+CREATE POLICY "Users can delete entity links in their workspace" 
+ON public.entity_links FOR DELETE 
+USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = entity_links.workspace_id AND public.is_active_workspace_member()));
+
+-- Update Documents schema
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'documents') THEN
+    ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+  END IF;
+END $$;
+
+-- Explicitly Grant Permissions to authenticated users (Fixes PGRST 42501)
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.workspace_finance_settings TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.entity_links TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.notification_events TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.notification_preferences TO authenticated;
+
+-- ==========================================
+-- WORKFLOW TEMPLATES & STATES
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.workflow_templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    function_type TEXT,
+    template_type TEXT,
+    configuration JSONB DEFAULT '{}'::jsonb,
+    is_system_template BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.workflow_templates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view workflow templates" ON public.workflow_templates;
+CREATE POLICY "Users can view workflow templates" 
+ON public.workflow_templates FOR SELECT 
+USING (is_system_template = true OR workspace_id IN (SELECT id FROM public.workspaces WHERE id = workflow_templates.workspace_id AND public.is_active_workspace_member()));
+
+CREATE TABLE IF NOT EXISTS public.workflow_states (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workflow_template_id UUID REFERENCES public.workflow_templates(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    order_index INT DEFAULT 0,
+    state_category TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.workflow_states ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view workflow states" ON public.workflow_states;
+CREATE POLICY "Users can view workflow states" 
+ON public.workflow_states FOR SELECT 
+USING (workflow_template_id IN (SELECT id FROM public.workflow_templates WHERE is_system_template = true OR workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_id AND public.is_active_workspace_member())));
+
+-- Update Projects schema
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'projects') THEN
+    ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS workflow_template_id UUID REFERENCES public.workflow_templates(id);
+  END IF;
+END $$;
+
+-- ==========================================
+-- PERSONAL LEAVE
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.personal_leave (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    leave_type TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    reason TEXT,
+    status TEXT DEFAULT 'pending',
+    availability_factor NUMERIC DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Force add columns in case the table already existed with missing fields
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'personal_leave') THEN
+    ALTER TABLE public.personal_leave ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE;
+    ALTER TABLE public.personal_leave ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.users(id) ON DELETE CASCADE;
+    ALTER TABLE public.personal_leave ADD COLUMN IF NOT EXISTS leave_type TEXT;
+    ALTER TABLE public.personal_leave ADD COLUMN IF NOT EXISTS start_date DATE;
+    ALTER TABLE public.personal_leave ADD COLUMN IF NOT EXISTS end_date DATE;
+    ALTER TABLE public.personal_leave ADD COLUMN IF NOT EXISTS reason TEXT;
+    ALTER TABLE public.personal_leave ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+    ALTER TABLE public.personal_leave ADD COLUMN IF NOT EXISTS availability_factor NUMERIC DEFAULT 0;
+  END IF;
+END $$;
+
+ALTER TABLE public.personal_leave ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view personal leave in workspace" ON public.personal_leave;
+CREATE POLICY "Users can view personal leave in workspace" 
+ON public.personal_leave FOR SELECT 
+USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = personal_leave.workspace_id AND public.is_active_workspace_member()));
+
+DROP POLICY IF EXISTS "Users can insert their own leave" ON public.personal_leave;
+CREATE POLICY "Users can insert their own leave" 
+ON public.personal_leave FOR INSERT 
+WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can update their own leave" ON public.personal_leave;
+CREATE POLICY "Users can update their own leave" 
+ON public.personal_leave FOR UPDATE 
+USING (user_id = auth.uid() OR workspace_id IN (SELECT id FROM public.workspaces WHERE id = personal_leave.workspace_id AND public.is_active_workspace_member()));
+
+-- Update Documents schema
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'documents') THEN
+    ALTER TABLE public.documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+  END IF;
+END $$;
+
+-- Explicitly Grant Permissions to authenticated users
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.workflow_templates TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.workflow_states TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.personal_leave TO authenticated;
+
+-- Ensure users table has workspace_id (required by personal_leave view joins)
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users') THEN
+    ALTER TABLE public.users ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES public.workspaces(id);
+    ALTER TABLE public.users ADD COLUMN IF NOT EXISTS capabilities TEXT[] DEFAULT '{}'::text[];
+    ALTER TABLE public.users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT false;
+  END IF;
+END $$;
+
+-- ==========================================
+-- ISSUE REPORTS & SEARCH INDEX
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.system_issue_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    reported_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    module TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    error_stack TEXT,
+    browser_metadata JSONB DEFAULT '{}'::jsonb,
+    status TEXT DEFAULT 'open',
+    assigned_to UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.system_issue_reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view their workspace issues" ON public.system_issue_reports;
+CREATE POLICY "Users can view their workspace issues" ON public.system_issue_reports FOR SELECT USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = system_issue_reports.workspace_id AND public.is_active_workspace_member()));
+DROP POLICY IF EXISTS "Users can insert workspace issues" ON public.system_issue_reports;
+CREATE POLICY "Users can insert workspace issues" ON public.system_issue_reports FOR INSERT WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = system_issue_reports.workspace_id AND public.is_active_workspace_member()));
+DROP POLICY IF EXISTS "Users can update workspace issues" ON public.system_issue_reports;
+CREATE POLICY "Users can update workspace issues" ON public.system_issue_reports FOR UPDATE USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = system_issue_reports.workspace_id AND public.is_active_workspace_member()));
+
+CREATE TABLE IF NOT EXISTS public.search_index (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    entity_type TEXT NOT NULL,
+    entity_id UUID NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT DEFAULT '',
+    keywords JSONB DEFAULT '{}'::jsonb,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(entity_type, entity_id)
+);
+
+ALTER TABLE public.search_index ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view search index in workspace" ON public.search_index;
+CREATE POLICY "Users can view search index in workspace" ON public.search_index FOR SELECT USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = search_index.workspace_id AND public.is_active_workspace_member()));
+DROP POLICY IF EXISTS "Users can insert search index" ON public.search_index;
+CREATE POLICY "Users can insert search index" ON public.search_index FOR INSERT WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = search_index.workspace_id AND public.is_active_workspace_member()));
+DROP POLICY IF EXISTS "Users can update search index" ON public.search_index;
+CREATE POLICY "Users can update search index" ON public.search_index FOR UPDATE USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = search_index.workspace_id AND public.is_active_workspace_member()));
+DROP POLICY IF EXISTS "Users can delete search index" ON public.search_index;
+CREATE POLICY "Users can delete search index" ON public.search_index FOR DELETE USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = search_index.workspace_id AND public.is_active_workspace_member()));
+
+CREATE TABLE IF NOT EXISTS public.recent_entities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    entity_type TEXT NOT NULL,
+    entity_id UUID NOT NULL,
+    opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, entity_type, entity_id)
+);
+
+ALTER TABLE public.recent_entities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view their recent entities" ON public.recent_entities;
+CREATE POLICY "Users can view their recent entities" ON public.recent_entities FOR SELECT USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "Users can manage their recent entities" ON public.recent_entities;
+CREATE POLICY "Users can manage their recent entities" ON public.recent_entities FOR ALL USING (user_id = auth.uid());
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.system_issue_reports TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.search_index TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.recent_entities TO authenticated;
+
 -- Reload schema cache
 NOTIFY pgrst, 'reload schema';
 

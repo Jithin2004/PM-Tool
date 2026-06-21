@@ -76,7 +76,7 @@ export function StorageSettingsPanel() {
     e.preventDefault();
     setSaving(true);
     try {
-      const { data: existing } = await supabase.from('workspace_storage_settings').select('id').eq('workspace_id', workspace!.id).single();
+      const { data: existing } = await supabase.from('workspace_storage_settings').select('id').eq('workspace_id', workspace!.id).maybeSingle();
       
       if (existing) {
         await supabase.from('workspace_storage_settings').update({

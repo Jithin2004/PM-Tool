@@ -41,6 +41,12 @@ export function LogisticsDashboard({
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [attendanceSearch, setAttendanceSearch] = useState('');
 
+  const isWeekend = useMemo(() => {
+    if (!selectedDate) return false;
+    const day = new Date(selectedDate).getDay();
+    return day === 0 || day === 6; // Sunday or Saturday
+  }, [selectedDate]);
+
   // Pay Slab form states
   const [allowedCasualLeaves, setAllowedCasualLeaves] = useState(2);
   const [allowedMedicalLeaves, setAllowedMedicalLeaves] = useState(2);
@@ -925,6 +931,13 @@ export function LogisticsDashboard({
                 <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary">Mark System Attendance</h3>
                 <span className="text-[9px] font-mono text-text-tertiary bg-[var(--pm-surface)]/5 px-2 py-0.5 border border-border-subtle uppercase">SYSTEM_ACTIVE</span>
               </div>
+              
+              {isWeekend && (
+                <div className="bg-signal-warning/10 border-b border-signal-warning/20 p-3 flex items-center justify-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-signal-warning" />
+                  <span className="text-xs font-medium text-signal-warning uppercase tracking-wide">Weekend / Non-Working Day</span>
+                </div>
+              )}
 
               <div className="divide-y divide-white/5">
                 {filteredProfiles.length === 0 ? (
@@ -967,7 +980,8 @@ export function LogisticsDashboard({
                           {/* Present button */}
                           <button
                             onClick={() => handleMarkAttendance(profile.id, 'present')}
-                            className={`w-full sm:w-auto px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all ${status === 'present' ? 'bg-signal-safe-bg border-border text-signal-safe font-bold shadow-sm' : 'border-border hover:border-border text-text-tertiary hover:text-text-primary'}`}
+                            disabled={isWeekend}
+                            className={`w-full sm:w-auto px-3 py-1.5 text-[9px] font-mono uppercase tracking-wider border rounded-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${status === 'present' ? 'bg-signal-safe-bg border-border text-signal-safe font-bold shadow-sm' : 'border-border hover:border-border text-text-tertiary hover:text-text-primary'}`}
                           >
                             Present
                           </button>
@@ -976,7 +990,8 @@ export function LogisticsDashboard({
                           <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-bg border border-border p-1 gap-1 sm:gap-0 w-full sm:w-auto">
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', false)}
-                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && leaveType === 'unexcused' && !record?.isPaidHalfDay ? 'bg-signal-warning-bg text-signal-warning font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
+                              disabled={isWeekend}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed ${status === 'half_day' && leaveType === 'unexcused' && !record?.isPaidHalfDay ? 'bg-signal-warning-bg text-signal-warning font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
                             >
                               Half Day (Unpaid)
                             </button>
@@ -984,7 +999,8 @@ export function LogisticsDashboard({
 
                             <button
                               onClick={() => handleMarkAttendance(profile.id, 'half_day', 'unexcused', true)}
-                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all ${status === 'half_day' && record?.isPaidHalfDay ? 'bg-signal-safe-bg text-signal-safe font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
+                              disabled={isWeekend}
+                              className={`px-2.5 py-1.5 sm:py-1 text-[9px] font-mono uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed ${status === 'half_day' && record?.isPaidHalfDay ? 'bg-signal-safe-bg text-signal-safe font-bold' : 'text-text-tertiary hover:text-text-primary'}`}
                             >
                               Half Day (Paid)
                             </button>

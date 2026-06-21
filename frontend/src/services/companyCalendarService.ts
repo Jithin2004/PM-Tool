@@ -80,10 +80,19 @@ export const companyCalendarService = {
       delete dbUpdates.custom_saturdays_off;
     }
 
-    const { error } = await supabase
-      .from('company_working_rules')
-      .insert({ ...dbUpdates, workspace_id: workspaceId, effective_from: new Date().toISOString().split('T')[0] });
-    return !error;
+    const current = await this.getSettings(workspaceId);
+    if (current && (current as any).id) {
+      const { error } = await supabase
+        .from('company_working_rules')
+        .update(dbUpdates)
+        .eq('id', (current as any).id);
+      return !error;
+    } else {
+      const { error } = await supabase
+        .from('company_working_rules')
+        .insert({ ...dbUpdates, workspace_id: workspaceId, effective_from: new Date().toISOString().split('T')[0] });
+      return !error;
+    }
   },
 
   async getEvents(workspaceId: string, year: number): Promise<CompanyCalendarEvent[]> {

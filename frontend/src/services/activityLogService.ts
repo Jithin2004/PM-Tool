@@ -9,10 +9,21 @@ export interface ActivityLogEntry {
   project_id?: string;
   task_id?: string;
   action_type: string;
+  entity_type?: string;
   metadata: Record<string, any>;
   previous_hash?: string;
   hash?: string;
   created_at?: string;
+}
+
+function deriveEntityType(action: string): string {
+  if (action.includes('project')) return 'project';
+  if (action.includes('task')) return 'task';
+  if (action.includes('milestone')) return 'milestone';
+  if (action.includes('user') || action.includes('role') || action.includes('invite')) return 'user';
+  if (action.includes('finance') || action.includes('ledger') || action.includes('budget')) return 'finance';
+  if (action.includes('document') || action.includes('file')) return 'document';
+  return 'system';
 }
 
 // ─── Constants for graceful RLS degradation ────────────────────
@@ -163,6 +174,7 @@ export const activityLogService = {
         project_id: entry.project_id,
         task_id: entry.task_id,
         action: entry.action_type,
+        entity_type: entry.entity_type || deriveEntityType(entry.action_type),
         metadata: entry.metadata,
         created_at: createdAt,
         hash: hash,
@@ -209,6 +221,7 @@ export const activityLogService = {
         project_id: entry.project_id,
         task_id: entry.task_id,
         action: entry.action_type,
+        entity_type: entry.entity_type || deriveEntityType(entry.action_type),
         metadata: entry.metadata,
         created_at: createdAt,
         hash: hash,
