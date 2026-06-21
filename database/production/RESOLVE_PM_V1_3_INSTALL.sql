@@ -578,6 +578,60 @@ ON public.workspace_finance_settings FOR ALL
 USING (workspace_id = (SELECT workspace_id FROM public.users WHERE id = auth.uid() AND role IN ('admin', 'super_admin')));
 
 
+-- ==========================================
+-- NOTIFICATIONS SYSTEM
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.notification_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    recipient_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    source_event_id UUID,
+    entity_type TEXT,
+    entity_id TEXT,
+    priority TEXT DEFAULT 'normal',
+    category TEXT,
+    title TEXT NOT NULL,
+    message TEXT,
+    action_url TEXT,
+    read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.notification_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can read their own notifications" ON public.notification_events;
+CREATE POLICY "Users can read their own notifications" 
+ON public.notification_events FOR SELECT 
+USING (recipient_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notification_events;
+CREATE POLICY "Users can update their own notifications" 
+ON public.notification_events FOR UPDATE 
+USING (recipient_id = auth.uid());
+
+DROP POLICY IF EXISTS "System can insert notifications" ON public.notification_events;
+CREATE POLICY "System can insert notifications" 
+ON public.notification_events FOR INSERT 
+WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS public.notification_preferences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(workspace_id, user_id)
+);
+
+ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own notification preferences" ON public.notification_preferences;
+CREATE POLICY "Users can manage their own notification preferences" 
+ON public.notification_preferences FOR ALL 
+USING (user_id = auth.uid());
+
 -- 19. system_audit_ledger
 --    Append-only cryptographic audit chain.
 --    INSERT: permitted (write new blocks).
