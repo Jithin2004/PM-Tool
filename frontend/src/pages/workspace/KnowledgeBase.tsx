@@ -8,7 +8,7 @@ import { activityLogService } from '../../services/activityLogService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { BookOpen, Search, Plus, FileText, Clock, Archive, Pin, Trash2, ArrowLeft } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return '';

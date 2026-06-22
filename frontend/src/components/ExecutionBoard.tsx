@@ -1,5 +1,5 @@
 import { PremiumEmptyState } from '../components/ui/PremiumEmptyState';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, Layers, Plus, Shield, ChevronDown, X, Terminal, Send, Lock, ListTodo, BrainCircuit, Play, AlertTriangle, Edit2, Check } from 'lucide-react';
 import { List } from 'react-window';
@@ -134,8 +134,33 @@ export default function ExecutionBoard({
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
   const [waitStateTask, setWaitStateTask] = useState<Task | null>(null);
 
-  const role = currentUserProfile?.role || 'viewer';
-  const hasWriteAccess = hasCapability(role, 'manage_tasks');
+  const [memberRole, setMemberRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRole = async () => {
+      if (!workspace?.id || !currentUserProfile?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from('team_members')
+          .select('member_role')
+          .eq('workspace_id', workspace.id)
+          .eq('user_id', currentUserProfile.id)
+          .single();
+          
+        if (!error && data) {
+          setMemberRole(data.member_role);
+        } else {
+          setMemberRole('viewer'); // Fallback safely
+        }
+      } catch (err) {
+        console.error('Failed to fetch RBAC role', err);
+        setMemberRole('viewer');
+      }
+    };
+    fetchRole();
+  }, [workspace?.id, currentUserProfile?.id]);
+
+  const hasWriteAccess = memberRole === 'owner' || memberRole === 'editor';
 
   const userMap = useMemo(() => {
     const map = new Map<string, any>();
@@ -307,6 +332,11 @@ export default function ExecutionBoard({
           <h2 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping" />
             Kanban Board
+            {memberRole === 'viewer' && (
+              <span className="ml-2 px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-sm">
+                Read Only
+              </span>
+            )}
           </h2>
           <p className="text-[10px] font-mono text-text-quaternary mt-1 uppercase tracking-wider">
             {KANBAN_COLUMNS.length} lanes · {projects.length} projects synced

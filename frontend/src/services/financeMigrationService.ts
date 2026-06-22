@@ -34,11 +34,11 @@ export const financeMigrationService = {
     const toMigrate = (unmigrated || []).filter(tx => !tx.finance_migration_map || tx.finance_migration_map.length === 0);
 
     if (toMigrate.length === 0) {
-      console.log(`[Finance Migration] Workspace ${workspaceId} is already fully migrated.`);
+      // Logging removed for production
       return;
     }
 
-    console.log(`[Finance Migration] Found ${toMigrate.length} legacy transactions to migrate for ${workspaceId}.`);
+    // Logging removed for production
 
     let migratedCount = 0;
 
@@ -93,6 +93,6 @@ export const financeMigrationService = {
       }
     }
 
-    console.log(`[Finance Migration] Successfully migrated ${migratedCount} transactions for ${workspaceId}.`);
+    // Logging removed for production
   }
 };

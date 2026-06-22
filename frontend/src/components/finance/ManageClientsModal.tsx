@@ -27,7 +27,7 @@ export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSu
   React.useEffect(() => {
     if (isOpen && workspaceId) {
       Promise.all([
-        supabase.from('projects').select('*').eq('workspace_id', workspaceId),
+        supabase.from('projects').select('id, workspace_id, client_id, name, description, status, priority, execution_mode, created_at, deadline, tags').eq('workspace_id', workspaceId),
         supabase.from('invoices').select('*').eq('workspace_id', workspaceId),
         supabase.from('payments').select('*').eq('workspace_id', workspaceId),
       ]).then(([p, i, pay]) => {

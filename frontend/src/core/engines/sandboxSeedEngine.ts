@@ -3,7 +3,7 @@ import { financeLedgerService } from '../../services/financeLedgerService';
 
 export const sandboxSeedEngine = {
   async seedSandboxEnvironment(workspaceId: string, actorId: string, templateType: string) {
-    console.log(`[SandboxSeed] Starting full enterprise simulation for ${workspaceId}`);
+    // Logging removed for production
     
     // 1. Mark as Sandbox
     await supabase.from('workspaces').update({ 
@@ -156,7 +156,7 @@ export const sandboxSeedEngine = {
       { workspace_id: workspaceId, actor_id: finId, entity_type: 'invoice', action_type: 'paid', metadata: { amount: 15000 }, created_at: thirtyMinsAgo }
     ]);
 
-    console.log(`[SandboxSeed] Successfully completed simulation for ${workspaceId}`);
+    // Logging removed for production
   }
 };
 

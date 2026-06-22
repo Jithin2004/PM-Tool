@@ -25,7 +25,7 @@ export interface TaskComment {
 export const fetchTaskComments = async (taskId: string): Promise<TaskComment[]> => {
   const { data, error } = await supabase
     .from('task_comments')
-    .select('*, author:users(email, full_name, avatar_url)')
+    .select('id, workspace_id, task_id, author_id, content, parent_comment_id, metadata, is_internal, created_at, updated_at, deleted_at, author:users(email, full_name, avatar_url)')
     .eq('task_id', taskId)
     .is('deleted_at', null)
     .order('created_at', { ascending: true });
@@ -74,7 +74,7 @@ export const createTaskComment = async (
       parent_comment_id: parentId,
       metadata: commentMetadata
     })
-    .select('*, author:users(email, full_name, avatar_url)')
+    .select('id, workspace_id, task_id, author_id, content, parent_comment_id, metadata, is_internal, created_at, updated_at, deleted_at, author:users(email, full_name, avatar_url)')
     .single();
 
   if (error) {

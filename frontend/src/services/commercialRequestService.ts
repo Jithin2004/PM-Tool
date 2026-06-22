@@ -17,7 +17,7 @@ class CommercialRequestService {
     return new Promise((resolve) => {
       // Simulate network request
       setTimeout(() => {
-        console.log('Simulated Commercial Request Submission:', request);
+        // Simulated logging removed for production
         resolve();
       }, 800);
     });

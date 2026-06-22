@@ -9481,3 +9481,211 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO authenticated, service_role;
 
+-- ==============================================================================
+-- MIGRATION: Enable Client Portal Row Level Security (RLS)
+-- Purpose: Lock down Workspaces, Projects, and Tasks for secure multi-tenant access.
+--          Grants full visibility to internal team members, while strictly 
+--          limiting external clients to their assigned projects.
+-- ==============================================================================
+
+-- 1. Enforce RLS on target tables
+ALTER TABLE public.workspaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+
+-- ==============================================================================
+-- WORKSPACES POLICIES
+-- ==============================================================================
+DROP POLICY IF EXISTS "Workspaces visible to team members and assigned clients" ON public.workspaces;
+
+CREATE POLICY "Workspaces visible to team members and assigned clients"
+ON public.workspaces FOR SELECT
+USING (
+  -- Internal Team Members: Can view the workspace if they are actively linked in team_members
+  EXISTS (
+    SELECT 1 FROM public.team_members 
+    WHERE team_members.workspace_id = workspaces.id 
+    AND team_members.user_id = auth.uid()
+  )
+  OR
+  -- External Clients: Can view the workspace if their canonical user profile is assigned to it
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = auth.uid() 
+    AND users.workspace_id = workspaces.id 
+    AND users.role = 'client'
+  )
+);
+
+-- ==============================================================================
+-- PROJECTS POLICIES
+-- ==============================================================================
+DROP POLICY IF EXISTS "Projects visible to team members and assigned clients" ON public.projects;
+
+CREATE POLICY "Projects visible to team members and assigned clients"
+ON public.projects FOR SELECT
+USING (
+  -- Internal Team Members: Can view any project within their mapped workspace
+  EXISTS (
+    SELECT 1 FROM public.team_members 
+    WHERE team_members.workspace_id = projects.workspace_id 
+    AND team_members.user_id = auth.uid()
+  )
+  OR
+  -- External Clients: Can ONLY view projects where they are explicitly assigned as the client_id
+  (projects.client_id = auth.uid())
+);
+
+-- ==============================================================================
+-- TASKS POLICIES
+-- ==============================================================================
+DROP POLICY IF EXISTS "Tasks visible to team members and assigned clients" ON public.tasks;
+
+CREATE POLICY "Tasks visible to team members and assigned clients"
+ON public.tasks FOR SELECT
+USING (
+  -- Internal Team Members: Can view any task within their mapped workspace
+  EXISTS (
+    SELECT 1 FROM public.team_members 
+    WHERE team_members.workspace_id = tasks.workspace_id 
+    AND team_members.user_id = auth.uid()
+  )
+  OR
+  -- External Clients: Can ONLY view tasks if they own the parent project
+  EXISTS (
+    SELECT 1 FROM public.projects 
+    WHERE projects.id = tasks.project_id 
+    AND projects.client_id = auth.uid()
+  )
+);
+
+-- ==============================================================================
+-- End of Client Portal Migration
+-- ==============================================================================
+
+-- ==============================================================================
+-- MIGRATION: Time Logs Schema (Epic Six)
+-- Purpose: Tracking billable hours linked to tasks, workspaces, and users
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.time_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE SET NULL,
+    hours_logged NUMERIC(5, 2) NOT NULL CHECK (hours_logged > 0),
+    description TEXT,
+    is_billable BOOLEAN DEFAULT true,
+    billing_status TEXT DEFAULT 'unbilled' CHECK (billing_status IN ('unbilled', 'invoiced', 'paid')),
+    logged_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS immediately
+ALTER TABLE public.time_logs ENABLE ROW LEVEL SECURITY;
+
+-- Write Select Policy for Internal Team Members
+CREATE POLICY "Team members can view all time logs in workspace" ON public.time_logs
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.team_members 
+            WHERE team_members.workspace_id = time_logs.workspace_id 
+            AND team_members.user_id = auth.uid()
+        )
+    );
+
+-- Write Insert Policy for Internal Team Members
+CREATE POLICY "Team members can insert time logs in workspace" ON public.time_logs
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.team_members 
+            WHERE team_members.workspace_id = time_logs.workspace_id 
+            AND team_members.user_id = auth.uid()
+        )
+    );
+
+-- Write Select Policy for External Clients (Fenced view)
+CREATE POLICY "Clients can view billable time logs for their projects" ON public.time_logs
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.projects
+            WHERE projects.id = (SELECT project_id FROM public.tasks WHERE tasks.id = time_logs.task_id)
+            AND projects.client_id = auth.uid()
+        )
+    );
+
+-- ==============================================================================
+-- MIGRATION: Enforce RBAC Policies (Epic Eight)
+-- Purpose: Lock down `team_members` role definitions and enforce strict 
+--          Role-Based Access Control (RBAC) on the `tasks` table.
+-- ==============================================================================
+
+-- 1. Patch existing data to comply with the new constraint
+UPDATE public.team_members SET member_role = 'owner' WHERE member_role = 'admin';
+UPDATE public.team_members SET member_role = 'editor' WHERE member_role = 'member';
+UPDATE public.team_members SET member_role = 'viewer' WHERE member_role IS NULL OR member_role NOT IN ('owner', 'editor', 'viewer');
+
+-- 2. Enforce specific roles on team_members
+ALTER TABLE public.team_members 
+ADD CONSTRAINT check_member_role 
+CHECK (member_role IN ('owner', 'editor', 'viewer'));
+
+-- 2. Drop existing broad policies for tasks
+DROP POLICY IF EXISTS "Tasks are visible to workspace" ON public.tasks;
+DROP POLICY IF EXISTS "Tasks can be created by PMs and Admins" ON public.tasks;
+DROP POLICY IF EXISTS "Tasks can be fully updated by PMs and Admins" ON public.tasks;
+DROP POLICY IF EXISTS "Developers can update their assigned tasks" ON public.tasks;
+DROP POLICY IF EXISTS "Tasks can be deleted by PMs and Admins" ON public.tasks;
+
+-- 3. Create new RBAC SELECT policy for all authenticated team members
+CREATE POLICY "Team members can view tasks in their workspace"
+ON public.tasks FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM public.team_members
+    WHERE team_members.workspace_id = tasks.workspace_id
+    AND team_members.user_id = auth.uid()
+    AND team_members.member_role IN ('owner', 'editor', 'viewer')
+  )
+);
+
+-- 4. Create new RBAC INSERT policy strictly for owners and editors
+CREATE POLICY "Owners and editors can insert tasks"
+ON public.tasks FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.team_members
+    WHERE team_members.workspace_id = tasks.workspace_id
+    AND team_members.user_id = auth.uid()
+    AND team_members.member_role IN ('owner', 'editor')
+  )
+);
+
+-- ==============================================================================
+-- MIGRATION: Enable Realtime for Tasks
+-- ==============================================================================
+-- Turn on Realtime broadcasting for the tasks table so the React frontend can subscribe to changes
+ALTER PUBLICATION supabase_realtime ADD TABLE public.tasks;
+
+-- 5. Create new RBAC UPDATE policy strictly for owners and editors
+CREATE POLICY "Owners and editors can update tasks"
+ON public.tasks FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM public.team_members
+    WHERE team_members.workspace_id = tasks.workspace_id
+    AND team_members.user_id = auth.uid()
+    AND team_members.member_role IN ('owner', 'editor')
+  )
+);
+
+-- 6. Create new RBAC DELETE policy strictly for owners and editors
+CREATE POLICY "Owners and editors can delete tasks"
+ON public.tasks FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM public.team_members
+    WHERE team_members.workspace_id = tasks.workspace_id
+    AND team_members.user_id = auth.uid()
+    AND team_members.member_role IN ('owner', 'editor')
+  )
+);

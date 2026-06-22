@@ -23,8 +23,8 @@ export async function exportWorkspace(wsId: string): Promise<WorkspaceExport | n
   if (!isSupabaseConfigured || !wsId) return null;
 
   const [projects, tasks, users, teams, webhooks, integrations, activityLogs, taskDependencies, clients, requirements, milestones, invoices] = await Promise.all([
-    supabase.from('projects').select('*').limit(50).eq('workspace_id', wsId),
-    supabase.from('tasks').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('projects').select('id, workspace_id, client_id, name, description, status, priority, execution_mode, created_at, deadline, tags').limit(50).eq('workspace_id', wsId),
+    supabase.from('tasks').select('id, title, status, project_id, assigned_to').limit(50).eq('workspace_id', wsId),
     supabase.from('users').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('teams').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('webhooks').select('*').limit(50).eq('workspace_id', wsId),

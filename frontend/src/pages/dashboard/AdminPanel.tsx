@@ -155,7 +155,7 @@ export function AdminPanel() {
   const loadWorkspacesData = async () => {
     setLoadingWorkspaces(true);
     try {
-      const { data: wsData, error: wsError } = await supabase.from('workspaces').select('*');
+      const { data: wsData, error: wsError } = await supabase.from('workspaces').select('id, name, owner_id, business_type, created_at');
       if (wsError) throw wsError;
       
       const { data: userData, error: userError } = await supabase.from('users').select('id, workspace_id');
@@ -263,7 +263,7 @@ export function AdminPanel() {
     notify("Preparing export data...", "info");
     try {
       const [projectsRes, tasksRes, teamsRes, depsRes, collabsRes] = await Promise.all([
-        supabase.from('projects').select('*').eq('workspace_id', ws.id),
+        supabase.from('projects').select('id, workspace_id, client_id, name, description, status, priority, execution_mode, created_at, deadline, tags').eq('workspace_id', ws.id),
         supabase.from('tasks').select('*').eq('workspace_id', ws.id),
         supabase.from('teams').select('*').eq('workspace_id', ws.id),
         supabase.from('task_dependencies').select('*').eq('workspace_id', ws.id),

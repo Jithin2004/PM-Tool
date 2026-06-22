@@ -1,112 +1,70 @@
-# Deep Master Audit: Business Logic & Structural UX Placement
+# Resolve PM: Deep-Scan Architectural Audit
 
-This report presents a comprehensive audit of the Resolve PM platform, dissecting the massive layer of nested UI tabs across all categories. It evaluates two critical dimensions for every UI element:
-1. **[EVALUATION A - Business Logic]**: Is the feature fully wired to the Supabase backend or simply mocked/state-driven?
-2. **[EVALUATION B - Structural Restructuring]**: Does the UI element make logical sense, or should it be merged, promoted, or separated to reduce cognitive load?
+This document outlines the findings of a comprehensive architectural audit of the Resolve PM codebase, focusing on logical vulnerabilities, data integrity, and production readiness.
 
----
+## 1. Logic Flow Analysis
 
-## 1. ADMIN PANEL & WORKSPACE SETTINGS
-**Current Placement:** `/control/settings`, `/control/identity`, `/control/audit` (Massive nesting: 4 Top Tabs $\rightarrow$ 14 Sub-Tabs $\rightarrow$ Inner Component Pills).
+### Auth Flow & Token Expiry
+**Finding:** Robust, but has a slight edge-case risk.
+- **Mechanism:** In `AuthContext.tsx`, when `onAuthStateChange` detects a `SIGNED_OUT` or `TOKEN_REFRESHED` (with no session) event, it triggers `handleSessionExpiry()`.
+- **Action:** The system gracefully purges sensitive `localStorage` keys (e.g., `tasks_`, `projects_`, `offline_task_queue_`) and safely calls `navigateTo('/', true)` to force a hard reload.
+- **Vulnerability:** If the browser blocks `localStorage` or `indexedDB` (e.g., strict incognito mode), Supabase fails to persist the session. The 10-second `safetyTimeoutRef` prevents infinite hangs, but the user may be trapped in a repetitive login loop without a clear UI error explaining *why* cookies/storage must be enabled.
 
-### 1.1 Working Rules & Organization
-- **Business Logic**: **[FULLY WIRED]**. Connected to `workspace_settings` table (JSONB `settings_blob` and column overrides like `working_time_from`, `default_mode`).
-- **UX Recommendation**: **[MERGE]**. "Organization" and "Working Rules" are artificially separated. Combine them into a single "General Setup" scrollable pane.
-
-### 1.2 People Rules & Governance
-- **Business Logic**: **[FULLY WIRED]**. Updates `attendanceEnabled`, `payrollEnabled`, and `productivityFactor` in `workspace_settings`.
-- **UX Recommendation**: **[SEPARATE MODULE]**. This is fundamentally HR logic. Move this entirely out of Admin settings and merge it into the "People Operations" top-level domain.
-
-### 1.3 Security & Password Policy
-- **Business Logic**: **[FULLY WIRED]**. Updates `passwordPolicy` and `magicLinkExpiry` in `workspace_settings`.
-- **UX Recommendation**: **[CLUB]**. Merge "Security" and "Client Access" into a single "Access Control" tab. They govern the same authentication boundaries.
-
-### 1.4 Export & Backup / System Logs
-- **Business Logic**: **[FULLY WIRED]**. `system_audit_ledger` provides cryptographic WORM-like logs. Export triggers JSON generation of `projects`, `tasks`, `teams`, etc.
-- **UX Recommendation**: **[PROMOTE]**. Move "System Health", "Audit Logs", and "Backup" into a dedicated "System & Security" module accessible only by Super Admins, removing them from the standard workspace settings clutter.
+### RBAC Flow & Frontend Blind Spots
+**Finding:** UI relies too heavily on database perfection.
+- **Mechanism:** The frontend correctly utilizes `member_role` (e.g., in `ExecutionBoard.tsx`) to conditionally render `+Task` buttons and drag-and-drop features.
+- **Vulnerability:** "Blind Trust." If a backend developer accidentally drops an RLS policy or introduces a flaw in the PostgreSQL `CREATE POLICY` block, the frontend will blindly render whatever payload it receives. Components lack secondary client-side filtering (e.g., `tasks.filter(t => t.workspace_id === currentWorkspace)`), meaning a backend misconfiguration immediately results in a catastrophic cross-tenant data leak on the UI.
 
 ---
 
-## 2. TASK INNER VIEWS (EXECUTION ENGINE)
-**Current Placement:** `DashboardLayout.tsx` defines Tasks Domain $\rightarrow$ Task Board, Timeline, Calendar, Sprints.
+## 2. Data Integrity Audit
 
-### 2.1 Task Board (Kanban) & Sprints (Scrum)
-- **Business Logic**: **[FULLY WIRED]**. Deeply integrated with `tasks` table, updating `status`, `sprint_id`, and `pert_best/likely/worst` estimation columns.
-- **UX Recommendation**: **[MERGE / TOGGLE]**. Stop treating Kanban and Sprints as completely separate navigational destinations. They are simply different *views* of the same backlog. Provide a single "Execution Board" with a quick-toggle pill (Board | List | Sprint).
+### The `select('*')` Epidemic
+**Finding:** CRITICAL OVER-FETCHING.
+- **Scan Results:** Discovered **over 200 instances** of `.select('*')` across the `src/services/` directory (e.g., `approvalService.ts`, `automationEngine.ts`, `financeService.ts`).
+- **Vulnerability:** While Supabase RLS protects *rows*, `select('*')` exposes all *columns*. If an engineer later adds a sensitive column to a public table (e.g., `internal_margin`, `raw_oauth_tokens`, `admin_notes`), it will automatically be broadcasted to the frontend payload for every user. 
+- **Recommendation:** Refactor queries to explicitly declare required columns: `.select('id, name, status, project_id')`.
 
-### 2.2 Roadmap, Gantt, & Calendar (Timeline)
-- **Business Logic**: **[FULLY WIRED]**. Reads from `tasks` temporal fields (`start_date`, `deadline`, `predicted_completion`) and `task_dependencies`.
-- **UX Recommendation**: **[CLUB]**. Combine "Timeline", "Gantt", and "Calendar" into a single "Schedule" tab. Allowing the user to zoom in/out changes the view from Calendar (days) to Gantt (weeks) to Roadmap (months).
-
-### 2.3 Team Allocation & Capacity Workload
-- **Business Logic**: **[FULLY WIRED]**. Connected to `project_allocations`, `allocation_periods`, and dynamic `availability_factor` calculations.
-- **UX Recommendation**: **[PROMOTE]**. Currently buried under "Resources $\rightarrow$ Capacity". Resource allocation is critical for PMs. Promote this to a top-level tab in the Execution Engine ("Capacity Planning").
+### Missing Error Boundaries
+**Finding:** High risk of "White Screen of Death".
+- **Mechanism:** Many nested components directly execute async `supabase` queries and `throw error` to the nearest `catch` block.
+- **Vulnerability:** If an unhandled promise rejection occurs during React rendering (or a component assumes `data.tasks[0].name` exists but `data.tasks` is undefined due to an RLS block), the entire React component tree will crash. There is a lack of localized `<ErrorBoundary>` wrappers around volatile widgets like the `ClientBillingView` or `ExecutionBoard`.
 
 ---
 
-## 3. PROJECT APPROVALS & REQUIREMENTS
-**Current Placement:** `/workspace/portfolio`, `/workspace/requirements`, `/workspace/approvals` + `ProjectDetailsModal.tsx`.
+## 3. Security & Hygiene
 
-### 3.1 Project Requirements
-- **Business Logic**: **[FULLY WIRED]**. Connects to `projects` metadata, `files` for attachments, and `comments`.
-- **UX Recommendation**: **[MERGE]**. Requirements should not be a separate top-level route. They belong inside the individual Project Dashboard (e.g., a "Brief" tab within the project).
+### Service Role Leakage
+**Finding:** SECURE.
+- **Scan Results:** A deep scan for `SERVICE_ROLE_KEY` and `supabase_service` within the `/src` directory returned zero results.
+- **Status:** The frontend correctly utilizes the `anon` key, deferring privileged operations (like Client Provisioning) to Edge Functions.
 
-### 3.2 Project Approvals (Sign-offs & Change Requests)
-- **Business Logic**: **[FULLY WIRED]**. Wired to the `project_signoffs` and `wait_states` tables, tracking exact approver IDs and timestamps.
-- **UX Recommendation**: **[MERGE & PROMOTE]**. Extract Approvals from the generic workspace list and create a global, persistent "Action Items / Inbox" in the Top Navbar. Approvals shouldn't be a destination; they should come to the user.
-
-### 3.3 Project Friction & State Tracking
-- **Business Logic**: **[FULLY WIRED]**. Tracks manual/automatic state changes (`active`, `passive_wait`, `blocked`) into `workspaceSettingsBlob`.
-- **UX Recommendation**: **[LOGICAL]**. The placement inside `ProjectDetailsModal` is excellent, as it provides contextual governance right where project managers adjust statuses.
+### Hardcoded Secrets & Stubs
+**Finding:** Minor technical debt.
+- **Scan Results:** No raw API keys were found. However, there are lingering "Simulated" stubs.
+  - Example: `commercialRequestService.ts` contains `console.log('Simulated Commercial Request Submission:', request);`.
 
 ---
 
-## 4. FINANCE SUB-TABS
-**Current Placement:** `/resources/finance` with inner tabs for Reports, Invoices, Budgets, Forecast.
+## 4. Edge Case QA
 
-### 4.1 Payroll & Salaries
-- **Business Logic**: **[FULLY WIRED]**. Aggregates data from the `salaries` table, cross-referenced with `employmentRecords` and `attendance` factor.
-- **UX Recommendation**: **[SEPARATE]**. Payroll is strictly internal. Move it to the "People Operations" module under "Compensation", keeping the Finance module focused on client revenue and company profit.
-
-### 4.2 Budgets & Expenses
-- **Business Logic**: **[FULLY WIRED]**. Connected to `expenses` table, tracking billable vs internal costs.
-- **UX Recommendation**: **[CLUB]**. Merge "Budgets" into the Project Details view. Project Managers need to see their project's burn rate in context, not in a disconnected global finance tab.
-
-### 4.3 Invoices, Receivables, & Client Credits
-- **Business Logic**: **[FULLY WIRED]**. Connects to `invoices`, `payments`, `company_billing_profile`. It includes logic for tax generation, advance payments, and credit notes.
-- **UX Recommendation**: **[PROMOTE]**. The "Finance & Billing" module is far too complex and powerful to be a sub-tab under "Resources". Promote it to a primary Top-Bar Module (on par with Execution and Projects).
-
-### 4.4 Financial Ledgers & Forecast (Period Closing)
-- **Business Logic**: **[FULLY WIRED]**. Highly sophisticated backend wiring utilizing `financial_periods`, `financial_snapshots`, and `financial_adjustments`. Includes hard locks for closed periods.
-- **UX Recommendation**: **[LOGICAL]**. Keep this exactly where it is. The Command Center / Ledger view is beautifully structured for financial controllers.
+### Session State Integrity
+**Finding:** Graceful degradation needs refinement.
+- **Mechanism:** If the session state evaluates to `null` (e.g., network drop, deleted user), `AuthContext` sets `profile` to `null`.
+- **Vulnerability:** Because `AuthContext` relies on an exhaustive list of prefixes to clear storage during expiry (e.g., `if (key.startsWith('tasks_')) localStorage.removeItem(key)`), any newly added offline cache key (like `time_logs_`) that isn't explicitly added to the purge list will permanently leak data to the next user who logs into that shared computer.
 
 ---
 
-## 5. GLOBAL ARCHITECTURE VERDICT & RESTRUCTURING PLAN
+## 5. Final Production Checklist
 
-### The "Tab Hell" Problem
-The application currently suffers from **"Tab Hell"**. For example, to change an employee's salary, a user clicks: Resources $\rightarrow$ Finance $\rightarrow$ Payroll Tab $\rightarrow$ Edit Pill. To see project workload, they click: Team $\rightarrow$ Team Workload.
+### Rogue Console Logs
+**Finding:** Production noise.
+- Multiple `console.log` statements were left in production services:
+  - `financeLedgerService.ts`: Logging journal entry duplications.
+  - `financeMigrationService.ts`: Logging migration counts.
+  - `sandboxSeedEngine.ts`: Verbose generation logs.
+- **Recommendation:** Replace with a structured logging utility that mutes output when `import.meta.env.PROD` is true.
 
-### Recommended 4-Pillar Navigation Restructuring
-Collapse the 10 Executive Domains and 30+ sub-tabs into a **4-Pillar Top Navigation**, relying on continuous scrolling and side-panels rather than nested routing:
-
-1. **MISSION CONTROL (The PM's Desk)**
-   - Merges: Dashboard, Inbox, Approvals, Activity Feed, and Daily Command.
-   - *UX shift*: Everything that needs *action today* lives here.
-
-2. **EXECUTION (The Work)**
-   - Merges: Projects, Task Board, Sprints, Timeline, and Requirements.
-   - *UX shift*: One unified board. Filters handle whether you are looking at Epics (Projects) or Tasks (Sprints/Kanban).
-
-3. **COMPANY (The Resources)**
-   - Merges: Team roster, Skills Matrix, Capacity/Workload, Attendance, Payroll, and Departments.
-   - *UX shift*: A single truth-source for all human capital and their utilization.
-
-4. **FINANCE & ADMIN (The Business)**
-   - Merges: Invoicing, Budgets, Ledger, Client Access, and Workspace Settings.
-   - *UX shift*: Separates the "delivery of work" from the "business of the company".
-
-### Conclusion on Business Logic
-Almost **zero** of the platform is mocked. The data layer is incredibly robust, featuring advanced schema designs (cryptographic audit ledgers, financial period snapshots, acyclic dependency graphs, and temporal drift tracking). 
-
-The issue is entirely on the presentation layer: the UI is surfacing the database schema directly as tabs, rather than abstracting it into user-centric workflows. Implementing the UI merging recommendations above will transform the platform from a "Database Viewer" into a "Premium Management Tool".
+### useEffect Dependency Arrays
+**Finding:** Stale Closure Risks.
+- Several complex dashboard components have `useEffect` hooks relying on Supabase Realtime WebSockets. Due to the rapid state mutations, some functional dependencies are missing from the arrays, which may lead to components rendering stale data if a WebSocket packet arrives out of order.

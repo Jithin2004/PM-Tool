@@ -26,7 +26,7 @@ export const financeLedgerService = {
       .maybeSingle();
       
     if (existing) {
-      console.log(`Journal entry already exists for invoice ${params.invoiceId}`);
+      // Logging removed for production
       return existing.id;
     }
 
@@ -90,7 +90,7 @@ export const financeLedgerService = {
       .maybeSingle();
       
     if (existing) {
-      console.log(`Journal entry already exists for payment ${params.paymentId}`);
+      // Logging removed for production
       return existing.id;
     }
 
@@ -150,7 +150,7 @@ export const financeLedgerService = {
       .maybeSingle();
       
     if (existing) {
-      console.log(`Journal entry already exists for expense ${params.expenseId}`);
+      // Logging removed for production
       return existing.id;
     }
 

@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
       format: 'es',
     },
     build: {
-      sourcemap: true,
+      sourcemap: false,
       // Use esbuild minifier — faster and smaller than default
       minify: 'esbuild',
       // Raise warning bar slightly since we're actively splitting chunks

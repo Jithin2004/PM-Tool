@@ -67,7 +67,7 @@ export function ExportCenter() {
   };
 
   const exportProjects = () => {
-    handleExport('projects', supabase.from('projects').select('*').eq('workspace_id', workspace?.id) as any);
+    handleExport('projects', supabase.from('projects').select('id, workspace_id, client_id, name, description, status, priority, execution_mode, created_at, deadline, tags').eq('workspace_id', workspace?.id) as any);
   };
 
   const exportFinance = () => {

@@ -1,6 +1,4 @@
 import { supabase } from '../lib/supabase';
-import type { PostgrestFilterBuilder } from '@supabase/postgrest-js';
-
 export interface PaginatedResult<T> {
   data: T[];
   nextCursor: number | null;

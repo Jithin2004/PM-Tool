@@ -65,6 +65,8 @@ import { WorkSessionManager } from '../../components/execution/WorkSessionManage
 import { cloneWorkspaceToSandbox } from '../../services/workspaceService';
 import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 import { EndOfDayModal } from '../../components/execution/EndOfDayModal';
+import { IconContainer } from '../../components/ui/IconContainer';
+import { CompanyHealthModal } from '../../components/dashboard/CompanyHealthModal';
 // Sunset imported above
 
 interface ConfirmState {
@@ -410,6 +412,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const [isRosterOpen, setIsRosterOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isEndOfDayModalOpen, setIsEndOfDayModalOpen] = useState(false);
+  const [isHealthModalOpen, setIsHealthModalOpen] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'dashboard' | 'active' | 'completed' | 'intelligence'>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -1128,9 +1131,9 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     }
                   }}
                 >
-                  <div className={`flex items-center justify-center ${isSidebarCollapsed ? 'w-8 h-8 rounded-lg' : ''}`}>
+                  <IconContainer className={isSidebarCollapsed ? 'w-8 h-8 rounded-lg' : ''}>
                     {renderRouteIcon(domain.iconName)}
-                  </div>
+                  </IconContainer>
                   {!isSidebarCollapsed && (
                     <div className="flex flex-col text-left">
                       <span className="whitespace-nowrap premium-fade-in">{domain.label}</span>
@@ -1527,7 +1530,12 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </span>
                 {dbNotifications.filter(n => !n.read_at).length === 0 && (
-                  <span className="text-xs font-medium text-emerald-400/80 bg-emerald-500/10 px-2 py-0.5 rounded">All systems nominal</span>
+                  <button 
+                    onClick={() => setIsHealthModalOpen(true)}
+                    className="text-xs font-medium text-emerald-400/80 bg-emerald-500/10 px-2 py-0.5 rounded hover:bg-emerald-500/20 transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    All systems nominal
+                  </button>
                 )}
               </div>
             </div>
@@ -1544,7 +1552,18 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               {hasAuthority(profile, 'admin') && window.location.pathname === '/workspace' && (
                 <WelcomeCenter />
               )}
-              {children}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={window.location.pathname}
+                  initial={{ opacity: 0, y: 15, scale: 0.98, rotateX: 5 }}
+                  animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98, rotateX: -5 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
+                >
+                  {children}
+                </motion.div>
+              </AnimatePresence>
             </ErrorBoundary>
           </main>
 
@@ -1664,6 +1683,13 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
             currentUser={profile}
             workspaceId={workspace.id}
             notify={notify}
+          />
+        </AnimatePresence>
+
+        <AnimatePresence>
+          <CompanyHealthModal 
+            isOpen={isHealthModalOpen} 
+            onClose={() => setIsHealthModalOpen(false)} 
           />
         </AnimatePresence>
 

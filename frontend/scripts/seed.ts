@@ -37,16 +37,28 @@ async function seedDatabase() {
     // ==========================================
     console.log("👑 Checking for existing Admin/Owner Auth Profile...");
     let adminId = '';
-    const email = 'demo.admin@resolvepm.app';
+    const email = 'demo.admin.v2@resolvepm.app'; // Changed to bypass corrupted auth.identities row
     
     // 🔥 CRITICAL FIX: Clean up dangling public user to prevent trigger collision
     await supabase.from('users').delete().eq('email', email);
     
-    const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
-    const existingUser = usersData?.users?.find((u: any) => u.email === email);
+    // Fetch ALL users using pagination to bypass the 50-user default limit
+    let allUsers: any[] = [];
+    let page = 1;
+    while (true) {
+      const { data: pageData, error: listError } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+      if (listError) throw new Error(`Failed to list users: ${listError.message}`);
+      if (!pageData || !pageData.users || pageData.users.length === 0) break;
+      
+      allUsers.push(...pageData.users);
+      if (pageData.users.length < 1000) break;
+      page++;
+    }
+    
+    const existingUser = allUsers.find((u: any) => u.email === email);
     
     if (existingUser) {
-      console.log("✅ User already exists. Reusing ID...");
+      console.log(`✅ User already exists (${existingUser.id}). Reusing ID...`);
       adminId = existingUser.id;
     } else {
       console.log("👑 Creating new Admin/Owner Auth Profile...");
@@ -101,8 +113,7 @@ async function seedDatabase() {
     const { error: teamError } = await supabase.from('teams').insert({
       id: teamId,
       workspace_id: workspace.id,
-      name: 'Executive Board',
-      description: 'Core leadership and admin team'
+      name: 'Executive Board'
     });
     if (teamError) throw new Error(`Team Creation Failed: ${teamError.message}`);
 
@@ -114,7 +125,7 @@ async function seedDatabase() {
       user_id: adminId,
       workspace_id: workspace.id,
       team_id: teamId,
-      role: 'admin'
+      member_role: 'admin'
     });
     if (tmError) throw new Error(`Team Member Mapping Failed: ${tmError.message}`);
 
@@ -164,7 +175,7 @@ async function seedDatabase() {
     console.log("-------------------------------------------------");
     console.log(`Sandbox Workspace ID: ${workspace.id}`);
     console.log(`Team ID: ${teamId}`);
-    console.log(`Admin Login: demo.admin@resolvepm.app / Password123!`);
+    console.log(`Admin Login: ${email} / Password123!`);
     console.log("-------------------------------------------------");
 
   } catch (error: any) {

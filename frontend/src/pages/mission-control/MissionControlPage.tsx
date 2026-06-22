@@ -24,7 +24,8 @@ import type { MissionControlView } from '../../core/mission-control/operationalF
 import type { OperationalPresence } from '../../core/presence/types';
 import { OnboardingChecklist } from '../../components/onboarding/OnboardingChecklist';
 import { hasAuthority, hasFunction, hasCapability } from '../../core/auth/permissions';
-import { KanbanSquare, Users, Building2, Settings, Target, ListTodo, Calendar, Banknote, BarChart3, Play, MessageSquare, Rocket, ChevronRight } from 'lucide-react';
+import { KanbanSquare, Users, Building2, Settings, Target, ListTodo, Calendar, Banknote, BarChart3, Play, MessageSquare, Rocket, ChevronRight, Activity, ActivitySquare } from 'lucide-react';
+import { TiltCard } from '../../components/ui/TiltCard';
 
 function MissionControlContent() {
   const { profile } = useAuth();
@@ -155,13 +156,24 @@ function MissionControlContent() {
         (() => {
           return (
             <div className="flex flex-col items-center justify-center min-h-[500px] text-center px-4 py-8">
-              <div className="w-16 h-16 rounded-full mb-6 flex items-center justify-center bg-indigo-500/10">
+              <div className="w-16 h-16 rounded-full mb-6 flex items-center justify-center bg-indigo-500/10 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
                 <Rocket className="w-8 h-8 text-indigo-400" />
               </div>
-              <h2 className="text-3xl font-bold mb-3 tracking-tight text-white font-geist">Let's start building your workspace</h2>
-              <p className="text-base max-w-lg mx-auto leading-relaxed text-[var(--text-secondary)] mb-12 font-geist">
-                Follow the guided journey to initialize your delivery environment and bring your operations online.
+              <h2 className="text-4xl font-serif-headers mb-3 tracking-tight text-white font-medium">Let's build your workspace.</h2>
+              <p className="text-base max-w-lg mx-auto leading-relaxed text-[var(--text-tertiary)] mb-12 font-mono-data opacity-80">
+                Initialize your delivery environment and bring operations online.
               </p>
+              
+              {/* Value State: Blurred Mock Visualization */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-20" style={{ zIndex: -1 }}>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] border border-white/10 rounded-2xl bg-white/5 blur-md flex flex-col p-8">
+                   <div className="w-full h-8 border-b border-white/10 mb-4 flex gap-2"><div className="w-4 h-4 rounded-full bg-white/20"/><div className="w-24 h-4 rounded bg-white/10"/></div>
+                   <div className="flex-1 flex gap-4">
+                     <div className="w-1/3 h-full border border-white/10 rounded-xl bg-white/5" />
+                     <div className="flex-1 h-full border border-white/10 rounded-xl bg-white/5" />
+                   </div>
+                </div>
+              </div>
               
               <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-sm font-mono text-[var(--text-secondary)] mb-12">
                 <div className="flex items-center gap-2 text-indigo-400">
@@ -190,28 +202,42 @@ function MissionControlContent() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto w-full">
-                <button 
-                  onClick={() => (window as any).openCreateProjectModal?.()}
-                  className="flex flex-col items-center gap-3 p-6 rounded-xl border border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors text-center group"
-                >
-                  <KanbanSquare className="w-6 h-6 text-indigo-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-semibold text-white">Create first project</span>
-                </button>
-                <button 
-                  onClick={() => navigateTo('/resources/teams')}
-                  className="flex flex-col items-center gap-3 p-6 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-center group"
-                >
-                  <Users className="w-6 h-6 text-emerald-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-semibold text-white">Invite teammates</span>
-                </button>
-                <button 
-                  onClick={() => navigateTo('/control/settings')}
-                  className="flex flex-col items-center gap-3 p-6 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-center group"
-                >
-                  <Settings className="w-6 h-6 text-amber-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-semibold text-white">Configure workspace</span>
-                </button>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto w-full z-10">
+                <TiltCard onClick={() => (window as any).openCreateProjectModal?.()}>
+                  <div className="flex flex-col items-center gap-4 p-8 text-center h-full justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-2">
+                      <KanbanSquare className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-serif-headers font-medium text-white mb-1">Create Project</h3>
+                      <p className="text-[11px] font-mono-data text-white/40 uppercase tracking-wider">Initialize delivery</p>
+                    </div>
+                  </div>
+                </TiltCard>
+
+                <TiltCard onClick={() => navigateTo('/resources/teams')}>
+                  <div className="flex flex-col items-center gap-4 p-8 text-center h-full justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-2">
+                      <Users className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-serif-headers font-medium text-white mb-1">Invite Team</h3>
+                      <p className="text-[11px] font-mono-data text-white/40 uppercase tracking-wider">Scale resources</p>
+                    </div>
+                  </div>
+                </TiltCard>
+
+                <TiltCard onClick={() => navigateTo('/control/settings')}>
+                  <div className="flex flex-col items-center gap-4 p-8 text-center h-full justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2">
+                      <Settings className="w-6 h-6 text-amber-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-serif-headers font-medium text-white mb-1">Configure</h3>
+                      <p className="text-[11px] font-mono-data text-white/40 uppercase tracking-wider">Workspace settings</p>
+                    </div>
+                  </div>
+                </TiltCard>
               </div>
             </div>
           );
