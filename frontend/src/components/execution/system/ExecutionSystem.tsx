@@ -49,7 +49,7 @@ import { supabase } from '../../../lib/supabase';
 import { reconstructProjectTimeline } from '../../../core/execution/flowEngine';
 import type { DeliveryTimeline } from '../../../core/execution/flowEngine';
 
-import ExecutionTimelineView from './ExecutionTimelineView';
+import { ScheduleView } from './ScheduleView';
 import { DynamicBoard } from '../../board/DynamicBoard';
 
 interface ExecutionSystemProps {
@@ -97,11 +97,29 @@ export function ExecutionSystem({
 
   const { events: calendarEvents } = useCalendarEvents(workspace?.id);
 
-  const [activeView, setActiveView] = useState<ExecutionViewType>(initialView);
+  const [activeView, setActiveView] = useState<ExecutionViewType>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view') as ExecutionViewType;
+    return viewParam || initialView;
+  });
 
   React.useEffect(() => {
-    setActiveView(initialView);
-  }, [initialView]);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') !== activeView) {
+      params.set('view', activeView);
+      window.history.replaceState(null, '', `?${params.toString()}`);
+    }
+  }, [activeView]);
+
+  React.useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view') as ExecutionViewType;
+      if (viewParam) setActiveView(viewParam);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -473,8 +491,8 @@ export function ExecutionSystem({
           />
         )}
 
-        {activeView === 'timeline' && (
-          <ExecutionTimelineView
+        {activeView === 'schedule' && (
+          <ScheduleView
             tasks={filteredTasks}
             projects={projects}
             dependencies={dependencies}
@@ -486,13 +504,6 @@ export function ExecutionSystem({
           <RoadmapView
             projects={projects}
             tasks={filteredTasks}
-          />
-        )}
-
-        {activeView === 'calendar' && (
-          <CalendarView
-            tasks={filteredTasks}
-            events={calendarEvents}
           />
         )}
 

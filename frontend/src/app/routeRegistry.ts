@@ -44,25 +44,25 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'scheduling', path: '/execution/timeline', label: 'Scheduling', iconName: 'Timeline', capability: 'view_scheduling', group: 'core', disclosureTier: 'operational' },
   
   // Reports routes
-  { id: 'analytics', path: '/control/analytics', label: 'Analytics', iconName: 'ChartLineUp', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
+  { id: 'analytics', path: '/admin/analytics', label: 'Analytics', iconName: 'ChartLineUp', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
   { id: 'decisions', path: '/workspace/decisions', label: 'Decision Center', iconName: 'Compass', capability: 'view_decision_center', group: 'intelligence', disclosureTier: 'intelligence' },
   
   // Resources routes
-  { id: 'work-logs', path: '/resources/work-logs', label: 'Work Logs', iconName: 'Notebook', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
-  { id: 'logistics', path: '/resources', label: 'Attendance & Leave', iconName: 'UserCog', capability: 'manage_logistics', group: 'resources', disclosureTier: 'operational' },
-  { id: 'finance', path: '/resources/finance', label: 'Accounts & Finance', iconName: 'Landmark', capability: 'manage_finance', group: 'resources', disclosureTier: 'platform' },
-  { id: 'teams', path: '/resources/teams', label: 'Employees & Departments', iconName: 'UsersThree', capability: 'view_teams', group: 'resources', disclosureTier: 'operational' },
-  { id: 'capacity', path: '/resources/capacity', label: 'Capacity Forecast', iconName: 'BarChart3', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
+  { id: 'work-logs', path: '/company/work-logs', label: 'Work Logs', iconName: 'Notebook', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
+  { id: 'logistics', path: '/company', label: 'Attendance & Leave', iconName: 'UserCog', capability: 'manage_logistics', group: 'resources', disclosureTier: 'operational' },
+  { id: 'finance', path: '/finance', label: 'Accounts & Finance', iconName: 'Landmark', capability: 'manage_finance', group: 'resources', disclosureTier: 'platform' },
+  { id: 'teams', path: '/company/teams', label: 'Employees & Departments', iconName: 'UsersThree', capability: 'view_teams', group: 'resources', disclosureTier: 'operational' },
+  { id: 'capacity', path: '/company/capacity', label: 'Capacity Forecast', iconName: 'BarChart3', capability: 'view_reports', group: 'resources', disclosureTier: 'operational' },
   { id: 'portfolio', path: '/workspace/portfolio', label: 'Client Profiles', iconName: 'Building2', capability: 'view_stakeholders', group: 'resources', disclosureTier: 'intelligence' },
-  { id: 'audit', path: '/control/audit', label: 'Audit Log', iconName: 'Activity', capability: 'view_audit_log', group: 'resources', disclosureTier: 'platform' },
+  { id: 'audit', path: '/admin/audit', label: 'Audit Log', iconName: 'Activity', capability: 'view_audit_log', group: 'resources', disclosureTier: 'platform' },
   
   // System routes
-  { id: 'document-templates', path: '/control/document-templates', label: 'Document Templates', iconName: 'FileText', capability: 'manage_settings', group: 'system', disclosureTier: 'platform' },
-  { id: 'identity', path: '/control/identity', label: 'Access Control', iconName: 'Shield', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
-  { id: 'automations', path: '/control/automations', label: 'Automations', iconName: 'Zap', capability: 'manage_automations', group: 'system', disclosureTier: 'platform' },
-  { id: 'mission-control', path: '/control/mission-control', label: 'Dashboard', iconName: 'LayoutDashboard', capability: 'view_mission_control', group: 'intelligence', disclosureTier: 'platform' },
-  { id: 'system-health', path: '/control/system-health', label: 'System Health', iconName: 'Activity', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
-  { id: 'settings', path: '/control/settings', label: 'Settings', iconName: 'Settings', capability: 'manage_settings', group: 'system', disclosureTier: 'operational' },
+  { id: 'document-templates', path: '/admin/document-templates', label: 'Document Templates', iconName: 'FileText', capability: 'manage_settings', group: 'system', disclosureTier: 'platform' },
+  { id: 'identity', path: '/admin/identity', label: 'Access Control', iconName: 'Shield', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
+  { id: 'automations', path: '/admin/automations', label: 'Automations', iconName: 'Zap', capability: 'manage_automations', group: 'system', disclosureTier: 'platform' },
+  { id: 'mission-control', path: '/admin/mission-control', label: 'Dashboard', iconName: 'LayoutDashboard', capability: 'view_mission_control', group: 'intelligence', disclosureTier: 'platform' },
+  { id: 'system-health', path: '/admin/system-health', label: 'System Health', iconName: 'Activity', capability: 'platform_governance', group: 'system', disclosureTier: 'platform' },
+  { id: 'settings', path: '/admin/settings', label: 'Settings', iconName: 'Settings', capability: 'manage_settings', group: 'system', disclosureTier: 'operational' },
 
   // Executive routes
   { id: 'executive', path: '/workspace/executive', label: 'Executive Overview', iconName: 'Binoculars', capability: 'view_analytics', group: 'intelligence', disclosureTier: 'intelligence' },
@@ -79,9 +79,9 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'login', path: '/login', label: 'Login', iconName: 'Lock', isPublic: true, disclosureTier: 'essential' },
   { id: 'onboarding', path: '/onboarding/workspace', label: 'Workspace Setup', iconName: 'Building2', disclosureTier: 'essential' },
   { id: 'project-new', path: '/projects/new', label: 'Create Project', iconName: 'PlusCircle', capability: 'manage_projects', disclosureTier: 'essential' },
-  { id: 'control-root', path: '/control', label: 'Control', iconName: 'Shield', capability: 'platform_governance', disclosureTier: 'platform' },
-  { id: 'settings-notifications', path: '/control/settings/notifications', label: 'Notification Settings', iconName: 'Bell', capability: 'manage_settings', disclosureTier: 'operational' },
-  { id: 'settings-modes', path: '/control/settings/modes', label: 'Mode Settings', iconName: 'Sliders', capability: 'manage_settings', disclosureTier: 'operational' },
+  { id: 'control-root', path: '/admin', label: 'Control', iconName: 'Shield', capability: 'platform_governance', disclosureTier: 'platform' },
+  { id: 'settings-notifications', path: '/admin/settings/notifications', label: 'Notification Settings', iconName: 'Bell', capability: 'manage_settings', disclosureTier: 'operational' },
+  { id: 'settings-modes', path: '/admin/settings/modes', label: 'Mode Settings', iconName: 'Sliders', capability: 'manage_settings', disclosureTier: 'operational' },
   { id: 'execution-board', path: '/execution/board', label: 'Execution Board', iconName: 'ListTodo', capability: 'view_tasks', disclosureTier: 'essential' },
   { id: 'execution-gantt', path: '/execution/gantt', label: 'Gantt Workspace', iconName: 'GitBranch', capability: 'view_scheduling', disclosureTier: 'operational' },
   { id: 'execution-sprints', path: '/execution/sprints', label: 'Sprint Center', iconName: 'GitFork', capability: 'view_scheduling', disclosureTier: 'operational' },
@@ -145,7 +145,7 @@ export function isRegisteredPath(pathname: string): boolean {
   if (path.startsWith('/accept-invite/')) {
     return true;
   }
-  if (path.startsWith('/control/automations/') || path.startsWith('/control/connections/')) {
+  if (path.startsWith('/admin/automations/') || path.startsWith('/admin/connections/')) {
     return true;
   }
 

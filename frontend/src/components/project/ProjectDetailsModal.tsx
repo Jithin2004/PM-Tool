@@ -23,6 +23,7 @@ import { ProjectShareModal } from './ProjectShareModal';
 import { SharedProjectDashboard } from '../../pages/shared/SharedProjectDashboard';
 import { ChangeRequestsTab } from './ChangeRequestsTab';
 import { hasAuthority } from '../../core/auth/permissions';
+import { ProjectRequirementsTab } from './ProjectRequirementsTab';
 
 function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; currentUserProfile?: any }) {
   const [loading, setLoading] = useState(true);
@@ -343,7 +344,7 @@ export function ProjectDetailsModal({
   useEscapeKey(true, onClose);
   const hasTasks = tasks.some(t => t.project_id === project.id);
 
-  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance' | 'insights' | 'change_requests'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance' | 'requirements' | 'insights' | 'change_requests'>('general');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [previewToken, setPreviewToken] = useState<string | null>(null);
   const [deltaDays, setDeltaDays] = useState('5');
@@ -793,6 +794,20 @@ export function ProjectDetailsModal({
                 <History className="w-4 h-4 text-signal-info" /> Project Ledger Center
               </h4>
               <button
+                onClick={() => setActiveTab('general')}
+                className={`flex-1 min-w-[120px] py-2.5 px-4 text-[11px] font-bold tracking-widest uppercase transition-all whitespace-nowrap border-b-2
+                  ${activeTab === 'general' ? 'border-[var(--pm-primary)] text-[var(--pm-primary)] bg-[var(--pm-primary)]/5' : 'border-transparent text-text-tertiary hover:text-text-primary hover:bg-surface-3'}`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab('finance')}
+                className={`flex-1 min-w-[120px] py-2.5 px-4 text-[11px] font-bold tracking-widest uppercase transition-all whitespace-nowrap border-b-2
+                  ${activeTab === 'finance' ? 'border-[var(--pm-primary)] text-[var(--pm-primary)] bg-[var(--pm-primary)]/5' : 'border-transparent text-text-tertiary hover:text-text-primary hover:bg-surface-3'}`}
+              >
+                Budgets & Finance
+              </button>
+              <button
                 type="button"
                 onClick={() => setShowLogs(false)}
                 className="p-2 border border-border hover:bg-[var(--pm-surface)]/5 transition-colors"
@@ -1118,6 +1133,14 @@ export function ProjectDetailsModal({
                 }`}
             >
               Files
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('requirements')}
+              className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn ${activeTab === 'requirements' ? 'active' : ''
+                }`}
+            >
+              Requirements
             </button>
             <button
               type="button"
@@ -1614,6 +1637,8 @@ export function ProjectDetailsModal({
             </div>
           ) : activeTab === 'finance' ? (
             <ProjectFinanceTab project={project} currentUserProfile={currentUserProfile} />
+          ) : activeTab === 'requirements' ? (
+            <ProjectRequirementsTab project={project} />
           ) : activeTab === 'change_requests' ? (
             <ChangeRequestsTab project={project} />
           ) : null}

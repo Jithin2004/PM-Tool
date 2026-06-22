@@ -588,35 +588,36 @@ export function useTasks(workspaceId?: string) {
   useEffect(() => {
     if (!workspaceId || !isSupabaseConfigured) return;
 
-    const unsubscribeTasks = realtimeOrchestrator.subscribe(
-      `tasks-changes-${workspaceId}`,
-      'tasks',
-      `workspace_id=eq.${workspaceId}`,
-      (payload) => {
-        const { eventType, new: newRecord, old: oldRecord } = payload;
-        if (eventType === 'INSERT') {
-          if (newRecord.deleted_at) return;
-           setTasks(prev => {
-            if (prev.some(t => t.id === newRecord.id)) return prev;
-            return [normalizeTaskFromRow(newRecord as Record<string, unknown>), ...prev];
-          });
-        } else if (eventType === 'UPDATE') {
-          if (newRecord.deleted_at) {
-            setTasks(prev => prev.filter(t => t.id !== newRecord.id));
-          } else {
-            setTasks(prev =>
-              prev.map(t =>
-                t.id === newRecord.id
-                  ? normalizeTaskFromRow({ ...t, ...newRecord } as Record<string, unknown>)
-                  : t,
-              ),
-            );
+    const tasksChannel = supabase.channel(`tasks-live-sync-${workspaceId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks', filter: `workspace_id=eq.${workspaceId}` },
+        (payload: any) => {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          if (eventType === 'INSERT') {
+            if (newRecord.deleted_at) return;
+             setTasks(prev => {
+              if (prev.some(t => t.id === newRecord.id)) return prev;
+              return [normalizeTaskFromRow(newRecord as Record<string, unknown>), ...prev];
+            });
+          } else if (eventType === 'UPDATE') {
+            if (newRecord.deleted_at) {
+              setTasks(prev => prev.filter(t => t.id !== newRecord.id));
+            } else {
+              setTasks(prev =>
+                prev.map(t =>
+                  t.id === newRecord.id
+                    ? normalizeTaskFromRow({ ...t, ...newRecord } as Record<string, unknown>)
+                    : t,
+                ),
+              );
+            }
+          } else if (eventType === 'DELETE') {
+            setTasks(prev => prev.filter(t => t.id !== oldRecord.id));
           }
-        } else if (eventType === 'DELETE') {
-          setTasks(prev => prev.filter(t => t.id !== oldRecord.id));
         }
-      }
-    );
+      )
+      .subscribe();
 
     const unsubscribeDeps = realtimeOrchestrator.subscribe(
       `task-dependencies-changes-${workspaceId}`,
@@ -653,7 +654,7 @@ export function useTasks(workspaceId?: string) {
     );
 
     return () => {
-      unsubscribeTasks();
+      supabase.removeChannel(tasksChannel);
       unsubscribeDeps();
       unsubscribeCollabs();
     };

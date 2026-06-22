@@ -15,13 +15,11 @@ import { BillingSettings } from './BillingSettings';
 import { showPrompt } from '../../components/common/Dialogs';
 
 const TABS = [
-  { id: 'organization', label: 'Organization' },
-  { id: 'working_rules', label: 'Working Rules' },
+  { id: 'general_setup', label: 'General Setup' },
   { id: 'people_rules', label: 'People Rules' },
   { id: 'finance', label: 'Finance Settings' },
   { id: 'billing', label: 'Billing & Plans' },
-  { id: 'client_access', label: 'Client Access' },
-  { id: 'security', label: 'Security' },
+  { id: 'access_control', label: 'Access Control' },
   { id: 'export', label: 'Export & Backup' }
 ];
 
@@ -33,7 +31,7 @@ export function WorkspaceSettings() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('tab') || 'organization';
+    return params.get('tab') || 'general_setup';
   });
 
   useEffect(() => {
@@ -188,8 +186,8 @@ export function WorkspaceSettings() {
       </div>
 
       <div className="mt-8">
-        {activeTab === 'organization' && (
-          <div className="space-y-8">
+        {activeTab === 'general_setup' && (
+          <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
             <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">
               <h3 className="text-xs font-mono font-bold tracking-widest uppercase text-[var(--text-secondary)] mb-6 flex items-center gap-2.5">
                 <Globe className="w-4 h-4 text-indigo-400" />
@@ -215,11 +213,7 @@ export function WorkspaceSettings() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {activeTab === 'working_rules' && (
-          <div className="space-y-8">
             <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">
               <h3 className="text-xs font-mono font-bold tracking-widest uppercase text-[var(--text-secondary)] mb-6 flex items-center gap-2.5">
                 <Settings className="w-4 h-4 text-cyan-400" />
@@ -343,8 +337,8 @@ export function WorkspaceSettings() {
           </div>
         )}
 
-        {activeTab === 'client_access' && (
-          <div className="space-y-8">
+        {activeTab === 'access_control' && (
+          <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
             <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">
               <h3 className="text-xs font-mono font-bold tracking-widest uppercase text-[var(--text-secondary)] mb-6 flex items-center gap-2.5">
                 <Globe className="w-4 h-4 text-blue-400" />
@@ -360,11 +354,7 @@ export function WorkspaceSettings() {
                 </select>
               </div>
             </div>
-          </div>
-        )}
 
-        {activeTab === 'security' && (
-          <div className="space-y-8">
             <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">
               <h3 className="text-xs font-mono font-bold tracking-widest uppercase text-[var(--text-secondary)] mb-6 flex items-center gap-2.5">
                 <Shield className="w-4 h-4 text-rose-400" />

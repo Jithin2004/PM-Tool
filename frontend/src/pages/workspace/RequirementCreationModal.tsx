@@ -6,7 +6,7 @@ import { Icon } from '../../components/ui/Icon';
 import { activityLogService } from '../../services/activityLogService';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
-export function RequirementCreationModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
+export function RequirementCreationModal({ onClose, onSuccess, defaultProjectId }: { onClose: () => void, onSuccess: () => void, defaultProjectId?: string }) {
   const { workspace } = useWorkspace();
   const { projects } = useDashboard();
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export function RequirementCreationModal({ onClose, onSuccess }: { onClose: () =
     title: '',
     description: '',
     client_name: '',
-    project_id: '',
+    project_id: defaultProjectId || '',
     priority: 'medium',
     acceptance_criteria: ''
   });

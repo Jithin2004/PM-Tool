@@ -8,13 +8,27 @@ import { supabase } from '../../lib/supabase';
 import { generatePriorityExplanation } from '../../core/intelligence/PriorityExplanationEngine';
 import { PriorityExplanationBadge } from '../ui/PriorityExplanationBadge';
 
-export function UniversalWorkInbox() {
+import { ApprovalDecisionModal } from '../../pages/workspace/ApprovalDecisionModal';
+
+export function ActionInbox() {
   const { profile } = useAuth();
   const { workspace } = useWorkspace();
   const { raw: { tasks, projects, profiles }, dbNotifications } = useOperationalData();
   const [inboxItems, setInboxItems] = useState<WorkInboxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [rawApprovals, setRawApprovals] = useState<any[]>([]);
+  const [selectedApproval, setSelectedApproval] = useState<any | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('inbox') === 'open') {
+      setIsOpen(true);
+      // Optional: remove query param to not trigger again on reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
 
   useEffect(() => {
     if (!profile || !workspace) return;
@@ -25,9 +39,10 @@ export function UniversalWorkInbox() {
     setLoading(true);
     try {
       const [{ data: approvals }] = await Promise.all([
-        supabase.from('universal_approvals').select('*').eq('workspace_id', workspace!.id)
+        supabase.from('universal_approvals').select('*, requested_by_user:users!requested_by(email), approved_by_user:users!approved_by(email)').eq('workspace_id', workspace!.id)
       ]);
 
+      setRawApprovals(approvals || []);
       const notifs = dbNotifications;
 
       const items = generateWorkInbox({
@@ -102,7 +117,18 @@ export function UniversalWorkInbox() {
                       ${item.priority === 'CRITICAL' ? 'border-signal-error/30 bg-signal-error/5' :
                         item.priority === 'HIGH' ? 'border-amber-500/30 bg-amber-500/5' :
                           'border-border/50 bg-surface-highest'}`}
-                    onClick={() => navigateTo(item.actionRoute)}
+                    onClick={() => {
+                      if (item.type === 'approval' && item.metadata?.approvalId) {
+                        const approval = rawApprovals.find(a => a.id === item.metadata?.approvalId);
+                        if (approval) {
+                          setSelectedApproval(approval);
+                        } else {
+                          navigateTo(item.actionRoute);
+                        }
+                      } else {
+                        navigateTo(item.actionRoute);
+                      }
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5">
@@ -158,6 +184,14 @@ export function UniversalWorkInbox() {
             </div>
           </div>
         </>
+      )}
+
+      {selectedApproval && (
+        <ApprovalDecisionModal
+          approval={selectedApproval}
+          onClose={() => setSelectedApproval(null)}
+          onUpdate={loadInbox}
+        />
       )}
     </div>
   );

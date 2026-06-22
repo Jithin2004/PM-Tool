@@ -14,7 +14,7 @@ import {
   Map
 } from 'lucide-react';
 
-export type ExecutionViewType = 'board' | 'list' | 'sprint' | 'timeline' | 'roadmap' | 'calendar' | 'allocation';
+export type ExecutionViewType = 'board' | 'list' | 'sprint' | 'schedule' | 'roadmap' | 'allocation';
 
 interface ExecutionHeaderProps {
   activeView: ExecutionViewType;
@@ -57,9 +57,8 @@ export function ExecutionHeader({
     { id: 'board', label: 'Board', icon: <LayoutGrid className="w-4 h-4" /> },
     { id: 'list', label: 'List', icon: <ListIcon className="w-4 h-4" /> },
     { id: 'sprint', label: 'Sprint', icon: <Layers className="w-4 h-4" /> },
-    { id: 'timeline', label: 'Timeline', icon: <GanttChart className="w-4 h-4" /> },
+    { id: 'schedule', label: 'Schedule', icon: <GanttChart className="w-4 h-4" /> },
     { id: 'roadmap', label: 'Roadmap', icon: <Map className="w-4 h-4" /> },
-    { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="w-4 h-4" /> },
     { id: 'allocation', label: 'Allocation', icon: <BarChart2 className="w-4 h-4" /> },
   ];
 

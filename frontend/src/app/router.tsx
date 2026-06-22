@@ -65,8 +65,7 @@ const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage')
 const KnowledgeBase = withRetry(() => import('../pages/workspace/KnowledgeBase'));
 const DecisionsPage = withRetry(() => import('../pages/workspace/DecisionsPage'));
 const MeetingsPage = withRetry(() => import('../pages/workspace/MeetingsPage'));
-const RequirementsPage = withRetry(() => import('../pages/workspace/RequirementsPage'));
-const ApprovalsPage = withRetry(() => import('../pages/workspace/ApprovalsPage'));
+
 const AutomationCenter = withRetry(() => import('../pages/workspace/AutomationCenter'));
 const FileCenterPage = withRetry(() => import('../pages/workspace/FileCenter'));
 
@@ -76,9 +75,7 @@ const ProductAdoptionDashboard = withRetry(() => import('../pages/workspace/Prod
 const ReportsCenter = withRetry(() => import('../pages/workspace/ReportsCenter'));
 
 const ExecutionBoardPage = withRetry(() => import('../pages/execution/ExecutionBoardPage'));
-const TimelinePage = withRetry(() => import('../pages/execution/TimelinePage'));
-const GanttPage = withRetry(() => import('../pages/execution/GanttPage'));
-const SprintPage = withRetry(() => import('../pages/execution/SprintPage'));
+
 
 const TeamsPage = withRetry(() => import('../pages/resources/TeamsPage'));
 const CapacityPage = withRetry(() => import('../pages/resources/CapacityPage'));
@@ -471,12 +468,10 @@ export function ResolveRouter() {
       return <RouteShell><MeetingsPage /></RouteShell>;
     }
     if (pathname === '/workspace/requirements') {
-      if (!guardRoute(role, '/workspace/requirements')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><ModuleErrorBoundary module="RequirementsPage"><RequirementsPage /></ModuleErrorBoundary></RouteShell>;
+      return <Redirect to="/workspace" />;
     }
     if (pathname === '/workspace/approvals') {
-      if (!guardRoute(role, '/workspace/approvals')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><ApprovalsPage /></RouteShell>;
+      return <Redirect to="/overview?inbox=open" />;
     }
     if (pathname === '/workspace/onboarding') {
       if (!guardRoute(role, '/workspace/onboarding')) return <RouteShell><AccessRestricted /></RouteShell>;
@@ -498,72 +493,82 @@ export function ResolveRouter() {
       return <RouteShell><ExecutionBoardPage /></RouteShell>;
     }
     if (pathname === '/execution/timeline') {
-      if (!guardRoute(role, '/execution/timeline')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><ModuleErrorBoundary module="TimelinePage"><TimelinePage /></ModuleErrorBoundary></RouteShell>;
+      return <Redirect to="/execution/board?view=timeline" />;
     }
     if (pathname === '/execution/gantt') {
-      if (!guardRoute(role, '/execution/gantt')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><GanttPage /></RouteShell>;
+      return <Redirect to="/execution/board?view=roadmap" />;
     }
     if (pathname === '/execution/sprints') {
-      if (!guardRoute(role, '/execution/sprints')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><SprintPage /></RouteShell>;
+      return <Redirect to="/execution/board?view=sprint" />;
     }
 
-    // ── RESOURCES ──
+    // ── COMPANY (Legacy: RESOURCES) ──
 
-    if (pathname === '/resources' || pathname === '/resources/attendance' || pathname === '/resources/payroll') {
+    // Aliasing/Redirects for legacy paths
+    if (pathname.startsWith('/resources/finance')) {
+      return <Redirect to={pathname.replace('/resources/finance', '/finance')} />;
+    }
+    if (pathname.startsWith('/resources')) {
+      return <Redirect to={pathname.replace('/resources', '/company')} />;
+    }
+
+    if (pathname === '/company' || pathname === '/company/attendance' || pathname === '/company/payroll') {
       if (!guardRoute(role, '/resources')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><PeopleOpsCenter /></RouteShell>;
     }
-    if (pathname === '/resources/teams' || pathname === '/resources/capacity' || pathname === '/resources/teams/departments' || pathname === '/resources/teams/skills') {
+    if (pathname === '/company/teams' || pathname === '/company/capacity' || pathname === '/company/teams/departments' || pathname === '/company/teams/skills') {
       if (!guardRoute(role, '/resources/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModuleErrorBoundary module="TeamsPage"><TeamsPage /></ModuleErrorBoundary></RouteShell>;
     }
-    if (pathname === '/resources/finance') {
+    if (pathname === '/finance') {
       if (!guardRoute(role, '/resources/finance')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModuleErrorBoundary module="FinancePage"><FinancePage /></ModuleErrorBoundary></RouteShell>;
     }
 
-    // ── CONTROL ──
+    // ── ADMIN (Legacy: CONTROL) ──
 
-    if (pathname === '/control' || pathname === '/control/identity') {
+    // Aliasing/Redirects for legacy paths
+    if (pathname.startsWith('/control')) {
+      return <Redirect to={pathname.replace('/control', '/admin')} />;
+    }
+
+    if (pathname === '/admin' || pathname === '/admin/identity') {
       if (!guardRoute(role, '/control')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><AdminPanel /></RouteShell>;
     }
-    if (pathname === '/control/analytics') {
+    if (pathname === '/admin/analytics') {
       if (!guardRoute(role, '/control/analytics')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModuleErrorBoundary module="AnalyticsPage"><AnalyticsPage /></ModuleErrorBoundary></RouteShell>;
     }
-    if (pathname === '/control/audit') {
+    if (pathname === '/admin/audit') {
       if (!guardRoute(role, '/control/audit')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><AuditPage /></RouteShell>;
     }
-    if (pathname === '/control/document-templates') {
+    if (pathname === '/admin/document-templates') {
       if (!guardRoute(role, '/control/document-templates')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><DocumentTemplatesPage /></RouteShell>;
     }
-    if (pathname === '/control/system-health') {
+    if (pathname === '/admin/system-health') {
       if (!guardRoute(role, '/control')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ObservabilityPanel /></RouteShell>;
     }
-    if (pathname === '/control/automations' || pathname.startsWith('/control/automations/')) {
+    if (pathname === '/admin/automations' || pathname.startsWith('/admin/automations/')) {
       if (!guardRoute(role, '/control/automations')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModuleErrorBoundary module="AutomationsPanel"><AutomationsPanel /></ModuleErrorBoundary></RouteShell>;
     }
-    if (pathname === '/control/settings') {
+    if (pathname === '/admin/settings') {
       if (!guardRoute(role, '/control/settings')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><SettingsPage /></RouteShell>;
     }
-    if (pathname === '/control/settings/notifications') {
+    if (pathname === '/admin/settings/notifications') {
       if (!guardRoute(role, '/control/settings/notifications')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><NotificationSettings /></RouteShell>;
     }
-    if (pathname === '/control/settings/modes') {
+    if (pathname === '/admin/settings/modes') {
       if (!guardRoute(role, '/control/settings/modes')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModeSettings /></RouteShell>;
     }
-    if (pathname === '/control/mission-control') {
+    if (pathname === '/admin/mission-control') {
       if (!guardRoute(role, '/control/mission-control')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><MissionControlPage /></RouteShell>;
     }
@@ -588,10 +593,10 @@ export function ResolveRouter() {
         return <RouteShell><ExecutionBoardPage /></RouteShell>;
       }
       if (subRoute === 'sprints') {
-        return <RouteShell><SprintView /></RouteShell>;
+        return <Redirect to={`/projects/${projectRoute.projectId}/board?view=sprint`} />;
       }
       if (subRoute === 'timeline') {
-        return <RouteShell><ModuleErrorBoundary module="ProjectTimelinePage"><ProjectTimelinePage /></ModuleErrorBoundary></RouteShell>;
+        return <Redirect to={`/projects/${projectRoute.projectId}/board?view=timeline`} />;
       }
 
       return <Redirect to={`/projects/${projectRoute.projectId}/board`} />;

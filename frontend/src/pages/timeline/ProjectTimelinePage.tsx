@@ -23,7 +23,7 @@ export default function ProjectTimelinePage() {
         currentUserProfile={profile}
         notify={notify}
         onRecalibrateAnalytics={() => fetchProjects()}
-        initialView="timeline"
+        initialView="schedule"
       />
     </main>
   );

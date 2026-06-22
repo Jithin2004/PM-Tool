@@ -32,7 +32,7 @@ import { getLicenseInfo } from '../../lib/productKey';
 import { errorMessageService } from '../../services/errorMessageService';
 
 // Lucide imports merged above
-import { UniversalWorkInbox } from '../../components/inbox/UniversalWorkInbox';
+import { ActionInbox } from '../../components/inbox/ActionInbox';
 import { Login } from '../../components/auth/Login';
 import CommandPalette from '../../components/command/CommandPalette';
 import CommandAnalytics from '../../components/command/CommandAnalytics';
@@ -92,107 +92,45 @@ interface ExecutiveDomain {
   subsections: DomainSubsection[];
 }
 
-const EXECUTIVE_DOMAINS: ExecutiveDomain[] = [
+const PILLAR_DOMAINS: ExecutiveDomain[] = [
   {
     id: 'mission-control',
     label: 'Mission Control',
     iconName: 'Radar',
     subsections: [
-      { label: 'Company Health', path: '/overview', capability: 'view_projects' },
-      { label: 'Daily Command', path: '/overview/executive', capability: 'view_analytics' },
+      { label: 'Dashboard', path: '/overview', capability: 'view_projects' },
       { label: 'Activity Feed', path: '/overview/activity', capability: 'view_reports' },
-      { label: 'Workspace Reports', path: '/workspace/reports', capability: 'view_reports' }
-    ]
-  },
-  {
-    id: 'projects',
-    label: 'Projects',
-    iconName: 'TreeStructure',
-    subsections: [
-      { label: 'Project List', path: '/workspace', capability: 'view_projects' },
-      { label: 'Requirements', path: '/workspace/requirements', capability: 'view_projects' },
       { label: 'Approvals', path: '/workspace/approvals', capability: 'view_projects' }
     ]
   },
   {
-    id: 'tasks',
-    label: 'Tasks',
-    iconName: 'Kanban',
+    id: 'execution',
+    label: 'Execution',
+    iconName: 'TreeStructure',
     subsections: [
+      { label: 'Projects', path: '/workspace', capability: 'view_projects' },
       { label: 'Task Board', path: '/execution/board', capability: 'view_tasks' },
-      { label: 'Timeline', path: '/execution/gantt', capability: 'view_scheduling' },
-      { label: 'Calendar', path: '/execution/timeline', capability: 'view_tasks' },
-      { label: 'Sprints', path: '/execution/sprints', capability: 'view_tasks' }
+      { label: 'Schedule', path: '/execution/timeline', capability: 'view_scheduling' }
     ]
   },
   {
-    id: 'team',
-    label: 'Team',
-    iconName: 'Users',
-    subsections: [
-      { label: 'Employees', path: '/resources/teams', capability: 'view_teams' },
-      { label: 'Departments', path: '/resources/teams/departments', capability: 'view_teams' },
-      { label: 'Team Workload', path: '/resources/capacity', capability: 'view_reports' },
-      { label: 'Skills Matrix', path: '/resources/teams/skills', capability: 'view_teams' },
-      { label: 'Meetings', path: '/workspace/meetings', capability: 'view_teams' }
-    ]
-  },
-  {
-    id: 'clients',
-    label: 'Clients',
+    id: 'company',
+    label: 'Company',
     iconName: 'Building2',
     subsections: [
-      { label: 'Client Profiles', path: '/workspace/portfolio', capability: 'view_stakeholders' }
+      { label: 'People Ops', path: '/company', capability: 'manage_logistics' },
+      { label: 'Team Directory', path: '/company/teams', capability: 'view_teams' },
+      { label: 'Capacity', path: '/company/capacity', capability: 'view_reports' }
     ]
   },
   {
-    id: 'finance',
-    label: 'Finance',
+    id: 'finance-admin',
+    label: 'Finance & Admin',
     iconName: 'Landmark',
     subsections: [
-      { label: 'Payroll & Salaries', path: '/resources/finance?tab=payroll', capability: 'manage_finance' },
-      { label: 'Expenses & Budgets', path: '/resources/finance?tab=budgets', capability: 'manage_finance' },
-      { label: 'Invoices & Billing', path: '/resources/finance?tab=invoices', capability: 'manage_finance' },
-      { label: 'Financial Reports', path: '/resources/finance', capability: 'manage_finance' }
-    ]
-  },
-  {
-    id: 'people',
-    label: 'People Operations',
-    iconName: 'Users',
-    subsections: [
-      { label: 'Attendance & Leave', path: '/resources', capability: 'manage_logistics' }
-    ]
-  },
-  {
-    id: 'documents',
-    label: 'Documents',
-    iconName: 'FileText',
-    subsections: [
-      { label: 'File Center', path: '/workspace/files', capability: 'view_projects' },
-      { label: 'Knowledge Base', path: '/workspace/knowledge', capability: 'view_projects' },
-      { label: 'Templates', path: '/control/document-templates', capability: 'manage_settings' }
-    ]
-  },
-  {
-    id: 'automation',
-    label: 'Automation',
-    iconName: 'Cpu',
-    subsections: [
-      { label: 'Workload Recommendations', path: '/workspace/decisions', capability: 'view_decision_center' },
-      { label: 'Automations', path: '/control/automations', capability: 'manage_automations' },
-      { label: 'Workspace Automation', path: '/workspace/automation', capability: 'manage_automations' }
-    ]
-  },
-  {
-    id: 'admin',
-    label: 'Admin',
-    iconName: 'Settings',
-    subsections: [
-      { label: 'Workspace Settings', path: '/control/settings', capability: 'manage_settings' },
-      { label: 'Roles & Permissions', path: '/control/identity?tab=roles', capability: 'manage_settings' },
-      { label: 'Activity History', path: '/control/audit', capability: 'view_audit_log' },
-      { label: 'System Status', path: '/control/system-health', capability: 'platform_governance' }
+      { label: 'Finance Hub', path: '/finance', capability: 'manage_finance' },
+      { label: 'Workspace Settings', path: '/admin/settings', capability: 'manage_settings' },
+      { label: 'System & Security', path: '/admin/system-health', capability: 'platform_governance' }
     ]
   }
 ];
@@ -329,7 +267,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   const isSidebarItemActive = (path: string): boolean => {
     const current = window.location.pathname;
-    // Strip query parameters from the path being checked (e.g., '/control/identity?tab=roles' → '/control/identity')
+    // Strip query parameters from the path being checked (e.g., '/admin/identity?tab=roles' → '/admin/identity')
     const pathWithoutQuery = path.split('?')[0];
     
     if (pathWithoutQuery === '/overview') return current === '/overview' || current === '/';
@@ -338,20 +276,20 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       return current.startsWith('/execution') && !current.includes('timeline');
     }
     if (pathWithoutQuery === '/execution/timeline') return current.includes('timeline');
-    if (pathWithoutQuery === '/resources') return current === '/resources' || current.startsWith('/resources/logistics');
-    if (pathWithoutQuery === '/control/identity') return current === '/control/identity' || current === '/control' || current.startsWith('/control/identity/');
-    if (pathWithoutQuery === '/control/settings') {
-      return current === '/control/settings' || current.startsWith('/control/settings/');
+    if (pathWithoutQuery === '/company') return current === '/company' || current.startsWith('/company/logistics');
+    if (pathWithoutQuery === '/admin/identity') return current === '/admin/identity' || current === '/admin' || current.startsWith('/admin/identity/');
+    if (pathWithoutQuery === '/admin/settings') {
+      return current === '/admin/settings' || current.startsWith('/admin/settings/');
     }
-    // For admin routes (/control/*), use prefix matching to handle nested paths
-    if (current.startsWith('/control/') && pathWithoutQuery.startsWith('/control/')) {
+    // For admin routes (/admin/*), use prefix matching to handle nested paths
+    if (current.startsWith('/admin/') && pathWithoutQuery.startsWith('/admin/')) {
       return current === pathWithoutQuery || current.startsWith(`${pathWithoutQuery}/`);
     }
     return current === pathWithoutQuery || current.startsWith(`${pathWithoutQuery}/`);
   };
 
   const visibleDomains = useMemo(() => {
-    return EXECUTIVE_DOMAINS.map(domain => {
+    return PILLAR_DOMAINS.map(domain => {
       const allowedSubsections = domain.subsections.filter(sub => isSubsectionAllowed(sub, profile));
       return { ...domain, subsections: allowedSubsections };
     }).filter(domain => domain.subsections.length > 0);
@@ -1562,7 +1500,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 <HelpCircle className="w-4 h-4" />
               </button>
 
-              <UniversalWorkInbox />
+              <ActionInbox />
 
               {/* New Project CTA */}
               {profile && hasCapability(profile.role, 'manage_projects') && (
