@@ -103,7 +103,11 @@ export function getAuthorityRank(role: AuthorityRole | string | undefined): numb
 
 export function hasAuthority(profile: any, required: AuthorityRole): boolean {
   if (!profile) return false;
-  const roleStr = typeof profile === 'string' ? profile : (profile.authority || profile.role);
+  let roleStr = typeof profile === 'string' ? profile : (profile.authority || profile.role);
+  if (typeof roleStr === 'string') {
+    roleStr = roleStr.toLowerCase().replace(/\s+/g, '_');
+  }
+  if (roleStr === 'super_admin') return true; // Super Admin Wildcard
   return getAuthorityRank(roleStr) >= getAuthorityRank(required);
 }
 
@@ -126,7 +130,12 @@ export function hasCapability(roleOrProfile: any, capability: Capability): boole
     customCaps = roleOrProfile.capabilities || [];
   }
 
-  // Fallback to legacy super_admin string literal match before evaluating map
+  // Strict Normalization: "Super Admin" -> "super_admin"
+  if (typeof roleStr === 'string') {
+    roleStr = roleStr.toLowerCase().replace(/\s+/g, '_');
+  }
+
+  // CRITICAL HOTFIX BYPASS: Super Admin Wildcard
   if (roleStr === 'super_admin') return true;
   
   // 1. Check Authority explicitly
