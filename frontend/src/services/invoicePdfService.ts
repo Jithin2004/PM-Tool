@@ -67,8 +67,8 @@ export async function generateInvoicePDF(
   const exchangeRate = invoice.exchange_rate || 1;
 
   const tableBody = lineItems.map(item => {
-    const taxAmt = item.amount * (item.tax_percentage / 100);
-    const convertedAmount = item.amount * exchangeRate;
+    const taxAmt = item.total * (item.tax_percentage / 100);
+    const convertedAmount = item.total * exchangeRate;
     const convertedTax = taxAmt * exchangeRate;
 
     const taxDisplay = isInterState 
@@ -78,7 +78,7 @@ export async function generateInvoicePDF(
     return [
       item.description,
       item.quantity.toString(),
-      `${currencySymbol}${(item.rate * exchangeRate).toFixed(2)}`,
+      `${currencySymbol}${(item.unit_price * exchangeRate).toFixed(2)}`,
       `${item.tax_percentage}%`,
       taxDisplay,
       `${currencySymbol}${(convertedAmount + convertedTax).toFixed(2)}`

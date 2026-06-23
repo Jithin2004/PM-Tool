@@ -64,13 +64,13 @@ export const leaveBalanceService = {
     const balance = await this.getBalance(workspaceId, userId, leaveType);
     if (!balance) throw new Error("Balance record not found");
 
-    if (balance.remaining < days) throw new Error("Insufficient leave balance");
+    if (balance.available_balance < days) throw new Error("Insufficient leave balance");
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('leave_balances')
       .update({
-        used: balance.used + days,
-        remaining: balance.remaining - days
+        used_balance: balance.used_balance + days,
+        available_balance: balance.available_balance - days
       })
       .eq('id', balance.id);
 
@@ -90,13 +90,11 @@ export const leaveBalanceService = {
 
   async restoreLeave(workspaceId: string, userId: string, leaveType: string, days: number) {
     const balance = await this.getBalance(workspaceId, userId, leaveType);
-    if (!balance) return;
-
-    await supabase
+    const { error: restoreError } = await supabase
       .from('leave_balances')
       .update({
-        used: balance.used - days,
-        remaining: balance.remaining + days
+        used_balance: balance.used_balance - days,
+        available_balance: balance.available_balance + days
       })
       .eq('id', balance.id);
 
@@ -114,3 +112,4 @@ export const leaveBalanceService = {
     }
   }
 };
+

@@ -48,7 +48,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
   }, [invoiceCurrency, baseCurrency]);
 
   const [lineItems, setLineItems] = useState<Partial<InvoiceLineItem>[]>(prefillLineItems || [
-    { description: '', quantity: 1, rate: 0, tax_percentage: 18, amount: 0 }
+    { description: '', quantity: 1, unit_price: 0, tax_percentage: 18, total: 0 }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -119,15 +119,15 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
     const newItems = [...lineItems];
     newItems[index] = { ...newItems[index], [field]: value };
     
-    if (field === 'quantity' || field === 'rate') {
-      newItems[index].amount = Number(newItems[index].quantity || 0) * Number(newItems[index].rate || 0);
+    if (field === 'quantity' || field === 'unit_price') {
+      newItems[index].total = Number(newItems[index].quantity || 0) * Number(newItems[index].unit_price || 0);
     }
     
     setLineItems(newItems);
   };
 
   const addLineItem = () => {
-    setLineItems([...lineItems, { description: '', quantity: 1, rate: 0, tax_percentage: 18, amount: 0 }]);
+    setLineItems([...lineItems, { description: '', quantity: 1, unit_price: 0, tax_percentage: 18, total: 0 }]);
   };
 
   const removeLineItem = (index: number) => {
@@ -137,7 +137,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
   };
 
   // Calculations
-  const subtotal = lineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + (item.total || 0), 0);
   const discount_amount = 0; // Simplified for now
   const taxable_amount = subtotal - discount_amount;
   
@@ -146,7 +146,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
   let igst_amount = 0;
 
   lineItems.forEach(item => {
-    const itemTax = (item.amount || 0) * ((item.tax_percentage || 0) / 100);
+    const itemTax = (item.total || 0) * ((item.tax_percentage || 0) / 100);
     if (isInterState) {
       igst_amount += itemTax;
     } else {
@@ -380,9 +380,9 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                   <tr>
                     <th className="px-4 py-3 w-1/2">Description</th>
                     <th className="px-4 py-3 w-20">Qty</th>
-                    <th className="px-4 py-3 w-32">Rate ({invoiceCurrency})</th>
+                    <th className="px-4 py-3 w-32">Unit Price ({invoiceCurrency})</th>
                     <th className="px-4 py-3 w-24">Tax %</th>
-                    <th className="px-4 py-3 w-32 text-right">Amount ({invoiceCurrency})</th>
+                    <th className="px-4 py-3 w-32 text-right">Total ({invoiceCurrency})</th>
                     <th className="px-4 py-3 w-12"></th>
                   </tr>
                 </thead>
@@ -396,7 +396,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                         <input type="number" min="1" value={item.quantity} onChange={e => handleLineItemChange(index, 'quantity', Number(e.target.value))} className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary" />
                       </td>
                       <td className="p-2">
-                        <input type="number" min="0" value={item.rate} onChange={e => handleLineItemChange(index, 'rate', Number(e.target.value))} className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary" />
+                        <input type="number" min="0" value={item.unit_price} onChange={e => handleLineItemChange(index, 'unit_price', Number(e.target.value))} className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary" />
                       </td>
                       <td className="p-2">
                         <select value={item.tax_percentage} onChange={e => handleLineItemChange(index, 'tax_percentage', Number(e.target.value))} className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary">
@@ -408,7 +408,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                         </select>
                       </td>
                       <td className="p-2 text-right font-mono text-sm text-text-primary pr-4">
-                        {(item.amount || 0).toFixed(2)}
+                        {(item.total || 0).toFixed(2)}
                       </td>
                       <td className="p-2 text-center">
                         <button onClick={() => removeLineItem(index)} className="text-text-tertiary hover:text-rose-500 transition-colors p-1"><Trash2 className="w-4 h-4" /></button>

@@ -67,8 +67,8 @@ export const sandboxSeedEngine = {
     }).select().single();
 
     await supabase.from('leave_balances').insert([
-      { workspace_id: workspaceId, user_id: devId, leave_type: 'vacation', total_allowance: 20, used_days: 5, year: new Date().getFullYear() },
-      { workspace_id: workspaceId, user_id: hrId, leave_type: 'sick', total_allowance: 10, used_days: 2, year: new Date().getFullYear() }
+      { workspace_id: workspaceId, user_id: devId, leave_type: 'vacation', total_allowance: 20, used_balance: 5, year: new Date().getFullYear() },
+      { workspace_id: workspaceId, user_id: hrId, leave_type: 'sick', total_allowance: 10, used_balance: 2, year: new Date().getFullYear() }
     ]);
 
     // 5. Execution (Projects, Epics, Sprints, Timeline)
@@ -159,4 +159,5 @@ export const sandboxSeedEngine = {
     // Logging removed for production
   }
 };
+
 

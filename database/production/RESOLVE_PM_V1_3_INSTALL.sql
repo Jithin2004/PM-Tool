@@ -9689,3 +9689,90 @@ USING (
     AND team_members.member_role IN ('owner', 'editor')
   )
 );
+
+-- Migration: RC22_1_HR_SCHEMA_PATCH
+-- Description: Adds missing clock_events and leave_balances tables for HR/Attendance runtime stability, and missing finance schema columns.
+
+CREATE TABLE IF NOT EXISTS public.clock_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL CHECK (event_type IN ('CLOCK_IN', 'CLOCK_OUT')),
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.clock_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read access for own records or HR/Admins" ON public.clock_events;
+CREATE POLICY "Enable read access for own records or HR/Admins"
+    ON public.clock_events FOR SELECT
+    USING (
+        user_id = auth.uid() 
+        OR EXISTS (
+            SELECT 1 FROM public.users me 
+            WHERE me.id = auth.uid() 
+            AND me.workspace_id = clock_events.workspace_id 
+            AND me.role IN ('super_admin', 'admin', 'hr')
+        )
+    );
+
+DROP POLICY IF EXISTS "Enable write access for own records or HR/Admins" ON public.clock_events;
+CREATE POLICY "Enable write access for own records or HR/Admins"
+    ON public.clock_events FOR ALL
+    USING (
+        user_id = auth.uid() 
+        OR EXISTS (
+            SELECT 1 FROM public.users me 
+            WHERE me.id = auth.uid() 
+            AND me.workspace_id = clock_events.workspace_id 
+            AND me.role IN ('super_admin', 'admin', 'hr')
+        )
+    );
+
+CREATE TABLE IF NOT EXISTS public.leave_balances (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    leave_type TEXT NOT NULL,
+    total_allowance NUMERIC NOT NULL DEFAULT 0,
+    used_balance NUMERIC NOT NULL DEFAULT 0,
+    available_balance NUMERIC GENERATED ALWAYS AS (total_allowance - used_balance) STORED,
+    year INTEGER NOT NULL DEFAULT extract(year from current_date),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(workspace_id, user_id, leave_type, year)
+);
+
+ALTER TABLE public.leave_balances ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read access for own records or HR/Admins" ON public.leave_balances;
+CREATE POLICY "Enable read access for own records or HR/Admins"
+    ON public.leave_balances FOR SELECT
+    USING (
+        user_id = auth.uid() 
+        OR EXISTS (
+            SELECT 1 FROM public.users me 
+            WHERE me.id = auth.uid() 
+            AND me.workspace_id = leave_balances.workspace_id 
+            AND me.role IN ('super_admin', 'admin', 'hr')
+        )
+    );
+
+DROP POLICY IF EXISTS "Enable write access for HR/Admins" ON public.leave_balances;
+CREATE POLICY "Enable write access for HR/Admins"
+    ON public.leave_balances FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.users me 
+            WHERE me.id = auth.uid() 
+            AND me.workspace_id = leave_balances.workspace_id 
+            AND me.role IN ('super_admin', 'admin', 'hr')
+        )
+    );
+
+ALTER TABLE public.invoice_line_items
+ADD COLUMN IF NOT EXISTS tax_percentage numeric DEFAULT 0 NOT NULL;
+
