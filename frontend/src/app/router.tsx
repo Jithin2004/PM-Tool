@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { ModuleErrorBoundary } from '../components/error/ModuleErrorBoundary';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
@@ -119,6 +120,22 @@ function RouteFallback() {
 }
 
 const FALLBACK = <RouteFallback />;
+
+function NotFound() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full w-full bg-surface-1 p-8 text-center animate-in fade-in zoom-in duration-300">
+      <div className="bg-surface-2 p-6 rounded-xl border border-white/5 mb-4 max-w-sm w-full mx-auto shadow-2xl">
+        <div className="w-12 h-12 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
+          <AlertCircle className="w-6 h-6 text-rose-500" />
+        </div>
+        <h3 className="text-lg font-bold text-text-primary mb-2 tracking-tight">Page Not Found</h3>
+        <p className="text-sm text-text-tertiary">
+          The route you are trying to access does not exist or has been moved.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function AccessRestricted() {
   return (
@@ -410,11 +427,7 @@ export function ResolveRouter() {
       return <Redirect to={pathname} />;
     }
 
-    // ── Legacy redirects ──
-
-    if (rawPathname === '/projects/new' || pathname === '/projects/new') {
-      return <Redirect to="/workspace/portfolio" />;
-    }
+    // 🚫 Legacy redirects 🚫
 
     if (pathname === '/onboarding/workspace') {
       return <Redirect to="/overview" />;
@@ -467,9 +480,6 @@ export function ResolveRouter() {
       if (!guardRoute(role, '/workspace/meetings')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><MeetingsPage /></RouteShell>;
     }
-    if (pathname === '/workspace/requirements') {
-      return <Redirect to="/overview?inbox=open" />;
-    }
     if (pathname === '/workspace/onboarding') {
       if (!guardRoute(role, '/workspace/onboarding')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><PeopleOpsCenter /></RouteShell>;
@@ -496,7 +506,8 @@ export function ResolveRouter() {
       return <Redirect to="/execution/schedule" />;
     }
     if (pathname === '/execution/sprints') {
-      return <Redirect to="/execution/board?view=sprint" />;
+      if (!guardRoute(role, '/execution/sprints')) return <RouteShell><AccessRestricted /></RouteShell>;
+      return <RouteShell><SprintView /></RouteShell>;
     }
 
     // ── COMPANY (Legacy: RESOURCES) ──
@@ -545,6 +556,10 @@ export function ResolveRouter() {
       if (!guardRoute(role, '/admin/document-templates')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><DocumentTemplatesPage /></RouteShell>;
     }
+    if (pathname === '/admin/connections') {
+      if (!guardRoute(role, '/admin/connections')) return <RouteShell><AccessRestricted /></RouteShell>;
+      return <RouteShell><ConnectionsPanel /></RouteShell>;
+    }
     if (pathname === '/admin/system-health') {
       if (!guardRoute(role, '/admin/system-health')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ObservabilityPanel /></RouteShell>;
@@ -590,7 +605,7 @@ export function ResolveRouter() {
         return <RouteShell><ExecutionBoardPage /></RouteShell>;
       }
       if (subRoute === 'sprints') {
-        return <Redirect to={`/projects/${projectRoute.projectId}/board?view=sprint`} />;
+        return <RouteShell><SprintView /></RouteShell>;
       }
       if (subRoute === 'schedule' || subRoute === 'timeline') {
         return <Redirect to={`/projects/${projectRoute.projectId}/board?view=timeline`} />;
@@ -599,10 +614,11 @@ export function ResolveRouter() {
       return <Redirect to={`/projects/${projectRoute.projectId}/board`} />;
     }
 
-    // ── Fallback: unknown paths → overview (registered 404 behavior) ──
+    // 🚫 Fallback: unknown paths -> NotFound 🚫
     if (import.meta.env.DEV && !isRegisteredPath(pathname)) {
+      console.warn(`[Router] Unregistered path hit fallback: ${pathname}`);
     }
-    return <Redirect to="/overview" />;
+    return <RouteShell><NotFound /></RouteShell>;
   }
 
   const appContent = renderRouteContent();

@@ -112,7 +112,19 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Projects', path: '/workspace', capability: 'project.view' },
       { label: 'Task Board', path: '/execution/board', capability: 'task.view' },
+      { label: 'Sprints', path: '/execution/sprints', capability: 'sprint.manage' },
       { label: 'Schedule', path: '/execution/schedule', capability: 'timeline.view' }
+    ]
+  },
+  {
+    id: 'knowledge',
+    label: 'Knowledge',
+    iconName: 'ArchiveBox',
+    subsections: [
+      { label: 'Documents', path: '/workspace/knowledge', capability: 'document.view' },
+      { label: 'Files', path: '/workspace/files', capability: 'file.view' },
+      { label: 'Meetings', path: '/workspace/meetings', capability: 'meeting.view' },
+      { label: 'Decisions', path: '/workspace/decisions', capability: 'decision.view' }
     ]
   },
   {
@@ -140,9 +152,9 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Workspace Settings', path: '/admin/settings', capability: 'settings.manage' },
       { label: 'Access Control', path: '/admin/identity', capability: 'user.manage' },
-      { label: 'Integrations', path: '/admin/connections', capability: 'automation.manage' },
+      { label: 'Integrations', path: '/admin/connections', capability: 'integration.manage' },
       { label: 'Automations', path: '/admin/automations', capability: 'automation.manage' },
-      { label: 'System Health', path: '/admin/system-health', capability: 'audit.view' }
+      { label: 'Audit', path: '/admin/audit', capability: 'audit.view' }
     ]
   }
 ];
@@ -361,19 +373,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   useEffect(() => {
     if (loading || !profile) return;
 
-    const isDev = hasCapability(profile, 'task.update') && !hasCapability(profile, 'project.update');
     const isView = hasCapability(profile, 'project.view') && !hasCapability(profile, 'task.update');
-    if (isDev) {
-      const allowed = ['/overview', '/execution', '/execution/board', '/login', '/execution/timeline'];
-      if (!allowed.includes(routePath)) {
-        navigateTo('/overview');
-        window.dispatchEvent(
-          new CustomEvent('notify-toast', {
-            detail: { message: 'Employee role is restricted to the Execution Workspace, Board, and Scheduling.', type: 'warning' },
-          }),
-        );
-      }
-    } else if (isView) {
+    if (isView) {
       const allowed = ['/workspace/portfolio', '/workspace/decisions', '/login'];
       if (!allowed.includes(routePath)) {
         navigateTo('/workspace/portfolio');

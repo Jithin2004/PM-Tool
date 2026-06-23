@@ -9839,3 +9839,219 @@ ADD COLUMN IF NOT EXISTS visibility_scope jsonb;
 
 
 
+-- RC22_3_DATABASE_CONTRACT_PATCH.sql
+-- Description: Patch to resolve RC22.2 missing tables and contract deviations
+
+-- ================================================
+-- FINANCE PATCH
+-- ================================================
+ALTER TABLE IF EXISTS public.invoice_line_items
+  ADD COLUMN IF NOT EXISTS tax_percentage numeric DEFAULT 0 NOT NULL;
+
+-- ================================================
+-- CLOCK EVENTS TABLE
+-- ================================================
+CREATE TABLE IF NOT EXISTS public.clock_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  clock_in timestamptz,
+  clock_out timestamptz,
+  duration_minutes integer,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.clock_events ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (handling safety)
+DROP POLICY IF EXISTS "Enable read access for own records or HR/Admins" ON public.clock_events;
+DROP POLICY IF EXISTS "Enable insert for own records or HR/Admins" ON public.clock_events;
+DROP POLICY IF EXISTS "Enable update for own records or HR/Admins" ON public.clock_events;
+DROP POLICY IF EXISTS "Enable delete for admins only" ON public.clock_events;
+
+-- SELECT
+CREATE POLICY "Enable read access for own records or HR/Admins" ON public.clock_events FOR SELECT
+USING (
+  user_id = auth.uid() OR
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = clock_events.workspace_id
+      AND users.role IN ('super_admin', 'admin', 'hr')
+  )
+);
+
+-- INSERT
+CREATE POLICY "Enable insert for own records or HR/Admins" ON public.clock_events FOR INSERT
+WITH CHECK (
+  user_id = auth.uid() OR
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = clock_events.workspace_id
+      AND users.role IN ('super_admin', 'admin', 'hr')
+  )
+);
+
+-- UPDATE
+CREATE POLICY "Enable update for own records or HR/Admins" ON public.clock_events FOR UPDATE
+USING (
+  user_id = auth.uid() OR
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = clock_events.workspace_id
+      AND users.role IN ('super_admin', 'admin', 'hr')
+  )
+);
+
+-- DELETE
+CREATE POLICY "Enable delete for admins only" ON public.clock_events FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = clock_events.workspace_id
+      AND users.role IN ('super_admin', 'admin')
+  )
+);
+
+-- ================================================
+-- LEAVE BALANCES TABLE
+-- ================================================
+CREATE TABLE IF NOT EXISTS public.leave_balances (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  leave_type text NOT NULL,
+  total_allowance numeric DEFAULT 0,
+  used_balance numeric DEFAULT 0,
+  available_balance numeric GENERATED ALWAYS AS (total_allowance - used_balance) STORED,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.leave_balances ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Enable read access for own records or HR/Admins" ON public.leave_balances;
+DROP POLICY IF EXISTS "Enable insert for HR/Admins only" ON public.leave_balances;
+DROP POLICY IF EXISTS "Enable update for HR/Admins only" ON public.leave_balances;
+DROP POLICY IF EXISTS "Enable delete for super_admins only" ON public.leave_balances;
+
+-- SELECT
+CREATE POLICY "Enable read access for own records or HR/Admins" ON public.leave_balances FOR SELECT
+USING (
+  user_id = auth.uid() OR
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = leave_balances.workspace_id
+      AND users.role IN ('super_admin', 'admin', 'hr')
+  )
+);
+
+-- INSERT
+CREATE POLICY "Enable insert for HR/Admins only" ON public.leave_balances FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = leave_balances.workspace_id
+      AND users.role IN ('super_admin', 'admin', 'hr')
+  )
+);
+
+-- UPDATE
+CREATE POLICY "Enable update for HR/Admins only" ON public.leave_balances FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = leave_balances.workspace_id
+      AND users.role IN ('super_admin', 'admin', 'hr')
+  )
+);
+
+-- DELETE
+CREATE POLICY "Enable delete for super_admins only" ON public.leave_balances FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE users.id = auth.uid()
+      AND users.workspace_id = leave_balances.workspace_id
+      AND users.role = 'super_admin'
+  )
+);
+-- RC22_8_LEAVE_BALANCE_REPAIR.sql
+-- Description: Repair the leave_balances table by converting available_balance to a true generated column
+-- while preserving existing data and hardening constraints.
+
+-- ================================================
+-- STEP 3 — Normalize Existing Rows
+-- ================================================
+-- Ensure total_allowance and used_balance are not null before constraints and generation.
+UPDATE public.leave_balances 
+SET total_allowance = 0 
+WHERE total_allowance IS NULL;
+
+UPDATE public.leave_balances 
+SET used_balance = 0 
+WHERE used_balance IS NULL;
+
+-- Ensure columns cannot be null in the future
+ALTER TABLE public.leave_balances 
+  ALTER COLUMN total_allowance SET DEFAULT 0,
+  ALTER COLUMN total_allowance SET NOT NULL,
+  ALTER COLUMN used_balance SET DEFAULT 0,
+  ALTER COLUMN used_balance SET NOT NULL;
+
+
+-- ================================================
+-- STEP 4 — Constraint Hardening
+-- ================================================
+ALTER TABLE public.leave_balances DROP CONSTRAINT IF EXISTS chk_leave_balances_positive_allowance;
+ALTER TABLE public.leave_balances DROP CONSTRAINT IF EXISTS chk_leave_balances_positive_used;
+ALTER TABLE public.leave_balances DROP CONSTRAINT IF EXISTS chk_leave_balances_valid_balance;
+
+ALTER TABLE public.leave_balances ADD CONSTRAINT chk_leave_balances_positive_allowance CHECK (total_allowance >= 0);
+ALTER TABLE public.leave_balances ADD CONSTRAINT chk_leave_balances_positive_used CHECK (used_balance >= 0);
+ALTER TABLE public.leave_balances ADD CONSTRAINT chk_leave_balances_valid_balance CHECK (used_balance <= total_allowance);
+
+
+-- ================================================
+-- STEP 2 — Repair Column
+-- ================================================
+ALTER TABLE public.leave_balances DROP COLUMN IF EXISTS available_balance;
+
+ALTER TABLE public.leave_balances 
+  ADD COLUMN available_balance numeric GENERATED ALWAYS AS (total_allowance - used_balance) STORED;
+
+
+-- ================================================
+-- STEP 5 — Verification Script (To be run separately)
+-- ================================================
+/*
+-- Insert a test row (using an existing user_id and workspace_id)
+INSERT INTO public.leave_balances (workspace_id, user_id, leave_type, total_allowance, used_balance)
+VALUES (
+  'YOUR_WORKSPACE_ID_HERE', 
+  'YOUR_USER_ID_HERE', 
+  'Test Leave Verification', 
+  20, 
+  5
+) RETURNING *;
+
+-- EXPECTED RESULT: 
+-- The returned row will show `available_balance` = 15.
+
+-- Attempt manual update:
+UPDATE public.leave_balances 
+SET available_balance = 100 
+WHERE leave_type = 'Test Leave Verification';
+
+-- EXPECTED RESULT:
+-- ERROR:  column "available_balance" can only be updated to DEFAULT
+-- DETAIL:  Column "available_balance" is a generated column.
+*/

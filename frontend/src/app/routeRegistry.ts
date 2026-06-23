@@ -30,6 +30,7 @@ export interface SidebarNavItem {
 export const CANONICAL_ROUTES: AppRoute[] = [
   // Core routes
   { id: 'overview', path: '/overview', label: 'Overview', iconName: 'Radar', capability: 'dashboard.view', group: 'core', disclosureTier: 'essential' },
+  { id: 'activity', path: '/overview/activity', label: 'Activity Feed', iconName: 'Activity', capability: 'dashboard.view', group: 'core', disclosureTier: 'essential' },
   { id: 'projects', path: '/workspace', label: 'Projects', iconName: 'TreeStructure', capability: 'project.view', group: 'core', disclosureTier: 'essential' },
   { id: 'board', path: '/execution', label: 'Tasks', iconName: 'Kanban', capability: 'task.view', group: 'core', disclosureTier: 'essential' },
   { id: 'meetings', path: '/workspace/meetings', label: 'Meetings', iconName: 'Users', capability: 'meeting.view', group: 'core', disclosureTier: 'essential' },
@@ -59,6 +60,7 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   // System routes
   { id: 'document-templates', path: '/admin/document-templates', label: 'Document Templates', iconName: 'FileText', capability: 'settings.manage', group: 'system', disclosureTier: 'platform' },
   { id: 'identity', path: '/admin/identity', label: 'Access Control', iconName: 'Shield', capability: 'user.manage', group: 'system', disclosureTier: 'platform' },
+  { id: 'connections', path: '/admin/connections', label: 'Integrations', iconName: 'Link', capability: 'integration.manage', group: 'system', disclosureTier: 'platform' },
   { id: 'automations', path: '/admin/automations', label: 'Automations', iconName: 'Zap', capability: 'automation.manage', group: 'system', disclosureTier: 'platform' },
   { id: 'mission-control', path: '/admin/mission-control', label: 'Dashboard', iconName: 'LayoutDashboard', capability: 'dashboard.view', group: 'intelligence', disclosureTier: 'platform' },
   { id: 'system-health', path: '/admin/system-health', label: 'System Health', iconName: 'Activity', capability: 'audit.view', group: 'system', disclosureTier: 'platform' },
