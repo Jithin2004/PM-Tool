@@ -9,7 +9,7 @@ export const leaveBalanceService = {
       .eq('workspace_id', workspaceId)
       .eq('user_id', userId)
       .eq('leave_type', leaveType)
-      .single();
+      .maybeSingle();
     
     return data;
   },
@@ -69,8 +69,7 @@ export const leaveBalanceService = {
     const { error: updateError } = await supabase
       .from('leave_balances')
       .update({
-        used_balance: balance.used_balance + days,
-        available_balance: balance.available_balance - days
+        used_balance: balance.used_balance + days
       })
       .eq('id', balance.id);
 
@@ -93,8 +92,7 @@ export const leaveBalanceService = {
     const { error: restoreError } = await supabase
       .from('leave_balances')
       .update({
-        used_balance: balance.used_balance - days,
-        available_balance: balance.available_balance + days
+        used_balance: balance.used_balance - days
       })
       .eq('id', balance.id);
 
