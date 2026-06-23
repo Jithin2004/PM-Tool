@@ -459,8 +459,8 @@ export function ResolveRouter() {
     if (pathname.startsWith('/workspace/knowledge/')) {
       return <RouteShell><ModuleErrorBoundary module="DocumentView"><DocumentView /></ModuleErrorBoundary></RouteShell>;
     }
-    if (pathname === '/workspace/decisions') {
-      if (!guardRoute(role, '/workspace/decisions')) return <RouteShell><AccessRestricted /></RouteShell>;
+    if (pathname === '/workspace/decisions' || pathname === '/workspace/approvals') {
+      if (!guardRoute(role, '/workspace/decisions') && !guardRoute(role, '/workspace/approvals')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><DecisionsPage /></RouteShell>;
     }
     if (pathname === '/workspace/meetings') {
@@ -489,11 +489,11 @@ export function ResolveRouter() {
       if (!guardRoute(role, '/execution/board')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ExecutionBoardPage /></RouteShell>;
     }
-    if (pathname === '/execution/timeline') {
-      return <Redirect to="/execution/board?view=timeline" />;
+    if (pathname === '/execution/schedule') {
+      return <RouteShell><ProjectTimelinePage /></RouteShell>;
     }
-    if (pathname === '/execution/gantt') {
-      return <Redirect to="/execution/board?view=roadmap" />;
+    if (pathname === '/execution/timeline' || pathname === '/execution/gantt') {
+      return <Redirect to="/execution/schedule" />;
     }
     if (pathname === '/execution/sprints') {
       return <Redirect to="/execution/board?view=sprint" />;
@@ -592,7 +592,7 @@ export function ResolveRouter() {
       if (subRoute === 'sprints') {
         return <Redirect to={`/projects/${projectRoute.projectId}/board?view=sprint`} />;
       }
-      if (subRoute === 'timeline') {
+      if (subRoute === 'schedule' || subRoute === 'timeline') {
         return <Redirect to={`/projects/${projectRoute.projectId}/board?view=timeline`} />;
       }
 

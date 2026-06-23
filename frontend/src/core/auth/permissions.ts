@@ -9,11 +9,12 @@ export type Capability =
   | 'project.view' | 'project.create' | 'project.update' | 'project.archive' | 'project.delete'
   | 'task.view' | 'task.create' | 'task.update' | 'task.delete' | 'task.assign'
   | 'sprint.manage'
-  | 'timeline.manage'
+  | 'timeline.view' | 'timeline.manage'
   | 'document.view' | 'document.manage'
   | 'file.view' | 'file.manage'
   | 'meeting.view' | 'meeting.manage'
   | 'decision.view' | 'decision.manage'
+  | 'approval.view' | 'approval.manage'
   | 'people.view' | 'people.manage'
   | 'attendance.manage' | 'leave.manage'
   | 'hr.private_records'
@@ -29,8 +30,8 @@ export type Capability =
 const ALL_CAPABILITIES: Capability[] = [
   'dashboard.view', 'workspace.view', 'workspace.update', 'workspace.delete', 'ownership.transfer', 'license.manage',
   'user.invite', 'user.manage', 'project.view', 'project.create', 'project.update', 'project.archive', 'project.delete',
-  'task.view', 'task.create', 'task.update', 'task.delete', 'task.assign', 'sprint.manage', 'timeline.manage',
-  'document.view', 'document.manage', 'file.view', 'file.manage', 'meeting.view', 'meeting.manage', 'decision.view', 'decision.manage',
+  'task.view', 'task.create', 'task.update', 'task.delete', 'task.assign', 'sprint.manage', 'timeline.view', 'timeline.manage',
+  'document.view', 'document.manage', 'file.view', 'file.manage', 'meeting.view', 'meeting.manage', 'decision.view', 'decision.manage', 'approval.view', 'approval.manage',
   'people.view', 'people.manage', 'attendance.manage', 'leave.manage', 'hr.private_records',
   'finance.view', 'finance.manage', 'invoice.manage', 'expense.manage',
   'automation.manage', 'integration.manage', 'settings.manage', 'audit.view', 'audit.security', 'reports.view'
@@ -43,11 +44,11 @@ const ADMIN_CAPABILITIES: Capability[] = [
   'user.invite', 'user.manage',
   'project.view', 'project.create', 'project.update', 'project.archive',
   'task.view', 'task.create', 'task.update', 'task.delete', 'task.assign',
-  'sprint.manage', 'timeline.manage',
+  'sprint.manage', 'timeline.view', 'timeline.manage',
   'document.view', 'document.manage',
   'file.view', 'file.manage',
   'meeting.view', 'meeting.manage',
-  'decision.view', 'decision.manage',
+  'decision.view', 'decision.manage', 'approval.view', 'approval.manage',
   'people.view',
   'automation.manage', 'integration.manage',
   'reports.view', 'settings.manage', 'audit.view'
@@ -57,9 +58,9 @@ const PM_CAPABILITIES: Capability[] = [
   'dashboard.view', 'workspace.view',
   'project.view', 'project.create', 'project.update', 'project.archive',
   'task.view', 'task.create', 'task.update', 'task.delete', 'task.assign',
-  'sprint.manage', 'timeline.manage',
+  'sprint.manage', 'timeline.view', 'timeline.manage',
   'document.view', 'document.manage', 'file.view', 'file.manage',
-  'meeting.view', 'meeting.manage', 'decision.view', 'decision.manage',
+  'meeting.view', 'meeting.manage', 'decision.view', 'decision.manage', 'approval.view', 'approval.manage',
   'people.view', 'reports.view'
 ];
 
@@ -68,13 +69,13 @@ const TEAM_LEAD_CAPABILITIES: Capability[] = [
   'task.view', 'task.create', 'task.update', 'task.assign',
   'sprint.manage',
   'document.view', 'document.manage', 'file.view', 'file.manage',
-  'meeting.view', 'decision.view', 'people.view'
+  'meeting.view', 'decision.view', 'approval.view', 'people.view', 'timeline.view'
 ];
 
 const DEVELOPER_CAPABILITIES: Capability[] = [
   'dashboard.view', 'workspace.view', 'project.view',
   'task.view', 'task.update',
-  'document.view', 'file.view', 'meeting.view', 'people.view'
+  'document.view', 'file.view', 'meeting.view', 'people.view', 'timeline.view'
 ];
 
 const EMPLOYEE_CAPABILITIES: Capability[] = [

@@ -35,13 +35,13 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'meetings', path: '/workspace/meetings', label: 'Meetings', iconName: 'Users', capability: 'meeting.view', group: 'core', disclosureTier: 'essential' },
   { id: 'requirements', path: '/workspace/requirements', label: 'Requirements', iconName: 'FileText', capability: 'project.view', group: 'core', disclosureTier: 'essential' },
   { id: 'documents', path: '/workspace/documents', label: 'Documents', iconName: 'FolderOpen', capability: 'document.view', group: 'core', disclosureTier: 'essential' },
-  { id: 'approvals', path: '/workspace/approvals', label: 'Approvals', iconName: 'CheckCircle', capability: 'decision.view', group: 'core', disclosureTier: 'essential' },
+  { id: 'approvals', path: '/workspace/approvals', label: 'Approvals', iconName: 'CheckCircle', capability: 'approval.view', group: 'core', disclosureTier: 'essential' },
   { id: 'files', path: '/workspace/files', label: 'File Center', iconName: 'FolderOpen', capability: 'file.view', group: 'core', disclosureTier: 'operational' },
   { id: 'employee-onboarding', path: '/workspace/onboarding', label: 'Onboarding Center', iconName: 'Compass', capability: 'workspace.view', group: 'core', disclosureTier: 'essential' },
   
   // Extra core (legacy/other)
   { id: 'knowledge', path: '/workspace/knowledge', label: 'Knowledge Hub', iconName: 'ArchiveBox', capability: 'document.view', group: 'core', disclosureTier: 'essential' },
-  { id: 'scheduling', path: '/execution/timeline', label: 'Scheduling', iconName: 'Timeline', capability: 'timeline.manage', group: 'core', disclosureTier: 'operational' },
+  { id: 'scheduling', path: '/execution/schedule', label: 'Scheduling', iconName: 'Timeline', capability: 'timeline.view', group: 'core', disclosureTier: 'operational' },
   
   // Reports routes
   { id: 'analytics', path: '/admin/analytics', label: 'Analytics', iconName: 'ChartLineUp', capability: 'reports.view', group: 'intelligence', disclosureTier: 'intelligence' },

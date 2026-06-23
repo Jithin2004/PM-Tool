@@ -102,7 +102,7 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Dashboard', path: '/overview', capability: 'project.view' },
       { label: 'Activity Feed', path: '/overview/activity', capability: 'reports.view' },
-      { label: 'Approvals', path: '/workspace/approvals', capability: 'project.view' }
+      { label: 'Approvals', path: '/workspace/approvals', capability: 'approval.view' }
     ]
   },
   {
@@ -112,7 +112,7 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Projects', path: '/workspace', capability: 'project.view' },
       { label: 'Task Board', path: '/execution/board', capability: 'task.view' },
-      { label: 'Schedule', path: '/execution/timeline', capability: 'meeting.view' }
+      { label: 'Schedule', path: '/execution/schedule', capability: 'timeline.view' }
     ]
   },
   {
@@ -126,13 +126,23 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     ]
   },
   {
-    id: 'finance-admin',
-    label: 'Finance & Admin',
+    id: 'finance',
+    label: 'Finance',
     iconName: 'Landmark',
     subsections: [
-      { label: 'Finance Hub', path: '/finance', capability: 'finance.manage' },
+      { label: 'Finance Hub', path: '/finance', capability: 'finance.view' }
+    ]
+  },
+  {
+    id: 'admin',
+    label: 'Admin',
+    iconName: 'Shield',
+    subsections: [
       { label: 'Workspace Settings', path: '/admin/settings', capability: 'settings.manage' },
-      { label: 'System & Security', path: '/admin/system-health', capability: 'workspace.update' }
+      { label: 'Access Control', path: '/admin/identity', capability: 'user.manage' },
+      { label: 'Integrations', path: '/admin/connections', capability: 'automation.manage' },
+      { label: 'Automations', path: '/admin/automations', capability: 'automation.manage' },
+      { label: 'System Health', path: '/admin/system-health', capability: 'audit.view' }
     ]
   }
 ];
