@@ -132,7 +132,7 @@ export function generateAdaptiveResponses(
       
       // Find other developers in same team or project with fewer active tasks
 
-      const activeUnassignedDevs = profiles.filter(p => hasFunction(p, 'Engineering') && p.id !== taskObj.assignee_id);
+      const activeUnassignedDevs = profiles.filter(p => hasFunction((p as any).authority || (p as any).role || 'employee', 'Engineering') && p.id !== taskObj.assignee_id);
       if (activeUnassignedDevs.length > 0) {
         const altDev = activeUnassignedDevs[0];
         const altDevName = altDev.full_name || altDev.email || 'Alternative Developer';
@@ -247,3 +247,7 @@ export function generateAdaptiveResponses(
 
   return responses;
 }
+
+
+
+

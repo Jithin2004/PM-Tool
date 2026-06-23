@@ -34,7 +34,7 @@ export const fetchTaskComments = async (taskId: string): Promise<TaskComment[]> 
     console.error('Failed to fetch comments', error);
     return [];
   }
-  return (data || []) as TaskComment[];
+  return (data || []).map((row: any) => ({ ...row, author: Array.isArray(row.author) ? row.author[0] : row.author })) as TaskComment[];
 };
 
 export const createTaskComment = async (
@@ -121,7 +121,7 @@ export const createTaskComment = async (
         title: `Decision: "${content.substring(0, 45)}..."`,
         type: 'comment_decision',
         ownerId: authorId,
-        ownerName: data.author?.full_name || data.author?.email || 'System User',
+        ownerName: (Array.isArray(data.author) ? (data.author as any)[0]?.full_name : (data.author as any)?.full_name) || (Array.isArray(data.author) ? (data.author as any)[0]?.email : (data.author as any)?.email) || 'System User',
         ownerRole: 'member',
         affectedProjectIds: [],
         relatedBlockerIds: [],
@@ -172,7 +172,7 @@ export const createTaskComment = async (
     }
   }
 
-  return data as TaskComment;
+  return { ...data, author: Array.isArray(data.author) ? data.author[0] : data.author } as TaskComment;
 };
 
 export const updateTaskComment = async (
@@ -223,3 +223,8 @@ export const archiveTaskComment = async (
 
   return true;
 };
+
+
+
+
+

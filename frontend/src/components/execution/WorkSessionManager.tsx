@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Clock, AlertTriangle, Play, Pause, Users } from 'lucide-react';
 import type { Workspace, Member } from '../../core/types';
 import type { WorkSession } from '../../core/types/execution';
@@ -171,3 +171,4 @@ export function WorkSessionManager({ workspace, currentUser, notify }: WorkSessi
     </AnimatePresence>
   );
 }
+

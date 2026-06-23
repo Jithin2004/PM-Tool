@@ -14,7 +14,7 @@ export function AllocationPeriodManager() {
     user_id: '', project_id: '', allocation_percent: 100, start_date: '', end_date: ''
   });
 
-  const canManage = hasCapability(profile?.role, 'manage_teams'); // Assuming PM/Admin maps to manage_teams capability
+  const canManage = hasCapability(profile?.role, 'people.manage'); // Assuming PM/Admin maps to manage_teams capability
 
   const handleSave = async () => {
     if (!formData.user_id || !formData.project_id || !formData.start_date || !formData.end_date) {
@@ -116,3 +116,4 @@ export function AllocationPeriodManager() {
     </div>
   );
 }
+

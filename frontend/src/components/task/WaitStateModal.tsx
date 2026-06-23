@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { X, Clock, AlertCircle } from 'lucide-react';
 import { Task } from '../../types';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -145,3 +145,4 @@ export function WaitStateModal({ isOpen, onClose, task, onSubmit, notify }: Wait
     </div>
   );
 }
+

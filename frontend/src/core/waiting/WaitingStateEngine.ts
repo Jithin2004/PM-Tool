@@ -96,8 +96,8 @@ export function generateWaitingStates(inputs: WaitingStateInputs): WaitingState[
       id: `approval_${a.id}`,
       sourceType: 'approval',
       title: `${a.entity_type.toUpperCase()} Approval`,
-      waitingForUserId: a.requested_from,
-      waitingForName: getUserName(a.requested_from),
+      waitingForUserId: (((a.requested_from as any)?.id || a.requested_from) as any as string),
+      waitingForName: getUserName((((a.requested_from as any)?.id || a.requested_from) as any as string)),
       waitingReason: a.reason || 'Pending review',
       waitingSince: waitingSince.toISOString(),
       waitingDurationHours: durationHours,
@@ -105,7 +105,7 @@ export function generateWaitingStates(inputs: WaitingStateInputs): WaitingState[
       affectedUsers: [a.requested_by],
       affectedProjects: [],
       severity,
-      recommendedAction: `Awaiting ${getUserName(a.requested_from)}'s approval`,
+      recommendedAction: `Awaiting ${getUserName((((a.requested_from as any)?.id || a.requested_from) as any as string))}'s approval`,
       actionRoute: '/workspace/approvals'
     });
   }
@@ -114,12 +114,12 @@ export function generateWaitingStates(inputs: WaitingStateInputs): WaitingState[
   const userProfile = profiles.find(p => p.id === userId);
 
   // Filter based on function
-  if (hasFunction(userProfile, 'Engineering')) {
+  if (hasFunction((userProfile as any)?.authority || (userProfile as any)?.role || 'employee', 'Engineering')) {
     return states.filter(s => 
       s.affectedUsers.includes(userId) || 
       s.waitingForUserId === userId
     );
-  } else if (hasFunction(userProfile, 'Projects')) {
+  } else if (hasFunction((userProfile as any)?.authority || (userProfile as any)?.role || 'employee', 'Projects')) {
     const managedProjectIds = projects.filter(p => p.owner_id === userId).map(p => p.id);
     return states.filter(s => 
       s.affectedProjects.some(pid => managedProjectIds.includes(pid)) || 
@@ -131,3 +131,8 @@ export function generateWaitingStates(inputs: WaitingStateInputs): WaitingState[
   // Admins see all
   return states.sort((a, b) => b.waitingDurationHours - a.waitingDurationHours);
 }
+
+
+
+
+

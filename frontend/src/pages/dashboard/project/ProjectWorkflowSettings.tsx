@@ -24,7 +24,7 @@ export const ProjectWorkflowSettings: React.FC<ProjectWorkflowSettingsProps> = (
   const [manualMappings, setManualMappings] = useState<Record<string, string>>({});
   const [newStates, setNewStates] = useState<WorkflowState[]>([]);
 
-  const canManageWorkflow = hasCapability(profile?.role || 'viewer', 'manage_projects') || hasCapability(profile?.role || 'viewer', 'platform_governance');
+  const canManageWorkflow = hasCapability(profile?.role || 'viewer', 'project.update') || hasCapability(profile?.role || 'viewer', 'workspace.update');
 
   useEffect(() => {
     async function loadWorkflows() {
@@ -148,3 +148,4 @@ export const ProjectWorkflowSettings: React.FC<ProjectWorkflowSettingsProps> = (
     </div>
   );
 };
+

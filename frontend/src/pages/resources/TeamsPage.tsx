@@ -12,7 +12,7 @@ import { Users } from 'lucide-react';
 export default function TeamsPage() {
   const { profile } = useAuth();
   const { raw } = useOperationalData();
-  const isHR = hasCapability(profile?.role, 'manage_employees');
+  const isHR = hasCapability(profile?.role, 'people.manage');
   
   const [activeTab, setActiveTab] = useState<'employees' | 'departments' | 'workloadPlanning' | 'skillsMatrix'>(() => {
     const path = window.location.pathname;
@@ -99,3 +99,6 @@ export default function TeamsPage() {
     </div>
   );
 }
+
+
+

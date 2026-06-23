@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 export function TeamMember({ name, role, load, efficiency, urgent }: { name: string, role: string, load: number, efficiency: number, urgent?: boolean }) {
   const loadColor = load < 70 ? 'text-signal-safe' : load < 100 ? 'text-signal-warning' : 'text-signal-critical';
@@ -30,3 +30,4 @@ export function TeamMember({ name, role, load, efficiency, urgent }: { name: str
     </div>
   );
 }
+

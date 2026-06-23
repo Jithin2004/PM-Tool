@@ -90,7 +90,7 @@ class HolidaySourceService {
       if (!actor || actor.workspace_id !== workspaceId) {
         return { imported: 0, skipped: 0, status: 'skipped' };
       }
-      if (!hasCapability(actor.role as UserRole, 'manage_settings')) {
+      if (!hasCapability(actor.role as UserRole, 'settings.manage')) {
         return { imported: 0, skipped: 0, status: 'skipped' };
       }
     }
@@ -296,7 +296,7 @@ class HolidaySourceService {
       if (!actor || actor.workspace_id !== workspaceId) {
         return false;
       }
-      if (!hasCapability(actor.role as UserRole, 'manage_settings')) {
+      if (!hasCapability(actor.role as UserRole, 'settings.manage')) {
         return false;
       }
     }
@@ -367,3 +367,4 @@ class HolidaySourceService {
 }
 
 export const holidaySourceService = new HolidaySourceService();
+

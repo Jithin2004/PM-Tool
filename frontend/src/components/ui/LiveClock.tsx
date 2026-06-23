@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Clock } from 'lucide-react';
 
 export function LiveClock() {
@@ -16,3 +16,4 @@ export function LiveClock() {
     </div>
   );
 }
+

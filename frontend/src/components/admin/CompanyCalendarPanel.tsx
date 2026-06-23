@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, RefreshCw, Upload, Plus, X, Globe, Building2, Save } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -15,7 +15,7 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export function CompanyCalendarPanel() {
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
-  const canManageCalendar = hasCapability(profile?.role, 'manage_settings');
+  const canManageCalendar = hasCapability(profile?.role, 'settings.manage');
 
   const [tab, setTab] = useState<'calendar' | 'settings'>('calendar');
   const [year, setYear] = useState(new Date().getFullYear());
@@ -475,3 +475,5 @@ export function CompanyCalendarPanel() {
     </div>
   );
 }
+
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 
 interface PremiumModalProps {
@@ -59,3 +59,4 @@ export function PremiumModal({ isOpen, onClose, title, children, maxWidth = 'md'
     </AnimatePresence>
   );
 }
+

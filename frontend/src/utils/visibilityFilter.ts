@@ -23,7 +23,7 @@ export function buildVisibilityContext(
     .map(p => p.id);
     
   let assignedTeamProjectIds: string[] = [];
-  if (hasCapability(role, 'manage_tasks') && !hasCapability(role, 'manage_projects')) {
+  if (hasCapability(role, 'task.update') && !hasCapability(role, 'project.update')) {
     const userTeamIds = teams.filter(t => {
       const data = t.data as any;
       if (!data) return false;
@@ -82,3 +82,5 @@ export function getVisibleProjectIds(
   const visibleProjects = filterProjectsByVisibility(projects, context, taskProjectIds);
   return new Set(visibleProjects.map(p => p.id));
 }
+
+

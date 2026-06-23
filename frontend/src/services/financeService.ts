@@ -211,13 +211,13 @@ export interface CreditNote {
 export async function fetchFinanceData(workspaceId: string) {
   const [companyProfile, clients, invoices, payments, expenses, salaries, periods, snapshots, adjustments, billingMilestones, clientCredits, advanceApplications, creditNotes, employmentRecords, financeSettings] = await Promise.all([
     supabase.from('company_billing_profile').select('*').limit(50).eq('workspace_id', workspaceId).maybeSingle(),
-    supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null),
-    supabase.from('invoices').select('*, invoice_line_items(*)').eq('workspace_id', workspaceId).is('deleted_at', null),
-    supabase.from('payments').select('*').limit(50).eq('workspace_id', workspaceId),
-    supabase.from('expenses').select('*').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('clients').select('id, workspace_id, company_name, contact_person, email, phone, billing_address, status, gstin, billing_state, billing_country, tax_type, currency, default_currency, advance_balance').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null),
+    supabase.from('invoices').select('id, workspace_id, client_id, project_id, invoice_number, amount, subtotal, discount_amount, taxable_amount, cgst_amount, sgst_amount, igst_amount, total_tax, grand_total, balance_due, billing_state_snapshot, currency, company_base_currency, base_amount, invoice_currency, invoice_amount, converted_amount, exchange_rate, exchange_rate_locked, exchange_locked_at, exchange_override_reason, conversion_date, status, issue_date, due_date, paid_date, created_at, task_id, billing_type, payment_terms, milestone_id, invoice_line_items(id, invoice_id, description, quantity, rate, tax_percentage, amount)').eq('workspace_id', workspaceId).is('deleted_at', null),
+    supabase.from('payments').select('id, invoice_id, amount, payment_date, method, reference_number, client_id, advance_payment').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('expenses').select('id, workspace_id, category, amount, date, description, project_id, task_id, billable').limit(50).eq('workspace_id', workspaceId),
     supabase.from('salaries').select('user_id, base_salary').eq('workspace_id', workspaceId),
-    supabase.from('financial_periods').select('*').limit(50).eq('workspace_id', workspaceId),
-    supabase.from('financial_snapshots').select('*').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('financial_periods').select('id, workspace_id, month, year, status, closed_by, closed_at').limit(50).eq('workspace_id', workspaceId),
+    supabase.from('financial_snapshots').select('id, workspace_id, period_id, total_revenue, total_salary_expense, total_other_expenses, net_profit, employee_count, client_count, project_count').limit(50).eq('workspace_id', workspaceId),
     supabase.from('financial_adjustments').select('*, financial_periods!inner(workspace_id)').eq('financial_periods.workspace_id', workspaceId),
     supabase.from('billing_milestones').select('*').limit(50).eq('workspace_id', workspaceId),
     supabase.from('client_credits').select('*').limit(50).eq('workspace_id', workspaceId),
@@ -285,7 +285,7 @@ export const createClient = async (workspaceId: string, client: Partial<Client>)
 };
 
 export const fetchClients = async (workspaceId: string): Promise<Client[]> => {
-  const { data, error } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').select('*').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null));
+  const { data, error } = await trackSupabaseOperation('supabase_from_clients', () => supabase.from('clients').select('id, workspace_id, company_name, contact_person, email, phone, billing_address, status, gstin, billing_state, billing_country, tax_type, currency, default_currency, advance_balance').limit(50).eq('workspace_id', workspaceId).is('deleted_at', null));
   if (error) throw error;
   return data as Client[];
 };
@@ -655,3 +655,5 @@ export async function restoreInvoice(invoiceId: string, workspaceId: string, per
     new_value: { status: 'draft' }
   }]));
 }
+
+

@@ -209,10 +209,10 @@ export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => vo
               <option value="Client Meeting">Client Meeting</option>
               <option value="Standup">Standup</option>
               <option value="Sprint Review">Sprint Review</option>
-              {(hasCapability(profile, 'manage_employees') || hasAuthority(profile, 'admin')) && (
+              {hasCapability(profile?.role, 'people.view') && (
                 <option value="hr">Human Resources</option>
               )}
-              {(hasCapability(profile, 'manage_finance') || hasAuthority(profile, 'admin')) && (
+              {hasCapability(profile?.role, 'finance.view') && (
                 <option value="Finance Review">Finance Review</option>
               )}
             </select>

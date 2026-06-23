@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { List } from 'react-window';
 import { Users, Shield, Terminal, X, AlertTriangle, Activity, Lock, Layers, Search, ChevronRight, BrainCircuit, Plus, Clock } from 'lucide-react';
 import { Team, User, Profile, Project } from '../../types';
@@ -711,3 +711,4 @@ export function TeamRosterModal({
     </div>
   );
 }
+

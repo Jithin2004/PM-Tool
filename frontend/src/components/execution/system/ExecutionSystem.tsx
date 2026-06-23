@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Plus,
   Filter,
@@ -162,12 +162,12 @@ export function ExecutionSystem({
   const [columnLimits, setColumnLimits] = useState<Record<string, number>>({});
 
   const role = currentUserProfile?.role || 'viewer';
-  const hasWriteAccess = hasCapability(role, 'manage_tasks');
+  const hasWriteAccess = hasCapability(role, 'task.update');
 
   const canUserModifyTask = (task: Task) => {
-    if (!hasCapability(role, 'manage_tasks')) return false;
-    if (hasCapability(role, 'platform_governance')) return true;
-    if (hasCapability(role, 'manage_projects')) {
+    if (!hasCapability(role, 'task.update')) return false;
+    if (hasCapability(role, 'workspace.update')) return true;
+    if (hasCapability(role, 'project.update')) {
       return projectMap.get(task.project_id)?.owner_id === currentUserProfile?.id;
     }
     // Lacks manage_projects (Developer) -> can only edit assigned tasks
@@ -369,7 +369,7 @@ export function ExecutionSystem({
       return d.pm_id === currentUserProfile?.id || (Array.isArray(d.developer_ids) && d.developer_ids.includes(currentUserProfile?.id));
     });
 
-    if (!isUserInAnyTeam && !hasCapability(role, 'platform_governance')) {
+    if (!isUserInAnyTeam && !hasCapability(role, 'workspace.update')) {
       notify("Access Denied: You must form or join a team before creating tasks.", "error");
       return;
     }
@@ -378,8 +378,8 @@ export function ExecutionSystem({
       notify("Access Denied: Viewers cannot create tasks.", "error");
       return;
     }
-    const isPM = hasCapability(role, 'manage_projects') && !hasCapability(role, 'platform_governance');
-    const isDeveloper = hasCapability(role, 'manage_tasks') && !hasCapability(role, 'manage_projects');
+    const isPM = hasCapability(role, 'project.update') && !hasCapability(role, 'workspace.update');
+    const isDeveloper = hasCapability(role, 'task.update') && !hasCapability(role, 'project.update');
     if (isPM) {
       const project = projectMap.get(taskData.project_id);
       if (project && project.owner_id !== currentUserProfile?.id) {
@@ -1182,3 +1182,5 @@ function ListView({ tasks, projectMap, userMap, hasWriteAccess, onTransitionTask
     </div>
   );
 }
+
+

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Zap, X, Plus, Trash2, ShieldAlert, DollarSign, Users, Target, FileText, Settings, Briefcase, Calendar } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -162,7 +162,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     { id: 'execution', label: 'Execution', icon: Settings },
   ];
 
-  if (hasCapability(profile?.role, 'manage_finance')) {
+  if (hasCapability(profile?.role, 'finance.manage')) {
     tabs.push({ id: 'finance', label: 'Finance', icon: DollarSign });
   }
 
@@ -476,7 +476,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
               )}
 
               {/* Finance Tab */}
-              {activeTab === 'finance' && hasCapability(profile?.role, 'manage_finance') && (
+              {activeTab === 'finance' && hasCapability(profile?.role, 'finance.manage') && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -525,3 +525,5 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
     </div>
   );
 }
+
+

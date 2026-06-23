@@ -17,7 +17,7 @@ export function SupportEscalationModal({ isOpen, onClose, notify }: SupportEscal
 
   if (!isOpen) return null;
 
-  const isAdmin = profile?.role ? hasCapability(profile.role, 'platform_governance') : false;
+  const isAdmin = profile?.role ? hasCapability(profile.role, 'settings.manage') : false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

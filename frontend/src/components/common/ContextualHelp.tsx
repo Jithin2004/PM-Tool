@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { HelpCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ContextualHelpProps {
   topic: string;
@@ -47,3 +47,4 @@ export function ContextualHelp({ topic, definition, calculation, importance }: C
     </div>
   );
 }
+

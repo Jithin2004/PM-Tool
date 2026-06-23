@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { CheckSquare, LayoutDashboard, KanbanSquare, ListTodo, AlertTriangle, MessageSquare, Users, Clock, DollarSign, FileText, ShieldCheck, TrendingUp, Activity, Bell, Target, Play } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { hasCapability, hasAuthority, hasFunction } from '../../core/auth/permissions';
+import { hasCapability } from '../../core/auth/permissions';
 
 interface RoleSection {
   icon: React.ElementType;
@@ -151,10 +151,10 @@ export function RoleAwareQuickAccess() {
 
   if (!profile) return null;
 
-  const isOwnerOrAdmin = hasAuthority(role, 'owner') || hasAuthority(role, 'admin');
-  const isHR = hasFunction(role, 'PeopleOperations') || role === 'hr';
-  const isFinance = hasFunction(role, 'Finance') || role === 'finance';
-  const isPM = hasCapability(profile, 'manage_projects') && !isOwnerOrAdmin;
+  const isOwnerOrAdmin = hasCapability(profile, 'settings.manage');
+  const isHR = hasCapability(profile, 'people.manage');
+  const isFinance = hasCapability(profile, 'finance.manage');
+  const isPM = hasCapability(profile, 'project.update') && !isOwnerOrAdmin;
 
   let content: React.ReactNode;
   if (isOwnerOrAdmin) {

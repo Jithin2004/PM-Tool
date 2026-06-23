@@ -9,6 +9,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { issueReportService } from '../../services/issueReportService';
 import { AlertCircle, RefreshCw, Flag } from 'lucide-react';
 import { showAlert } from '../../components/common/Dialogs';
+import { hasCapability } from '../../core/auth/permissions';
 
 type ViewTab = 'all' | 'recent' | 'mine' | 'shared' | 'archived';
 type SortKey = 'name' | 'size' | 'created_at';
@@ -134,7 +135,7 @@ const FileCenterPage: React.FC = () => {
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
-  const isAdmin = ['owner', 'admin', 'super_admin'].includes(role);
+  const canManageFiles = hasCapability(profile, 'file.manage');
 
   const handleReportIssue = async () => {
     setIsReporting(true);
@@ -451,7 +452,7 @@ const FileCenterPage: React.FC = () => {
                           {tab === 'archived' ? (
                             <button id={`fc-unarchive-${file.id}`} title="Restore" onClick={() => handleUnarchive(file)} style={actionBtn}>♻</button>
                           ) : (
-                            isAdmin && (
+                            canManageFiles && (
                               <button id={`fc-archive-${file.id}`} title="Archive" onClick={() => handleArchive(file)} style={{ ...actionBtn, color: 'rgba(239,68,68,0.7)' }}>🗑</button>
                             )
                           )}
@@ -522,7 +523,7 @@ const FileCenterPage: React.FC = () => {
                   workspaceId={workspaceId}
                   currentVersionId={selectedFile.current_version_id}
                   originalName={selectedFile.original_name}
-                  canRestore={isAdmin}
+                  canRestore={canManageFiles}
                   onRestored={loadFiles}
                 />
               </div>

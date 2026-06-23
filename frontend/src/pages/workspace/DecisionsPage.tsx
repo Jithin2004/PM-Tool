@@ -46,9 +46,9 @@ export default function DecisionsPage() {
   const userName = profile?.full_name || profile?.email?.split('@')[0] || 'Unknown';
 
   // Permission Checks
-  const canCoordinate = hasCapability(userRole, 'manage_projects') || hasCapability(userRole, 'platform_governance');
-  const canIntervene = hasCapability(userRole, 'platform_governance');
-  const canParticipate = hasCapability(userRole, 'manage_tasks');
+  const canCoordinate = hasCapability(userRole, 'project.update') || hasCapability(userRole, 'workspace.update');
+  const canIntervene = hasCapability(userRole, 'workspace.update');
+  const canParticipate = hasCapability(userRole, 'task.update');
 
   // Modals state
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
@@ -770,7 +770,7 @@ export default function DecisionsPage() {
                   workspaceId={(workspaceSettingsBlob?.workspace_id as string) || 'ws-default'}
                   entityType={"decision" as any} 
                   entityId={selectedDecision.id} 
-                  readOnly={!hasCapability(profile?.role, 'manage_projects')} 
+                  readOnly={!hasCapability(profile?.role, 'project.update')} 
                 />
               </div>
             </div>
@@ -1083,3 +1083,4 @@ export default function DecisionsPage() {
     </div>
   );
 }
+

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Shield, TrendingUp, TrendingDown, Target, Zap, Users, ChevronDown, Plus, X, Terminal,
   AlertTriangle, Calendar, Clock, BookOpen, ListChecks, BarChart3, GitBranch, CheckCircle2,
@@ -56,7 +56,7 @@ export function SprintBoard({
   const [sprintVelocity, setSprintVelocity] = useState(0);
   const [selectedEpic, setSelectedEpic] = useState<string | null>(null);
 
-  const hasWriteAccess = hasCapability(currentUserProfile?.role, 'manage_tasks');
+  const hasWriteAccess = hasCapability(currentUserProfile?.role, 'task.update');
 
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
 
@@ -700,3 +700,5 @@ export function SprintBoard({
     </>
   );
 }
+
+

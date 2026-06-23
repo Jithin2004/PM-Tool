@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { X, Terminal } from 'lucide-react';
 import { Project, TaskStatus } from '../../types';
 import { AssigneePicker } from './AssigneePicker';
@@ -266,3 +266,4 @@ export function TaskCreateModal({
     </div>
   );
 }
+

@@ -352,7 +352,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 
   const handleSaveLogisticsData = useCallback(
     async (updatedData: Record<string, unknown>) => {
-      if (!hasCapability(profile?.role, 'manage_logistics') || !workspace?.id) {
+      if (!hasCapability(profile?.role, 'meeting.manage') || !workspace?.id) {
         return 'unauthorized';
       }
 
@@ -381,7 +381,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 
   const handleCreateTeam = useCallback(
     async (name: string, pmId: string, devIds: string[]) => {
-      if (!hasCapability(profile?.role, 'manage_teams') || !workspace?.id) return;
+      if (!hasCapability(profile?.role, 'people.manage') || !workspace?.id) return;
 
       const { data, error } = await supabase
         .from('teams')
@@ -421,7 +421,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 
   const handleUpdateTeam = useCallback(
     async (id: string, name: string, pmId: string, devIds: string[]) => {
-      if (!hasCapability(profile?.role, 'manage_teams') || !workspace?.id) return;
+      if (!hasCapability(profile?.role, 'people.manage') || !workspace?.id) return;
 
       await supabase.from('teams').update({ name }).eq('id', id);
       await supabase.from('team_members').delete().eq('team_id', id);
@@ -458,7 +458,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 
   const handleDeleteTeam = useCallback(
     async (id: string) => {
-      if (!hasCapability(profile?.role, 'manage_teams')) return;
+      if (!hasCapability(profile?.role, 'people.manage')) return;
       await supabase.from('team_members').delete().eq('team_id', id);
       await supabase.from('teams').delete().eq('id', id);
       setTeams(prev => prev.filter(t => t.id !== id));
@@ -626,3 +626,5 @@ export function useOperationalRaw() {
 export function useOperationalDerived() {
   return useOperationalData().derived;
 }
+
+

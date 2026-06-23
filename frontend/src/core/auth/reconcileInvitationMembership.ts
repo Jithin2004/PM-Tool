@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import type { User, UserRole } from '../../types';
+import type { User } from '../../types';
 import { isProductKeyVerified } from '../../lib/productKey';
 
 export type ReconcileOutcome =
@@ -37,18 +37,19 @@ export interface InvitationRecord {
   date_of_joining?: string;
 }
 
-import type { AuthorityRole, FunctionalAccess } from '../types/workspace';
+import type { UserRole, AuthorityRole, FunctionalAccess } from '../types/workspace';
 
 export function rowToProfile(row: Record<string, unknown>): User {
   const dbRole = row.role as string;
-  let authority: AuthorityRole = 'member';
+  let authority: AuthorityRole = 'employee';
   if (dbRole === 'super_admin') {
-    authority = row.is_owner ? 'owner' : 'admin';
+    authority = row.is_owner ? 'super_admin' : 'admin';
   }
-  else if (dbRole === 'pm') authority = 'manager';
-  else if (dbRole === 'developer') authority = 'member';
-  else if (dbRole === 'hr' || dbRole === 'finance') authority = 'member';
-  else if (dbRole === 'client' || dbRole === 'viewer') authority = 'external';
+  else if (dbRole === 'pm') authority = 'project_manager';
+  else if (dbRole === 'developer') authority = 'developer';
+  else if (dbRole === 'hr') authority = 'hr';
+  else if (dbRole === 'finance') authority = 'finance';
+  else if (dbRole === 'client' || dbRole === 'viewer') authority = 'client';
   else if (dbRole === 'pending-workspace-setup') authority = 'pending-workspace-setup';
   else if (dbRole === 'uninvited') authority = 'uninvited';
 
@@ -323,4 +324,9 @@ export async function reconcileWorkspaceMembership(
   }
   return { repaired: false, workspaceId: null, reason: 'orphaned' };
 }
+
+
+
+
+
 

@@ -64,11 +64,11 @@ export function generateDecisionInsights(inputs: DecisionEngineInputs): Decision
   const { userId, role, projects, tasks, profiles, workspaceSettingsBlob, invoices = [], contracts = [], leaves = [] } = inputs;
   const insights: DecisionInsight[] = [];
 
-  const isSuperAdmin = hasCapability(role as any, 'platform_governance');
-  const isPM = hasCapability(role as any, 'manage_projects') && !isSuperAdmin;
-  const isDeveloper = hasCapability(role as any, 'manage_tasks') && !hasCapability(role as any, 'manage_projects');
-  const isFinance = hasCapability(role as any, 'manage_finance') && !isSuperAdmin;
-  const isHR = hasCapability(role as any, 'manage_teams') && !isSuperAdmin;
+  const isSuperAdmin = hasCapability(role as any, 'workspace.update');
+  const isPM = hasCapability(role as any, 'project.update') && !isSuperAdmin;
+  const isDeveloper = hasCapability(role as any, 'task.update') && !hasCapability(role as any, 'project.update');
+  const isFinance = hasCapability(role as any, 'finance.manage') && !isSuperAdmin;
+  const isHR = hasCapability(role as any, 'people.manage') && !isSuperAdmin;
   
   const executionBlockers = workspaceSettingsBlob?.execution_blockers || [];
 
@@ -400,3 +400,4 @@ export function generateDecisionInsights(inputs: DecisionEngineInputs): Decision
     return b.confidence - a.confidence;
   });
 }
+

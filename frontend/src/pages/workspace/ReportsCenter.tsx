@@ -27,7 +27,7 @@ export default function ReportsCenter() {
   const [viewMode, setViewMode] = useState<'legacy' | 'v2'>('v2');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   
-  const canManageCompensation = hasCapability(profile?.role, 'manage_compensation');
+  const canManageCompensation = hasCapability(profile?.role, 'finance.manage');
 
   const handleGenerate = async () => {
     if (!workspace) return;
@@ -459,3 +459,4 @@ export default function ReportsCenter() {
     </div>
   );
 }
+

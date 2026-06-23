@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Save, AlertTriangle } from 'lucide-react';
 import { Task } from '../../types';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -102,3 +102,4 @@ export function TaskBlockerModal({ task, users, isOpen, onClose, onSubmit }: Tas
     </AnimatePresence>
   );
 }
+

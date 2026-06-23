@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Link as LinkIcon, Copy, Check, Shield, Trash2, Calendar, Eye } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -257,3 +257,4 @@ export function ProjectShareModal({ projectId, workspaceId, isOpen, onClose, not
     </div>
   );
 }
+

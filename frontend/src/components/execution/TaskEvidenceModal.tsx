@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, CheckCircle2, Link as LinkIcon, FileText, Github, AlertCircle } from 'lucide-react';
 import type { Task } from '../../core/types/execution';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -112,3 +112,4 @@ export function TaskEvidenceModal({ task, isOpen, onClose, onSubmit }: TaskEvide
     </AnimatePresence>
   );
 }
+

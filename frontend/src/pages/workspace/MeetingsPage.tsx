@@ -54,7 +54,7 @@ export default function MeetingsPage() {
     fetchMeetings();
   }, [workspace?.id, filter, profile?.id]);
 
-  const canCreateMeetings = hasCapability(profile?.role, 'manage_projects') || hasCapability(profile?.role, 'manage_employees') || hasCapability(profile?.role, 'manage_finance');
+  const canCreateMeetings = hasCapability(profile?.role, 'project.update') || hasCapability(profile?.role, 'people.manage') || hasCapability(profile?.role, 'finance.manage');
 
   return (
     <div className="flex-1 flex flex-col h-full bg-transparent text-white overflow-hidden premium-fade-in-up">
@@ -204,3 +204,7 @@ export default function MeetingsPage() {
     </div>
   );
 }
+
+
+
+

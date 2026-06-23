@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Save, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -186,3 +186,4 @@ export function ProjectReviewModal({ project, workspaceId, userId, isOpen, onClo
     </AnimatePresence>
   );
 }
+

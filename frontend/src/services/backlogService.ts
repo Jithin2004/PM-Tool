@@ -27,7 +27,7 @@ export const backlogService = {
       ] = await Promise.all([
         supabase.from('epics').select('*').eq('project_id', projectId).is('deleted_at', null).order('created_at'),
         supabase.from('stories').select('*').eq('project_id', projectId).order('created_at'),
-        supabase.from('tasks').select('id, title, status, project_id, assigned_to').eq('project_id', projectId).is('deleted_at', null).order('created_at')
+        supabase.from('tasks').select('*').eq('project_id', projectId).is('deleted_at', null).order('created_at')
       ]);
 
       const result: BacklogData = {
@@ -71,3 +71,4 @@ export const backlogService = {
     }
   }
 };
+

@@ -79,7 +79,7 @@ export function ChangeRequestsTab({ project }: { project: Project }) {
     }
   };
 
-  const canManage = hasCapability(profile?.role as any, 'manage_projects');
+  const canManage = hasCapability(profile?.role as any, 'project.update');
 
   if (loading) {
     return <div className="p-8 text-center text-xs font-mono text-text-tertiary">Loading change requests...</div>;
@@ -203,3 +203,4 @@ export function ChangeRequestsTab({ project }: { project: Project }) {
     </div>
   );
 }
+

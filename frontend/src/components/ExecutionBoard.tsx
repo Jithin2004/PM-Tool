@@ -1,6 +1,6 @@
 import { PremiumEmptyState } from '../components/ui/PremiumEmptyState';
 import React, { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { LayoutGrid, Layers, Plus, Shield, ChevronDown, X, Terminal, Send, Lock, ListTodo, BrainCircuit, Play, AlertTriangle, Edit2, Check } from 'lucide-react';
 import { List } from 'react-window';
 import { useOperationalData } from '../context/OperationalDataContext';
@@ -616,3 +616,4 @@ export default function ExecutionBoard({
     </>
   );
 }
+

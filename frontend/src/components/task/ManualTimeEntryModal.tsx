@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Save, Clock } from 'lucide-react';
 import { workSessionService } from '../../services/workSessionService';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -163,3 +163,4 @@ export function ManualTimeEntryModal({ task, workspaceId, userId, isOpen, onClos
     </AnimatePresence>
   );
 }
+

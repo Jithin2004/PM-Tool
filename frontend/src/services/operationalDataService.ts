@@ -32,7 +32,7 @@ export async function fetchWorkspaceProfiles(workspaceId: string): Promise<Profi
   let users = (!error && data) ? (data as Profile[]) : [];
   
   if (users.length === 0) {
-    const { data: fallback, error: fallbackErr } = await supabase.from('profiles').select('*');
+    const { data: fallback, error: fallbackErr } = await supabase.from('profiles').select('id, email, full_name, avatar_url, role, designation, default_workspace_id, phone, status, workspace_id, availability_factor, created_at');
     if (!fallbackErr && fallback) {
       users = fallback as Profile[];
     }
@@ -264,3 +264,5 @@ export async function searchWorkspaceUsers(workspaceId: string, searchText: stri
   }
   return (data || []) as Profile[];
 }
+
+

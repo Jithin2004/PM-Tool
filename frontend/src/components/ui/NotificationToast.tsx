@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { CheckCircle2, XCircle, Info, AlertCircle, Plus } from 'lucide-react';
 
 export interface Notification {
@@ -38,3 +38,4 @@ export function NotificationToast({ notification, onClose }: { notification: Not
     </motion.div>
   );
 }
+

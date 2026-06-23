@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bell, Check, Archive, AlertTriangle, Info, ShieldAlert, AtSign, CheckSquare, FileText, Activity, Zap } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { supabase } from '../../lib/supabase';
 import { activityLogService } from '../../services/activityLogService';
@@ -232,3 +232,4 @@ export function NotificationCenter() {
     </div>
   );
 }
+

@@ -81,13 +81,13 @@ export async function getDailyIntelligence(userId: string, workspaceId: string, 
     if (hasFunction(profile, 'Engineering') || role === 'developer') {
       await populateDeveloperIntelligence(userId, workspaceId, baseIntelligence, m);
     } 
-    if (hasFunction(profile, 'Projects') || role === 'pm') {
+    if (hasFunction(profile, 'Projects') || role === 'pm' || role === 'project_manager') {
       await populatePMIntelligence(userId, workspaceId, baseIntelligence, m, deliveryHealth);
     } 
     if (rank >= getAuthorityRank('admin')) {
       await populateFounderIntelligence(workspaceId, baseIntelligence, m, deliveryHealth, anomalies);
     }
-    if (hasFunction(profile, 'PeopleOperations') || hasFunction(profile, 'Finance') || hasCapability(profile, 'manage_employees') || hasCapability(profile, 'manage_finance')) {
+    if (hasFunction(profile, 'PeopleOperations') || hasFunction(profile, 'Finance') || profile?.role === 'hr' || profile?.role === 'finance') {
       await populateAdminSupportIntelligence(workspaceId, profile, baseIntelligence, m);
     }
     if (role === 'client' || hasFunction(profile, 'Clients')) {
@@ -237,14 +237,14 @@ async function populateFounderIntelligence(workspaceId: string, i: DailyIntellig
 async function populateAdminSupportIntelligence(workspaceId: string, profile: any, i: DailyIntelligence, m: any) {
   i.greeting.subMessage = "Logistics and operational support.";
 
-  if (hasCapability(profile, 'manage_employees')) {
+  if (profile?.role === 'hr' || hasFunction(profile, 'PeopleOperations')) {
     i.primaryFocus = {
       id: 'hr-focus',
       message: 'You have new onboarding tasks to review.',
       type: 'action',
       actionRoute: '/team/directory'
     };
-  } else if (hasCapability(profile, 'manage_finance')) {
+  } else if (profile?.role === 'finance' || hasFunction(profile, 'Finance')) {
     if (m.approvals > 0) {
       i.primaryFocus = {
         id: 'fin-focus',
@@ -288,3 +288,8 @@ async function populateClientIntelligence(userId: string, workspaceId: string, i
     };
   }
 }
+
+
+
+
+

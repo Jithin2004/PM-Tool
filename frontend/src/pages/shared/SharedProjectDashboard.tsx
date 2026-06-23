@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Shield, Clock, FileText, CheckSquare, Calendar as CalendarIcon, LogOut, ArrowRight, ShieldCheck, Download, Activity } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { showAlert, showPrompt } from '../../components/common/Dialogs';
@@ -295,3 +295,4 @@ export function SharedProjectDashboard({ previewToken }: { previewToken?: string
     </div>
   );
 }
+

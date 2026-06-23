@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { User, ArrowRight, ArrowUp, AlertTriangle, Clock, Users, Shield, Link2, MoreHorizontal, Edit2 } from 'lucide-react';
 import { formatUserName } from '../../utils/userFormatting';
 import { Task, Project } from '../../types';
@@ -434,4 +434,5 @@ export const TaskCard = React.memo(function TaskCard({
     </motion.div>
   );
 });
+
 

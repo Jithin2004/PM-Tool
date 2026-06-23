@@ -35,12 +35,12 @@ export default function PeopleOpsCenter() {
     handleSaveLogisticsData
   } = useDashboard();
 
-  const isAdmin = hasCapability(profile?.role, 'manage_logistics');
+  const canManageHR = hasCapability(profile?.role, 'people.manage');
   
   // Start with 'admin' if route indicates logistics/attendance/payroll, else 'journey'
   const [activeTab, setActiveTab] = useState<'journey' | 'admin' | 'timesheets'>(() => {
     const path = window.location.pathname;
-    if (isAdmin && (path.includes('resources') && !path.includes('employee'))) {
+    if (canManageHR && (path.includes('resources') && !path.includes('employee'))) {
       return 'admin';
     }
     return 'journey';
@@ -206,7 +206,7 @@ export default function PeopleOpsCenter() {
           </p>
         </div>
         
-        {isAdmin && (
+        {canManageHR && (
           <div className="flex bg-surface-2 p-1 rounded-lg border border-[var(--border-soft)]">
             <button 
               onClick={() => setActiveTab('journey')}

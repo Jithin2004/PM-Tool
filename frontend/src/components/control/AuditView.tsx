@@ -34,10 +34,10 @@ const AuditView = React.memo(function AuditView() {
   const userId = profile?.id || '';
 
   // Capabilities
-  const isSuperAdmin = hasCapability(userRole, 'platform_governance');
-  const isPM = hasCapability(userRole, 'manage_projects') && !isSuperAdmin;
-  const isDeveloper = hasCapability(userRole, 'manage_tasks') && !hasCapability(userRole, 'manage_projects');
-  const isStakeholder = userRole === 'viewer';
+  const isSuperAdmin = hasCapability(userRole, 'audit.security');
+  const isPM = hasCapability(userRole, 'project.update') && !isSuperAdmin;
+  const isDeveloper = hasCapability(userRole, 'task.update') && !hasCapability(userRole, 'project.update');
+  const isStakeholder = hasCapability(userRole, 'project.view') || userRole === 'client';
 
   const { 
     raw: { projects, tasks, teams, profiles, workspaceSettingsBlob },
@@ -653,3 +653,4 @@ const AuditView = React.memo(function AuditView() {
 });
 
 export default AuditView;
+

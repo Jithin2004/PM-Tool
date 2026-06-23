@@ -26,9 +26,9 @@ function getInitials(name: string) {
 
 function getRoleColor(role: string) {
   const r = role as UserRole;
-  if (hasCapability(r, 'platform_governance')) return 'var(--pm-primary)';
-  if (hasCapability(r, 'manage_projects')) return 'var(--pm-secondary)';
-  if (hasCapability(r, 'view_stakeholders') && !hasCapability(r, 'manage_tasks')) return 'var(--pm-on-surface-variant)';
+  if (hasCapability(r, 'workspace.update')) return 'var(--pm-primary)';
+  if (hasCapability(r, 'project.update')) return 'var(--pm-secondary)';
+  if (hasCapability(r, 'project.view') && !hasCapability(r, 'task.update')) return 'var(--pm-on-surface-variant)';
   return 'var(--pm-tertiary)';
 }
 
@@ -118,8 +118,8 @@ export function AdminPanel() {
     };
   }, []);
   const { workspace, user: currentUserProfile, updateWorkspaceSettings } = useWorkspace();
-  const canGovernPlatform = hasCapability(profile?.role, 'platform_governance');
-  const canViewCalendar = hasCapability(profile?.role, 'view_decision_center');
+  const canGovernPlatform = hasCapability(profile?.role, 'workspace.update');
+  const canViewCalendar = hasCapability(profile?.role, 'decision.view');
 
   // General Settings state
   const [companyName, setCompanyName] = useState(() => {
@@ -299,8 +299,8 @@ export function AdminPanel() {
     }
   };
 
-  const pms = profiles.filter(p => hasCapability(p.role as UserRole, 'manage_projects'));
-  const devs = profiles.filter(p => !hasCapability(p.role as UserRole, 'manage_projects'));
+  const pms = profiles.filter(p => hasCapability(p.role as UserRole, 'project.update'));
+  const devs = profiles.filter(p => !hasCapability(p.role as UserRole, 'project.update'));
   const assignedDevIds = new Set(
     teams
       .filter(t => t.id !== editingTeamId)
@@ -455,7 +455,7 @@ export function AdminPanel() {
     }
   };
 
-  if (!hasCapability(profile?.role, 'platform_governance')) {
+  if (!hasCapability(profile?.role, 'settings.manage')) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 font-geist"
         style={{ color: 'var(--pm-on-surface-variant)' }}>
@@ -760,7 +760,7 @@ export function AdminPanel() {
                                   type="button"
                                   onClick={async () => {
                                     setActiveGearPopover(null);
-                                    const isDisabled = !hasCapability(p.role as UserRole, 'view_projects');
+                                    const isDisabled = !hasCapability(p.role as UserRole, 'project.view');
                                     const actionText = isDisabled ? "Enable" : "Disable";
                                     if (await showConfirm(`Are you sure you want to ${actionText.toLowerCase()} access for ${p.full_name || p.email}?`, { title: `${actionText} Account`, confirmText: actionText, type: 'warning' })) {
                                       const targetRole = isDisabled ? 'developer' : 'uninvited';
@@ -770,13 +770,13 @@ export function AdminPanel() {
                                   }}
                                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-[11px] font-mono-pm uppercase tracking-widest transition-all"
                                   style={{
-                                    background: !hasCapability(p.role as UserRole, 'view_projects') ? 'rgba(52,211,153,0.1)' : 'rgba(245,158,11,0.1)',
-                                    color: !hasCapability(p.role as UserRole, 'view_projects') ? 'var(--pm-primary)' : 'var(--pm-secondary)',
-                                    border: !hasCapability(p.role as UserRole, 'view_projects') ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(245,158,11,0.2)'
+                                    background: !hasCapability(p.role as UserRole, 'project.view') ? 'rgba(52,211,153,0.1)' : 'rgba(245,158,11,0.1)',
+                                    color: !hasCapability(p.role as UserRole, 'project.view') ? 'var(--pm-primary)' : 'var(--pm-secondary)',
+                                    border: !hasCapability(p.role as UserRole, 'project.view') ? '1px solid rgba(52,211,153,0.2)' : '1px solid rgba(245,158,11,0.2)'
                                   }}
                                 >
-                                  <Icon name={!hasCapability(p.role as UserRole, 'view_projects') ? "person" : "block"} size={14} />
-                                  {!hasCapability(p.role as UserRole, 'view_projects') ? 'Enable Account' : 'Disable Account'}
+                                  <Icon name={!hasCapability(p.role as UserRole, 'project.view') ? "person" : "block"} size={14} />
+                                  {!hasCapability(p.role as UserRole, 'project.view') ? 'Enable Account' : 'Disable Account'}
                                 </button>
 
                                 {/* Remove Person Button */}
@@ -1471,7 +1471,7 @@ export function AdminPanel() {
             </div>
             <div className="p-6 overflow-y-auto space-y-4 flex-1">
               <div className="space-y-3">
-                {['manage_finance', 'manage_employees', 'manage_projects', 'manage_tasks', 'platform_governance'].map(cap => (
+                {['finance.manage', 'people.manage', 'project.update', 'task.update', 'workspace.update'].map(cap => (
                   <label key={cap} className="flex items-center gap-3 p-3 border border-[var(--border-soft)] rounded-lg hover:bg-[var(--surface-hover)] cursor-pointer transition-colors">
                     <input 
                       type="checkbox" 
@@ -1552,3 +1552,5 @@ export function AdminPanel() {
     </div>
   );
 }
+
+

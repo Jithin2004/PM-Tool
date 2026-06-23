@@ -5,7 +5,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { notificationSoundService } from '../../services/notificationSoundService';
 import { notificationEngine } from '../../core/engines/notificationEngine';
 import { Bell, Check, X, AlertCircle, Briefcase, FileText, Activity, Shield, Users } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
@@ -156,3 +156,4 @@ export function NotificationCenter() {
     </>
   );
 }
+

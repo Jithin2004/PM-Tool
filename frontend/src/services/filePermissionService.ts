@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { hasCapability } from '../core/auth/permissions';
 
 type SensitiveScope = 'hr' | 'finance' | 'none';
 
@@ -12,10 +13,8 @@ function detectScope(entityType: string): SensitiveScope {
 /** Check if role has required sensitive capability */
 function hasSensitiveCapability(role: string, scope: SensitiveScope): boolean {
   if (scope === 'none') return true;
-  const elevated = ['owner', 'admin', 'super_admin'];
-  if (elevated.includes(role)) return true;
-  if (scope === 'hr') return role === 'hr';
-  if (scope === 'finance') return role === 'finance';
+  if (scope === 'hr') return hasCapability(role as any, 'people.manage');
+  if (scope === 'finance') return hasCapability(role as any, 'finance.manage');
   return false;
 }
 
@@ -29,7 +28,7 @@ export const filePermissionService = {
    * 5. Workspace member fallback for non-sensitive files
    */
   async canViewFile(fileId: string, userId: string, role: string): Promise<boolean> {
-    if (['owner', 'admin', 'super_admin'].includes(role)) return true;
+    if (hasCapability(role as any, 'document.manage')) return true;
 
     const { data: file } = await supabase
       .from('files')
@@ -82,7 +81,7 @@ export const filePermissionService = {
   },
 
   async canEditFile(fileId: string, userId: string, role: string): Promise<boolean> {
-    if (['owner', 'admin', 'super_admin'].includes(role)) return true;
+    if (hasCapability(role as any, 'document.manage')) return true;
 
     const { data: file } = await supabase
       .from('files')
@@ -103,7 +102,7 @@ export const filePermissionService = {
   },
 
   async canManageFile(fileId: string, userId: string, role: string): Promise<boolean> {
-    if (['owner', 'admin', 'super_admin'].includes(role)) return true;
+    if (hasCapability(role as any, 'document.manage')) return true;
 
     const { data: file } = await supabase
       .from('files')
@@ -165,3 +164,8 @@ export const filePermissionService = {
     return !!data;
   },
 };
+
+
+
+
+

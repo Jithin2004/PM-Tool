@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, Users, X, Plus, Check, Video } from 'lucide-react';
 import type { Meeting, MeetingType, User } from '../../types';
 import { MEETING_TYPES } from '../../constants/product';
@@ -25,7 +25,7 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
   const [meetingCategory, setMeetingCategory] = useState<'Internal' | 'Client' | 'HR' | 'Finance'>('Internal');
   
   const { profile } = useAuth();
-  const canCreateHRFinance = hasCapability(profile?.role, 'platform_governance');
+  const canCreateHRFinance = hasCapability(profile?.role, 'workspace.update');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,3 +158,5 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
     </>
   );
 }
+
+

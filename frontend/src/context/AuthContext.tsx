@@ -516,7 +516,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateRole = async (id: string, role: User['role']) => {
-    if (!hasCapability(profile?.role, 'platform_governance') || !isSupabaseConfigured) return false;
+    if (!hasCapability(profile?.role, 'workspace.update') || !isSupabaseConfigured) return false;
 
     // We must map AuthorityRole back to LegacyDBRole before persisting
     const { mapAuthorityToLegacyRole } = await import('../core/types/workspace');
@@ -603,4 +603,5 @@ export function useAuth() {
   }
   return context;
 }
+
 

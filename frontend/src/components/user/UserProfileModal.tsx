@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { User as UserIcon, Shield, Terminal, X, Lock, Activity, Users } from 'lucide-react';
 import { User, Profile } from '../../types';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
@@ -146,3 +146,4 @@ export function UserProfileModal({ profile, onClose, onUpdate }: { profile: Prof
     </div>
   );
 }
+

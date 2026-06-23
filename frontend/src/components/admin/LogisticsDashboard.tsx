@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Database, Shield, Terminal, Lock, X, AlertTriangle, Download, Settings, Users, ArrowRight, Sliders, Calendar, Search, Check, BrainCircuit, Info, Calculator, TrendingDown, Banknote, Edit2, Truck, Cpu, Layers, Clock } from 'lucide-react';
 import { User, Project, Team, Profile, Task, UserRole } from '../../types';
 import { hasCapability } from '../../core/auth/permissions';
@@ -34,7 +34,7 @@ export function LogisticsDashboard({
 }) {
   // systemData is passed from canonical DashboardContext
   const [activeTab, setActiveTab] = useState<'members' | 'attendance' | 'paySlab' | 'payroll' | 'workload'>(defaultTab || 'members');
-  const canConfigurePaySlabs = hasCapability(role as UserRole | undefined, 'manage_compensation');
+  const canConfigurePaySlabs = hasCapability(role as UserRole | undefined, 'finance.manage');
   const isPayrollRoute = window.location.pathname.includes('payroll');
 
   // Attendance states
@@ -88,7 +88,7 @@ export function LogisticsDashboard({
   });
 
   useEffect(() => {
-    if (hasCapability(role, 'manage_compensation') && (activeTab === 'payroll' || activeTab === 'paySlab')) {
+    if (hasCapability(role, 'finance.manage') && (activeTab === 'payroll' || activeTab === 'paySlab')) {
       const fetchComp = async () => {
         setIsFetchingCompensation(true);
         try {
@@ -154,7 +154,7 @@ export function LogisticsDashboard({
     const workloadRate = completedTasks.length > 0 ? Number((completedTasks.length / Math.max(1, tasks.length) * 100).toFixed(1)) : 76.5;
 
     // Route overloadedTasks: average in-progress tasks per active developer
-    const devs = profiles.filter(p => hasCapability(p.role as UserRole, 'manage_tasks') && !hasCapability(p.role as UserRole, 'manage_projects'));
+    const devs = profiles.filter(p => hasCapability(p.role as UserRole, 'task.update') && !hasCapability(p.role as UserRole, 'project.update'));
     const overloadedTasks = devs.length > 0 ? Number((inProgressTasks.length / devs.length).toFixed(1)) : 0;
     
     // Blocked Tasks: high priority active tasks
@@ -184,7 +184,7 @@ export function LogisticsDashboard({
   }, [tasks, projects, routingTaskSearch]);
 
   const executionNodes = useMemo(() => {
-    const devs = profiles.filter(p => hasCapability(p.role as UserRole, 'manage_tasks'));
+    const devs = profiles.filter(p => hasCapability(p.role as UserRole, 'task.update'));
     return devs.map(dev => {
       const devTasks = tasks.filter(t => t.assignee_id === dev.id && t.status !== 'done');
       const loadHours = devTasks.reduce((acc, t) => acc + (Number(t.estimated_hours) || 0), 0);
@@ -639,7 +639,7 @@ export function LogisticsDashboard({
               </>
             )}
             {/* Rules & Slabs hidden as unsupported */}
-            {hasCapability(role, 'manage_compensation') && isPayrollRoute && (
+            {hasCapability(role, 'finance.manage') && isPayrollRoute && (
             <button
               onClick={() => setActiveTab('payroll')}
               role="tab"
@@ -1064,7 +1064,7 @@ export function LogisticsDashboard({
           </motion.div>
         )}
 
-        {hasCapability(role, 'manage_compensation') && activeTab === 'paySlab' && (
+        {hasCapability(role, 'finance.manage') && activeTab === 'paySlab' && (
           <motion.div
             key="paySlab"
             role="tabpanel"
@@ -1243,7 +1243,7 @@ export function LogisticsDashboard({
           </motion.div>
         )}
 
-        {hasCapability(role, 'manage_compensation') && activeTab === 'payroll' && (
+        {hasCapability(role, 'finance.manage') && activeTab === 'payroll' && (
           <motion.div
             key="payroll"
             role="tabpanel"
@@ -1463,3 +1463,5 @@ export function LogisticsDashboard({
     </main>
   );
 }
+
+

@@ -3,7 +3,7 @@ import { hasCapability, isOperationalReadOnly as isReadOnlyRole } from '../auth/
 import type { PermissionContext, EntityVisibility, ExecutionOwnershipType } from './types';
 
 function hasPlatformGovernance(ctx: PermissionContext): boolean {
-  return hasCapability(ctx.role, 'platform_governance');
+  return hasCapability(ctx.role, 'workspace.update');
 }
 
 function isProjectOwner(projectId: string, ctx: PermissionContext): boolean {
@@ -122,7 +122,7 @@ export function canViewTask(
   }
 
   // PMs have full visibility in projects they manage
-  if (hasCapability(ctx.role, 'manage_projects') && ctx.ownerProjectIds.has(task.project_id)) {
+  if (hasCapability(ctx.role, 'project.update') && ctx.ownerProjectIds.has(task.project_id)) {
     return { visible: true, reason: 'direct' };
   }
 
@@ -164,7 +164,7 @@ export function canViewTask(
   }
 
   // Developer visibility restrictions:
-  if (hasCapability(ctx.role, 'manage_tasks') && !hasCapability(ctx.role, 'manage_projects')) {
+  if (hasCapability(ctx.role, 'task.update') && !hasCapability(ctx.role, 'project.update')) {
     // Check if task is in the dependency chain (upstream/downstream) of their assigned tasks
     if (ctx.tasks && ctx.dependencies) {
       const chain = getDependencyChain(ctx.userId, ctx.tasks, ctx.dependencies);
@@ -182,7 +182,7 @@ export function canViewTask(
     return { visible: false, reason: 'denied' };
   }
 
-  if (hasCapability(ctx.role, 'view_tasks') && isReadOnlyRole(ctx.role)) {
+  if (hasCapability(ctx.role, 'task.view') && isReadOnlyRole(ctx.role)) {
     return { visible: true, reason: 'direct' };
   }
   return { visible: false, reason: 'denied' };
@@ -192,7 +192,7 @@ export function canEditTask(
   task: Task,
   ctx: PermissionContext,
 ): EntityVisibility {
-  if (!hasCapability(ctx.role, 'manage_tasks')) {
+  if (!hasCapability(ctx.role, 'task.update')) {
     return { visible: false, reason: 'denied' };
   }
   if (hasPlatformGovernance(ctx)) {
@@ -202,7 +202,7 @@ export function canEditTask(
   const ownerships = resolveExecutionOwnerships(task, ctx);
 
   if (
-    (hasCapability(ctx.role, 'manage_projects') && ctx.ownerProjectIds.has(task.project_id)) ||
+    (hasCapability(ctx.role, 'project.update') && ctx.ownerProjectIds.has(task.project_id)) ||
     ownerships.includes('ProjectOwner') ||
     ownerships.includes('ExecutionLead')
   ) {
@@ -210,7 +210,7 @@ export function canEditTask(
   }
 
   // Developers can ONLY edit their assigned tasks
-  if (hasCapability(ctx.role, 'manage_tasks') && !hasCapability(ctx.role, 'manage_projects')) {
+  if (hasCapability(ctx.role, 'task.update') && !hasCapability(ctx.role, 'project.update')) {
     if (ownerships.includes('TaskAssignee')) {
       return { visible: true, reason: 'direct' };
     }
@@ -231,13 +231,13 @@ export function canViewProject(
   if (hasPlatformGovernance(ctx)) {
     return { visible: true, reason: 'role' };
   }
-  if (hasCapability(ctx.role, 'manage_tasks') && !hasCapability(ctx.role, 'manage_projects')) {
+  if (hasCapability(ctx.role, 'task.update') && !hasCapability(ctx.role, 'project.update')) {
     if (ctx.assignedTeamProjectIds.has(project.id)) {
       return { visible: true, reason: 'direct' };
     }
     return { visible: false, reason: 'denied' };
   }
-  if (!hasCapability(ctx.role, 'view_projects')) {
+  if (!hasCapability(ctx.role, 'project.view')) {
     return { visible: false, reason: 'denied' };
   }
   if (isProjectOwner(project.id, ctx)) {
@@ -253,7 +253,7 @@ export function canManageProject(
   project: Project,
   ctx: PermissionContext,
 ): EntityVisibility {
-  if (!hasCapability(ctx.role, 'manage_projects')) {
+  if (!hasCapability(ctx.role, 'project.update')) {
     return { visible: false, reason: 'denied' };
   }
   if (hasPlatformGovernance(ctx)) {
@@ -360,16 +360,16 @@ export function canAccessBacklog(
   ctx: PermissionContext,
   project: Project,
 ): EntityVisibility {
-  if (!hasCapability(ctx.role, 'view_tasks')) {
+  if (!hasCapability(ctx.role, 'task.view')) {
     return { visible: false, reason: 'denied' };
   }
   if (hasPlatformGovernance(ctx)) {
     return { visible: true, reason: 'role' };
   }
-  if (hasCapability(ctx.role, 'manage_projects') && isProjectOwner(project.id, ctx)) {
+  if (hasCapability(ctx.role, 'project.update') && isProjectOwner(project.id, ctx)) {
     return { visible: true, reason: 'direct' };
   }
-  if (hasCapability(ctx.role, 'manage_tasks')) {
+  if (hasCapability(ctx.role, 'task.update')) {
     return { visible: true, reason: 'direct' };
   }
   if (isReadOnlyRole(ctx.role)) {
@@ -393,14 +393,14 @@ export function filterProjectsByVisibility(
 ): Project[] {
   if (hasPlatformGovernance(ctx)) return projects;
   
-  if (hasCapability(ctx.role, 'manage_tasks') && !hasCapability(ctx.role, 'manage_projects')) {
+  if (hasCapability(ctx.role, 'task.update') && !hasCapability(ctx.role, 'project.update')) {
     return projects.filter(p => 
       ctx.assignedTeamProjectIds.has(p.id) || 
       (visibleTaskProjectIds && visibleTaskProjectIds.has(p.id))
     );
   }
 
-  if (hasCapability(ctx.role, 'manage_projects')) {
+  if (hasCapability(ctx.role, 'project.update')) {
     return projects.filter(p => ctx.ownerProjectIds.has(p.id));
   }
   
@@ -409,7 +409,7 @@ export function filterProjectsByVisibility(
     const fromTasks = projects.filter(p => visibleTaskProjectIds.has(p.id));
     return [...new Map([...own, ...fromTasks].map(p => [p.id, p])).values()];
   }
-  if (isReadOnlyRole(ctx.role) && hasCapability(ctx.role, 'view_projects')) {
+  if (isReadOnlyRole(ctx.role) && hasCapability(ctx.role, 'project.view')) {
     return projects;
   }
   return own;
@@ -432,3 +432,4 @@ export function filterSprintsByVisibility(
   if (hasPlatformGovernance(ctx)) return sprints;
   return sprints.filter(s => canViewSprint(s, ctx, visibleTaskSprintIds).visible);
 }
+

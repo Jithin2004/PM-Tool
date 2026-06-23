@@ -30,15 +30,15 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function getScopeLabel(role: string): string {
   const r = role as UserRole;
-  if (hasCapability(r, 'platform_governance')) return 'WORKSPACE';
-  if (hasCapability(r, 'manage_projects') || hasCapability(r, 'manage_teams')) return 'TEAM';
+  if (hasCapability(r, 'workspace.update')) return 'WORKSPACE';
+  if (hasCapability(r, 'project.update') || hasCapability(r, 'people.manage')) return 'TEAM';
   return 'PERSONAL';
 }
 
 function getScopeDescription(role: string): string {
   const r = role as UserRole;
-  if (hasCapability(r, 'platform_governance')) return 'Full workspace intelligence';
-  if (hasCapability(r, 'manage_projects') || hasCapability(r, 'manage_teams')) return 'Aggregate team command patterns';
+  if (hasCapability(r, 'workspace.update')) return 'Full workspace intelligence';
+  if (hasCapability(r, 'project.update') || hasCapability(r, 'people.manage')) return 'Aggregate team command patterns';
   return 'Your personal command usage only';
 }
 
@@ -333,3 +333,5 @@ export default function CommandAnalytics({ isOpen, onClose, role, workspaceId, p
     </AnimatePresence>
   );
 }
+
+

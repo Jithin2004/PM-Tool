@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Save, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Task } from '../../types';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -116,3 +116,4 @@ export function TaskReviewModal({ task, actionType, isOpen, onClose, onSubmit }:
     </AnimatePresence>
   );
 }
+

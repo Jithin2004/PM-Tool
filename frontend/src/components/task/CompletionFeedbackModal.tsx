@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { X, AlertTriangle, Clock, BookOpen, Layers } from 'lucide-react';
 import type { Task } from '../../types';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -150,3 +150,4 @@ export function CompletionFeedbackModal({ task, onSubmit, onSkip, onClose }: Com
     </div>
   );
 }
+

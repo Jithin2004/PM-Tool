@@ -110,7 +110,7 @@ export function useTasks(workspaceId?: string) {
       
       const authorId = user.id;
       const authorName = profile?.full_name || user.email?.split('@')[0] || 'Unknown';
-      const authorRole = hasCapability(profile?.role, 'platform_governance') ? 'Super Admin' : hasCapability(profile?.role, 'manage_projects') ? 'Project Manager' : 'Developer';
+      const authorRole = hasCapability(profile?.role, 'workspace.update') ? 'Super Admin' : hasCapability(profile?.role, 'project.update') ? 'Project Manager' : 'Developer';
       
       const message = `${taskId}${timestamp}${authorName}${authorRole}${fieldName}${oldValue ?? ''}${newValue ?? ''}${previousHash}`;
       const newHash = await sha256(message);
@@ -180,7 +180,7 @@ export function useTasks(workspaceId?: string) {
     const currentUserId = user?.id;
     const isCurrentlyDeveloper = currentRole === 'developer';
     const isCurrentlyViewer = currentRole === 'viewer';
-    const isPMOrAdmin = hasAuthority(profile, 'manager');
+    const isPMOrAdmin = hasCapability(profile?.role, 'project.update');
 
     // Viewers cannot perform ANY task mutations — purge entire queue
     if (isCurrentlyViewer || !currentRole || !currentUserId) {
@@ -423,12 +423,12 @@ export function useTasks(workspaceId?: string) {
 
       // Batch 9 Launch Closure: Truncate Global State Memory
       // Only fetch active user's tasks or tasks from their projects to prevent OOM
-      if (profile && !hasAuthority(profile, 'admin')) {
-        if (getAuthorityRank(profile.role) <= getAuthorityRank('developer')) {
+      if (profile) {
+        if (!hasCapability(profile?.role, 'project.update')) {
           tasksQuery = tasksQuery.eq('assignee_id', profile.id);
-        } else if (getAuthorityRank(profile.role) === getAuthorityRank('manager')) {
+        } else if (!hasCapability(profile?.role, 'workspace.update')) {
           // Can't do OR easily in postgrest with relations, so we fetch their projects first or use a subquery
-          // Since we already enforce limits, we'll just restrict to a smaller limit
+          // Since we already enforce limits, we'll restrict to a smaller limit
           tasksQuery = tasksQuery.limit(500); 
         }
       }
@@ -514,10 +514,10 @@ export function useTasks(workspaceId?: string) {
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
-      if (profile && !hasAuthority(profile, 'admin')) {
-        if (getAuthorityRank(profile.role) <= getAuthorityRank('developer')) {
+      if (profile) {
+        if (!hasCapability(profile?.role, 'project.update')) {
           tasksQuery = tasksQuery.eq('assignee_id', profile.id);
-        } else if (getAuthorityRank(profile.role) === getAuthorityRank('manager')) {
+        } else if (!hasCapability(profile?.role, 'workspace.update')) {
           tasksQuery = tasksQuery.limit(500); 
         }
       }
@@ -693,7 +693,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'addTask');
+    guardCapability(profile?.role, 'task.update', 'addTask');
 
     
     if (isSupabaseConfigured) {
@@ -772,7 +772,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'updateTaskStatus');
+    guardCapability(profile?.role, 'task.update', 'updateTaskStatus');
     // Wave 7/9 + Sprint 6.5: Developers can only change status on assigned or collaborated tasks
     if (isDeveloper && !isAssignedTo(taskId) && !isCollaborator(taskId)) {
       const msg = 'Unauthorized: You can only update tasks assigned or collaborated by you.';
@@ -924,7 +924,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'updateTaskDates');
+    guardCapability(profile?.role, 'task.update', 'updateTaskDates');
     // Wave 7/9: Developers cannot change dates directly
     if (isDeveloper) {
       const msg = 'Unauthorized: Only PMs and Admins can modify planning dates.';
@@ -993,7 +993,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'updateTask');
+    guardCapability(profile?.role, 'task.update', 'updateTask');
 
     // Wave 7/9: Developer scope restrictions
     if (isDeveloper) {
@@ -1124,7 +1124,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'deleteTask');
+    guardCapability(profile?.role, 'task.update', 'deleteTask');
     
     if (isSupabaseConfigured) {
       const { error: deleteError } = await supabase
@@ -1193,7 +1193,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'addDependency');
+    guardCapability(profile?.role, 'task.update', 'addDependency');
 
     if (wouldCreateCycle(taskId, dependsOnTaskId, dependencies)) {
       const cycleError = "Circular dependency detected! A task cannot transitively depend on itself.";
@@ -1265,7 +1265,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'removeDependency');
+    guardCapability(profile?.role, 'task.update', 'removeDependency');
     
     if (isSupabaseConfigured) {
       const { error: deleteError } = await supabase
@@ -1300,7 +1300,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'addCollaborator');
+    guardCapability(profile?.role, 'task.update', 'addCollaborator');
 
     if (isSupabaseConfigured) {
       const { error: insertError } = await supabase
@@ -1329,7 +1329,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'removeCollaborator');
+    guardCapability(profile?.role, 'task.update', 'removeCollaborator');
 
     if (isSupabaseConfigured) {
       const { error: deleteError } = await supabase
@@ -1359,7 +1359,7 @@ export function useTasks(workspaceId?: string) {
       setError(msg);
       throw new Error(msg);
     }
-    guardCapability(profile?.role, 'manage_tasks', 'transferTaskOwnership');
+    guardCapability(profile?.role, 'task.update', 'transferTaskOwnership');
 
     const task = tasks.find(t => t.id === taskId);
     if (!task) throw new Error('Task not found');
@@ -1570,5 +1570,6 @@ export function useTasks(workspaceId?: string) {
 
   return { tasks, dependencies, collaborators, loading, error, page, hasMore, loadMore, fetchTasks, addTask, updateTask, updateTaskStatus, updateTaskDates, deleteTask, restoreTask, addDependency, removeDependency, addCollaborator, removeCollaborator, transferTaskOwnership, createTaskSuggestion, reviewTaskSuggestion };
 }
+
 
 

@@ -468,9 +468,6 @@ export function ResolveRouter() {
       return <RouteShell><MeetingsPage /></RouteShell>;
     }
     if (pathname === '/workspace/requirements') {
-      return <Redirect to="/workspace" />;
-    }
-    if (pathname === '/workspace/approvals') {
       return <Redirect to="/overview?inbox=open" />;
     }
     if (pathname === '/workspace/onboarding') {
@@ -489,7 +486,7 @@ export function ResolveRouter() {
     // ── EXECUTION ──
 
     if (pathname === '/execution' || pathname === '/execution/board') {
-      if (!guardRoute(role, '/execution')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/execution/board')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ExecutionBoardPage /></RouteShell>;
     }
     if (pathname === '/execution/timeline') {
@@ -513,15 +510,15 @@ export function ResolveRouter() {
     }
 
     if (pathname === '/company' || pathname === '/company/attendance' || pathname === '/company/payroll') {
-      if (!guardRoute(role, '/resources')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/company')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><PeopleOpsCenter /></RouteShell>;
     }
     if (pathname === '/company/teams' || pathname === '/company/capacity' || pathname === '/company/teams/departments' || pathname === '/company/teams/skills') {
-      if (!guardRoute(role, '/resources/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/company/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModuleErrorBoundary module="TeamsPage"><TeamsPage /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/finance') {
-      if (!guardRoute(role, '/resources/finance')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/finance')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModuleErrorBoundary module="FinancePage"><FinancePage /></ModuleErrorBoundary></RouteShell>;
     }
 
@@ -533,43 +530,43 @@ export function ResolveRouter() {
     }
 
     if (pathname === '/admin' || pathname === '/admin/identity') {
-      if (!guardRoute(role, '/control')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/identity')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><AdminPanel /></RouteShell>;
     }
     if (pathname === '/admin/analytics') {
-      if (!guardRoute(role, '/control/analytics')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/analytics')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModuleErrorBoundary module="AnalyticsPage"><AnalyticsPage /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/admin/audit') {
-      if (!guardRoute(role, '/control/audit')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/audit')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><AuditPage /></RouteShell>;
     }
     if (pathname === '/admin/document-templates') {
-      if (!guardRoute(role, '/control/document-templates')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/document-templates')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><DocumentTemplatesPage /></RouteShell>;
     }
     if (pathname === '/admin/system-health') {
-      if (!guardRoute(role, '/control')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/system-health')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ObservabilityPanel /></RouteShell>;
     }
     if (pathname === '/admin/automations' || pathname.startsWith('/admin/automations/')) {
-      if (!guardRoute(role, '/control/automations')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/automations')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModuleErrorBoundary module="AutomationsPanel"><AutomationsPanel /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/admin/settings') {
-      if (!guardRoute(role, '/control/settings')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/settings')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><SettingsPage /></RouteShell>;
     }
     if (pathname === '/admin/settings/notifications') {
-      if (!guardRoute(role, '/control/settings/notifications')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/settings/notifications')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><NotificationSettings /></RouteShell>;
     }
     if (pathname === '/admin/settings/modes') {
-      if (!guardRoute(role, '/control/settings/modes')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/settings/modes')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModeSettings /></RouteShell>;
     }
     if (pathname === '/admin/mission-control') {
-      if (!guardRoute(role, '/control/mission-control')) return <RouteShell><AccessRestricted /></RouteShell>;
+      if (!guardRoute(role, '/admin/mission-control')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><MissionControlPage /></RouteShell>;
     }
 

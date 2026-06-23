@@ -43,11 +43,10 @@ export function DependencyRiskPanel({ predictions, insights }: DependencyRiskPan
   const userRole = profile?.role || 'viewer';
   const userId = profile?.id || '';
 
-  // Capabilities
-  const isSuperAdmin = hasCapability(userRole, 'platform_governance');
-  const isPM = hasCapability(userRole, 'manage_projects');
-  const isDeveloper = hasCapability(userRole, 'manage_tasks') && !hasCapability(userRole, 'manage_projects');
-  const isStakeholder = hasCapability(userRole, 'view_stakeholders') || userRole === 'viewer';
+  const isSuperAdmin = hasCapability(userRole, 'audit.security');
+  const isPM = hasCapability(userRole, 'project.update');
+  const isDeveloper = hasCapability(userRole, 'task.update') && !hasCapability(userRole, 'project.update');
+  const isStakeholder = hasCapability(userRole, 'client.project.view') || userRole === 'client';
 
   const blockers = useMemo(() => {
     return (workspaceSettingsBlob?.execution_blockers || []) as any[];
@@ -118,8 +117,8 @@ export function DependencyRiskPanel({ predictions, insights }: DependencyRiskPan
   }, [blockers, adaptiveResponses, appliedActions]);
 
   const handleApplyReassignment = async (responseId: string, taskId: string, newOwnerId: string) => {
-    if (!hasCapability(profile?.role, 'manage_tasks')) {
-      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Unauthorized: 'manage_tasks' capability required.", type: "error" } }));
+    if (!hasCapability(profile?.role, 'task.assign')) {
+      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Unauthorized: 'task.assign' capability required.", type: "error" } }));
       return;
     }
     try {
@@ -185,8 +184,8 @@ export function DependencyRiskPanel({ predictions, insights }: DependencyRiskPan
   };
 
   const handleEscalateBlocker = async (responseId: string, blockerId: string) => {
-    if (!hasCapability(profile?.role, 'manage_tasks')) {
-      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Unauthorized: 'manage_tasks' capability required.", type: "error" } }));
+    if (!hasCapability(profile?.role, 'task.update')) {
+      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Unauthorized: 'task.update' capability required.", type: "error" } }));
       return;
     }
     try {
@@ -218,8 +217,8 @@ export function DependencyRiskPanel({ predictions, insights }: DependencyRiskPan
   };
 
   const handleApplyTimelineShift = async (responseId: string, projectId: string, proposedDeadline: string) => {
-    if (!hasCapability(profile?.role, 'manage_projects')) {
-      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Unauthorized: 'manage_projects' capability required.", type: "error" } }));
+    if (!hasCapability(profile?.role, 'project.update')) {
+      window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Unauthorized: 'project.update' capability required.", type: "error" } }));
       return;
     }
     try {
@@ -258,7 +257,7 @@ export function DependencyRiskPanel({ predictions, insights }: DependencyRiskPan
   };
 
   const handleForceResolveBlocker = async (responseId: string, blockerId: string) => {
-    if (!hasCapability(profile?.role, 'platform_governance') && !hasCapability(profile?.role, 'manage_projects')) {
+    if (!hasCapability(profile?.role, 'audit.security') && !hasCapability(profile?.role, 'project.update')) {
       window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: "Unauthorized: Administrative capability required.", type: "error" } }));
       return;
     }

@@ -8,6 +8,7 @@ import { calendarService, CalendarEvent } from '../../services/calendarService';
 import { fetchWorkItemsForCalendar, VirtualCalendarItem } from '../../services/workItemCalendarService';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { hasCapability } from '../../core/auth/permissions';
 import { showConfirm } from '../../components/common/Dialogs';
 
 /** App-wide navigation helper (matches the custom ResolveRouter pattern). */
@@ -56,6 +57,8 @@ export function CalendarView() {
   const [virtualItems, setVirtualItems] = useState<VirtualCalendarItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
+
+  const canManageEvents = hasCapability(profile, 'meeting.manage');
 
   const [viewMode, setViewMode] = useState<'month' | 'list'>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -200,11 +203,11 @@ export function CalendarView() {
   const handleOpenModal = (event?: CalendarEvent) => {
     if (event) {
       const isCompanyEvent = event.sourceType === 'company' || event.sourceType === 'holiday' || event.sourceType === 'festival';
-      if (isCompanyEvent && profile?.role !== 'pm' && profile?.role !== 'super_admin') {
+      if (isCompanyEvent && !hasCapability(profile, 'settings.manage') && !hasCapability(profile, 'project.update')) {
         notifyToast('Only PMs and Admins can modify company/global events.', 'info');
         return;
       }
-      if (profile?.role === 'viewer') { notifyToast('Viewers cannot modify events.', 'info'); return; }
+      if (!canManageEvents) { notifyToast('You do not have permission to modify events.', 'info'); return; }
       setEditingEvent(event);
       setFormData({
         summary:     event.summary,
@@ -213,7 +216,7 @@ export function CalendarView() {
         end:   toLocalISOString(new Date(event.end)),
       });
     } else {
-      if (profile?.role === 'viewer') { notifyToast('Viewers cannot create events.', 'info'); return; }
+      if (!canManageEvents) { notifyToast('You do not have permission to create events.', 'info'); return; }
       setEditingEvent(null);
       setFormData({
         summary: '', description: '',
@@ -225,7 +228,7 @@ export function CalendarView() {
   };
 
   const handleOpenModalForDate = (date: Date) => {
-    if (profile?.role === 'viewer') return;
+    if (!canManageEvents) return;
     const start = new Date(date); start.setHours(9, 0, 0, 0);
     const end   = new Date(date); end.setHours(10, 0, 0, 0);
     setEditingEvent(null);
@@ -316,7 +319,7 @@ export function CalendarView() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
-          {profile?.role !== 'viewer' && (
+          {canManageEvents && (
             <button onClick={() => handleOpenModal()} className="px-4 py-2 bg-primary hover:bg-primary/90 text-on-primary rounded text-sm font-medium flex items-center gap-2 transition-colors">
               <Plus className="w-4 h-4" /> New Event
             </button>
@@ -376,7 +379,7 @@ export function CalendarView() {
                         <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-primary text-on-primary shadow-sm' : d.isCurrentMonth ? 'text-on-surface' : 'text-on-surface-variant/40'}`}>
                           {d.day}
                         </span>
-                        {profile?.role !== 'viewer' && d.isCurrentMonth && (
+                        {canManageEvents && d.isCurrentMonth && (
                           <button onClick={() => handleOpenModalForDate(d.date)} className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-surface-container-high rounded text-primary transition-all duration-200" title="Add Event">
                             <Plus className="w-3 h-3" />
                           </button>
@@ -411,7 +414,7 @@ export function CalendarView() {
           <div className="flex flex-col items-center justify-center h-60 text-on-surface-variant">
             <CalendarIcon className="w-12 h-12 opacity-20 mb-4" />
             <p>No scheduled work or events for this period.</p>
-            {profile?.role !== 'viewer' && (
+            {canManageEvents && (
               <button onClick={() => handleOpenModal()} className="mt-4 px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded transition-colors">
                 Create your first event
               </button>
@@ -440,7 +443,7 @@ export function CalendarView() {
                       <h3 className={`font-semibold text-on-surface truncate pr-2 text-sm ${s.text}`} title={title}>
                         {s.icon}{title}
                       </h3>
-                      {!isVirtual && profile?.role !== 'viewer' && (
+                      {!isVirtual && canManageEvents && (
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={e => { e.stopPropagation(); handleOpenModal(ev as CalendarEvent); }} className="p-1 hover:bg-surface-container rounded text-on-surface-variant">
                             <Edit2 className="w-3.5 h-3.5" />

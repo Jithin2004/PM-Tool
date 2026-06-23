@@ -1,7 +1,7 @@
-export type AuthorityRole = 'owner' | 'admin' | 'manager' | 'member' | 'external' | 'pending-workspace-setup' | 'uninvited';
+export type AuthorityRole = 'super_admin' | 'admin' | 'project_manager' | 'team_lead' | 'developer' | 'employee' | 'hr' | 'finance' | 'client' | 'pending-workspace-setup' | 'uninvited';
 
 // Map legacy DB strings to AuthorityRole for internal type safety where needed
-export type LegacyDBRole = 'super_admin' | 'pm' | 'developer' | 'viewer' | 'uninvited' | 'pending-workspace-setup' | 'hr' | 'finance' | 'client';
+export type LegacyDBRole = 'owner' | 'manager' | 'member' | 'external' | 'pm' | 'viewer';
 
 export type UserRole = AuthorityRole | LegacyDBRole; // Transitional compatibility
 
@@ -14,15 +14,24 @@ export type FunctionalAccess =
   | 'Documents'
   | 'Operations';
 
-export function mapAuthorityToLegacyRole(authority: AuthorityRole | string): string {
-  switch (authority) {
-    case 'owner':
-    case 'admin': return 'super_admin';
-    case 'manager': return 'pm';
-    case 'member': return 'developer';
-    case 'external': return 'client';
-    default: return authority;
+export function normalizeLegacyRole(role: string): AuthorityRole {
+  if (!role) return 'employee'; // default
+  
+  const normalized = role.toLowerCase().replace(/\s+/g, '_');
+  switch (normalized) {
+    case 'owner': return 'super_admin';
+    case 'manager':
+    case 'pm': return 'project_manager';
+    case 'member': return 'employee';
+    case 'external':
+    case 'viewer': return 'client';
+    default: return normalized as AuthorityRole;
   }
+}
+
+export function mapAuthorityToLegacyRole(authority: AuthorityRole | string): string {
+  // Pass through the new enterprise roles to the database going forward
+  return authority;
 }
 
 export interface Workspace {

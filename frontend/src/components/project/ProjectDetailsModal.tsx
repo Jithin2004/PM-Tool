@@ -1,5 +1,6 @@
+import { hasCapability } from '../../core/auth/permissions';
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { Shield, Clock, Terminal, Lock, X, AlertTriangle, Users, Layers, LayoutGrid, CheckCircle2, Plus, Activity, BrainCircuit, Trash2, History, ShieldCheck, ShieldAlert, RefreshCw, TrendingUp, Share2 } from 'lucide-react';
 import { sha256 } from '../../utils/cryptoUtils';
@@ -306,7 +307,6 @@ function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; 
         prefillProject={project}
         totalInvoicedForProject={totalInvoiced}
         prefillBillingType={prefillBillingType}
-        currentUserIsSuperAdmin={true} // In real app, fetch from user profile
         onSuccess={() => {
           setIsCreateInvoiceOpen(false);
           // Auto-refresh the component
@@ -1096,7 +1096,7 @@ export function ProjectDetailsModal({
                 <Activity className="w-4 h-4" />
                 <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Preview as Client</span>
               </button>
-              {hasAuthority(currentUserProfile, 'manager') && (
+              {hasCapability(currentUserProfile?.role, 'project.update') && (
                 <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2 border border-border/50 rounded-xl hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary">
                   <Share2 className="w-4 h-4" />
                   <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Share</span>
@@ -1632,7 +1632,7 @@ export function ProjectDetailsModal({
                 workspaceId={project.workspace_id}
                  entityType="project"
                 entityId={project.id}
-                readOnly={!hasAuthority(currentUserProfile, 'manager')}
+                readOnly={!hasCapability(currentUserProfile?.role, 'project.update')}
               />
             </div>
           ) : activeTab === 'finance' ? (
@@ -1667,3 +1667,5 @@ export function ProjectDetailsModal({
     </div>
   );
 }
+
+

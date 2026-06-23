@@ -257,7 +257,7 @@ export async function updateWorkspaceSettings(workspace: Workspace, settings: Pa
 
     if (actorError || !actor) throw new Error('Access denied: actor not found');
     if (actor.workspace_id !== workspace.id) throw new Error('Access denied: cross-workspace operation');
-    if (!hasCapability(actor.role as UserRole, 'manage_settings') && actor.id !== workspace.ownerId) {
+    if (!hasCapability(actor.role as UserRole, 'settings.manage') && actor.id !== workspace.ownerId) {
       throw new Error('Access denied: manage_settings capability required to update workspace settings');
     }
   }
@@ -300,4 +300,5 @@ export async function cloneWorkspaceToSandbox(workspaceId: string, userId: strin
   if (updateError) throw updateError;
   return sandboxId;
 }
+
 

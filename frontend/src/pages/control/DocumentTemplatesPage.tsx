@@ -4,7 +4,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { fetchDocumentTemplates, createDocumentTemplate, updateDocumentTemplate, deleteDocumentTemplate, DocumentTemplate, TemplateType } from '../../services/documentTemplateService';
 import { documentGenerator } from '../../services/documentGeneratorService';
-import { hasAuthority } from '../../core/auth/permissions';
+import { hasCapability } from '../../core/auth/permissions';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
 import { PremiumLoader } from '../../components/common/PremiumLoader';
 
@@ -157,7 +157,7 @@ export default function DocumentTemplatesPage() {
     );
   }
 
-  const isAdmin = hasAuthority(profile, 'admin');
+  const isAdmin = hasCapability(profile, 'settings.manage');
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

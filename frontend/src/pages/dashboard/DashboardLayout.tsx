@@ -100,9 +100,9 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     label: 'Mission Control',
     iconName: 'Radar',
     subsections: [
-      { label: 'Dashboard', path: '/overview', capability: 'view_projects' },
-      { label: 'Activity Feed', path: '/overview/activity', capability: 'view_reports' },
-      { label: 'Approvals', path: '/workspace/approvals', capability: 'view_projects' }
+      { label: 'Dashboard', path: '/overview', capability: 'project.view' },
+      { label: 'Activity Feed', path: '/overview/activity', capability: 'reports.view' },
+      { label: 'Approvals', path: '/workspace/approvals', capability: 'project.view' }
     ]
   },
   {
@@ -110,9 +110,9 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     label: 'Execution',
     iconName: 'TreeStructure',
     subsections: [
-      { label: 'Projects', path: '/workspace', capability: 'view_projects' },
-      { label: 'Task Board', path: '/execution/board', capability: 'view_tasks' },
-      { label: 'Schedule', path: '/execution/timeline', capability: 'view_scheduling' }
+      { label: 'Projects', path: '/workspace', capability: 'project.view' },
+      { label: 'Task Board', path: '/execution/board', capability: 'task.view' },
+      { label: 'Schedule', path: '/execution/timeline', capability: 'meeting.view' }
     ]
   },
   {
@@ -120,9 +120,9 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     label: 'Company',
     iconName: 'Building2',
     subsections: [
-      { label: 'People Ops', path: '/company', capability: 'manage_logistics' },
-      { label: 'Team Directory', path: '/company/teams', capability: 'view_teams' },
-      { label: 'Capacity', path: '/company/capacity', capability: 'view_reports' }
+      { label: 'People Ops', path: '/company', capability: 'meeting.manage' },
+      { label: 'Team Directory', path: '/company/teams', capability: 'people.view' },
+      { label: 'Capacity', path: '/company/capacity', capability: 'reports.view' }
     ]
   },
   {
@@ -130,9 +130,9 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     label: 'Finance & Admin',
     iconName: 'Landmark',
     subsections: [
-      { label: 'Finance Hub', path: '/finance', capability: 'manage_finance' },
-      { label: 'Workspace Settings', path: '/admin/settings', capability: 'manage_settings' },
-      { label: 'System & Security', path: '/admin/system-health', capability: 'platform_governance' }
+      { label: 'Finance Hub', path: '/finance', capability: 'finance.manage' },
+      { label: 'Workspace Settings', path: '/admin/settings', capability: 'settings.manage' },
+      { label: 'System & Security', path: '/admin/system-health', capability: 'workspace.update' }
     ]
   }
 ];
@@ -351,8 +351,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   useEffect(() => {
     if (loading || !profile) return;
 
-    const isDev = hasCapability(profile, 'manage_tasks') && !hasCapability(profile, 'manage_projects');
-    const isView = hasCapability(profile, 'view_stakeholders') && !hasCapability(profile, 'manage_tasks');
+    const isDev = hasCapability(profile, 'task.update') && !hasCapability(profile, 'project.update');
+    const isView = hasCapability(profile, 'project.view') && !hasCapability(profile, 'task.update');
     if (isDev) {
       const allowed = ['/overview', '/execution', '/execution/board', '/login', '/execution/timeline'];
       if (!allowed.includes(routePath)) {
@@ -378,7 +378,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   useEffect(() => {
     if (!disclosure.active || loading) return;
-    const isDevOrView = (hasCapability(profile, 'manage_tasks') && !hasCapability(profile, 'manage_projects')) || (hasCapability(profile, 'view_stakeholders') && !hasCapability(profile, 'manage_tasks'));
+    const isDevOrView = (hasCapability(profile, 'task.update') && !hasCapability(profile, 'project.update')) || (hasCapability(profile, 'project.view') && !hasCapability(profile, 'task.update'));
     if (isDevOrView) return; // Bypass progressive unlock for developers & stakeholders
     if (routePath === '/overview' || routePath === '/') return;
     if (disclosure.isRouteVisible(routePath)) return;
@@ -466,7 +466,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const tourSteps: TourStep[] = useMemo(() => {
     const role = profile?.role || 'viewer';
 
-    if (hasAuthority(role, 'admin') || hasAuthority(role, 'owner')) {
+    if (role === 'admin' || role === 'super_admin' || role === 'owner') {
       // OWNER / ADMIN TOUR
       return [
         {
@@ -500,7 +500,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/control/settings')
         }
       ];
-    } else if (hasFunction(role, 'Projects') || hasCapability(role, 'manage_projects')) {
+    } else if (hasFunction(role, 'Projects') || hasCapability(role, 'project.update')) {
       // PM TOUR
       return [
         {
@@ -556,7 +556,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/workspace/approvals')
         }
       ];
-    } else if (hasAuthority(role, 'external')) {
+    } else if (role === 'client' || role === 'external') {
       // CLIENT TOUR
       return [
         {
@@ -813,7 +813,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   };
 
   const handleDeleteProject = async (id: string, reason: string) => {
-    if (!hasCapability(profile, 'manage_workspace') && !hasCapability(profile, 'manage_projects')) {
+    if (!hasCapability(profile, 'workspace.update') && !hasCapability(profile, 'project.update')) {
       notify("You don't have permission to delete projects.", "error");
       return;
     }
@@ -855,7 +855,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       notify("Project designation is required.", "error");
       return;
     }
-    if (!hasCapability(profile, 'manage_projects')) {
+    if (!hasCapability(profile, 'project.update')) {
       notify("You don't have permission to create projects.", 'error');
       return;
     }
@@ -1152,7 +1152,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               message={disclosure.nextUnlock.message}
               nextLevel={disclosure.nextUnlock.level}
               lockedCount={disclosure.lockedCount}
-              onShowAll={hasCapability(profile, 'manage_settings') ? handleShowAllFeatures : undefined}
+              onShowAll={hasCapability(profile, 'settings.manage') ? handleShowAllFeatures : undefined}
             />
           )}
 
@@ -1302,7 +1302,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                       message={disclosure.nextUnlock.message}
                       nextLevel={disclosure.nextUnlock.level}
                       lockedCount={disclosure.lockedCount}
-                      onShowAll={hasCapability(profile, 'manage_settings') ? handleShowAllFeatures : undefined}
+                      onShowAll={hasCapability(profile, 'settings.manage') ? handleShowAllFeatures : undefined}
                     />
                   )}
                 </div>
@@ -1406,8 +1406,8 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               </div>
 
               {/* View As Role Tool */}
-              {hasAuthority(trueProfile, 'admin') && (
-                <div className="relative group flex items-center">
+              {hasCapability(trueProfile?.role, 'user.manage') && (
+                  <div className="relative group flex items-center">
                   <select
                     value={simulatedRole || ''}
                     onChange={(e) => setSimulatedRole(e.target.value ? (e.target.value as UserRole) : null)}
@@ -1427,11 +1427,11 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     <ChevronDown className="w-3 h-3" />
                   </div>
                 </div>
-              )}
+                )}
 
               {/* Sandbox Toggle */}
-              {hasAuthority(profile, 'admin') && (
-                <button
+              {hasCapability(profile?.role, 'settings.manage') && (
+                  <button
                   onClick={async () => {
                     if (!workspace || !user) return;
                     setIsSandboxTransitioning(true);
@@ -1506,7 +1506,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
               <ActionInbox />
 
               {/* New Project CTA */}
-              {profile && hasCapability(profile.role, 'manage_projects') && (
+              {profile && hasCapability(profile.role, 'project.update') && (
                 <button
                   onClick={() => setIsAdding(true)}
                   className="flex items-center gap-1.5 text-[11px] font-medium h-7 px-3 rounded-md transition-all cursor-pointer shrink-0 active:scale-95"
@@ -1549,7 +1549,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           {/* Dynamic Page Routing Slot */}
           <main id="main-content" className="flex-1 px-6 py-5 overflow-y-auto pb-6 relative user-content">
             <ErrorBoundary>
-              {hasAuthority(profile, 'admin') && window.location.pathname === '/workspace' && (
+              {hasCapability(profile?.role, 'settings.manage') && window.location.pathname === '/workspace' && (
                 <WelcomeCenter />
               )}
               <AnimatePresence mode="wait">
@@ -1819,6 +1819,10 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   );
 }
+
+
+
+
 
 
 

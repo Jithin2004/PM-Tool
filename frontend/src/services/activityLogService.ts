@@ -85,7 +85,7 @@ export async function verifyActivityLogAccess(workspaceId: string): Promise<Acce
   if (!ctx.usersRowExists) return { canInsert: false, reason: 'No users row exists for this auth UID' };
   if (ctx.usersRow && !ctx.usersRow.workspace_id) return { canInsert: false, reason: 'users.workspace_id is null' };
   if (ctx.workspaceId !== workspaceId) return { canInsert: false, reason: `Workspace mismatch: appendLog workspace_id=${workspaceId}, users.workspace_id=${ctx.workspaceId}` };
-  if (ctx.role && !hasCapability(ctx.role as any, 'view_projects')) return { canInsert: false, reason: 'Pending setup or uninvited, no workspace access' };
+  if (ctx.role && !hasCapability(ctx.role as any, 'project.view')) return { canInsert: false, reason: 'Pending setup or uninvited, no workspace access' };
   if (ctx.ownerWorkspaceIds.length === 0 && !ctx.workspaceId) return { canInsert: false, reason: 'No owned workspaces and no workspace context' };
 
   return { canInsert: true, reason: 'OK' };
@@ -939,3 +939,4 @@ export function recordForensicAppend(outcome: 'success' | 'failed' | 'queued'): 
     const rates = { ..._agg };
   }
 }
+

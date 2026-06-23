@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Square, Clock } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import type { Task, WorkSession } from '../../core/types/execution';
 import type { Workspace, Member } from '../../core/types';
 import { workSessionService } from '../../services/workSessionService';
@@ -225,3 +225,4 @@ export function TaskTimerUI({ task, workspace, currentUser, onRefreshTasks, isCo
     </div>
   );
 }
+

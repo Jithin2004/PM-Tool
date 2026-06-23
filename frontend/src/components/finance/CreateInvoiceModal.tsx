@@ -7,6 +7,8 @@ import { documentGenerator } from '../../services/documentGeneratorService';
 import { showConfirm, showAlert } from '../common/Dialogs';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAuth } from '../../context/AuthContext';
+import { hasCapability } from '../../core/auth/permissions';
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
@@ -17,14 +19,15 @@ interface CreateInvoiceModalProps {
   onSuccess: () => void;
   prefillProject?: any;
   totalInvoicedForProject?: number;
-  currentUserIsSuperAdmin?: boolean;
   prefillLineItems?: Partial<InvoiceLineItem>[];
   prefillBillingType?: string;
 }
 
-export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, companyProfile, onSuccess, prefillProject, totalInvoicedForProject, currentUserIsSuperAdmin, prefillLineItems, prefillBillingType }: CreateInvoiceModalProps) {
+export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, companyProfile, onSuccess, prefillProject, totalInvoicedForProject, prefillLineItems, prefillBillingType }: CreateInvoiceModalProps) {
   useEscapeKey(isOpen, onClose);
   const { workspace } = useWorkspace();
+  const { profile } = useAuth();
+  const currentUserIsSuperAdmin = hasCapability(profile, 'audit.security');
   const baseCurrency = workspace?.metadata?.baseCurrency || 'INR';
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);

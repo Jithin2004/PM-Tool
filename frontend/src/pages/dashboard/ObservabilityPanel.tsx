@@ -3,6 +3,7 @@ import { useObservability } from '../../core/observability/ObservabilityProvider
 import { Activity, Server, Database, Network, ShieldCheck, ShieldAlert, History, AlertTriangle, CheckCircle, RefreshCcw, Info, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
+import { hasCapability } from '../../core/auth/permissions';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { searchSyncService } from '../../services/searchSyncService';
 import { searchHealthService, SearchHealthStatus } from '../../services/searchHealthService';
@@ -18,7 +19,7 @@ export const ObservabilityPanel: React.FC = () => {
   const [isSyncing, setIsSyncing] = React.useState(false);
 
   React.useEffect(() => {
-    if (workspace?.id && (profile?.role === 'owner' || profile?.role === 'admin' || profile?.role === 'super_admin')) {
+    if (workspace?.id && hasCapability(profile?.role as any, 'audit.security')) {
       searchHealthService.checkSearchHealth(workspace.id).then(setSearchHealth);
     }
   }, [workspace?.id, profile?.role]);
@@ -266,4 +267,6 @@ export const ObservabilityPanel: React.FC = () => {
     </div>
   );
 };
+
+
 

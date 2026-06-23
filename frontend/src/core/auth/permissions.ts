@@ -1,126 +1,135 @@
 import { normalizePath } from '../../app/routePaths';
-import type { AuthorityRole, FunctionalAccess, UserRole } from '../../types';
+import { AuthorityRole, UserRole, normalizeLegacyRole } from '../types/workspace';
+import { ROUTE_CAPABILITY_MAP } from '../../app/routeRegistry';
 
-/**
- * Canonical capabilities — single source of operational authority.
- */
 export type Capability =
-  | 'view_projects'
-  | 'manage_projects'
-  | 'view_tasks'
-  | 'manage_tasks'
-  | 'view_scheduling'
-  | 'manage_scheduling'
-  | 'view_analytics'
-  | 'view_decision_center'
-  | 'view_reports'
-  | 'manage_logistics'
-  | 'view_teams'
-  | 'manage_teams'
-  | 'view_stakeholders'
-  | 'view_audit_log'
-  | 'manage_settings'
-  | 'manage_integrations'
-  | 'manage_automations'
-  | 'manage_compensation'
-  | 'platform_governance'
-  | 'platform_security'
-  | 'manage_finance'
-  | 'view_mission_control'
-  // Sprint 1 HR & Finance Capabilities
-  | 'manage_employees'
-  | 'manage_attendance'
-  | 'manage_employment_records'
-  | 'manage_payroll'
-  | 'manage_invoice'
-  | 'manage_expenses'
-  | 'approve_work'
-  | 'assign_tasks'
-  | 'manage_meetings'
-  | 'manage_workspace'
-  | 'manage_roles';
+  | 'dashboard.view'
+  | 'workspace.view' | 'workspace.update' | 'workspace.delete' | 'ownership.transfer' | 'license.manage'
+  | 'user.invite' | 'user.manage'
+  | 'project.view' | 'project.create' | 'project.update' | 'project.archive' | 'project.delete'
+  | 'task.view' | 'task.create' | 'task.update' | 'task.delete' | 'task.assign'
+  | 'sprint.manage'
+  | 'timeline.manage'
+  | 'document.view' | 'document.manage'
+  | 'file.view' | 'file.manage'
+  | 'meeting.view' | 'meeting.manage'
+  | 'decision.view' | 'decision.manage'
+  | 'people.view' | 'people.manage'
+  | 'attendance.manage' | 'leave.manage'
+  | 'hr.private_records'
+  | 'finance.view' | 'finance.manage'
+  | 'invoice.manage' | 'expense.manage'
+  | 'automation.manage'
+  | 'integration.manage'
+  | 'settings.manage'
+  | 'audit.view' | 'audit.security'
+  | 'reports.view'
+  | 'project.view' | 'client.project.view' | 'client.document.view' | 'client.meeting.view';
 
-const VIEW_CAPABILITIES: Capability[] = [
-  'view_projects',
-  'view_tasks',
-  'view_analytics',
-  'view_decision_center',
-  'view_reports',
-  'view_teams',
-  'view_stakeholders',
-  'view_audit_log',
+const ALL_CAPABILITIES: Capability[] = [
+  'dashboard.view', 'workspace.view', 'workspace.update', 'workspace.delete', 'ownership.transfer', 'license.manage',
+  'user.invite', 'user.manage', 'project.view', 'project.create', 'project.update', 'project.archive', 'project.delete',
+  'task.view', 'task.create', 'task.update', 'task.delete', 'task.assign', 'sprint.manage', 'timeline.manage',
+  'document.view', 'document.manage', 'file.view', 'file.manage', 'meeting.view', 'meeting.manage', 'decision.view', 'decision.manage',
+  'people.view', 'people.manage', 'attendance.manage', 'leave.manage', 'hr.private_records',
+  'finance.view', 'finance.manage', 'invoice.manage', 'expense.manage',
+  'automation.manage', 'integration.manage', 'settings.manage', 'audit.view', 'audit.security', 'reports.view'
 ];
 
-const FUNCTION_CAPABILITIES: Record<FunctionalAccess, Capability[]> = {
-  Projects: ['manage_projects', 'manage_tasks', 'view_projects', 'view_tasks', 'view_scheduling', 'manage_scheduling', 'view_teams'],
-  Engineering: ['view_projects', 'view_tasks', 'manage_tasks', 'view_scheduling', 'view_teams'],
-  Finance: ['view_projects', 'manage_payroll', 'manage_invoice', 'manage_expenses', 'manage_finance', 'view_reports'],
-  PeopleOperations: ['view_projects', 'view_teams', 'manage_employees', 'manage_attendance', 'manage_employment_records', 'view_analytics', 'manage_compensation'],
-  Clients: ['view_projects', 'view_tasks', 'view_stakeholders'],
-  Documents: ['view_projects'],
-  Operations: ['view_projects', 'view_reports', 'manage_logistics', 'view_analytics']
-};
+// Based on User Corrections
+const ADMIN_CAPABILITIES: Capability[] = [
+  'dashboard.view',
+  'workspace.view', 'workspace.update',
+  'user.invite', 'user.manage',
+  'project.view', 'project.create', 'project.update', 'project.archive',
+  'task.view', 'task.create', 'task.update', 'task.delete', 'task.assign',
+  'sprint.manage', 'timeline.manage',
+  'document.view', 'document.manage',
+  'file.view', 'file.manage',
+  'meeting.view', 'meeting.manage',
+  'decision.view', 'decision.manage',
+  'people.view',
+  'automation.manage', 'integration.manage',
+  'reports.view', 'settings.manage', 'audit.view'
+];
+
+const PM_CAPABILITIES: Capability[] = [
+  'dashboard.view', 'workspace.view',
+  'project.view', 'project.create', 'project.update', 'project.archive',
+  'task.view', 'task.create', 'task.update', 'task.delete', 'task.assign',
+  'sprint.manage', 'timeline.manage',
+  'document.view', 'document.manage', 'file.view', 'file.manage',
+  'meeting.view', 'meeting.manage', 'decision.view', 'decision.manage',
+  'people.view', 'reports.view'
+];
+
+const TEAM_LEAD_CAPABILITIES: Capability[] = [
+  'dashboard.view', 'workspace.view', 'project.view',
+  'task.view', 'task.create', 'task.update', 'task.assign',
+  'sprint.manage',
+  'document.view', 'document.manage', 'file.view', 'file.manage',
+  'meeting.view', 'decision.view', 'people.view'
+];
+
+const DEVELOPER_CAPABILITIES: Capability[] = [
+  'dashboard.view', 'workspace.view', 'project.view',
+  'task.view', 'task.update',
+  'document.view', 'file.view', 'meeting.view', 'people.view'
+];
+
+const EMPLOYEE_CAPABILITIES: Capability[] = [
+  'dashboard.view', 'workspace.view', 'project.view', 'people.view'
+];
+
+const HR_CAPABILITIES: Capability[] = [
+  'dashboard.view', 'workspace.view', 'people.view', 'people.manage',
+  'attendance.manage', 'leave.manage', 'hr.private_records', 'reports.view'
+];
+
+const FINANCE_CAPABILITIES: Capability[] = [
+  'dashboard.view', 'workspace.view', 'people.view',
+  'finance.view', 'finance.manage', 'invoice.manage', 'expense.manage', 'reports.view'
+];
+
+const CLIENT_CAPABILITIES: Capability[] = [
+  'project.view', 'client.project.view', 'client.document.view', 'client.meeting.view'
+];
 
 const AUTHORITY_CAPABILITIES: Record<AuthorityRole, Capability[]> = {
-  owner: [
-    'view_projects', 'manage_projects', 'view_tasks', 'manage_tasks', 'view_scheduling', 'manage_scheduling', 'view_analytics', 'view_decision_center', 'view_reports', 'manage_logistics', 'view_teams', 'manage_teams', 'view_stakeholders', 'view_audit_log', 'manage_settings', 'manage_integrations', 'manage_automations', 'manage_compensation', 'manage_finance', 'platform_governance', 'platform_security', 'view_mission_control', 'manage_roles', 'manage_workspace', 'manage_employees', 'manage_attendance', 'manage_employment_records', 'manage_payroll', 'manage_invoice', 'manage_expenses', 'approve_work', 'assign_tasks', 'manage_meetings'
-  ],
-  admin: [
-    'view_projects', 'manage_projects', 'view_tasks', 'manage_tasks', 'view_scheduling', 'manage_scheduling', 'view_analytics', 'view_decision_center', 'view_reports', 'manage_logistics', 'view_teams', 'manage_teams', 'view_stakeholders', 'view_audit_log', 'manage_settings', 'manage_integrations', 'manage_automations', 'manage_finance', 'view_mission_control', 'manage_workspace', 'manage_employees', 'manage_attendance', 'manage_employment_records', 'manage_payroll', 'manage_invoice', 'manage_expenses', 'approve_work', 'assign_tasks', 'manage_meetings'
-  ],
-  manager: [
-    'view_projects', 'manage_projects', 'view_tasks', 'manage_tasks', 'view_scheduling', 'manage_scheduling', 'view_analytics', 'view_decision_center', 'view_reports', 'manage_logistics', 'view_teams', 'manage_teams', 'view_stakeholders', 'approve_work', 'assign_tasks', 'manage_meetings'
-  ],
-  member: [
-    'view_projects', 'view_tasks', 'manage_tasks', 'view_scheduling', 'view_teams'
-  ],
-  external: [
-    'view_projects', 'view_tasks', 'view_stakeholders'
-  ],
+  super_admin: ALL_CAPABILITIES,
+  admin: ADMIN_CAPABILITIES,
+  project_manager: PM_CAPABILITIES,
+  team_lead: TEAM_LEAD_CAPABILITIES,
+  developer: DEVELOPER_CAPABILITIES,
+  employee: EMPLOYEE_CAPABILITIES,
+  hr: HR_CAPABILITIES,
+  finance: FINANCE_CAPABILITIES,
+  client: CLIENT_CAPABILITIES,
   'pending-workspace-setup': [],
   uninvited: []
 };
 
-import { ROUTE_CAPABILITY_MAP } from '../../app/routeRegistry';
-
-export function getAuthorityRank(role: AuthorityRole | string | undefined): number {
-  switch (role) {
-    case 'owner': return 50;
-    case 'super_admin': return 50; // Legacy mapping fallback
-    case 'admin': return 40;
-    case 'manager': return 30;
-    case 'pm': return 30; // Legacy mapping fallback
-    case 'member': return 20;
-    case 'developer': return 20; // Legacy mapping fallback
-    case 'hr': return 20; // Legacy fallback
-    case 'finance': return 20; // Legacy fallback
-    case 'external': return 10;
-    case 'client': return 10; // Legacy mapping fallback
-    case 'viewer': return 10;
-    default: return 0;
-  }
-}
-
 export function hasAuthority(profile: any, required: AuthorityRole): boolean {
+  // Legacy function kept for compatibility, but deprecated.
+  // We map rank explicitly here to avoid breaking any stray callers.
+  const rank = {
+    super_admin: 90, admin: 80, project_manager: 70, team_lead: 60,
+    hr: 50, finance: 50, developer: 40, employee: 30, client: 10,
+    'pending-workspace-setup': 0, uninvited: 0
+  };
+  
   if (!profile) return false;
-  let roleStr = typeof profile === 'string' ? profile : (profile.authority || profile.role);
-  if (typeof roleStr === 'string') {
-    roleStr = roleStr.toLowerCase().replace(/\s+/g, '_');
-  }
-  if (roleStr === 'super_admin') return true; // Super Admin Wildcard
-  return getAuthorityRank(roleStr) >= getAuthorityRank(required);
-}
-
-export function hasFunction(profile: any, requiredFunc: FunctionalAccess): boolean {
-  if (!profile) return false;
-  const funcs = profile.functionalAccess || profile.capabilities || [];
-  return funcs.includes(requiredFunc);
+  const roleStr = typeof profile === 'string' ? profile : (profile.authority || profile.role);
+  const normalized = normalizeLegacyRole(roleStr);
+  
+  if (normalized === 'super_admin') return true;
+  return (rank[normalized] || 0) >= (rank[required] || 0);
 }
 
 export function hasCapability(roleOrProfile: any, capability: Capability): boolean {
   if (!roleOrProfile) return false;
   
-  let roleStr: AuthorityRole | string;
+  let roleStr: string;
   let customCaps: string[] = [];
   
   if (typeof roleOrProfile === 'string') {
@@ -130,59 +139,38 @@ export function hasCapability(roleOrProfile: any, capability: Capability): boole
     customCaps = roleOrProfile.capabilities || [];
   }
 
-  // Strict Normalization: "Super Admin" -> "super_admin"
-  if (typeof roleStr === 'string') {
-    roleStr = roleStr.toLowerCase().replace(/\s+/g, '_');
+  const normalizedRole = normalizeLegacyRole(roleStr);
+  
+  if (normalizedRole === 'super_admin') {
+    if (ALL_CAPABILITIES.includes(capability)) return true;
   }
 
-  // CRITICAL HOTFIX BYPASS: Super Admin Wildcard
-  if (roleStr === 'super_admin') return true;
-  
-  // 1. Check Authority explicitly
-  let normalizedRole: AuthorityRole = 'member';
-  if (roleStr === 'super_admin' || roleStr === 'owner') normalizedRole = 'owner';
-  else if (roleStr === 'admin') normalizedRole = 'admin';
-  else if (roleStr === 'pm' || roleStr === 'manager') normalizedRole = 'manager';
-  else if (roleStr === 'developer') normalizedRole = 'member';
-  else if (roleStr === 'client' || roleStr === 'viewer' || roleStr === 'external') normalizedRole = 'external';
-
-  // 2. Check Role-based static capabilities
   const defaultCaps = AUTHORITY_CAPABILITIES[normalizedRole] || [];
   if (defaultCaps.includes(capability)) return true;
   
-  // 3. Look for explicitly granted exact string capabilities
   if (customCaps.includes(capability)) return true;
   
-  // 4. Check Functions
-  const functionalAccess: FunctionalAccess[] = roleOrProfile?.functionalAccess || [];
-  for (const f of functionalAccess) {
-    if (FUNCTION_CAPABILITIES[f]?.includes(capability)) return true;
-  }
-  
   return false;
-}
-
-export function isOperationalReadOnly(role: UserRole | undefined): boolean {
-  if (!role) return true;
-  return hasCapability(role, 'view_projects') && !hasCapability(role, 'manage_tasks') && !hasCapability(role, 'manage_projects');
 }
 
 export function hasAnyCapability(role: UserRole | undefined, capabilities: Capability[]): boolean {
   return capabilities.some(c => hasCapability(role, c));
 }
 
-export function canWriteOperationally(role: UserRole | undefined): boolean {
-  if (!role || !hasCapability(role, 'view_projects')) return false;
-  return !isOperationalReadOnly(role);
-}
-
 export function getCapabilities(role: UserRole | undefined): Capability[] {
   if (!role) return [];
-  return AUTHORITY_CAPABILITIES[role as AuthorityRole] ?? [];
+  const normalized = normalizeLegacyRole(role);
+  return AUTHORITY_CAPABILITIES[normalized] ?? [];
 }
 
 export function canAccessRoute(role: UserRole | undefined, pathname: string): boolean {
-  if (!role || !hasCapability(role, 'view_projects')) return false;
+  if (!role) return false;
+  
+  // Clients are locked down
+  const normalized = normalizeLegacyRole(role);
+  if (normalized === 'client') {
+    return hasCapability(role, 'project.view');
+  }
 
   const path = normalizePath(pathname);
   const required = ROUTE_CAPABILITY_MAP[path];
@@ -190,18 +178,17 @@ export function canAccessRoute(role: UserRole | undefined, pathname: string): bo
   if (required === 'auth') return true;
   if (!required) {
     if (path.startsWith('/projects/')) {
-      return hasCapability(role, 'view_tasks');
+      return hasCapability(role, 'project.view');
     }
     if (path.startsWith('/workspace/knowledge/')) {
-      return hasCapability(role, 'view_projects');
+      return hasCapability(role, 'document.view');
     }
     return false;
   }
 
-  return hasCapability(role, required);
+  return hasCapability(role, required as Capability);
 }
 
-// Fix 5: Rate Limiting & Abuse Resilience (Frontend mutation governance)
 const mutationTimestamps: number[] = [];
 const MAX_MUTATIONS_PER_10S = 30;
 
@@ -214,13 +201,12 @@ export function guardCapability(
     const now = Date.now();
     mutationTimestamps.push(now);
     
-    // Clean up timestamps older than 10 seconds
     while (mutationTimestamps.length > 0 && mutationTimestamps[0] < now - 10000) {
       mutationTimestamps.shift();
     }
     
     if (mutationTimestamps.length > MAX_MUTATIONS_PER_10S) {
-      const msg = `Rate Limit Exceeded: Too many operational mutations requested. Please wait before retrying.`;
+      const msg = `Rate Limit Exceeded: Too many operational mutations requested.`;
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('notify-toast', { detail: { message: msg, type: 'error' } }));
       }
@@ -234,3 +220,20 @@ export function guardCapability(
     throw new Error(msg);
   }
 }
+export function getAuthorityRank(role: string): number {
+  const normalized = normalizeLegacyRole(role);
+  const rank: Record<string, number> = {
+    super_admin: 90, admin: 80, project_manager: 70, team_lead: 60,
+    hr: 50, finance: 50, developer: 40, employee: 30, client: 10,
+    'pending-workspace-setup': 0, uninvited: 0, viewer: 10, member: 30, manager: 70, external: 10
+  };
+  return rank[normalized] ?? 0;
+}
+
+export function hasFunction(role: string, funcName: string): boolean {
+  return getAuthorityRank(role) >= 90;
+}
+export function isOperationalReadOnly(role: string): boolean {
+  return getAuthorityRank(role) <= 10;
+}
+

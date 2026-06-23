@@ -143,7 +143,7 @@ export function useOperationalPresence(options: UseOperationalPresenceOptions) {
   // Permission-gated collaborator visibility
   const visibleCollaborators = useMemo(() => {
     return collaborators.filter(c => {
-      if (hasCapability(options.role, 'platform_governance')) return true;
+      if (hasCapability(options.role, 'workspace.update')) return true;
       if (!c.context.projectId) return false;
       if (c.context.projectId === operationalContext.projectId) return true;
       return false;
@@ -172,3 +172,4 @@ export function useOperationalPresence(options: UseOperationalPresenceOptions) {
     registerCommandIntent: intentEngine.registerCommandIntent,
   };
 }
+

@@ -4,7 +4,7 @@ import {
   Briefcase, Filter, ChevronDown, CheckCircle2,
   TrendingUp, Users, Cpu, Layers
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -84,7 +84,7 @@ export function ProjectWorkspace() {
             </div>
           </div>
 
-          {hasCapability(profile?.role, 'manage_projects') && (
+          {hasCapability(profile?.role, 'project.update') && (
             <button
               onClick={() => setIsAdding(true)}
               className="bg-text-primary text-bg px-4 py-2 rounded-md font-medium text-xs flex items-center gap-2 hover:bg-neutral-200 transition-colors shadow-sm"
@@ -199,7 +199,7 @@ export function ProjectWorkspace() {
                 </div>
               </div>
 
-              {hasCapability(profile?.role as any, 'manage_projects') && (
+              {hasCapability(profile?.role as any, 'project.update') && (
                 <button onClick={() => setIsAdding(true)} className="btn-premium-primary px-6 py-2.5 rounded-lg text-sm font-semibold tracking-wide">
                   Create Project
                 </button>
@@ -212,3 +212,5 @@ export function ProjectWorkspace() {
     </div>
   );
 }
+
+

@@ -57,16 +57,16 @@ export const universalSearchEngine = {
   },
 
   isEntityVisibleToRole(entity: SearchResult, role: string): boolean {
-    if (role === 'owner' || role === 'super_admin' || role === 'admin') return true;
+    if (hasCapability(role as any, 'workspace.update')) return true;
 
     // Financial Data
     if (entity.entity_type === 'invoice' || entity.entity_type === 'finance' || entity.entity_type === 'ledger') {
-      return hasCapability(role, 'manage_finance') || hasCapability(role, 'manage_finance');
+      return hasCapability(role, 'finance.manage') || hasCapability(role, 'finance.manage');
     }
 
     // HR Data
     if (entity.entity_type === 'hr' || entity.entity_type === 'salary' || entity.entity_type === 'attendance') {
-      return hasCapability(role, 'manage_employees');
+      return hasCapability(role, 'people.manage');
     }
 
     // If it's a general entity like task, epic, project, it is typically visible if they are in the workspace
@@ -76,20 +76,24 @@ export const universalSearchEngine = {
 
   getRoleRelevanceMultiplier(entity: SearchResult, role: string): number {
     // Developers care most about Tasks and Documents
-    if (!hasCapability(role, 'manage_projects')) {
+    if (!hasCapability(role, 'project.update')) {
       if (entity.entity_type === 'task') return 1.5;
       if (entity.entity_type === 'document') return 1.2;
     }
 
     // PMs care about Projects, Risks, Sprints, Epics
-    if (hasCapability(role, 'manage_projects') && !hasCapability(role, 'manage_settings')) {
+    if (hasCapability(role, 'project.update') && !hasCapability(role, 'settings.manage')) {
       if (['project', 'epic', 'sprint', 'risk'].includes(entity.entity_type)) return 1.5;
     }
 
     // Finance/HR cares about invoices/people
-    if (hasCapability(role, 'manage_finance') && entity.entity_type === 'invoice') return 1.5;
-    if (hasCapability(role, 'manage_employees') && entity.entity_type === 'user') return 1.5;
+    if (hasCapability(role, 'finance.manage') && entity.entity_type === 'invoice') return 1.5;
+    if (hasCapability(role, 'people.manage') && entity.entity_type === 'user') return 1.5;
 
     return 1.0;
   }
 };
+
+
+
+

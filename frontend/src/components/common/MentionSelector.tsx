@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Profile } from '../../types';
 
 interface MentionSelectorProps {
@@ -83,3 +83,4 @@ export function MentionSelector({ query, profiles, onSelect, position }: Mention
     </AnimatePresence>
   );
 }
+

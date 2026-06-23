@@ -128,7 +128,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           workspaceMemberCache.initializeRealtimeSync(parsed.id);
 
           // Auto-fetch next year's holidays in background (owner / super_admin only)
-          if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || hasCapability(profile.role, 'manage_settings'))) {
+          if (parsed.settings?.country && profile && (profile.id === parsed.ownerId || hasCapability(profile.role, 'settings.manage'))) {
             companyCalendarService.syncHolidays(parsed.id, parsed.settings.country, parsed.settings.region || '').catch(() => { });
           } else if (parsed.settings?.country) {
           }
@@ -236,3 +236,4 @@ export function useWorkspace() {
   }
   return context;
 }
+

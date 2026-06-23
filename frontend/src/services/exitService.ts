@@ -129,7 +129,7 @@ export const transferAndArchiveEmployee = async (
         { data: workspace },
         events
       ] = await Promise.all([
-        supabase.from('tasks').select('id, title, status, project_id, assigned_to').eq('workspace_id', workspaceId).is('deleted_at', null),
+        supabase.from('tasks').select('*').eq('workspace_id', workspaceId).is('deleted_at', null),
         supabase.from('task_dependencies').select('*').eq('workspace_id', workspaceId),
         supabase.from('workspaces').select('settings').eq('id', workspaceId).single(),
         calendarEventService.getEventsInRange(
@@ -156,3 +156,4 @@ export const transferAndArchiveEmployee = async (
     }
   }
 };
+

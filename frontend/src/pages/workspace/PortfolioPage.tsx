@@ -91,7 +91,7 @@ export default function PortfolioPage() {
             {stats.active} active initiatives across {stats.total} total projects
           </p>
         </div>
-        {hasCapability(profile?.role, 'manage_projects') && (
+        {hasCapability(profile?.role, 'project.update') && (
           <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all active:scale-95"
             style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}>
             <Icon name="add" size={18} />
@@ -272,7 +272,7 @@ export default function PortfolioPage() {
           })}
 
           {/* New initiative slot */}
-          {hasCapability(profile?.role, 'manage_projects') && (
+          {hasCapability(profile?.role, 'project.update') && (
             <button onClick={() => setIsAdding(true)} className="rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer group"
               style={{ border: '2px dashed rgba(70,69,84,0.4)' }}
               onMouseEnter={e => { (e.currentTarget as any).style.borderColor = 'rgba(192,193,255,0.4)'; (e.currentTarget as any).style.background = 'rgba(192,193,255,0.03)'; }}
@@ -507,3 +507,4 @@ export default function PortfolioPage() {
     </div>
   );
 }
+

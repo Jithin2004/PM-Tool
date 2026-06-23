@@ -48,10 +48,10 @@ export function ExecutiveAnalytics() {
   const userId = profile?.id || '';
 
   // Capabilities
-  const isSuperAdmin = hasCapability(userRole, 'platform_governance');
-  const isPM = hasCapability(userRole, 'manage_projects') && !isSuperAdmin;
-  const isDeveloper = hasCapability(userRole, 'manage_tasks') && !hasCapability(userRole, 'manage_projects');
-  const isStakeholder = userRole === 'viewer';
+  const isSuperAdmin = hasCapability(userRole, 'audit.security');
+  const isPM = hasCapability(userRole, 'project.update') && !isSuperAdmin;
+  const isDeveloper = hasCapability(userRole, 'task.update') && !hasCapability(userRole, 'project.update');
+  const isStakeholder = hasCapability(userRole, 'project.view') || userRole === 'client';
 
   const intel = governanceCache.intelligence;
   const memory = governanceCache.memory;
@@ -469,3 +469,4 @@ export function ExecutiveAnalytics() {
     </div>
   );
 }
+

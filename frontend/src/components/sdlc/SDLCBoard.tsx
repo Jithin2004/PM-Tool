@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Flag, FileText, Calendar, PenTool, Code, TestTube, Rocket, Activity, Users, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Task, User, Milestone, Approval, Meeting, Project } from '../../types';
 import { SDLC_PHASES } from '../../constants/product';
@@ -35,7 +35,7 @@ interface SDLCBoardProps {
 export function SDLCBoard({ project, workspaceId, tasks, users, milestones, approvals, meetings, currentUserProfile, notify, onUpdateTaskStatus, onCreateTask }: SDLCBoardProps) {
   const [activePhase, setActivePhase] = useState<string | null>(null);
   const [isAddingTask, setIsAddingTask] = useState(false);
-  const hasWriteAccess = hasCapability(currentUserProfile?.role, 'manage_tasks');
+  const hasWriteAccess = hasCapability(currentUserProfile?.role, 'task.update');
 
   const projectTasks = useMemo(() => tasks.filter(t => t.project_id === project.id), [tasks, project.id]);
   const projectMilestones = useMemo(() => milestones.filter(m => m.project_id === project.id), [milestones, project.id]);
@@ -183,3 +183,5 @@ export function SDLCBoard({ project, workspaceId, tasks, users, milestones, appr
     </>
   );
 }
+
+

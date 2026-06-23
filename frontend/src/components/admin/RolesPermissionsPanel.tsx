@@ -11,7 +11,7 @@ export function RolesPermissionsPanel() {
   const [saving, setSaving] = useState(false);
 
   // Core safety constraints for super_admin
-  const PROTECTED_CAPS = ['platform_governance', 'manage_settings', 'manage_users', 'manage_roles', 'workspace_admin'];
+  const PROTECTED_CAPS = ['workspace.update', 'settings.manage', 'manage_users', 'manage_roles', 'workspace_admin'];
 
   useEffect(() => {
     fetchMatrix();
@@ -181,3 +181,4 @@ export function RolesPermissionsPanel() {
     </div>
   );
 }
+

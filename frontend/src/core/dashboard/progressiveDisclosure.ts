@@ -78,11 +78,11 @@ export function buildDisclosureMaturity(input: {
 
 /** Roles that bypass progressive limits (full surface when permitted by RBAC). */
 export function bypassesProgressiveDisclosure(role: UserRole | undefined): boolean {
-  return hasCapability(role, 'platform_governance');
+  return hasCapability(role, 'workspace.update');
 }
 
 export function shouldApplyProgressiveDisclosure(role: UserRole | undefined): boolean {
-  if (!role || !hasCapability(role, 'view_projects')) return false;
+  if (!role || !hasCapability(role, 'project.view')) return false;
   return !bypassesProgressiveDisclosure(role);
 }
 
@@ -93,7 +93,7 @@ export function resolveDisclosureLevel(
   if (!shouldApplyProgressiveDisclosure(role)) return 3;
   if (maturity.forceFull) return 3;
 
-  if (hasCapability(role, 'manage_tasks') && !hasCapability(role, 'manage_projects')) {
+  if (hasCapability(role, 'task.update') && !hasCapability(role, 'project.update')) {
     if (maturity.taskCount >= 5 || maturity.projectCount >= 2) return 2;
     if (maturity.taskCount >= 1 || maturity.projectCount >= 1) return 1;
     return 0;
@@ -233,3 +233,4 @@ export function getLockedNavItems(
   if (!shouldApplyProgressiveDisclosure(role)) return [];
   return SIDEBAR_NAV.filter(item => !isNavItemDisclosed(item, level, role));
 }
+

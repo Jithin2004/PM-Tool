@@ -1,3 +1,4 @@
+import { hasCapability } from '../../core/auth/permissions';
 import React, { useEffect, useState, useCallback } from 'react';
 import { fileStorageService, type FileRecord } from '../../services/fileStorageService';
 import { filePreviewService } from '../../services/filePreviewService';
@@ -245,7 +246,7 @@ export const EntityAttachments: React.FC<EntityAttachmentsProps> = ({
                           workspaceId={workspaceId}
                           currentVersionId={file.current_version_id}
                           originalName={file.original_name}
-                          canRestore={!readOnly && ['owner', 'admin', 'pm'].includes(role)}
+                          canRestore={!readOnly && hasCapability(role as any, 'document.manage')}
                           onRestored={loadFiles}
                         />
                       </div>
@@ -266,3 +267,6 @@ const actionBtnStyle: React.CSSProperties = {
   background: 'var(--surface-hover)', cursor: 'pointer', fontSize: 12,
   lineHeight: 1, transition: 'all 0.15s',
 };
+
+
+

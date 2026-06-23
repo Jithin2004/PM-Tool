@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Clock, AlertTriangle } from 'lucide-react';
 import type { Task } from '../../core/types/execution';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -106,3 +106,4 @@ export function TaskDelayReasonModal({ task, isOpen, onClose, onSubmit }: TaskDe
     </AnimatePresence>
   );
 }
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { X, Terminal, AlertTriangle, MessageSquare, ShieldAlert } from 'lucide-react';
 import { Project, Task, TaskStatus } from '../../types';
 import { hasCapability } from '../../core/auth/permissions';
@@ -140,7 +140,7 @@ export function TaskEditModal({
 
   if (!isOpen) return null;
 
-  const isDeveloper = !hasCapability(currentUserProfile?.role, 'manage_projects');
+  const isDeveloper = !hasCapability(currentUserProfile?.role, 'project.update');
   const isPrimaryAssignee = task.assignee_id === currentUserProfile?.id;
   const isTaskCollaborator = taskCollaborators.some(c => c.user_id === currentUserProfile?.id);
   const isCollaboratorOnly = isTaskCollaborator && !isPrimaryAssignee;
@@ -812,4 +812,6 @@ export function TaskEditModal({
     </div>
   );
 }
+
+
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Save, ShieldAlert } from 'lucide-react';
 import { Task } from '../../types';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -166,3 +166,4 @@ export function TaskConfidenceModal({ task, isOpen, onClose, onSubmit }: TaskCon
     </AnimatePresence>
   );
 }
+

@@ -73,7 +73,7 @@ export const commandEngine = {
 
     // Role-restricted commands
     if (action === 'delete') {
-      if (!hasCapability(role, 'manage_projects') && role !== 'admin' && role !== 'owner') {
+      if (!hasCapability(role, 'project.update') && role !== 'admin' && role !== 'owner') {
         return { success: false, message: 'Permission denied: Cannot delete entity' };
       }
       // Implement soft delete or actual delete
@@ -83,3 +83,4 @@ export const commandEngine = {
     return { success: false, message: 'Unknown command' };
   }
 };
+

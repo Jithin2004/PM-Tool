@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Target, BarChart3, Users, TrendingUp } from 'lucide-react';
 import { Stats } from '../../types';
 
@@ -25,3 +25,4 @@ export function StatsGrid({ stats }: { stats: Stats }) {
     </div>
   );
 }
+

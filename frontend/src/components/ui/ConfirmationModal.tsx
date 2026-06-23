@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { AlertTriangle } from 'lucide-react';
 
 interface ConfirmationModalProps {
@@ -72,3 +72,4 @@ export function ConfirmationModal({ isOpen, title, message, confirmText = 'Confi
     </AnimatePresence>
   );
 }
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Search, Loader2, FileText, Clock, AlertCircle, Play, CheckCircle2, ChevronRight, User } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
@@ -237,3 +237,4 @@ export function CommandCenter({ onNavigate }: { onNavigate: (path: string) => vo
     </AnimatePresence>
   );
 }
+

@@ -39,7 +39,7 @@ export default function ExecutionSetupPage() {
 
   const [phase, setPhase] = useState<SetupPhase>('welcome');
 
-  const canInitialize = hasCapability(profile?.role, 'manage_projects');
+  const canInitialize = hasCapability(profile?.role, 'project.update');
 
   if (!projectId || !project) {
     return (
@@ -213,3 +213,4 @@ export default function ExecutionSetupPage() {
     </main>
   );
 }
+
