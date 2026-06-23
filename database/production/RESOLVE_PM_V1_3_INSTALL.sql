@@ -9776,3 +9776,47 @@ CREATE POLICY "Enable write access for HR/Admins"
 ALTER TABLE public.invoice_line_items
 ADD COLUMN IF NOT EXISTS tax_percentage numeric DEFAULT 0 NOT NULL;
 
+-- Migration: RC22_2_RUNTIME_STABILIZATION
+-- Description: Adds missing columns for frontend queries and fixes table grants for HR
+
+-- 1. Integration Sync Jobs
+ALTER TABLE public.integration_sync_jobs
+ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now(),
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+-- 2. Invoices missing premium fields
+ALTER TABLE public.invoices
+ADD COLUMN IF NOT EXISTS subtotal numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS discount_amount numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS taxable_amount numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS cgst_amount numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS sgst_amount numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS igst_amount numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS total_tax numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS grand_total numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS balance_due numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS billing_state_snapshot jsonb,
+ADD COLUMN IF NOT EXISTS company_base_currency text DEFAULT 'USD',
+ADD COLUMN IF NOT EXISTS base_amount numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS invoice_currency text DEFAULT 'USD',
+ADD COLUMN IF NOT EXISTS invoice_amount numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS converted_amount numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS exchange_rate numeric,
+ADD COLUMN IF NOT EXISTS exchange_rate_locked boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS exchange_locked_at timestamptz,
+ADD COLUMN IF NOT EXISTS exchange_override_reason text,
+ADD COLUMN IF NOT EXISTS conversion_date date,
+ADD COLUMN IF NOT EXISTS task_id uuid,
+ADD COLUMN IF NOT EXISTS billing_type text,
+ADD COLUMN IF NOT EXISTS payment_terms text,
+ADD COLUMN IF NOT EXISTS milestone_id uuid;
+
+-- 3. Grants for new HR tables
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.clock_events TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.clock_events TO service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.leave_balances TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.leave_balances TO service_role;
+
+
