@@ -9819,4 +9819,23 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.clock_events TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.leave_balances TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.leave_balances TO service_role;
 
+-- 4. Users missing premium fields
+ALTER TABLE public.users
+ADD COLUMN IF NOT EXISTS auth_user_id uuid,
+ADD COLUMN IF NOT EXISTS authority text,
+ADD COLUMN IF NOT EXISTS capabilities jsonb,
+ADD COLUMN IF NOT EXISTS functional_access jsonb,
+ADD COLUMN IF NOT EXISTS date_of_joining date,
+ADD COLUMN IF NOT EXISTS employee_type text,
+ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}'::jsonb,
+ADD COLUMN IF NOT EXISTS preferences jsonb DEFAULT '{}'::jsonb,
+ADD COLUMN IF NOT EXISTS contract_start date,
+ADD COLUMN IF NOT EXISTS contract_end date,
+ADD COLUMN IF NOT EXISTS probation_end date,
+ADD COLUMN IF NOT EXISTS employment_status text,
+ADD COLUMN IF NOT EXISTS force_password_change boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS external_access boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS visibility_scope jsonb;
+
+
 
