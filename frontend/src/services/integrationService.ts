@@ -34,15 +34,14 @@ export interface IntegrationConfig {
 export interface IntegrationHealth {
   id: string;
   workspace_id: string;
-  service: string;
+  provider: string;
   status: 'connected' | 'failed' | 'token_expired' | 'syncing' | 'disconnected';
-  last_sync?: string;
+  last_checked_at?: string;
   last_error?: string;
-  latency_ms?: number;
   retry_count: number;
-  checked_at: string;
-  integration_last_checked?: string;
-  last_sync_attempt?: string;
+  metadata?: any;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface SyncResult {
@@ -295,8 +294,8 @@ export async function getQueueStats(): Promise<{ length: number; pending: number
 // ── Cooldown / Rate Limiting ──
 
 export function getCooldownRemaining(health: IntegrationHealth | undefined): number {
-  if (!health?.last_sync_attempt) return 0;
-  const elapsed = Date.now() - new Date(health.last_sync_attempt).getTime();
+  if (!health?.last_checked_at) return 0;
+  const elapsed = Date.now() - new Date(health.last_checked_at).getTime();
   return Math.max(0, SYNC_COOLDOWN_MS - elapsed);
 }
 
@@ -453,7 +452,7 @@ export async function fetchIntegrationHealth(workspaceId: string): Promise<Integ
       .from('integration_health')
       .select('*')
       .eq('workspace_id', workspaceId)
-      .order('service', { ascending: true });
+      .order('provider', { ascending: true });
     if (data) return data as IntegrationHealth[];
   } catch { /* ignore */ }
   return [];
@@ -465,29 +464,37 @@ export async function updateIntegrationHealth(
   if (!isSupabaseConfigured || !workspaceId) return false;
   const now = new Date().toISOString();
   try {
-    const { data: existing } = await supabase
+    const existing = await supabase
       .from('integration_health')
       .select('id, retry_count')
       .eq('workspace_id', workspaceId)
-      .eq('service', service)
+      .eq('provider', service)
       .maybeSingle();
-    if (existing) {
-      const retry_count = status === 'failed' ? (existing.retry_count ?? 0) + 1 : 0;
+
+    if (existing.data) {
+      const retry_count = status === 'failed' ? (existing.data.retry_count ?? 0) + 1 : 0;
       await supabase.from('integration_health').update({
-        status, last_error: error,
-        last_sync: status === 'connected' ? now : undefined,
-        checked_at: now, integration_last_checked: now,
-        last_sync_attempt: now, retry_count,
-      }).eq('id', existing.id);
+        status, 
+        last_error: error,
+        last_checked_at: now,
+        updated_at: now,
+        retry_count,
+      }).eq('id', existing.data.id);
     } else {
       await supabase.from('integration_health').insert({
-        workspace_id: workspaceId, service, status, last_error: error,
-        checked_at: now, integration_last_checked: now, last_sync_attempt: now,
+        workspace_id: workspaceId, 
+        provider: service, 
+        status, 
+        last_error: error,
+        last_checked_at: now,
+        created_at: now,
+        updated_at: now
       });
     }
+
     activityLogService.appendLog({
       workspace_id: workspaceId, action_type: 'integration_health_checked',
-      metadata: { service, status, error, integration_last_checked: now },
+      metadata: { provider: service, status, error, last_checked_at: now },
     });
     return true;
   } catch { return false; }

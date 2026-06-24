@@ -24,9 +24,14 @@ export const SprintView: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (projectId && workspace) {
-      loadActiveSprint();
+    if (!workspace) return;
+    
+    if (!projectId) {
+      setLoading(false);
+      return;
     }
+    
+    loadActiveSprint();
   }, [projectId, workspace]);
 
   const loadActiveSprint = async () => {

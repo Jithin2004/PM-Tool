@@ -14,7 +14,6 @@ import { SystemHealthPanel } from '../../components/admin/SystemHealthPanel';
 import { BackupRestorePanel } from '../../components/admin/BackupRestorePanel';
 import { StorageSettingsPanel } from '../../components/admin/StorageSettingsPanel';
 import { RolesPermissionsPanel } from '../../components/admin/RolesPermissionsPanel';
-import { BillingSettings } from '../../components/control/BillingSettings';
 import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 import { showConfirm, showPrompt } from '../../components/common/Dialogs';
 import IntegrationCenter from '../workspace/IntegrationCenter';
@@ -69,17 +68,16 @@ export function AdminPanel() {
   const [activeTopTab, setActiveTopTab] = useState<TopTab>(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'license' || tab === 'backup') return 'system';
+    if (tab === 'backup') return 'system';
     if (tab === 'teams') return 'people';
     return 'company';
   });
   const [activeSubTab, setActiveSubTab] = useState<string>(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'license') return 'license';
     if (tab === 'backup') return 'backup';
     if (tab === 'teams' || tab === 'users') return 'users';
-    return 'profile';
+    return 'calendar';
   });
   const [activeGearPopover, setActiveGearPopover] = useState<string | null>(null);
   const [capabilityModal, setCapabilityModal] = useState({ isOpen: false, userId: '', userEmail: '', capabilities: [] as string[], reason: '', saving: false });
@@ -100,14 +98,13 @@ export function AdminPanel() {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab');
       if (tab) {
-        if (tab === 'license' || tab === 'backup') setActiveTopTab('system');
+        if (tab === 'backup') setActiveTopTab('system');
         else if (tab === 'teams') setActiveTopTab('people');
         else setActiveTopTab('company');
         
-        if (tab === 'license') setActiveSubTab('license');
-        else if (tab === 'backup') setActiveSubTab('backup');
+        if (tab === 'backup') setActiveSubTab('backup');
         else if (tab === 'teams' || tab === 'users') setActiveSubTab('users');
-        else setActiveSubTab('profile');
+        else setActiveSubTab('calendar');
       }
     };
     window.addEventListener('open-capability-modal', handleOpen);
@@ -121,11 +118,6 @@ export function AdminPanel() {
   const canGovernPlatform = hasCapability(profile?.role, 'workspace.update');
   const canViewCalendar = hasCapability(profile?.role, 'decision.view');
 
-  // General Settings state
-  const [companyName, setCompanyName] = useState(() => {
-    const raw = workspace?.settings?.companyName || workspace?.name || '';
-    return raw.replace(/\[Sandbox\]\s*/gi, '').trim();
-  });
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Invitation state
@@ -483,7 +475,6 @@ export function AdminPanel() {
 
   const SUB_TABS: Record<TopTab, { id: string; label: string; icon: string }[]> = {
     company: [
-      { id: 'profile', label: 'Profile', icon: 'business' },
       { id: 'calendar', label: 'Calendar', icon: 'calendar_month' }
     ],
     people: [
@@ -501,7 +492,6 @@ export function AdminPanel() {
       { id: 'health', label: 'Health', icon: 'monitor_heart' },
       { id: 'backup', label: 'Backup', icon: 'settings_backup_restore' },
       { id: 'audit_logs', label: 'Audit Logs', icon: 'history' },
-      { id: 'license', label: 'License', icon: 'verified_user' },
       { id: 'registry', label: 'Workspace Registry', icon: 'dns' }
     ]
   };
@@ -557,52 +547,6 @@ export function AdminPanel() {
       </div>
 
       {/* Views */}
-{activeSubTab === 'profile' && (
-        <div className="space-y-8">
-          <div className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-6 lg:w-1/2 shadow-sm">
-            <h3 className="font-semibold mb-6 flex items-center gap-2">
-              <Icon name="business" size={18} style={{ color: 'var(--pm-primary)' }} />
-              Organization Identity
-            </h3>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              setSavingSettings(true);
-              try {
-                await updateWorkspaceSettings({ companyName });
-                notify("Organization Identity updated successfully.", "success");
-              } catch (err) {
-                notify("Failed to update organization identity.", "error");
-              } finally {
-                setSavingSettings(false);
-              }
-            }} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-mono-pm uppercase tracking-widest mb-2" style={{ color: 'var(--pm-on-surface-variant)' }}>Company Name</label>
-                <input
-                  required
-                  type="text"
-                  value={companyName}
-                  onChange={e => setCompanyName(e.target.value)}
-                  className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
-                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                  placeholder="e.g. Acme Corp"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={savingSettings}
-                className="w-full rounded-lg h-10 font-bold uppercase text-[10px] tracking-widest transition-all disabled:opacity-50"
-                style={{ background: 'rgba(192,193,255,0.1)', color: 'var(--pm-primary)', border: '1px solid rgba(192,193,255,0.2)' }}
-                onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.15)'; }}
-                onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(192,193,255,0.1)'; }}
-              >
-                {savingSettings ? 'Saving...' : 'Save Changes'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
 {activeSubTab === 'calendar' && (
         <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(70,69,84,0.3)' }}>
           <CompanyCalendarPanel />
@@ -1257,11 +1201,6 @@ export function AdminPanel() {
           <Icon name="history" size={48} style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }} />
           <h3 className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Audit Logs</h3>
           <p className="text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>View system-wide activity, access history, and permission changes.</p>
-        </div>
-      )}
-{activeSubTab === 'license' && (
-        <div className="rounded-xl overflow-hidden">
-          <BillingSettings />
         </div>
       )}
 

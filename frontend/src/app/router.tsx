@@ -65,6 +65,7 @@ const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
 const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage'));
 const KnowledgeBase = withRetry(() => import('../pages/workspace/KnowledgeBase'));
 const DecisionsPage = withRetry(() => import('../pages/workspace/DecisionsPage'));
+const ApprovalsPage = withRetry(() => import('../pages/workspace/ApprovalsPage'));
 const MeetingsPage = withRetry(() => import('../pages/workspace/MeetingsPage'));
 
 const AutomationCenter = withRetry(() => import('../pages/workspace/AutomationCenter'));
@@ -472,9 +473,13 @@ export function ResolveRouter() {
     if (pathname.startsWith('/workspace/knowledge/')) {
       return <RouteShell><ModuleErrorBoundary module="DocumentView"><DocumentView /></ModuleErrorBoundary></RouteShell>;
     }
-    if (pathname === '/workspace/decisions' || pathname === '/workspace/approvals') {
-      if (!guardRoute(role, '/workspace/decisions') && !guardRoute(role, '/workspace/approvals')) return <RouteShell><AccessRestricted /></RouteShell>;
+    if (pathname === '/workspace/decisions') {
+      if (!guardRoute(role, '/workspace/decisions')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><DecisionsPage /></RouteShell>;
+    }
+    if (pathname === '/workspace/approvals') {
+      if (!guardRoute(role, '/workspace/approvals')) return <RouteShell><AccessRestricted /></RouteShell>;
+      return <RouteShell><ApprovalsPage /></RouteShell>;
     }
     if (pathname === '/workspace/meetings') {
       if (!guardRoute(role, '/workspace/meetings')) return <RouteShell><AccessRestricted /></RouteShell>;

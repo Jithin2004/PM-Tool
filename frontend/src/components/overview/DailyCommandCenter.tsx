@@ -13,6 +13,11 @@ export function DailyCommandCenter() {
   const [loading, setLoading] = useState(true);
   const [recentNotifications, setRecentNotifications] = useState<any[]>([]);
 
+  // Attendance State
+  const [loadingOps, setLoadingOps] = useState(false);
+  const [isClockedIn, setIsClockedIn] = useState(false);
+  const [dailyStatus, setDailyStatus] = useState<any[]>([]);
+
   const [activeTab, setActiveTab] = useState<'overview' | 'activity'>(() => {
     return window.location.pathname === '/overview/activity' ? 'activity' : 'overview';
   });
@@ -24,6 +29,23 @@ export function DailyCommandCenter() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  useEffect(() => {
+    async function loadOpsData() {
+      if (!workspace?.id || !profile?.id) return;
+      try {
+        const { attendanceEngine } = await import('../../core/engines/attendanceEngine');
+        const status = await attendanceEngine.getDailyStatus(workspace.id, profile.id, new Date());
+        setDailyStatus(status);
+        const inEvent = status.filter(e => e.event_type === 'CLOCK_IN').pop();
+        const outEvent = status.filter(e => e.event_type === 'CLOCK_OUT').pop();
+        setIsClockedIn(inEvent && (!outEvent || outEvent.timestamp < inEvent.timestamp) ? true : false);
+      } catch (err) {
+        console.error('[DailyCommandCenter] ops load failed', err);
+      }
+    }
+    loadOpsData();
+  }, [workspace?.id, profile?.id]);
 
   useEffect(() => {
     async function load() {
@@ -69,6 +91,36 @@ export function DailyCommandCenter() {
     }
     window.history.pushState(null, '', path);
     window.dispatchEvent(new Event('popstate'));
+  };
+
+  const handleClockIn = async () => {
+    setLoadingOps(true);
+    try {
+      const { attendanceEngine } = await import('../../core/engines/attendanceEngine');
+      await attendanceEngine.clockIn(workspace!.id, profile!.id);
+      const status = await attendanceEngine.getDailyStatus(workspace!.id, profile!.id, new Date());
+      setDailyStatus(status);
+      setIsClockedIn(true);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoadingOps(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    setLoadingOps(true);
+    try {
+      const { attendanceEngine } = await import('../../core/engines/attendanceEngine');
+      await attendanceEngine.clockOut(workspace!.id, profile!.id);
+      const status = await attendanceEngine.getDailyStatus(workspace!.id, profile!.id, new Date());
+      setDailyStatus(status);
+      setIsClockedIn(false);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoadingOps(false);
+    }
   };
 
   const renderRecommendationIcon = (type: string) => {
@@ -134,6 +186,34 @@ export function DailyCommandCenter() {
 
             {/* LEFT COLUMN: Actions & Needs Attention */}
             <div className="lg:col-span-2 space-y-6">
+
+              {/* Card: Attendance Terminal */}
+              <div className="bg-surface-elevated border border-border shadow-sm rounded-xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-indigo-400" /> Attendance Terminal
+                  </h3>
+                  <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${isClockedIn ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-surface-3 text-text-secondary border-border'}`}>
+                    {isClockedIn ? 'ON SHIFT' : 'OFF SHIFT'}
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={handleClockIn}
+                    disabled={loadingOps || isClockedIn}
+                    className="flex-1 py-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded text-xs font-bold disabled:opacity-50 hover:bg-emerald-500/20 transition-all"
+                  >
+                    CLOCK IN
+                  </button>
+                  <button 
+                    onClick={handleClockOut}
+                    disabled={loadingOps || !isClockedIn}
+                    className="flex-1 py-2.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded text-xs font-bold disabled:opacity-50 hover:bg-rose-500/20 transition-all"
+                  >
+                    CLOCK OUT
+                  </button>
+                </div>
+              </div>
 
               {/* Needs My Attention */}
               {intel.attentionItems.length > 0 && (

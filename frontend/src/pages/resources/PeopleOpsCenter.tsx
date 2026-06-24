@@ -87,10 +87,6 @@ export default function PeopleOpsCenter() {
     try {
       const status = await attendanceEngine.getDailyStatus(workspace.id, profile.id, new Date());
       setDailyStatus(status);
-      
-      const inEvent = status.filter(e => e.event_type === 'CLOCK_IN').pop();
-      const outEvent = status.filter(e => e.event_type === 'CLOCK_OUT').pop();
-      setIsClockedIn(inEvent && (!outEvent || outEvent.timestamp < inEvent.timestamp));
 
       // Load balances (Mock fetching multiple types for demo)
       const bal1 = await leaveBalanceService.getBalance(workspace.id, profile.id, 'Casual');
@@ -98,32 +94,6 @@ export default function PeopleOpsCenter() {
       setBalances([bal1, bal2].filter(Boolean));
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  const handleClockIn = async () => {
-    setLoadingOps(true);
-    try {
-      await attendanceEngine.clockIn(workspace!.id, profile!.id);
-      await loadOpsData();
-      showAlert("Clocked in successfully.", { type: "success" });
-    } catch (e: any) {
-      showAlert(e.message, { type: "error" });
-    } finally {
-      setLoadingOps(false);
-    }
-  };
-
-  const handleClockOut = async () => {
-    setLoadingOps(true);
-    try {
-      await attendanceEngine.clockOut(workspace!.id, profile!.id);
-      await loadOpsData();
-      showAlert("Clocked out successfully.", { type: "success" });
-    } catch (e: any) {
-      showAlert(e.message, { type: "error" });
-    } finally {
-      setLoadingOps(false);
     }
   };
 
@@ -265,11 +235,6 @@ export default function PeopleOpsCenter() {
                 <h2 className="text-2xl font-bold text-white mb-2">
                   Welcome, {profile.full_name || 'Partner'}
                 </h2>
-                <div className="flex items-center justify-center md:justify-start gap-3 mt-3">
-                  <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${isClockedIn ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-[var(--surface-hover)] text-[var(--text-secondary)] border-[var(--border-soft)]'}`}>
-                    {isClockedIn ? 'ON SHIFT' : 'OFF SHIFT'}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -278,45 +243,6 @@ export default function PeopleOpsCenter() {
             
             {/* Left Column: Role details, Team & Attendance */}
             <div className="space-y-6">
-              
-              {/* Card: Attendance Terminal */}
-              <div className="bg-surface-2 border border-[var(--border-soft)] rounded-xl p-5 shadow-md">
-                <h3 className="text-xs font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-400" /> Attendance Terminal
-                </h3>
-                <div className="flex gap-4">
-                  <button 
-                    onClick={handleClockIn}
-                    disabled={loadingOps || isClockedIn}
-                    className="flex-1 py-3 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-lg text-xs font-bold disabled:opacity-50 hover:bg-emerald-500/20 transition-all"
-                  >
-                    CLOCK IN
-                  </button>
-                  <button 
-                    onClick={handleClockOut}
-                    disabled={loadingOps || !isClockedIn}
-                    className="flex-1 py-3 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-lg text-xs font-bold disabled:opacity-50 hover:bg-rose-500/20 transition-all"
-                  >
-                    CLOCK OUT
-                  </button>
-                </div>
-                
-                <div className="mt-5 space-y-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Today's Log</h4>
-                  {dailyStatus.length === 0 ? (
-                    <p className="text-xs text-[var(--text-secondary)] italic">No punches today.</p>
-                  ) : (
-                    dailyStatus.map(e => (
-                      <div key={e.id} className="flex justify-between items-center text-xs p-2 bg-black/20 rounded border border-[var(--border-soft)]">
-                        <span className="font-mono text-[var(--text-secondary)]">{new Date(e.timestamp).toLocaleTimeString()}</span>
-                        <span className={`font-bold ${e.event_type === 'CLOCK_IN' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {e.event_type.replace('_', ' ')}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
 
               {/* Card: Your Role */}
               <div className="bg-surface-2 border border-[var(--border-soft)] rounded-xl p-5 shadow-md">

@@ -645,7 +645,7 @@ export async function fetchIntegrationHealth(workspaceId: string): Promise<Integ
       .from('integration_health')
       .select('*')
       .eq('workspace_id', workspaceId)
-      .order('service', { ascending: true });
+      .order('provider', { ascending: true });
     if (data) return data as IntegrationHealth[];
   } catch { /* ignore */ }
   return [];
@@ -657,29 +657,35 @@ export async function updateIntegrationHealth(
   if (!isSupabaseConfigured || !workspaceId) return false;
   const now = new Date().toISOString();
   try {
-    const { data: existing } = await supabase
+    const existing = await supabase
       .from('integration_health')
       .select('id, retry_count')
       .eq('workspace_id', workspaceId)
-      .eq('service', service)
+      .eq('provider', service)
       .maybeSingle();
-    if (existing) {
-      const retry_count = status === 'failed' ? (existing.retry_count ?? 0) + 1 : 0;
+    if (existing && existing.data) {
+      const retry_count = status === 'failed' ? (existing.data.retry_count ?? 0) + 1 : 0;
       await supabase.from('integration_health').update({
-        status, last_error: error,
-        last_sync: status === 'connected' ? now : undefined,
-        checked_at: now, integration_last_checked: now,
-        last_sync_attempt: now, retry_count,
-      }).eq('id', existing.id);
+        status, 
+        last_error: error,
+        last_checked_at: now,
+        updated_at: now,
+        retry_count,
+      }).eq('id', existing.data.id);
     } else {
       await supabase.from('integration_health').insert({
-        workspace_id: workspaceId, service, status, last_error: error,
-        checked_at: now, integration_last_checked: now, last_sync_attempt: now,
+        workspace_id: workspaceId, 
+        provider: service, 
+        status, 
+        last_error: error,
+        last_checked_at: now,
+        created_at: now,
+        updated_at: now
       });
     }
     activityLogService.appendLog({
       workspace_id: workspaceId, action_type: 'integration_health_checked',
-      metadata: { service, status, error, integration_last_checked: now },
+      metadata: { provider: service, status, error, last_checked_at: now },
     });
     return true;
   } catch { return false; }

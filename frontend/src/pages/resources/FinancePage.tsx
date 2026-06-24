@@ -21,6 +21,7 @@ import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 import { deliverableService, Milestone } from '../../services/deliverableService';
 import { profitabilityService, ProjectProfitability } from '../../services/profitabilityService';
 import { Icon } from '../../components/ui/Icon';
+import { BillingSettings } from '../../components/control/BillingSettings';
 import FinanceCommandCenter from './FinanceCommandCenter';
 
 export default function FinancePage() {
@@ -440,7 +441,8 @@ export default function FinancePage() {
           { id: 'reports', label: 'Ledgers & Reports' },
           { id: 'invoices', label: 'Invoices & Receivables' },
           { id: 'budgets', label: 'Expenses' },
-          { id: 'forecast', label: 'Forecast & Intelligence' }
+          { id: 'forecast', label: 'Forecast & Intelligence' },
+          { id: 'billing', label: 'Subscription & Billing' }
         ].map(tab => (
           <button 
             key={tab.id}
@@ -457,6 +459,10 @@ export default function FinancePage() {
 
       {activeTab === 'forecast' ? (
         <FinanceCommandCenter />
+      ) : activeTab === 'billing' ? (
+        <div className="premium-panel rounded-2xl flex flex-col border border-[var(--border-soft)] p-0">
+          <BillingSettings />
+        </div>
       ) : (
         <>
           {/* Period Selector */}
