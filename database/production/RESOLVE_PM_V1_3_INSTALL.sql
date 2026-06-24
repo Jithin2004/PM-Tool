@@ -10163,9 +10163,34 @@ WHERE NOT EXISTS (SELECT 1 FROM public.automation_templates LIMIT 1);
 ALTER TABLE public.connected_accounts
 ADD COLUMN IF NOT EXISTS connected_at timestamptz NULL DEFAULT now();
 
--- 6. EXPLICIT GRANTS
+-- =====================================================
+-- 6. WORKSPACE ONBOARDING STATE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS public.workspace_onboarding_state (
+    workspace_id uuid PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    setup_completed boolean DEFAULT false,
+    completed_steps text[] DEFAULT '{}',
+    selected_templates text[] DEFAULT '{}',
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.workspace_onboarding_state ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Workspace onboarding state isolation" ON public.workspace_onboarding_state;
+CREATE POLICY "Workspace onboarding state isolation" 
+ON public.workspace_onboarding_state FOR ALL USING (
+    workspace_id = public.current_workspace()
+) WITH CHECK (
+    workspace_id = public.current_workspace()
+);
+
+-- =====================================================
+-- 7. EXPLICIT GRANTS
+-- =====================================================
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.integration_health TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.automation_templates TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.workspace_onboarding_state TO authenticated;
 
 -- =====================================================
 -- RESTORE SUPABASE API ROLE ACCESS
@@ -10194,3 +10219,6 @@ GRANT SELECT ON TABLES TO anon;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT SELECT, INSERT, UPDATE, DELETE
 ON TABLES TO authenticated;
+
+-- Ensure PostgREST cache is fully reloaded so frontend doesn't get PGRST200/PGRST205 errors
+NOTIFY pgrst, 'reload schema';
