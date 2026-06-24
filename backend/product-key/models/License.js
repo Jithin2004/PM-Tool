@@ -1,28 +1,32 @@
 const mongoose = require('mongoose');
+const geoip = require("geoip-lite");
 
 const licenseSchema = new mongoose.Schema({
-  key: { 
-    type: String, 
-    required: true, 
+  key: {
+    type: String,
+    required: true,
     unique: true,
-    index: true 
+    index: true
   },
-  status: { 
-    type: String, 
-    enum: ['ACTIVE', 'EXPIRED', 'REVOKED'], 
-    default: 'ACTIVE',
-    required: true 
+  status: {
+    type: String,
+    enum: [
+      "ACTIVE",
+      "CONSUMED",
+      "EXPIRED",
+      "REVOKED"
+    ]
   },
-  plan: { 
-    type: String, 
-    enum: ['STARTER', 'BUSINESS', 'ENTERPRISE'], 
+  plan: {
+    type: String,
+    enum: ['STARTER', 'BUSINESS', 'ENTERPRISE'],
     default: 'BUSINESS',
-    required: true 
+    required: true
   },
-  activation_limit: { 
-    type: Number, 
+  activation_limit: {
+    type: Number,
     default: 1, // Enforce single-use logically if desired, keeping for compatibility
-    required: true 
+    required: true
   },
   // Replaced activated_workspace_id with explicit single-use flags
   isUsed: {
@@ -38,26 +42,56 @@ const licenseSchema = new mongoose.Schema({
   workspaceId: {
     type: String
   },
-  activation_metadata: { 
+  activation_metadata: {
     type: mongoose.Schema.Types.Mixed,
-    default: {} 
+    default: {}
   },
-  activated_devices: { 
-    type: [String], 
-    default: [] 
+  activated_devices: {
+    type: [String],
+    default: []
   },
-  created_at: { 
-    type: Date, 
+  created_at: {
+    type: Date,
     default: Date.now,
-    required: true 
+    required: true
   },
-  last_verified_at: { 
-    type: Date 
+  last_verified_at: {
+    type: Date
   },
-  purchase_metadata: { 
-    type: Map, 
+  purchase_metadata: {
+    type: Map,
     of: mongoose.Schema.Types.Mixed,
-    default: {} 
+    default: {}
+  },
+  activation: {
+    ip: {
+      type: String
+    },
+
+    country: {
+      type: String
+    },
+
+    region: {
+      type: String
+    },
+
+    city: {
+      type: String
+    },
+
+    timezone: {
+      type: String
+    },
+
+    userAgent: {
+      type: String
+    },
+
+    source: {
+      type: String,
+      default: "web"
+    }
   }
 });
 

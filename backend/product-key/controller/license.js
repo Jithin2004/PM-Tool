@@ -47,11 +47,11 @@ exports.addLicense = async (req, res) => {
         await Promise.all(initialKeys.map(async (k) => {
             const existing = await License.findOne({ key: k });
             if (!existing) {
-                await License.create({ 
-                    key: k, 
-                    plan: 'BUSINESS', 
-                    status: 'ACTIVE', 
-                    activation_limit: 3 
+                await License.create({
+                    key: k,
+                    plan: 'BUSINESS',
+                    status: 'ACTIVE',
+                    activation_limit: 3
                 });
                 await AuditEvent.create({
                     event_type: 'license_created',
@@ -71,6 +71,13 @@ exports.addLicense = async (req, res) => {
 // 2. License Key Activation
 exports.activateLicense = async (req, res) => {
     const { productKey, workspaceId, userIdentifier } = req.body;
+    const ip =
+        req.headers["x-forwarded-for"]?.split(",")[0] ||
+        req.socket.remoteAddress;
+
+    const geo = geoip.lookup(ip);
+
+    const userAgent = req.headers["user-agent"];
 
     if (!productKey || !workspaceId) {
         return res.status(400).json({ error: 'Product key and workspace ID are required.' });
@@ -79,7 +86,7 @@ exports.activateLicense = async (req, res) => {
     try {
         // First check if key exists and its status
         const initialCheck = await License.findOne({ key: productKey });
-        
+
         if (!initialCheck) {
             await AuditEvent.create({
                 event_type: 'verification_failed',
@@ -110,9 +117,22 @@ exports.activateLicense = async (req, res) => {
             {
                 $set: {
                     isUsed: true,
+                    status: "CONSUMED",
+
                     usedAt: new Date(),
                     usedBy: userIdentifier || workspaceId,
-                    workspaceId: workspaceId,
+                    workspaceId,
+
+                    activation: {
+                        ip,
+                        country: geo?.country,
+                        region: geo?.region,
+                        city: geo?.city,
+                        timezone: geo?.timezone,
+                        userAgent,
+                        source: "web"
+                    },
+
                     last_verified_at: new Date()
                 }
             },
@@ -125,11 +145,11 @@ exports.activateLicense = async (req, res) => {
             if (existingUsed) {
                 // Return success for idempotency
                 const token = jwt.sign(
-                    { key: existingUsed.key, workspaceId: workspaceId }, 
-                    JWT_SECRET, 
+                    { key: existingUsed.key, workspaceId: workspaceId },
+                    JWT_SECRET,
                     { expiresIn: '30d' }
                 );
-                
+
                 await AuditEvent.create({
                     event_type: 'license_activated',
                     reason: 'Existing workspace re-verified',
@@ -151,8 +171,8 @@ exports.activateLicense = async (req, res) => {
 
         // Sign token containing only the key & workspaceId
         const token = jwt.sign(
-            { key: license.key, workspaceId: workspaceId }, 
-            JWT_SECRET, 
+            { key: license.key, workspaceId: workspaceId },
+            JWT_SECRET,
             { expiresIn: '30d' }
         );
 
@@ -169,6 +189,11 @@ exports.activateLicense = async (req, res) => {
         console.error('Activation error:', error);
         res.status(500).json({ error: 'Server error' });
     }
+    const ip =
+        req.headers["x-forwarded-for"]?.split(",")[0] ||
+        req.socket.remoteAddress;
+
+    const userAgent = req.headers["user-agent"];
 };
 
 // 3. License Key Verification
@@ -245,7 +270,7 @@ exports.verifyLicenseToken = async (req, res) => {
         return res.status(401).json({ valid: false, message: 'Missing token' });
     }
     const token = authHeader.split(' ')[1];
-    
+
     // Check if token is a Supabase UUID (offline/local verification fallback)
     // UUIDs have 36 chars and 4 dashes.
     if (token.length === 36 && token.split('-').length === 5) {
@@ -260,11 +285,11 @@ exports.verifyLicenseToken = async (req, res) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         const license = await License.findOne({ key: decoded.key });
-        
+
         if (!license || license.status !== 'ACTIVE') {
             return res.status(401).json({ valid: false, message: 'Invalid or expired license' });
         }
-        
+
         return res.status(200).json({
             valid: true,
             keyId: license.key,
@@ -354,13 +379,13 @@ exports.adminGetActivations = async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit, 10) || 100, 1000); // Cap at 1000
         const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
-        
+
         // Excludes Mongo document IDs and internal metadata fields
         const licenses = await License.find({}, { _id: 0, __v: 0 })
             .limit(limit)
             .skip(skip)
             .lean();
-        
+
         const total = await License.countDocuments({});
         res.json({ data: licenses, total, limit, skip });
     } catch (error) {
@@ -374,14 +399,14 @@ exports.adminGetEvents = async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit, 10) || 100, 1000); // Cap at 1000
         const skip = Math.max(parseInt(req.query.skip, 10) || 0, 0);
-        
+
         // Excludes Mongo document IDs
         const events = await AuditEvent.find({}, { _id: 0, __v: 0 })
             .sort({ timestamp: -1 })
             .limit(limit)
             .skip(skip)
             .lean();
-        
+
         const total = await AuditEvent.countDocuments({});
         res.json({ data: events, total, limit, skip });
     } catch (error) {
