@@ -197,6 +197,21 @@ exports.verifyLicense = async (req, res) => {
             return res.status(401).json({ valid: false, message: 'Invalid or expired license' });
         }
 
+        // If license is already used, refuse it to prevent onboarding continuation
+        if (license.isUsed) {
+            try {
+                await AuditEvent.create({
+                    event_type: 'verification_failed',
+                    reason: 'License key already used',
+                    device_hash: 'unauthenticated',
+                    license_key: productKey
+                });
+            } catch (auditErr) {
+                console.error('Audit logging failed background execution:', auditErr.message);
+            }
+            return res.status(403).json({ valid: false, isUsed: true, message: 'License key has already been activated' });
+        }
+
         // Update verification time in the background safely
         try {
             license.last_verified_at = new Date();
@@ -208,6 +223,7 @@ exports.verifyLicense = async (req, res) => {
         // Secure response payload matching frontend overview expectations.
         return res.status(200).json({
             valid: true,
+            isUsed: false,
             licenseId: license.key,
             message: 'License verified',
             plan: license.plan || 'STANDARD',
