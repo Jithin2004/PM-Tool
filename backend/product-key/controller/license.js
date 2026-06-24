@@ -70,16 +70,17 @@ exports.addLicense = async (req, res) => {
 
 // 2. License Key Activation
 exports.activateLicense = async (req, res) => {
-    const { productKey, workspaceId } = req.body;
+    const { productKey, workspaceId, userIdentifier } = req.body;
 
     if (!productKey || !workspaceId) {
         return res.status(400).json({ error: 'Product key and workspace ID are required.' });
     }
 
     try {
-        const license = await License.findOne({ key: productKey });
-
-        if (!license) {
+        // First check if key exists and its status
+        const initialCheck = await License.findOne({ key: productKey });
+        
+        if (!initialCheck) {
             await AuditEvent.create({
                 event_type: 'verification_failed',
                 reason: 'Invalid product key provided',
@@ -89,61 +90,66 @@ exports.activateLicense = async (req, res) => {
             return res.status(404).json({ error: 'Invalid product key' });
         }
 
-        if (license.status === 'EXPIRED') {
+        if (initialCheck.status === 'EXPIRED' || initialCheck.status === 'REVOKED') {
             await AuditEvent.create({
                 event_type: 'verification_failed',
-                reason: 'License has expired',
+                reason: `License has been ${initialCheck.status.toLowerCase()}`,
                 device_hash: workspaceId,
                 license_key: productKey
             });
-            return res.status(403).json({ error: 'Key has expired' });
+            return res.status(403).json({ error: `Key has been ${initialCheck.status.toLowerCase()}` });
         }
 
-        if (license.status === 'REVOKED') {
-            await AuditEvent.create({
-                event_type: 'verification_failed',
-                reason: 'License has been revoked',
-                device_hash: workspaceId,
-                license_key: productKey
-            });
-            return res.status(403).json({ error: 'Key has been revoked' });
-        }
+        // ATOMIC ACTIVATION TRANSACTION
+        const license = await License.findOneAndUpdate(
+            {
+                key: productKey,
+                isUsed: false,
+                status: 'ACTIVE'
+            },
+            {
+                $set: {
+                    isUsed: true,
+                    usedAt: new Date(),
+                    usedBy: userIdentifier || workspaceId,
+                    workspaceId: workspaceId,
+                    last_verified_at: new Date()
+                }
+            },
+            { new: true }
+        );
 
-        let isAlreadyActivated = false;
-
-        // Check if license is already bound to a workspace
-        if (license.activated_workspace_id) {
-            if (license.activated_workspace_id === workspaceId) {
-                isAlreadyActivated = true;
-            } else {
+        if (!license) {
+            // It might already be used by this workspace, let's check
+            const existingUsed = await License.findOne({ key: productKey, workspaceId });
+            if (existingUsed) {
+                // Return success for idempotency
+                const token = jwt.sign(
+                    { key: existingUsed.key, workspaceId: workspaceId }, 
+                    JWT_SECRET, 
+                    { expiresIn: '30d' }
+                );
+                
                 await AuditEvent.create({
-                    event_type: 'verification_failed',
-                    reason: 'License assigned to another workspace',
+                    event_type: 'license_activated',
+                    reason: 'Existing workspace re-verified',
                     device_hash: workspaceId,
                     license_key: productKey
                 });
-                return res.status(403).json({ error: 'License assigned to another workspace' });
+                return res.json({ success: true, token, plan: existingUsed.plan });
             }
-        } else {
-            // Backward Compatibility Migration
-            if (license.activated_devices && license.activated_devices.length > 0) {
-                // Safely migrate the old fingerprint-based activation to workspace_id binding
-                license.activated_workspace_id = workspaceId;
-                isAlreadyActivated = true;
-                // Preserve existing activation_at date
-            } else {
-                // True first activation
-                license.activated_workspace_id = workspaceId;
-                if (!license.activated_at) {
-                    license.activated_at = new Date();
-                }
-            }
+
+            // Otherwise, it was claimed by someone else
+            await AuditEvent.create({
+                event_type: 'verification_failed',
+                reason: 'License assigned to another workspace',
+                device_hash: workspaceId,
+                license_key: productKey
+            });
+            return res.status(403).json({ error: 'License assigned to another workspace' });
         }
 
-        license.last_verified_at = new Date();
-        await license.save();
-
-        // Sign token containing only the key & workspaceId (no raw DB records)
+        // Sign token containing only the key & workspaceId
         const token = jwt.sign(
             { key: license.key, workspaceId: workspaceId }, 
             JWT_SECRET, 
@@ -152,7 +158,7 @@ exports.activateLicense = async (req, res) => {
 
         await AuditEvent.create({
             event_type: 'license_activated',
-            reason: isAlreadyActivated ? 'Existing workspace re-verified' : 'New workspace registered',
+            reason: 'New workspace registered',
             device_hash: workspaceId,
             license_key: productKey
         });

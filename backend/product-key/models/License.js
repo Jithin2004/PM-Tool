@@ -21,12 +21,26 @@ const licenseSchema = new mongoose.Schema({
   },
   activation_limit: { 
     type: Number, 
-    default: 3,
+    default: 1, // Enforce single-use logically if desired, keeping for compatibility
     required: true 
   },
-  activated_workspace_id: {
-    type: String,
-    default: null
+  // Replaced activated_workspace_id with explicit single-use flags
+  isUsed: {
+    type: Boolean,
+    default: false
+  },
+  usedAt: {
+    type: Date
+  },
+  usedBy: {
+    type: String
+  },
+  workspaceId: {
+    type: String
+  },
+  activation_metadata: { 
+    type: mongoose.Schema.Types.Mixed,
+    default: {} 
   },
   activated_devices: { 
     type: [String], 
@@ -36,9 +50,6 @@ const licenseSchema = new mongoose.Schema({
     type: Date, 
     default: Date.now,
     required: true 
-  },
-  activated_at: { 
-    type: Date 
   },
   last_verified_at: { 
     type: Date 

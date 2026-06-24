@@ -7,7 +7,7 @@ import { Check, Layers, Users, Zap, Briefcase, Plus, X, ArrowLeft, LayoutTemplat
 import { EmailChipsInput, EmailChip } from '../../components/ui/EmailChipsInput';
 import { ProjectChipsInput } from '../../components/ui/ProjectChipsInput';
 import { sandboxSeedEngine } from '../../core/engines/sandboxSeedEngine';
-import { clearLicense } from '../../lib/productKey';
+import { clearLicense, activateLicenseKey } from '../../lib/productKey';
 import { supabase } from '../../lib/supabase';
 import { sha256 } from '../../utils/cryptoUtils';
 import { navigateTo } from '../../core/auth/postAuthRedirect';
@@ -63,10 +63,19 @@ export function WorkspaceSetupWizard() {
       const validatedAt = parsed.validatedAt || new Date().toISOString();
       const supportExpiryDate = parsed.supportExpiry ? new Date(parsed.supportExpiry).toISOString() : null;
 
+      // 1. Actually activate the license in the backend MongoDB (Atomic single-use claim)
+      if (productKeyStr !== 'OFFLINE-LICENSE') {
+        const activationResult = await activateLicenseKey(productKeyStr, workspaceId);
+        if (!activationResult.success) {
+          console.error('Backend activation failed:', activationResult.error);
+          return false;
+        }
+      }
+
       // Hash raw product key before database insertion/update
       const hashedKey = await sha256(productKeyStr);
 
-      // Check if license already exists
+      // Check if license already exists locally
       const { data: existingLicense } = await supabase
         .from('workspace_license')
         .select('*')
@@ -97,8 +106,6 @@ export function WorkspaceSetupWizard() {
             support_until: supportExpiryDate
           });
       }
-
-
 
       if (queryResult.error) {
         console.error('License attachment query error:', queryResult.error);

@@ -308,6 +308,38 @@ export async function validateNewActivationKey(productKey: string): Promise<Veri
   }
 }
 
+// ── Activate new license key via server (finalize) ───────────────────────────
+export async function activateLicenseKey(productKey: string, workspaceId: string): Promise<VerifyResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const res = await fetch(ACTIVATE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        productKey: productKey.trim(),
+        workspaceId
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      const errorMsg = body?.error || `Activation failed (${res.status}).`;
+      return { success: false, error: errorMsg };
+    }
+
+    const data = await res.json();
+    return { success: true, token: data?.token, plan: data?.plan };
+  } catch (err: any) {
+    clearTimeout(timer);
+    return { success: false, error: err.message };
+  }
+}
+
 // ── Verify existing license key via server ──────────────────────────────────────
 export async function verifyLicenseKey(productKey: string): Promise<VerifyResult> {
   if (!productKey.trim()) {
