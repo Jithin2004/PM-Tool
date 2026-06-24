@@ -4340,6 +4340,7 @@ ADD COLUMN IF NOT EXISTS meeting_category text DEFAULT 'Internal' CHECK (meeting
 
 -- 4. Create RPC to fetch shared project data securely using token bypass
 
+DROP FUNCTION IF EXISTS public.get_shared_project_data(text);
 CREATE OR REPLACE FUNCTION get_shared_project_data(p_token text)
 RETURNS json
 LANGUAGE plpgsql
@@ -4944,6 +4945,7 @@ ADD COLUMN IF NOT EXISTS last_accessed_at timestamptz,
 ADD COLUMN IF NOT EXISTS access_count integer DEFAULT 0 NOT NULL;
 
 
+DROP FUNCTION IF EXISTS public.get_shared_project_data(text);
 CREATE OR REPLACE FUNCTION get_shared_project_data(p_token text)
 RETURNS json
 LANGUAGE plpgsql
@@ -8184,14 +8186,14 @@ CREATE POLICY "Users can read their own notification events"
 ON public.notification_events FOR SELECT
   USING (
     workspace_id = current_workspace() 
-    AND user_id = auth.uid() 
+    AND recipient_id = auth.uid() 
     AND public.is_active_workspace_member()
   );
 DROP POLICY IF EXISTS "System can mutate notifications" ON public.notification_events;
 CREATE POLICY "System can mutate notifications" 
 ON public.notification_events FOR ALL
-  USING (workspace_id = current_workspace() AND user_id = auth.uid())
-  WITH CHECK (workspace_id = current_workspace() AND user_id = auth.uid());
+  USING (workspace_id = current_workspace() AND recipient_id = auth.uid())
+  WITH CHECK (workspace_id = current_workspace() AND recipient_id = auth.uid());
 
 -- Triggers for lightweight notifications
 
@@ -9460,9 +9462,9 @@ ON public.billing_milestones FOR DELETE
 -- RC-1.2 HARDENING: Notification System Scale Indexes & Enterprise Indexes
 -- ==============================================================================
 
-CREATE INDEX IF NOT EXISTS idx_notification_events_user_unread ON public.notification_events(user_id, created_at DESC) WHERE read_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_notification_events_user_timeline ON public.notification_events(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_notification_events_digest_group ON public.notification_events(user_id, type, entity_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notification_events_user_unread ON public.notification_events(recipient_id, created_at DESC) WHERE read_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_notification_events_user_timeline ON public.notification_events(recipient_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notification_events_digest_group ON public.notification_events(recipient_id, category, entity_type, created_at DESC);
 
 -- Verify Existing Enterprise Indexes
 CREATE INDEX IF NOT EXISTS idx_tasks_workspace_active ON public.tasks(workspace_id, status) WHERE status != 'completed' AND status != 'archived';
