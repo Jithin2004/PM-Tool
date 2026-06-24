@@ -86,38 +86,33 @@ export function AcceptInvitePage() {
     setLoading(true);
 
     try {
-      // 1. Authenticate or Create Account
-      let authSuccess = false;
-      
-      const { error: signUpError } = await supabase.auth.signUp({
+      const res = await supabase.functions.invoke('provisioning', {
+        body: {
+          operation: 'accept_invitation',
+          token,
+          password
+        }
+      });
+
+      if (res.error) {
+        throw res.error;
+      }
+
+      const result = res.data;
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to accept the invitation.');
+      }
+
+      // Automatically sign in the user after password is set successfully
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: inviteDetails!.email,
         password: password,
       });
 
-      if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          // Try to sign in
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: inviteDetails!.email,
-            password: password,
-          });
-          if (signInError) {
-            throw new Error('Account exists but incorrect password. Please go to Login to accept your invitation.');
-          }
-          authSuccess = true;
-        } else {
-          throw signUpError;
-        }
-      } else {
-        authSuccess = true;
-      }
-
-      // 2. Accept Invitation
-      const { data: accepted, error: updateError } = await supabase
-        .rpc('accept_invitation', { p_token: token });
-
-      if (updateError || !accepted) {
-        throw new Error('Could not accept the invitation. It may have expired or already been used.');
+      if (signInError) {
+         console.warn("Auto-login failed:", signInError);
+         // Don't throw, we still successfully accepted the invite.
+         // They can log in manually if this fails.
       }
 
       setSuccess(true);

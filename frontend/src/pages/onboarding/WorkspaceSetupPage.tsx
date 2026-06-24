@@ -153,30 +153,22 @@ export function WorkspaceSetupPage() {
     setSaving(true);
     try {
       if (workspace?.id) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-
-        const finalUrl = import.meta.env.VITE_API_URL;
-        if (!finalUrl) {
-          throw new Error("Configuration Error: VITE_API_URL is missing.");
-        }
-        const res = await fetch(`${finalUrl}/api/invite`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
+        const res = await supabase.functions.invoke('provisioning', {
+          body: {
+            operation: 'invite_user',
             email,
             role: 'developer', // Default invited role
             source: 'onboarding'
-          })
+          }
         });
 
-        const result = await res.json();
+        if (res.error) {
+          throw res.error;
+        }
 
-        if (!res.ok) {
-          throw new Error(result.error || 'Failed to provision employee.');
+        const result = res.data;
+        if (!result?.success) {
+          throw new Error(result?.error || 'Failed to provision employee.');
         }
 
         setInviteLinkToCopy({ email, link: result.data.invite_link });

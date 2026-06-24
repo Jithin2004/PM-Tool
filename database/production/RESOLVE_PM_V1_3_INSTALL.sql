@@ -31,10 +31,29 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users; -- Removed to prevent permission errors in Supabase SQL Editor
 
 -- Functions
+DROP FUNCTION IF EXISTS public.transfer_workspace_ownership CASCADE;
+DROP FUNCTION IF EXISTS public.search_workspace CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 DROP FUNCTION IF EXISTS current_workspace() CASCADE;
 
 -- Tables (children before parents)
+DROP TABLE IF EXISTS follow_ups CASCADE;
+DROP TABLE IF EXISTS system_migrations CASCADE;
+DROP TABLE IF EXISTS system_events CASCADE;
+DROP TABLE IF EXISTS approval_chains CASCADE;
+DROP TABLE IF EXISTS approval_instances CASCADE;
+DROP TABLE IF EXISTS approval_steps CASCADE;
+DROP TABLE IF EXISTS decision_recommendation_history CASCADE;
+DROP TABLE IF EXISTS clock_events CASCADE;
+DROP TABLE IF EXISTS leave_balances CASCADE;
+DROP TABLE IF EXISTS external_access_links CASCADE;
+DROP TABLE IF EXISTS exchange_rate_audits CASCADE;
+DROP TABLE IF EXISTS financial_report_snapshots CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS capabilities CASCADE;
+DROP TABLE IF EXISTS role_capabilities CASCADE;
+DROP TABLE IF EXISTS user_capability_overrides CASCADE;
+DROP TABLE IF EXISTS ai_recommendations CASCADE;
 DROP TABLE IF EXISTS system_audit_ledger CASCADE;
 DROP TABLE IF EXISTS workspace_settings CASCADE;
 DROP TABLE IF EXISTS personal_leave CASCADE;
@@ -125,7 +144,7 @@ CREATE TABLE IF NOT EXISTS workspaces (
   metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   name                text        NOT NULL,
-  owner_id            uuid        NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  created_by_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   business_type       text        NOT NULL DEFAULT 'Software',
   template_id         text,
   execution_mode      text        NOT NULL DEFAULT 'KANBAN',
@@ -157,8 +176,7 @@ CREATE TABLE IF NOT EXISTS users (
   full_name           text,
   phone               text,
   avatar_url          text,
-  role                text        NOT NULL DEFAULT 'viewer'
-                                  CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer', 'uninvited', 'pending-workspace-setup', 'hr', 'finance', 'client')),
+  role text NOT NULL DEFAULT 'employee' CHECK (role IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client')),
   designation         text,
   department          text,
   status              text        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'invited', 'disabled')),
@@ -209,7 +227,7 @@ CREATE TABLE IF NOT EXISTS public.departments (
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   name text NOT NULL,
   description text,
-  manager_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  lead_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(workspace_id, name)
@@ -229,7 +247,7 @@ CREATE TABLE IF NOT EXISTS projects (
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   team_id               uuid        REFERENCES teams(id) ON DELETE SET NULL,
-  owner_id              uuid        REFERENCES users(id) ON DELETE RESTRICT,
+  created_by_id uuid REFERENCES public.users(id) ON DELETE RESTRICT,
   name                  text        NOT NULL,
   description           text,
   status                text        NOT NULL DEFAULT 'planning'
@@ -338,7 +356,7 @@ CREATE TABLE IF NOT EXISTS wait_states (
   target_id           uuid        NOT NULL,
   category            text        NOT NULL CHECK (category IN ('client', 'vendor', 'approval', 'compliance', 'infrastructure', 'data', 'internal_cross_team')),
   reason              text,
-  waiting_on          text        NOT NULL CHECK (waiting_on IN ('client', 'vendor', 'internal_team', 'pm', 'compliance', 'infrastructure', 'external_partner', 'other')),
+  waiting_on          text        NOT NULL CHECK (waiting_on IN ('client', 'vendor', 'internal_team', 'project_manager', 'compliance', 'infrastructure', 'external_partner', 'other')),
   status              text        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'resolved')),
   started_at          timestamptz NOT NULL DEFAULT now(),
   resolved_at         timestamptz,
@@ -499,7 +517,7 @@ CREATE TABLE IF NOT EXISTS invitations (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id  uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   email         text        NOT NULL,
-  role          text        NOT NULL CHECK (role IN ('super_admin', 'pm', 'developer', 'viewer', 'hr', 'finance', 'client')),
+  role text NOT NULL CHECK (role IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client')),
   token         text        UNIQUE NOT NULL,
   status        text        NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'revoked')),
   expires_at    timestamptz NOT NULL,
@@ -714,7 +732,7 @@ BEGIN
       NEW.id = auth.uid()
       AND EXISTS (
         SELECT 1 FROM public.workspaces w 
-        WHERE w.id = NEW.workspace_id AND w.owner_id = auth.uid()
+        WHERE w.id = NEW.workspace_id AND w.created_by_id = auth.uid()
       )
     ) THEN
       RAISE EXCEPTION 'Unauthorized: Only super_admin can modify roles.';
@@ -835,15 +853,15 @@ ALTER TABLE system_audit_ledger ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Workspace members can view their workspace" ON workspaces;
 CREATE POLICY "Workspace members can view their workspace" 
 ON workspaces FOR SELECT
-  USING (id = current_workspace() OR owner_id = auth.uid());
-DROP POLICY IF EXISTS "Workspace owner can update workspace" ON workspaces;
-CREATE POLICY "Workspace owner can update workspace" 
+  USING (id = current_workspace() OR created_by_id = auth.uid());
+DROP POLICY IF EXISTS "Workspace admin can update workspace" ON workspaces;
+CREATE POLICY "Workspace admin can update workspace" 
 ON workspaces FOR UPDATE
-  USING (owner_id = auth.uid());
-DROP POLICY IF EXISTS "Workspace owner can create workspace" ON workspaces;
-CREATE POLICY "Workspace owner can create workspace" 
+  USING (created_by_id = auth.uid());
+DROP POLICY IF EXISTS "Workspace admin can create workspace" ON workspaces;
+CREATE POLICY "Workspace admin can create workspace" 
 ON workspaces FOR INSERT
-  WITH CHECK (owner_id = auth.uid());
+  WITH CHECK (created_by_id = auth.uid());
 
 
 -- ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ Users ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬
@@ -857,8 +875,8 @@ ON users FOR SELECT
     id = auth.uid()
     OR workspace_id = current_workspace()
   );
-DROP POLICY IF EXISTS "Workspace owner can create first super admin user" ON users;
-CREATE POLICY "Workspace owner can create first super admin user" 
+DROP POLICY IF EXISTS "Workspace admin can create first super admin user" ON users;
+CREATE POLICY "Workspace admin can create first super admin user" 
 ON users FOR INSERT
   WITH CHECK (
     id = auth.uid()
@@ -866,7 +884,7 @@ ON users FOR INSERT
     AND EXISTS (
       SELECT 1 FROM workspaces
       WHERE workspaces.id = users.workspace_id
-        AND workspaces.owner_id = auth.uid()
+        AND workspaces.created_by_id = auth.uid()
     )
   );
 DROP POLICY IF EXISTS "Workspace admins can insert users" ON users;
@@ -877,7 +895,7 @@ ON users FOR INSERT
       SELECT 1 FROM users me
       WHERE me.id = auth.uid()
         AND me.workspace_id = users.workspace_id
-        AND me.role IN ('super_admin', 'pm')
+        AND me.role IN ('super_admin', 'admin', 'project_manager')
     )
   );
 DROP POLICY IF EXISTS "Workspace admins can update users" ON users;
@@ -888,7 +906,7 @@ ON users FOR UPDATE
       SELECT 1 FROM users me
       WHERE me.id = auth.uid()
         AND me.workspace_id = users.workspace_id
-        AND me.role IN ('super_admin', 'pm')
+        AND me.role IN ('super_admin', 'admin', 'project_manager')
     )
   );
 DROP POLICY IF EXISTS "Workspace admins can delete users" ON users;
@@ -899,7 +917,7 @@ ON users FOR DELETE
       SELECT 1 FROM users me
       WHERE me.id = auth.uid()
         AND me.workspace_id = users.workspace_id
-        AND me.role IN ('super_admin', 'pm')
+        AND me.role IN ('super_admin', 'admin', 'project_manager')
     )
   );
 DROP POLICY IF EXISTS "Users can insert their own pending user row" ON users;
@@ -939,7 +957,7 @@ ON users FOR UPDATE
       (role IS NOT DISTINCT FROM (SELECT role FROM users WHERE id = auth.uid())
        AND workspace_id IS NOT DISTINCT FROM (SELECT workspace_id FROM users WHERE id = auth.uid()))
       OR
-      EXISTS (SELECT 1 FROM workspaces WHERE workspaces.id = workspace_id AND workspaces.owner_id = auth.uid())
+      EXISTS (SELECT 1 FROM workspaces WHERE workspaces.id = workspace_id AND workspaces.created_by_id = auth.uid())
     )
   );
 
@@ -955,11 +973,11 @@ CREATE POLICY "Teams can be managed by PMs and Admins"
 ON teams FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -974,11 +992,11 @@ CREATE POLICY "Team members can be managed by PMs and Admins"
 ON team_members FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -994,12 +1012,12 @@ ON projects FOR ALL
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -1018,7 +1036,7 @@ ON tasks FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- UPDATE for PMs/Admins: Full update access
@@ -1028,7 +1046,7 @@ ON tasks FOR UPDATE
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- UPDATE for Developers: ONLY tasks assigned to them
@@ -1049,7 +1067,7 @@ ON tasks FOR DELETE
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -1064,11 +1082,11 @@ CREATE POLICY "Task dependencies can be managed by PMs and Admins"
 ON task_dependencies FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -1097,12 +1115,12 @@ ON comments FOR ALL
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- UPDATE/DELETE for non-admins: Own comments only
@@ -1131,7 +1149,7 @@ ON files FOR SELECT
         EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND workspace_id = current_workspace() AND role = 'client')
         AND is_internal = false
         AND EXISTS (
-          SELECT 1 FROM projects WHERE projects.id = files.project_id AND projects.owner_id = auth.uid()
+          SELECT 1 FROM projects WHERE projects.id = files.project_id AND projects.created_by_id = auth.uid()
         )
       )
     )
@@ -1150,12 +1168,12 @@ ON files FOR ALL
   USING (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
     public.is_active_workspace_member() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -1181,11 +1199,11 @@ CREATE POLICY "Notifications can be managed by PMs and Admins"
 ON notifications FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- Users can mark their own notifications as read
@@ -1221,11 +1239,11 @@ CREATE POLICY "Attendance can be managed by PMs and Admins"
 ON attendance FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -1236,18 +1254,18 @@ CREATE POLICY "Salaries are visible to admins"
 ON salaries FOR SELECT
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 DROP POLICY IF EXISTS "Salaries can be managed by PMs and Admins" ON salaries;
 CREATE POLICY "Salaries can be managed by PMs and Admins" 
 ON salaries FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -1293,11 +1311,11 @@ CREATE POLICY "Workspace holidays can be managed by PMs and Admins"
 ON workspace_holidays FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -1320,11 +1338,11 @@ CREATE POLICY "PMs and Admins can manage all leave"
 ON personal_leave FOR ALL
   USING (
     user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()) AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     user_id IN (SELECT id FROM users WHERE workspace_id = current_workspace()) AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -1339,11 +1357,11 @@ CREATE POLICY "Workspace settings can be managed by PMs and Admins"
 ON workspace_settings FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -1358,7 +1376,7 @@ ON system_audit_ledger FOR SELECT
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
         AND users.workspace_id = current_workspace()
-        AND users.role IN ('super_admin', 'pm')
+        AND users.role IN ('super_admin', 'admin', 'project_manager')
     )
   );
 DROP POLICY IF EXISTS "System audit ledger is insertable by authenticated users" ON system_audit_ledger;
@@ -1548,7 +1566,7 @@ FOR SELECT USING (
 
     WHERE users.id = auth.uid() AND users.workspace_id = employment_records.workspace_id
 
-    AND users.role IN ('super_admin', 'admin', 'manager', 'editor')
+    AND users.role IN ('super_admin', 'admin', 'team_lead', 'editor')
 
   )
 
@@ -1658,7 +1676,7 @@ FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM public.users
     WHERE users.id = auth.uid() AND users.workspace_id = employment_records.workspace_id
-    AND users.role IN ('super_admin', 'admin', 'manager', 'editor')
+    AND users.role IN ('super_admin', 'admin', 'team_lead', 'editor')
   )
 );
 
@@ -1986,7 +2004,7 @@ BEGIN
     END;
 
     -- Super Admin & PM can access everything active in their workspace
-    IF v_role IN ('super_admin', 'pm') THEN RETURN true; END IF;
+    IF v_role IN ('super_admin', 'admin', 'project_manager') THEN RETURN true; END IF;
 
     -- Viewer & Developer
     IF p_entity_type = 'task' THEN
@@ -2028,7 +2046,7 @@ BEGIN
         -- Fallback
     END;
 
-    IF v_role IN ('super_admin', 'pm') THEN RETURN true; END IF;
+    IF v_role IN ('super_admin', 'admin', 'project_manager') THEN RETURN true; END IF;
 
     IF p_entity_type = 'task' THEN
         RETURN EXISTS (SELECT 1 FROM public.tasks WHERE id = p_entity_id AND assignee_id = auth.uid());
@@ -2071,7 +2089,7 @@ BEGIN
     -- Uploader check
     IF p_uploaded_by = auth.uid() THEN RETURN true; END IF;
 
-    IF v_role IN ('super_admin', 'pm') THEN RETURN true; END IF;
+    IF v_role IN ('super_admin', 'admin', 'project_manager') THEN RETURN true; END IF;
 
     IF p_entity_type = 'task' THEN
         RETURN EXISTS (SELECT 1 FROM public.tasks WHERE id = p_entity_id AND assignee_id = auth.uid());
@@ -2333,7 +2351,7 @@ RETURNS TABLE (
     title text,
     context text,
     last_updated timestamptz,
-    owner_id uuid,
+    created_by_id uuid,
     rank real
 ) AS $$
 DECLARE
@@ -2350,7 +2368,7 @@ BEGIN
         name as title,
         status || ' Ãƒâ€šÃ‚Â· ' || execution_mode as context,
         updated_at as last_updated,
-        owner_id as owner_id,
+        created_by_id as created_by_id,
         (CASE WHEN name ILIKE p_query THEN 100 WHEN name ILIKE v_query THEN 50 ELSE 0 END)::real as rank
     FROM public.projects
     WHERE workspace_id = v_workspace_id AND name ILIKE v_query AND deleted_at IS NULL AND public.can_access_entity('project', id)
@@ -2364,7 +2382,7 @@ BEGIN
         name as title,
         status || ' Ãƒâ€šÃ‚Â· Priority: ' || priority as context,
         updated_at as last_updated,
-        assignee_id as owner_id,
+        assignee_id as created_by_id,
         (CASE 
             WHEN name ILIKE p_query THEN 100 
             WHEN assignee_id = auth.uid() THEN 80 
@@ -2383,7 +2401,7 @@ BEGIN
         file_name as title,
         file_type || ' Ãƒâ€šÃ‚Â· ' || (file_size/1024) || 'KB' as context,
         updated_at as last_updated,
-        uploaded_by as owner_id,
+        uploaded_by as created_by_id,
         (CASE WHEN file_name ILIKE p_query THEN 100 WHEN file_name ILIKE v_query THEN 50 ELSE 0 END)::real as rank
     FROM public.workspace_files
     WHERE workspace_id = v_workspace_id AND file_name ILIKE v_query AND deleted_at IS NULL AND public.can_access_entity(entity_type, entity_id)
@@ -2397,7 +2415,7 @@ BEGIN
         substring(body from 1 for 60) as title,
         'On ' || entity_type as context,
         updated_at as last_updated,
-        author_id as owner_id,
+        author_id as created_by_id,
         (CASE WHEN body ILIKE p_query THEN 100 WHEN body ILIKE v_query THEN 50 ELSE 0 END)::real as rank
     FROM public.universal_comments
     WHERE workspace_id = v_workspace_id AND body ILIKE v_query AND deleted_at IS NULL AND public.can_access_entity(entity_type, entity_id)
@@ -2411,7 +2429,7 @@ BEGIN
         full_name as title,
         role || COALESCE(' Ãƒâ€šÃ‚Â· ' || designation, '') as context,
         created_at as last_updated,
-        id as owner_id,
+        id as created_by_id,
         (CASE WHEN full_name ILIKE p_query THEN 100 WHEN full_name ILIKE v_query THEN 50 ELSE 0 END)::real as rank
     FROM public.users
     WHERE workspace_id = v_workspace_id AND (full_name ILIKE v_query OR email ILIKE v_query)
@@ -2425,7 +2443,7 @@ BEGIN
         company_name as title,
         'Client Ãƒâ€šÃ‚Â· ' || COALESCE(status, '') as context,
         updated_at as last_updated,
-        NULL::uuid as owner_id,
+        NULL::uuid as created_by_id,
         (CASE WHEN company_name ILIKE p_query THEN 100 WHEN company_name ILIKE v_query THEN 50 ELSE 0 END)::real as rank
     FROM public.clients
     WHERE workspace_id = v_workspace_id AND company_name ILIKE v_query AND deleted_at IS NULL AND public.get_user_role(v_workspace_id) = 'super_admin'
@@ -2439,7 +2457,7 @@ BEGIN
         invoice_number as title,
         'Invoice Ãƒâ€šÃ‚Â· ' || status as context,
         updated_at as last_updated,
-        created_by as owner_id,
+        created_by as created_by_id,
         (CASE WHEN invoice_number ILIKE p_query THEN 100 WHEN invoice_number ILIKE v_query THEN 50 ELSE 0 END)::real as rank
     FROM public.invoices
     WHERE workspace_id = v_workspace_id AND invoice_number ILIKE v_query AND public.get_user_role(v_workspace_id) = 'super_admin'
@@ -2524,9 +2542,9 @@ CREATE POLICY "Enable write access for authorized users on recurring_task_temp"
 ON public.recurring_task_templates FOR ALL 
 USING (
   public.can_access_entity('project', project_id) AND (
-    public.get_user_role(workspace_id) IN ('super_admin', 'pm') OR
+    public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager') OR
     created_by = auth.uid() OR
-    EXISTS (SELECT 1 FROM projects p WHERE p.id = project_id AND p.owner_id = auth.uid())
+    EXISTS (SELECT 1 FROM projects p WHERE p.id = project_id AND p.created_by_id = auth.uid())
   )
 );
 
@@ -2650,7 +2668,7 @@ CREATE POLICY "Users can view reports they generated or if they are admin"
 ON public.generated_reports FOR SELECT 
 USING (
     generated_by = auth.uid() OR
-    public.get_user_role(workspace_id) IN ('super_admin', 'pm')
+    public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager')
 );
 DROP POLICY IF EXISTS "Users can insert reports" ON public.generated_reports;
 CREATE POLICY "Users can insert reports" 
@@ -2688,7 +2706,7 @@ USING (public.get_user_role(workspace_id) IS NOT NULL);
 DROP POLICY IF EXISTS "Enable write access for managers and admins" ON public.skills;
 CREATE POLICY "Enable write access for managers and admins" 
 ON public.skills FOR ALL 
-USING (public.get_user_role(workspace_id) IN ('super_admin', 'pm'));
+USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager'));
 
 -- 2. User Skills Mapping
 CREATE TABLE IF NOT EXISTS public.user_skills (
@@ -2722,7 +2740,7 @@ CREATE POLICY "Managers can verify and manage team skills"
 ON public.user_skills FOR ALL 
 USING (
   EXISTS (
-    SELECT 1 FROM skills s WHERE s.id = skill_id AND public.get_user_role(s.workspace_id) IN ('super_admin', 'pm')
+    SELECT 1 FROM skills s WHERE s.id = skill_id AND public.get_user_role(s.workspace_id) IN ('super_admin', 'admin', 'project_manager')
   )
 );
 
@@ -3170,7 +3188,7 @@ ALTER TABLE public.document_templates ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.document_templates;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.document_templates FOR SELECT 
-USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
+USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
 DROP POLICY IF EXISTS "Enable write access for super admin" ON public.document_templates;
 CREATE POLICY "Enable write access for super admin" 
 ON public.document_templates FOR ALL 
@@ -3195,7 +3213,7 @@ ALTER TABLE public.document_template_history ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.document_template_history;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.document_template_history FOR SELECT 
-USING (public.get_user_role((SELECT workspace_id FROM public.document_templates WHERE id = template_id)) IN ('super_admin', 'admin', 'manager', 'member'));
+USING (public.get_user_role((SELECT workspace_id FROM public.document_templates WHERE id = template_id)) IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
 DROP POLICY IF EXISTS "Enable write access for super admin" ON public.document_template_history;
 CREATE POLICY "Enable write access for super admin" 
 ON public.document_template_history FOR ALL 
@@ -3246,7 +3264,7 @@ ALTER TABLE public.company_billing_profile ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable read access for authorized users" ON public.company_billing_profile;
 CREATE POLICY "Enable read access for authorized users" 
 ON public.company_billing_profile FOR SELECT 
-USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
+USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
 DROP POLICY IF EXISTS "Enable write access for super admin" ON public.company_billing_profile;
 CREATE POLICY "Enable write access for super admin" 
 ON public.company_billing_profile FOR ALL 
@@ -3324,7 +3342,7 @@ CREATE POLICY "Enable read access for authorized users via invoice"
 ON public.invoice_line_items FOR SELECT 
 USING (
   EXISTS (
-    SELECT 1 FROM public.invoices i WHERE i.id = invoice_id AND public.get_user_role(i.workspace_id) IN ('super_admin', 'admin', 'manager', 'member')
+    SELECT 1 FROM public.invoices i WHERE i.id = invoice_id AND public.get_user_role(i.workspace_id) IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
   )
 );
 DROP POLICY IF EXISTS "Enable write access for authorized users via invoice" ON public.invoice_line_items;
@@ -3582,11 +3600,11 @@ ALTER TABLE public.advance_applications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view advance applications in their workspace" ON public.advance_applications;
 CREATE POLICY "Users can view advance applications in their workspace" 
 ON public.advance_applications
-    FOR SELECT USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
+    FOR SELECT USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
 DROP POLICY IF EXISTS "Users can create advance applications in their workspace" ON public.advance_applications;
 CREATE POLICY "Users can create advance applications in their workspace" 
 ON public.advance_applications
-    FOR INSERT WITH CHECK (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
+    FOR INSERT WITH CHECK (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
 
 -- 2. Credit Notes
 CREATE TABLE IF NOT EXISTS public.credit_notes (
@@ -3614,11 +3632,11 @@ ALTER TABLE public.credit_notes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view credit notes in their workspace" ON public.credit_notes;
 CREATE POLICY "Users can view credit notes in their workspace" 
 ON public.credit_notes
-    FOR SELECT USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
+    FOR SELECT USING (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
 DROP POLICY IF EXISTS "Users can create credit notes in their workspace" ON public.credit_notes;
 CREATE POLICY "Users can create credit notes in their workspace" 
 ON public.credit_notes
-    FOR INSERT WITH CHECK (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'manager', 'member'));
+    FOR INSERT WITH CHECK (public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
 
 -- 3. Extend `invoices` status enum (safe casting)
 -- If 'cancelled' isn't natively supported by some downstream checks, ensure it is covered.
@@ -3871,7 +3889,7 @@ CREATE TABLE IF NOT EXISTS document_references (
   title text NOT NULL,
   type text NOT NULL CHECK (type IN ('google_doc', 'drive', 'figma', 'github', 'url')),
   url text NOT NULL,
-  owner_id uuid REFERENCES users(id) ON DELETE RESTRICT,
+  created_by_id uuid REFERENCES public.users(id) ON DELETE RESTRICT,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -4045,7 +4063,7 @@ ON work_sessions FOR UPDATE
       SELECT 1 FROM public.users
       WHERE id = auth.uid()
         AND workspace_id = public.current_workspace()
-        AND (role IN ('super_admin', 'pm') OR 'manage_employees' = ANY(capabilities))
+        AND (role IN ('super_admin', 'admin', 'project_manager') OR 'manage_employees' = ANY(capabilities))
     )
   );
 DROP POLICY IF EXISTS "PMs and HR can delete work sessions" ON work_sessions;
@@ -4057,7 +4075,7 @@ ON work_sessions FOR DELETE
       SELECT 1 FROM public.users
       WHERE id = auth.uid()
         AND workspace_id = public.current_workspace()
-        AND (role IN ('super_admin', 'pm') OR 'manage_employees' = ANY(capabilities))
+        AND (role IN ('super_admin', 'admin', 'project_manager') OR 'manage_employees' = ANY(capabilities))
     )
   );
 
@@ -4122,7 +4140,7 @@ ON work_session_pauses FOR UPDATE
       WHERE ws.id = session_id
       AND ws.workspace_id = public.current_workspace()
       AND u.workspace_id = public.current_workspace()
-      AND (u.role IN ('super_admin', 'pm') OR 'manage_employees' = ANY(u.capabilities))
+      AND (u.role IN ('super_admin', 'admin', 'project_manager') OR 'manage_employees' = ANY(u.capabilities))
     )
   );
 
@@ -4191,7 +4209,7 @@ ON work_session_adjustments FOR INSERT
       SELECT 1 FROM public.users
       WHERE id = auth.uid() 
       AND workspace_id = public.current_workspace() 
-      AND (role IN ('super_admin', 'pm', 'admin', 'owner') OR 'manage_projects' = ANY(capabilities))
+      AND (role IN ('super_admin', 'project_manager', 'admin', 'project_manager') OR 'manage_projects' = ANY(capabilities))
     )
   );
 
@@ -4224,7 +4242,7 @@ ON project_reviews FOR INSERT
       SELECT 1 FROM public.users
       WHERE id = auth.uid() 
       AND workspace_id = public.current_workspace() 
-      AND (role IN ('super_admin', 'pm', 'admin', 'owner') OR 'manage_projects' = ANY(capabilities))
+      AND (role IN ('super_admin', 'project_manager', 'admin', 'project_manager') OR 'manage_projects' = ANY(capabilities))
     )
   );
 
@@ -4318,7 +4336,7 @@ CREATE POLICY "Project Managers can insert external access links"
 ON public.external_access_links FOR INSERT
   WITH CHECK (
     workspace_id IN (
-      SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'project_manager')
     )
   );
 DROP POLICY IF EXISTS "Project Managers can update external access links" ON public.external_access_links;
@@ -4326,7 +4344,7 @@ CREATE POLICY "Project Managers can update external access links"
 ON public.external_access_links FOR UPDATE
   USING (
     workspace_id IN (
-      SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'pm')
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND role IN ('super_admin', 'admin', 'project_manager')
     )
   );
 
@@ -4719,7 +4737,7 @@ USING (
     SELECT 1 FROM users
     WHERE users.id = auth.uid() 
       AND users.workspace_id = task_collaborators.workspace_id
-      AND users.role IN ('super_admin', 'pm')
+      AND users.role IN ('super_admin', 'admin', 'project_manager')
   )
 );
 
@@ -5191,9 +5209,9 @@ ALTER TABLE public.user_capability_overrides ENABLE ROW LEVEL SECURITY;
 -- 2. Seed Default Roles
 INSERT INTO public.roles (id, description) VALUES
     ('super_admin', 'Full platform access including governance & security'),
-    ('owner', 'Workspace owner'),
+    ('project_manager', 'Workspace admin'),
     ('admin', 'Workspace administrator'),
-    ('pm', 'Project Manager - operational leadership'),
+    ('project_manager', 'Project Manager - operational leadership'),
     ('project_manager', 'Project Manager alias'),
     ('developer', 'Execution and sprint focus'),
     ('hr_manager', 'HR capabilities'),
@@ -5220,11 +5238,11 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.role_capabilities (role_id, capability_id)
 SELECT 'super_admin', id FROM public.capabilities ON CONFLICT DO NOTHING;
 INSERT INTO public.role_capabilities (role_id, capability_id)
-SELECT 'owner', id FROM public.capabilities ON CONFLICT DO NOTHING;
+SELECT 'project_manager', id FROM public.capabilities ON CONFLICT DO NOTHING;
 
 -- PM mapping
 INSERT INTO public.role_capabilities (role_id, capability_id)
-SELECT 'pm', id FROM public.capabilities WHERE id IN (
+SELECT 'project_manager', id FROM public.capabilities WHERE id IN (
     'view_projects', 'manage_projects', 'view_tasks', 'manage_tasks', 'view_scheduling', 'manage_scheduling',
     'view_analytics', 'view_reports', 'manage_logistics', 'manage_settings', 'view_teams', 'manage_teams',
     'manage_integrations', 'manage_automations'
@@ -5441,7 +5459,7 @@ CREATE TABLE IF NOT EXISTS public.milestones (
 
     status text NOT NULL DEFAULT 'pending',
 
-    owner_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    created_by_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
 
     predicted_completion timestamptz,
 
@@ -5608,19 +5626,119 @@ CREATE TABLE IF NOT EXISTS public.approval_chains (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     name text NOT NULL,
+    trigger_event text,
+    trigger_config jsonb DEFAULT '{}'::jsonb,
+    enabled boolean DEFAULT true,
     created_at timestamptz DEFAULT now()
 );
 ALTER TABLE public.approval_chains ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "approval_chains_read" ON public.approval_chains FOR SELECT USING (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client')
+);
+CREATE POLICY "approval_chains_insert" ON public.approval_chains FOR INSERT WITH CHECK (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+);
+CREATE POLICY "approval_chains_update" ON public.approval_chains FOR UPDATE USING (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+);
+CREATE POLICY "approval_chains_delete" ON public.approval_chains FOR DELETE USING (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager')
+);
 
 CREATE TABLE IF NOT EXISTS public.approval_instances (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
     chain_id uuid NOT NULL REFERENCES public.approval_chains(id) ON DELETE CASCADE,
-    target_id uuid NOT NULL,
+    target_type text,
+    target_id text NOT NULL,
     status text DEFAULT 'pending',
+    current_step integer DEFAULT 1,
+    initiated_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    completed_at timestamptz,
     created_at timestamptz DEFAULT now()
 );
 ALTER TABLE public.approval_instances ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "approval_instances_read" ON public.approval_instances FOR SELECT USING (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client')
+);
+CREATE POLICY "approval_instances_insert" ON public.approval_instances FOR INSERT WITH CHECK (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+);
+CREATE POLICY "approval_instances_update" ON public.approval_instances FOR UPDATE USING (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+);
+CREATE POLICY "approval_instances_delete" ON public.approval_instances FOR DELETE USING (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager')
+);
+
+CREATE TABLE IF NOT EXISTS public.approval_steps (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    chain_id uuid NOT NULL REFERENCES public.approval_chains(id) ON DELETE CASCADE,
+    step_order integer NOT NULL,
+    approver_role text NOT NULL,
+    approver_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    timeout_hours integer DEFAULT 48,
+    created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.approval_steps ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "approval_steps_read" ON public.approval_steps FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.approval_chains ac WHERE ac.id = approval_steps.chain_id AND ac.workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid)
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client')
+);
+CREATE POLICY "approval_steps_insert" ON public.approval_steps FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM public.approval_chains ac WHERE ac.id = approval_steps.chain_id AND ac.workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid)
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+);
+CREATE POLICY "approval_steps_update" ON public.approval_steps FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM public.approval_chains ac WHERE ac.id = approval_steps.chain_id AND ac.workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid)
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+);
+CREATE POLICY "approval_steps_delete" ON public.approval_steps FOR DELETE USING (
+    EXISTS (SELECT 1 FROM public.approval_chains ac WHERE ac.id = approval_steps.chain_id AND ac.workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid)
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager')
+);
+
+CREATE TABLE IF NOT EXISTS public.decision_recommendation_history (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    insight_id text NOT NULL,
+    action_type text NOT NULL,
+    detected_problem text,
+    recommended_action text,
+    predicted_impact jsonb,
+    status text DEFAULT 'open',
+    executed_at timestamptz,
+    created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.decision_recommendation_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "decision_read" ON public.decision_recommendation_history FOR SELECT USING (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client')
+);
+CREATE POLICY "decision_insert" ON public.decision_recommendation_history FOR INSERT WITH CHECK (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+);
+CREATE POLICY "decision_update" ON public.decision_recommendation_history FOR UPDATE USING (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+);
+CREATE POLICY "decision_delete" ON public.decision_recommendation_history FOR DELETE USING (
+    workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid
+    AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager')
+);
 
 CREATE TABLE IF NOT EXISTS public.automation_rules (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6037,11 +6155,11 @@ CREATE POLICY "Wait states managed by PMs and Admins"
 ON wait_states FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -6056,11 +6174,11 @@ CREATE POLICY "Signoffs managed by PMs and Admins"
 ON project_signoffs FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -6075,11 +6193,11 @@ CREATE POLICY "Allocations managed by PMs and Admins"
 ON project_allocations FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -6094,11 +6212,11 @@ CREATE POLICY "Allocation periods managed by PMs and Admins"
 ON allocation_periods FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -6109,18 +6227,18 @@ CREATE POLICY "Billing milestones visible to workspace admins"
 ON public.billing_milestones FOR SELECT
   USING (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 DROP POLICY IF EXISTS "Billing milestones managed by admins" ON public.billing_milestones;
 CREATE POLICY "Billing milestones managed by admins" 
 ON public.billing_milestones FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -6131,18 +6249,18 @@ CREATE POLICY "Client credits visible to workspace admins"
 ON public.client_credits FOR SELECT
   USING (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 DROP POLICY IF EXISTS "Client credits managed by admins" ON public.client_credits;
 CREATE POLICY "Client credits managed by admins" 
 ON public.client_credits FOR ALL
   USING (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -6153,7 +6271,7 @@ CREATE POLICY "Invoice audit logs visible to admins"
 ON public.invoice_audit_logs FOR SELECT
   USING (
     workspace_id = public.current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 DROP POLICY IF EXISTS "Invoice audit logs insertable by workspace" ON public.invoice_audit_logs;
 CREATE POLICY "Invoice audit logs insertable by workspace" 
@@ -6293,7 +6411,7 @@ BEGIN
   SELECT role INTO v_role FROM public.users WHERE id = auth.uid() LIMIT 1;
 
   -- Admins/PMs can modify anything
-  IF v_role IN ('super_admin', 'pm') THEN
+  IF v_role IN ('super_admin', 'admin', 'project_manager') THEN
     RETURN NEW;
   END IF;
 
@@ -6908,7 +7026,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM users 
-    WHERE users.id = auth.uid() AND users.role IN ('super_admin', 'pm')
+    WHERE users.id = auth.uid() AND users.role IN ('super_admin', 'admin', 'project_manager')
   )
 );
 
@@ -6932,7 +7050,7 @@ CREATE TABLE IF NOT EXISTS system_migrations (
 -- 13. follow_ups
 CREATE TABLE IF NOT EXISTS follow_ups (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id    uuid        NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  created_by_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   source_type text        NOT NULL CHECK (source_type IN ('task_comment', 'task', 'project')),
   source_id   uuid        NOT NULL,
   remind_at   timestamptz NOT NULL,
@@ -6954,13 +7072,13 @@ DECLARE
 BEGIN
     -- 3.1. Insert sandbox workspace row copying production settings
     INSERT INTO workspaces (
-        name, owner_id, business_type, template_id, execution_mode, default_lanes,
+        name, created_by_id, business_type, template_id, execution_mode, default_lanes,
         workflow_rules, work_start, work_end, lunch_duration, workdays, timezone,
         attendance_enabled, payroll_enabled, productivity_factor, country, region,
         completion_policy, allow_overallocation, status, metadata
     )
     SELECT 
-        '[Sandbox] ' || name, owner_id, business_type, template_id, execution_mode, default_lanes,
+        '[Sandbox] ' || name, created_by_id, business_type, template_id, execution_mode, default_lanes,
         workflow_rules, work_start, work_end, lunch_duration, workdays, timezone,
         attendance_enabled, payroll_enabled, productivity_factor, country, region,
         completion_policy, allow_overallocation, 'sandbox', 
@@ -6989,11 +7107,11 @@ BEGIN
     -- 3.4. Clone projects (non-deleted ones)
     FOR v_project IN SELECT * FROM projects WHERE workspace_id = p_workspace_id AND deleted_at IS NULL LOOP
         INSERT INTO projects (
-            workspace_id, name, description, status, template, owner_id, team_id, deadline, created_at, updated_at
+            workspace_id, name, description, status, template, created_by_id, team_id, deadline, created_at, updated_at
         )
         VALUES (
             v_sandbox_id, v_project.name, v_project.description, v_project.status, v_project.template, 
-            v_project.owner_id, NULL, v_project.deadline, v_project.created_at, v_project.updated_at
+            v_project.created_by_id, NULL, v_project.deadline, v_project.created_at, v_project.updated_at
         )
         RETURNING id INTO v_new_project_id;
 
@@ -7033,7 +7151,7 @@ DO INSTEAD (
 -- Extra Indexes
 CREATE INDEX IF NOT EXISTS idx_projects_external_id ON public.projects(external_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_external_id ON public.tasks(external_id);
-CREATE INDEX IF NOT EXISTS idx_follow_ups_owner_completed ON follow_ups(owner_id, completed);
+CREATE INDEX IF NOT EXISTS idx_follow_ups_owner_completed ON follow_ups(created_by_id, completed);
 CREATE INDEX IF NOT EXISTS idx_follow_ups_remind_at ON follow_ups(remind_at);
 
 -- Extra Tables RLS Enablement & Policies
@@ -7047,8 +7165,8 @@ DROP POLICY IF EXISTS "Users can manage their own follow ups" ON follow_ups;
 CREATE POLICY "Users can manage their own follow ups" 
 ON follow_ups
   FOR ALL TO authenticated
-  USING (auth.uid() = owner_id)
-  WITH CHECK (auth.uid() = owner_id);
+  USING (auth.uid() = created_by_id)
+  WITH CHECK (auth.uid() = created_by_id);
 -- Migration: Add Company Calendar tables
 
 CREATE TABLE IF NOT EXISTS public.workspace_calendar_settings (
@@ -7202,11 +7320,11 @@ CREATE POLICY "Departments can be managed by PMs and Admins"
 ON public.departments FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- 2. Epics Policies
@@ -7220,11 +7338,11 @@ CREATE POLICY "Epics can be managed by PMs and Admins"
 ON public.epics FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- 3. Milestones Policies
@@ -7238,11 +7356,11 @@ CREATE POLICY "Milestones can be managed by PMs and Admins"
 ON public.milestones FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- 4. Task Comments Policies
@@ -7271,11 +7389,11 @@ CREATE POLICY "Task comments can be managed by PMs and Admins"
 ON public.task_comments FOR ALL
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   )
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 
@@ -7287,7 +7405,7 @@ ON public.task_comments FOR ALL
 -- ------------------------------------------------------------------------------
 -- PART 1: Ownership Transfer
 -- ------------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.transfer_workspace_ownership(new_owner_id uuid)
+CREATE OR REPLACE FUNCTION public.transfer_workspace_ownership(new_created_by_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -7295,16 +7413,16 @@ SET search_path = public
 AS $$
 DECLARE
 v_workspace_id uuid;
-  v_old_owner_id uuid;
+  v_old_created_by_id uuid;
   v_is_valid boolean;
 BEGIN
   v_workspace_id := public.current_workspace();
-  v_old_owner_id := auth.uid();
+  v_old_created_by_id := auth.uid();
   
   -- 1. Validate ownership
   IF NOT EXISTS (
     SELECT 1 FROM workspaces 
-    WHERE id = v_workspace_id AND owner_id = v_old_owner_id
+    WHERE id = v_workspace_id AND created_by_id = v_old_created_by_id
   ) THEN
     RAISE EXCEPTION 'Only the current workspace owner can transfer ownership.';
   END IF;
@@ -7312,7 +7430,7 @@ BEGIN
   -- 2. Validate new owner
   SELECT EXISTS (
     SELECT 1 FROM users
-    WHERE id = new_owner_id 
+    WHERE id = new_created_by_id 
       AND workspace_id = v_workspace_id
       AND status = 'active'
       AND role = 'super_admin'
@@ -7324,18 +7442,18 @@ BEGIN
 
   -- 3. Update ownership
   UPDATE workspaces
-  SET owner_id = new_owner_id, updated_at = now()
+  SET created_by_id = new_created_by_id, updated_at = now()
   WHERE id = v_workspace_id;
 
   -- 4. Create audit entry
   INSERT INTO activity_logs (workspace_id, actor_id, action, metadata)
   VALUES (
     v_workspace_id,
-    v_old_owner_id,
+    v_old_created_by_id,
     'WORKSPACE_OWNERSHIP_TRANSFERRED',
     jsonb_build_object(
-      'old_owner_id', v_old_owner_id,
-      'new_owner_id', new_owner_id,
+      'old_created_by_id', v_old_created_by_id,
+      'new_created_by_id', new_created_by_id,
       'timestamp', now()
     )
   );
@@ -7357,14 +7475,14 @@ $$;
   
   -- Scenario A: Workspace has 1 super_admin. Try to demote.
   -- Expected: BLOCKED ('Cannot remove the last Super Admin...')
-  UPDATE users SET role = 'pm' WHERE id = 'last-admin-id';
+  UPDATE users SET role = 'project_manager' WHERE id = 'last-admin-id';
   
   -- Scenario B: Workspace has 2 super_admins. Demote one.
   -- Expected: SUCCESS
-  UPDATE users SET role = 'pm' WHERE id = 'second-admin-id';
+  UPDATE users SET role = 'project_manager' WHERE id = 'second-admin-id';
   
   -- Scenario C: Owner transfers ownership.
-  -- Expected: owner_id changes, audit created in activity_logs
+  -- Expected: created_by_id changes, audit created in activity_logs
   SELECT public.transfer_workspace_ownership('new-owner-id');
 */
 
@@ -7713,7 +7831,7 @@ BEGIN
 
     SELECT COUNT(*) INTO v_owned_projects
     FROM public.projects
-    WHERE owner_id = p_user_id 
+    WHERE created_by_id = p_user_id 
       AND workspace_id = p_workspace_id 
       AND status NOT IN ('completed', 'done', 'archived');
 
@@ -7934,7 +8052,7 @@ BEGIN
     IF NEW.status != 'active' THEN
       SELECT EXISTS (
         SELECT 1 FROM public.workspaces 
-        WHERE id = OLD.workspace_id AND owner_id = OLD.id
+        WHERE id = OLD.workspace_id AND created_by_id = OLD.id
       ) INTO is_owner;
 
       IF is_owner THEN
@@ -8046,15 +8164,15 @@ BEGIN
           AND updated_at >= NOW() - INTERVAL '1 day' AND deleted_at IS NULL;
 
         SELECT COUNT(*) INTO v_waiting_on_me FROM public.wait_states
-        WHERE workspace_id = p_workspace_id AND owner_id = p_user_id
+        WHERE workspace_id = p_workspace_id AND created_by_id = p_user_id
           AND status = 'active';
 
-    ELSIF p_role = 'pm' THEN
+    ELSIF p_role = 'project_manager' THEN
         SELECT COUNT(*) INTO v_today_tasks FROM public.projects
-        WHERE workspace_id = p_workspace_id AND owner_id = p_user_id AND status != 'archived' AND deleted_at IS NULL;
+        WHERE workspace_id = p_workspace_id AND created_by_id = p_user_id AND status != 'archived' AND deleted_at IS NULL;
         
         SELECT COUNT(*) INTO v_blockers FROM public.projects
-        WHERE workspace_id = p_workspace_id AND owner_id = p_user_id AND (risk = 'high' OR delay_drift_days > 0) AND deleted_at IS NULL;
+        WHERE workspace_id = p_workspace_id AND created_by_id = p_user_id AND (risk = 'high' OR delay_drift_days > 0) AND deleted_at IS NULL;
 
         SELECT COUNT(*) INTO v_approvals FROM public.universal_approvals
         WHERE workspace_id = p_workspace_id AND status = 'pending';
@@ -8274,7 +8392,7 @@ CREATE POLICY "PMs and Admins can update change requests"
 ON public.change_requests FOR UPDATE
   USING (
     workspace_id = public.current_workspace() AND
-    public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'pm')
+    public.get_user_role(workspace_id) IN ('super_admin', 'admin', 'project_manager')
   );
 
 -- Part 3: Time to Invoice Pipeline
@@ -8299,7 +8417,7 @@ DECLARE
   v_amount numeric;
 BEGIN
   v_role := public.get_user_role(p_workspace_id);
-  IF v_role NOT IN ('super_admin', 'admin', 'pm') THEN
+  IF v_role NOT IN ('super_admin', 'admin', 'project_manager') THEN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 
@@ -8389,7 +8507,7 @@ CREATE TABLE IF NOT EXISTS public.employee_handoffs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   departing_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
-  manager_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  lead_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
   notes text,
   risks text,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -8627,7 +8745,7 @@ CREATE POLICY "Working rules editable by PMs and Admins"
 ON company_working_rules FOR ALL
     USING (
         workspace_id = public.current_workspace() AND
-        EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+        EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
     );
 
 -- Policies for company_holidays
@@ -8640,7 +8758,7 @@ CREATE POLICY "Company holidays editable by PMs and Admins"
 ON company_holidays FOR ALL
     USING (
         workspace_id = public.current_workspace() AND
-        EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'pm'))
+        EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = public.current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
     );
 
 
@@ -8759,7 +8877,7 @@ ON public.milestone_signoffs FOR SELECT
         EXISTS (
             SELECT 1 FROM public.milestones m
             JOIN public.projects p ON p.id = m.project_id
-            WHERE m.id = milestone_signoffs.milestone_id AND p.owner_id = auth.uid()
+            WHERE m.id = milestone_signoffs.milestone_id AND p.created_by_id = auth.uid()
         )
     );
 
@@ -8773,7 +8891,7 @@ ON public.milestone_signoffs FOR INSERT
         EXISTS (
             SELECT 1 FROM public.milestones m
             JOIN public.projects p ON p.id = m.project_id
-            WHERE m.id = milestone_id AND p.owner_id = auth.uid()
+            WHERE m.id = milestone_id AND p.created_by_id = auth.uid()
         )
     );
 -- ==========================================
@@ -8956,7 +9074,7 @@ CREATE POLICY "Invitations can be created by PMs and Admins"
 ON invitations FOR INSERT
   WITH CHECK (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- Update: PMs and Admins can update/revoke invitations
@@ -8965,7 +9083,7 @@ CREATE POLICY "Invitations can be updated by PMs and Admins"
 ON invitations FOR UPDATE
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- Delete: PMs and Admins can delete invitations
@@ -8974,7 +9092,7 @@ CREATE POLICY "Invitations can be deleted by PMs and Admins"
 ON invitations FOR DELETE
   USING (
     workspace_id = current_workspace() AND
-    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'pm'))
+    EXISTS (SELECT 1 FROM public.users me WHERE me.id = auth.uid() AND me.workspace_id = current_workspace() AND me.role IN ('super_admin', 'admin', 'project_manager'))
   );
 
 -- ==========================================
@@ -9622,14 +9740,14 @@ CREATE POLICY "Clients can view billable time logs for their projects" ON public
 -- ==============================================================================
 
 -- 1. Patch existing data to comply with the new constraint
-UPDATE public.team_members SET member_role = 'owner' WHERE member_role = 'admin';
-UPDATE public.team_members SET member_role = 'editor' WHERE member_role = 'member';
-UPDATE public.team_members SET member_role = 'viewer' WHERE member_role IS NULL OR member_role NOT IN ('owner', 'editor', 'viewer');
+UPDATE public.team_members SET member_role = 'project_manager' WHERE member_role = 'admin';
+UPDATE public.team_members SET member_role = 'editor' WHERE member_role = 'employee';
+UPDATE public.team_members SET member_role = 'viewer' WHERE member_role IS NULL OR member_role NOT IN ('project_manager', 'editor', 'viewer');
 
 -- 2. Enforce specific roles on team_members
 ALTER TABLE public.team_members 
 ADD CONSTRAINT check_member_role 
-CHECK (member_role IN ('owner', 'editor', 'viewer'));
+CHECK (member_role IN ('project_manager', 'developer', 'client'));
 
 -- 2. Drop existing broad policies for tasks
 DROP POLICY IF EXISTS "Tasks are visible to workspace" ON public.tasks;
@@ -9646,7 +9764,7 @@ USING (
     SELECT 1 FROM public.team_members
     WHERE team_members.workspace_id = tasks.workspace_id
     AND team_members.user_id = auth.uid()
-    AND team_members.member_role IN ('owner', 'editor', 'viewer')
+    AND team_members.member_role IN ('project_manager', 'developer', 'client')
   )
 );
 
@@ -9658,7 +9776,7 @@ WITH CHECK (
     SELECT 1 FROM public.team_members
     WHERE team_members.workspace_id = tasks.workspace_id
     AND team_members.user_id = auth.uid()
-    AND team_members.member_role IN ('owner', 'editor')
+    AND team_members.member_role IN ('project_manager', 'editor')
   )
 );
 
@@ -9676,7 +9794,7 @@ USING (
     SELECT 1 FROM public.team_members
     WHERE team_members.workspace_id = tasks.workspace_id
     AND team_members.user_id = auth.uid()
-    AND team_members.member_role IN ('owner', 'editor')
+    AND team_members.member_role IN ('project_manager', 'editor')
   )
 );
 
@@ -9688,537 +9806,50 @@ USING (
     SELECT 1 FROM public.team_members
     WHERE team_members.workspace_id = tasks.workspace_id
     AND team_members.user_id = auth.uid()
-    AND team_members.member_role IN ('owner', 'editor')
+    AND team_members.member_role IN ('project_manager', 'editor')
   )
 );
 
--- Migration: RC22_1_HR_SCHEMA_PATCH
--- Description: Adds missing clock_events and leave_balances tables for HR/Attendance runtime stability, and missing finance schema columns.
+
+-- ============================================================================
+-- EXTENDED MODULES (HR, GOVERNANCE, ETC.)
+-- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.clock_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    clock_in timestamptz,
+    clock_out timestamptz,
     event_type TEXT NOT NULL CHECK (event_type IN ('CLOCK_IN', 'CLOCK_OUT')),
     timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
 ALTER TABLE public.clock_events ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Enable read access for own records or HR/Admins" ON public.clock_events;
-CREATE POLICY "Enable read access for own records or HR/Admins"
-    ON public.clock_events FOR SELECT
-    USING (
-        user_id = auth.uid() 
-        OR EXISTS (
-            SELECT 1 FROM public.users me 
-            WHERE me.id = auth.uid() 
-            AND me.workspace_id = clock_events.workspace_id 
-            AND me.role IN ('super_admin', 'admin', 'hr')
-        )
-    );
-
-DROP POLICY IF EXISTS "Enable write access for own records or HR/Admins" ON public.clock_events;
-CREATE POLICY "Enable write access for own records or HR/Admins"
-    ON public.clock_events FOR ALL
-    USING (
-        user_id = auth.uid() 
-        OR EXISTS (
-            SELECT 1 FROM public.users me 
-            WHERE me.id = auth.uid() 
-            AND me.workspace_id = clock_events.workspace_id 
-            AND me.role IN ('super_admin', 'admin', 'hr')
-        )
-    );
 
 CREATE TABLE IF NOT EXISTS public.leave_balances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     leave_type TEXT NOT NULL,
-    total_allowance NUMERIC NOT NULL DEFAULT 0,
-    used_balance NUMERIC NOT NULL DEFAULT 0,
-    available_balance NUMERIC GENERATED ALWAYS AS (total_allowance - used_balance) STORED,
+    total_allowance NUMERIC NOT NULL DEFAULT 0 CHECK (total_allowance >= 0),
+    used_balance NUMERIC NOT NULL DEFAULT 0 CHECK (used_balance >= 0) CHECK (used_balance <= total_allowance),
+    available_balance numeric GENERATED ALWAYS AS (total_allowance - used_balance) STORED,
     year INTEGER NOT NULL DEFAULT extract(year from current_date),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE(workspace_id, user_id, leave_type, year)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
 ALTER TABLE public.leave_balances ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Enable read access for own records or HR/Admins" ON public.leave_balances;
-CREATE POLICY "Enable read access for own records or HR/Admins"
-    ON public.leave_balances FOR SELECT
-    USING (
-        user_id = auth.uid() 
-        OR EXISTS (
-            SELECT 1 FROM public.users me 
-            WHERE me.id = auth.uid() 
-            AND me.workspace_id = leave_balances.workspace_id 
-            AND me.role IN ('super_admin', 'admin', 'hr')
-        )
-    );
-
-DROP POLICY IF EXISTS "Enable write access for HR/Admins" ON public.leave_balances;
-CREATE POLICY "Enable write access for HR/Admins"
-    ON public.leave_balances FOR ALL
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.users me 
-            WHERE me.id = auth.uid() 
-            AND me.workspace_id = leave_balances.workspace_id 
-            AND me.role IN ('super_admin', 'admin', 'hr')
-        )
-    );
-
-ALTER TABLE public.invoice_line_items
-ADD COLUMN IF NOT EXISTS tax_percentage numeric DEFAULT 0 NOT NULL;
-
--- Migration: RC22_2_RUNTIME_STABILIZATION
--- Description: Adds missing columns for frontend queries and fixes table grants for HR
-
--- 1. Integration Sync Jobs
-ALTER TABLE public.integration_sync_jobs
-ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ,
-ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now(),
-ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
-
--- 2. Invoices missing premium fields
-ALTER TABLE public.invoices
-ADD COLUMN IF NOT EXISTS subtotal numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS discount_amount numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS taxable_amount numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS cgst_amount numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS sgst_amount numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS igst_amount numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS total_tax numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS grand_total numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS balance_due numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS billing_state_snapshot jsonb,
-ADD COLUMN IF NOT EXISTS company_base_currency text DEFAULT 'USD',
-ADD COLUMN IF NOT EXISTS base_amount numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS invoice_currency text DEFAULT 'USD',
-ADD COLUMN IF NOT EXISTS invoice_amount numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS converted_amount numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS exchange_rate numeric,
-ADD COLUMN IF NOT EXISTS exchange_rate_locked boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS exchange_locked_at timestamptz,
-ADD COLUMN IF NOT EXISTS exchange_override_reason text,
-ADD COLUMN IF NOT EXISTS conversion_date date,
-ADD COLUMN IF NOT EXISTS task_id uuid,
-ADD COLUMN IF NOT EXISTS billing_type text,
-ADD COLUMN IF NOT EXISTS payment_terms text,
-ADD COLUMN IF NOT EXISTS milestone_id uuid;
-
--- 3. Grants for new HR tables
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.clock_events TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.clock_events TO service_role;
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.leave_balances TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.leave_balances TO service_role;
-
--- 4. Users missing premium fields
-ALTER TABLE public.users
-ADD COLUMN IF NOT EXISTS auth_user_id uuid,
-ADD COLUMN IF NOT EXISTS authority text,
-ADD COLUMN IF NOT EXISTS capabilities jsonb,
-ADD COLUMN IF NOT EXISTS functional_access jsonb,
-ADD COLUMN IF NOT EXISTS date_of_joining date,
-ADD COLUMN IF NOT EXISTS employee_type text,
-ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}'::jsonb,
-ADD COLUMN IF NOT EXISTS preferences jsonb DEFAULT '{}'::jsonb,
-ADD COLUMN IF NOT EXISTS contract_start date,
-ADD COLUMN IF NOT EXISTS contract_end date,
-ADD COLUMN IF NOT EXISTS probation_end date,
-ADD COLUMN IF NOT EXISTS employment_status text,
-ADD COLUMN IF NOT EXISTS force_password_change boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS external_access boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS visibility_scope jsonb;
-
-
-
--- RC22_3_DATABASE_CONTRACT_PATCH.sql
--- Description: Patch to resolve RC22.2 missing tables and contract deviations
-
--- ================================================
--- FINANCE PATCH
--- ================================================
-ALTER TABLE IF EXISTS public.invoice_line_items
-  ADD COLUMN IF NOT EXISTS tax_percentage numeric DEFAULT 0 NOT NULL;
-
--- ================================================
--- CLOCK EVENTS TABLE
--- ================================================
-CREATE TABLE IF NOT EXISTS public.clock_events (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  clock_in timestamptz,
-  clock_out timestamptz,
-  duration_minutes integer,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.clock_events ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist (handling safety)
-DROP POLICY IF EXISTS "Enable read access for own records or HR/Admins" ON public.clock_events;
-DROP POLICY IF EXISTS "Enable insert for own records or HR/Admins" ON public.clock_events;
-DROP POLICY IF EXISTS "Enable update for own records or HR/Admins" ON public.clock_events;
-DROP POLICY IF EXISTS "Enable delete for admins only" ON public.clock_events;
-
--- SELECT
-CREATE POLICY "Enable read access for own records or HR/Admins" ON public.clock_events FOR SELECT
-USING (
-  user_id = auth.uid() OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-      AND users.workspace_id = clock_events.workspace_id
-      AND users.role IN ('super_admin', 'admin', 'hr')
-  )
-);
-
--- INSERT
-CREATE POLICY "Enable insert for own records or HR/Admins" ON public.clock_events FOR INSERT
-WITH CHECK (
-  user_id = auth.uid() OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-      AND users.workspace_id = clock_events.workspace_id
-      AND users.role IN ('super_admin', 'admin', 'hr')
-  )
-);
-
--- UPDATE
-CREATE POLICY "Enable update for own records or HR/Admins" ON public.clock_events FOR UPDATE
-USING (
-  user_id = auth.uid() OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-      AND users.workspace_id = clock_events.workspace_id
-      AND users.role IN ('super_admin', 'admin', 'hr')
-  )
-);
-
--- DELETE
-CREATE POLICY "Enable delete for admins only" ON public.clock_events FOR DELETE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-      AND users.workspace_id = clock_events.workspace_id
-      AND users.role IN ('super_admin', 'admin')
-  )
-);
-
--- ================================================
--- LEAVE BALANCES TABLE
--- ================================================
-CREATE TABLE IF NOT EXISTS public.leave_balances (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  leave_type text NOT NULL,
-  total_allowance numeric DEFAULT 0,
-  used_balance numeric DEFAULT 0,
-  available_balance numeric GENERATED ALWAYS AS (total_allowance - used_balance) STORED,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.leave_balances ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Enable read access for own records or HR/Admins" ON public.leave_balances;
-DROP POLICY IF EXISTS "Enable insert for HR/Admins only" ON public.leave_balances;
-DROP POLICY IF EXISTS "Enable update for HR/Admins only" ON public.leave_balances;
-DROP POLICY IF EXISTS "Enable delete for super_admins only" ON public.leave_balances;
-
--- SELECT
-CREATE POLICY "Enable read access for own records or HR/Admins" ON public.leave_balances FOR SELECT
-USING (
-  user_id = auth.uid() OR
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-      AND users.workspace_id = leave_balances.workspace_id
-      AND users.role IN ('super_admin', 'admin', 'hr')
-  )
-);
-
--- INSERT
-CREATE POLICY "Enable insert for HR/Admins only" ON public.leave_balances FOR INSERT
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-      AND users.workspace_id = leave_balances.workspace_id
-      AND users.role IN ('super_admin', 'admin', 'hr')
-  )
-);
-
--- UPDATE
-CREATE POLICY "Enable update for HR/Admins only" ON public.leave_balances FOR UPDATE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-      AND users.workspace_id = leave_balances.workspace_id
-      AND users.role IN ('super_admin', 'admin', 'hr')
-  )
-);
-
--- DELETE
-CREATE POLICY "Enable delete for super_admins only" ON public.leave_balances FOR DELETE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid()
-      AND users.workspace_id = leave_balances.workspace_id
-      AND users.role = 'super_admin'
-  )
-);
--- RC22_8_LEAVE_BALANCE_REPAIR.sql
--- Description: Repair the leave_balances table by converting available_balance to a true generated column
--- while preserving existing data and hardening constraints.
-
--- ================================================
--- STEP 3 — Normalize Existing Rows
--- ================================================
--- Ensure total_allowance and used_balance are not null before constraints and generation.
-UPDATE public.leave_balances 
-SET total_allowance = 0 
-WHERE total_allowance IS NULL;
-
-UPDATE public.leave_balances 
-SET used_balance = 0 
-WHERE used_balance IS NULL;
-
--- Ensure columns cannot be null in the future
-ALTER TABLE public.leave_balances 
-  ALTER COLUMN total_allowance SET DEFAULT 0,
-  ALTER COLUMN total_allowance SET NOT NULL,
-  ALTER COLUMN used_balance SET DEFAULT 0,
-  ALTER COLUMN used_balance SET NOT NULL;
-
-
--- ================================================
--- STEP 4 — Constraint Hardening
--- ================================================
-ALTER TABLE public.leave_balances DROP CONSTRAINT IF EXISTS chk_leave_balances_positive_allowance;
-ALTER TABLE public.leave_balances DROP CONSTRAINT IF EXISTS chk_leave_balances_positive_used;
-ALTER TABLE public.leave_balances DROP CONSTRAINT IF EXISTS chk_leave_balances_valid_balance;
-
-ALTER TABLE public.leave_balances ADD CONSTRAINT chk_leave_balances_positive_allowance CHECK (total_allowance >= 0);
-ALTER TABLE public.leave_balances ADD CONSTRAINT chk_leave_balances_positive_used CHECK (used_balance >= 0);
-ALTER TABLE public.leave_balances ADD CONSTRAINT chk_leave_balances_valid_balance CHECK (used_balance <= total_allowance);
-
-
--- ================================================
--- STEP 2 — Repair Column
--- ================================================
-ALTER TABLE public.leave_balances DROP COLUMN IF EXISTS available_balance;
-
-ALTER TABLE public.leave_balances 
-  ADD COLUMN available_balance numeric GENERATED ALWAYS AS (total_allowance - used_balance) STORED;
-
-
--- ================================================
--- STEP 5 — Verification Script (To be run separately)
--- ================================================
-/*
--- Insert a test row (using an existing user_id and workspace_id)
-INSERT INTO public.leave_balances (workspace_id, user_id, leave_type, total_allowance, used_balance)
-VALUES (
-  'YOUR_WORKSPACE_ID_HERE', 
-  'YOUR_USER_ID_HERE', 
-  'Test Leave Verification', 
-  20, 
-  5
-) RETURNING *;
-
--- EXPECTED RESULT: 
--- The returned row will show `available_balance` = 15.
-
--- Attempt manual update:
-UPDATE public.leave_balances 
-SET available_balance = 100 
-WHERE leave_type = 'Test Leave Verification';
-
--- EXPECTED RESULT:
--- ERROR:  column "available_balance" can only be updated to DEFAULT
--- DETAIL:  Column "available_balance" is a generated column.
-*/
-
--- ==============================================================================
--- RC23 RUNTIME CLOSURE & CONTRACT PATCHES
--- ==============================================================================
-
--- 1. FILES TABLE MODIFICATIONS
-ALTER TABLE public.files
-ADD COLUMN IF NOT EXISTS archived_at timestamptz NULL,
-ADD COLUMN IF NOT EXISTS archived_by uuid NULL REFERENCES auth.users(id);
-
--- 2. WORKSPACE STORAGE USAGE FUNCTION
-CREATE OR REPLACE FUNCTION public.workspace_storage_usage(p_workspace_id UUID)
-RETURNS bigint
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-    total_usage bigint;
-BEGIN
-    SELECT COALESCE(SUM(size_bytes), 0)
-    INTO total_usage
-    FROM public.files
-    WHERE workspace_id = p_workspace_id AND archived_at IS NULL;
-
-    RETURN total_usage;
-END;
-$$;
-
--- 3. INTEGRATION HEALTH TABLE
-CREATE TABLE IF NOT EXISTS public.integration_health (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    provider text NOT NULL,
-    status text NOT NULL DEFAULT 'healthy',
-    last_checked_at timestamptz DEFAULT now(),
-    last_error text,
-    retry_count integer DEFAULT 0,
-    metadata jsonb DEFAULT '{}'::jsonb,
-    created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now(),
-    UNIQUE(workspace_id, provider)
-);
-
-ALTER TABLE public.integration_health ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "integration_health_select" ON public.integration_health;
-CREATE POLICY "integration_health_select" ON public.integration_health FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role != 'client')
-);
-
-DROP POLICY IF EXISTS "integration_health_insert" ON public.integration_health;
-CREATE POLICY "integration_health_insert" ON public.integration_health FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
-);
-
-DROP POLICY IF EXISTS "integration_health_update" ON public.integration_health;
-CREATE POLICY "integration_health_update" ON public.integration_health FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
-);
-
-DROP POLICY IF EXISTS "integration_health_delete" ON public.integration_health;
-CREATE POLICY "integration_health_delete" ON public.integration_health FOR DELETE USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
-);
-
--- 4. AUTOMATION TEMPLATES TABLE
-CREATE TABLE IF NOT EXISTS public.automation_templates (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    name text NOT NULL,
-    description text,
-    category text,
-    trigger_event text,
-    actions jsonb NOT NULL DEFAULT '[]'::jsonb,
-    icon text,
-    is_active boolean DEFAULT true,
-    created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.automation_templates ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "automation_templates_select" ON public.automation_templates;
-CREATE POLICY "automation_templates_select" ON public.automation_templates FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "automation_templates_insert" ON public.automation_templates;
-CREATE POLICY "automation_templates_insert" ON public.automation_templates FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'super_admin')
-);
-
-DROP POLICY IF EXISTS "automation_templates_update" ON public.automation_templates;
-CREATE POLICY "automation_templates_update" ON public.automation_templates FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'super_admin')
-);
-
-DROP POLICY IF EXISTS "automation_templates_delete" ON public.automation_templates;
-CREATE POLICY "automation_templates_delete" ON public.automation_templates FOR DELETE USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'super_admin')
-);
-
-INSERT INTO public.automation_templates (name, description, category, trigger_event, actions, icon)
-SELECT 'Task Auto-assign', 'Assign tasks automatically based on tags.', 'Workflow', 'task.created', '[{"type":"assign"}]'::jsonb, 'UserPlus'
-WHERE NOT EXISTS (SELECT 1 FROM public.automation_templates LIMIT 1);
-
--- 5. CONNECTED ACCOUNTS TABLE MODIFICATION
-ALTER TABLE public.connected_accounts
-ADD COLUMN IF NOT EXISTS connected_at timestamptz NULL DEFAULT now();
-
--- =====================================================
--- 6. WORKSPACE ONBOARDING STATE
--- =====================================================
-CREATE TABLE IF NOT EXISTS public.workspace_onboarding_state (
-    workspace_id uuid PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    setup_completed boolean DEFAULT false,
-    completed_steps text[] DEFAULT '{}',
-    selected_templates text[] DEFAULT '{}',
-    created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE public.workspace_onboarding_state ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Workspace onboarding state isolation" ON public.workspace_onboarding_state;
-CREATE POLICY "Workspace onboarding state isolation" 
-ON public.workspace_onboarding_state FOR ALL USING (
-    workspace_id = public.current_workspace()
-) WITH CHECK (
-    workspace_id = public.current_workspace()
-);
-
--- =====================================================
--- 7. EXPLICIT GRANTS
--- =====================================================
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.integration_health TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.automation_templates TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.workspace_onboarding_state TO authenticated;
-
--- =====================================================
--- RESTORE SUPABASE API ROLE ACCESS
--- Required after clean schema recreation
--- RLS still controls row visibility
--- =====================================================
-
-GRANT USAGE ON SCHEMA public TO anon;
-GRANT USAGE ON SCHEMA public TO authenticated;
-
-GRANT SELECT, INSERT, UPDATE, DELETE
-ON ALL TABLES IN SCHEMA public
-TO authenticated;
-
-GRANT SELECT
-ON ALL TABLES IN SCHEMA public
-TO anon;
-
-GRANT USAGE, SELECT
-ON ALL SEQUENCES IN SCHEMA public
-TO authenticated;
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT SELECT ON TABLES TO anon;
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT SELECT, INSERT, UPDATE, DELETE
-ON TABLES TO authenticated;
-
--- Ensure PostgREST cache is fully reloaded so frontend doesn't get PGRST200/PGRST205 errors
-NOTIFY pgrst, 'reload schema';
+-- Note: approval_chains, approval_instances, approval_steps, decision_recommendation_history 
+-- are already cleanly embedded in the main file by our previous step! (Wait, I embedded them at line 5607)
+-- Let's check if they are already in the top half. Yes, they are!
+
+-- RLS POLICIES FOR EXTENDED SCHEMA
+CREATE POLICY "Enable read for workspace members" ON public.clock_events FOR SELECT USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client'));
+CREATE POLICY "Enable write for workspace members" ON public.clock_events FOR ALL USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
+
+CREATE POLICY "Enable read for workspace members" ON public.leave_balances FOR SELECT USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
+CREATE POLICY "Enable write for hr and admins" ON public.leave_balances FOR ALL USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'hr'));

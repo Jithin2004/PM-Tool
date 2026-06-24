@@ -123,7 +123,7 @@ export function AdminPanel() {
   // Invitation state
   const [invitations, setInvitations] = useState<any[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<string>('member');
+  const [inviteRole, setInviteRole] = useState<string>('developer');
   const [inviteFunctions, setInviteFunctions] = useState<string[]>([]);
   const [inviteDesignation, setInviteDesignation] = useState('');
   const [inviting, setInviting] = useState(false);
@@ -341,34 +341,28 @@ export function AdminPanel() {
 
       const { mapAuthorityToLegacyRole } = await import('../../core/types/workspace');
 
-      const finalUrl = import.meta.env.VITE_API_URL;
-      if (!finalUrl) {
-        throw new Error("Configuration Error: VITE_API_URL is missing.");
-      }
-      
-      const res = await fetch(`${finalUrl}/api/invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
+      const res = await supabase.functions.invoke('provisioning', {
+        body: {
+          operation: 'invite_user',
           email,
           role: mapAuthorityToLegacyRole(inviteRole),
           capabilities: inviteFunctions,
           designation: inviteDesignation,
           source: 'manual'
-        })
+        }
       });
 
-      const result = await res.json();
+      if (res.error) {
+        throw res.error;
+      }
 
-      if (!res.ok || !result.success) {
-        throw new Error(result.error || 'Failed to create invitation');
+      const result = res.data;
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to create invitation');
       }
 
       setInviteEmail('');
-      setInviteRole('member');
+      setInviteRole('developer');
       setInviteFunctions([]);
       setInviteDesignation('');
       fetchInvitations();
@@ -649,12 +643,11 @@ export function AdminPanel() {
                                   <div>
                                     <label className="block text-[9px] font-mono-pm uppercase tracking-widest mb-1.5" style={{ color: 'var(--pm-on-surface-variant)' }}>Authority Level</label>
                                     <select
-                                      value={p.role === 'super_admin' ? 'admin' : p.role === 'pm' ? 'manager' : p.role === 'developer' ? 'member' : 'external'}
+                                      value={p.role}
                                       onChange={async (e) => {
                                         const authVal = e.target.value as any;
                                         if (await showConfirm(`Confirm action: Change authority of ${p.full_name || p.email} to '${authVal}'?`, { title: "Change Authority Level", confirmText: "Change", type: 'warning' })) {
-                                          const { mapAuthorityToLegacyRole } = await import('../../core/types/workspace');
-                                          await handleUpdateRole(p.id, mapAuthorityToLegacyRole(authVal) as any);
+                                          await handleUpdateRole(p.id, authVal);
                                           notify("Authority updated successfully.", "success");
                                           setActiveGearPopover(null);
                                         }
@@ -663,9 +656,13 @@ export function AdminPanel() {
                                       style={{ borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)', background: 'var(--pm-surface-lowest)' }}
                                     >
                                       <option value="admin">Workspace Admin</option>
-                                      <option value="manager">Manager</option>
-                                      <option value="member">Member</option>
-                                      <option value="external">External / Client</option>
+                                      <option value="project_manager">Project Manager</option>
+                                      <option value="team_lead">Team Lead</option>
+                                      <option value="developer">Developer</option>
+                                      <option value="employee">Employee</option>
+                                      <option value="hr">HR</option>
+                                      <option value="finance">Finance</option>
+                                      <option value="client">Client</option>
                                     </select>
                                   </div>
                                   <div>
@@ -895,13 +892,13 @@ export function AdminPanel() {
                         className="w-full border rounded-lg h-10 px-3 font-mono-pm text-xs outline-none transition-colors"
                         style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
                       >
-                        <option value="owner">Owner</option>
                         <option value="admin">Admin</option>
-                        <option value="manager">Manager</option>
-                        <option value="employee">Employee</option>
+                        <option value="project_manager">Project Manager</option>
+                        <option value="team_lead">Team Lead</option>
                         <option value="developer">Developer</option>
-                        <option value="finance">Finance</option>
+                        <option value="employee">Employee</option>
                         <option value="hr">HR</option>
+                        <option value="finance">Finance</option>
                         <option value="client">Client</option>
                       </select>
                       <p className="mt-2 text-[10px] font-mono-pm text-text-tertiary">

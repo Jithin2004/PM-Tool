@@ -25,16 +25,16 @@ export async function exportWorkspace(wsId: string): Promise<WorkspaceExport | n
   const [projects, tasks, users, teams, webhooks, integrations, activityLogs, taskDependencies, clients, requirements, milestones, invoices] = await Promise.all([
     supabase.from('projects').select('id, workspace_id, client_id, name, description, status, priority, execution_mode, created_at, deadline, tags').limit(50).eq('workspace_id', wsId),
     supabase.from('tasks').select('id, title, status, project_id, assigned_to').limit(50).eq('workspace_id', wsId),
-    supabase.from('users').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('users').select('id, email, role, department, full_name, status, created_at').limit(50).eq('workspace_id', wsId),
     supabase.from('teams').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('webhooks').select('*').limit(50).eq('workspace_id', wsId),
-    supabase.from('connected_accounts').select('*').limit(50).eq('workspace_id', wsId),
-    supabase.from('activity_logs').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('connected_accounts').select('id, provider, status, created_at').limit(50).eq('workspace_id', wsId),
+    supabase.from('activity_logs').select('id, action_type, metadata, created_at').limit(50).eq('workspace_id', wsId),
     supabase.from('task_dependencies').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('clients').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('requirements').select('*').limit(50).eq('workspace_id', wsId),
     supabase.from('milestones').select('*').limit(50).eq('workspace_id', wsId),
-    supabase.from('invoices').select('*').limit(50).eq('workspace_id', wsId),
+    supabase.from('invoices').select('id, status, total_amount, created_at').limit(50).eq('workspace_id', wsId),
   ]);
 
   const pack: WorkspaceExport = {
