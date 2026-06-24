@@ -10102,18 +10102,22 @@ CREATE TABLE IF NOT EXISTS public.integration_health (
 
 ALTER TABLE public.integration_health ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "integration_health_select" ON public.integration_health;
 CREATE POLICY "integration_health_select" ON public.integration_health FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role != 'client')
 );
 
+DROP POLICY IF EXISTS "integration_health_insert" ON public.integration_health;
 CREATE POLICY "integration_health_insert" ON public.integration_health FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
 );
 
+DROP POLICY IF EXISTS "integration_health_update" ON public.integration_health;
 CREATE POLICY "integration_health_update" ON public.integration_health FOR UPDATE USING (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
 );
 
+DROP POLICY IF EXISTS "integration_health_delete" ON public.integration_health;
 CREATE POLICY "integration_health_delete" ON public.integration_health FOR DELETE USING (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
 );
@@ -10133,16 +10137,20 @@ CREATE TABLE IF NOT EXISTS public.automation_templates (
 
 ALTER TABLE public.automation_templates ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "automation_templates_select" ON public.automation_templates;
 CREATE POLICY "automation_templates_select" ON public.automation_templates FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "automation_templates_insert" ON public.automation_templates;
 CREATE POLICY "automation_templates_insert" ON public.automation_templates FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'super_admin')
 );
 
+DROP POLICY IF EXISTS "automation_templates_update" ON public.automation_templates;
 CREATE POLICY "automation_templates_update" ON public.automation_templates FOR UPDATE USING (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'super_admin')
 );
 
+DROP POLICY IF EXISTS "automation_templates_delete" ON public.automation_templates;
 CREATE POLICY "automation_templates_delete" ON public.automation_templates FOR DELETE USING (
   EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'super_admin')
 );
@@ -10159,3 +10167,30 @@ ADD COLUMN IF NOT EXISTS connected_at timestamptz NULL DEFAULT now();
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.integration_health TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.automation_templates TO authenticated;
 
+-- =====================================================
+-- RESTORE SUPABASE API ROLE ACCESS
+-- Required after clean schema recreation
+-- RLS still controls row visibility
+-- =====================================================
+
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON ALL TABLES IN SCHEMA public
+TO authenticated;
+
+GRANT SELECT
+ON ALL TABLES IN SCHEMA public
+TO anon;
+
+GRANT USAGE, SELECT
+ON ALL SEQUENCES IN SCHEMA public
+TO authenticated;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT ON TABLES TO anon;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON TABLES TO authenticated;
