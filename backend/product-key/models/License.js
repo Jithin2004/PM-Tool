@@ -15,7 +15,8 @@ const licenseSchema = new mongoose.Schema({
       "CONSUMED",
       "EXPIRED",
       "REVOKED"
-    ]
+    ],
+    default: "ACTIVE"
   },
   plan: {
     type: String,

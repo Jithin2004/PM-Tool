@@ -1,0 +1,23 @@
+{
+  "payload": {
+    "version": "1.3.0",
+    "schemaVersion": 1,
+    "licenseId": "LIC-MQSL59TV",
+    "issuedAt": 1782336521731,
+    "expiresAt": 1813872521731,
+    "companyName": "Acme Corp",
+    "plan": "BUSINESS",
+    "features": [
+      "task_management",
+      "project_tracking",
+      "team_inbox",
+      "reports",
+      "advanced_automation",
+      "continuity_engine",
+      "workspace_clone"
+    ],
+    "supportExpiry": 1813872521731,
+    "publicKeyThumbprint": "lUp7ENd1Y9bdkr_C"
+  },
+  "signature": "D2dD-DjM6G2_fJKrNxKNz5Sk2QPnUXDfpLU4wWjXr8ZdW1CEchiqhVZ3mvksM7nbK9ZsYwn3yZYHrz4BS-tsLZtmePk5nkm-h3sbwACGBUkYGueAIK2yiI3FEURgaO3ZIIuEkGvRudFzrwhJbfM0AmJCsN3vaXPaTkGBAZaeFCwmz2RnghA02jz898fNasdhX51BGAuMevwMJlfYFyCR3oXlheHLc716fXR_hCTTig3y6kTEF28m6vH1O3LOX_MmATZcOqKmbUjqN4n8TS2vA69HPCnP3KQ_hwjLWSEdqQZCyvIHoM1Kblm4t6-So6TSDZBDGj_yaqCsKlgOya27Ww"
+}

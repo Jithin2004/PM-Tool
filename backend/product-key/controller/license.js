@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const geoip = require('geoip-lite');
 const License = require('../models/License');
 const AuditEvent = require('../models/AuditEvent');
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -189,11 +190,6 @@ exports.activateLicense = async (req, res) => {
         console.error('Activation error:', error);
         res.status(500).json({ error: 'Server error' });
     }
-    const ip =
-        req.headers["x-forwarded-for"]?.split(",")[0] ||
-        req.socket.remoteAddress;
-
-    const userAgent = req.headers["user-agent"];
 };
 
 // 3. License Key Verification
