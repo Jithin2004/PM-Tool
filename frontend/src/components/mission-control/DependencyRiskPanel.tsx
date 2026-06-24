@@ -46,7 +46,7 @@ export function DependencyRiskPanel({ predictions, insights }: DependencyRiskPan
   const isSuperAdmin = hasCapability(userRole, 'audit.security');
   const isPM = hasCapability(userRole, 'project.update');
   const isDeveloper = hasCapability(userRole, 'task.update') && !hasCapability(userRole, 'project.update');
-  const isStakeholder = hasCapability(userRole, 'client.project.view') || userRole === 'client';
+  const isStakeholder = hasCapability(userRole, 'client.project.view');
 
   const blockers = useMemo(() => {
     return (workspaceSettingsBlob?.execution_blockers || []) as any[];

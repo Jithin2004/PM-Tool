@@ -533,7 +533,7 @@ export default function DecisionsPage() {
                     {selectedDecision.approvalChain.steps.map((step, idx) => {
                       const isPending = step.status === 'pending';
                       const isCurrentStep = idx === selectedDecision.approvalChain!.currentStepIndex;
-                      const userHasAuthority = userRole === step.role || userRole === 'super_admin';
+                      const userHasAuthority = userRole === step.role || hasCapability(userRole as any, 'workspace.update');
 
                       return (
                         <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-surface-2 border border-border-subtle">

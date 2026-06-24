@@ -51,7 +51,7 @@ export function ExecutiveAnalytics() {
   const isSuperAdmin = hasCapability(userRole, 'audit.security');
   const isPM = hasCapability(userRole, 'project.update') && !isSuperAdmin;
   const isDeveloper = hasCapability(userRole, 'task.update') && !hasCapability(userRole, 'project.update');
-  const isStakeholder = hasCapability(userRole, 'project.view') || userRole === 'client';
+  const isStakeholder = hasCapability(userRole, 'project.view') || hasCapability(userRole, 'client.project.view');
 
   const intel = governanceCache.intelligence;
   const memory = governanceCache.memory;

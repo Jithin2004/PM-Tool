@@ -1,3 +1,4 @@
+import { hasCapability } from '../core/auth/permissions';
 import { Task, Milestone, Approval, Project } from '../types';
 import { WaitState } from '../core/types/collaboration';
 
@@ -106,7 +107,7 @@ export const completionReadinessEngine = {
   },
 
   validateCompletionAttempt(readiness: CompletionReadinessScore, policy: CompletionPolicyMode, userRole: string): { allowed: boolean, reason?: string } {
-    if (userRole === 'super_admin') {
+    if (hasCapability(userRole as any, 'project.update')) {
       return { allowed: true }; // Super Admin override
     }
 

@@ -529,8 +529,12 @@ export function ResolveRouter() {
       if (!guardRoute(role, '/company')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><PeopleOpsCenter /></RouteShell>;
     }
-    if (pathname === '/company/teams' || pathname === '/company/capacity' || pathname === '/company/teams/departments' || pathname === '/company/teams/skills') {
+    if (pathname === '/company/teams' || pathname === '/company/teams/departments' || pathname === '/company/teams/skills') {
       if (!guardRoute(role, '/company/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="TeamsPage"><TeamsPage /></ModuleErrorBoundary></RouteShell>;
+    }
+    if (pathname === '/company/capacity') {
+      if (!guardRoute(role, '/company/capacity')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><ModuleErrorBoundary module="TeamsPage"><TeamsPage /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/finance') {

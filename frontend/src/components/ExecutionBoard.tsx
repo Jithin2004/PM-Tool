@@ -134,33 +134,7 @@ export default function ExecutionBoard({
   const [pendingCompletionTask, setPendingCompletionTask] = useState<Task | null>(null);
   const [waitStateTask, setWaitStateTask] = useState<Task | null>(null);
 
-  const [memberRole, setMemberRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchRole = async () => {
-      if (!workspace?.id || !currentUserProfile?.id) return;
-      try {
-        const { data, error } = await supabase
-          .from('team_members')
-          .select('member_role')
-          .eq('workspace_id', workspace.id)
-          .eq('user_id', currentUserProfile.id)
-          .single();
-          
-        if (!error && data) {
-          setMemberRole(data.member_role);
-        } else {
-          setMemberRole('viewer'); // Fallback safely
-        }
-      } catch (err) {
-        console.error('Failed to fetch RBAC role', err);
-        setMemberRole('viewer');
-      }
-    };
-    fetchRole();
-  }, [workspace?.id, currentUserProfile?.id]);
-
-  const hasWriteAccess = memberRole === 'owner' || memberRole === 'editor';
+  const hasWriteAccess = hasCapability(currentUserProfile?.role, 'task.update');
 
   const userMap = useMemo(() => {
     const map = new Map<string, any>();
@@ -332,7 +306,7 @@ export default function ExecutionBoard({
           <h2 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-500 animate-ping" />
             Kanban Board
-            {memberRole === 'viewer' && (
+            {!hasWriteAccess && (
               <span className="ml-2 px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-sm">
                 Read Only
               </span>

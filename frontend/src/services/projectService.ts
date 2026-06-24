@@ -1,5 +1,6 @@
 import { trackSupabaseOperation } from '../core/observability/telemetry';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { hasCapability } from '../core/auth/permissions';
 import { activityLogService } from './activityLogService';
 import { logServiceFailure } from '../utils/supabaseError';
 
@@ -142,7 +143,7 @@ export async function updateProject(
 ): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
   
-  if (userRole === 'developer') {
+    if (!hasCapability(userRole as any, 'project.update')) {
     const restrictedFields = ['deadline', 'budget', 'priority', 'status', 'eta_override', 'assigned_team', 'client_deadline'];
     const attemptedRestricted = restrictedFields.some(field => field in updates);
     if (attemptedRestricted) {

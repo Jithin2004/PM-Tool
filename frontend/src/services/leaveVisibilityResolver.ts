@@ -1,10 +1,12 @@
+import { hasCapability } from '../core/auth/permissions';
+
 export const leaveVisibilityResolver = {
   /**
    * Resolves exactly what details a viewer can see about a leave record based on privacy rules.
    */
   resolveVisibility(leaveRecord: any, viewerId: string, viewerRole: string, viewerIsManager: boolean) {
     // Admin / HR -> Full details
-    if (viewerRole === 'admin' || viewerRole === 'hr') {
+    if (hasCapability(viewerRole as any, 'people.manage')) {
       return {
         ...leaveRecord,
         visibility: 'full'

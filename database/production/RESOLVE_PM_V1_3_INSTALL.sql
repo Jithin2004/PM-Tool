@@ -10055,3 +10055,105 @@ WHERE leave_type = 'Test Leave Verification';
 -- ERROR:  column "available_balance" can only be updated to DEFAULT
 -- DETAIL:  Column "available_balance" is a generated column.
 */
+
+-- ==============================================================================
+-- RC23 RUNTIME CLOSURE & CONTRACT PATCHES
+-- ==============================================================================
+
+-- 1. FILES TABLE MODIFICATIONS
+ALTER TABLE public.files
+ADD COLUMN IF NOT EXISTS archived_at timestamptz NULL,
+ADD COLUMN IF NOT EXISTS archived_by uuid NULL REFERENCES auth.users(id);
+
+-- 2. WORKSPACE STORAGE USAGE FUNCTION
+CREATE OR REPLACE FUNCTION public.workspace_storage_usage(p_workspace_id UUID)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    total_usage bigint;
+BEGIN
+    SELECT COALESCE(SUM(size_bytes), 0)
+    INTO total_usage
+    FROM public.files
+    WHERE workspace_id = p_workspace_id AND archived_at IS NULL;
+
+    RETURN total_usage;
+END;
+$$;
+
+-- 3. INTEGRATION HEALTH TABLE
+CREATE TABLE IF NOT EXISTS public.integration_health (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    provider text NOT NULL,
+    status text NOT NULL DEFAULT 'healthy',
+    last_checked_at timestamptz DEFAULT now(),
+    last_error text,
+    retry_count integer DEFAULT 0,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    UNIQUE(workspace_id, provider)
+);
+
+ALTER TABLE public.integration_health ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "integration_health_select" ON public.integration_health FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role != 'client')
+);
+
+CREATE POLICY "integration_health_insert" ON public.integration_health FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
+);
+
+CREATE POLICY "integration_health_update" ON public.integration_health FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
+);
+
+CREATE POLICY "integration_health_delete" ON public.integration_health FOR DELETE USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role IN ('super_admin', 'admin'))
+);
+
+-- 4. AUTOMATION TEMPLATES TABLE
+CREATE TABLE IF NOT EXISTS public.automation_templates (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text NOT NULL,
+    description text,
+    category text,
+    trigger_event text,
+    actions jsonb NOT NULL DEFAULT '[]'::jsonb,
+    icon text,
+    is_active boolean DEFAULT true,
+    created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.automation_templates ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "automation_templates_select" ON public.automation_templates FOR SELECT USING (true);
+
+CREATE POLICY "automation_templates_insert" ON public.automation_templates FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'super_admin')
+);
+
+CREATE POLICY "automation_templates_update" ON public.automation_templates FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'super_admin')
+);
+
+CREATE POLICY "automation_templates_delete" ON public.automation_templates FOR DELETE USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'super_admin')
+);
+
+INSERT INTO public.automation_templates (name, description, category, trigger_event, actions, icon)
+SELECT 'Task Auto-assign', 'Assign tasks automatically based on tags.', 'Workflow', 'task.created', '[{"type":"assign"}]'::jsonb, 'UserPlus'
+WHERE NOT EXISTS (SELECT 1 FROM public.automation_templates LIMIT 1);
+
+-- 5. CONNECTED ACCOUNTS TABLE MODIFICATION
+ALTER TABLE public.connected_accounts
+ADD COLUMN IF NOT EXISTS connected_at timestamptz NULL DEFAULT now();
+
+-- 6. EXPLICIT GRANTS
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.integration_health TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.automation_templates TO authenticated;
+

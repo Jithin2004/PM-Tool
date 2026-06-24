@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { hasCapability } from '../../core/auth/permissions';
 import { CompletionReadinessScore, CompletionPolicyMode } from '../../services/completionReadinessEngine';
 
 import { Task, Approval } from '../../types';
@@ -304,7 +305,7 @@ export function CompletionReadinessPanel({
               </button>
             )}
 
-            {userRole === 'super_admin' && readiness.isBlocker && (
+            {hasCapability(userRole as any, 'project.update') && readiness.isBlocker && (
               <div className="ml-auto flex items-center gap-3">
                 {showOverrideConfirm ? (
                   <>

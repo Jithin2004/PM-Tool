@@ -32,7 +32,9 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'overview', path: '/overview', label: 'Overview', iconName: 'Radar', capability: 'dashboard.view', group: 'core', disclosureTier: 'essential' },
   { id: 'activity', path: '/overview/activity', label: 'Activity Feed', iconName: 'Activity', capability: 'dashboard.view', group: 'core', disclosureTier: 'essential' },
   { id: 'projects', path: '/workspace', label: 'Projects', iconName: 'TreeStructure', capability: 'project.view', group: 'core', disclosureTier: 'essential' },
-  { id: 'board', path: '/execution', label: 'Tasks', iconName: 'Kanban', capability: 'task.view', group: 'core', disclosureTier: 'essential' },
+  { id: 'execution-board', path: '/execution/board', label: 'Tasks', iconName: 'Kanban', capability: 'task.view', group: 'core', disclosureTier: 'essential' },
+  { id: 'execution-sprints', path: '/execution/sprints', label: 'Sprint Center', iconName: 'GitFork', capability: 'sprint.manage', group: 'core', disclosureTier: 'operational' },
+  { id: 'execution-schedule', path: '/execution/schedule', label: 'Scheduling', iconName: 'Timeline', capability: 'timeline.view', group: 'core', disclosureTier: 'operational' },
   { id: 'meetings', path: '/workspace/meetings', label: 'Meetings', iconName: 'Users', capability: 'meeting.view', group: 'core', disclosureTier: 'essential' },
   { id: 'requirements', path: '/workspace/requirements', label: 'Requirements', iconName: 'FileText', capability: 'project.view', group: 'core', disclosureTier: 'essential' },
   { id: 'documents', path: '/workspace/documents', label: 'Documents', iconName: 'FolderOpen', capability: 'document.view', group: 'core', disclosureTier: 'essential' },
@@ -83,10 +85,7 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'project-new', path: '/projects/new', label: 'Create Project', iconName: 'PlusCircle', capability: 'project.create', disclosureTier: 'essential' },
   { id: 'control-root', path: '/admin', label: 'Control', iconName: 'Shield', capability: 'settings.manage', disclosureTier: 'platform' },
   { id: 'settings-notifications', path: '/admin/settings/notifications', label: 'Notification Settings', iconName: 'Bell', capability: 'settings.manage', disclosureTier: 'operational' },
-  { id: 'settings-modes', path: '/admin/settings/modes', label: 'Mode Settings', iconName: 'Sliders', capability: 'settings.manage', disclosureTier: 'operational' },
-  { id: 'execution-board', path: '/execution/board', label: 'Execution Board', iconName: 'ListTodo', capability: 'task.view', disclosureTier: 'essential' },
-  { id: 'execution-gantt', path: '/execution/gantt', label: 'Gantt Workspace', iconName: 'GitBranch', capability: 'timeline.manage', disclosureTier: 'operational' },
-  { id: 'execution-sprints', path: '/execution/sprints', label: 'Sprint Center', iconName: 'GitFork', capability: 'sprint.manage', disclosureTier: 'operational' },
+  { id: 'settings-modes', path: '/admin/settings/modes', label: 'Mode Settings', iconName: 'Sliders', capability: 'settings.manage', disclosureTier: 'operational' }
 ];
 
 export const EXACT_APP_PATHS = new Set(CANONICAL_ROUTES.map(r => r.path));
