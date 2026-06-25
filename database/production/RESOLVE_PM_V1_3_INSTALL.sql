@@ -9854,26 +9854,60 @@ CREATE POLICY "Enable write for workspace members" ON public.clock_events FOR AL
 CREATE POLICY "Enable read for workspace members" ON public.leave_balances FOR SELECT USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
 CREATE POLICY "Enable write for hr and admins" ON public.leave_balances FOR ALL USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'hr'));
 
-
 -- ==============================================================================
--- V1.3.1 AGILE HIERARCHY EXTENSION
+-- V1.3.1 RELEASE CONSOLIDATION (AGILE & INTELLIGENCE EXTENSIONS)
 -- ==============================================================================
 
--- RC25_6_AGILE_HIERARCHY.sql
--- Description: Restores Agile Hierarchy layer as an optional execution extension.
--- Adds stories, timeline_baselines and updates epics and tasks idempotently.
+-- 1. Tables & Views
+-- From RC25_5: Frontend Schema Compatibility (Legacy Integrations)
+CREATE TABLE IF NOT EXISTS public.integration_connections (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    provider text NOT NULL,
+    status text,
+    connected_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    encrypted_credentials jsonb,
+    config jsonb,
+    last_sync_at timestamptz,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
 
--- 1. Update epics table
-ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS title text;
-ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS milestone_id uuid REFERENCES public.milestones(id) ON DELETE SET NULL;
-ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS owner_id uuid REFERENCES public.users(id) ON DELETE SET NULL;
-ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS target_date timestamptz;
-ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS completed_at timestamptz;
+CREATE TABLE IF NOT EXISTS public.integration_events (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    integration_id uuid REFERENCES public.integration_connections(id) ON DELETE CASCADE,
+    direction text,
+    event_type text,
+    processing_status text,
+    error_message text,
+    payload jsonb,
+    created_at timestamptz DEFAULT now()
+);
 
--- Migrate existing name -> title if needed (optional)
-UPDATE public.epics SET title = name WHERE title IS NULL AND name IS NOT NULL;
+CREATE TABLE IF NOT EXISTS public.webhook_endpoints (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    url text NOT NULL,
+    secret text,
+    events text[],
+    created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    is_active boolean DEFAULT true,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
 
--- 2. Create stories table
+CREATE OR REPLACE VIEW public.workspace_members AS
+SELECT 
+    id as id,
+    workspace_id as workspace_id,
+    id as user_id,
+    role as role,
+    created_at as joined_at
+FROM public.users
+WHERE workspace_id IS NOT NULL;
+
+-- From RC25_6: Agile Hierarchy (Stories & Baselines)
 CREATE TABLE IF NOT EXISTS public.stories (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
@@ -9886,9 +9920,8 @@ CREATE TABLE IF NOT EXISTS public.stories (
     
     story_points numeric,
     acceptance_criteria text,
-    
+    priority text,
     status text NOT NULL DEFAULT 'backlog',
-    priority text NOT NULL DEFAULT 'medium',
     
     assigned_to uuid REFERENCES public.users(id) ON DELETE SET NULL,
     
@@ -9896,14 +9929,6 @@ CREATE TABLE IF NOT EXISTS public.stories (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- RLS for stories
-ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.stories;
-CREATE POLICY "Enable all operations for workspace users" 
-ON public.stories FOR ALL 
-USING (workspace_id = public.current_workspace());
-
--- 3. Create timeline_baselines table
 CREATE TABLE IF NOT EXISTS public.timeline_baselines (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
@@ -9920,25 +9945,25 @@ CREATE TABLE IF NOT EXISTS public.timeline_baselines (
     
     variance_days numeric,
     confidence_score numeric,
+    ml_predicted_end timestamptz,
+    snapshot_data jsonb,
     
-    snapshot jsonb,
-    prediction_metadata jsonb,
-    
-    is_active boolean DEFAULT true,
     created_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+    
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- RLS for timeline_baselines
-ALTER TABLE public.timeline_baselines ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.timeline_baselines;
-CREATE POLICY "Enable all operations for workspace users" 
-ON public.timeline_baselines FOR ALL 
-USING (workspace_id = public.current_workspace());
+-- 2. Columns/constraints
+-- From RC25_6: Agile Hierarchy (Epics & Tasks)
+ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS title text;
+ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS milestone_id uuid REFERENCES public.milestones(id) ON DELETE SET NULL;
+ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS owner_id uuid REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS target_date timestamptz;
+ALTER TABLE public.epics ADD COLUMN IF NOT EXISTS completed_at timestamptz;
 
--- 4. Update tasks table constraints
--- The columns epic_id and story_id already exist, but they lacked foreign keys.
--- We must safely add constraints if they do not exist.
+-- Migrate existing name -> title if needed (optional)
+UPDATE public.epics SET title = name WHERE title IS NULL AND name IS NOT NULL;
+
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tasks_epic_id_fkey') THEN
@@ -9950,19 +9975,35 @@ BEGIN
     END IF;
 END $$;
 
+-- 3. Indexes (None explicitly in these patches)
 
+-- 4. Functions
+-- Reload schema cache
+NOTIFY pgrst, 'reload schema';
 
--- ==============================================================================
--- V1.3.1 INTELLIGENCE RLS HARDENING
--- ==============================================================================
+-- 5. Triggers (None explicitly in these patches)
 
--- RC25_7_INTELLIGENCE_RLS_HARDENING.sql
--- Description: Hardens RLS policies for stories and timeline_baselines to restrict access to enterprise levels.
+-- 6. RLS enablement
+ALTER TABLE public.integration_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.integration_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.webhook_endpoints ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.timeline_baselines ENABLE ROW LEVEL SECURITY;
 
--- Drop broad policies on stories
-DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.stories;
+-- 7. Policies
+-- RC25_5 Policies (Legacy Integrations)
+DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.integration_connections;
+CREATE POLICY "Enable all operations for workspace users" ON public.integration_connections FOR ALL USING (workspace_id = public.current_workspace());
 
+DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.integration_events;
+CREATE POLICY "Enable all operations for workspace users" ON public.integration_events FOR ALL USING (workspace_id = public.current_workspace());
+
+DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.webhook_endpoints;
+CREATE POLICY "Enable all operations for workspace users" ON public.webhook_endpoints FOR ALL USING (workspace_id = public.current_workspace());
+
+-- RC25_7 Policies (Intelligence Hardening)
 -- Stories: SELECT
+DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.stories;
 DROP POLICY IF EXISTS "Enable read for workspace members" ON public.stories;
 CREATE POLICY "Enable read for workspace members" ON public.stories FOR SELECT 
 USING (
@@ -9997,11 +10038,8 @@ USING (
   AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager')
 );
 
-
--- Drop broad policies on timeline_baselines
-DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.timeline_baselines;
-
 -- Timeline_baselines: SELECT
+DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.timeline_baselines;
 DROP POLICY IF EXISTS "Enable read for workspace members" ON public.timeline_baselines;
 CREATE POLICY "Enable read for workspace members" ON public.timeline_baselines FOR SELECT 
 USING (
@@ -10032,4 +10070,3 @@ USING (
   workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid 
   AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin')
 );
-
