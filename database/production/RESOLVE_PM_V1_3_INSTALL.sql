@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS users (
   full_name           text,
   phone               text,
   avatar_url          text,
-  role text NOT NULL DEFAULT 'employee' CHECK (role IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client')),
+  role text NOT NULL DEFAULT 'employee' CHECK (role IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client', 'pending-workspace-setup', 'uninvited')),
   designation         text,
   department          text,
   status              text        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'invited', 'disabled')),
