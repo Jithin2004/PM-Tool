@@ -13,7 +13,7 @@ app.use(express.json());
 
 // Health Check Endpoint (for Render and Docker healthchecks)
 app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', service: 'resolve-pm-backend', version: '1.0.0', timestamp: new Date().toISOString() });
+    res.status(200).json({ status: 'ok', service: 'resolve-pm-backend', version: '1.3.0', timestamp: new Date().toISOString() });
 });
 
 // 🪪 Public Licensing Endpoints 🪪
