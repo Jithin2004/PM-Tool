@@ -17,10 +17,10 @@ export const documentPermissionService = {
       const userId = (await supabase.auth.getUser()).data.user?.id;
       if (!userId) return false;
 
-      const { data: doc } = await supabase.from('documents').select('owner_id, workspace_id').eq('id', documentId).single();
+      const { data: doc } = await supabase.from('documents').select('created_by, workspace_id').eq('id', documentId).single();
       if (!doc) return false;
 
-      if (doc.owner_id === userId) return true;
+      if (doc.created_by === userId) return true;
 
       const { data: userRole } = await supabase.from('users').select('role').eq('id', userId).eq('workspace_id', doc.workspace_id).single();
       if (userRole && ['owner', 'admin', 'super_admin'].includes(userRole.role)) return true;
@@ -39,7 +39,7 @@ export const documentPermissionService = {
       const userId = (await supabase.auth.getUser()).data.user?.id;
       if (!userId) return false;
 
-      const { data: doc } = await supabase.from('documents').select('owner_id, workspace_id').eq('id', documentId).single();
+      const { data: doc } = await supabase.from('documents').select('created_by, workspace_id').eq('id', documentId).single();
       if (!doc) return false;
 
       const { data: userRole } = await supabase.from('users').select('role').eq('id', userId).eq('workspace_id', doc.workspace_id).single();

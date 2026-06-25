@@ -29,7 +29,7 @@ export function StorageSettingsPanel() {
       .from('workspace_storage_settings')
       .select('*')
       .eq('workspace_id', workspace.id)
-      .single();
+      .maybeSingle();
       
     if (settingsData) {
       setSettings(settingsData);

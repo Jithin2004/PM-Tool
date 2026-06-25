@@ -101,7 +101,7 @@ export class TestDataGuardian {
       // 3. Scan Orphan Projects
       const { data: projects, error: projError } = await supabase
         .from('projects')
-        .select('id, name, workspace_id, team_id, owner_id');
+        .select('id, name, workspace_id, team_id, created_by_id');
 
       if (!projError && projects) {
         // Build set of workspace IDs for fast lookup

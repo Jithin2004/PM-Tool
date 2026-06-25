@@ -156,10 +156,10 @@ export const filePermissionService = {
   // ─── Internal ─────────────────────────────────────────────────────────────
   async _isWorkspaceMember(workspaceId: string, userId: string): Promise<boolean> {
     const { data } = await supabase
-      .from('workspace_members')
-      .select('user_id')
+      .from('users')
+      .select('id')
       .eq('workspace_id', workspaceId)
-      .eq('user_id', userId)
+      .eq('id', userId)
       .maybeSingle();
     return !!data;
   },

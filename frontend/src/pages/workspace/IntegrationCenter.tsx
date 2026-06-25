@@ -25,7 +25,7 @@ export default function IntegrationCenter() {
     if (!workspace || !user) return;
     
     // Check Role
-    const { data: member } = await supabase.from('workspace_members').select('role').eq('workspace_id', workspace.id).eq('user_id', user.id).single();
+    const { data: member } = await supabase.from('users').select('role').eq('workspace_id', workspace.id).eq('id', user.id).single();
     if (member) setUserRole(member.role);
 
     // Load Connections

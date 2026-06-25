@@ -25,10 +25,10 @@ export interface MilestoneSignoff {
 export const deliverableService = {
   async getMilestones(workspaceId: string, status?: string): Promise<Milestone[]> {
     let query = supabase
-      .from('milestones')
+      .from('billing_milestones')
       .select('*, projects(name)')
       .eq('workspace_id', workspaceId)
-      .order('target_date', { ascending: true });
+      .order('due_date', { ascending: true });
       
     if (status) {
       query = query.eq('status', status);
@@ -45,7 +45,7 @@ export const deliverableService = {
 
   async updateMilestoneStatus(milestoneId: string, status: string): Promise<void> {
     const { error } = await supabase
-      .from('milestones')
+      .from('billing_milestones')
       .update({ status })
       .eq('id', milestoneId);
     

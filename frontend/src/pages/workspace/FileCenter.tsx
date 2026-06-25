@@ -65,7 +65,7 @@ const FileCenterPage: React.FC = () => {
           break;
         case 'archived':
           data = (await fileStorageService.getWorkspaceFiles(workspaceId, true))
-            .filter(f => !!f.archived_at);
+            .filter(f => false); // Archiving disabled in v1.3
           break;
       }
       setFiles(data);
@@ -536,7 +536,7 @@ const FileCenterPage: React.FC = () => {
                   ['Size', filePreviewService.formatSize(selectedFile.file_size)],
                   ['Uploaded', formatDate(selectedFile.created_at)],
                   ['Storage path', selectedFile.storage_path],
-                  ['Status', selectedFile.archived_at ? '🗑 Archived' : '✅ Active'],
+                  ['Status', '✅ Active'],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <p style={{ margin: 0, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 2 }}>

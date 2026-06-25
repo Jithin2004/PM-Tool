@@ -36,23 +36,11 @@ export const fileStorageService = {
   // QUOTA
   // ─────────────────────────────────────────────────────────────────────────
   async checkQuota(workspaceId: string, additionalBytes: number): Promise<boolean> {
-    const { data: usage } = await supabase
-      .from('workspace_storage_usage')
-      .select('used_bytes, quota_bytes')
-      .eq('workspace_id', workspaceId)
-      .maybeSingle();
-
-    if (!usage) return true; // no record yet → allow
-    return Number(usage.used_bytes) + additionalBytes <= Number(usage.quota_bytes);
+    return true; // Storage usage tracking disabled in v1.3 pending migration
   },
 
   async getStorageUsage(workspaceId: string) {
-    const { data } = await supabase
-      .from('workspace_storage_usage')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .maybeSingle();
-    return data;
+    return { used_bytes: 0, quota_bytes: 10 * 1024 * 1024 * 1024 }; // Mocked for v1.3
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -340,8 +328,8 @@ export const fileStorageService = {
     const { error } = await supabase
       .from('files')
       .update({
-        archived_at: new Date().toISOString(),
-        archived_by: authData.user.id,
+        // archived_at: new Date().toISOString(),
+        // archived_by: authData.user.id,
       })
       .eq('id', fileId);
 
@@ -368,7 +356,7 @@ export const fileStorageService = {
 
     const { error } = await supabase
       .from('files')
-      .update({ archived_at: null, archived_by: null })
+      // .update({ archived_at: null, archived_by: null })
       .eq('id', fileId);
 
     return !error;
@@ -396,7 +384,7 @@ export const fileStorageService = {
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false });
 
-    if (!includeArchived) q = q.is('archived_at', null);
+    // if (!includeArchived) q = q.is('archived_at', null);
 
     const { data, error } = await q;
     if (error) throw error;
@@ -432,7 +420,7 @@ export const fileStorageService = {
       .select('*')
       .eq('workspace_id', workspaceId)
       .eq('uploaded_by', userId)
-      .is('archived_at', null)
+      // .is('archived_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -447,6 +435,6 @@ export const fileStorageService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []).map((a: any) => a.file).filter((f: any) => f?.workspace_id === workspaceId && !f.archived_at);
+    return (data || []).map((a: any) => a.file).filter((f: any) => f?.workspace_id === workspaceId);
   },
 };

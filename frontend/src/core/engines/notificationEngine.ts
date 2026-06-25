@@ -22,8 +22,8 @@ export const notificationEngine = {
 
   async notifyOwners(workspaceId: string, title: string, message: string) {
     const { data: users } = await supabase
-      .from('workspace_members')
-      .select('user_id')
+      .from('users')
+      .select('id')
       .eq('workspace_id', workspaceId)
       .in('role', ['owner', 'admin', 'super_admin']);
       
