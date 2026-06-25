@@ -147,7 +147,7 @@ export function AdminPanel() {
   const loadWorkspacesData = async () => {
     setLoadingWorkspaces(true);
     try {
-      const { data: wsData, error: wsError } = await supabase.from('workspaces').select('id, name, owner_id, business_type, created_at');
+      const { data: wsData, error: wsError } = await supabase.from('workspaces').select('id, name, created_by_id, business_type, created_at');
       if (wsError) throw wsError;
       
       const { data: userData, error: userError } = await supabase.from('users').select('id, workspace_id');

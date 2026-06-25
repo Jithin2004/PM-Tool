@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 1. Primary Query: Canonical users table
         let { data, error } = await supabase
           .from('users')
-          .select('*, workspaces!users_workspace_id_fkey(owner_id)')
+          .select('*, workspaces!users_workspace_id_fkey(created_by_id)')
           .eq('id', authUser.id)
           .maybeSingle();
 
@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await new Promise(r => setTimeout(r, delays[i]));
             const retry = await supabase
               .from('users')
-              .select('*, workspaces!users_workspace_id_fkey(owner_id)')
+              .select('*, workspaces!users_workspace_id_fkey(created_by_id)')
               .eq('id', authUser.id)
               .maybeSingle();
             if (retry.data) {
@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ...(userCaps?.map(u => u.capability_id) || [])
           ];
 
-          const is_owner = data.workspaces ? (Array.isArray(data.workspaces) ? data.workspaces[0]?.owner_id === data.id : data.workspaces.owner_id === data.id) : false;
+          const is_owner = data.workspaces ? (Array.isArray(data.workspaces) ? data.workspaces[0]?.created_by_id === data.id : data.workspaces.created_by_id === data.id) : false;
 
           const extendedData = {
             ...data,

@@ -66,7 +66,7 @@ export async function debugActivityLogContext(): Promise<ActivityLogContext> {
       ctx.workspaceId = row?.workspace_id || null;
       ctx.role = row?.role || null;
     }
-    const { data: owned } = await supabase.from('workspaces').select('id').eq('owner_id', ctx.authUid || '');
+    const { data: owned } = await supabase.from('workspaces').select('id').eq('created_by_id', ctx.authUid || '');
     ctx.ownerWorkspaceIds = (owned || []).map(w => w.id);
   } catch { /* best effort */ }
   return ctx;

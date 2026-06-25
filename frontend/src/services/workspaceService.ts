@@ -20,7 +20,8 @@ export interface CreateWorkspaceInput {
 interface WorkspaceRow {
   id: string;
   name: string;
-  owner_id: string;
+  owner_id?: string;
+  created_by_id?: string;
   business_type: WorkspaceSettings['businessType'];
   template_id?: string;
   execution_mode?: string;
@@ -86,7 +87,7 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
   return {
     id: row.id,
     name: row.name,
-    ownerId: row.owner_id,
+    ownerId: row.created_by_id || row.owner_id || '',
     is_demo: row.is_demo,
     is_sandbox: row.is_sandbox,
     parent_workspace_id: row.parent_workspace_id,
@@ -206,7 +207,7 @@ export async function createWorkspaceForUser({ name, settings, user, templateId,
   const workspaceData = {
     id: newWorkspaceId,
     name,
-    owner_id: validOwnerId,
+    created_by_id: validOwnerId,
     template_id: templateId || null,
     execution_mode: executionMode || 'KANBAN',
     default_lanes: defaultLanes || 5,

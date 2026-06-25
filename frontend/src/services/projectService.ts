@@ -46,7 +46,7 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
         execution_mode: input.execution_mode || EXECUTION_MODES[0],
         client_id: input.client_id || null,
         department_id: input.department_id || null,
-        owner_id: input.owner_id || null,
+        created_by_id: input.owner_id || null,
         priority: input.priority || 'medium',
         proposed_start_date: input.proposed_start_date || null,
         client_deadline: input.client_deadline || null,
