@@ -29,7 +29,7 @@ export const notificationEngine = {
       
     if (users) {
       for (const u of users) {
-        await this.createNotification(workspaceId, u.user_id, null, 'integration', 'global', 'high', 'system', title, message, '/workspace/integrations');
+        await this.createNotification(workspaceId, u.id, null, 'integration', 'global', 'high', 'system', title, message, '/workspace/integrations');
       }
     }
   },

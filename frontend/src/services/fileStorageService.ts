@@ -351,15 +351,8 @@ export const fileStorageService = {
   },
 
   async unarchiveFile(fileId: string, workspaceId: string): Promise<boolean> {
-    const { data: authData } = await supabase.auth.getUser();
-    if (!authData.user) return false;
-
-    const { error } = await supabase
-      .from('files')
-      // .update({ archived_at: null, archived_by: null })
-      .eq('id', fileId);
-
-    return !error;
+    // Archiving is not supported in the current V1.3 schema.
+    return false;
   },
 
   // ─────────────────────────────────────────────────────────────────────────
