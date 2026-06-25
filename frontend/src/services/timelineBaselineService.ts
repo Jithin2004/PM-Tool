@@ -50,7 +50,10 @@ export const timelineBaselineService = {
       .eq('project_id', projectId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.warn('timeline_baselines table may not exist yet, returning empty array');
+      return [];
+    }
     return data || [];
   },
 

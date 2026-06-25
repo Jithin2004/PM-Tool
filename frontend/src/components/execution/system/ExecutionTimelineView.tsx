@@ -69,21 +69,25 @@ export default function ExecutionTimelineView({ tasks, projects, dependencies: i
       if (!activeProject || !workspace) return;
       setLoading(true);
 
-      const [mRes, eRes, sRes, dRes, bRes] = await Promise.all([
-        supabase.from('milestones').select('*').eq('project_id', activeProject.id),
-        supabase.from('epics').select('*').eq('project_id', activeProject.id),
-        supabase.from('stories').select('*').eq('project_id', activeProject.id),
-        dependencyService.getDependencies(workspace.id),
-        timelineBaselineService.getBaselines(activeProject.id)
-      ]);
+      try {
+        const [mRes, eRes, sRes, dRes, bRes] = await Promise.all([
+          supabase.from('milestones').select('*').eq('project_id', activeProject.id),
+          supabase.from('epics').select('*').eq('project_id', activeProject.id),
+          supabase.from('stories').select('*').eq('project_id', activeProject.id),
+          dependencyService.getDependencies(workspace.id).catch(() => []),
+          timelineBaselineService.getBaselines(activeProject.id).catch(() => [])
+        ]);
 
-      if (mRes.data) setMilestones(mRes.data);
-      if (eRes.data) setEpics(eRes.data);
-      if (sRes.data) setStories(sRes.data);
-      if (dRes) setDeps(dRes);
-      if (bRes) setBaselines(bRes);
-
-      setLoading(false);
+        if (mRes.data) setMilestones(mRes.data);
+        if (eRes.data) setEpics(eRes.data);
+        if (sRes.data) setStories(sRes.data);
+        if (dRes) setDeps(dRes);
+        if (bRes) setBaselines(bRes);
+      } catch (e) {
+        console.error("Failed to load hierarchy for Gantt chart:", e);
+      } finally {
+        setLoading(false);
+      }
     }
     loadHierarchy();
   }, [activeProject, workspace]);
