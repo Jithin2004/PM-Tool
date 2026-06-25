@@ -16,12 +16,19 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', service: 'resolve-pm-backend', version: '1.0.0', timestamp: new Date().toISOString() });
 });
 
-// ── Public Licensing Endpoints ──
+// 🪪 Public Licensing Endpoints 🪪
 app.post('/verify', licenseController.verifyLicense);
 app.get('/verify', licenseController.verifyLicenseToken);
 
 app.post('/activate', licenseController.activateLicense);
-app.get('/addLicense', licenseController.addLicense);
+
+// 🛡️ Admin Licensing Endpoints 🛡️
+const adminAuth = require('./middleware/adminAuth');
+app.get('/addLicense', adminAuth, licenseController.addLicense);
+app.post('/admin/generate', adminAuth, licenseController.adminGenerateKey);
+app.post('/admin/disable', adminAuth, licenseController.adminDisableKey);
+app.get('/admin/activations', adminAuth, licenseController.adminGetActivations);
+app.get('/admin/events', adminAuth, licenseController.adminGetEvents);
 
 
 // App Startup Process
