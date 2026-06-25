@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS public.stories (
 
 -- RLS for stories
 ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS ""Enable all operations for workspace users"" ON public.stories;
-CREATE POLICY ""Enable all operations for workspace users"" 
+DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.stories;
+CREATE POLICY "Enable all operations for workspace users" 
 ON public.stories FOR ALL 
 USING (workspace_id = public.current_workspace());
 
@@ -70,8 +70,8 @@ CREATE TABLE IF NOT EXISTS public.timeline_baselines (
 
 -- RLS for timeline_baselines
 ALTER TABLE public.timeline_baselines ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS ""Enable all operations for workspace users"" ON public.timeline_baselines;
-CREATE POLICY ""Enable all operations for workspace users"" 
+DROP POLICY IF EXISTS "Enable all operations for workspace users" ON public.timeline_baselines;
+CREATE POLICY "Enable all operations for workspace users" 
 ON public.timeline_baselines FOR ALL 
 USING (workspace_id = public.current_workspace());
 
