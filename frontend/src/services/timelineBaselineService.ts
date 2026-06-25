@@ -6,7 +6,15 @@ export interface TimelineBaseline {
   project_id: string;
   name: string;
   description: string | null;
+  baseline_date: string;
+  planned_start: string | null;
+  planned_end: string | null;
+  actual_start: string | null;
+  actual_end: string | null;
+  variance_days: number | null;
+  confidence_score: number | null;
   snapshot: any;
+  prediction_metadata: any;
   is_active: boolean;
   created_by: string | null;
   created_at: string;
@@ -51,8 +59,11 @@ export const timelineBaselineService = {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.warn('timeline_baselines table may not exist yet, returning empty array');
-      return [];
+      if (error.code === '42P01') {
+        console.warn('timeline_baselines table missing (optional agile layer), returning empty array');
+        return [];
+      }
+      throw error;
     }
     return data || [];
   },

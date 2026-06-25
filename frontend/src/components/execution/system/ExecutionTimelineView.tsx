@@ -74,15 +74,19 @@ export default function ExecutionTimelineView({ tasks, projects, dependencies: i
           supabase.from('milestones').select('*').eq('project_id', activeProject.id),
           supabase.from('epics').select('*').eq('project_id', activeProject.id),
           supabase.from('stories').select('*').eq('project_id', activeProject.id),
-          dependencyService.getDependencies(workspace.id).catch(() => []),
-          timelineBaselineService.getBaselines(activeProject.id).catch(() => [])
+          dependencyService.getDependencies(workspace.id),
+          timelineBaselineService.getBaselines(activeProject.id)
         ]);
+
+        if (mRes.error && mRes.error.code !== '42P01') throw mRes.error;
+        if (eRes.error && eRes.error.code !== '42P01') throw eRes.error;
+        if (sRes.error && sRes.error.code !== '42P01') throw sRes.error;
 
         if (mRes.data) setMilestones(mRes.data);
         if (eRes.data) setEpics(eRes.data);
         if (sRes.data) setStories(sRes.data);
-        if (dRes) setDeps(dRes);
-        if (bRes) setBaselines(bRes);
+        setDeps(dRes || []);
+        setBaselines(bRes || []);
       } catch (e) {
         console.error("Failed to load hierarchy for Gantt chart:", e);
       } finally {
