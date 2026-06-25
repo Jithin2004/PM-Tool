@@ -38,9 +38,7 @@ export function ActionInbox() {
   const loadInbox = async () => {
     setLoading(true);
     try {
-      const [{ data: approvals }] = await Promise.all([
-        supabase.from('universal_approvals').select('*, requested_by_user:users!universal_approvals_requested_by_fkey(email), approved_by_user:users!universal_approvals_approved_by_fkey(email)').eq('workspace_id', workspace!.id)
-      ]);
+      const { data: approvals } = await supabase.from('universal_approvals').select('*').eq('workspace_id', workspace!.id);
 
       setRawApprovals(approvals || []);
       const notifs = dbNotifications;
