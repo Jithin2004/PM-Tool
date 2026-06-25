@@ -416,7 +416,7 @@ export function useTasks(workspaceId?: string) {
 
       let tasksQuery = supabase
         .from('tasks')
-        .select('*, projects!inner(owner_id)', { count: 'exact' })
+        .select('*, projects!inner(created_by_id)', { count: 'exact' })
         .eq('workspace_id', workspaceId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
