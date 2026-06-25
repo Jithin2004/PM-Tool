@@ -78,7 +78,7 @@ USING (workspace_id = public.current_workspace());
 -- 4. Update tasks table constraints
 -- The columns epic_id and story_id already exist, but they lacked foreign keys.
 -- We must safely add constraints if they do not exist.
-DO $DO
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tasks_epic_id_fkey') THEN
         ALTER TABLE public.tasks ADD CONSTRAINT tasks_epic_id_fkey FOREIGN KEY (epic_id) REFERENCES public.epics(id) ON DELETE SET NULL;
@@ -87,4 +87,4 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tasks_story_id_fkey') THEN
         ALTER TABLE public.tasks ADD CONSTRAINT tasks_story_id_fkey FOREIGN KEY (story_id) REFERENCES public.stories(id) ON DELETE SET NULL;
     END IF;
-END $DO;
+END $$;
