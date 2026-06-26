@@ -11,3 +11,5 @@ export const intelligenceCache = new IntelligenceCache();
 export const forecastRefreshPipeline = new ForecastRefreshPipeline(intelligenceCache);
 
 export const intelligenceFacade = new IntelligenceFacade();
+
+export { IntelligenceApp } from './application/IntelligenceContainer';

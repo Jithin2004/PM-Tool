@@ -1,6 +1,6 @@
 import type { IPersistenceAdapter } from './IPersistenceAdapter';
 import type { PersistenceEvent } from './PersistenceEvents';
-import { supabase } from '../../../../lib/supabaseClient'; // Adjusted relative path assuming standard structure
+import { supabase } from '../../../lib/supabase'; // Adjusted relative path assuming standard structure
 
 export class SupabasePersistenceAdapter implements IPersistenceAdapter {
   

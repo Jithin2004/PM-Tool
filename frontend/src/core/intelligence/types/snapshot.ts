@@ -37,3 +37,11 @@ export interface CommercialSnapshot {
   timestamp: string;
   payload: Record<string, unknown>;
 }
+
+export interface MathematicalSnapshot {
+    id: string;
+    projectId: string;
+    timestamp: Date;
+    data: any;
+    engine_outputs?: any;
+}
