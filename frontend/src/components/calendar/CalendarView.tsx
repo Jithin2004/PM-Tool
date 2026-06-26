@@ -376,7 +376,7 @@ export function CalendarView() {
                       className={`min-h-[64px] p-1.5 border-r border-b border-outline-variant/40 flex flex-col group relative transition-colors ${d.isCurrentMonth ? 'bg-surface-container-lowest' : 'bg-surface-container-low/10 text-on-surface-variant/40'} hover:bg-surface-container-high/20`}
                     >
                       <div className="flex justify-between items-center mb-1">
-                        <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-primary text-on-primary shadow-sm' : d.isCurrentMonth ? 'text-on-surface' : 'text-on-surface-variant/40'}`}>
+                        <span className={`text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full transition-all ${isToday ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)] ring-2 ring-emerald-500/20 ring-offset-2 ring-offset-bg scale-110' : d.isCurrentMonth ? 'text-text-primary hover:bg-surface-3' : 'text-text-tertiary'}`}>
                           {d.day}
                         </span>
                         {canManageEvents && d.isCurrentMonth && (
@@ -511,3 +511,4 @@ export function CalendarView() {
     </div>
   );
 }
+

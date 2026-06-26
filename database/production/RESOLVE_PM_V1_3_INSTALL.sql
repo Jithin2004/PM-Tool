@@ -10070,3 +10070,142 @@ USING (
   workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid 
   AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin')
 );
+
+
+-- V1.3.2 BUGFIXES --
+-- RC26_1_V1_3_2_BUGFIXES.sql
+-- 1. Ensure Finance FK is explicit
+DO $DO 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM pg_constraint 
+        WHERE conname = 'billing_milestones_project_id_fkey'
+    ) THEN
+        ALTER TABLE public.billing_milestones 
+        ADD CONSTRAINT billing_milestones_project_id_fkey 
+        FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
+    END IF;
+END $DO;
+
+-- 2. Expand meetings table for Project Journal
+ALTER TABLE public.meetings
+ADD COLUMN IF NOT EXISTS milestone_id uuid REFERENCES public.milestones(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS task_id uuid REFERENCES public.tasks(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS summary text,
+ADD COLUMN IF NOT EXISTS minutes text,
+ADD COLUMN IF NOT EXISTS follow_up_date timestamptz;
+
+-- 3. Update universal_approvals for Project Journal
+ALTER TABLE public.universal_approvals DROP CONSTRAINT IF EXISTS universal_approvals_decision_check;
+ALTER TABLE public.universal_approvals ADD CONSTRAINT universal_approvals_decision_check CHECK (decision IN ('Pending', 'Approved', 'Approved with Conditions', 'Rejected', 'Returned for Revision', 'Cancelled', 'Deferred', 'Escalated', 'Expired', 'Overridden'));
+
+ALTER TABLE public.universal_approvals
+ADD COLUMN IF NOT EXISTS approval_type text,
+ADD COLUMN IF NOT EXISTS approver_role text,
+ADD COLUMN IF NOT EXISTS project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
+ADD COLUMN IF NOT EXISTS milestone_id uuid REFERENCES public.milestones(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS task_id uuid REFERENCES public.tasks(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS reason text,
+ADD COLUMN IF NOT EXISTS decision_summary text,
+ADD COLUMN IF NOT EXISTS supporting_notes text,
+ADD COLUMN IF NOT EXISTS attachments jsonb,
+ADD COLUMN IF NOT EXISTS conditions jsonb,
+ADD COLUMN IF NOT EXISTS action_items jsonb;
+
+-- ==========================================================
+-- RESOLVE INTELLIGENCE CORE: PHASE 7 (PERSISTENCE LAYER)
+-- ==========================================================
+
+-- 1. Feature Snapshots
+CREATE TABLE IF NOT EXISTS feature_snapshots (
+    snapshot_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL,
+    feature_data JSONB NOT NULL,
+    created_by UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2. Prediction Snapshots
+CREATE TABLE IF NOT EXISTS prediction_snapshots (
+    snapshot_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL,
+    snapshot_hash TEXT NOT NULL,
+    feature_snapshot_id UUID REFERENCES feature_snapshots(snapshot_id),
+    mathematical_snapshot_id TEXT NOT NULL,
+    created_by UUID,
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 3. Prediction History
+CREATE TABLE IF NOT EXISTS prediction_history (
+    prediction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL,
+    forecast_type TEXT NOT NULL,
+    algorithm_version TEXT NOT NULL,
+    model_version TEXT NOT NULL,
+    prediction_result JSONB NOT NULL,
+    confidence JSONB NOT NULL,
+    evidence JSONB NOT NULL,
+    recommendation JSONB,
+    snapshot_reference UUID REFERENCES prediction_snapshots(snapshot_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pred_hist_workspace ON prediction_history(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_pred_hist_created_at ON prediction_history(created_at);
+
+-- 4. Prediction Accuracy
+CREATE TABLE IF NOT EXISTS prediction_accuracy (
+    accuracy_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    prediction_id UUID NOT NULL REFERENCES prediction_history(prediction_id),
+    actual_outcome JSONB NOT NULL,
+    difference JSONB,
+    accuracy NUMERIC,
+    mae NUMERIC,
+    rmse NUMERIC,
+    bias NUMERIC,
+    calibration JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 5. Learning Dataset Versions
+CREATE TABLE IF NOT EXISTS learning_dataset_versions (
+    version_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dataset_version TEXT NOT NULL,
+    dataset_hash TEXT NOT NULL,
+    feature_version TEXT NOT NULL,
+    normalization_version TEXT NOT NULL,
+    prediction_version TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 6. Simulation Runs
+CREATE TABLE IF NOT EXISTS simulation_runs (
+    simulation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL,
+    prediction_id UUID REFERENCES prediction_history(prediction_id),
+    simulation_count INTEGER NOT NULL,
+    seed INTEGER NOT NULL,
+    distribution JSONB NOT NULL,
+    runtime_ms INTEGER NOT NULL,
+    quality_metrics JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 7. Forecast Sessions (Sandboxes)
+CREATE TABLE IF NOT EXISTS forecast_sessions (
+    session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL,
+    session_type TEXT NOT NULL,
+    simulation_data JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 8. Forecast Feedback
+CREATE TABLE IF NOT EXISTS forecast_feedback (
+    feedback_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    prediction_id UUID NOT NULL REFERENCES prediction_history(prediction_id),
+    user_id UUID NOT NULL,
+    feedback_text TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

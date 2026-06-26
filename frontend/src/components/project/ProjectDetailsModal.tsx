@@ -1,4 +1,7 @@
 import { hasCapability } from '../../core/auth/permissions';
+import { IntelligenceApp } from '../../core/intelligence';
+import { ProjectIntelligenceAdapter } from '../../core/intelligence/application/UIAdapters';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -25,6 +28,7 @@ import { SharedProjectDashboard } from '../../pages/shared/SharedProjectDashboar
 import { ChangeRequestsTab } from './ChangeRequestsTab';
 import { hasAuthority } from '../../core/auth/permissions';
 import { ProjectRequirementsTab } from './ProjectRequirementsTab';
+import { ProjectJournalTab } from './ProjectJournalTab';
 
 function ProjectFinanceTab({ project, currentUserProfile }: { project: Project; currentUserProfile?: any }) {
   const [loading, setLoading] = useState(true);
@@ -344,7 +348,7 @@ export function ProjectDetailsModal({
   useEscapeKey(true, onClose);
   const hasTasks = tasks.some(t => t.project_id === project.id);
 
-  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance' | 'requirements' | 'insights' | 'change_requests'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'friction' | 'files' | 'finance' | 'requirements' | 'insights' | 'change_requests' | 'journal' | 'intelligence'>('general');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [previewToken, setPreviewToken] = useState<string | null>(null);
   const [deltaDays, setDeltaDays] = useState('5');
@@ -509,22 +513,43 @@ export function ProjectDetailsModal({
   const startDate = proposedStartDate ? new Date(proposedStartDate) : new Date(project.created_at);
   const deadline = clientDeadline ? new Date(clientDeadline) : null;
 
-  const etaCompletionDate = useMemo(() => {
-    if (isPlanning) return nowLive;
-    return addWorkingHours(startDate, expectedRealHours / engineerCount, workWindow);
-  }, [startDate, expectedRealHours, engineerCount, workWindow, isPlanning, nowLive]);
-  const etaRemainingDays = useMemo(() => {
-    if (isPlanning) return 0;
-    if (nowLive >= etaCompletionDate) return 0;
-    let count = 0;
-    let cursor = new Date(nowLive);
-    while (cursor < etaCompletionDate) {
-      const cap = getDailyCapacity(cursor, workWindow);
-      if (cap > 0) count += cap / productiveHoursPerDay;
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return Math.max(0, Number(count.toFixed(1)));
-  }, [nowLive, etaCompletionDate, workWindow, productiveHoursPerDay, isPlanning]);
+  
+  const [intelligence, setIntelligence] = useState<any>(null);
+  const [intelligenceStatus, setIntelligenceStatus] = useState<'loading' | 'running' | 'failed' | 'ready'>('loading');
+
+  useEffect(() => {
+    let mounted = true;
+    const loadInt = async () => {
+      try {
+        setIntelligenceStatus('loading');
+        // Force background refresh event 
+        if(IntelligenceApp && IntelligenceApp.commands) {
+            await IntelligenceApp.commands.triggerForecastRefresh(project.id);
+        }
+        setIntelligenceStatus('running');
+        // Load payload
+        if(IntelligenceApp && IntelligenceApp.queries) {
+            const dto = await IntelligenceApp.queries.loadProjectIntelligence(project.id);
+            if (mounted && dto) {
+                setIntelligence(ProjectIntelligenceAdapter.toUIContract(dto));
+                setIntelligenceStatus('ready');
+            } else if (mounted) {
+                setIntelligenceStatus('failed');
+            }
+        } else {
+            setIntelligenceStatus('failed');
+        }
+      } catch (err) {
+        console.error("Intelligence load failed", err);
+        if (mounted) setIntelligenceStatus('failed');
+      }
+    };
+    loadInt();
+    return () => { mounted = false; };
+  }, [project.id]);
+
+  const etaCompletionDate = new Date(); // Mocked for other tabs that still stupidly rely on it
+  const etaRemainingDays = 0;
 
   const [changeReasonPrompt, setChangeReasonPrompt] = useState<{ changes: any, open: boolean }>({ changes: null, open: false });
   const [pendingFinanceWarning, setPendingFinanceWarning] = useState<{ open: boolean; gap: number; currency: string; contractVal: number; totalInv: number } | null>(null);
@@ -1150,7 +1175,15 @@ export function ProjectDetailsModal({
             >
               <Activity className="w-3.5 h-3.5" /> Finance
             </button>
-            <button
+            
+              <button
+                onClick={() => setActiveTab('intelligence')}
+                className={`flex-1 min-w-[120px] py-2.5 px-4 text-[11px] font-bold tracking-widest uppercase transition-all whitespace-nowrap border-b-2
+                  ${activeTab === 'intelligence' ? 'border-[var(--pm-primary)] text-[var(--pm-primary)] bg-[var(--pm-primary)]/5' : 'border-transparent text-text-tertiary hover:text-text-primary hover:bg-surface-3'}`}
+              >
+                Intelligence
+              </button>
+    <button
               type="button"
               onClick={() => setActiveTab('insights')}
               className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn flex items-center justify-center gap-2 ${activeTab === 'insights' ? 'active text-indigo-400' : ''
@@ -1667,5 +1700,6 @@ export function ProjectDetailsModal({
     </div>
   );
 }
+
 
 

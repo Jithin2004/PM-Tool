@@ -1,0 +1,1 @@
+# EndToEndArchitecture.md\nIntegration layer details.

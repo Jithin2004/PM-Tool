@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, Users, X, Plus, Check, Video } from 'lucide-react';
 import type { Meeting, MeetingType, User } from '../../types';
@@ -18,6 +18,19 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [milestoneId, setMilestoneId] = useState('');
+  const [taskId, setTaskId] = useState('');
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (projectId) {
+      import('../../lib/supabase').then(({ supabase }) => {
+        supabase.from('milestones').select('id, title').eq('project_id', projectId).is('deleted_at', null).then(({ data }) => setMilestones(data || []));
+        supabase.from('tasks').select('id, title').eq('project_id', projectId).is('deleted_at', null).then(({ data }) => setTasks(data || []));
+      });
+    }
+  }, [projectId]);
   const [meetingType, setMeetingType] = useState<MeetingType>('sync');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -158,5 +171,6 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
     </>
   );
 }
+
 
 

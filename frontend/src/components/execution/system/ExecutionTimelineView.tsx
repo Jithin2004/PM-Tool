@@ -66,7 +66,10 @@ export default function ExecutionTimelineView({ tasks, projects, dependencies: i
 
   useEffect(() => {
     async function loadHierarchy() {
-      if (!activeProject || !workspace) return;
+      if (!activeProject || !workspace) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
 
       try {

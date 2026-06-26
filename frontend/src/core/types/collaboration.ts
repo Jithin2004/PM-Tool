@@ -104,6 +104,8 @@ export interface Meeting {
   id: string;
   workspace_id: string;
   project_id?: string;
+  milestone_id?: string;
+  task_id?: string;
   title: string;
   description?: string;
   meeting_type: MeetingType;
@@ -111,6 +113,14 @@ export interface Meeting {
   start_time: string;
   end_time: string;
   organizer_id?: string;
+  date?: string;
+  time?: string;
+  agenda?: string;
+  minutes?: string;
+  summary?: string;
+  decisions?: any;
+  action_items?: any;
+  follow_up_date?: string;
   created_at: string;
   updated_at: string;
 }

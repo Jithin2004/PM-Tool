@@ -1,0 +1,1 @@
+# AcceptanceTest.md\nIntegration layer details.

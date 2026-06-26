@@ -152,8 +152,8 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Workspace Settings', path: '/admin/settings', capability: 'settings.manage' },
       { label: 'Access Control', path: '/admin/identity', capability: 'user.manage' },
-      { label: 'Integrations', path: '/admin/connections', capability: 'integration.manage' },
-      { label: 'Automations', path: '/admin/automations', capability: 'automation.manage' },
+      // TODO(v1.5): { label: 'Integrations', path: '/admin/connections', capability: 'integration.manage' },
+      // TODO(v1.5): { label: 'Automations', path: '/admin/automations', capability: 'automation.manage' },
       { label: 'Audit', path: '/admin/audit', capability: 'audit.view' }
     ]
   }
@@ -1830,6 +1830,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
 
   );
 }
+
 
 
 

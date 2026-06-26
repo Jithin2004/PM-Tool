@@ -1,0 +1,1 @@
+# WorkerArchitecture.md\nIntegration layer details.

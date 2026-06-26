@@ -1,0 +1,1 @@
+# RealtimeArchitecture.md\nIntegration layer details.
