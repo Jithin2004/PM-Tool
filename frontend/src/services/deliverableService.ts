@@ -28,7 +28,7 @@ export const deliverableService = {
       .from('billing_milestones')
       .select('*, projects(name)')
       .eq('workspace_id', workspaceId)
-      .order('due_date', { ascending: true });
+      .order('created_at', { ascending: true });
       
     if (status) {
       query = query.eq('status', status);
