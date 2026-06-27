@@ -477,7 +477,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const tourSteps: TourStep[] = useMemo(() => {
     const role = profile?.role || 'viewer';
 
-    if (role === 'admin' || role === 'super_admin' || role === 'owner') {
+    if (hasCapability(profile, 'workspace.update')) {
       // OWNER / ADMIN TOUR
       return [
         {
@@ -511,7 +511,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/control/settings')
         }
       ];
-    } else if (hasFunction(role, 'Projects') || hasCapability(role, 'project.update')) {
+    } else if (hasCapability(profile, 'project.update')) {
       // PM TOUR
       return [
         {
@@ -539,7 +539,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/resources/teams')
         }
       ];
-    } else if (hasFunction(role, 'Finance')) {
+    } else if (hasCapability(profile, 'finance.manage')) {
       // FINANCE TOUR
       return [
         {
@@ -567,7 +567,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
           actionBefore: () => navigateTo('/workspace/approvals')
         }
       ];
-    } else if (role === 'client' || role === 'external') {
+    } else if (hasCapability(profile, 'client.project.view')) {
       // CLIENT TOUR
       return [
         {
@@ -857,7 +857,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
       return d.pm_id === user.id || (Array.isArray(d.developer_ids) && d.developer_ids.includes(user.id));
     });
 
-    if (!isUserInAnyTeam && profile?.role !== 'super_admin') {
+    if (!isUserInAnyTeam && !hasCapability(profile, 'workspace.update')) {
       notify("Access Denied: You must form or join a team before creating a project.", "error");
       return;
     }

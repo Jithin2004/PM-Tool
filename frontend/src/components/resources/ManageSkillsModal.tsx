@@ -74,7 +74,7 @@ export function ManageSkillsModal({ onClose }: ManageSkillsModalProps) {
     }
   };
 
-  const activeTeamMembers = profiles.filter(p => p.role !== 'uninvited');
+  const activeTeamMembers = profiles.filter(p => p.status === 'active' && p.role !== 'uninvited');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay-premium p-4">

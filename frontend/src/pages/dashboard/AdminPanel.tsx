@@ -306,9 +306,9 @@ export function AdminPanel() {
   const fetchInvitations = async () => {
     if (!canGovernPlatform || !workspace?.id) return;
     const { data, error } = await supabase
-      .from('users')
+      .from('invitations')
       .select('*')
-      .eq('status', 'invited')
+      .eq('status', 'pending')
       .eq('workspace_id', workspace.id);
     if (!error && data) {
       setInvitations(data);
@@ -376,8 +376,8 @@ export function AdminPanel() {
   const handleRevokeInvitation = async (id: string) => {
     if (await showConfirm("Are you sure you want to revoke this invitation? The user will no longer be allowed to join.", { title: "Revoke Invitation", confirmText: "Revoke", type: 'warning' })) {
       const { error } = await supabase
-        .from('users')
-        .update({ status: 'disabled', invite_token: null, invite_expires_at: null })
+        .from('invitations')
+        .update({ status: 'revoked' })
         .eq('id', id);
       if (!error) {
         fetchInvitations();
@@ -457,7 +457,7 @@ export function AdminPanel() {
   }
 
   const activeTeams = teams.filter(t => t.name !== 'SYSTEM_SETTINGS');
-  const activeProfiles = profiles || [];
+  const activeProfiles = (profiles || []).filter(p => p.status === 'active' && p.role !== 'uninvited');
 
   
   const TOP_TABS = [

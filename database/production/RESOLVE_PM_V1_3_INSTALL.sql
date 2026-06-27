@@ -726,7 +726,7 @@ BEGIN
       SELECT 1 FROM public.users me 
       WHERE me.id = auth.uid() 
         AND me.workspace_id = OLD.workspace_id 
-        AND me.role = 'super_admin'
+        AND public.has_capability(auth.uid(), 'workspace.update')
     ) AND NOT (
       -- Exemption: Workspace founder bootstrapping their own role
       NEW.id = auth.uid()
@@ -880,7 +880,7 @@ CREATE POLICY "Workspace admin can create first super admin user"
 ON users FOR INSERT
   WITH CHECK (
     id = auth.uid()
-    AND role = 'super_admin'
+    AND public.has_capability(auth.uid(), 'workspace.update')
     AND EXISTS (
       SELECT 1 FROM workspaces
       WHERE workspaces.id = users.workspace_id
@@ -1282,7 +1282,7 @@ ON invitations FOR ALL
     AND EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
-        AND users.role = 'super_admin'
+        AND public.has_capability(auth.uid(), 'workspace.update')
     )
   )
   WITH CHECK (
@@ -1290,7 +1290,7 @@ ON invitations FOR ALL
     AND EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
-        AND users.role = 'super_admin'
+        AND public.has_capability(auth.uid(), 'workspace.update')
     )
   );
 DROP POLICY IF EXISTS "Invited users can accept their own invitation" ON invitations;
@@ -1532,7 +1532,7 @@ FOR ALL USING (
 
     SELECT 1 FROM public.users
 
-    WHERE users.id = auth.uid() AND users.role = 'super_admin'
+    WHERE users.id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
 
   )
 
@@ -1585,7 +1585,7 @@ FOR ALL USING (
 
     SELECT 1 FROM public.users
 
-    WHERE users.id = auth.uid() AND users.role = 'super_admin'
+    WHERE users.id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
 
   )
 
@@ -1656,7 +1656,7 @@ ON public.employment_records
 FOR ALL USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid() AND users.role = 'super_admin'
+    WHERE users.id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
   )
 );
 
@@ -1687,7 +1687,7 @@ ON public.employment_change_logs
 FOR ALL USING (
   EXISTS (
     SELECT 1 FROM public.users
-    WHERE users.id = auth.uid() AND users.role = 'super_admin'
+    WHERE users.id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
   )
 );
 DROP POLICY IF EXISTS "Users can view their own change logs" ON public.employment_change_logs;
@@ -1739,7 +1739,7 @@ USING (
     SELECT 1 FROM public.users
     WHERE users.id = auth.uid()
       AND users.workspace_id = compensation_records.workspace_id
-      AND users.role = 'super_admin'
+      AND public.has_capability(auth.uid(), 'workspace.update')
   )
 )
 WITH CHECK (
@@ -1747,7 +1747,7 @@ WITH CHECK (
     SELECT 1 FROM public.users
     WHERE users.id = auth.uid()
       AND users.workspace_id = compensation_records.workspace_id
-      AND users.role = 'super_admin'
+      AND public.has_capability(auth.uid(), 'workspace.update')
   )
 );
 
@@ -3735,7 +3735,7 @@ ON employment_records FOR ALL
       SELECT 1 FROM public.users
       WHERE id = auth.uid()
         AND workspace_id = public.current_workspace()
-        AND (role = 'super_admin' OR 'manage_employees' = ANY(capabilities))
+        AND (role = 'super_admin' OR 'people.manage' = ANY(capabilities))
     )
   );
 
@@ -3773,7 +3773,7 @@ BEGIN
       SELECT role, capabilities INTO current_user_role, current_user_caps 
       FROM users WHERE id = current_user_id;
 
-      IF current_user_role IS DISTINCT FROM 'super_admin' AND NOT ('manage_employees' = ANY(current_user_caps)) THEN
+      IF current_user_role IS DISTINCT FROM 'super_admin' AND NOT ('people.manage' = ANY(current_user_caps)) THEN
         RAISE EXCEPTION 'Unauthorized: Only Super Admins and HR can modify capabilities.';
       END IF;
     END IF;
@@ -4063,7 +4063,7 @@ ON work_sessions FOR UPDATE
       SELECT 1 FROM public.users
       WHERE id = auth.uid()
         AND workspace_id = public.current_workspace()
-        AND (role IN ('super_admin', 'admin', 'project_manager') OR 'manage_employees' = ANY(capabilities))
+        AND (role IN ('super_admin', 'admin', 'project_manager') OR 'people.manage' = ANY(capabilities))
     )
   );
 DROP POLICY IF EXISTS "PMs and HR can delete work sessions" ON work_sessions;
@@ -4075,7 +4075,7 @@ ON work_sessions FOR DELETE
       SELECT 1 FROM public.users
       WHERE id = auth.uid()
         AND workspace_id = public.current_workspace()
-        AND (role IN ('super_admin', 'admin', 'project_manager') OR 'manage_employees' = ANY(capabilities))
+        AND (role IN ('super_admin', 'admin', 'project_manager') OR 'people.manage' = ANY(capabilities))
     )
   );
 
@@ -4140,7 +4140,7 @@ ON work_session_pauses FOR UPDATE
       WHERE ws.id = session_id
       AND ws.workspace_id = public.current_workspace()
       AND u.workspace_id = public.current_workspace()
-      AND (u.role IN ('super_admin', 'admin', 'project_manager') OR 'manage_employees' = ANY(u.capabilities))
+      AND (u.role IN ('super_admin', 'admin', 'project_manager') OR 'people.manage' = ANY(u.capabilities))
     )
   );
 
@@ -4209,7 +4209,7 @@ ON work_session_adjustments FOR INSERT
       SELECT 1 FROM public.users
       WHERE id = auth.uid() 
       AND workspace_id = public.current_workspace() 
-      AND (role IN ('super_admin', 'project_manager', 'admin', 'project_manager') OR 'manage_projects' = ANY(capabilities))
+      AND (role IN ('super_admin', 'project_manager', 'admin', 'project_manager') OR 'project.update' = ANY(capabilities))
     )
   );
 
@@ -4242,7 +4242,7 @@ ON project_reviews FOR INSERT
       SELECT 1 FROM public.users
       WHERE id = auth.uid() 
       AND workspace_id = public.current_workspace() 
-      AND (role IN ('super_admin', 'project_manager', 'admin', 'project_manager') OR 'manage_projects' = ANY(capabilities))
+      AND (role IN ('super_admin', 'project_manager', 'admin', 'project_manager') OR 'project.update' = ANY(capabilities))
     )
   );
 
@@ -4503,7 +4503,7 @@ CREATE POLICY "Super Admins can view workspace license"
 ON workspace_license FOR SELECT
   USING (
     workspace_id IN (
-      SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
     )
   );
 DROP POLICY IF EXISTS "Super Admins can insert workspace license" ON workspace_license;
@@ -4511,7 +4511,7 @@ CREATE POLICY "Super Admins can insert workspace license"
 ON workspace_license FOR INSERT
   WITH CHECK (
     workspace_id IN (
-      SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
     )
   );
 DROP POLICY IF EXISTS "Super Admins can update workspace license" ON workspace_license;
@@ -4519,7 +4519,7 @@ CREATE POLICY "Super Admins can update workspace license"
 ON workspace_license FOR UPDATE
   USING (
     workspace_id IN (
-      SELECT workspace_id FROM users WHERE id = auth.uid() AND role = 'super_admin'
+      SELECT workspace_id FROM users WHERE id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
     )
   );
 
@@ -5221,16 +5221,16 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 3. Seed Default Capabilities
 INSERT INTO public.capabilities (id, module) VALUES
-    ('view_projects', 'core'), ('manage_projects', 'core'),
-    ('view_tasks', 'core'), ('manage_tasks', 'core'),
-    ('view_scheduling', 'core'), ('manage_scheduling', 'core'),
-    ('view_analytics', 'analytics'), ('view_reports', 'analytics'),
-    ('manage_logistics', 'settings'), ('manage_settings', 'settings'),
-    ('view_teams', 'hr'), ('manage_teams', 'hr'),
-    ('manage_employees', 'hr'), ('manage_attendance', 'hr'), ('manage_employment_records', 'hr'),
-    ('manage_finance', 'finance'), ('manage_payroll', 'finance'), ('manage_invoice', 'finance'), ('manage_expenses', 'finance'),
-    ('platform_governance', 'security'), ('platform_security', 'security'), ('view_audit_log', 'security'),
-    ('manage_integrations', 'settings'), ('manage_automations', 'settings')
+    ('project.view', 'core'), ('project.update', 'core'),
+    ('task.view', 'core'), ('task.update', 'core'),
+    ('timeline.view', 'core'), ('timeline.manage', 'core'),
+    ('dashboard.view', 'analytics'), ('reports.view', 'analytics'),
+    ('workspace.update', 'settings'), ('settings.manage', 'settings'),
+    ('people.view', 'hr'), ('people.manage', 'hr'),
+    ('people.manage', 'hr'), ('attendance.manage', 'hr'), ('hr.private_records', 'hr'),
+    ('finance.manage', 'finance'), ('finance.manage', 'finance'), ('invoice.manage', 'finance'), ('expense.manage', 'finance'),
+    ('workspace.update', 'security'), ('platform_security', 'security'), ('audit.view', 'security'),
+    ('integration.manage', 'settings'), ('automation.manage', 'settings')
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. Map Roles to Capabilities
@@ -5243,33 +5243,33 @@ SELECT 'project_manager', id FROM public.capabilities ON CONFLICT DO NOTHING;
 -- PM mapping
 INSERT INTO public.role_capabilities (role_id, capability_id)
 SELECT 'project_manager', id FROM public.capabilities WHERE id IN (
-    'view_projects', 'manage_projects', 'view_tasks', 'manage_tasks', 'view_scheduling', 'manage_scheduling',
-    'view_analytics', 'view_reports', 'manage_logistics', 'manage_settings', 'view_teams', 'manage_teams',
-    'manage_integrations', 'manage_automations'
+    'project.view', 'project.update', 'task.view', 'task.update', 'timeline.view', 'timeline.manage',
+    'dashboard.view', 'reports.view', 'workspace.update', 'settings.manage', 'people.view', 'people.manage',
+    'integration.manage', 'automation.manage'
 ) ON CONFLICT DO NOTHING;
 
 -- Developer mapping
 INSERT INTO public.role_capabilities (role_id, capability_id)
 SELECT 'developer', id FROM public.capabilities WHERE id IN (
-    'view_projects', 'view_tasks', 'manage_tasks', 'view_scheduling', 'view_teams'
+    'project.view', 'task.view', 'task.update', 'timeline.view', 'people.view'
 ) ON CONFLICT DO NOTHING;
 
 -- HR Manager mapping
 INSERT INTO public.role_capabilities (role_id, capability_id)
 SELECT 'hr_manager', id FROM public.capabilities WHERE id IN (
-    'view_teams', 'manage_teams', 'manage_employees', 'manage_attendance', 'manage_employment_records', 'manage_payroll'
+    'people.view', 'people.manage', 'people.manage', 'attendance.manage', 'hr.private_records', 'finance.manage'
 ) ON CONFLICT DO NOTHING;
 
 -- Finance Manager mapping
 INSERT INTO public.role_capabilities (role_id, capability_id)
 SELECT 'finance_manager', id FROM public.capabilities WHERE id IN (
-    'manage_finance', 'manage_invoice', 'manage_expenses', 'view_projects'
+    'finance.manage', 'invoice.manage', 'expense.manage', 'project.view'
 ) ON CONFLICT DO NOTHING;
 
 -- Viewer mapping
 INSERT INTO public.role_capabilities (role_id, capability_id)
 SELECT 'viewer', id FROM public.capabilities WHERE id IN (
-    'view_projects', 'view_tasks', 'view_analytics', 'view_reports', 'view_teams', 'view_audit_log'
+    'project.view', 'task.view', 'dashboard.view', 'reports.view', 'people.view', 'audit.view'
 ) ON CONFLICT DO NOTHING;
 
 
@@ -5886,93 +5886,93 @@ END $$;
 DROP POLICY IF EXISTS "Connected accounts isolation" ON connected_accounts;
 CREATE POLICY "Connected accounts isolation" 
 ON connected_accounts FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_settings')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_settings'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'settings.manage')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'settings.manage'));
 
 -- documents: View projects to read, manage_projects to write
 DROP POLICY IF EXISTS "Documents isolation select" ON documents;
 CREATE POLICY "Documents isolation select" 
 ON documents FOR SELECT USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_projects')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.view')
 );
 DROP POLICY IF EXISTS "Documents isolation write" ON documents;
 CREATE POLICY "Documents isolation write" 
 ON documents FOR INSERT WITH CHECK (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.update')
 );
 DROP POLICY IF EXISTS "Documents isolation update" ON documents;
 CREATE POLICY "Documents isolation update" 
 ON documents FOR UPDATE USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.update')
 );
 DROP POLICY IF EXISTS "Documents isolation delete" ON documents;
 CREATE POLICY "Documents isolation delete" 
 ON documents FOR DELETE USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.update')
 );
 
 -- sprints: View tasks to read, manage_tasks to write
 DROP POLICY IF EXISTS "Sprints isolation select" ON sprints;
 CREATE POLICY "Sprints isolation select" 
 ON sprints FOR SELECT USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_tasks')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'task.view')
 );
 DROP POLICY IF EXISTS "Sprints isolation write" ON sprints;
 CREATE POLICY "Sprints isolation write" 
 ON sprints FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_tasks')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_tasks'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'task.update')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'task.update'));
 
 -- approval_chains & approval_instances: platform_governance or manage_projects
 DROP POLICY IF EXISTS "Approvals chains isolation" ON approval_chains;
 CREATE POLICY "Approvals chains isolation" 
 ON approval_chains FOR ALL USING (
-    workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects'))
-) WITH CHECK (workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects')));
+    workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'workspace.update') OR public.has_capability(auth.uid(), 'project.update'))
+) WITH CHECK (workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'workspace.update') OR public.has_capability(auth.uid(), 'project.update')));
 DROP POLICY IF EXISTS "Approvals instances isolation" ON approval_instances;
 CREATE POLICY "Approvals instances isolation" 
 ON approval_instances FOR ALL USING (
-    workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects'))
-) WITH CHECK (workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'platform_governance') OR public.has_capability(auth.uid(), 'manage_projects')));
+    workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'workspace.update') OR public.has_capability(auth.uid(), 'project.update'))
+) WITH CHECK (workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'workspace.update') OR public.has_capability(auth.uid(), 'project.update')));
 
 -- automation_rules: manage_automations
 DROP POLICY IF EXISTS "Automation rules isolation" ON automation_rules;
 CREATE POLICY "Automation rules isolation" 
 ON automation_rules FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_automations')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_automations'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'automation.manage')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'automation.manage'));
 
 -- integration_sync_jobs: manage_integrations
 DROP POLICY IF EXISTS "Integrations isolation" ON integration_sync_jobs;
 CREATE POLICY "Integrations isolation" 
 ON integration_sync_jobs FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_integrations')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_integrations'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'integration.manage')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'integration.manage'));
 
 -- billing_milestones: manage_finance
 DROP POLICY IF EXISTS "Billing milestones isolation" ON billing_milestones;
 CREATE POLICY "Billing milestones isolation" 
 ON billing_milestones FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'finance.manage')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'finance.manage'));
 
 -- client_credits: manage_finance
 DROP POLICY IF EXISTS "Client credits isolation" ON client_credits;
 CREATE POLICY "Client credits isolation" 
 ON client_credits FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'finance.manage')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'finance.manage'));
 
 -- invoice_audit_logs: view_audit_log or manage_finance
 DROP POLICY IF EXISTS "Invoice audit isolation select" ON invoice_audit_logs;
 CREATE POLICY "Invoice audit isolation select" 
 ON invoice_audit_logs FOR SELECT USING (
-    workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'view_audit_log') OR public.has_capability(auth.uid(), 'manage_finance'))
+    workspace_id = public.current_workspace() AND (public.has_capability(auth.uid(), 'audit.view') OR public.has_capability(auth.uid(), 'finance.manage'))
 );
 DROP POLICY IF EXISTS "Invoice audit isolation insert" ON invoice_audit_logs;
 CREATE POLICY "Invoice audit isolation insert" 
 ON invoice_audit_logs FOR INSERT WITH CHECK (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_finance')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'finance.manage')
 );
 
 -- capability_change_logs: view_audit_log or platform_governance
@@ -5985,7 +5985,7 @@ ON capability_change_logs FOR SELECT USING (
         SELECT 1 FROM public.users me 
         WHERE me.id = auth.uid() 
         AND me.workspace_id = public.current_workspace()
-        AND (public.has_capability(auth.uid(), 'view_audit_log') OR public.has_capability(auth.uid(), 'platform_governance'))
+        AND (public.has_capability(auth.uid(), 'audit.view') OR public.has_capability(auth.uid(), 'workspace.update'))
     )
 );
 
@@ -5993,47 +5993,47 @@ ON capability_change_logs FOR SELECT USING (
 DROP POLICY IF EXISTS "Wait states isolation select" ON wait_states;
 CREATE POLICY "Wait states isolation select" 
 ON wait_states FOR SELECT USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_projects')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.view')
 );
 DROP POLICY IF EXISTS "Wait states isolation write" ON wait_states;
 CREATE POLICY "Wait states isolation write" 
 ON wait_states FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.update')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.update'));
 
 -- project_signoffs: view_projects to read, manage_projects to write
 DROP POLICY IF EXISTS "Project signoffs isolation select" ON project_signoffs;
 CREATE POLICY "Project signoffs isolation select" 
 ON project_signoffs FOR SELECT USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_projects')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.view')
 );
 DROP POLICY IF EXISTS "Project signoffs isolation write" ON project_signoffs;
 CREATE POLICY "Project signoffs isolation write" 
 ON project_signoffs FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_projects'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.update')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'project.update'));
 
 -- project_allocations & allocation_periods: view_scheduling to read, manage_scheduling to write
 DROP POLICY IF EXISTS "Project alloc isolation select" ON project_allocations;
 CREATE POLICY "Project alloc isolation select" 
 ON project_allocations FOR SELECT USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_scheduling')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'timeline.view')
 );
 DROP POLICY IF EXISTS "Project alloc isolation write" ON project_allocations;
 CREATE POLICY "Project alloc isolation write" 
 ON project_allocations FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_scheduling')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_scheduling'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'timeline.manage')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'timeline.manage'));
 DROP POLICY IF EXISTS "Alloc periods isolation select" ON allocation_periods;
 CREATE POLICY "Alloc periods isolation select" 
 ON allocation_periods FOR SELECT USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'view_scheduling')
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'timeline.view')
 );
 DROP POLICY IF EXISTS "Alloc periods isolation write" ON allocation_periods;
 CREATE POLICY "Alloc periods isolation write" 
 ON allocation_periods FOR ALL USING (
-    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_scheduling')
-) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'manage_scheduling'));
+    workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'timeline.manage')
+) WITH CHECK (workspace_id = public.current_workspace() AND public.has_capability(auth.uid(), 'timeline.manage'));
 
 
 -- ##############################################################################
@@ -6292,7 +6292,7 @@ ON capability_change_logs FOR SELECT
       SELECT 1 FROM public.users me 
       WHERE me.id = auth.uid() 
         AND me.workspace_id = public.current_workspace() 
-        AND me.role = 'super_admin'
+        AND public.has_capability(auth.uid(), 'workspace.update')
     )
   );
 DROP POLICY IF EXISTS "Capability logs insertable by admins" ON capability_change_logs;
@@ -6303,7 +6303,7 @@ ON capability_change_logs FOR INSERT
       SELECT 1 FROM public.users me 
       WHERE me.id = auth.uid() 
         AND me.workspace_id = public.current_workspace() 
-        AND me.role = 'super_admin'
+        AND public.has_capability(auth.uid(), 'workspace.update')
     )
   );
 
@@ -6668,7 +6668,7 @@ BEGIN
     END IF;
 
     -- Verify the caller has HR capability or is Super Admin
-    IF NOT (public.has_capability(auth.uid(), 'manage_employees') OR public.has_capability(auth.uid(), 'platform_governance')) THEN
+    IF NOT (public.has_capability(auth.uid(), 'people.manage') OR public.has_capability(auth.uid(), 'workspace.update')) THEN
         RAISE EXCEPTION 'Unauthorized. Only HR managers or Platform Admins can archive employees.';
     END IF;
 
@@ -7433,7 +7433,7 @@ BEGIN
     WHERE id = new_created_by_id 
       AND workspace_id = v_workspace_id
       AND status = 'active'
-      AND role = 'super_admin'
+      AND public.has_capability(auth.uid(), 'workspace.update')
   ) INTO v_is_valid;
 
   IF NOT v_is_valid THEN
@@ -8063,10 +8063,10 @@ BEGIN
 
   -- Last Super Admin Protection
   IF TG_OP = 'DELETE' THEN
-    IF OLD.role = 'super_admin' THEN
+    IF public.has_capability(OLD.id, 'workspace.update') THEN
       SELECT count(*) INTO super_admin_count FROM public.users 
       WHERE workspace_id = OLD.workspace_id 
-        AND role = 'super_admin' 
+        AND public.has_capability(auth.uid(), 'workspace.update') 
         AND status = 'active'
         AND id != OLD.id;
       
@@ -8077,10 +8077,10 @@ BEGIN
     RETURN OLD;
 
   ELSIF TG_OP = 'UPDATE' THEN
-    IF OLD.role = 'super_admin' AND (NEW.role != 'super_admin' OR NEW.workspace_id != OLD.workspace_id OR NEW.status != 'active') THEN
+    IF public.has_capability(OLD.id, 'workspace.update') AND (NOT public.has_capability(NEW.id, 'workspace.update') OR NEW.workspace_id != OLD.workspace_id OR NEW.status != 'active') THEN
       SELECT count(*) INTO super_admin_count FROM public.users 
       WHERE workspace_id = OLD.workspace_id 
-        AND role = 'super_admin' 
+        AND public.has_capability(auth.uid(), 'workspace.update') 
         AND status = 'active' 
         AND id != OLD.id;
       
@@ -8640,14 +8640,14 @@ CREATE POLICY "Backup snapshots viewable by super_admin"
 ON public.backup_snapshots FOR SELECT
     USING (EXISTS (
         SELECT 1 FROM public.users
-        WHERE users.id = auth.uid() AND users.workspace_id = backup_snapshots.workspace_id AND users.role = 'super_admin'
+        WHERE users.id = auth.uid() AND users.workspace_id = backup_snapshots.workspace_id AND public.has_capability(auth.uid(), 'workspace.update')
     ));
 DROP POLICY IF EXISTS "Backup snapshots insertable by super_admin" ON public.backup_snapshots;
 CREATE POLICY "Backup snapshots insertable by super_admin" 
 ON public.backup_snapshots FOR INSERT
     WITH CHECK (EXISTS (
         SELECT 1 FROM public.users
-        WHERE users.id = auth.uid() AND users.workspace_id = backup_snapshots.workspace_id AND users.role = 'super_admin'
+        WHERE users.id = auth.uid() AND users.workspace_id = backup_snapshots.workspace_id AND public.has_capability(auth.uid(), 'workspace.update')
     ));
 
 CREATE OR REPLACE FUNCTION public.record_backup_snapshot(
@@ -8865,7 +8865,7 @@ CREATE POLICY "View milestone signoffs (Internal)"
 ON public.milestone_signoffs FOR SELECT
     USING (
         workspace_id = public.current_workspace() AND
-        (public.has_capability(auth.uid(), 'manage_projects') OR public.has_capability(auth.uid(), 'manage_settings'))
+        (public.has_capability(auth.uid(), 'project.update') OR public.has_capability(auth.uid(), 'settings.manage'))
     );
 
 -- Clients can view signoffs for milestones on projects they own/have access to

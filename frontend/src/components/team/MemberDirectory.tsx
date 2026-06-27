@@ -63,7 +63,7 @@ export function MemberDirectory() {
   useEscapeKey(handoffState.active, () => setHandoffState(prev => ({ ...prev, active: false })));
 
   const userCustomRoles = systemData.userCustomRoles || {};
-  const activeProfiles = profiles.filter(p => p.role !== 'uninvited');
+  const activeProfiles = profiles.filter(p => p.status === 'active' && p.role !== 'uninvited');
 
   return (
     <div className="space-y-6">

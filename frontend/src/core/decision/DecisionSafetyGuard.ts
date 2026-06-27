@@ -1,5 +1,6 @@
 import { ActionType } from './DecisionIntelligenceEngine';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { hasCapability } from '../auth/permissions';
 
 export interface SafetyValidationResult {
   isSafe: boolean;
@@ -69,7 +70,7 @@ async function validateTaskReassignment(payload: any, workspaceId: string): Prom
   // 3. Verify user has the skill/capability to do the tasks
   // Simplification for safety guard: we trust the intelligence engine matched the department, 
   // but we enforce they aren't a 'viewer' or 'client'
-  if (['viewer', 'client', 'uninvited'].includes(userData.role)) {
+  if (!hasCapability(userData.role as any, 'task.update')) {
     return { isSafe: false, blockReason: `Target operator lacks execution permissions (Role: ${userData.role}).` };
   }
 

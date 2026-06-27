@@ -245,7 +245,7 @@ export function generateDecisionInsights(inputs: DecisionEngineInputs): Decision
           actionPayload: { source_user_id: user.id, target_user_id: targetDevId, tasks: uTasks.slice(0, 2).map(t => t.id) },
           expectedImpactMetrics: { workload_balance_change: Math.min(100, Math.round(((assignedHours - capacity) / capacity) * 100)) }
         });
-      } else if (assignedHours < capacity * 0.5 && (user as any).role !== 'client' && (user as any).role !== 'uninvited') {
+      } else if (assignedHours < capacity * 0.5 && hasCapability((user as any).role, 'task.update')) {
         insights.push({
           id: `underutil-${user.id}`,
           severity: 'info',

@@ -19,10 +19,10 @@ export const ObservabilityPanel: React.FC = () => {
   const [isSyncing, setIsSyncing] = React.useState(false);
 
   React.useEffect(() => {
-    if (workspace?.id && hasCapability(profile?.role as any, 'audit.security')) {
+    if (workspace?.id && hasCapability(profile, 'audit.security')) {
       searchHealthService.checkSearchHealth(workspace.id).then(setSearchHealth);
     }
-  }, [workspace?.id, profile?.role]);
+  }, [workspace?.id, profile]);
 
   const handleRebuildIndex = async () => {
     if (!workspace?.id || isSyncing) return;
@@ -35,7 +35,7 @@ export const ObservabilityPanel: React.FC = () => {
     searchHealthService.checkSearchHealth(workspace.id).then(setSearchHealth);
   };
 
-  if (profile?.role !== 'super_admin' && profile?.role !== 'pm') {
+  if (!hasCapability(profile, 'audit.security')) {
     return (
       <div className="flex h-full items-center justify-center bg-surface">
         <div className="text-center text-[var(--pm-text-secondary)]">

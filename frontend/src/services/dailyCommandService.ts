@@ -49,7 +49,7 @@ export async function getDailyIntelligence(userId: string, workspaceId: string, 
       .select('*', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId);
 
-    if (projectCount === 0 && role !== 'viewer' && role !== 'client') {
+    if (projectCount === 0 && hasCapability(profile, 'project.create')) {
       baseIntelligence.greeting.message = `Welcome to Resolve PM, ${firstName} 👋`;
       baseIntelligence.greeting.subMessage = "Let's get your operational workspace set up.";
       baseIntelligence.primaryFocus = {
@@ -78,19 +78,19 @@ export async function getDailyIntelligence(userId: string, workspaceId: string, 
     const deliveryHealth = await intelligenceQueryEngine.getDeliveryHealth(workspaceId);
     const anomalies = await intelligenceQueryEngine.getActivityAnomalies(workspaceId);
 
-    if (hasFunction(profile, 'Engineering') || role === 'developer') {
+    if (hasCapability(profile, 'task.update') && !hasCapability(profile, 'project.update')) {
       await populateDeveloperIntelligence(userId, workspaceId, baseIntelligence, m);
     } 
-    if (hasFunction(profile, 'Projects') || role === 'pm' || role === 'project_manager') {
+    if (hasCapability(profile, 'project.update') && !hasCapability(profile, 'workspace.update')) {
       await populatePMIntelligence(userId, workspaceId, baseIntelligence, m, deliveryHealth);
     } 
-    if (rank >= getAuthorityRank('admin')) {
+    if (hasCapability(profile, 'workspace.update')) {
       await populateFounderIntelligence(workspaceId, baseIntelligence, m, deliveryHealth, anomalies);
     }
-    if (hasFunction(profile, 'PeopleOperations') || hasFunction(profile, 'Finance') || profile?.role === 'hr' || profile?.role === 'finance') {
+    if (hasCapability(profile, 'people.manage') || hasCapability(profile, 'finance.manage')) {
       await populateAdminSupportIntelligence(workspaceId, profile, baseIntelligence, m);
     }
-    if (role === 'client' || hasFunction(profile, 'Clients')) {
+    if (hasCapability(profile, 'client.project.view')) {
       await populateClientIntelligence(userId, workspaceId, baseIntelligence, m);
     }
 
@@ -237,14 +237,14 @@ async function populateFounderIntelligence(workspaceId: string, i: DailyIntellig
 async function populateAdminSupportIntelligence(workspaceId: string, profile: any, i: DailyIntelligence, m: any) {
   i.greeting.subMessage = "Logistics and operational support.";
 
-  if (profile?.role === 'hr' || hasFunction(profile, 'PeopleOperations')) {
+  if (hasCapability(profile, 'people.manage')) {
     i.primaryFocus = {
       id: 'hr-focus',
       message: 'You have new onboarding tasks to review.',
       type: 'action',
       actionRoute: '/team/directory'
     };
-  } else if (profile?.role === 'finance' || hasFunction(profile, 'Finance')) {
+  } else if (hasCapability(profile, 'finance.manage')) {
     if (m.approvals > 0) {
       i.primaryFocus = {
         id: 'fin-focus',

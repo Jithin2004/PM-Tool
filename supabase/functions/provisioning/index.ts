@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Types
 type ProvisionOperation = "invite_user" | "bulk_invite_users" | "accept_invitation";
 
 interface UserPayload {
@@ -18,7 +17,6 @@ interface UserPayload {
   designation?: string;
 }
 
-// Generate token using Web Crypto API
 function generateToken() {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -26,7 +24,6 @@ function generateToken() {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -40,7 +37,6 @@ serve(async (req) => {
       throw new Error('Missing environment configuration');
     }
 
-    // Parse payload
     const payload = await req.json();
     const { operation, source = 'manual' } = payload;
 
@@ -51,7 +47,6 @@ serve(async (req) => {
       });
     }
 
-    // Initialize Supabase Admin client
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -59,7 +54,6 @@ serve(async (req) => {
       }
     });
 
-    // Helper: Verify requester
     async function verifyRequester() {
       const authHeader = req.headers.get('authorization');
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -78,70 +72,50 @@ serve(async (req) => {
 
       if (requesterError || !requester) throw new Error('Requester profile not found');
 
-      const allowedRoles = ['super_admin', 'admin', 'hr', 'pm'];
+      const allowedRoles = ['super_admin', 'admin', 'hr', 'project_manager'];
       if (!allowedRoles.includes(requester.role)) {
         throw new Error('Insufficient permissions to provision users');
       }
       return requester;
     }
 
-    // Helper: Process single invite
     async function processInvite(userData: UserPayload, requester: any, src: string) {
       let { email, role, department, full_name, capabilities, designation } = userData;
       email = email.trim().toLowerCase();
       const targetRole = role || 'developer';
 
-      // 1. Role escalation protection
       if (targetRole === 'super_admin' && requester.role !== 'super_admin') {
         throw new Error(`Cannot invite super_admin`);
       }
 
-      // Block legacy roles
       const legacyRoles = ['owner', 'manager', 'member', 'external', 'pm'];
       if (legacyRoles.includes(targetRole)) {
         throw new Error(`Role '${targetRole}' is a legacy role and can no longer be provisioned.`);
       }
 
-      // 2. Generate secure token
+      const { data: existingUser } = await supabaseAdmin.from('users').select('id').eq('email', email).eq('workspace_id', requester.workspace_id).maybeSingle();
+      if (existingUser) {
+        throw new Error(`User ${email} already exists in this workspace`);
+      }
+
       const inviteToken = generateToken();
       const inviteExpiresAt = new Date();
       inviteExpiresAt.setDate(inviteExpiresAt.getDate() + 7);
 
-      // 3. Create Auth User Passwordless
-      const { data: authUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-        email: email,
-        email_confirm: true,
-        user_metadata: { full_name: full_name || '' }
-      });
-
-      if (createUserError) {
-        if (createUserError.message.includes('already registered') || createUserError.message.includes('already exists')) {
-          throw new Error(`User ${email} already exists`);
-        }
-        throw createUserError;
-      }
-
-      const userId = authUser.user.id;
-
-      // 4. Create public.users row
-      const { error: dbError } = await supabaseAdmin.from('users').insert({
-        id: userId,
+      const { error: dbError } = await supabaseAdmin.from('invitations').insert({
+        workspace_id: requester.workspace_id,
         email: email,
         role: targetRole,
-        department: department || null,
-        designation: designation || null,
-        capabilities: Array.isArray(capabilities) ? capabilities : null,
-        workspace_id: requester.workspace_id,
-        invited_by: requester.id,
-        status: 'invited',
-        invite_token: inviteToken,
-        invite_expires_at: inviteExpiresAt.toISOString(),
-        invite_source: src,
-        full_name: full_name || email.split('@')[0]
+        token: inviteToken,
+        status: 'pending',
+        expires_at: inviteExpiresAt.toISOString(),
+        created_by: requester.id
       });
 
       if (dbError) {
-        await supabaseAdmin.auth.admin.deleteUser(userId);
+        if (dbError.code === '23505') {
+            throw new Error(`An active invitation already exists for this email.`);
+        }
         throw dbError;
       }
 
@@ -151,7 +125,6 @@ serve(async (req) => {
       };
     }
 
-    // Route Operations
     if (operation === 'invite_user') {
       const requester = await verifyRequester();
       const { email, role, department, full_name, capabilities, designation } = payload;
@@ -200,38 +173,59 @@ serve(async (req) => {
       if (!token || !password) throw new Error('Token and password are required');
       if (password.length < 8) throw new Error('Password must be at least 8 characters');
 
-      // 1. Find user by token
-      const { data: userRow, error: fetchError } = await supabaseAdmin
-        .from('users')
-        .select('id, invite_expires_at, status')
-        .eq('invite_token', token)
+      const { data: invRow, error: fetchError } = await supabaseAdmin
+        .from('invitations')
+        .select('id, workspace_id, email, role, expires_at, status')
+        .eq('token', token)
         .single();
 
-      if (fetchError || !userRow) throw new Error('Invalid or expired invitation token');
-      if (userRow.status !== 'invited') throw new Error('This invitation has already been processed');
-      if (new Date(userRow.invite_expires_at) < new Date()) throw new Error('This invitation has expired');
+      if (fetchError || !invRow) throw new Error('Invalid or expired invitation token');
+      if (invRow.status !== 'pending') throw new Error('This invitation has already been processed');
+      if (new Date(invRow.expires_at) < new Date()) throw new Error('This invitation has expired');
 
-      // 2. Update Auth User Password
-      const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
-        userRow.id,
-        { password: password }
-      );
+      let authUserId = null;
+      const { data: authUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+        email: invRow.email,
+        password: password,
+        email_confirm: true,
+      });
 
-      if (updateAuthError) throw updateAuthError;
+      if (createUserError) {
+        if (createUserError.message.includes('already registered') || createUserError.message.includes('already exists')) {
+          throw new Error('An account with this email already exists. Please log in and join the workspace from your dashboard.');
+        } else {
+            throw createUserError;
+        }
+      }
+      
+      authUserId = authUser.user.id;
 
-      // 3. Update public.users status and clear token
-      const { error: updateDbError } = await supabaseAdmin
+      const { error: insertUserError } = await supabaseAdmin
         .from('users')
-        .update({
+        .insert({
+          id: authUserId,
+          email: invRow.email,
+          workspace_id: invRow.workspace_id,
+          role: invRow.role,
           status: 'active',
-          invite_token: null,
-          invite_expires_at: null
+          full_name: invRow.email.split('@')[0], 
+        });
+
+      if (insertUserError) {
+          throw insertUserError;
+      }
+
+      const { error: updateDbError } = await supabaseAdmin
+        .from('invitations')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString()
         })
-        .eq('id', userRow.id);
+        .eq('id', invRow.id);
 
       if (updateDbError) throw updateDbError;
 
-      return new Response(JSON.stringify({ success: true, message: 'Password set successfully' }), {
+      return new Response(JSON.stringify({ success: true, message: 'Invitation accepted successfully' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
