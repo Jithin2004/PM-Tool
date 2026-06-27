@@ -35,14 +35,14 @@ export interface WorkspaceSettings {
   baseCurrency?: string;
 }
 
-export type WorkspaceStatus = 'active' | 'onboarding' | 'inactive' | 'retired' | 'sandbox';
+export type WorkspaceStatus = 'active' | 'onboarding' | 'inactive' | 'retired';
 
 export interface Workspace {
   id: string;
   name: string;
   ownerId: string;
   is_demo?: boolean;
-  is_sandbox?: boolean;
+  environment?: 'production' | 'sandbox' | 'staging' | 'demo' | 'training';
   parent_workspace_id?: string;
   status?: WorkspaceStatus;
   metadata?: Record<string, any>;
@@ -57,3 +57,4 @@ export interface TeamCapacity {
   currentLoadHours: number;
   availabilityFactor: number;
 }
+

@@ -159,7 +159,7 @@ export function BillingSettings() {
   const planName = dbLicense?.license_type || dbLicense?.plan || serverLicenseData?.plan || license?.plan || 'Enterprise';
   const maxSeats = dbLicense?.allowed_users || dbLicense?.max_seats || serverLicenseData?.seats || '';
   const productKeyId = dbLicense?.license_key_hash || dbLicense?.id || serverLicenseData?.keyId || license?.productKey || license?.purchaseId || 'Unlicensed';
-  const isSandbox = workspace?.is_sandbox || workspace?.status === 'sandbox';
+  const isSandbox = workspace?.environment === 'sandbox';
   const displayWorkspaceName = getWorkspaceDisplayName(workspace?.name, !!isSandbox);
 
   return (
@@ -305,3 +305,4 @@ export function BillingSettings() {
     </div>
   );
 }
+

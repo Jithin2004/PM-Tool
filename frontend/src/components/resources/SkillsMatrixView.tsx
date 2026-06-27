@@ -96,7 +96,7 @@ export function SkillsMatrixView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
-              {profiles.filter(p => p.status === 'active' && p.role !== 'uninvited').map(p => {
+              {profiles.filter(p => p.role !== 'uninvited').map(p => {
                 const memberSkills = userSkills.filter(us => us.user_id === p.id);
                 const topSkills = memberSkills.map(us => skills.find(s => s.id === us.skill_id)?.name).filter(Boolean);
                 

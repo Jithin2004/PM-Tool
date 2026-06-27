@@ -7,7 +7,7 @@ export const sandboxSeedEngine = {
     
     // 1. Mark as Sandbox
     await supabase.from('workspaces').update({ 
-      status: 'sandbox',
+      environment: 'sandbox',
       business_type: templateType,
       metadata: { environment: 'sandbox', created_by: 'seed_engine' }
     }).eq('id', workspaceId);

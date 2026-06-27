@@ -452,7 +452,7 @@ function WorkspaceDangerZone() {
     }
   };
 
-  if (workspace?.status === 'sandbox') return null;
+  if (workspace?.environment === 'sandbox') return null;
 
   return (
     <div className="bg-signal-critical/5 border border-signal-critical/20 rounded-xl p-5 mb-8">
@@ -493,3 +493,4 @@ function WorkspaceDangerZone() {
     </div>
   );
 }
+

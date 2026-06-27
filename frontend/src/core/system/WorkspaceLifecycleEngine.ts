@@ -1,4 +1,4 @@
-export type WorkspaceStatus = 'active' | 'onboarding' | 'inactive' | 'retired' | 'sandbox';
+export type WorkspaceStatus = 'active' | 'onboarding' | 'inactive' | 'retired';
 
 export class WorkspaceLifecycleEngine {
   /**

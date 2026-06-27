@@ -207,12 +207,10 @@ export function AdminPanel() {
   };
 
   const handleResetSandbox = async (workspaceId: string) => {
-    if (await showConfirm("Are you sure you want to purge all projects, tasks, collaborators, and dependencies from this sandbox? This cannot be undone.", { title: "Reset Sandbox Workspace", confirmText: "Reset", type: 'error' })) {
+    if (await showConfirm("Are you sure you want to reset this sandbox? This will purge all data from this sandbox environment.", { title: "Reset Sandbox Workspace", confirmText: "Reset", type: 'error' })) {
       try {
-        await supabase.from('task_collaborators').delete().eq('workspace_id', workspaceId);
-        await supabase.from('task_dependencies').delete().eq('workspace_id', workspaceId);
-        await supabase.from('tasks').delete().eq('workspace_id', workspaceId);
-        await supabase.from('projects').delete().eq('workspace_id', workspaceId);
+        const { error } = await supabase.rpc('delete_sandbox_workspace', { p_workspace_id: workspaceId });
+        if (error) throw error;
         notify("Sandbox workspace successfully reset.", "success");
         loadWorkspacesData();
       } catch (err: any) {
@@ -222,15 +220,12 @@ export function AdminPanel() {
   };
 
   const handleDeleteSandbox = async (workspaceId: string) => {
-    if (await showConfirm("Are you sure you want to set this sandbox workspace status to inactive?", { title: "Deactivate Sandbox", confirmText: "Deactivate", type: 'warning' })) {
-      const { error } = await supabase
-        .from('workspaces')
-        .update({ status: 'inactive' })
-        .eq('id', workspaceId);
+    if (await showConfirm("Are you sure you want to permanently delete this sandbox workspace and all its data?", { title: "Delete Sandbox", confirmText: "Delete", type: 'error' })) {
+      const { error } = await supabase.rpc('delete_sandbox_workspace', { p_workspace_id: workspaceId });
       if (error) {
-        notify("Failed to deactivate sandbox: " + error.message, "error");
+        notify("Failed to delete sandbox: " + error.message, "error");
       } else {
-        notify("Sandbox set to inactive.", "success");
+        notify("Sandbox deleted successfully.", "success");
         loadWorkspacesData();
       }
     }
@@ -1230,7 +1225,7 @@ export function AdminPanel() {
                     <tbody className="divide-y divide-border/20">
                       {workspacesList.filter(w => w.status === 'active' || w.status === 'onboarding' || !w.status).map((ws: any) => (
                         <tr key={ws.id} className="hover:bg-white/[0.02] transition-colors">
-                          <td className="py-4 text-sm font-medium text-white">{getWorkspaceDisplayName(ws.name, ws.status === 'sandbox')}</td>
+                          <td className="py-4 text-sm font-medium text-white">{getWorkspaceDisplayName(ws.name, ws.environment === 'sandbox')}</td>
                           <td className="py-4">
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
                               {ws.status || 'active'}
@@ -1281,9 +1276,9 @@ export function AdminPanel() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">
-                      {workspacesList.filter(w => w.status === 'sandbox').map((ws: any) => (
+                      {workspacesList.filter(w => w.environment === 'sandbox').map((ws: any) => (
                         <tr key={ws.id} className="hover:bg-white/[0.02] transition-colors">
-                          <td className="py-4 text-sm font-medium text-white">{getWorkspaceDisplayName(ws.name, ws.status === 'sandbox')}</td>
+                          <td className="py-4 text-sm font-medium text-white">{getWorkspaceDisplayName(ws.name, ws.environment === 'sandbox')}</td>
                           <td className="py-4">
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/25">
                               sandbox
@@ -1314,7 +1309,7 @@ export function AdminPanel() {
                           </td>
                         </tr>
                       ))}
-                      {workspacesList.filter(w => w.status === 'sandbox').length === 0 && (
+                      {workspacesList.filter(w => w.environment === 'sandbox').length === 0 && (
                         <tr>
                           <td colSpan={6} className="text-center py-6 text-xs italic text-[var(--pm-on-surface-variant)]">No sandbox environments.</td>
                         </tr>
@@ -1345,7 +1340,7 @@ export function AdminPanel() {
                     <tbody className="divide-y divide-border/20">
                       {workspacesList.filter(w => w.status === 'retired' || w.status === 'inactive').map((ws: any) => (
                         <tr key={ws.id} className="hover:bg-white/[0.02] transition-colors">
-                          <td className="py-4 text-sm font-medium text-white">{getWorkspaceDisplayName(ws.name, ws.status === 'sandbox')}</td>
+                          <td className="py-4 text-sm font-medium text-white">{getWorkspaceDisplayName(ws.name, ws.environment === 'sandbox')}</td>
                           <td className="py-4">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${ws.status === 'retired' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25' : 'bg-red-500/10 text-red-400 border border-red-500/25'}`}>
                               {ws.status}

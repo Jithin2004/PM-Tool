@@ -25,7 +25,8 @@ export type Capability =
   | 'settings.manage'
   | 'audit.view' | 'audit.security'
   | 'reports.view'
-  | 'project.view' | 'client.project.view' | 'client.document.view' | 'client.meeting.view';
+  | 'project.view' | 'client.project.view' | 'client.document.view' | 'client.meeting.view'
+  | 'sandbox.manage' | 'sandbox.clone' | 'sandbox.reset' | 'sandbox.restore' | 'sandbox.delete' | 'sandbox.run_tests';
 
 const ALL_CAPABILITIES: Capability[] = [
   'dashboard.view', 'workspace.view', 'workspace.update', 'workspace.delete', 'ownership.transfer', 'license.manage',
@@ -34,7 +35,8 @@ const ALL_CAPABILITIES: Capability[] = [
   'document.view', 'document.manage', 'file.view', 'file.manage', 'meeting.view', 'meeting.manage', 'decision.view', 'decision.manage', 'approval.view', 'approval.manage',
   'people.view', 'people.manage', 'attendance.manage', 'leave.manage', 'hr.private_records',
   'finance.view', 'finance.manage', 'invoice.manage', 'expense.manage',
-  'automation.manage', 'integration.manage', 'settings.manage', 'audit.view', 'audit.security', 'reports.view'
+  'automation.manage', 'integration.manage', 'settings.manage', 'audit.view', 'audit.security', 'reports.view',
+  'sandbox.manage', 'sandbox.clone', 'sandbox.reset', 'sandbox.restore', 'sandbox.delete', 'sandbox.run_tests'
 ];
 
 // Based on User Corrections
@@ -51,7 +53,8 @@ const ADMIN_CAPABILITIES: Capability[] = [
   'decision.view', 'decision.manage', 'approval.view', 'approval.manage',
   'people.view',
   'automation.manage', 'integration.manage',
-  'reports.view', 'settings.manage', 'audit.view'
+  'reports.view', 'settings.manage', 'audit.view',
+  'sandbox.manage', 'sandbox.clone', 'sandbox.reset', 'sandbox.restore', 'sandbox.delete', 'sandbox.run_tests'
 ];
 
 const PM_CAPABILITIES: Capability[] = [

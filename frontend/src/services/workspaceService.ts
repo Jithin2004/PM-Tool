@@ -36,7 +36,7 @@ interface WorkspaceRow {
   payroll_enabled: boolean;
   productivity_factor: number;
   is_demo?: boolean;
-  is_sandbox?: boolean;
+  environment?: 'production' | 'sandbox' | 'staging' | 'demo' | 'training';
   parent_workspace_id?: string;
   status?: string;
   metadata?: any;
@@ -89,7 +89,7 @@ export function rowToWorkspace(row: WorkspaceRow): Workspace {
     name: row.name,
     ownerId: row.created_by_id || row.owner_id || '',
     is_demo: row.is_demo,
-    is_sandbox: row.is_sandbox,
+    environment: row.environment,
     parent_workspace_id: row.parent_workspace_id,
     status: row.status as any || 'active',
     metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {}),
@@ -301,5 +301,6 @@ export async function cloneWorkspaceToSandbox(workspaceId: string, userId: strin
   if (updateError) throw updateError;
   return sandboxId;
 }
+
 
 

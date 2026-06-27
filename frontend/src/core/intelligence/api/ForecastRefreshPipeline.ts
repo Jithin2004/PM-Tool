@@ -12,11 +12,16 @@ export class ForecastRefreshPipeline {
     ];
 
     if (triggerEvents.includes(event.type) && event.projectId) {
-      // 1. Invalidate affected cache
+      // 1. Invalidate affected cache (cache is scoped per environment inherently, or should be. We invalidate regardless to clear stale data).
       this.cache.invalidateProject(event.projectId);
       
-      // 2. Queue background recalculation
-      this.triggerBackgroundRecalculation(event.projectId);
+      // 2. Queue background recalculation ONLY for production
+      // Phase C: Sandbox intelligence must NEVER enter Production Intelligence.
+      if (event.environment === 'production') {
+        this.triggerBackgroundRecalculation(event.projectId);
+      } else {
+        console.log(`[ForecastRefreshPipeline] Skipping background recalculation for non-production environment: ${event.environment}`);
+      }
     }
   }
 

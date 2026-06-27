@@ -95,7 +95,7 @@ async function seedDatabase() {
       id: workspaceId,
       owner_id: adminId,
       name: 'Resolve PM Demo Corp',
-      status: 'sandbox', // Strictly required per SEEDING_GUIDELINES.md
+      environment: 'sandbox', // Strictly required per SEEDING_GUIDELINES.md
       metadata: {
         environment: 'simulation',
         safe_to_purge: true,

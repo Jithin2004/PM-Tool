@@ -27,7 +27,7 @@ export class TestDataGuardian {
           const isSimulation = ws.name?.toLowerCase().includes('simulation') || 
                                wsMetadata.environment === 'simulation' || 
                                wsMetadata.safe_to_purge === true ||
-                               ws.status === 'sandbox';
+                               ws.environment === 'sandbox';
 
           if (isDemo || isSimulation) {
             issues.push({

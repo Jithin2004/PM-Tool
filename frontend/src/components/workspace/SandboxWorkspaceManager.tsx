@@ -10,7 +10,7 @@ export function SandboxWorkspaceManager() {
   const { notify } = useDashboard();
   const [loading, setLoading] = useState(false);
 
-  const isSandbox = workspace?.status === 'sandbox' || workspace?.name?.toLowerCase().includes('sandbox');
+  const isSandbox = workspace?.environment === 'sandbox' || workspace?.name?.toLowerCase().includes('sandbox');
 
   const handleAction = async (action_type: string) => {
     setLoading(true);
@@ -18,7 +18,7 @@ export function SandboxWorkspaceManager() {
     if (workspace?.id) {
       if (action_type === 'reset' || action_type === 'rebuilt') {
         // Ensure flag / status is set on reset/rebuild
-        await supabase.from('workspaces').update({ status: 'sandbox' }).eq('id', workspace.id);
+        await supabase.from('workspaces').update({ environment: 'sandbox' }).eq('id', workspace.id);
       } else if (action_type === 'archived') {
         // Mark as archived / disabled
         await supabase.from('workspaces').update({ status: 'inactive' }).eq('id', workspace.id);
@@ -81,3 +81,4 @@ export function SandboxWorkspaceManager() {
     </div>
   );
 }
+

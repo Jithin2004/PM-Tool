@@ -1441,7 +1441,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                 )}
 
               {/* Sandbox Toggle */}
-              {hasCapability(profile?.role, 'settings.manage') && (
+              {hasCapability(profile?.role, 'sandbox.manage') && (
                   <button
                   onClick={async () => {
                     if (!workspace || !user) return;
