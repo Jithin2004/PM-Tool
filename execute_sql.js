@@ -11,20 +11,23 @@ async function executeSQL() {
   }
 
   const client = new Client({
-    connectionString,
+    host: process.env.SUPABASE_DB_HOST,
+    port: 5432,
+    user: process.env.SUPABASE_DB_USER,
+    password: process.env.SUPABASE_DB_PASSWORD,
+    database: "postgres",
     ssl: { rejectUnauthorized: false }
   });
-
   try {
     await client.connect();
     console.log('Connected to database.');
-    
-    const sqlPath = path.resolve('database/production/RESOLVE_PM_V1_3_INSTALL.sql');
+
+    const sqlPath = path.resolve('db_migration_bug4.sql');
     const sql = fs.readFileSync(sqlPath, 'utf8');
-    
-    console.log('Executing master installer...');
+
+    console.log('Executing db_migration_bug4.sql...');
     await client.query(sql);
-    console.log('Master installer executed successfully.');
+    console.log('Migration executed successfully.');
 
     console.log('Reloading PostgREST schema cache...');
     await client.query("NOTIFY pgrst, 'reload schema';");

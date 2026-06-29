@@ -107,6 +107,11 @@ const SprintView = withRetry(() => import('../pages/dashboard/project/SprintView
 const ProjectTimelinePage = withRetry(() => import('../pages/timeline/ProjectTimelinePage'));
 const SharedProjectDashboard = withRetry(() => import('../pages/shared/SharedProjectDashboard').then(m => ({ default: m.SharedProjectDashboard })));
 
+const ProjectCreatePage = withRetry(() => import('../pages/project/ProjectCreatePage').then(m => ({ default: m.ProjectCreatePage })));
+const ProjectEditPage = withRetry(() => import('../pages/project/ProjectEditPage').then(m => ({ default: m.ProjectEditPage })));
+const ProjectSettingsPage = withRetry(() => import('../pages/project/ProjectSettingsPage').then(m => ({ default: m.ProjectSettingsPage })));
+const ProjectDetailPage = withRetry(() => import('../pages/project/ProjectDetailPage').then(m => ({ default: m.ProjectDetailPage })));
+
 const DEFAULT_AUTH_REDIRECT = '/overview';
 
 function RouteFallback() {
@@ -634,14 +639,24 @@ export function ResolveRouter() {
 
     // ── PROJECT routes (/projects/:id/...) ──
 
+    if (pathname === '/projects/new') {
+      return <RouteShell><ProjectCreatePage /></RouteShell>;
+    }
+
     const projectRoute = parseProjectRoute(pathname);
     if (projectRoute?.projectId) {
       const { subRoute, segments } = projectRoute;
 
       if (!subRoute) {
-        return <Redirect to={`/projects/${projectRoute.projectId}/board`} />;
+        return <RouteShell><ProjectDetailPage /></RouteShell>;
       }
 
+      if (subRoute === 'edit') {
+        return <RouteShell><ProjectEditPage /></RouteShell>;
+      }
+      if (subRoute === 'settings') {
+        return <RouteShell><ProjectSettingsPage /></RouteShell>;
+      }
       if (subRoute === 'setup' && segments[3] === 'execution') {
         return <RouteShell><ExecutionSetupPage /></RouteShell>;
       }

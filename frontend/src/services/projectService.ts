@@ -207,6 +207,30 @@ export async function archiveProject(projectId: string, workspaceId: string, act
   }
 }
 
+export async function restoreProject(projectId: string, workspaceId: string, actorId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    // 1. Restore the project itself
+    await trackSupabaseOperation('supabase_from_projects', () => supabase.from('projects').update({ status: 'active', deleted_at: null }).eq('id', projectId));
+
+    // 2. Restore cascaded Tasks
+    await trackSupabaseOperation('supabase_from_tasks', () => supabase.from('tasks').update({ status: 'backlog', deleted_at: null }).eq('project_id', projectId).eq('status', 'archived'));
+
+    // Audit the action
+    await activityLogService.appendLog({
+      workspace_id: workspaceId,
+      actor_id: actorId,
+      action_type: 'project_restored',
+      metadata: { project_id: projectId },
+    });
+
+    return true;
+  } catch (err) { 
+    logServiceFailure('restoreProject', { projectId }, err); 
+    return false;
+  }
+}
+
 export async function deleteMilestone(milestoneId: string, workspaceId: string, performedBy: string): Promise<boolean> {
   if (!isSupabaseConfigured) return false;
   try {

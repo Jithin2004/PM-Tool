@@ -1,60 +1,71 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
+import { updateProject } from '../../services/projectService';
 import { supabase } from '../../lib/supabase';
 
-export function ProjectCreatePage() {
+export function ProjectEditPage() {
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Extract project ID from URL
+  const pathSegments = window.location.pathname.split('/').filter(Boolean);
+  const projectId = pathSegments[1]; // /projects/:id/edit
+
+  useEffect(() => {
+    if (!projectId || !workspace?.id) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('name')
+          .eq('id', projectId)
+          .eq('workspace_id', workspace.id)
+          .maybeSingle();
+        if (data) {
+          setName(data.name || '');
+        }
+      } catch (err) {
+        console.error('Failed to load project:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [projectId, workspace?.id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!workspace?.id || !name.trim()) return;
+    if (!workspace?.id || !projectId || !name.trim()) return;
     setIsSubmitting(true);
     setErrorMessage('');
     setSuccessMessage('');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          workspace_id: workspace.id,
-          name: name.trim(),
-          description: description.trim(),
-          status: 'active',
-          execution_mode: 'KANBAN',
-          created_by_id: user.id,
-          priority: 'medium',
-        })
-        .select('id')
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data?.id) {
-        setSuccessMessage('Project created');
-        setName('');
-        setDescription('');
-      } else {
-        setErrorMessage('Failed to create project.');
-      }
+      await updateProject(projectId, { name: name.trim() }, profile?.role || 'admin', workspace.id);
+      setSuccessMessage('Project updated');
     } catch (err: any) {
-      console.error('Failed to create project:', err);
-      setErrorMessage(err?.message || 'Failed to create project.');
+      console.error('Failed to update project:', err);
+      setErrorMessage(err?.message || 'Failed to update project.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto p-8">
-      <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-6">Create Project</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-6">Edit Project</h1>
 
       {successMessage && (
         <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm">
@@ -77,17 +88,7 @@ export function ProjectCreatePage() {
             value={name}
             onChange={e => setName(e.target.value)}
             className="w-full bg-surface-3 border border-border rounded-lg px-4 py-3 text-text-primary focus:ring-2 focus:ring-indigo-500 outline-none"
-            placeholder="e.g. Certification Project"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">Description</label>
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            rows={4}
-            className="w-full bg-surface-3 border border-border rounded-lg px-4 py-3 text-text-primary focus:ring-2 focus:ring-indigo-500 outline-none"
-            placeholder="Optional project description..."
+            placeholder="Project Name"
           />
         </div>
         <button
@@ -95,7 +96,7 @@ export function ProjectCreatePage() {
           disabled={isSubmitting || !name.trim()}
           className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
         >
-          {isSubmitting ? 'Creating...' : 'Create Project'}
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
         </button>
       </form>
     </div>

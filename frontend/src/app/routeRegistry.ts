@@ -41,6 +41,7 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'approvals', path: '/workspace/approvals', label: 'Approvals', iconName: 'CheckCircle', capability: 'approval.view', group: 'core', disclosureTier: 'essential' },
   { id: 'files', path: '/workspace/files', label: 'File Center', iconName: 'FolderOpen', capability: 'file.view', group: 'core', disclosureTier: 'operational' },
   { id: 'employee-onboarding', path: '/workspace/onboarding', label: 'Onboarding Center', iconName: 'Compass', capability: 'workspace.view', group: 'core', disclosureTier: 'essential' },
+  { id: 'project-new', path: '/projects/new', label: 'New Project', iconName: 'Plus', capability: 'project.create', group: 'core', disclosureTier: 'essential', isPublic: false },
   
   // Extra core (legacy/other)
   { id: 'knowledge', path: '/workspace/knowledge', label: 'Knowledge Hub', iconName: 'ArchiveBox', capability: 'document.view', group: 'core', disclosureTier: 'essential' },
@@ -114,6 +115,8 @@ export const PROJECT_SUBROUTES = new Set([
   'board',
   'sprints',
   'timeline',
+  'edit',
+  'settings',
 ]);
 
 export function renderRouteIcon(name: string, className = "w-[15px] h-[15px] shrink-0"): React.ReactNode {
