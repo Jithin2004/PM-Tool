@@ -185,6 +185,7 @@ CREATE TABLE IF NOT EXISTS users (
   invited_by          uuid        REFERENCES auth.users(id) ON DELETE SET NULL,
   invite_source       text        CHECK (invite_source IN ('onboarding', 'manual', 'bulk_import')),
   availability_factor numeric     NOT NULL DEFAULT 1,
+  metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
   created_at          timestamptz NOT NULL DEFAULT now(),
   UNIQUE(workspace_id, email)
 );

@@ -45,7 +45,7 @@ export function buildOAuthRedirectUrl(): string {
   return `${window.location.origin}${DEFAULT_ENTRY}`;
 }
 
-export function resolvePostAuthEntryPath(role: UserRole | undefined): string {
+export function resolvePostAuthEntryPath(role: UserRole | undefined): string { console.log('RESOLVE_POST_AUTH_ENTRY_PATH_CALLED:', role);
   if (role === 'pending-workspace-setup') return '/onboarding/workspace';
   if (role === 'uninvited') return '/login?error=uninvited';
 

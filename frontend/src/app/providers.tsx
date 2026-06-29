@@ -4,6 +4,8 @@ import { AuthProvider } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ObservabilityProvider } from '../core/observability/ObservabilityProvider';
 import { GlobalDialogs } from '../components/common/Dialogs';
+import { OperationalDataProvider } from '../context/OperationalDataContext';
+import { RealtimeProvider } from '../context/RealtimeProvider';
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -17,8 +19,12 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ObservabilityProvider>
         <AuthProvider>
           <WorkspaceProvider>
-            {children}
-            <GlobalDialogs />
+            <OperationalDataProvider>
+              <RealtimeProvider>
+                {children}
+                <GlobalDialogs />
+              </RealtimeProvider>
+            </OperationalDataProvider>
           </WorkspaceProvider>
         </AuthProvider>
       </ObservabilityProvider>

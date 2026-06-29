@@ -7,7 +7,10 @@
     "doc": "docs"
   },
   "scripts": {
-    "test:prod-smoke": "npx cross-env TEST_ENV=production playwright test tests/e2e/01-auth.spec.ts tests/e2e/02-navigation.spec.ts tests/e2e/backend-health.spec.ts tests/e2e/invite-acceptance.spec.ts --project=chromium"
+    "test:prod-smoke": "npx cross-env TEST_ENV=production playwright test tests/e2e/01-auth.spec.ts tests/e2e/02-navigation.spec.ts tests/e2e/backend-health.spec.ts tests/e2e/invite-acceptance.spec.ts --project=chromium",
+    "certify": "tsx testing/scripts/runner.ts",
+    "certify:playwright": "npx playwright test --config=testing/config/playwright.config.ts",
+    "certify:vitest": "npx vitest run --config=testing/config/vitest.config.ts"
   },
   "repository": {
     "type": "git",
@@ -23,10 +26,17 @@
   "homepage": "https://github.com/Jithin2004/PM-Tool#readme",
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@types/k6": "^2.0.0",
     "@types/node": "^25.9.2",
-    "dotenv": "^17.4.2"
+    "@vitest/coverage-v8": "^4.1.9",
+    "dotenv": "^17.4.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
     "geoip-lite": "^2.0.3",
     "pg": "^8.22.0"
   }

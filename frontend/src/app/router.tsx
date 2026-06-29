@@ -14,6 +14,7 @@ import {
 import DashboardLayout from '../pages/dashboard/DashboardLayout';
 import { Login } from '../components/auth/Login';
 import { PasswordSetup } from '../components/auth/PasswordSetup';
+import { ResetPassword } from '../components/auth/ResetPassword';
 import { ProductKeyGate } from '../components/auth/ProductKeyGate';
 import { isProductKeyVerified, checkLicenseOnline } from '../lib/productKey';
 import { ResolveBootScreen } from '../components/common/ResolveBootScreen';
@@ -186,7 +187,7 @@ function usePathname() {
   return pathname;
 }
 
-function redirectTo(target: string): void {
+function redirectTo(target: string): void { console.log('REDIRECT_CALLED:', target, new Error().stack);
   window.history.replaceState(null, '', target);
   window.dispatchEvent(new CustomEvent('popstate'));
 }
@@ -231,6 +232,14 @@ export function ResolveRouter() {
   // 1. Font/icon readiness control
   useEffect(() => {
     let active = true;
+
+    // Failsafe timeout for Playwright where fonts might hang
+    const timer = setTimeout(() => {
+      if (active) {
+        setFontsReady(true);
+      }
+    }, 1500);
+
     Promise.all([
       document.fonts.load("16px 'Geist'"),
       document.fonts.load("16px 'Inter'"),
@@ -255,6 +264,7 @@ export function ResolveRouter() {
 
     return () => {
       active = false;
+      clearTimeout(timer);
     };
   }, []);
 
@@ -296,10 +306,19 @@ export function ResolveRouter() {
   const isGateResolved = !authLoading && !workspaceLoading && profileResolved && !profileHydrating && fontsReady && licenseCheckComplete;
 
   useEffect(() => {
+    console.log('[BootGate] State:', JSON.stringify({
+      authLoading,
+      workspaceLoading,
+      profileResolved,
+      profileHydrating,
+      fontsReady,
+      licenseCheckComplete,
+      isGateResolved
+    }));
     if (isGateResolved) {
       setFadeBootScreen(true);
     }
-  }, [isGateResolved]);
+  }, [authLoading, workspaceLoading, profileResolved, profileHydrating, fontsReady, licenseCheckComplete, isGateResolved]);
 
   useEffect(() => {
     if (postAuthRedirectApplied.current) return;
@@ -372,6 +391,10 @@ export function ResolveRouter() {
 
     if (pathname === '/login') {
       return <Login />;
+    }
+
+    if (pathname === '/reset-password') {
+      return <ResetPassword />;
     }
 
     if (pathname === '/password-setup') {
@@ -632,18 +655,16 @@ export function ResolveRouter() {
 
   const appContent = renderRouteContent();
 
-  if (showBootScreen) {
-    return (
-      <>
-        {fadeBootScreen && appContent}
+  return (
+    <>
+      {(!showBootScreen || fadeBootScreen) && appContent}
+      {showBootScreen && (
         <ResolveBootScreen
           fadeOut={fadeBootScreen}
           onFadeComplete={() => setShowBootScreen(false)}
         />
-      </>
-    );
-  }
-
-  return appContent;
+      )}
+    </>
+  );
 }
 

@@ -21,6 +21,19 @@ export function ResolveBootScreen({ fadeOut, onFadeComplete }: ResolveBootScreen
     return () => clearInterval(interval);
   }, []);
 
+  // Failsafe for Playwright/Headless environments where transition events might drop
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (fadeOut && onFadeComplete) {
+      timeout = setTimeout(() => {
+        onFadeComplete();
+      }, 1000); // slightly longer than the 700ms transition duration
+    }
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [fadeOut, onFadeComplete]);
+
   return (
     <div
       className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050712] select-none overflow-hidden transition-all duration-700 ease-in-out ${

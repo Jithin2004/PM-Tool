@@ -84,7 +84,7 @@ export function ProjectWorkspace() {
             </div>
           </div>
 
-          {hasCapability(profile?.role, 'project.update') && (
+          {hasCapability(profile?.role, 'project.create') && (
             <button
               onClick={() => setIsAdding(true)}
               className="bg-text-primary text-bg px-4 py-2 rounded-md font-medium text-xs flex items-center gap-2 hover:bg-neutral-200 transition-colors shadow-sm"
@@ -199,7 +199,7 @@ export function ProjectWorkspace() {
                 </div>
               </div>
 
-              {hasCapability(profile?.role as any, 'project.update') && (
+              {hasCapability(profile?.role as any, 'project.create') && (
                 <button onClick={() => setIsAdding(true)} className="btn-premium-primary px-6 py-2.5 rounded-lg text-sm font-semibold tracking-wide">
                   Create Project
                 </button>

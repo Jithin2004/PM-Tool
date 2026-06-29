@@ -19,7 +19,9 @@ interface RealtimeContextType {
 
 const RealtimeContext = createContext<RealtimeContextType>({ isConnected: false });
 
+import { OperationalDataContext as ODC_LOCAL } from './OperationalDataContext';
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
+  console.log('REALTIME PROVIDER using ODC UID:', (ODC_LOCAL as any)._uid);
   const { workspace } = useWorkspace() as any;
   const { profile } = useAuth();
   const { refreshAll } = useOperationalData() as any;

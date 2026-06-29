@@ -110,12 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', authUser.id)
           .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
+        console.log("SYNC_PROFILE_STEP_2", {hasData: !!data, error: error});
+if (error && error.code !== 'PGRST116') {
           console.error("Error fetching from users table:", error);
         }
 
         if (!data) {
-          setProfileHydrating(true);
+          console.log("SYNC_PROFILE_STEP_3");
+setProfileHydrating(true);
           // Optimized retry logic: fewer delays for Render's reliable database
           // In production, first query usually succeeds; retries are for eventual consistency edge cases
           const maxRetries = 2; // Reduced from 4
@@ -138,7 +140,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               break;
             }
           }
-          setProfileHydrating(false);
+          console.log("SYNC_PROFILE_STEP_4");
+setProfileHydrating(false);
         }
 
         if (!data) {
@@ -161,7 +164,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        if (data && !data.avatar_url && providerAvatar) {
+        console.log("SYNC_PROFILE_STEP_6", {hasData: !!data});
+if (data && !data.avatar_url && providerAvatar) {
           const { data: updatedUser } = await supabase
             .from('users')
             .update({ avatar_url: providerAvatar })
@@ -172,7 +176,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (data) {
-          // Task 3: Fetch database capabilities
+          console.log("SYNC_PROFILE_STEP_7");
+// Task 3: Fetch database capabilities
           const { data: roleCaps } = await supabase
             .from('role_capabilities')
             .select('capability_id')
@@ -197,7 +202,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             capabilities: dbCapabilities.length > 0 ? Array.from(new Set(dbCapabilities)) : undefined
           };
 
-          const profileWithDesignation = rowToProfile(extendedData as Record<string, unknown>);
+          console.log("SYNC_PROFILE_STEP_8");
+const profileWithDesignation = rowToProfile(extendedData as Record<string, unknown>);
           setProfile(profileWithDesignation);
           lastSyncedUserIdRef.current = authUser.id;
           setProfileResolved(true);
@@ -321,8 +327,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.dispatchEvent(new CustomEvent('notify-toast', {
         detail: { message: `Session ${reason}. Redirecting...`, type: 'error' },
       }));
-      if (window.location.pathname !== '/') {
-        navigateTo('/', true);
+      if (window.location.pathname !== '/login') {
+        navigateTo('/login', true);
       }
     } finally {
       sessionExpiryInProgressRef.current = false;
@@ -376,6 +382,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     safetyTimeoutRef.current = setTimeout(() => {
       if (safetyTimeoutRef.current) {
         setLoading(false);
+        setProfileResolved(true);
         safetyTimeoutRef.current = null;
       }
     }, 10000);

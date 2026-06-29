@@ -129,6 +129,9 @@ export function Login() {
                     placeholder="Enter your password"
                     required
                   />
+                  <div className="flex justify-end mt-1">
+                    <a href="/reset-password" className="text-xs text-indigo-400 hover:text-indigo-300">Forgot Password?</a>
+                  </div>
                 </div>
 
                 <button

@@ -1,0 +1,216 @@
+<testsuites id="" name="" tests="4" failures="0" skipped="0" errors="4" time="111.887295">
+<testsuite name="Workspace.spec.ts" timestamp="2026-06-29T15:58:19.715Z" hostname="chromium" tests="4" failures="0" skipped="0" time="340.218" errors="4">
+<testcase name="Workspace Certification Pack › Create Workspace Flow" classname="Workspace.spec.ts" time="84.343">
+<system-out>
+<![CDATA[Creating Sandbox Environment...
+Reusing existing Sandbox c04d4340-38ad-440a-b2e1-ec02e29590c1...
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certification-Pack-Create-Workspace-Flow-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certification-Pack-Create-Workspace-Flow-chromium\video.webm]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certification-Pack-Create-Workspace-Flow-chromium\error-context.md]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certification-Pack-Create-Workspace-Flow-chromium\error-context.md]]
+]]>
+</system-out>
+<system-err>
+<![CDATA[[Sandbox] Seed payload missing teams or projects — skipping.
+]]>
+</system-err>
+<error message="Test timeout of 60000ms exceeded." type="Error">
+<![CDATA[  [chromium] › Workspace.spec.ts:19:7 › Workspace Certification Pack › Create Workspace Flow ───────
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.fill: Test timeout of 60000ms exceeded.
+    Call log:
+      - waiting for locator('input[name="workspaceName"]')
+
+
+      19 |   test('Create Workspace Flow', async ({ page }) => {
+      20 |     await page.goto('http://localhost:3000/workspaces/new');
+    > 21 |     await page.fill('input[name="workspaceName"]', 'Test Workspace');
+         |                ^
+      22 |     
+      23 |     // Layer 2: Intercept API Response
+      24 |     const responsePromise = page.waitForResponse(response => 
+        at C:\Users\jithi\OneDrive\Desktop\Resolve PM\Resolve PM\testing\certification\Workspace.spec.ts:21:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\Workspace-Workspace-Certification-Pack-Create-Workspace-Flow-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\..\test-results\Workspace-Workspace-Certification-Pack-Create-Workspace-Flow-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\Workspace-Workspace-Certification-Pack-Create-Workspace-Flow-chromium\error-context.md
+
+    Error Context: ..\..\test-results\Workspace-Workspace-Certification-Pack-Create-Workspace-Flow-chromium\error-context.md
+]]>
+</error>
+</testcase>
+<testcase name="Workspace Certification Pack › Update Workspace Flow" classname="Workspace.spec.ts" time="88.04">
+<system-out>
+<![CDATA[Creating Sandbox Environment...
+Reusing existing Sandbox c04d4340-38ad-440a-b2e1-ec02e29590c1...
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certification-Pack-Update-Workspace-Flow-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certification-Pack-Update-Workspace-Flow-chromium\video.webm]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certification-Pack-Update-Workspace-Flow-chromium\error-context.md]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certification-Pack-Update-Workspace-Flow-chromium\error-context.md]]
+]]>
+</system-out>
+<system-err>
+<![CDATA[[Sandbox] Seed payload missing teams or projects — skipping.
+]]>
+</system-err>
+<error message="Test timeout of 60000ms exceeded." type="Error">
+<![CDATA[  [chromium] › Workspace.spec.ts:37:7 › Workspace Certification Pack › Update Workspace Flow ───────
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.fill: Test timeout of 60000ms exceeded.
+    Call log:
+      - waiting for locator('input[name="workspaceName"]')
+
+
+      37 |   test('Update Workspace Flow', async ({ page }) => {
+      38 |     await page.goto('http://localhost:3000/workspaces/settings');
+    > 39 |     await page.fill('input[name="workspaceName"]', 'Updated Workspace');
+         |                ^
+      40 |     
+      41 |     const responsePromise = page.waitForResponse(response => 
+      42 |       response.url().includes('supabase.co') && 
+        at C:\Users\jithi\OneDrive\Desktop\Resolve PM\Resolve PM\testing\certification\Workspace.spec.ts:39:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\Workspace-Workspace-Certification-Pack-Update-Workspace-Flow-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\..\test-results\Workspace-Workspace-Certification-Pack-Update-Workspace-Flow-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\Workspace-Workspace-Certification-Pack-Update-Workspace-Flow-chromium\error-context.md
+
+    Error Context: ..\..\test-results\Workspace-Workspace-Certification-Pack-Update-Workspace-Flow-chromium\error-context.md
+]]>
+</error>
+</testcase>
+<testcase name="Workspace Certification Pack › Archive and Restore Workspace" classname="Workspace.spec.ts" time="83.59">
+<system-out>
+<![CDATA[Creating Sandbox Environment...
+Reusing existing Sandbox c04d4340-38ad-440a-b2e1-ec02e29590c1...
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certif-7225d-chive-and-Restore-Workspace-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certif-7225d-chive-and-Restore-Workspace-chromium\error-context.md]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certif-7225d-chive-and-Restore-Workspace-chromium\error-context.md]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certif-7225d-chive-and-Restore-Workspace-chromium\video.webm]]
+]]>
+</system-out>
+<system-err>
+<![CDATA[[Sandbox] Seed payload missing teams or projects — skipping.
+]]>
+</system-err>
+<error message="Test timeout of 60000ms exceeded." type="Error">
+<![CDATA[  [chromium] › Workspace.spec.ts:52:7 › Workspace Certification Pack › Archive and Restore Workspace 
+
+    Test timeout of 60000ms exceeded.
+
+    Error: page.waitForResponse: Test timeout of 60000ms exceeded.
+
+      53 |     await page.goto('http://localhost:3000/workspaces/settings');
+      54 |     
+    > 55 |     let responsePromise = page.waitForResponse(response => 
+         |                                ^
+      56 |       response.url().includes('supabase.co') && 
+      57 |       response.url().includes('/rest/v1/workspaces') &&
+      58 |       response.status() === 204
+        at C:\Users\jithi\OneDrive\Desktop\Resolve PM\Resolve PM\testing\certification\Workspace.spec.ts:55:32
+
+    Error: page.click: Test timeout of 60000ms exceeded.
+    Call log:
+      - waiting for locator('button:has-text("Archive")')
+
+
+      59 |     );
+      60 |     
+    > 61 |     await page.click('button:has-text("Archive")');
+         |                ^
+      62 |     await page.click('button:has-text("Confirm Archive")');
+      63 |     await responsePromise;
+      64 |     await expect(page.locator('text=Workspace archived')).toBeVisible();
+        at C:\Users\jithi\OneDrive\Desktop\Resolve PM\Resolve PM\testing\certification\Workspace.spec.ts:61:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\Workspace-Workspace-Certif-7225d-chive-and-Restore-Workspace-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\Workspace-Workspace-Certif-7225d-chive-and-Restore-Workspace-chromium\error-context.md
+
+    Error Context: ..\..\test-results\Workspace-Workspace-Certif-7225d-chive-and-Restore-Workspace-chromium\error-context.md
+
+    attachment #4: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\..\test-results\Workspace-Workspace-Certif-7225d-chive-and-Restore-Workspace-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</error>
+</testcase>
+<testcase name="Workspace Certification Pack › Multi-tenant isolation check" classname="Workspace.spec.ts" time="84.245">
+<system-out>
+<![CDATA[Creating Sandbox Environment...
+Reusing existing Sandbox c04d4340-38ad-440a-b2e1-ec02e29590c1...
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certif-8733f-ulti-tenant-isolation-check-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certif-8733f-ulti-tenant-isolation-check-chromium\video.webm]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certif-8733f-ulti-tenant-isolation-check-chromium\error-context.md]]
+
+[[ATTACHMENT|..\..\..\test-results\Workspace-Workspace-Certif-8733f-ulti-tenant-isolation-check-chromium\error-context.md]]
+]]>
+</system-out>
+<system-err>
+<![CDATA[[Sandbox] Seed payload missing teams or projects — skipping.
+]]>
+</system-err>
+<error message="Test timeout of 60000ms exceeded." type="Error">
+<![CDATA[  [chromium] › Workspace.spec.ts:67:7 › Workspace Certification Pack › Multi-tenant isolation check 
+
+    Test timeout of 60000ms exceeded.
+
+    Error: browserContext.newPage: Test timeout of 60000ms exceeded.
+
+      69 |     await pageA.goto('http://localhost:3000/workspaces/tenant-a');
+      70 |     
+    > 71 |     const pageB = await context.newPage();
+         |                                 ^
+      72 |     await pageB.goto('http://localhost:3000/workspaces/tenant-b');
+      73 |     
+      74 |     // Abstracted isolation check based purely on UI limits
+        at C:\Users\jithi\OneDrive\Desktop\Resolve PM\Resolve PM\testing\certification\Workspace.spec.ts:71:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\Workspace-Workspace-Certif-8733f-ulti-tenant-isolation-check-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\..\test-results\Workspace-Workspace-Certif-8733f-ulti-tenant-isolation-check-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\Workspace-Workspace-Certif-8733f-ulti-tenant-isolation-check-chromium\error-context.md
+
+    Error Context: ..\..\test-results\Workspace-Workspace-Certif-8733f-ulti-tenant-isolation-check-chromium\error-context.md
+]]>
+</error>
+</testcase>
+</testsuite>
+</testsuites>

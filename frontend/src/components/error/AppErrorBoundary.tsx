@@ -45,7 +45,7 @@ export class AppErrorBoundary extends Component<Props, State> {
             </div>
             <h1 className="text-2xl font-semibold text-[var(--pm-text)] mb-3">Something went wrong</h1>
             <p className="text-[var(--pm-text-secondary)] mb-8 text-sm">
-              The application encountered a critical error. Our systems have prevented further action to protect your data.
+              The application encountered a critical error. {this.state.error?.message} : {this.state.error?.stack}
             </p>
 
             <div className="flex flex-col gap-3">

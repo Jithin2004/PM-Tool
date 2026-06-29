@@ -18,8 +18,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { OperationalDataProvider, useOperationalData } from '../../context/OperationalDataContext';
-import { RealtimeProvider } from '../../context/RealtimeProvider';
+import { useOperationalData } from '../../context/OperationalDataContext';
 import { useTheme } from '../../context/ThemeContext';
 import { DashboardDataBridge } from '../../components/dashboard/DashboardDataBridge';
 import { ProgressiveUnlockHint } from '../../components/dashboard/ProgressiveUnlockHint';
@@ -167,16 +166,6 @@ const isSubsectionAllowed = (sub: DomainSubsection, profile?: any): boolean => {
 };
 
 export default function DashboardLayout({ children }: { children?: React.ReactNode }) {
-  return (
-    <OperationalDataProvider>
-      <RealtimeProvider>
-        <DashboardLayoutShell>{children}</DashboardLayoutShell>
-      </RealtimeProvider>
-    </OperationalDataProvider>
-  );
-}
-
-function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
   const { user, profile, trueProfile, isSimulating, simulatedRole, setSimulatedRole, logout, updateProfile } = useAuth();
   const { workspace } = useWorkspace();
   const {
@@ -1217,6 +1206,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                   title="Sign Out"
                 >
                   <LogOut className="w-3.5 h-3.5" />
+                  <span className="sr-only">Logout</span>
                 </button>
                 <button
                   onClick={() => navigateTo('/control/settings')}
@@ -1330,6 +1320,7 @@ function DashboardLayoutShell({ children }: { children?: React.ReactNode }) {
                     </div>
                     <button onClick={() => { handleLogout(); setMobileSidebarOpen(false); }} className="p-1.5 2xl:p-2 hover:bg-rose-500/10 text-rose-400 rounded-lg">
                       <LogOut className="w-3.5 h-3.5 2xl:w-4 2xl:h-4" />
+                      <span className="sr-only">Logout</span>
                     </button>
                   </div>
                 </div>

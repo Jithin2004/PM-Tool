@@ -5,7 +5,9 @@
 CREATE OR REPLACE FUNCTION public.seed_sandbox(p_sandbox_id UUID, p_payload JSONB)
 RETURNS void
 LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
+SECURITY DEFINER 
+SET search_path = public
+SET statement_timeout = '10min'
 AS $$
 DECLARE
   v_user_id UUID;
@@ -45,14 +47,13 @@ BEGIN
           v_milestone_count := (v_project->>'milestoneCount')::INT;
           FOR i IN 1..v_milestone_count
           LOOP
-              INSERT INTO milestones (workspace_id, project_id, title, status, target_date, created_by_id)
+              INSERT INTO milestones (workspace_id, project_id, title, status, target_date)
               VALUES (
                   p_sandbox_id, 
                   v_project_id, 
                   '[SEED] Milestone ' || i || ' — ' || (v_project->>'name'), 
                   'pending', 
-                  (now() + (i * 7 || ' days')::interval)::date,
-                  v_user_id
+                  (now() + (i * 7 || ' days')::interval)::timestamptz
               );
           END LOOP;
 
@@ -64,7 +65,7 @@ BEGIN
                   p_sandbox_id, 
                   v_project_id, 
                   '[SEED] Task ' || j || ' — ' || (v_project->>'name'), 
-                  'backlog', 
+                  'assigned', 
                   'medium', 
                   v_user_id, 
                   4
@@ -74,3 +75,8 @@ BEGIN
   END LOOP;
 END;
 $$;
+
+-- Ensure PostgREST exposes this function to the authenticated role
+GRANT EXECUTE ON FUNCTION public.seed_sandbox(UUID, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.seed_sandbox(UUID, JSONB) TO anon;
+GRANT EXECUTE ON FUNCTION public.seed_sandbox(UUID, JSONB) TO service_role;

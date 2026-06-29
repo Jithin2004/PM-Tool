@@ -59,6 +59,8 @@ interface OperationalDataContextValue {
 }
 
 export const OperationalDataContext = createContext<OperationalDataContextValue | null>(null);
+(OperationalDataContext as any)._uid = Math.random();
+console.log('CREATED CONTEXT UID:', (OperationalDataContext as any)._uid);
 
 export function OperationalDataProvider({ children }: { children: React.ReactNode }) {
   
@@ -247,10 +249,6 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
           if (critical.teams) {  setTeams(critical.teams); }
           if (critical.workspaceSettingsBlob) {  setWorkspaceSettingsBlob(critical.workspaceSettingsBlob); }
   
-          // Clear the loading spinner — page renders now
-          
-          setLoading(false);
-  
           // ── Phase 2: secondary – attendance, tasks, skills (background) ────
           // Small delay so the browser paints the first frame before fetching more
           setTimeout(async () => {
@@ -286,11 +284,11 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
            setProjects([]);
            setTeams([]);
            setProfiles([]);
-          setAttendanceRows([]);
-          setLoading(false);
+           setAttendanceRows([]);
         }
       } catch (err) {
         console.error('Failed to load operational data', err);
+      } finally {
         if (mounted) setLoading(false);
       }
     };
@@ -612,7 +610,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 }
 
 export function useOperationalData() {
-  const ctx = useContext(OperationalDataContext);
+  const ctx = useContext(OperationalDataContext); console.log('USING OPERATIONAL DATA', ctx);
   if (!ctx) {
     throw new Error('useOperationalData must be used within OperationalDataProvider');
   }

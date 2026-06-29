@@ -45,6 +45,7 @@ export function rowToProfile(row: Record<string, unknown>): User {
   if (dbRole === 'super_admin') {
     authority = row.is_owner ? 'super_admin' : 'admin';
   }
+  else if (dbRole === 'admin') authority = 'admin';
   else if (dbRole === 'pm') authority = 'project_manager';
   else if (dbRole === 'developer') authority = 'developer';
   else if (dbRole === 'hr') authority = 'hr';
