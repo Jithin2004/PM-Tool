@@ -409,6 +409,9 @@ export function ResolveRouter() {
       );
     }
 
+    const WorkspaceSetupPage = withRetry(() => import('../pages/onboarding/WorkspaceSetupPage').then(m => ({ default: m.default })));
+    const WorkspaceSettings = withRetry(() => import('../components/control/WorkspaceSettings').then(m => ({ default: m.WorkspaceSettings })));
+    const SuperAdminConsole = withRetry(() => import('../components/admin/SuperAdminConsole').then(m => ({ default: m.SuperAdminConsole })));
     // ── Auth Gate ──
     if (!user) return <Login />;
 
@@ -440,7 +443,7 @@ export function ResolveRouter() {
       return <WorkspaceSetupWizard />;
     }
 
-    if (!workspace) {
+    if (!workspace && pathname !== '/workspaces/new') {
       return <Redirect to="/login?error=uninvited" />;
     }
 
@@ -470,6 +473,18 @@ export function ResolveRouter() {
     }
 
     // ── WORKSPACE ──
+    if (pathname === '/workspaces/new') {
+      return <RouteShell><WorkspaceSetupPage /></RouteShell>;
+    }
+    if (pathname === '/workspaces/settings') {
+      if (!guardRoute(role, '/workspaces/settings')) return <RouteShell><AccessRestricted /></RouteShell>;
+      return <RouteShell><WorkspaceSettings /></RouteShell>;
+    }
+    
+    if (pathname === '/admin/super') {
+      if (!guardRoute(role, '/admin/super')) return <RouteShell><AccessRestricted /></RouteShell>;
+      return <RouteShell><SuperAdminConsole /></RouteShell>;
+    }
 
     if (pathname === '/workspace') {
       return <RouteShell><ProjectsPage /></RouteShell>;

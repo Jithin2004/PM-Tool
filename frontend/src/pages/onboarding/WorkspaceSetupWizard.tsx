@@ -344,7 +344,7 @@ export function WorkspaceSetupWizard() {
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
               <label className="block text-sm font-semibold">Step 1: Workspace Name</label>
-              <input value={name} onChange={e => setName(e.target.value)} className="w-full p-3 input-premium" placeholder="e.g. Acme Corp" />
+              <input name="workspaceName" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 input-premium" placeholder="e.g. Acme Corp" />
             </div>
           )}
           

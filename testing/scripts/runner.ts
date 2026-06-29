@@ -168,6 +168,11 @@ const PACKS: PackDefinition[] = [
   },
 ];
 
+const filterParam = process.argv.find(arg => arg.startsWith('--filter='));
+const filterName = filterParam ? filterParam.split('=')[1] : null;
+
+const ACTIVE_PACKS = filterName ? PACKS.filter(p => p.name === filterName) : PACKS;
+
 type PackStatus = 'PASS' | 'FAIL' | 'SKIPPED' | 'BLOCKED' | 'PENDING' | 'CONFIGURATION_ERROR';
 
 interface PackResult {
@@ -306,7 +311,9 @@ async function runCertification() {
     try {
       // ── Phase C — Shared Sandbox (single creation, immutable context) ────
       const sandboxStart = Date.now();
-      console.log('\n[CPO] Phase C: Shared sandbox provisioning...');
+      console.log(`[CPO] Starting phase C — Parallel Execution of ${ACTIVE_PACKS.length} Packs`);
+  
+      const workerQueue: PackDefinition[] = [...ACTIVE_PACKS];
       const sandbox = await SandboxIntegration.createSandbox();
       sandboxId = sandbox.sandboxId;
       telemetry.sandboxCreationMs = Date.now() - sandboxStart;
@@ -342,7 +349,7 @@ async function runCertification() {
       }
 
       // ── Execute packs sequentially (dependency-aware) ─────────────────────
-      for (const pack of PACKS) {
+      for (const pack of ACTIVE_PACKS) {
         let depsMet = true;
         let skipReason = '';
 
@@ -474,14 +481,15 @@ async function runCertification() {
   console.log('══════════════════════════════════════════════════════');
 
   // ── Regression summary (preserved for compatibility) ──────────────────────
-  console.log('\n--- REGRESSION SUMMARY ---');
-  for (const pack of PACKS) {
-    const res = results.get(pack.name)!;
-    console.log(`Executed command: ${res.command || 'N/A'}`);
-    console.log(`Result classification: ${res.reason || 'Success'}`);
-    console.log(`Exit code: ${res.exitCode !== undefined ? res.exitCode : 'N/A'}`);
-    console.log(`Status: ${res.status}`);
+  const passes = Array.from(results.values()).filter(r => r.status === 'PASS').length;
+  console.log(`\n--- REGRESSION SUMMARY ---`);
+  for (const [pack, result] of results.entries()) {
+    console.log(`Executed command: ${result.command}`);
+    console.log(`Result classification: ${result.status === 'PASS' ? 'Success' : 'Assertion failures'}`);
+    console.log(`Exit code: ${result.exitCode}`);
+    console.log(`Status: ${result.status}`);
   }
+  console.log(`Confidence: ${Math.round((passes / Math.max(1, ACTIVE_PACKS.length)) * 100)}%`);
 
   const passCount = Array.from(results.values()).filter(r => r.status === 'PASS').length;
   const confidence = Math.round((passCount / PACKS.length) * 100);

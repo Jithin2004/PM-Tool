@@ -67,6 +67,7 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'mission-control', path: '/admin/mission-control', label: 'Dashboard', iconName: 'LayoutDashboard', capability: 'dashboard.view', group: 'intelligence', disclosureTier: 'platform' },
   { id: 'system-health', path: '/admin/system-health', label: 'System Health', iconName: 'Activity', capability: 'audit.view', group: 'system', disclosureTier: 'platform' },
   { id: 'settings', path: '/admin/settings', label: 'Settings', iconName: 'Settings', capability: 'settings.manage', group: 'system', disclosureTier: 'operational' },
+  { id: 'super-admin', path: '/admin/super', label: 'Super Admin', iconName: 'ShieldAlert', capability: 'settings.manage', group: 'system', disclosureTier: 'platform' },
 
   // Executive routes
   { id: 'executive', path: '/workspace/executive', label: 'Executive Overview', iconName: 'Binoculars', capability: 'reports.view', group: 'intelligence', disclosureTier: 'intelligence' },

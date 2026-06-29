@@ -196,7 +196,7 @@ export function WorkspaceSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="group/input">
                   <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-2 block">Company Name</label>
-                  <input value={formState.companyName} onChange={e => setFormState(s => ({ ...s, companyName: e.target.value }))} className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl h-11 px-4 text-sm text-white outline-none focus:border-indigo-500/50 transition-all focus:bg-black/50" />
+                  <input name="workspaceName" value={formState.companyName} onChange={e => setFormState(s => ({ ...s, companyName: e.target.value }))} className="w-full bg-black/30 border border-[var(--border-soft)] rounded-xl h-11 px-4 text-sm text-white outline-none focus:border-indigo-500/50 transition-all focus:bg-black/50" />
                 </div>
                 <div className="group/input">
                   <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-2 block">Timezone</label>
@@ -440,6 +440,23 @@ function WorkspaceDangerZone() {
     }
   };
 
+  const handleArchiveWorkspace = async () => {
+    const confirmation = await showPrompt(
+      "Are you sure you want to archive this workspace? Type 'Confirm Archive' to confirm.",
+      { title: "Archive Workspace", confirmText: "Archive", type: 'warning' }
+    );
+    if (confirmation === 'Confirm Archive') {
+      try {
+        await supabase.from('workspaces').update({ settings: { archived: true } }).eq('id', workspace!.id);
+        notify("Workspace archived", "success");
+      } catch (err: any) {
+        notify(err.message || "Failed to archive", "error");
+      }
+    } else if (confirmation !== null) {
+      notify("Confirmation text did not match.", "error");
+    }
+  };
+
   const handleDeleteWorkspace = async () => {
     const confirmation = await showPrompt(
       "Are you sure you want to delete this workspace? Type 'DELETE WORKSPACE' to confirm.",
@@ -482,6 +499,12 @@ function WorkspaceDangerZone() {
           className="flex items-center justify-center px-4 py-3 bg-surface border border-border hover:border-signal-critical text-text-secondary hover:text-signal-critical rounded-lg text-xs font-bold transition-all"
         >
           Reset Production Instance
+        </button>
+        <button
+          onClick={handleArchiveWorkspace}
+          className="flex items-center justify-center px-4 py-3 bg-surface border border-border hover:border-signal-warning text-text-secondary hover:text-signal-warning rounded-lg text-xs font-bold transition-all"
+        >
+          Archive
         </button>
         <button
           onClick={handleDeleteWorkspace}

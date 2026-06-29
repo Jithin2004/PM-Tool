@@ -79,9 +79,13 @@ export const SuperAdminConsole: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase.from('workspaces').insert({
         name: newWorkspaceName,
-        status: 'active'
+        status: 'active',
+        created_by_id: user.id
       });
       if (error) throw error;
       
@@ -181,6 +185,7 @@ export const SuperAdminConsole: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-1">Workspace Name</label>
                   <input
+                    name="workspaceName"
                     required
                     type="text"
                     value={newWorkspaceName}

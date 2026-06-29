@@ -24,6 +24,9 @@ export class CertificationSession {
     await page.click('button[type="submit"]');
     await responsePromise;
     await page.waitForURL(/.*\/overview/);
+
+    // Dismiss onboarding tour if present (prevents Spotlight from intercepting pointer events)
+    await page.locator('button:has-text("Skip")').click({ timeout: 3000 }).catch(() => {});
   }
 }
 
