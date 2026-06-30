@@ -203,12 +203,12 @@ exports.verifyLicense = async (req, res) => {
     try {
         const license = await License.findOne({ key: productKey });
 
-        // If license is missing or inactive, log audit event and exit cleanly
-        if (!license || license.status !== 'ACTIVE') {
+        // 1. If license doesn't exist at all, fail immediately
+        if (!license) {
             try {
                 await AuditEvent.create({
                     event_type: 'verification_failed',
-                    reason: !license ? 'License key not found' : `License is in status ${license.status}`,
+                    reason: 'License key not found',
                     device_hash: 'unauthenticated',
                     license_key: productKey
                 });
@@ -218,7 +218,7 @@ exports.verifyLicense = async (req, res) => {
             return res.status(401).json({ valid: false, message: 'Invalid or expired license' });
         }
 
-        // If license is already used, refuse it to prevent onboarding continuation
+        // 2. If license is already used, refuse it to prevent onboarding continuation
         if (license.isUsed) {
             try {
                 await AuditEvent.create({
@@ -231,6 +231,21 @@ exports.verifyLicense = async (req, res) => {
                 console.error('Audit logging failed background execution:', auditErr.message);
             }
             return res.status(403).json({ valid: false, isUsed: true, message: 'License key has already been activated' });
+        }
+
+        // 3. If license exists but is not ACTIVE (e.g. EXPIRED or REVOKED), exit cleanly
+        if (license.status !== 'ACTIVE') {
+            try {
+                await AuditEvent.create({
+                    event_type: 'verification_failed',
+                    reason: `License is in status ${license.status}`,
+                    device_hash: 'unauthenticated',
+                    license_key: productKey
+                });
+            } catch (auditErr) {
+                console.error('Audit logging failed background execution:', auditErr.message);
+            }
+            return res.status(401).json({ valid: false, message: 'Invalid or expired license' });
         }
 
         // Update verification time in the background safely
