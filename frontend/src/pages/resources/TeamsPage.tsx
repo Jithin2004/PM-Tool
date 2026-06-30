@@ -33,6 +33,18 @@ export default function TeamsPage() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  const navigateTo = (path: string) => {
+    window.history.pushState(null, '', path);
+    window.dispatchEvent(new CustomEvent('popstate'));
+  };
+
+  const onboardedMembersCount = raw.profiles.filter(p => 
+    p.id !== profile?.id && 
+    p.role !== 'uninvited' && 
+    (!p.employment_status || ['active', 'on_leave', 'suspended'].includes(p.employment_status)) &&
+    (p as any).status !== 'archived'
+  ).length;
   
   const TEAM_VIEWS = {
     employees: (
@@ -79,14 +91,14 @@ export default function TeamsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 mt-8">
-        {raw.profiles.length <= 1 ? (
+        {onboardedMembersCount === 0 ? (
           <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2 p-8">
              <PremiumEmptyState
                icon={Users}
                title="Build Your Team"
-               description="Your workspace currently has no other members. Invite teammates to unlock capacity planning, skills matrices, and department management."
+               description="No employees have joined this workspace yet. Invite your first team member to unlock Team Directory, Capacity Planning, Skills Matrix and Workload Analytics."
                action={
-                 <button onClick={() => (window as any).openTeamRosterModal?.()} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                 <button onClick={() => navigateTo('/admin/identity')} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors">
                    Invite Teammates
                  </button>
                }
