@@ -248,7 +248,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     setShowGuide(false);
     
     // Use existing router navigation
-    navigateTo('/overview');
+    // navigateTo('/overview'); // Removed to prevent unintended redirects to the initialization phase when dismissing guide
   };
 
   useEffect(() => {
