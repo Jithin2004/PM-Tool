@@ -406,7 +406,7 @@ export function ResolveRouter() {
       );
     }
 
-    const WorkspaceSetupPage = withRetry(() => import('../pages/onboarding/WorkspaceSetupPage').then(m => ({ default: m.default })));
+    const WorkspaceSetupPage = withRetry(() => import('../pages/onboarding/WorkspaceSetupPage').then(m => ({ default: m.WorkspaceSetupPage })));
     const WorkspaceSettings = withRetry(() => import('../components/control/WorkspaceSettings').then(m => ({ default: m.WorkspaceSettings })));
     const SuperAdminConsole = withRetry(() => import('../components/admin/SuperAdminConsole').then(m => ({ default: m.SuperAdminConsole })));
     // ── Auth Gate ──
