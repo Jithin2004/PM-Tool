@@ -36,7 +36,7 @@
     "vitest": "^4.1.9"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.108.2",
+    "@supabase/supabase-js": "^2.110.0",
     "geoip-lite": "^2.0.3",
     "pg": "^8.22.0"
   }

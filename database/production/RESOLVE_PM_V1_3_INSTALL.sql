@@ -96,6 +96,50 @@ $$ LANGUAGE plpgsql;
 
 
 
+-- Helper to check if an employee is active. Returns true if active, false if terminated/suspended/resigned.
+-- If no employment_record exists, defaults to true (for external clients, legacy admins).
+CREATE OR REPLACE FUNCTION public.is_active_employee(p_user_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER SET search_path = ''
+SET search_path = public
+AS $$
+BEGIN
+    RETURN NOT EXISTS (
+        SELECT 1 FROM public.employment_records
+        WHERE user_id = p_user_id 
+        AND employment_status IN ('terminated', 'resigned', 'suspended')
+    );
+END;
+$$;
+
+-- Returns the user's current workspace, or NULL if their employment is revoked.
+-- This cascades and instantly breaks ALL RLS access across the entire app.
+CREATE OR REPLACE FUNCTION public.current_workspace()
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER SET search_path = ''
+SET search_path = public
+AS $$
+DECLARE
+    v_workspace uuid;
+BEGIN
+    IF public.is_active_employee(auth.uid()) = false THEN
+        RETURN NULL;
+    END IF;
+    
+    SELECT workspace_id INTO v_workspace
+    FROM public.users 
+    WHERE id = auth.uid() 
+    LIMIT 1;
+    
+    RETURN v_workspace;
+END;
+$$;
+
+
 -- Returns true if the currently authenticated user is an active workspace member.
 CREATE OR REPLACE FUNCTION public.is_active_workspace_member()
 RETURNS boolean AS $$
@@ -5267,40 +5311,7 @@ SELECT 'viewer', id FROM public.capabilities WHERE id IN (
 -- PHASE 4: EMPLOYEE ACCESS REVOCATION
 -- ##############################################################################
 
--- Helper to check if an employee is active. Returns true if active, false if terminated/suspended/resigned.
--- If no employment_record exists, defaults to true (for external clients, legacy admins).
-CREATE OR REPLACE FUNCTION public.is_active_employee(p_user_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER SET search_path = ''
-SET search_path = public
-AS $$
-    SELECT NOT EXISTS (
-        SELECT 1 FROM public.employment_records
-        WHERE user_id = p_user_id 
-        AND employment_status IN ('terminated', 'resigned', 'suspended')
-    );
-$$;
 
--- Update current_workspace() to immediately return NULL if the employee is revoked.
--- This cascades and instantly breaks ALL RLS access across the entire app.
-CREATE OR REPLACE FUNCTION public.current_workspace()
-RETURNS uuid
-LANGUAGE sql
-STABLE
-SECURITY DEFINER SET search_path = ''
-SET search_path = public
-AS $$
-    SELECT 
-        CASE 
-            WHEN public.is_active_employee(auth.uid()) = false THEN NULL
-            ELSE workspace_id 
-        END
-    FROM public.users 
-    WHERE id = auth.uid() 
-    LIMIT 1;
-$$;
 
 
 -- ##############################################################################
@@ -9969,7 +9980,7 @@ CREATE TABLE IF NOT EXISTS public.webhook_endpoints (
     updated_at timestamptz DEFAULT now()
 );
 
-CREATE OR REPLACE VIEW public.workspace_members AS
+CREATE OR REPLACE VIEW public.workspace_members WITH (security_invoker = true) AS
 SELECT 
     id as id,
     workspace_id as workspace_id,
@@ -10147,7 +10158,7 @@ USING (
 -- V1.3.2 BUGFIXES --
 -- RC26_1_V1_3_2_BUGFIXES.sql
 -- 1. Ensure Finance FK is explicit
-DO $DO 
+DO $$ 
 BEGIN
     IF NOT EXISTS (
         SELECT 1 
@@ -10158,7 +10169,7 @@ BEGIN
         ADD CONSTRAINT billing_milestones_project_id_fkey 
         FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE RESTRICT;
     END IF;
-END $DO;
+END $$;
 
 -- 2. Expand meetings table for Project Journal
 ALTER TABLE public.meetings
@@ -10281,3 +10292,217 @@ CREATE TABLE IF NOT EXISTS forecast_feedback (
     feedback_text TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ==========================================================
+-- AI INTELLIGENCE LAYER: ROW LEVEL SECURITY POLICIES
+-- ==========================================================
+
+-- 1. Feature Snapshots
+ALTER TABLE public.feature_snapshots ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Active workspace members can select feature_snapshots" ON public.feature_snapshots;
+CREATE POLICY "Active workspace members can select feature_snapshots"
+ON public.feature_snapshots FOR SELECT
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can insert feature_snapshots" ON public.feature_snapshots;
+CREATE POLICY "Active workspace members can insert feature_snapshots"
+ON public.feature_snapshots FOR INSERT
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can update feature_snapshots" ON public.feature_snapshots;
+CREATE POLICY "Active workspace members can update feature_snapshots"
+ON public.feature_snapshots FOR UPDATE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member())
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can delete feature_snapshots" ON public.feature_snapshots;
+CREATE POLICY "Active workspace members can delete feature_snapshots"
+ON public.feature_snapshots FOR DELETE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+
+-- 2. Forecast Sessions
+ALTER TABLE public.forecast_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Active workspace members can select forecast_sessions" ON public.forecast_sessions;
+CREATE POLICY "Active workspace members can select forecast_sessions"
+ON public.forecast_sessions FOR SELECT
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can insert forecast_sessions" ON public.forecast_sessions;
+CREATE POLICY "Active workspace members can insert forecast_sessions"
+ON public.forecast_sessions FOR INSERT
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can update forecast_sessions" ON public.forecast_sessions;
+CREATE POLICY "Active workspace members can update forecast_sessions"
+ON public.forecast_sessions FOR UPDATE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member())
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can delete forecast_sessions" ON public.forecast_sessions;
+CREATE POLICY "Active workspace members can delete forecast_sessions"
+ON public.forecast_sessions FOR DELETE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+
+-- 3. Prediction History
+ALTER TABLE public.prediction_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Active workspace members can select prediction_history" ON public.prediction_history;
+CREATE POLICY "Active workspace members can select prediction_history"
+ON public.prediction_history FOR SELECT
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can insert prediction_history" ON public.prediction_history;
+CREATE POLICY "Active workspace members can insert prediction_history"
+ON public.prediction_history FOR INSERT
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can update prediction_history" ON public.prediction_history;
+CREATE POLICY "Active workspace members can update prediction_history"
+ON public.prediction_history FOR UPDATE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member())
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can delete prediction_history" ON public.prediction_history;
+CREATE POLICY "Active workspace members can delete prediction_history"
+ON public.prediction_history FOR DELETE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+
+-- 4. Prediction Snapshots
+ALTER TABLE public.prediction_snapshots ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Active workspace members can select prediction_snapshots" ON public.prediction_snapshots;
+CREATE POLICY "Active workspace members can select prediction_snapshots"
+ON public.prediction_snapshots FOR SELECT
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can insert prediction_snapshots" ON public.prediction_snapshots;
+CREATE POLICY "Active workspace members can insert prediction_snapshots"
+ON public.prediction_snapshots FOR INSERT
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can update prediction_snapshots" ON public.prediction_snapshots;
+CREATE POLICY "Active workspace members can update prediction_snapshots"
+ON public.prediction_snapshots FOR UPDATE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member())
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can delete prediction_snapshots" ON public.prediction_snapshots;
+CREATE POLICY "Active workspace members can delete prediction_snapshots"
+ON public.prediction_snapshots FOR DELETE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+
+-- 5. Simulation Runs
+ALTER TABLE public.simulation_runs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Active workspace members can select simulation_runs" ON public.simulation_runs;
+CREATE POLICY "Active workspace members can select simulation_runs"
+ON public.simulation_runs FOR SELECT
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can insert simulation_runs" ON public.simulation_runs;
+CREATE POLICY "Active workspace members can insert simulation_runs"
+ON public.simulation_runs FOR INSERT
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can update simulation_runs" ON public.simulation_runs;
+CREATE POLICY "Active workspace members can update simulation_runs"
+ON public.simulation_runs FOR UPDATE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member())
+  WITH CHECK (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can delete simulation_runs" ON public.simulation_runs;
+CREATE POLICY "Active workspace members can delete simulation_runs"
+ON public.simulation_runs FOR DELETE
+  USING (workspace_id = public.current_workspace() AND public.is_active_workspace_member());
+
+
+-- 6. Forecast Feedback (Relationship-based)
+ALTER TABLE public.forecast_feedback ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Active workspace members can select forecast_feedback" ON public.forecast_feedback;
+CREATE POLICY "Active workspace members can select forecast_feedback"
+ON public.forecast_feedback FOR SELECT
+  USING (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = forecast_feedback.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can insert forecast_feedback" ON public.forecast_feedback;
+CREATE POLICY "Active workspace members can insert forecast_feedback"
+ON public.forecast_feedback FOR INSERT
+  WITH CHECK (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = forecast_feedback.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can update forecast_feedback" ON public.forecast_feedback;
+CREATE POLICY "Active workspace members can update forecast_feedback"
+ON public.forecast_feedback FOR UPDATE
+  USING (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = forecast_feedback.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member())
+  WITH CHECK (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = forecast_feedback.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can delete forecast_feedback" ON public.forecast_feedback;
+CREATE POLICY "Active workspace members can delete forecast_feedback"
+ON public.forecast_feedback FOR DELETE
+  USING (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = forecast_feedback.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member());
+
+
+-- 7. Prediction Accuracy (Relationship-based)
+ALTER TABLE public.prediction_accuracy ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Active workspace members can select prediction_accuracy" ON public.prediction_accuracy;
+CREATE POLICY "Active workspace members can select prediction_accuracy"
+ON public.prediction_accuracy FOR SELECT
+  USING (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = prediction_accuracy.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can insert prediction_accuracy" ON public.prediction_accuracy;
+CREATE POLICY "Active workspace members can insert prediction_accuracy"
+ON public.prediction_accuracy FOR INSERT
+  WITH CHECK (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = prediction_accuracy.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can update prediction_accuracy" ON public.prediction_accuracy;
+CREATE POLICY "Active workspace members can update prediction_accuracy"
+ON public.prediction_accuracy FOR UPDATE
+  USING (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = prediction_accuracy.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member())
+  WITH CHECK (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = prediction_accuracy.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member());
+
+DROP POLICY IF EXISTS "Active workspace members can delete prediction_accuracy" ON public.prediction_accuracy;
+CREATE POLICY "Active workspace members can delete prediction_accuracy"
+ON public.prediction_accuracy FOR DELETE
+  USING (EXISTS (
+      SELECT 1 FROM public.prediction_history ph
+      WHERE ph.prediction_id = prediction_accuracy.prediction_id
+      AND ph.workspace_id = public.current_workspace()
+  ) AND public.is_active_workspace_member());
+
+-- Note: learning_dataset_versions is intentionally left without RLS for global ML metadata/version registry.
+
