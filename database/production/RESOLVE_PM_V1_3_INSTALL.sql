@@ -94,18 +94,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- Returns the workspace_id for the currently authenticated user.
--- Used as a secure binding expression inside RLS policies.
-CREATE OR REPLACE FUNCTION current_workspace()
-RETURNS uuid
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER SET search_path = ''
-AS $$
-BEGIN
-  RETURN (SELECT workspace_id FROM public.users WHERE id = auth.uid() LIMIT 1);
-END;
-$$;
+
 
 -- Returns true if the currently authenticated user is an active workspace member.
 CREATE OR REPLACE FUNCTION public.is_active_workspace_member()
@@ -6889,20 +6878,8 @@ BEGIN
   END IF;
 END $$;
 
--- Hard Delete Prevention Trigger
-CREATE OR REPLACE FUNCTION prevent_user_hard_delete()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  RAISE EXCEPTION 'Hard deletes of users are strictly prohibited. Use archive_employee() instead to maintain historical referential integrity.';
-  RETURN NULL;
-END;
-$$;
-DROP TRIGGER IF EXISTS prevent_user_hard_delete_trigger ON users;
-CREATE TRIGGER prevent_user_hard_delete_trigger
-  BEFORE DELETE ON users
-  FOR EACH ROW EXECUTE FUNCTION prevent_user_hard_delete();
+
+
 
 -- -------------------------------------------------------------
 -- 5. AUDIT IMMUTABILITY CHECK (WORM PROTECTION)

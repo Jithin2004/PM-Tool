@@ -35,7 +35,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  if (import.meta.env.DEV) console.log('[AuthContext] PROVIDER RENDER');
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,13 +109,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq('id', authUser.id)
           .maybeSingle();
 
-        console.log("SYNC_PROFILE_STEP_2", {hasData: !!data, error: error});
 if (error && error.code !== 'PGRST116') {
           console.error("Error fetching from users table:", error);
         }
 
         if (!data) {
-          console.log("SYNC_PROFILE_STEP_3");
 setProfileHydrating(true);
           // Optimized retry logic: fewer delays for Render's reliable database
           // In production, first query usually succeeds; retries are for eventual consistency edge cases
@@ -140,7 +137,6 @@ setProfileHydrating(true);
               break;
             }
           }
-          console.log("SYNC_PROFILE_STEP_4");
 setProfileHydrating(false);
         }
 
@@ -164,7 +160,6 @@ setProfileHydrating(false);
           }
         }
 
-        console.log("SYNC_PROFILE_STEP_6", {hasData: !!data});
 if (data && !data.avatar_url && providerAvatar) {
           const { data: updatedUser } = await supabase
             .from('users')
@@ -176,7 +171,6 @@ if (data && !data.avatar_url && providerAvatar) {
         }
 
         if (data) {
-          console.log("SYNC_PROFILE_STEP_7");
 // Task 3: Fetch database capabilities
           const { data: roleCaps } = await supabase
             .from('role_capabilities')
@@ -202,7 +196,6 @@ if (data && !data.avatar_url && providerAvatar) {
             capabilities: dbCapabilities.length > 0 ? Array.from(new Set(dbCapabilities)) : undefined
           };
 
-          console.log("SYNC_PROFILE_STEP_8");
 const profileWithDesignation = rowToProfile(extendedData as Record<string, unknown>);
           setProfile(profileWithDesignation);
           lastSyncedUserIdRef.current = authUser.id;

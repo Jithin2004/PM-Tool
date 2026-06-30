@@ -907,7 +907,6 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       }
     };
 
-    if (typeof window !== 'undefined') console.debug('[pipeline] createProject:start', { name: newName });
 
     const { data, error } = await supabase
       .from('projects')
@@ -916,7 +915,6 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       .single();
 
     if (!error && data) {
-      if (typeof window !== 'undefined') console.debug('[pipeline] createProject:success', { id: data.id });
 
       const selectedFrictions: string[] = [];
       if (frictionInfra) selectedFrictions.push("Client Infrastructure Access Lag");
@@ -949,7 +947,6 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       setFrictionSla(false);
       notify("Project created successfully.", "success");
 
-      if (typeof window !== 'undefined') console.debug('[pipeline] projectVisible:confirmed', { id: data.id, name: data.name });
 
       // Immutable log (fire-and-forget, never blocks visibility)
       activityLogService.appendLog({

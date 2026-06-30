@@ -192,7 +192,7 @@ function usePathname() {
   return pathname;
 }
 
-function redirectTo(target: string): void { console.log('REDIRECT_CALLED:', target, new Error().stack);
+function redirectTo(target: string): void {
   window.history.replaceState(null, '', target);
   window.dispatchEvent(new CustomEvent('popstate'));
 }
@@ -311,15 +311,7 @@ export function ResolveRouter() {
   const isGateResolved = !authLoading && !workspaceLoading && profileResolved && !profileHydrating && fontsReady && licenseCheckComplete;
 
   useEffect(() => {
-    console.log('[BootGate] State:', JSON.stringify({
-      authLoading,
-      workspaceLoading,
-      profileResolved,
-      profileHydrating,
-      fontsReady,
-      licenseCheckComplete,
-      isGateResolved
-    }));
+
     if (isGateResolved) {
       setFadeBootScreen(true);
     }

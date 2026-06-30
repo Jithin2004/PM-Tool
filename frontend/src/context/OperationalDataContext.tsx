@@ -60,7 +60,6 @@ interface OperationalDataContextValue {
 
 export const OperationalDataContext = createContext<OperationalDataContextValue | null>(null);
 (OperationalDataContext as any)._uid = Math.random();
-console.log('CREATED CONTEXT UID:', (OperationalDataContext as any)._uid);
 
 export function OperationalDataProvider({ children }: { children: React.ReactNode }) {
   
@@ -610,7 +609,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
 }
 
 export function useOperationalData() {
-  const ctx = useContext(OperationalDataContext); console.log('USING OPERATIONAL DATA', ctx);
+  const ctx = useContext(OperationalDataContext);
   if (!ctx) {
     throw new Error('useOperationalData must be used within OperationalDataProvider');
   }
