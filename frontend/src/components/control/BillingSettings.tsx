@@ -233,15 +233,17 @@ export function BillingSettings() {
                 <span className="text-sm text-[var(--pm-text-secondary)]">Activated On</span>
                 <span className="text-sm font-medium text-[var(--pm-text)]">{dbLicense?.created_at ? new Date(dbLicense.created_at).toLocaleDateString() : (license?.verifiedAt ? new Date(license.verifiedAt).toLocaleDateString() : 'N/A')}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
-                <span className="text-sm text-[var(--pm-text-secondary)]">Support Coverage</span>
-                <span className={`text-sm font-medium ${isExpired ? 'text-red-400' : 'text-indigo-500'}`}>
-                  {license?.supportExpiry ? `Until ${new Date(license.supportExpiry).toLocaleDateString()}` : 'N/A'}
+              <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)] gap-4">
+                <span className="text-sm text-[var(--pm-text-secondary)] shrink-0">Support Coverage</span>
+                <span className={`text-sm font-medium ${isExpired ? 'text-red-400' : 'text-indigo-500'} truncate`}>
+                  {dbLicense?.support_until 
+                    ? `Until ${new Date(dbLicense.support_until).toLocaleDateString()}` 
+                    : (license?.supportExpiry ? `Until ${new Date(license.supportExpiry).toLocaleDateString()}` : 'Lifetime')}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)]">
-                <span className="text-sm text-[var(--pm-text-secondary)]">License Key ID</span>
-                <span className="text-sm font-mono text-[var(--pm-text)]">{productKeyId}</span>
+              <div className="flex justify-between items-center py-2 border-b border-[var(--pm-border)] gap-4">
+                <span className="text-sm text-[var(--pm-text-secondary)] shrink-0">License Key ID</span>
+                <span className="text-sm font-mono text-[var(--pm-text)] truncate" title={productKeyId}>{productKeyId}</span>
               </div>
             </div>
           </div>
