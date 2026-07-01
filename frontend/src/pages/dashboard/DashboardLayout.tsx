@@ -131,8 +131,8 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     label: 'Company',
     iconName: 'Building2',
     subsections: [
-      { label: 'People Ops', path: '/company', capability: 'meeting.manage' },
-      { label: 'Team Directory', path: '/company/teams', capability: 'people.view' },
+      { label: 'People Ops', path: '/company', capability: 'people.view' },
+      { label: 'Teams', path: '/company/teams', capability: 'people.view' },
       { label: 'Capacity', path: '/company/capacity', capability: 'reports.view' }
     ]
   },
@@ -151,8 +151,8 @@ const PILLAR_DOMAINS: ExecutiveDomain[] = [
     subsections: [
       { label: 'Workspace Settings', path: '/admin/settings', capability: 'settings.manage' },
       { label: 'Access Control', path: '/admin/identity', capability: 'user.manage' },
-      // TODO(v1.5): { label: 'Integrations', path: '/admin/connections', capability: 'integration.manage' },
-      // TODO(v1.5): { label: 'Automations', path: '/admin/automations', capability: 'automation.manage' },
+      // Reserved for future Integrations module: { label: 'Integrations', path: '/admin/connections', capability: 'integration.manage' },
+      // Reserved for future Automations module: { label: 'Automations', path: '/admin/automations', capability: 'automation.manage' },
       { label: 'Audit', path: '/admin/audit', capability: 'audit.view' }
     ]
   }

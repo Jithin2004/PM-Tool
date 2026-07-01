@@ -62,6 +62,9 @@ import { DailyCommandCenter } from '../components/overview/DailyCommandCenter';
 
 const AdminPanel = withRetry(() => import('../pages/dashboard/AdminPanel').then(m => ({ default: m.AdminPanel })));
 const PeopleOpsCenter = withRetry(() => import('../pages/resources/PeopleOpsCenter'));
+const OperationalTeamsPage = withRetry(() => import('../pages/company/OperationalTeamsPage'));
+const TeamDetailsWorkspace = withRetry(() => import('../pages/company/TeamDetailsWorkspace'));
+const CapacityPage = withRetry(() => import('../pages/company/CapacityPage'));
 const ProjectsPage = withRetry(() => import('../pages/workspace/ProjectsPage'));
 const PortfolioPage = withRetry(() => import('../pages/workspace/PortfolioPage'));
 const KnowledgeBase = withRetry(() => import('../pages/workspace/KnowledgeBase'));
@@ -81,7 +84,6 @@ const ExecutionBoardPage = withRetry(() => import('../pages/execution/ExecutionB
 
 
 const TeamsPage = withRetry(() => import('../pages/resources/TeamsPage'));
-const CapacityPage = withRetry(() => import('../pages/resources/CapacityPage'));
 const FinancePage = withRetry(() => import('../pages/resources/FinancePage'));
 
 
@@ -564,13 +566,18 @@ export function ResolveRouter() {
       if (!guardRoute(role, '/company')) return <RouteShell><AccessRestricted /></RouteShell>;
       return <RouteShell><PeopleOpsCenter /></RouteShell>;
     }
-    if (pathname === '/company/teams' || pathname === '/company/teams/departments' || pathname === '/company/teams/skills') {
+    if (pathname === '/company/teams') {
       if (!guardRoute(role, '/company/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><ModuleErrorBoundary module="TeamsPage"><TeamsPage /></ModuleErrorBoundary></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="TeamsPage"><OperationalTeamsPage /></ModuleErrorBoundary></RouteShell>;
+    }
+    if (pathname.startsWith('/company/teams/')) {
+      if (!guardRoute(role, '/company/teams')) return <RouteShell><AccessRestricted /></RouteShell>;
+      const teamId = pathname.replace('/company/teams/', '');
+      return <RouteShell><ModuleErrorBoundary module="TeamDetails"><TeamDetailsWorkspace teamId={teamId} /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/company/capacity') {
       if (!guardRoute(role, '/company/capacity')) return <RouteShell><AccessRestricted /></RouteShell>;
-      return <RouteShell><ModuleErrorBoundary module="TeamsPage"><TeamsPage /></ModuleErrorBoundary></RouteShell>;
+      return <RouteShell><ModuleErrorBoundary module="CapacityPage"><CapacityPage /></ModuleErrorBoundary></RouteShell>;
     }
     if (pathname === '/finance') {
       if (!guardRoute(role, '/finance')) return <RouteShell><AccessRestricted /></RouteShell>;

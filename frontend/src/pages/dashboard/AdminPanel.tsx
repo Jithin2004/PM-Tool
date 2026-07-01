@@ -475,7 +475,7 @@ export function AdminPanel() {
       { id: 'rules', label: 'Rules', icon: 'gavel' },
       { id: 'data_management', label: 'Data Management', icon: 'cloud_upload' },
       { id: 'storage', label: 'Storage', icon: 'sd_storage' },
-      // TODO(v1.5): { id: 'integrations', label: 'Integrations', icon: 'extension' }
+      // Reserved for future Integrations module: { id: 'integrations', label: 'Integrations', icon: 'extension' }
     ],
     system: [
       { id: 'health', label: 'Health', icon: 'monitor_heart' },

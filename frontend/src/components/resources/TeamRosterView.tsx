@@ -4,12 +4,16 @@ import { useDashboard } from '../../context/DashboardContext';
 import { Users, Shield, Zap, Activity, Clock, Briefcase, Layers, User } from 'lucide-react';
 import { formatUserName } from '../../utils/userFormatting';
 
-export function TeamRosterView() {
+export function TeamRosterView({ teamId }: { teamId?: string }) {
   const { profile } = useAuth();
   const { profiles, teams, tasks, projects } = useDashboard();
 
   const enrichedTeams = useMemo(() => {
-    return teams.filter((t: any) => t.name !== 'SYSTEM_SETTINGS').map((team: any) => {
+    let filteredTeams = teams.filter((t: any) => t.name !== 'SYSTEM_SETTINGS');
+    if (teamId) {
+      filteredTeams = filteredTeams.filter((t: any) => t.id === teamId);
+    }
+    return filteredTeams.map((team: any) => {
       const pmId = team.data?.pm_id;
       const devIds = Array.isArray(team.data?.developer_ids) ? team.data.developer_ids : [];
       const pm = profiles.find((p: any) => p.id === pmId);

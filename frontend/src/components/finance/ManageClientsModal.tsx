@@ -151,25 +151,25 @@ export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSu
                 <h3 className="text-base font-bold uppercase tracking-wider text-[var(--pm-text)] mb-4">{editingClient.id ? 'Edit Client Details' : 'Register New Client'}</h3>
                 
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Company Name</label>
-                  <input type="text" value={editingClient.company_name || ''} onChange={e => setEditingClient({...editingClient, company_name: e.target.value})} className="w-full input-premium h-11 px-4 text-sm outline-none" />
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Company Name <span className="text-rose-500">*</span></label>
+                  <input type="text" value={editingClient.company_name || ''} onChange={e => setEditingClient({...editingClient, company_name: e.target.value})} placeholder="Enter company name..." className="w-full input-premium h-11 px-4 text-sm outline-none" required />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Email</label>
-                    <input type="email" value={editingClient.email || ''} onChange={e => setEditingClient({...editingClient, email: e.target.value})} className="w-full input-premium h-11 px-4 text-sm outline-none" />
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Email <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+                    <input type="email" value={editingClient.email || ''} onChange={e => setEditingClient({...editingClient, email: e.target.value})} placeholder="contact@company.com" className="w-full input-premium h-11 px-4 text-sm outline-none" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Phone</label>
-                    <input type="text" value={editingClient.phone || ''} onChange={e => setEditingClient({...editingClient, phone: e.target.value})} className="w-full input-premium h-11 px-4 text-sm outline-none" />
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Phone <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+                    <input type="text" value={editingClient.phone || ''} onChange={e => setEditingClient({...editingClient, phone: e.target.value})} placeholder="+1 234 567 8900" className="w-full input-premium h-11 px-4 text-sm outline-none" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Billing Currency</label>
-                    <select value={editingClient.currency || 'INR'} onChange={e => setEditingClient({...editingClient, currency: e.target.value})} className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Billing Currency <span className="text-rose-500">*</span></label>
+                    <select value={editingClient.currency || 'INR'} onChange={e => setEditingClient({...editingClient, currency: e.target.value})} className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer" required>
                       <option value="INR">INR (₹)</option>
                       <option value="USD">USD ($)</option>
                       <option value="EUR">EUR (€)</option>
@@ -179,24 +179,24 @@ export function ManageClientsModal({ isOpen, onClose, workspaceId, clients, onSu
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">GST / Tax ID</label>
-                    <input type="text" value={editingClient.gstin || ''} onChange={e => setEditingClient({...editingClient, gstin: e.target.value})} className="w-full input-premium h-11 px-4 text-sm outline-none" />
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">GST / Tax ID <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+                    <input type="text" value={editingClient.gstin || ''} onChange={e => setEditingClient({...editingClient, gstin: e.target.value})} placeholder="Tax identification number" className="w-full input-premium h-11 px-4 text-sm outline-none" />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Billing Address</label>
-                  <textarea value={editingClient.billing_address || ''} onChange={e => setEditingClient({...editingClient, billing_address: e.target.value})} className="w-full input-premium p-4 text-sm outline-none resize-none h-20" />
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Billing Address <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+                  <textarea value={editingClient.billing_address || ''} onChange={e => setEditingClient({...editingClient, billing_address: e.target.value})} placeholder="Enter complete billing address..." className="w-full input-premium p-4 text-sm outline-none resize-none h-20" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">State</label>
-                    <input type="text" value={editingClient.billing_state || ''} onChange={e => setEditingClient({...editingClient, billing_state: e.target.value})} className="w-full input-premium h-11 px-4 text-sm outline-none" />
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">State <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+                    <input type="text" value={editingClient.billing_state || ''} onChange={e => setEditingClient({...editingClient, billing_state: e.target.value})} placeholder="e.g. Maharashtra" className="w-full input-premium h-11 px-4 text-sm outline-none" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Country</label>
-                    <input type="text" value={editingClient.billing_country || 'India'} onChange={e => setEditingClient({...editingClient, billing_country: e.target.value})} className="w-full input-premium h-11 px-4 text-sm outline-none" />
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--pm-text-secondary)]">Country <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+                    <input type="text" value={editingClient.billing_country || 'India'} onChange={e => setEditingClient({...editingClient, billing_country: e.target.value})} placeholder="e.g. India" className="w-full input-premium h-11 px-4 text-sm outline-none" />
                   </div>
                 </div>
 

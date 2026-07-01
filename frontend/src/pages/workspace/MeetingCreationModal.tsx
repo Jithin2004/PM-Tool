@@ -200,12 +200,13 @@ export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => vo
           </div>
 
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Title</label>
-            <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none" />
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Title <span className="text-rose-500">*</span></label>
+            <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Enter meeting title..." className="w-full input-premium px-3 py-2 text-sm outline-none" />
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Type</label>
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Type <span className="text-rose-500">*</span></label>
             <select value={formData.meeting_type} onChange={e => setFormData({...formData, meeting_type: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none">
+              <option value="" disabled>Select Type</option>
               <option value="Client Meeting">Client Meeting</option>
               <option value="Standup">Standup</option>
               <option value="Sprint Review">Sprint Review</option>
@@ -219,24 +220,24 @@ export function MeetingCreationModal({ onClose, onSuccess }: { onClose: () => vo
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Date</label>
+              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Date <span className="text-rose-500">*</span></label>
               <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none" />
             </div>
             <div className="flex-1">
-              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Time</label>
+              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Time <span className="text-rose-500">*</span></label>
               <input required type="time" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none" />
             </div>
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Meeting Link (Optional)</label>
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Meeting Link <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
             <input type="url" value={formData.external_link} onChange={e => setFormData({...formData, external_link: e.target.value})} placeholder="https://meet.google.com/..." className="w-full input-premium px-3 py-2 text-sm outline-none" />
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Agenda</label>
-            <textarea value={formData.agenda} onChange={e => setFormData({...formData, agenda: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none min-h-[80px]" />
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Agenda <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+            <textarea value={formData.agenda} onChange={e => setFormData({...formData, agenda: e.target.value})} placeholder="Provide meeting agenda..." className="w-full input-premium px-3 py-2 text-sm outline-none min-h-[80px]" />
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Participants</label>
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Participants <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
             <div className="bg-black/20 border border-[var(--border-soft)] rounded-lg p-2 max-h-32 overflow-y-auto space-y-1 scrollbar-premium">
               {profiles.map(p => (
                 <label key={p.id} className="flex items-center gap-2 p-1 hover:bg-[var(--surface-hover)] rounded cursor-pointer">

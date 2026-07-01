@@ -5,12 +5,26 @@ import { hasCapability } from '../../core/auth/permissions';
 import { Settings } from 'lucide-react';
 import { ManageSkillsModal } from './ManageSkillsModal';
 
-export function SkillsMatrixView() {
-  const { raw: { skills = [], userSkills = [], profiles = [] } } = useOperationalData();
+export function SkillsMatrixView({ teamId }: { teamId?: string }) {
+  const { raw: { skills = [], userSkills = [], profiles: allProfiles = [], teams = [] } } = useOperationalData();
   const { profile } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const canManageTeam = hasCapability(profile?.role, 'people.manage');
+  let profiles = allProfiles;
+  if (teamId) {
+    const team = teams.find(t => t.id === teamId);
+    if (team) {
+      const pmId = (team.data as any)?.pm_id;
+      const devIds = (team.data as any)?.developer_ids || [];
+      const allTeamIds = [...devIds];
+      if (pmId && !allTeamIds.includes(pmId)) allTeamIds.push(pmId);
+      profiles = profiles.filter(p => allTeamIds.includes(p.id));
+    } else {
+      profiles = [];
+    }
+  }
+
 
   // Compute coverage: which skills exist, and how many people have them?
   const skillCoverage = useMemo(() => {

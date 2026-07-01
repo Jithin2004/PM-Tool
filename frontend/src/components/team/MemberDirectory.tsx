@@ -28,9 +28,9 @@ function getInitials(name: string) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export function MemberDirectory() {
+export function MemberDirectory({ teamId }: { teamId?: string }) {
   const { profile: currentUserProfile } = useAuth();
-  const { profiles, invalidateAll, systemData } = useDashboard();
+  const { profiles, invalidateAll, systemData, tasks } = useDashboard();
   const { raw: { skills = [], userSkills = [] } } = useOperationalData();
   const { workspace } = useWorkspace();
   
@@ -73,6 +73,9 @@ export function MemberDirectory() {
             <tr>
               <th className="text-[11px] font-mono uppercase tracking-widest">Member Directory</th>
               <th className="text-[11px] font-mono uppercase tracking-widest">Department</th>
+              <th className="text-[11px] font-mono uppercase tracking-widest">Role</th>
+              <th className="text-[11px] font-mono uppercase tracking-widest">Workload</th>
+              <th className="text-[11px] font-mono uppercase tracking-widest">Top Skills</th>
               <th className="text-[11px] font-mono uppercase tracking-widest text-right">Action</th>
             </tr>
           </thead>
@@ -100,6 +103,37 @@ export function MemberDirectory() {
                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-surface-3 text-text-secondary border border-border">
                       {userCustomRoles[p.id] || 'General'}
                     </span>
+                  </td>
+                  <td className="px-8 py-5">
+                    <div className="text-sm font-medium">{getRoleLabel(p.role)}</div>
+                  </td>
+                  <td className="px-8 py-5">
+                    {(() => {
+                      const userTasks = tasks?.filter(t => t.assignee_id === p.id && t.status !== 'done' && t.status !== 'completed') || [];
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{userTasks.length} active tasks</span>
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-8 py-5">
+                    {(() => {
+                      const memberSkills = userSkills.filter(us => us.user_id === p.id).slice(0, 2);
+                      if (memberSkills.length === 0) return <span className="text-xs text-[var(--text-secondary)] italic">Not recorded</span>;
+                      return (
+                        <div className="flex flex-wrap gap-1">
+                          {memberSkills.map(us => {
+                            const skillDef = skills.find(s => s.id === us.skill_id);
+                            return (
+                              <span key={us.id} className="text-[10px] bg-surface-2 border border-border px-2 py-0.5 rounded uppercase font-semibold">
+                                {skillDef?.name || 'Skill'}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-8 py-5 text-right">
                     <button className="text-[11px] font-mono uppercase tracking-widest text-indigo-400 hover:text-indigo-300">

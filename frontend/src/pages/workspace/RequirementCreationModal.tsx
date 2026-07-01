@@ -69,17 +69,17 @@ export function RequirementCreationModal({ onClose, onSuccess, defaultProjectId 
         
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2 space-y-4 scrollbar-premium">
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Title</label>
-            <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none" />
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Title <span className="text-rose-500">*</span></label>
+            <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Requirement title..." className="w-full input-premium px-3 py-2 text-sm outline-none" />
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Client (Optional)</label>
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Client <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
             <input type="text" value={formData.client_name} onChange={e => setFormData({...formData, client_name: e.target.value})} placeholder="Client name..." className="w-full input-premium px-3 py-2 text-sm outline-none" />
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Project (Optional)</label>
-              <select value={formData.project_id} onChange={e => setFormData({...formData, project_id: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none">
+              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Project <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+              <select value={formData.project_id} onChange={e => setFormData({...formData, project_id: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none cursor-pointer">
                 <option value="">-- None --</option>
                 {projects.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -87,8 +87,8 @@ export function RequirementCreationModal({ onClose, onSuccess, defaultProjectId 
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Priority</label>
-              <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none">
+              <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Priority <span className="text-rose-500">*</span></label>
+              <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none cursor-pointer">
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
@@ -97,11 +97,11 @@ export function RequirementCreationModal({ onClose, onSuccess, defaultProjectId 
             </div>
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Description</label>
-            <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full input-premium px-3 py-2 text-sm outline-none min-h-[80px]" />
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Description <span className="text-rose-500">*</span></label>
+            <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Provide detailed requirement description..." className="w-full input-premium px-3 py-2 text-sm outline-none min-h-[80px]" />
           </div>
           <div>
-            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Acceptance Criteria</label>
+            <label className="block text-[11px] font-mono uppercase tracking-widest text-text-tertiary mb-1">Acceptance Criteria <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
             <textarea value={formData.acceptance_criteria} onChange={e => setFormData({...formData, acceptance_criteria: e.target.value})} placeholder="- System must handle 10k RPS..." className="w-full input-premium px-3 py-2 text-sm outline-none min-h-[80px]" />
           </div>
           

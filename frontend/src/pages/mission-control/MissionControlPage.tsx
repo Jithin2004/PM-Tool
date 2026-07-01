@@ -14,6 +14,7 @@ import { OperationalTopologyMap } from '../../components/mission-control/Operati
 import { ExecutionPressureZones } from '../../components/mission-control/ExecutionPressureZones';
 import { DependencyRiskPanel } from '../../components/mission-control/DependencyRiskPanel';
 import { OrganizationalFlowMap } from '../../components/mission-control/OrganizationalFlowMap';
+import { WorkSessionPanel } from '../../components/mission-control/WorkSessionPanel';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
@@ -150,7 +151,10 @@ function MissionControlContent() {
         </div>
       </div>
 
-
+      {/* Operational Command Center (Work Session / Attendance) */}
+      <div className="mb-8">
+        <WorkSessionPanel />
+      </div>
 
       {(raw.projects.length === 0 && raw.tasks.length === 0) ? (
         (() => {

@@ -69,7 +69,7 @@ export function UserProfileModal({ profile, onClose, onUpdate }: { profile: Prof
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-[11px] uppercase tracking-widest font-bold text-[var(--text-secondary)] mb-2">Full Name</label>
+            <label className="block text-[11px] uppercase tracking-widest font-bold text-[var(--text-secondary)] mb-2">Full Name <span className="text-red-400">*</span></label>
             <input
               autoFocus
               required
@@ -82,7 +82,7 @@ export function UserProfileModal({ profile, onClose, onUpdate }: { profile: Prof
           </div>
 
           <div>
-            <label className="block text-[11px] uppercase tracking-widest font-bold text-[var(--text-secondary)] mb-2">Phone / Contact</label>
+            <label className="block text-[11px] uppercase tracking-widest font-bold text-[var(--text-secondary)] mb-2">Phone / Contact <span className="text-red-400">*</span></label>
             <input
               type="tel"
               pattern="[0-9]{10}"
@@ -97,7 +97,7 @@ export function UserProfileModal({ profile, onClose, onUpdate }: { profile: Prof
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-[11px] uppercase tracking-widest font-bold text-[var(--text-secondary)]">Profile Source Overrides</label>
+              <label className="block text-[11px] uppercase tracking-widest font-bold text-[var(--text-secondary)]">Profile Source Overrides <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
               <div className="flex gap-2">
                 <input type="file" accept="image/*" className="hidden" id="avatar-upload" onChange={handleFileChange} />
                 <label htmlFor="avatar-upload" className="text-[10px] font-bold text-purple-400 border border-purple-500/20 rounded-lg px-2 py-1 hover:bg-purple-500/10 cursor-pointer transition-all uppercase tracking-wider">

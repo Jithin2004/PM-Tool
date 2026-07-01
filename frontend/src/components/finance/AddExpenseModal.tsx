@@ -121,12 +121,13 @@ export function AddExpenseModal({ isOpen, onClose, workspaceId, onSuccess }: Add
 
           <div className="grid grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <label className="font-medium text-text-primary">Category</label>
+              <label className="font-medium text-text-primary">Category <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
               <select 
                 value={category}
                 onChange={e => setCategory(e.target.value as any)}
                 className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer"
               >
+                <option value="" disabled>Select Category</option>
                 <option value="software">Software & Subscriptions</option>
                 <option value="infrastructure">Infrastructure & Hosting</option>
                 <option value="salary">Salary & Wages</option>
@@ -136,12 +137,13 @@ export function AddExpenseModal({ isOpen, onClose, workspaceId, onSuccess }: Add
             </div>
             
             <div className="space-y-1.5">
-              <label className="font-medium text-text-primary">Payment Method</label>
+              <label className="font-medium text-text-primary">Payment Method <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
               <select 
                 value={paymentMethod}
                 onChange={e => setPaymentMethod(e.target.value)}
                 className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer"
               >
+                <option value="" disabled>Select Payment Method</option>
                 <option value="Bank Transfer">Bank Transfer</option>
                 <option value="Credit Card">Credit Card</option>
                 <option value="Cash">Cash</option>
@@ -152,7 +154,7 @@ export function AddExpenseModal({ isOpen, onClose, workspaceId, onSuccess }: Add
           </div>
 
           <div className="space-y-1.5">
-            <label className="font-medium text-text-primary">Vendor / Paid To</label>
+            <label className="font-medium text-text-primary">Vendor / Paid To <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
             <input 
               type="text" 
               value={vendor}
@@ -164,7 +166,7 @@ export function AddExpenseModal({ isOpen, onClose, workspaceId, onSuccess }: Add
 
           <div className="grid grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <label className="font-medium text-text-primary">Reference / Receipt Number</label>
+              <label className="font-medium text-text-primary">Reference / Receipt Number <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
               <input 
                 type="text" 
                 value={reference}
@@ -175,7 +177,7 @@ export function AddExpenseModal({ isOpen, onClose, workspaceId, onSuccess }: Add
             </div>
             
             <div className="space-y-1.5">
-              <label className="font-medium text-text-primary">Tax Amount Included (Optional)</label>
+              <label className="font-medium text-text-primary">Tax Amount Included ({baseCurrency}) <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
               <input 
                 type="number" 
                 min="0"

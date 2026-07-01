@@ -285,13 +285,13 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
           {/* Client & Dates */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-1.5 md:col-span-1">
-              <label className="font-medium text-text-primary">Client</label>
+              <label className="font-medium text-text-primary">Client <span className="text-rose-500">*</span></label>
               <select 
                 value={selectedClient} 
                 onChange={e => setSelectedClient(e.target.value)}
                 className="w-full input-premium h-11 px-4 text-sm outline-none cursor-pointer"
               >
-                <option value="">Select a client...</option>
+                <option value="" disabled>Select a client...</option>
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>{c.company_name} {c.gstin ? `(GST: ${c.gstin})` : ''}</option>
                 ))}
@@ -303,7 +303,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
               )}
             </div>
             <div className="space-y-1.5">
-              <label className="font-medium text-text-primary">Issue Date</label>
+              <label className="font-medium text-text-primary">Issue Date <span className="text-rose-500">*</span></label>
               <input 
                 type="date" 
                 value={issueDate}
@@ -312,7 +312,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
               />
             </div>
             <div className="space-y-1.5">
-              <label className="font-medium text-text-primary">Payment Terms</label>
+              <label className="font-medium text-text-primary">Payment Terms <span className="text-rose-500">*</span></label>
               <select 
                 value={paymentTerms} 
                 onChange={e => setPaymentTerms(e.target.value)}
@@ -326,7 +326,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="font-medium text-text-primary">Due Date</label>
+              <label className="font-medium text-text-primary">Due Date <span className="text-rose-500">*</span></label>
               <input 
                 type="date" 
                 value={dueDate}
@@ -336,7 +336,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
               />
             </div>
             <div className="space-y-1.5">
-              <label className="font-medium text-text-primary">Billing Type</label>
+              <label className="font-medium text-text-primary">Billing Type <span className="text-rose-500">*</span></label>
               <select 
                 value={billingType}
                 onChange={e => setBillingType(e.target.value)}
@@ -351,7 +351,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="font-medium text-text-primary">Template</label>
+              <label className="font-medium text-text-primary">Template <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
               <select 
                 value={selectedTemplateId}
                 onChange={e => setSelectedTemplateId(e.target.value)}
@@ -393,10 +393,10 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
                         <input type="text" value={item.description} onChange={e => handleLineItemChange(index, 'description', e.target.value)} placeholder="Item description" className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary" />
                       </td>
                       <td className="p-2">
-                        <input type="number" min="1" value={item.quantity} onChange={e => handleLineItemChange(index, 'quantity', Number(e.target.value))} className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary" />
+                        <input type="number" min="1" value={item.quantity} onChange={e => handleLineItemChange(index, 'quantity', Number(e.target.value))} className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary" placeholder="Qty" />
                       </td>
                       <td className="p-2">
-                        <input type="number" min="0" value={item.unit_price} onChange={e => handleLineItemChange(index, 'unit_price', Number(e.target.value))} className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary" />
+                        <input type="number" min="0" value={item.unit_price} onChange={e => handleLineItemChange(index, 'unit_price', Number(e.target.value))} className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary" placeholder={`Price (${invoiceCurrency})`} />
                       </td>
                       <td className="p-2">
                         <select value={item.tax_percentage} onChange={e => handleLineItemChange(index, 'tax_percentage', Number(e.target.value))} className="w-full bg-transparent border-none outline-none px-2 text-sm text-text-primary">

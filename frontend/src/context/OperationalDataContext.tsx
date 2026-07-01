@@ -35,8 +35,8 @@ interface OperationalDataContextValue {
   refreshAttendance: () => Promise<void>;
   
   handleSaveLogisticsData: (data: Record<string, unknown>) => Promise<'success' | 'unauthorized' | 'error'>;
-  handleCreateTeam: (name: string, pmId: string, devIds: string[]) => Promise<void>;
-  handleUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => Promise<void>;
+  handleCreateTeam: (name: string, pmId: string, devIds: string[], extraData?: Record<string, any>) => Promise<void>;
+  handleUpdateTeam: (id: string, name: string, pmId: string, devIds: string[], extraData?: Record<string, any>) => Promise<void>;
   handleDeleteTeam: (id: string) => Promise<void>;
   handleUpdateRole: (id: string, role: UserRole) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
@@ -377,12 +377,12 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   );
 
   const handleCreateTeam = useCallback(
-    async (name: string, pmId: string, devIds: string[]) => {
+    async (name: string, pmId: string, devIds: string[], extraData?: Record<string, any>) => {
       if (!hasCapability(profile?.role, 'people.manage') || !workspace?.id) return;
 
       const { data, error } = await supabase
         .from('teams')
-        .insert({ workspace_id: workspace.id, name, capacity_hours_per_week: 40 * devIds.length })
+        .insert({ workspace_id: workspace.id, name, capacity_hours_per_week: 40 * devIds.length, data: { pm_id: pmId, developer_ids: devIds, ...(extraData || {}) } })
         .select()
         .single();
 
@@ -409,7 +409,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
         }
         setTeams(prev => [
           ...prev,
-          { ...data, data: { pm_id: pmId, developer_ids: devIds } } as Team,
+          { ...data, data: { pm_id: pmId, developer_ids: devIds, ...(extraData || {}) } } as Team,
         ]);
       }
     },
@@ -417,10 +417,12 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
   );
 
   const handleUpdateTeam = useCallback(
-    async (id: string, name: string, pmId: string, devIds: string[]) => {
+    async (id: string, name: string, pmId: string, devIds: string[], extraData?: Record<string, any>) => {
       if (!hasCapability(profile?.role, 'people.manage') || !workspace?.id) return;
 
-      await supabase.from('teams').update({ name }).eq('id', id);
+      const { data: teamData } = await supabase.from('teams').select('data').eq('id', id).single();
+      const newData = { ...(teamData?.data || {}), pm_id: pmId, developer_ids: devIds, ...(extraData || {}) };
+      await supabase.from('teams').update({ name, data: newData }).eq('id', id);
       await supabase.from('team_members').delete().eq('team_id', id);
 
       const memberInserts: Record<string, unknown>[] = [];

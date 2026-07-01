@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { workSessionEngine } from './workSessionEngine';
 
 export const attendanceEngine = {
   async clockIn(workspaceId: string, userId: string) {
@@ -43,7 +44,75 @@ export const attendanceEngine = {
       .single();
 
     if (error) throw error;
+    
+    // Also end any active work session
+    await workSessionEngine.endActiveSession(workspaceId, userId, 'Clocked Out');
+    
     return data;
+  },
+
+  async pauseSession(workspaceId: string, userId: string, reason?: string) {
+    const now = new Date();
+    const { data, error } = await supabase
+      .from('clock_events')
+      .insert({
+        workspace_id: workspaceId,
+        user_id: userId,
+        event_type: 'PAUSE',
+        timestamp: now.toISOString(),
+        metadata: { reason }
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    
+    // Also end any active work session on pause
+    await workSessionEngine.endActiveSession(workspaceId, userId, 'Attendance Paused');
+    
+    return data;
+  },
+
+  async resumeSession(workspaceId: string, userId: string) {
+    const now = new Date();
+    const { data, error } = await supabase
+      .from('clock_events')
+      .insert({
+        workspace_id: workspaceId,
+        user_id: userId,
+        event_type: 'RESUME',
+        timestamp: now.toISOString(),
+        metadata: {}
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getCurrentSession(workspaceId: string, userId: string) {
+    // Get the most recent event for today
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    const { data, error } = await supabase
+      .from('clock_events')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', userId)
+      .gte('timestamp', start.toISOString())
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .single();
+
+    // It's okay if no row is returned, that means not clocked in today.
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching current session:', error);
+      return null;
+    }
+    
+    return data || null;
   },
 
   async getDailyStatus(workspaceId: string, userId: string, date: Date) {

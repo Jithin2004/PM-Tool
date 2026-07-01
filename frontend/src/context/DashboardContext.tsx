@@ -24,8 +24,8 @@ interface DashboardContextType {
   isAdding: boolean;
   setIsAdding: (adding: boolean) => void;
   
-  handleCreateTeam: (name: string, pmId: string, devIds: string[]) => Promise<void>;
-  handleUpdateTeam: (id: string, name: string, pmId: string, devIds: string[]) => Promise<void>;
+  handleCreateTeam: (name: string, pmId: string, devIds: string[], extraData?: Record<string, any>) => Promise<void>;
+  handleUpdateTeam: (id: string, name: string, pmId: string, devIds: string[], extraData?: Record<string, any>) => Promise<void>;
   handleDeleteTeam: (id: string) => Promise<void>;
   handleUpdateRole: (id: string, role: any) => Promise<void>;
   handleSaveLogisticsData: (data: any) => Promise<void>;

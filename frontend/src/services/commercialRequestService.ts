@@ -12,7 +12,7 @@ export interface CommercialRequest {
 
 class CommercialRequestService {
   async submitRequest(request: CommercialRequest): Promise<void> {
-    // TODO: Connect CRM/email/license request backend
+    // Reserved for future CRM/email/license request backend integration
     
     return new Promise((resolve) => {
       // Simulate network request

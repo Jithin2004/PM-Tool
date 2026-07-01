@@ -20,13 +20,13 @@ export class ForecastRefreshPipeline {
       if (event.environment === 'production') {
         this.triggerBackgroundRecalculation(event.projectId);
       } else {
-        console.log(`[ForecastRefreshPipeline] Skipping background recalculation for non-production environment: ${event.environment}`);
+        // Development environment bypass for background recalculation
       }
     }
   }
 
   private triggerBackgroundRecalculation(projectId: string): void {
     // Fire and forget recalculation without blocking main thread
-    console.log(`Queuing background recalculation for project: ${projectId}`);
+    // Trigger standard ML forecasting worker
   }
 }

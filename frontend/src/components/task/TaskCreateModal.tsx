@@ -210,14 +210,14 @@ export function TaskCreateModal({
           {mode === 'task' && projectId && (
             <div className="grid grid-cols-2 gap-4 border border-border/30 rounded-xl p-4 bg-surface-2/30">
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Epic (Optional)</label>
+                <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Epic <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
                 <select value={epicId} onChange={e => { setEpicId(e.target.value); setStoryId(''); }} className="input-premium w-full h-9 px-3 text-sm outline-none transition-all cursor-pointer">
                   <option value="">None</option>
                   {epics.map(ep => <option key={ep.id} value={ep.id}>{ep.uid_code} - {ep.name}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Story (Optional)</label>
+                <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Story <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
                 <select value={storyId} onChange={e => {
                   setStoryId(e.target.value);
                   if (e.target.value && !epicId) {
@@ -230,7 +230,7 @@ export function TaskCreateModal({
                 </select>
               </div>
               <div className="col-span-2 space-y-1.5">
-                <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Module (Optional)</label>
+                <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Module <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
                 <select value={moduleId} onChange={e => setModuleId(e.target.value)} className="input-premium w-full h-9 px-3 text-sm outline-none transition-all cursor-pointer">
                   <option value="">None</option>
                   {modules.map(md => <option key={md.id} value={md.id}>{md.name}</option>)}
@@ -240,17 +240,17 @@ export function TaskCreateModal({
           )}
 
           <div className="space-y-1.5">
-            <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Description</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Technical specs, links, etc." rows={2} className="input-premium w-full p-4 text-sm outline-none transition-all resize-none" />
+            <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Description <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Provide additional details, links, etc..." rows={2} className="input-premium w-full p-4 text-sm outline-none transition-all resize-none" />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 space-y-1.5">
-              <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Hours</label>
+              <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Hours <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
               <input type="number" min="0.5" step="0.5" value={estimatedHours} onChange={e => setEstimatedHours(Number(e.target.value))} className="input-premium w-full h-11 px-4 text-sm outline-none transition-all" />
             </div>
             <div className="flex-1 space-y-1.5">
-              <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Assignee</label>
+              <label className="block text-[10px] font-medium uppercase tracking-widest text-text-tertiary">Assignee <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
               <AssigneePicker users={users} value={assigneeId} onChange={setAssigneeId} contextText={name} />
             </div>
           </div>

@@ -223,18 +223,19 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
               {activeTab === 'identity' && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div>
-                    <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Project Designation *</label>
+                    <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Project Designation <span className="text-red-400">*</span></label>
                     <input autoFocus required type="text" value={formData.name} onChange={e => handleUpdate('name', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 outline-none" placeholder="E.g. QUANTUM CORE UPGRADE" />
                   </div>
                   <div>
-                    <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Description</label>
-                    <textarea value={formData.description} onChange={e => handleUpdate('description', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 p-4 rounded-xl text-sm focus:border-teal-500/50 outline-none min-h-[100px]" placeholder="Detailed mandate..." />
+                    <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Description <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
+                    <textarea value={formData.description} onChange={e => handleUpdate('description', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 p-4 rounded-xl text-sm focus:border-teal-500/50 outline-none min-h-[100px]" placeholder="Provide additional details..." />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Project Owner</label>
+                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Project Owner <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
                       <select value={formData.owner_id} onChange={e => handleUpdate('owner_id', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm outline-none">
-                        <option value="">Select Owner</option>
+                        <option value="" disabled>Select Project Owner</option>
+                        <option value="none">No Owner Assigned</option>
                         {availableUsers.map((u: any) => <option key={u.id} value={u.id}>{u.full_name || u.email}</option>)}
                       </select>
                     </div>
@@ -247,15 +248,15 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Start Date</label>
+                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Start Date <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
                       <input type="date" value={formData.proposed_start_date} onChange={e => handleUpdate('proposed_start_date', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm outline-none" />
                     </div>
                     <div>
-                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Target Delivery Date</label>
+                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Target Delivery Date <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
                       <input type="date" value={formData.client_deadline} onChange={e => handleUpdate('client_deadline', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm outline-none" />
                     </div>
                     <div>
-                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Priority</label>
+                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Priority <span className="text-red-400">*</span></label>
                       <select value={formData.priority} onChange={e => handleUpdate('priority', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm outline-none">
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
@@ -264,7 +265,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Status</label>
+                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Status <span className="text-red-400">*</span></label>
                       <select value={formData.status} onChange={e => handleUpdate('status', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm outline-none">
                         <option value="planning">Planning</option>
                         <option value="active">Active</option>
@@ -348,19 +349,21 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
                   <div className="bg-surface-3/30 border border-border/50 p-4 rounded-xl space-y-3">
                     <h4 className="text-sm font-semibold">Add Initial Task</h4>
                     <input type="text" value={taskName} onChange={e => setTaskName(e.target.value)} placeholder="Task Designation" className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none" />
-                    <textarea value={taskDesc} onChange={e => setTaskDesc(e.target.value)} placeholder="Description" className="w-full bg-surface border border-border p-3 rounded-lg text-sm outline-none" />
+                    <textarea value={taskDesc} onChange={e => setTaskDesc(e.target.value)} placeholder="Provide additional details..." className="w-full bg-surface border border-border p-3 rounded-lg text-sm outline-none" />
                     <div className="grid grid-cols-2 gap-3">
                       <select value={taskMsIndex} onChange={e => setTaskMsIndex(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none">
-                        <option value="">No Milestone Link</option>
+                        <option value="" disabled>Select Milestone Link</option>
+                        <option value="none">No Milestone Link</option>
                         {formData.initialMilestones?.map((m, i) => (
                           <option key={i} value={i}>{m.name}</option>
                         ))}
                       </select>
                       <select value={taskAssignee} onChange={e => setTaskAssignee(e.target.value)} className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none">
-                        <option value="">Unassigned</option>
+                        <option value="" disabled>Select Assignee</option>
+                        <option value="none">Unassigned</option>
                         {availableUsers.map((u: any) => <option key={u.id} value={u.id}>{u.full_name || u.email}</option>)}
                       </select>
-                      <input type="number" min="0" value={taskEst} onChange={e => setTaskEst(Number(e.target.value))} placeholder="Est. Hours" className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none" />
+                      <input type="number" min="0" value={taskEst} onChange={e => setTaskEst(Number(e.target.value))} placeholder="Est. Hours" title="Estimated Hours" className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none" />
                       <select value={taskPriority} onChange={e => setTaskPriority(e.target.value)} className="w-full bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none">
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
@@ -402,7 +405,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
                     <h4 className="text-sm font-semibold">Assign Member</h4>
                     <div className="flex gap-2">
                       <select value={allocUser} onChange={e => setAllocUser(e.target.value)} className="flex-1 bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none">
-                        <option value="">Select User...</option>
+                        <option value="" disabled>Select User...</option>
                         {availableUsers.map((u: any) => <option key={u.id} value={u.id}>{u.full_name || u.email}</option>)}
                       </select>
                       <input type="number" min="0" max="100" value={allocPercent} onChange={e => setAllocPercent(Number(e.target.value))} placeholder="%" className="w-20 bg-surface border border-border h-10 px-3 rounded-lg text-sm outline-none" title="Allocation %" />
@@ -440,7 +443,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Methodology</label>
+                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Methodology <span className="text-red-400">*</span></label>
                       <select value={formData.execution_mode} onChange={e => handleUpdate('execution_mode', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm outline-none">
                         <option value="KANBAN">Board (Kanban)</option>
                         <option value="SCRUM">Work Cycles (Sprint)</option>
@@ -455,7 +458,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
                       </p>
                     </div>
                     <div>
-                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Approval Workflow</label>
+                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Approval Workflow <span className="text-red-400">*</span></label>
                       <select value={formData.approval_workflow} onChange={e => handleUpdate('approval_workflow', e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm outline-none">
                         <option value="standard">Standard (PM Review)</option>
                         <option value="strict">Strict (Multi-level Signoff)</option>
@@ -498,7 +501,7 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
                       </select>
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Total Budget / Contract Value</label>
+                      <label className="block text-[11px] uppercase font-bold tracking-widest text-text-secondary mb-2">Total Budget / Contract Value <span className="text-[10px] normal-case opacity-60 ml-1">(Optional)</span></label>
                       <div className="relative">
                         <span className="absolute left-4 top-3.5 text-text-tertiary">$</span>
                         <input type="number" min="0" step="0.01" value={formData.budget} onChange={e => handleUpdate('budget', Number(e.target.value))} className="w-full bg-surface-3/50 border border-border/50 h-12 pl-8 pr-4 rounded-xl text-sm outline-none" />
