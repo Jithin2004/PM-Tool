@@ -19,10 +19,9 @@ export function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) {
-      window.history.replaceState(null, '', '/overview');
-      window.dispatchEvent(new CustomEvent('popstate'));
-    }
+    // Deliberately removed aggressive auto-redirect.
+    // The router.tsx will automatically redirect the user to the appropriate page
+    // once the profile is fully loaded and resolved.
   }, [user, authLoading]);
 
   useEffect(() => {

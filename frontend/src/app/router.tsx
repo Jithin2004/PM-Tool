@@ -547,6 +547,9 @@ export function ResolveRouter() {
     }
 
     if (pathname === "/login") {
+      if (user && profileResolved && profile && role !== "uninvited") {
+        return <Redirect to={resolveAuthenticatedDestination(role, !!workspace, false)} />;
+      }
       return <Login />;
     }
 

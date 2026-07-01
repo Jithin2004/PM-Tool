@@ -11,7 +11,7 @@ export async function persistSystemEvent(
 ) {
   try {
     // Attempt to extract workspace_id and user_id from localStorage or session
-    const authData = localStorage.getItem("supabase.auth.token");
+    const authData = localStorage.getItem("resolve-pm-auth");
     let userId = null;
     let workspaceId = null;
 

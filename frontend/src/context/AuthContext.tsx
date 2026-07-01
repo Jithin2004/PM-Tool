@@ -395,6 +395,7 @@ const profileWithDesignation = rowToProfile(extendedData as Record<string, unkno
         // If we already have the profile, we can skip syncProfile to save a query
         if (session?.user) {
           if (userRef.current?.id !== session.user.id) {
+            setProfileResolved(false);
             setUser(session.user);
             // Defer the syncProfile call to release the auth event lock and prevent deadlocks
             setTimeout(async () => {
