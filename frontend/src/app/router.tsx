@@ -4,6 +4,8 @@ import { ModuleErrorBoundary } from "../components/error/ModuleErrorBoundary";
 import { useWorkspace } from "../context/WorkspaceContext";
 import { useAuth } from "../context/AuthContext";
 import { useOperationalData } from "../context/OperationalDataContext";
+import { useBootstrap } from "../core/lifecycle/BootstrapOrchestrator";
+import { AuthState, BootstrapState } from "../core/lifecycle/types";
 import { canAccessRoute } from "../core/auth/permissions";
 import type { UserRole } from "../types";
 import {
@@ -236,9 +238,15 @@ function NotFound() {
         <h3 className="text-lg font-bold text-text-primary mb-2 tracking-tight">
           Page Not Found
         </h3>
-        <p className="text-sm text-text-tertiary">
+        <p className="text-sm text-text-tertiary mb-6">
           The route you are trying to access does not exist or has been moved.
         </p>
+        <button
+          onClick={() => redirectTo("/overview")}
+          className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-500 hover:bg-indigo-600 text-white"
+        >
+          Return to Dashboard
+        </button>
       </div>
     </div>
   );
@@ -343,229 +351,78 @@ function RouteShell({ children }: { children: React.ReactNode }) {
 export function ResolveRouter() {
   const rawPathname = usePathname();
   const pathname = normalizePath(rawPathname);
-  const { user, workspace, loading: workspaceLoading } = useWorkspace();
-  const {
-    profile,
-    loading: authLoading,
-    profileResolved,
-    profileHydrating,
-  } = useAuth();
-  const role = profile?.role;
-  const postAuthRedirectApplied = useRef(false);
+  const { authState, bootstrapState } = useBootstrap();
+  const { user, profile } = useAuth();
+  const { workspace } = useWorkspace();
 
-  // --- Boot sequence readiness hooks ---
-  const [fontsReady, setFontsReady] = useState(false);
-  const [licenseCheckComplete, setLicenseCheckComplete] = useState(false);
   const [showBootScreen, setShowBootScreen] = useState(true);
   const [fadeBootScreen, setFadeBootScreen] = useState(false);
 
-  // 1. Font/icon readiness control
   useEffect(() => {
-    let active = true;
-
-    // Failsafe timeout for Playwright where fonts might hang
-    const timer = setTimeout(() => {
-      if (active) {
-        setFontsReady(true);
-      }
-    }, 1500);
-
-    Promise.all([
-      document.fonts.load("16px 'Geist'"),
-      document.fonts.load("16px 'Inter'"),
-      document.fonts.load("16px 'JetBrains Mono'"),
-      document.fonts.load("24px 'Material Symbols Outlined'"),
-    ])
-      .then(() => {
-        return document.fonts.ready;
-      })
-      .then(() => {
-        if (active) {
-          setFontsReady(true);
-          document.documentElement.classList.add("fonts-loaded");
-          document.body.classList.add("fonts-loaded");
-        }
-      })
-      .catch((err) => {
-        console.warn("Font loading check encountered an issue:", err);
-        if (active) {
-          setFontsReady(true);
-          document.documentElement.classList.add("fonts-loaded");
-          document.body.classList.add("fonts-loaded");
-        }
-      });
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, []);
-
-  // 2. License check complete control
-  useEffect(() => {
-    let active = true;
-
-    const runLicenseCheck = async () => {
-      // Wait until auth initialization is complete
-      if (authLoading || !profileResolved || profileHydrating) return;
-
-      // If user is not authenticated or does not have a workspace yet,
-      // license check is immediately considered complete for the boot gate.
-      if (!user || !profile?.workspace_id) {
-        setLicenseCheckComplete(true);
-        return;
-      }
-
-      try {
-        const res = await checkLicenseOnline();
-        if (active) {
-          setLicenseCheckComplete(true);
-        }
-      } catch (err) {
-        console.error("License check error during boot sequence:", err);
-        if (active) {
-          setLicenseCheckComplete(true);
-        }
-      }
-    };
-
-    runLicenseCheck();
-
-    return () => {
-      active = false;
-    };
-  }, [
-    user,
-    profile?.workspace_id,
-    authLoading,
-    profileResolved,
-    profileHydrating,
-  ]);
-
-  const isGateResolved =
-    !authLoading &&
-    !workspaceLoading &&
-    profileResolved &&
-    !profileHydrating &&
-    fontsReady &&
-    licenseCheckComplete;
-
-  useEffect(() => {
-    if (isGateResolved) {
+    if (
+      bootstrapState === BootstrapState.READY ||
+      bootstrapState === BootstrapState.ERROR ||
+      bootstrapState === BootstrapState.LICENSE_ACTIVATION ||
+      bootstrapState === BootstrapState.PENDING_ONBOARDING ||
+      authState === AuthState.UNAUTHENTICATED
+    ) {
       setFadeBootScreen(true);
     }
-  }, [
-    authLoading,
-    workspaceLoading,
-    profileResolved,
-    profileHydrating,
-    fontsReady,
-    licenseCheckComplete,
-    isGateResolved,
-  ]);
+  }, [bootstrapState, authState]);
 
+  const role = profile?.role;
+  const postAuthRedirectApplied = useRef(false);
+
+  // Apply post-auth redirects only once when READY
   useEffect(() => {
+    if (bootstrapState !== BootstrapState.READY) return;
     if (postAuthRedirectApplied.current) return;
-    if (workspaceLoading || authLoading || !profileResolved || profileHydrating)
-      return;
     if (!user || !profile || role === "uninvited") return;
 
     const stored = consumeRedirectToAfterAuth();
     if (!stored) return;
 
     postAuthRedirectApplied.current = true;
-    const destination = resolveAuthenticatedDestination(
-      role,
-      !!workspace,
-      stored,
-    );
+    const destination = resolveAuthenticatedDestination(role, !!workspace, stored);
     const target = normalizePath(destination);
     if (target !== pathname) {
       redirectTo(target);
     }
-  }, [
-    workspaceLoading,
-    authLoading,
-    profileResolved,
-    profileHydrating,
-    user,
-    profile,
-    role,
-    workspace,
-    pathname,
-  ]);
-
-  useEffect(() => {}, [
-    pathname,
-    workspace,
-    user,
-    role,
-    workspaceLoading,
-    authLoading,
-    profileResolved,
-    profileHydrating,
-  ]);
+  }, [bootstrapState, user, profile, role, workspace, pathname]);
 
   // Routing render logic helper to render target pages
   function renderRouteContent() {
     // ── Public routes ──
+    if (pathname === "/") return <LandingPage />;
+    if (pathname.startsWith("/accept-invite/")) return <AcceptInvitePage />;
+    if (pathname === "/privacy") return <PrivacyPage />;
+    if (pathname === "/terms") return <TermsPage />;
+    if (pathname === "/compliance") return <CompliancePage />;
+    if (pathname === "/security") return <SecurityPage />;
+    if (pathname === "/reset-password") return <ResetPassword />;
 
-    if (pathname === "/") {
-      return <LandingPage />;
-    }
-
-    if (pathname.startsWith("/accept-invite/")) {
-      return <AcceptInvitePage />;
-    }
-
-    if (pathname === "/privacy") {
-      return <PrivacyPage />;
-    }
-    if (pathname === "/terms") {
-      return <TermsPage />;
-    }
-    if (pathname === "/compliance") {
-      return <CompliancePage />;
-    }
-    if (pathname === "/security") {
-      return <SecurityPage />;
-    }
-
-    if (pathname.startsWith("/shared/project/")) {
-      return <SharedProjectDashboard />;
-    }
-
-    if (pathname === "/activate-license") {
-      return (
-        <ProductKeyGate
-          onVerified={() => {
-            window.history.pushState(null, "", "/overview");
-            window.dispatchEvent(new Event("popstate"));
-          }}
-        />
-      );
-    }
-
-    if (pathname === "/login") {
-      if (user && profileResolved && profile && role !== "uninvited") {
-        return <Redirect to={resolveAuthenticatedDestination(role, !!workspace, false)} />;
-      }
+    // ── FSM Routing ──
+    if (authState === AuthState.UNAUTHENTICATED) {
       return <Login />;
     }
 
-    if (pathname === "/reset-password") {
-      return <ResetPassword />;
+    if (authState === AuthState.ERROR || bootstrapState === BootstrapState.ERROR) {
+      return (
+        <div className="flex h-screen w-screen items-center justify-center bg-surface">
+          <div className="text-rose-500 font-mono">Fatal Application Error</div>
+        </div>
+      );
     }
 
-    if (pathname === "/password-setup") {
-      return <PasswordSetup />;
-    }
-
+    // Still initializing
     if (
-      workspaceLoading ||
-      authLoading ||
-      !profileResolved ||
-      profileHydrating
+      bootstrapState === BootstrapState.IDLE ||
+      bootstrapState === BootstrapState.HYDRATING_PROFILE ||
+      bootstrapState === BootstrapState.RESOLVING_WORKSPACE ||
+      bootstrapState === BootstrapState.VALIDATING_LICENSE ||
+      bootstrapState === BootstrapState.INITIALIZING_SERVICES ||
+      authState === AuthState.BOOTING ||
+      authState === AuthState.AUTHENTICATING
     ) {
       return (
         <div className="flex h-screen w-screen items-center justify-center bg-surface">
@@ -574,46 +431,33 @@ export function ResolveRouter() {
       );
     }
 
-    const WorkspaceSetupPage = withRetry(() =>
-      import("../pages/onboarding/WorkspaceSetupPage").then((m) => ({
-        default: m.WorkspaceSetupPage,
-      })),
-    );
-    const WorkspaceSettings = withRetry(() =>
-      import("../components/control/WorkspaceSettings").then((m) => ({
-        default: m.WorkspaceSettings,
-      })),
-    );
-    const SuperAdminConsole = withRetry(() =>
-      import("../components/admin/SuperAdminConsole").then((m) => ({
-        default: m.SuperAdminConsole,
-      })),
-    );
-    // ── Auth Gate ──
-    if (!user) return <Login />;
+    // User authenticated but needs onboarding
+    if (bootstrapState === BootstrapState.PENDING_ONBOARDING) {
+      return <WorkspaceSetupWizard />;
+    }
 
-    if (
-      profile?.employment_status &&
-      ["terminated", "resigned", "suspended"].includes(
-        profile.employment_status,
-      )
-    ) {
+    // User authenticated, workspace resolved, but license invalid
+    if (bootstrapState === BootstrapState.LICENSE_ACTIVATION) {
+      return (
+        <ProductKeyGate
+          onVerified={() => {
+            window.location.reload(); // Hard reload to restart FSM
+          }}
+        />
+      );
+    }
+
+    // We must be READY at this point
+    if (bootstrapState !== BootstrapState.READY) {
+      return <Login />;
+    }
+
+    if (profile?.employment_status && ["terminated", "resigned", "suspended"].includes(profile.employment_status)) {
       return <Redirect to="/login?error=access_denied" />;
     }
 
-    if (
-      (profile as any)?.status &&
-      ["archived", "offboarding", "disabled"].includes((profile as any).status)
-    ) {
+    if ((profile as any)?.status && ["archived", "offboarding", "disabled"].includes((profile as any).status)) {
       return <Redirect to="/login?error=access_denied" />;
-    }
-
-    if (
-      role === "pending-workspace-setup" &&
-      !isProductKeyVerified() &&
-      pathname !== "/activate-license"
-    ) {
-      return <Redirect to="/activate-license" />;
     }
 
     if (role === "uninvited" || !role) {
@@ -621,32 +465,15 @@ export function ResolveRouter() {
     }
 
     if (profile?.force_password_change) {
-      if (pathname !== "/password-setup") {
-        return <Redirect to="/password-setup" />;
-      }
+      if (pathname !== "/password-setup") return <Redirect to="/password-setup" />;
     } else if (pathname === "/password-setup") {
       return <Redirect to="/overview" />;
     }
 
-    if (!workspace && role === "pending-workspace-setup") {
-      return <WorkspaceSetupWizard />;
-    }
-
-    if (!workspace && pathname !== "/workspaces/new") {
-      return <Redirect to="/login?error=uninvited" />;
-    }
-
     // ── Alias redirects (canonicalize) ──
-
     const rawStripped = rawPathname.split("?")[0].replace(/\/+$/, "") || "/";
     if (rawStripped !== pathname) {
       return <Redirect to={pathname} />;
-    }
-
-    // 🚫 Legacy redirects 🚫
-
-    if (pathname === "/onboarding/workspace") {
-      return <Redirect to="/overview" />;
     }
 
     // ── MISSION CONTROL ──

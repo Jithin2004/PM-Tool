@@ -147,5 +147,28 @@ export const activityEventService = {
     } catch (e) {
       console.error('[emitExternalEvent] Failed to route to Integration Engine:', e);
     }
+  },
+
+  // --- LifecycleAwareService implementation ---
+  _status: 'idle' as 'idle' | 'running' | 'paused' | 'error',
+  
+  initialize(context: any) {
+    this._status = 'running';
+  },
+  
+  pause() {
+    this._status = 'paused';
+  },
+  
+  resume() {
+    this._status = 'running';
+  },
+  
+  dispose() {
+    this._status = 'idle';
+  },
+  
+  getStatus() {
+    return this._status;
   }
 };

@@ -34,7 +34,7 @@ const roleMapping: Record<string, string[]> = {
 
 export function WorkspaceSetupWizard() {
   const { createWorkspace, error } = useWorkspace();
-  const { refreshProfile, profile, user } = useAuth();
+  const { profile, user } = useAuth();
   
   const [step, setStep] = useState(1);
   const [name, setName] = useState(sessionStorage.getItem('pending_workspace_name') || '');
@@ -221,8 +221,7 @@ export function WorkspaceSetupWizard() {
           setLoading(false);
           return;
         }
-        await refreshProfile();
-        // Persist onboarding state — mark setup complete
+        // Persist onboarding state - mark setup complete
         await onboardingService.completeSetup(created.id);
         if (selectedOperatingTemplates.length > 0) {
           await onboardingService.saveTemplates(created.id, selectedOperatingTemplates);
@@ -255,7 +254,6 @@ export function WorkspaceSetupWizard() {
           setDemoLoading(false);
           return;
         }
-        await refreshProfile();
         window.location.href = '/overview';
       }
     } catch (err: any) {

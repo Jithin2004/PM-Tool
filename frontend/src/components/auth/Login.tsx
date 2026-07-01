@@ -11,7 +11,7 @@ function getErrorParam(): string | null {
 }
 
 export function Login() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
@@ -22,7 +22,7 @@ export function Login() {
     // Deliberately removed aggressive auto-redirect.
     // The router.tsx will automatically redirect the user to the appropriate page
     // once the profile is fully loaded and resolved.
-  }, [user, authLoading]);
+  }, [user]);
 
   useEffect(() => {
     const err = getErrorParam();

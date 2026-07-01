@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { isProductKeyVerified } from '../lib/productKey';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { useBootstrap } from '../core/lifecycle/BootstrapOrchestrator';
+import { AuthState, BootstrapState } from '../core/lifecycle/types';
 import { navigateTo, resolveAuthenticatedDestination } from '../core/auth/postAuthRedirect';
 import { LiveCommandCenterSimulation } from './LiveCommandCenterSimulation';
 import { 
@@ -13,10 +15,11 @@ import { CommercialRequestModal } from './components/CommercialRequestModal';
 
 export function LandingPage() {
   const verified = isProductKeyVerified() || !!useAuth().user;
-  const { user, profile, profileResolved, loading: authLoading } = useAuth();
-  const { workspace, loading: workspaceLoading } = useWorkspace();
+  const { user, profile } = useAuth();
+  const { authState, bootstrapState } = useBootstrap();
+  const { workspace } = useWorkspace();
 
-  const authReady = profileResolved && !authLoading;
+  const authReady = authState === AuthState.AUTHENTICATED && bootstrapState === BootstrapState.READY;
   const hasSession = authReady && !!user && !!profile && profile.role !== 'uninvited';
 
   const [activeSection, setActiveSection] = useState('');
@@ -53,11 +56,11 @@ export function LandingPage() {
   useEffect(() => {
     if (!hasSession) return;
     const destination = resolveAuthenticatedDestination(profile!.role, !!workspace, null);
-    if (workspaceLoading && profile!.role !== 'pending-workspace-setup' && !workspace) {
+    if (bootstrapState !== BootstrapState.READY && profile!.role !== 'pending-workspace-setup' && !workspace) {
       return;
     }
     navigateTo(destination, true);
-  }, [hasSession, profile, workspace, workspaceLoading]);
+  }, [hasSession, profile, workspace, bootstrapState]);
 
   return (
     <div className="font-body-md text-body-md overflow-x-hidden min-h-screen bg-[#0a0c10] text-[#e2e2e5]">

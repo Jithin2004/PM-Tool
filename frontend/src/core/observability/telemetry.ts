@@ -1,5 +1,28 @@
 import { supabase } from "../../lib/supabase";
 import { ObservabilityEngine } from "./ObservabilityEngine";
+import { LifecycleAwareService, AppContext } from "../lifecycle/types";
+
+let globalTelemetryContext = {
+  userId: null as string | null,
+  workspaceId: null as string | null
+};
+
+let _telemetryStatus: 'idle' | 'running' | 'paused' | 'error' = 'idle';
+
+export const TelemetryService: LifecycleAwareService = {
+  initialize: (context: AppContext) => {
+    globalTelemetryContext.userId = context.user?.id || null;
+    globalTelemetryContext.workspaceId = context.workspace?.id || null;
+    _telemetryStatus = 'running';
+  },
+  pause: () => { _telemetryStatus = 'paused'; },
+  resume: () => { _telemetryStatus = 'running'; },
+  dispose: () => {
+    globalTelemetryContext = { userId: null, workspaceId: null };
+    _telemetryStatus = 'idle';
+  },
+  getStatus: () => _telemetryStatus
+};
 
 export async function persistSystemEvent(
   eventType: string,
@@ -10,24 +33,8 @@ export async function persistSystemEvent(
   stackTrace?: string,
 ) {
   try {
-    // Attempt to extract workspace_id and user_id from localStorage or session
-    const authData = localStorage.getItem("resolve-pm-auth");
-    let userId = null;
-    let workspaceId = null;
-
-    if (authData) {
-      try {
-        const parsed = JSON.parse(authData);
-        userId = parsed?.currentSession?.user?.id;
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    workspaceId = localStorage.getItem("pm_active_workspace");
-    if (workspaceId && workspaceId.startsWith('"')) {
-      workspaceId = JSON.parse(workspaceId);
-    }
+    let userId = globalTelemetryContext.userId;
+    let workspaceId = globalTelemetryContext.workspaceId;
 
     const browserInfo = {
       userAgent: navigator.userAgent,

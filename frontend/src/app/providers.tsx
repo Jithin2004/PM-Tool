@@ -6,12 +6,11 @@ import { ObservabilityProvider } from '../core/observability/ObservabilityProvid
 import { GlobalDialogs } from '../components/common/Dialogs';
 import { OperationalDataProvider } from '../context/OperationalDataContext';
 import { RealtimeProvider } from '../context/RealtimeProvider';
+import { BootstrapOrchestrator } from '../core/lifecycle/BootstrapOrchestrator';
 
 interface AppProvidersProps {
   children: React.ReactNode;
 }
-
-const GLOBAL_FALLBACK = <div className="flex h-screen w-screen bg-[#0b0c12]"></div>;
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
@@ -20,10 +19,12 @@ export function AppProviders({ children }: AppProvidersProps) {
         <AuthProvider>
           <WorkspaceProvider>
             <OperationalDataProvider>
-              <RealtimeProvider>
-                {children}
-                <GlobalDialogs />
-              </RealtimeProvider>
+              <BootstrapOrchestrator>
+                <RealtimeProvider>
+                  {children}
+                  <GlobalDialogs />
+                </RealtimeProvider>
+              </BootstrapOrchestrator>
             </OperationalDataProvider>
           </WorkspaceProvider>
         </AuthProvider>

@@ -811,13 +811,24 @@ export async function getRecentActivity(workspaceId: string, service: string, li
   return [];
 }
 
-// ── Auto-recovery on module load ──
-if (typeof window !== 'undefined' && isSupabaseConfigured) {
-  recoverJobs().then(count => {
-    if (process.env.NODE_ENV === 'development' && count > 0) {
+// ── // 🚫 Auto-recovery on module load removed in favor of BootstrapOrchestrator 🚫
+
+import { LifecycleAwareService, AppContext } from '../lifecycle/types';
+
+let _integrationStatus: 'idle' | 'running' | 'paused' | 'error' = 'idle';
+
+export const IntegrationService: LifecycleAwareService = {
+  initialize: (context: AppContext) => {
+    _integrationStatus = 'running';
+    if (isSupabaseConfigured) {
+      recoverJobs().catch(() => {});
     }
-  }).catch(() => {});
-}
+  },
+  pause: () => { _integrationStatus = 'paused'; },
+  resume: () => { _integrationStatus = 'running'; },
+  dispose: () => { _integrationStatus = 'idle'; },
+  getStatus: () => _integrationStatus
+};
 
 // ── Synthetic stress test helpers (avoid raw inserts) ──
 

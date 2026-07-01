@@ -186,6 +186,29 @@ export const automationEngine = {
       automation_context_id: contextId,
       execution_depth: depth
     });
+  },
+
+  // --- LifecycleAwareService implementation ---
+  _status: 'idle' as 'idle' | 'running' | 'paused' | 'error',
+  
+  initialize(context: any) {
+    this._status = 'running';
+  },
+  
+  pause() {
+    this._status = 'paused';
+  },
+  
+  resume() {
+    this._status = 'running';
+  },
+  
+  dispose() {
+    this._status = 'idle';
+  },
+  
+  getStatus() {
+    return this._status;
   }
 };
 

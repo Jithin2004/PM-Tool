@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useState } from 'react';
 import { useWorkspace } from './WorkspaceContext';
 import { useAuth } from './AuthContext';
 import { useOperationalData } from './OperationalDataContext';
+import { useBootstrap } from '../core/lifecycle/BootstrapOrchestrator';
+import { BootstrapState } from '../core/lifecycle/types';
 import { 
   useTasksRealtime,
   useApprovalsRealtime,
@@ -19,19 +21,24 @@ interface RealtimeContextType {
 
 const RealtimeContext = createContext<RealtimeContextType>({ isConnected: false });
 
-import { OperationalDataContext as ODC_LOCAL } from './OperationalDataContext';
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const { workspace } = useWorkspace() as any;
   const { profile } = useAuth();
   const { refreshAll } = useOperationalData() as any;
-  // Simplified for RC4: if any is connected, we consider it connected, but orchestrator handles the real state.
+  const { bootstrapState } = useBootstrap();
+  
   const [isConnected, setIsConnected] = useState(true);
 
-  const wsId = workspace?.id;
-  const userId = profile?.id;
+  // Only enable realtime engines when the application is fully READY
+  const isReady = bootstrapState === BootstrapState.READY;
+  
+  // Realtime hooks should be designed to accept undefined/null to stay dormant,
+  // or we pass a conditional flag. Our current hooks check for wsId, so we can nullify it.
+  const wsId = isReady ? workspace?.id : null;
+  const userId = isReady ? profile?.id : null;
 
   const handleUpdate = () => {
-    if (refreshAll) {
+    if (refreshAll && isReady) {
       refreshAll();
     }
   };
