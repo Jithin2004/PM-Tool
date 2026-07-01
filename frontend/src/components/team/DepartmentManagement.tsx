@@ -24,8 +24,7 @@ export function DepartmentManagement() {
           .select(`
             *,
             manager:users(id, full_name, avatar_url),
-            team_members(count),
-            teams(count)
+            projects(count)
           `)
           .eq('workspace_id', workspace.id);
         
@@ -104,20 +103,13 @@ export function DepartmentManagement() {
                     {dept.manager?.full_name || 'Unassigned'}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-[var(--pm-on-surface-variant)] flex items-center gap-2 text-xs uppercase tracking-wider font-mono">
-                    <Briefcase className="w-3.5 h-3.5" /> Members
-                  </span>
-                  <span className="text-[var(--pm-on-surface)] font-medium text-sm">
-                    {dept.team_members?.[0]?.count || 0}
-                  </span>
-                </div>
+
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-[var(--pm-on-surface-variant)] flex items-center gap-2 text-xs uppercase tracking-wider font-mono">
                     <Folders className="w-3.5 h-3.5" /> Active Projects
                   </span>
                   <span className="text-[var(--pm-on-surface)] font-medium text-sm">
-                    {dept.teams?.[0]?.count || 0}
+                    {dept.projects?.[0]?.count || 0}
                   </span>
                 </div>
               </div>
