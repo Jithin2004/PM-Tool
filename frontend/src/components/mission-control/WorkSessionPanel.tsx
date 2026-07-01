@@ -307,7 +307,7 @@ export function WorkSessionPanel() {
                   <label className="block text-[10px] text-text-tertiary uppercase mb-1">Select Task</label>
                   <select value={switchState.taskId} onChange={e => setSwitchState({...switchState, taskId: e.target.value})} className="w-full input-premium py-1.5 px-2 text-xs">
                     <option value="" disabled>Select Task...</option>
-                    {raw.tasks.map(t => <option key={t.id} value={t.id}>{t.task_number} - {t.name}</option>)}
+                    {raw.tasks.map(t => <option key={t.id} value={t.id}>{(t as any).task_number} - {t.name}</option>)}
                   </select>
                 </div>
               )}

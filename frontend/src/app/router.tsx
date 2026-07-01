@@ -213,6 +213,22 @@ const ProjectDetailPage = withRetry(() =>
   })),
 );
 
+const WorkspaceSetupPageLazy = withRetry(() =>
+  import("../pages/onboarding/WorkspaceSetupPage").then((m) => ({
+    default: m.WorkspaceSetupPage,
+  })),
+);
+const WorkspaceSettingsLazy = withRetry(() =>
+  import("../components/control/WorkspaceSettings").then((m) => ({
+    default: m.WorkspaceSettings,
+  })),
+);
+const SuperAdminConsole = withRetry(() =>
+  import("../components/admin/SuperAdminConsole").then((m) => ({
+    default: m.SuperAdminConsole,
+  })),
+);
+
 const DEFAULT_AUTH_REDIRECT = "/overview";
 
 function RouteFallback() {
@@ -504,7 +520,7 @@ export function ResolveRouter() {
     if (pathname === "/workspaces/new") {
       return (
         <RouteShell>
-          <WorkspaceSetupPage />
+          <WorkspaceSetupPageLazy />
         </RouteShell>
       );
     }
@@ -517,7 +533,7 @@ export function ResolveRouter() {
         );
       return (
         <RouteShell>
-          <WorkspaceSettings />
+          <WorkspaceSettingsLazy />
         </RouteShell>
       );
     }

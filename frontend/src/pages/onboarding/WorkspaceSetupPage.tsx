@@ -1,9 +1,9 @@
-import React, { useMemo, useState, useEffect } from 'react';
+﻿import React, { useMemo, useState, useEffect } from 'react';
 import { Check, Plus, X, Layers, GitBranch, Users, Hash, BadgeCheck, CalendarDays } from 'lucide-react';
 import { BUSINESS_TYPES, WORKFLOW_TEMPLATES, getTemplatesForBusiness, EXECUTION_MODES } from '../../constants/product';
 import type { WorkflowTemplate } from '../../constants/product';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { useAuth } from '../../context/AuthContext';
+
 import { predictEtaSync } from '../../services/etaService';
 import { companyCalendarService } from '../../services/companyCalendarService';
 import type { BusinessType, WorkspaceSettings } from '../../types/workspace';
@@ -34,15 +34,14 @@ const DEFAULT_SETTINGS: WorkspaceSettings = {
   productivityFactor: 0.8,
   saturdayRule: 'off'
 };
-
 function navigate(path: string) {
   window.history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
 export function WorkspaceSetupPage() {
-  const { user, workspace, createWorkspace, updateWorkspaceSettings, error } = useWorkspace();
-  const { refreshProfile } = useAuth();
+  const { user, workspace, createWorkspace, updateWorkspaceSettings } = useWorkspace();
+  // profile is managed by BootstrapOrchestrator after auth events
   const [step, setStep] = useState(1);
   const [workspaceName, setWorkspaceName] = useState(workspace?.name || '');
   const [settings, setSettings] = useState<WorkspaceSettings>(workspace?.settings || DEFAULT_SETTINGS);
@@ -106,8 +105,8 @@ export function WorkspaceSetupPage() {
             teamStructure: selectedTemplate?.teamStructure || ''
           }
         });
+        // Profile will be refreshed by BootstrapOrchestrator on next auth event
         wsId = created.id;
-        await refreshProfile();
       }
 
       if (ignoredHolidayDates.size > 0 && wsId) {
@@ -202,12 +201,11 @@ export function WorkspaceSetupPage() {
     }
   };
 
-  const toggleWorkday = (day: number) => {
+  const toggleWorkday = (day) => {
     setSettings(prev => {
       const nextDays = prev.workingDays.includes(day)
         ? prev.workingDays.filter(value => value !== day)
         : [...prev.workingDays, day].sort((a, b) => a - b);
-
       const hasSaturday = nextDays.includes(6);
       return {
         ...prev,
@@ -220,11 +218,7 @@ export function WorkspaceSetupPage() {
   return (
     <ResolveLayout eyebrow="Workspace Initialization">
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-        {/* Main Form Section */}
-        <section 
-          className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300 font-geist"
-          style={{ color: 'var(--pm-on-surface)' }}
-        >
+        <section className="bg-surface-3/50 backdrop-blur-md border border-border/50 rounded-2xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300 font-geist" style={{ color: 'var(--pm-on-surface)' }}>
           <div className="mb-8 flex items-center justify-between border-b pb-5" style={{ borderColor: 'rgba(70,69,84,0.15)' }}>
             <div>
               <p className="text-[10px] font-mono-pm uppercase tracking-[0.25em]" style={{ color: 'var(--pm-on-surface-variant)' }}>Initialization Phase {step} of 7</p>
@@ -233,44 +227,23 @@ export function WorkspaceSetupPage() {
               </h2>
             </div>
           </div>
-
-          {(localError || error) && (
-            <div className="mb-6 border border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 bg-signal-critical-bg/30 p-4 text-xs font-mono-pm text-red-200 rounded-lg flex items-center gap-2">
+          {localError && (
+            <div className="mb-6 border border-red-500/30 bg-red-500/5 p-4 text-xs text-red-200 rounded-lg flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              <span>{localError || error}</span>
+              <span>{localError}</span>
             </div>
           )}
-
           {step === 1 && (
             <div className="space-y-6">
-              <label className="block text-xs uppercase font-mono-pm tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                Organization Identity (Company Name) <span className="text-signal-critical">*</span>
-                <input
-                  value={workspaceName}
-                  onChange={event => {
-                    setWorkspaceName(event.target.value);
-                    setSettings(prev => ({ ...prev, companyName: event.target.value }));
-                  }}
-                  className="mt-2.5 h-11 w-full bg-surface-3 border border-border/50 rounded-lg px-4 text-sm outline-none transition-all font-sans focus:border-accent-primary focus:bg-surface-4"
-                  style={{ color: 'var(--pm-on-surface)' }}
-                  placeholder="e.g. Acme Corp"
-                />
+              <label className="block text-xs uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                Organization Identity (Company Name) <span className="text-red-400">*</span>
+                <input value={workspaceName} onChange={event => { setWorkspaceName(event.target.value); setSettings(prev => ({ ...prev, companyName: event.target.value })); }} className="mt-2.5 h-11 w-full bg-surface-3 border border-border/50 rounded-lg px-4 text-sm outline-none transition-all focus:border-accent-primary" style={{ color: 'var(--pm-on-surface)' }} placeholder="e.g. Acme Corp" />
               </label>
-
               <div>
-                <label className="mb-3 block text-xs uppercase font-mono-pm tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Operational Domain</label>
+                <label className="mb-3 block text-xs uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Operational Domain</label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {BUSINESS_TYPES.map(type => (
-                    <button
-                      key={type}
-                      onClick={() => setSettings(prev => ({ ...prev, businessType: type as BusinessType }))}
-                      className={`border border-border/50 rounded-xl px-4 py-3.5 text-left text-xs transition-all font-sans`}
-                      style={{ 
-                        borderColor: settings.businessType === type ? 'var(--accent-primary)' : 'rgba(70,69,84,0.2)',
-                        background: settings.businessType === type ? 'rgba(var(--accent-primary-rgb), 0.1)' : 'var(--pm-surface-lowest)',
-                        color: settings.businessType === type ? 'var(--accent-primary)' : 'var(--pm-on-surface)'
-                      }}
-                    >
+                    <button key={type} onClick={() => setSettings(prev => ({ ...prev, businessType: type }))} className="border border-border/50 rounded-xl px-4 py-3.5 text-left text-xs transition-all" style={{ borderColor: settings.businessType === type ? 'var(--accent-primary)' : 'rgba(70,69,84,0.2)', background: settings.businessType === type ? 'rgba(var(--accent-primary-rgb), 0.1)' : 'var(--pm-surface-lowest)', color: settings.businessType === type ? 'var(--accent-primary)' : 'var(--pm-on-surface)' }}>
                       <div className="flex items-center gap-2">
                         <span className={`w-1.5 h-1.5 rounded-full ${settings.businessType === type ? 'bg-[var(--pm-primary)]' : 'bg-[var(--pm-on-surface-variant)]'}`} />
                         <span className="font-semibold">{type}</span>
@@ -279,31 +252,17 @@ export function WorkspaceSetupPage() {
                   ))}
                 </div>
               </div>
-
-              <label className="block text-xs uppercase font-mono-pm tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-                Regional Jurisdiction <span className="text-signal-critical">*</span>
-                <select
-                  value={settings.country || ''}
-                  onChange={event => {
-                    setSettings(prev => ({ ...prev, country: event.target.value, region: '' }));
-                    setIgnoredHolidayDates(new Set());
-                    setPreviewHolidays([]);
-                  }}
-                  className="mt-2.5 h-11 w-full bg-surface-3 border border-border/50 rounded-lg px-4 text-sm outline-none transition-all font-sans focus:border-accent-primary focus:bg-surface-4"
-                  style={{ color: 'var(--pm-on-surface)' }}
-                >
+              <label className="block text-xs uppercase tracking-widest mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
+                Regional Jurisdiction <span className="text-red-400">*</span>
+                <select value={settings.country || ''} onChange={event => { setSettings(prev => ({ ...prev, country: event.target.value, region: '' })); setIgnoredHolidayDates(new Set()); setPreviewHolidays([]); }} className="mt-2.5 h-11 w-full bg-surface-3 border border-border/50 rounded-lg px-4 text-sm outline-none transition-all" style={{ color: 'var(--pm-on-surface)' }}>
                   <option value="">Select country</option>
-                  {COUNTRIES.map(c => (
-                    <option key={c.code} value={c.name}>{c.name}</option>
-                  ))}
+                  {COUNTRIES.map(c => (<option key={c.code} value={c.name}>{c.name}</option>))}
                 </select>
               </label>
             </div>
           )}
-
           {step === 2 && (
-            <div className="space-y-4">
-              <p className="text-xs text-[var(--pm-on-surface-variant)] leading-relaxed mb-4">
+            <div className="space-y-4">              <p className="text-xs text-[var(--pm-on-surface-variant)] leading-relaxed mb-4">
                 Select a baseline workflow architecture optimized for <strong>{settings.businessType}</strong>. This instantiates your primary kanban/scrum execution structures.
               </p>
               <div className="grid gap-3.5 max-h-[440px] overflow-y-auto pr-1 scrollbar-thin">
@@ -618,7 +577,7 @@ export function WorkspaceSetupPage() {
                 <div className="mt-4 border border-border/50 rounded-xl bg-surface-3/50 p-4 text-left space-y-1.5">
                   <span className="text-[9px] font-mono-pm uppercase tracking-widest text-[var(--pm-primary)]">Workflow Architecture</span>
                   <p className="text-xs font-semibold text-[var(--pm-on-surface)]">{selectedTemplate.name}</p>
-                  <p className="text-[10px] font-mono text-[var(--pm-on-surface-variant)]">{selectedTemplate.executionMode} · {selectedTemplate.lanes} Lanes · {selectedTemplate.teamStructure}</p>
+                  <p className="text-[10px] font-mono text-[var(--pm-on-surface-variant)]">{selectedTemplate.executionMode} Â· {selectedTemplate.lanes} Lanes Â· {selectedTemplate.teamStructure}</p>
                 </div>
               )}
             </div>

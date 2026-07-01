@@ -33,7 +33,8 @@ const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefi
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const { profile } = useAuth();
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [workspace, setWorkspaceState] = useState<Workspace | null>(null);
+  const setWorkspace = useCallback((ws: Workspace | null) => setWorkspaceState(ws), []);
 
   const refreshWorkspace = useCallback(async (workspaceId: string) => {
     if (!isSupabaseConfigured || !workspaceId) {
@@ -73,9 +74,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!workspace || !isSupabaseConfigured) return;
 
     const newSettings = { ...workspace.settings, ...updates };
-    await persistWorkspaceSettings(workspace.id, newSettings);
+    await persistWorkspaceSettings(workspace, newSettings);
     
-    setWorkspace(prev => prev ? { ...prev, settings: newSettings } : null);
+    setWorkspaceState(prev => prev ? { ...prev, settings: newSettings } : null);
   }, [workspace]);
 
   const signOut = useCallback(async () => {
@@ -85,7 +86,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const t = useCallback((key: string, fallback?: string) => {
     const keys = key.split('.');
-    let result: any = workspace?.settings?.terminology;
+    let result: any = (workspace?.settings as any)?.terminology;
     for (const k of keys) {
       if (result && typeof result === 'object') {
         result = result[k];
@@ -94,7 +95,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     }
     return (result as string) || fallback || key;
-  }, [workspace?.settings?.terminology]);
+  }, [(workspace?.settings as any)?.terminology]);
 
   return (
     <WorkspaceContext.Provider value={{

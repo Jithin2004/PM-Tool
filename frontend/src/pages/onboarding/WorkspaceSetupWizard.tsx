@@ -33,7 +33,7 @@ const roleMapping: Record<string, string[]> = {
 };
 
 export function WorkspaceSetupWizard() {
-  const { createWorkspace, error } = useWorkspace();
+  const { createWorkspace } = useWorkspace();
   const { profile, user } = useAuth();
   
   const [step, setStep] = useState(1);

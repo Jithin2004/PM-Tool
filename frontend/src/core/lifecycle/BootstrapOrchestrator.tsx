@@ -34,7 +34,7 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
   const [error, setError] = useState<Error | null>(null);
 
   const { setWorkspace, refreshWorkspace, workspace } = useWorkspace();
-  const { initializeOperationalContext } = useOperationalData();
+  const { refreshAll } = useOperationalData();
 
   // Helper to log state transitions
   const logEvent = (state: string) => {
@@ -92,7 +92,7 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
       }
       
       // 7. Initialize Operational Context
-      await initializeOperationalContext(syncedProfile.workspace_id);
+      await refreshAll();
 
       // 8. Start Background Services
       setBootstrap(BootstrapState.INITIALIZING_SERVICES);
