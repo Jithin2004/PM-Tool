@@ -5,7 +5,12 @@ import { AppErrorBoundary } from './components/error/AppErrorBoundary';
 import './index.css';
 
 // Initialize global operational density
-const savedDensity = localStorage.getItem('app-density') || 'comfortable';
+let savedDensity = 'comfortable';
+try {
+  savedDensity = localStorage.getItem('app-density') || 'comfortable';
+} catch (e) {
+  // Ignore quota or security errors
+}
 document.body.classList.add(`density-${savedDensity}`);
 
 createRoot(document.getElementById('root')!).render(
