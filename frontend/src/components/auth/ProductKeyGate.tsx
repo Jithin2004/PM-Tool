@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Shield, CheckCircle, XCircle, Loader, AlertCircle, KeyRound } from 'lucide-react';
 import { validateNewActivationKey } from '../../lib/productKey';
 import { showAlert } from '../../components/common/Dialogs';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProductKeyGateProps {
   onVerified: () => void;
@@ -16,6 +17,15 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
   const [errorMsg, setErrorMsg] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const initializedRef = useRef(false);
+  const { user, logout } = useAuth() || {};
+
+  const handleReturnHome = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (user && logout) {
+      await logout();
+    }
+    window.location.href = '/';
+  };
 
   // Signup Form State
   const [fullName, setFullName] = useState('');
@@ -412,6 +422,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
             </button>
             <a
               href="/"
+              onClick={handleReturnHome}
               className="w-full rounded-lg h-10 flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-[var(--pm-surface)]/5 mt-2"
               style={{ color: 'var(--pm-on-surface-variant)' }}
             >
