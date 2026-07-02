@@ -200,16 +200,22 @@ serve(async (req) => {
       
       authUserId = authUser.user.id;
 
+      // Note: the handle_new_user DB trigger fires after auth.admin.createUser() and inserts
+      // a placeholder row (role: pending-workspace-setup, workspace_id: null). Use upsert
+      // so that the trigger-created placeholder is overwritten with the correct values.
       const { error: insertUserError } = await supabaseAdmin
         .from('users')
-        .insert({
-          id: authUserId,
-          email: invRow.email,
-          workspace_id: invRow.workspace_id,
-          role: invRow.role,
-          status: 'active',
-          full_name: invRow.email.split('@')[0], 
-        });
+        .upsert(
+          {
+            id: authUserId,
+            email: invRow.email,
+            workspace_id: invRow.workspace_id,
+            role: invRow.role,
+            status: 'active',
+            full_name: invRow.email.split('@')[0],
+          },
+          { onConflict: 'id' }
+        );
 
       if (insertUserError) {
           throw insertUserError;

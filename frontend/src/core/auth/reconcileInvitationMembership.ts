@@ -179,7 +179,7 @@ export async function reconcileInvitationMembership(
 
   if (input.existingUserRow) {
     const role = input.existingUserRow.role as UserRole;
-    
+
     // If they have the product key but are currently uninvited, upgrade them
     if (role === 'uninvited' && isProductKeyVerified()) {
       const { userRow, workspaceId, role: newRole } = await upsertSuperAdmin(input);
@@ -193,6 +193,25 @@ export async function reconcileInvitationMembership(
       }
     }
 
+    // If the row has no workspace yet (e.g. created by the handle_new_user DB trigger as a
+    // placeholder), still check for a pending invitation. An invited user who signs up via
+    // /login rather than /accept-invite/ will have this trigger-created row but their
+    // invitation must still be accepted and their workspace_id assigned.
+    if (role === 'pending-workspace-setup' && !input.existingUserRow.workspace_id) {
+      const invite = await findValidInvitation(input.email);
+      if (invite) {
+        const userRow = await upsertMemberFromInvitation(input, invite);
+        if (userRow) {
+          return {
+            outcome: 'invitation_accepted',
+            userRow,
+            workspaceId: invite.workspace_id,
+            role: invite.role as UserRole,
+          };
+        }
+      }
+    }
+
     return {
       outcome: 'existing_member',
       userRow: input.existingUserRow,
@@ -200,6 +219,7 @@ export async function reconcileInvitationMembership(
       role,
     };
   }
+
 
   if (isProductKeyVerified()) {
     const { userRow, workspaceId, role } = await upsertSuperAdmin(input);
