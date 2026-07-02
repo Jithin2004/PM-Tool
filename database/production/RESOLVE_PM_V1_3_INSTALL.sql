@@ -28,7 +28,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- -------------------------------------------------------------
 
 -- Triggers
--- DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users; -- Removed to prevent permission errors in Supabase SQL Editor
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
 -- Functions
 DROP FUNCTION IF EXISTS public.transfer_workspace_ownership CASCADE;
@@ -735,12 +735,40 @@ CREATE INDEX IF NOT EXISTS idx_users_workspace      ON users(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_teams_workspace      ON teams(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_comments_task        ON comments(task_id);
 
--- (OAuth / email signup).
--- WARNING: Removed handle_new_user because it pre-inserts users as 'viewer', causing a 400 Bad Request
--- when reconcileInvitationMembership attempts to upsert them to 'pending-workspace-setup' or other roles.
--- The client-side reconciliation handles user row creation securely.
--- CREATE OR REPLACE FUNCTION public.handle_new_user() ...
--- CREATE TRIGGER on_auth_user_created ...
+-- User provisioning trigger: fires on every new auth.users INSERT.
+-- Inserts a minimal public.users row so syncProfile() always finds a row.
+-- Role 'pending-workspace-setup' is what reconcileInvitationMembership expects
+-- for a first-login workspace owner who has no invitation.
+-- ON CONFLICT (id) DO NOTHING is safe: invited users are pre-inserted by the
+-- provisioning Edge Function with their correct role + workspace_id; this
+-- trigger will silently skip them without overwriting anything.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.users (id, email, role, full_name, availability_factor)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    'pending-workspace-setup',
+    COALESCE(
+      NEW.raw_user_meta_data->>'full_name',
+      NEW.raw_user_meta_data->>'name',
+      split_part(NEW.email, '@', 1)
+    ),
+    1
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- Fix 3: Privilege Escalation Protection
 CREATE OR REPLACE FUNCTION prevent_role_escalation()
