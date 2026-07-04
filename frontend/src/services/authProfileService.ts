@@ -107,3 +107,45 @@ export async function syncProfile(authUser: any): Promise<User | null> {
     return null;
   }
 }
+
+export async function updateRole(id: string, role: User['role'], currentProfile: User | null): Promise<boolean> {
+  if (!currentProfile || !isSupabaseConfigured) return false;
+  
+  // Need to import hasCapability dynamically or pass it to avoid cyclic deps, 
+  // but let's just do a basic admin check for now or use the helper
+  const { hasCapability } = await import('../core/auth/permissions');
+  if (!hasCapability(currentProfile.role, 'workspace.update')) return false;
+
+  const { mapAuthorityToLegacyRole } = await import('../core/types/workspace');
+  const dbRole = mapAuthorityToLegacyRole(role);
+
+  const { error } = await supabase
+    .from('users')
+    .update({ role: dbRole })
+    .eq('id', id);
+
+  return !error;
+}
+
+export async function updateProfile(updates: Partial<User>, currentProfileId: string | undefined): Promise<boolean> {
+  if (!currentProfileId || !isSupabaseConfigured) return false;
+
+  const FORBIDDEN_PROFILE_FIELDS = new Set([
+    'role', 'workspace_id', 'id', 'created_at',
+  ]);
+  const sanitized: Record<string, any> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    if (!FORBIDDEN_PROFILE_FIELDS.has(key)) {
+      sanitized[key] = value;
+    }
+  }
+
+  if (Object.keys(sanitized).length === 0) return false;
+
+  const { error } = await supabase
+    .from('users')
+    .update(sanitized)
+    .eq('id', currentProfileId);
+
+  return !error;
+}

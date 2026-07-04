@@ -12,9 +12,7 @@ export async function validateAndRepairWorkspace(authUser: any, currentProfile: 
     return { needsSetup: false };
   }
   
-  if (currentProfile.role === 'pending-workspace-setup') {
-    return { needsSetup: true };
-  }
+  // pending-workspace-setup should fall through to repairUserWorkspace to reconcile invitations
 
   const result = await repairUserWorkspace(authUser.id, authUser.email);
 
@@ -37,4 +35,15 @@ export async function validateAndRepairWorkspace(authUser: any, currentProfile: 
   } else {
     return { needsSetup: true };
   }
+}
+
+export async function switchWorkspace(userId: string, targetWorkspaceId: string | null): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  
+  const { error } = await supabase
+    .from('users')
+    .update({ workspace_id: targetWorkspaceId })
+    .eq('id', userId);
+    
+  return !error;
 }

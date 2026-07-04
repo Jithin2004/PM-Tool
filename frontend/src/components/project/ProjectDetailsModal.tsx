@@ -1211,12 +1211,12 @@ export function ProjectDetailsModal({
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div>
-                  <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2 flex items-center gap-2">Project Designation <span className="w-1.5 h-1.5 rounded-full bg-teal-500" /></label>
-                  <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 outline-none text-text-primary focus:bg-surface-3 transition-all" />
+                  <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2 flex items-center gap-2">Project Designation * <span className="w-1.5 h-1.5 rounded-full bg-teal-500" /></label>
+                  <input value={name} onChange={e => setName(e.target.value)} placeholder="Enter project designation" className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-sm focus:border-teal-500/50 outline-none text-text-primary focus:bg-surface-3 transition-all" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Status</label>
+                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Status *</label>
                     <select value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none hover:bg-surface-3 transition-colors cursor-pointer appearance-none">
                       <option value="planning">PLANNING</option>
                       <option value="in-progress">IN PROGRESS</option>
@@ -1226,7 +1226,7 @@ export function ProjectDetailsModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Priority</label>
+                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Priority *</label>
                     <select value={priority} onChange={e => setPriority(e.target.value as any)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none hover:bg-surface-3 transition-colors cursor-pointer appearance-none">
                       <option value="low">LOW</option>
                       <option value="medium">MEDIUM</option>
@@ -1236,16 +1236,16 @@ export function ProjectDetailsModal({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Proposed Start</label>
+                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Proposed Start (Optional)</label>
                     <input type="date" value={proposedStartDate} onChange={e => setProposedStartDate(e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none transition-colors" />
                   </div>
                   <div>
-                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Client Deadline</label>
+                    <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Client Deadline (Optional)</label>
                     <input type="date" value={clientDeadline} onChange={e => setClientDeadline(e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none transition-colors" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Assign Team</label>
+                  <label className="block text-[11px] uppercase tracking-widest font-bold text-text-secondary mb-2">Assign Team (Optional)</label>
                   <select value={teamId} onChange={e => setTeamId(e.target.value)} className="w-full bg-surface-3/50 border border-border/50 h-12 px-4 rounded-xl text-xs focus:border-teal-500/50 outline-none hover:bg-surface-3 transition-colors cursor-pointer appearance-none">
                     <option value="">UNALLOCATED</option>
                     {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -1271,7 +1271,7 @@ export function ProjectDetailsModal({
                     </button>
                   ) : (
                     <div className="space-y-3">
-                      <label className="block text-[10px] uppercase font-mono text-signal-critical/80">Reason for Archiveing</label>
+                      <label className="block text-[10px] uppercase font-mono text-signal-critical/80">Reason for Archiving *</label>
                       <textarea
                         required
                         value={deleteReason}
@@ -1285,7 +1285,7 @@ export function ProjectDetailsModal({
                           onClick={() => onDelete(project.id, deleteReason)}
                           className="flex-1 bg-red-500 text-text-primary py-2 text-[10px] font-mono uppercase tracking-wide hover:bg-red-600 transition-colors"
                         >
-                          Confirm Delete
+                          Archive
                         </button>
                         <button
                           type="button"
@@ -1396,7 +1396,7 @@ export function ProjectDetailsModal({
                   )}
                 </div>
                 <button type="submit" className="w-full bg-[var(--pm-panel)] text-[var(--pm-text)] h-12 font-semibold uppercase tracking-wide text-[10px] hover:bg-neutral-200 transition-all shadow-xl shadow-white/5">
-                  Commit System Updates
+                  Update
                 </button>
               </div>
             </form>

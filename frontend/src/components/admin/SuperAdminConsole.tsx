@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { ShieldAlert, Building2, FolderPlus, UserPlus, FolderKanban, Plus, X, Loader2, Users } from 'lucide-react';
+import { createWorkspaceForUser } from '../../services/workspaceService';
 
 interface Project {
   id: string;
@@ -82,12 +83,13 @@ export const SuperAdminConsole: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { error } = await supabase.from('workspaces').insert({
+      const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single();
+
+      await createWorkspaceForUser({
         name: newWorkspaceName,
-        status: 'active',
-        created_by_id: user.id
+        settings: {} as any,
+        user: profile,
       });
-      if (error) throw error;
       
       setNewWorkspaceName('');
       setActiveModal(null);

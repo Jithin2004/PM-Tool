@@ -75,7 +75,7 @@ export function ResetPassword() {
 
             <div className="space-y-1.5">
               <label htmlFor="email" className="block text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                Email Address
+                Email Address *
               </label>
               <input
                 id="email"

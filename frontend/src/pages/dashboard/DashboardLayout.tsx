@@ -12,9 +12,11 @@ import {
   Archive, UserCog, Mail, ChevronDown, WifiOff, RefreshCw,
   Link as LinkIcon
 } from 'lucide-react';
+import { updateProfile as authUpdateProfile } from '../../services/authProfileService';
 import { showConfirm } from '../../components/common/Dialogs';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { switchWorkspace } from '../../services/authWorkspaceService';
 import { ErrorBoundary } from '../../components/ui/ErrorBoundary';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -166,7 +168,7 @@ const isSubsectionAllowed = (sub: DomainSubsection, profile?: any): boolean => {
 };
 
 export default function DashboardLayout({ children }: { children?: React.ReactNode }) {
-  const { user, profile, trueProfile, isSimulating, simulatedRole, setSimulatedRole, logout, updateProfile } = useAuth();
+  const { user, profile, trueProfile, isSimulating, simulatedRole, setSimulatedRole, logout, setProfile } = useAuth();
   const { workspace } = useWorkspace();
   const {
     raw,
@@ -231,12 +233,12 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   const dismissGuide = async () => {
     if (user) {
       try {
-        await updateProfile({
+        await authUpdateProfile({
           metadata: {
             ...profile?.metadata,
             tourCompleted: true
           }
-        });
+        }, profile?.id);
       } catch (err) {
         console.error('Failed to update profile tour status', err);
       }
@@ -803,7 +805,10 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
   const handleUpdateProfile = async (updates: Partial<Profile>) => {
     if (!user) return;
-    const success = await updateProfile(updates);
+    const success = await authUpdateProfile(updates, profile?.id);
+    if (success) {
+      setProfile({ ...profile, ...updates } as any);
+    }
 
     if (success) {
       notify("Identity parameters updated.", "success");
@@ -1447,8 +1452,8 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                       } else {
                         // Exit Sandbox — use stored parent workspace ID (DB may not set parent_workspace_id)
                         const parentId = workspace.parent_workspace_id || localStorage.getItem('resolve-sandbox-parent-workspace');
-                        if (parentId) {
-                          await supabase.from('users').update({ workspace_id: parentId }).eq('id', user.id);
+                        if (parentId && user) {
+                          await switchWorkspace(user.id, parentId);
                         }
                         setIsSandboxMode(false);
                         localStorage.setItem('resolve-sandbox-mode', 'false');

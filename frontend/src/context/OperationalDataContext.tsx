@@ -11,6 +11,7 @@ import React, {
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { DataGovernanceEngine } from '../core/governance/dataGovernanceEngine';
 import { useAuth } from './AuthContext';
+import { updateRole as authUpdateRole } from '../services/authProfileService';
 import { useWorkspace } from './WorkspaceContext';
 import { useTasks } from '../hooks/useTasks';
 import { hasCapability } from '../core/auth/permissions';
@@ -63,7 +64,7 @@ export const OperationalDataContext = createContext<OperationalDataContextValue 
 
 export function OperationalDataProvider({ children }: { children: React.ReactNode }) {
   
-  const { user, profile, updateRole } = useAuth();
+  const { user, profile } = useAuth();
   const { workspace } = useWorkspace();
   const {
     tasks,
@@ -526,7 +527,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
       const oldProfile = profiles.find(p => p.id === id);
       const oldRole = oldProfile?.role;
       
-      await updateRole(id, role);
+      await authUpdateRole(id, role, profile);
       setProfiles(prev => prev.map(p => (p.id === id ? { ...p, role } : p)));
       
       if (workspace?.id && user?.id && oldRole && oldRole !== role) {
@@ -540,7 +541,7 @@ export function OperationalDataProvider({ children }: { children: React.ReactNod
         }]).then();
       }
     },
-    [updateRole, profiles, workspace?.id, user?.id],
+    [profiles, workspace?.id, user?.id, profile],
   );
 
   const value = useMemo<OperationalDataContextValue>(

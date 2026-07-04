@@ -770,6 +770,18 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+-- Part 6: Idempotent Backfill for existing users
+-- Ensures all auth.users have a corresponding public.users row (fixes any users orphaned during the v1.3 trigger removal).
+INSERT INTO public.users (id, email, role, full_name, availability_factor)
+SELECT 
+  id,
+  email,
+  'pending-workspace-setup',
+  COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1)),
+  1
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
 -- Fix 3: Privilege Escalation Protection
 CREATE OR REPLACE FUNCTION prevent_role_escalation()
 RETURNS trigger
@@ -1520,244 +1532,6 @@ CREATE TRIGGER trigger_enforce_task_completion
 ALTER TABLE public.invitations ADD COLUMN IF NOT EXISTS date_of_joining TIMESTAMP WITH TIME ZONE;
 
 
-
--- 2. Create employment_records table
-
-CREATE TABLE IF NOT EXISTS public.employment_records (
-
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-
-    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE SET NULL,
-
-    date_of_joining TIMESTAMP WITH TIME ZONE NOT NULL,
-
-    employment_status TEXT NOT NULL DEFAULT 'active' CHECK (employment_status IN ('active', 'resigned', 'terminated')),
-
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-
-    created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
-
-    updated_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
-
-    CONSTRAINT unique_profile_workspace_employment UNIQUE (user_id, workspace_id)
-
-);
-
-
-
--- 3. Create employment_change_logs table
-
-CREATE TABLE IF NOT EXISTS public.employment_change_logs (
-
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-    employee_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-
-    field_changed TEXT NOT NULL,
-
-    previous_value TEXT,
-
-    new_value TEXT,
-
-    changed_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-
-    changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-
-    reason TEXT NOT NULL
-
-);
-
-
-
--- Enable RLS
-
-ALTER TABLE public.employment_records ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE public.employment_change_logs ENABLE ROW LEVEL SECURITY;
-
-
-
--- RLS Policies for employment_records
-
--- Super Admins can do anything
-DROP POLICY IF EXISTS "Super Admins have full access to employment_records" ON public.employment_records;
-CREATE POLICY "Super Admins have full access to employment_records" 
-ON public.employment_records
-
-FOR ALL USING (
-
-  EXISTS (
-
-    SELECT 1 FROM public.users
-
-    WHERE users.id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
-
-  )
-
-);
-
-
-
--- Users can view their own record
-DROP POLICY IF EXISTS "Users can view their own employment_records" ON public.employment_records;
-CREATE POLICY "Users can view their own employment_records" 
-ON public.employment_records
-
-FOR SELECT USING (
-
-  user_id = auth.uid()
-
-);
-
-
-
--- Project Managers and Admins can view records in their workspace
-DROP POLICY IF EXISTS "Workspace managers can view employment_records" ON public.employment_records;
-CREATE POLICY "Workspace managers can view employment_records" 
-ON public.employment_records
-
-FOR SELECT USING (
-
-  EXISTS (
-
-    SELECT 1 FROM public.users
-
-    WHERE users.id = auth.uid() AND users.workspace_id = employment_records.workspace_id
-
-    AND users.role IN ('super_admin', 'admin', 'team_lead', 'editor')
-
-  )
-
-);
-
-
-
--- RLS Policies for employment_change_logs
-DROP POLICY IF EXISTS "Super Admins have full access to employment_change_logs" ON public.employment_change_logs;
-CREATE POLICY "Super Admins have full access to employment_change_logs" 
-ON public.employment_change_logs
-
-FOR ALL USING (
-
-  EXISTS (
-
-    SELECT 1 FROM public.users
-
-    WHERE users.id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
-
-  )
-
-);
-DROP POLICY IF EXISTS "Users can view their own change logs" ON public.employment_change_logs;
-CREATE POLICY "Users can view their own change logs" 
-ON public.employment_change_logs
-
-FOR SELECT USING (
-
-  employee_id = auth.uid()
-
-);
-
-INSERT INTO public.employment_records (user_id, workspace_id, date_of_joining, employment_status, created_at, updated_at)
-SELECT id, workspace_id, created_at, 'active', now(), now()
-FROM public.users
-WHERE workspace_id IS NOT NULL
-ON CONFLICT (user_id, workspace_id) DO NOTHING;
-
-
-
--- ========================================== 
--- MERGED: HR ISOLATION AUDIT MIGRATION 
--- ==========================================
-
--- MIGRATION_DOJ_HR_AUDIT.sql
--- Run this script to migrate the database for the DOJ HR Audit update.
-
--- 1. Add date_of_joining to invitations
-ALTER TABLE public.invitations ADD COLUMN IF NOT EXISTS date_of_joining TIMESTAMP WITH TIME ZONE;
-
--- 2. Create employment_records table
-CREATE TABLE IF NOT EXISTS public.employment_records (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
-    workspace_id UUID REFERENCES public.workspaces(id) ON DELETE SET NULL,
-    date_of_joining TIMESTAMP WITH TIME ZONE NOT NULL,
-    employment_status TEXT NOT NULL DEFAULT 'active' CHECK (employment_status IN ('active', 'resigned', 'terminated')),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    created_by UUID REFERENCES public.users(id) ON DELETE RESTRICT,
-    updated_by UUID REFERENCES public.users(id) ON DELETE RESTRICT,
-    CONSTRAINT unique_profile_workspace_employment UNIQUE (user_id, workspace_id)
-);
-
--- 3. Create employment_change_logs table
-CREATE TABLE IF NOT EXISTS public.employment_change_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    employee_id UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
-    field_changed TEXT NOT NULL,
-    previous_value TEXT,
-    new_value TEXT,
-    changed_by UUID NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
-    changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    reason TEXT NOT NULL
-);
-
--- Enable RLS
-ALTER TABLE public.employment_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.employment_change_logs ENABLE ROW LEVEL SECURITY;
-
--- RLS Policies for employment_records
--- Super Admins can do anything
-DROP POLICY IF EXISTS "Super Admins have full access to employment_records" ON public.employment_records;
-CREATE POLICY "Super Admins have full access to employment_records" 
-ON public.employment_records
-FOR ALL USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
-  )
-);
-
--- Users can view their own record
-DROP POLICY IF EXISTS "Users can view their own employment_records" ON public.employment_records;
-CREATE POLICY "Users can view their own employment_records" 
-ON public.employment_records
-FOR SELECT USING (
-  user_id = auth.uid()
-);
-
--- Project Managers and Admins can view records in their workspace
-DROP POLICY IF EXISTS "Workspace managers can view employment_records" ON public.employment_records;
-CREATE POLICY "Workspace managers can view employment_records" 
-ON public.employment_records
-FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid() AND users.workspace_id = employment_records.workspace_id
-    AND users.role IN ('super_admin', 'admin', 'team_lead', 'editor')
-  )
-);
-
--- RLS Policies for employment_change_logs
-DROP POLICY IF EXISTS "Super Admins have full access to employment_change_logs" ON public.employment_change_logs;
-CREATE POLICY "Super Admins have full access to employment_change_logs" 
-ON public.employment_change_logs
-FOR ALL USING (
-  EXISTS (
-    SELECT 1 FROM public.users
-    WHERE users.id = auth.uid() AND public.has_capability(auth.uid(), 'workspace.update')
-  )
-);
-DROP POLICY IF EXISTS "Users can view their own change logs" ON public.employment_change_logs;
-CREATE POLICY "Users can view their own change logs" 
-ON public.employment_change_logs
-FOR SELECT USING (
-  employee_id = auth.uid()
-);
 
 -- HR DATA ISOLATION MIGRATION
 -- Moves sensitive salary data out of globally fetched operational structures
@@ -10609,3 +10383,9 @@ CREATE TRIGGER trigger_work_sessions_updated_at
 BEFORE UPDATE ON work_sessions
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
+
+-- ==========================================
+-- APPENDED: 20260704_workspaces_idempotency.sql
+-- ==========================================
+-- Block duplicate workspace creation during onboarding race conditions
+CREATE UNIQUE INDEX IF NOT EXISTS idx_single_workspace_per_owner ON public.workspaces (created_by_id);

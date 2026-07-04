@@ -10,9 +10,11 @@ The new architecture introduces a **Deterministic Finite State Machine (FSM)** c
 
 ### Core Responsibilities
 
-- **`BootstrapOrchestrator`**: The single source of truth for application startup. It reads from `supabase.auth` and strictly drives the sequence from Booting -> Authenticating -> Hydrating Profile -> Resolving Workspace -> Validating License -> Initializing Services -> Ready.
+- **`BootstrapOrchestrator`**: The single source of truth for application startup. It reads from `supabase.auth` and strictly drives the sequence from Booting -> Authenticating -> Hydrating Profile -> Resolving Workspace -> Validating License -> Initializing Services -> Ready. It owns orchestration ONLY (never mutates users, only determines the next state).
+- **Database (`handle_new_user`)**: Responsible ONLY for structural integrity. It guarantees every `auth.users` row has a matching `public.users` row (placeholder) and nothing else. It MUST NOT contain business workflows.
+- **Provisioning Layer (Edge Functions & Reconciliation Services)**: Owns ALL business rules: invitation reconciliation, workspace assignment, role assignment, product key provisioning, invitation acceptance, owner onboarding, and audit events. There is ONE canonical implementation of invitation reconciliation.
+- **Router (`router.tsx`)**: Completely passive rendering only. It reads `AuthState` and `BootstrapState` and renders the appropriate view. It performs no redirects via side-effects during the boot phase.
 - **`AuthContext` / `WorkspaceContext`**: Pure state containers. They do not initiate API calls or listen to Auth events. They only hold data pushed into them by the Orchestrator.
-- **Router (`router.tsx`)**: Completely passive. It reads `AuthState` and `BootstrapState` and renders the appropriate view. It performs no redirects via side-effects during the boot phase.
 - **Background Services**: Wrap long-running tasks (like realtime engines, telemetry, polling) in the `LifecycleAwareService` interface. The Orchestrator dictates exactly when they start, pause, resume, and die.
 
 ---

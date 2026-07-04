@@ -69,7 +69,7 @@ export function ProjectCreatePage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">Project Name</label>
+          <label className="block text-sm font-medium text-text-secondary mb-2">Project Name *</label>
           <input
             name="projectName"
             required
@@ -77,17 +77,17 @@ export function ProjectCreatePage() {
             value={name}
             onChange={e => setName(e.target.value)}
             className="w-full bg-surface-3 border border-border rounded-lg px-4 py-3 text-text-primary focus:ring-2 focus:ring-indigo-500 outline-none"
-            placeholder="e.g. Certification Project"
+            placeholder="Enter project name"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">Description</label>
+          <label className="block text-sm font-medium text-text-secondary mb-2">Description (Optional)</label>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={4}
             className="w-full bg-surface-3 border border-border rounded-lg px-4 py-3 text-text-primary focus:ring-2 focus:ring-indigo-500 outline-none"
-            placeholder="Optional project description..."
+            placeholder="Provide additional notes..."
           />
         </div>
         <button

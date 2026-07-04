@@ -563,7 +563,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
             {isSubmitting ? 'Generating...' : (
               <>
                 <Download className="w-4 h-4" />
-                Generate Invoice & PDF
+                Create & PDF
               </>
             )}
           </button>

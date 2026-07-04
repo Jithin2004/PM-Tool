@@ -33,6 +33,8 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>(BootstrapState.IDLE);
   const [error, setError] = useState<Error | null>(null);
 
+  const isOrchestrating = useRef(false);
+
   const { setWorkspace, refreshWorkspace, workspace } = useWorkspace();
   const { refreshAll } = useOperationalData();
 
@@ -49,6 +51,8 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
   };
 
   const orchestrate = async (sessionUser: any) => {
+    if (isOrchestrating.current) return;
+    isOrchestrating.current = true;
     try {
       // 3. Load User Profile
       setBootstrap(BootstrapState.HYDRATING_PROFILE);
@@ -101,6 +105,8 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
       console.error('Bootstrap Error:', err);
       setError(err);
       setBootstrap(BootstrapState.ERROR);
+    } finally {
+      isOrchestrating.current = false;
     }
   };
 
@@ -169,7 +175,12 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
         setUser(null);
         setProfile(null);
         setWorkspace(null);
-        // TODO: dispose background services
+        import('../observability/telemetry').then(({ TelemetryService }) => TelemetryService.dispose());
+        import('../engines/integrationEngine').then(({ IntegrationService }) => IntegrationService.dispose());
+        import('../engines/notificationEngine').then(({ notificationEngine }) => notificationEngine.dispose());
+        import('../../services/activityEventService').then(({ activityEventService }) => activityEventService.dispose());
+        import('../engines/automationEngine').then(({ automationEngine }) => automationEngine.dispose());
+        import('../presence/PresenceService').then(({ PresenceService }) => PresenceService.dispose());
       } else if (event === 'SIGNED_IN' && session) {
         setAuthState(AuthState.AUTHENTICATED);
         logEvent(AuthState.AUTHENTICATED);

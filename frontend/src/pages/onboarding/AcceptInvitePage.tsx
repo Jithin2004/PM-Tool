@@ -231,7 +231,7 @@ export function AcceptInvitePage() {
 
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-medium text-gray-400 mb-1 ml-1 flex items-center gap-1">
-                  <Lock className="w-3 h-3" /> NEW PASSWORD
+                  <Lock className="w-3 h-3" /> NEW PASSWORD *
                 </label>
                 <input 
                   type="password" 
@@ -244,7 +244,7 @@ export function AcceptInvitePage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-medium text-gray-400 mb-1 ml-1">CONFIRM PASSWORD</label>
+                <label className="block text-[11px] font-medium text-gray-400 mb-1 ml-1">CONFIRM PASSWORD *</label>
                 <input 
                   type="password" 
                   value={confirmPassword}

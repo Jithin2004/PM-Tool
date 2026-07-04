@@ -318,26 +318,26 @@ export function WorkspaceSetupPage() {
           {step === 3 && (
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
-                Shift Commencement
+                Shift Commencement *
                 <input type="time" value={settings.workStart} onChange={event => setSettings(prev => ({ ...prev, workStart: event.target.value }))} className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans" />
               </label>
               <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
-                Shift Conclusion
+                Shift Conclusion *
                 <input type="time" value={settings.workEnd} onChange={event => setSettings(prev => ({ ...prev, workEnd: event.target.value }))} className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans" />
               </label>
               <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
-                Break Duration (Min)
+                Break Duration (Min) *
                 <input type="number" min={0} value={settings.lunchDuration} onChange={event => setSettings(prev => ({ ...prev, lunchDuration: Number(event.target.value) || 0 }))} className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans" />
               </label>
               <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
-                Timezone Calibration
+                Timezone Calibration *
                 <input value={settings.timezone} onChange={event => setSettings(prev => ({ ...prev, timezone: event.target.value }))} className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans" />
               </label>
               {(() => {
                 const countryData = getCountryByCode(settings.country || '');
                 return countryData && countryData.states.length > 0 ? (
                   <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
-                    State/Region
+                    State/Region (Optional)
                     <select
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
@@ -351,22 +351,22 @@ export function WorkspaceSetupPage() {
                   </label>
                 ) : (
                   <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
-                    State/Region
+                    State/Region (Optional)
                     <input
                       value={settings.region || ''}
                       onChange={event => setSettings(prev => ({ ...prev, region: event.target.value }))}
-                      placeholder="Optional"
+                      placeholder="Enter value"
                       className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans"
                     />
                   </label>
                 );
               })()}
               <label className="text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)]">
-                City / Municipality
+                City / Municipality (Optional)
                 <input
                   value={settings.city || ''}
                   onChange={event => setSettings(prev => ({ ...prev, city: event.target.value }))}
-                  placeholder="Optional"
+                  placeholder="Enter value"
                   className="mt-2 h-11 w-full border border-border/50 rounded-lg bg-surface-3 px-4 text-sm text-[var(--pm-on-surface)] focus:border-accent-primary focus:bg-surface-4 outline-none transition-all font-sans"
                 />
               </label>
@@ -480,7 +480,7 @@ export function WorkspaceSetupPage() {
           {step === 5 && (
             <div className="space-y-5">
               <label className="block text-xs uppercase font-mono-pm tracking-widest text-[var(--pm-on-surface-variant)] mb-1">
-                Friction / Productivity Factor (Modifier)
+                Friction / Productivity Factor (Modifier) *
                 <input
                   type="number"
                   min={0.1}

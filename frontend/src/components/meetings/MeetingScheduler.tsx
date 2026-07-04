@@ -90,7 +90,7 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
         onClick={() => setIsOpen(true)}
         className="flex items-center gap-2 px-3 py-1.5 bg-[var(--pm-surface)]/5 border border-border text-text-secondary text-[10px] font-mono uppercase tracking-wider rounded-sm hover:bg-[var(--pm-surface)]/10 hover:text-text-primary transition-all cursor-pointer"
       >
-        <Plus className="w-3 h-3" /> Schedule Meeting
+        <Plus className="w-3 h-3" /> Create
       </button>
 
       <AnimatePresence>
@@ -99,7 +99,7 @@ export function MeetingScheduler({ workspaceId, projectId, users, onCreateMeetin
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsOpen(false)} className="absolute inset-0 bg-bg backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-surface border border-border w-full max-w-lg p-6 rounded-sm">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">Schedule Meeting</h3>
+                <h3 className="text-sm font-sans tracking-tight uppercase tracking-wide text-text-primary">Create</h3>
                 <button onClick={() => setIsOpen(false)} className="p-1.5 border border-border hover:bg-[var(--pm-surface)]/5 transition-colors cursor-pointer"><X className="w-3.5 h-3.5 text-text-tertiary" /></button>
               </div>
 

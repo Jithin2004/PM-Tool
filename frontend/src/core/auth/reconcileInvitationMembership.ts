@@ -301,49 +301,22 @@ export async function reconcileWorkspaceMembership(
   }
 
   if (email) {
-    const invite = await findValidInvitation(email);
-    if (invite) {
-      const { error: inviteUpsertError } = await supabase.from('users').upsert(
-        {
-          id: authUserId,
-          email,
-          workspace_id: invite.workspace_id,
-          role: invite.role,
-          availability_factor: 1,
-        },
-        { onConflict: 'id' },
-      );
+    // Delegate to canonical reconciliation flow to ensure single implementation
+    const { outcome, workspaceId } = await reconcileInvitationMembership({
+      authUserId,
+      email,
+      fullName: email.split('@')[0], // fallback
+    });
 
-      if (!inviteUpsertError) {
-        if (invite.status === 'pending') {
-          await markInvitationAccepted(invite.id);
-        }
-        return { repaired: true, workspaceId: invite.workspace_id, reason: 'invitation_repair' };
-      }
-      return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
+    if (outcome === 'invitation_accepted') {
+      return { repaired: true, workspaceId, reason: 'invitation_repair' };
+    }
+    if (outcome === 'product_key_override') {
+      return { repaired: true, workspaceId, reason: 'product_key_override' };
     }
   }
 
-  if (isProductKeyVerified()) {
-    const { data: ws } = await supabase.from('workspaces').select('id').limit(1).maybeSingle();
-    if (ws) {
-      const { error: upsertError } = await supabase.from('users').upsert(
-        {
-          id: authUserId,
-          workspace_id: ws.id,
-          email: email || '',
-          role: 'super_admin',
-          availability_factor: 1,
-        },
-        { onConflict: 'id' },
-      );
-      if (!upsertError) {
-        return { repaired: true, workspaceId: ws.id, reason: 'product_key_override' };
-      }
-    }
-    return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
-  }
-  return { repaired: false, workspaceId: null, reason: 'orphaned' };
+  return { repaired: false, workspaceId: null, reason: 'needs_workspace_setup' };
 }
 
 

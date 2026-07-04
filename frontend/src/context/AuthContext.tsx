@@ -18,8 +18,6 @@ interface AuthContextType {
   setAuthState: (state: AuthState) => void;
 
   logout: () => Promise<void>;
-  updateRole: (id: string, role: User['role']) => Promise<boolean>;
-  updateProfile: (updates: Partial<User>) => Promise<boolean>;
   
   simulatedRole: User['role'] | null;
   setSimulatedRole: (role: User['role'] | null) => void;
@@ -119,53 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateRole = async (id: string, role: User['role']) => {
-    if (!hasCapability(profile?.role, 'workspace.update') || !isSupabaseConfigured) return false;
-
-    const { mapAuthorityToLegacyRole } = await import('../core/types/workspace');
-    const dbRole = mapAuthorityToLegacyRole(role);
-
-    const { error } = await supabase
-      .from('users')
-      .update({ role: dbRole })
-      .eq('id', id);
-
-    if (!error) {
-      if (profile?.id === id) {
-        setProfile(prev => prev ? { ...prev, role } : null);
-      }
-      return true;
-    }
-    return false;
-  };
-
-  const updateProfile = async (updates: Partial<User>) => {
-    if (!profile?.id || !isSupabaseConfigured) return false;
-
-    const FORBIDDEN_PROFILE_FIELDS = new Set([
-      'role', 'workspace_id', 'id', 'created_at',
-    ]);
-    const sanitized: Record<string, any> = {};
-    for (const [key, value] of Object.entries(updates)) {
-      if (!FORBIDDEN_PROFILE_FIELDS.has(key)) {
-        sanitized[key] = value;
-      }
-    }
-
-    if (Object.keys(sanitized).length === 0) return false;
-
-    const { error } = await supabase
-      .from('users')
-      .update(sanitized)
-      .eq('id', profile.id);
-
-    if (!error) {
-      setProfile(prev => prev ? { ...prev, ...sanitized } : null);
-      return true;
-    }
-    return false;
-  };
-
   // We expose handleSessionExpiry so Orchestrator can trigger it if needed
   useEffect(() => {
     window.addEventListener('resolve-session-expiry', (e: any) => {
@@ -185,8 +136,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser,
       setAuthState,
       logout,
-      updateRole,
-      updateProfile,
       simulatedRole,
       setSimulatedRole,
       isSimulating: !!simulatedRole,

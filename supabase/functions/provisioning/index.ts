@@ -205,17 +205,13 @@ serve(async (req) => {
       // so that the trigger-created placeholder is overwritten with the correct values.
       const { error: insertUserError } = await supabaseAdmin
         .from('users')
-        .upsert(
-          {
-            id: authUserId,
-            email: invRow.email,
-            workspace_id: invRow.workspace_id,
-            role: invRow.role,
-            status: 'active',
-            full_name: invRow.email.split('@')[0],
-          },
-          { onConflict: 'id' }
-        );
+        .update({
+          workspace_id: invRow.workspace_id,
+          role: invRow.role,
+          status: 'active',
+          full_name: invRow.email.split('@')[0],
+        })
+        .eq('id', authUserId);
 
       if (insertUserError) {
           throw insertUserError;

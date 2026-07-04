@@ -304,58 +304,69 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
                   )}
 
                   <div className="space-y-3">
-                    <input
-                      type="text"
-                      required
-                      value={fullName}
-                      onChange={e => setFullName(e.target.value)}
-                      placeholder="Owner full name"
-                      className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
-                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                    />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="Work email"
-                      className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
-                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                    />
-                    <input
-                      type="text"
-                      required
-                      value={workspaceName}
-                      onChange={e => setWorkspaceName(e.target.value)}
-                      placeholder="Workspace/company name"
-                      className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
-                      style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
-                    />
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--pm-on-surface-variant)] mb-1">Owner Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={e => setFullName(e.target.value)}
+                        placeholder="Enter full name"
+                        className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
+                        style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--pm-on-surface-variant)] mb-1">Work Email *</label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder="Enter work email"
+                        className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
+                        style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--pm-on-surface-variant)] mb-1">Workspace Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={workspaceName}
+                        onChange={e => setWorkspaceName(e.target.value)}
+                        placeholder="Enter workspace name"
+                        className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
+                        style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
+                      />
+                    </div>
                     <div className="relative">
+                      <label className="block text-xs font-medium text-[var(--pm-on-surface-variant)] mb-1">Password *</label>
                       <input
                         type={showPassword ? 'text' : 'password'}
                         required
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        placeholder="Password"
+                        placeholder="Create password"
                         className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
                         style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
                       />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 text-xs font-semibold" style={{ color: 'var(--pm-primary)' }}>
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-9 text-xs font-semibold" style={{ color: 'var(--pm-primary)' }}>
                         {showPassword ? 'HIDE' : 'SHOW'}
                       </button>
                     </div>
                     <div className="relative">
+                      <label className="block text-xs font-medium text-[var(--pm-on-surface-variant)] mb-1">Confirm Password *</label>
                       <input
                         type={showConfirmPassword ? 'text' : 'password'}
                         required
                         value={confirmPassword}
                         onChange={e => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm password"
+                        placeholder="Repeat password"
                         className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition-all"
                         style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}
                       />
-                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-3 text-xs font-semibold" style={{ color: 'var(--pm-primary)' }}>
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-9 text-xs font-semibold" style={{ color: 'var(--pm-primary)' }}>
                         {showConfirmPassword ? 'HIDE' : 'SHOW'}
                       </button>
                     </div>

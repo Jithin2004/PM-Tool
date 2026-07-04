@@ -123,6 +123,7 @@ export function WorkspaceSetupWizard() {
   };
 
   const handleFinish = async () => {
+    if (loading) return;
     setLoading(true);
     try {
       const created = await createWorkspace({

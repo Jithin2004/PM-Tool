@@ -80,7 +80,7 @@ export function ProjectEditPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">Project Name</label>
+          <label className="block text-sm font-medium text-text-secondary mb-2">Project Name *</label>
           <input
             name="projectName"
             required
@@ -88,7 +88,7 @@ export function ProjectEditPage() {
             value={name}
             onChange={e => setName(e.target.value)}
             className="w-full bg-surface-3 border border-border rounded-lg px-4 py-3 text-text-primary focus:ring-2 focus:ring-indigo-500 outline-none"
-            placeholder="Project Name"
+            placeholder="Enter project name"
           />
         </div>
         <button
@@ -96,7 +96,7 @@ export function ProjectEditPage() {
           disabled={isSubmitting || !name.trim()}
           className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
         >
-          {isSubmitting ? 'Saving...' : 'Save Changes'}
+          {isSubmitting ? 'Saving...' : 'Save'}
         </button>
       </form>
     </div>

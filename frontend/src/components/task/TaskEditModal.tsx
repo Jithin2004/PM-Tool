@@ -698,7 +698,7 @@ export function TaskEditModal({
               disabled={isSubmitting || !canSave}
               className="btn-premium-primary px-4 py-2 text-[9px] font-medium uppercase tracking-wide transition-colors disabled:opacity-50"
             >
-              {isSubmitting ? 'Processing...' : 'Save Changes'}
+              {isSubmitting ? 'Processing...' : 'Save'}
             </button>
           </div>
         </form>

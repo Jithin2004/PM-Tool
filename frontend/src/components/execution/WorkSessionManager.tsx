@@ -112,6 +112,7 @@ export function WorkSessionManager({ workspace, currentUser, notify }: WorkSessi
     intervalRef.current = window.setInterval(checkStatus, 60000);
     return () => {
       if (intervalRef.current) window.clearInterval(intervalRef.current);
+      if (autoPauseTimeoutRef.current) window.clearTimeout(autoPauseTimeoutRef.current);
     };
   }, [activeSession, workspace, showEndPrompt, showHeartbeatPrompt, showMeetingPrompt]);
 
