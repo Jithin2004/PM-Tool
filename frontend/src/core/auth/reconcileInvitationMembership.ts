@@ -280,7 +280,7 @@ export async function reconcileWorkspaceMembership(
   const { data: owned, error: ownedError } = await supabase
     .from('workspaces')
     .select('id')
-    .eq('owner_id', authUserId)
+    .eq('created_by_id', authUserId)
     .limit(1);
   if (!ownedError && owned && owned.length > 0) {
     const wsId = owned[0].id;

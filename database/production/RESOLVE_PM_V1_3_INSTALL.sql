@@ -10361,3 +10361,39 @@ CREATE INDEX IF NOT EXISTS idx_work_sessions_project ON work_sessions(project_id
 -- ==========================================
 -- Block duplicate workspace creation during onboarding race conditions
 CREATE UNIQUE INDEX IF NOT EXISTS idx_single_workspace_per_owner ON public.workspaces (created_by_id);
+
+-- ==========================================
+-- APPENDED: 20260705_workspace_onboarding_state.sql
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.workspace_onboarding_state (
+    workspace_id UUID PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    setup_completed BOOLEAN NOT NULL DEFAULT false,
+    completed_steps TEXT[] DEFAULT '{}',
+    selected_templates TEXT[] DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.workspace_onboarding_state ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view workspace_onboarding_state" ON public.workspace_onboarding_state;
+CREATE POLICY "Users can view workspace_onboarding_state"
+ON public.workspace_onboarding_state FOR SELECT
+USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_onboarding_state.workspace_id AND public.is_active_workspace_member()));
+
+DROP POLICY IF EXISTS "Users can insert workspace_onboarding_state" ON public.workspace_onboarding_state;
+CREATE POLICY "Users can insert workspace_onboarding_state"
+ON public.workspace_onboarding_state FOR INSERT
+WITH CHECK (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_onboarding_state.workspace_id AND public.is_active_workspace_member()));
+
+DROP POLICY IF EXISTS "Users can update workspace_onboarding_state" ON public.workspace_onboarding_state;
+CREATE POLICY "Users can update workspace_onboarding_state"
+ON public.workspace_onboarding_state FOR UPDATE
+USING (workspace_id IN (SELECT id FROM public.workspaces WHERE id = workspace_onboarding_state.workspace_id AND public.is_active_workspace_member()));
+
+DROP TRIGGER IF EXISTS trigger_workspace_onboarding_updated_at ON public.workspace_onboarding_state;
+CREATE TRIGGER trigger_workspace_onboarding_updated_at
+BEFORE UPDATE ON public.workspace_onboarding_state
+FOR EACH ROW
+EXECUTE FUNCTION public.trigger_set_timestamp();
+

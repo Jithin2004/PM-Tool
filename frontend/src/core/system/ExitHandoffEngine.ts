@@ -41,7 +41,7 @@ export const ExitHandoffEngine = {
         .from('projects')
         .select('id, name, description, status')
         .eq('workspace_id', workspaceId)
-        .eq('owner_id', userId)
+        .eq('created_by_id', userId)
         .not('status', 'in', '("completed","done","archived")');
 
       if (!projectsError && projects) {
@@ -124,9 +124,9 @@ export const ExitHandoffEngine = {
       if (transfers.projectIds && transfers.projectIds.length > 0) {
         const { error: projectError } = await supabase
           .from('projects')
-          .update({ owner_id: newOwnerId, updated_at: new Date().toISOString() })
+          .update({ created_by_id: newOwnerId, updated_at: new Date().toISOString() })
           .eq('workspace_id', workspaceId)
-          .eq('owner_id', resigningUserId)
+          .eq('created_by_id', resigningUserId)
           .in('id', transfers.projectIds);
         if (projectError) throw projectError;
       }

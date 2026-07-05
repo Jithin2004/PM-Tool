@@ -92,7 +92,7 @@ export const FollowUpEngine = {
       const { error } = await supabase
         .from('follow_ups')
         .insert({
-          owner_id: ownerId,
+          created_by_id: ownerId,
           source_type: sourceType,
           source_id: sourceId,
           remind_at: remindAt.toISOString(),
@@ -119,7 +119,7 @@ export const FollowUpEngine = {
       const { data, error } = await supabase
         .from('follow_ups')
         .select('*')
-        .eq('owner_id', ownerId)
+        .eq('created_by_id', ownerId)
         .order('completed', { ascending: true })
         .order('remind_at', { ascending: true });
 

@@ -76,8 +76,8 @@ export const transferAndArchiveEmployee = async (
   if (transferMap.projectOwnerId) {
     const { error } = await trackSupabaseOperation('supabase_from_projects_transfer', () =>
       supabase.from('projects')
-        .update({ owner_id: transferMap.projectOwnerId, updated_at: new Date().toISOString() })
-        .eq('owner_id', userId)
+        .update({ created_by_id: transferMap.projectOwnerId, updated_at: new Date().toISOString() })
+        .eq('created_by_id', userId)
         .eq('workspace_id', workspaceId)
         .not('status', 'in', '("completed","done","archived")')
     );

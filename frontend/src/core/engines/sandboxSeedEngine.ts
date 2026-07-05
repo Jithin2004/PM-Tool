@@ -76,7 +76,7 @@ export const sandboxSeedEngine = {
       workspace_id: workspaceId,
       name: 'Project Phoenix (Sandbox)',
       status: 'active',
-      owner_id: pmId,
+      created_by_id: pmId,
       execution_mode: 'HYBRID'
     }).select().single();
 
@@ -87,7 +87,6 @@ export const sandboxSeedEngine = {
         project_id: proj.id,
         name: 'V2 Platform Migration',
         status: 'in_progress',
-        owner_id: pmId,
         target_start: new Date(Date.now() - 7 * 86400000).toISOString(),
         target_end: new Date(Date.now() + 30 * 86400000).toISOString()
       }).select().single();
