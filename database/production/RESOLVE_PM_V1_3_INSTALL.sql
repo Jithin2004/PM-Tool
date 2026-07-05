@@ -27,9 +27,6 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- Clean Drop Section (Reverse Dependency Order)
 -- -------------------------------------------------------------
 
--- Triggers
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-
 -- Functions
 DROP FUNCTION IF EXISTS public.transfer_workspace_ownership CASCADE;
 DROP FUNCTION IF EXISTS public.search_workspace CASCADE;
@@ -83,15 +80,6 @@ DROP TABLE IF EXISTS profiles CASCADE;
 -- =============================================================
 -- HELPER FUNCTIONS AND TRIGGER PROCEDURES
 -- =============================================================
-
--- Standard timestamp trigger helper
-CREATE OR REPLACE FUNCTION public.trigger_set_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
 
 
 
@@ -153,6 +141,50 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+
+CREATE OR REPLACE FUNCTION public.has_capability(p_user_id uuid, p_cap text)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER SET search_path = ''
+SET search_path = public
+AS $$
+DECLARE
+    v_role text;
+    v_has_role_cap boolean;
+    v_has_override boolean;
+    v_override_val boolean;
+BEGIN
+    -- If user is inactive, they have 0 capabilities.
+    IF NOT public.is_active_employee(p_user_id) THEN
+        RETURN false;
+    END IF;
+
+    -- Check explicit override first
+    SELECT is_granted INTO v_override_val
+    FROM public.user_capability_overrides
+    WHERE user_id = p_user_id AND capability_id = p_cap;
+
+    IF FOUND THEN
+        RETURN v_override_val;
+    END IF;
+
+    -- Look up their role
+    SELECT role INTO v_role FROM public.users WHERE id = p_user_id;
+
+    IF v_role IS NULL THEN
+        RETURN false;
+    END IF;
+
+    -- Check role mapping
+    SELECT true INTO v_has_role_cap
+    FROM public.role_capabilities
+    WHERE role_id = v_role AND capability_id = p_cap;
+
+    RETURN COALESCE(v_has_role_cap, false);
+END;
+$$;
+
 
 
 
@@ -5120,48 +5152,6 @@ SELECT 'viewer', id FROM public.capabilities WHERE id IN (
 -- PHASE 2.2: CAPABILITY HELPER RPC
 -- ##############################################################################
 
-CREATE OR REPLACE FUNCTION public.has_capability(p_user_id uuid, p_cap text)
-RETURNS boolean
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER SET search_path = ''
-SET search_path = public
-AS $$
-DECLARE
-    v_role text;
-    v_has_role_cap boolean;
-    v_has_override boolean;
-    v_override_val boolean;
-BEGIN
-    -- If user is inactive, they have 0 capabilities.
-    IF NOT public.is_active_employee(p_user_id) THEN
-        RETURN false;
-    END IF;
-
-    -- Check explicit override first
-    SELECT is_granted INTO v_override_val
-    FROM public.user_capability_overrides
-    WHERE user_id = p_user_id AND capability_id = p_cap;
-
-    IF FOUND THEN
-        RETURN v_override_val;
-    END IF;
-
-    -- Look up their role
-    SELECT role INTO v_role FROM public.users WHERE id = p_user_id;
-
-    IF v_role IS NULL THEN
-        RETURN false;
-    END IF;
-
-    -- Check role mapping
-    SELECT true INTO v_has_role_cap
-    FROM public.role_capabilities
-    WHERE role_id = v_role AND capability_id = p_cap;
-
-    RETURN COALESCE(v_has_role_cap, false);
-END;
-$$;
 
 -- ============================================================
 -- RESOLVE PM v1.3 SCHEMA RECONCILIATION
@@ -6702,13 +6692,13 @@ END;
 $$;
 
 -- Activity logs WORM protection has been moved to the unified worm_activity_logs_immutable trigger in MASTER_SCHEMA.
-DROP TRIGGER IF EXISTS worm_protect_system_audit_ledger_update ON system_audit_ledger;
+DROP TRIGGER IF EXISTS worm_protect_system_audit_ledger_update ON public.system_audit_ledger;
 CREATE TRIGGER worm_protect_system_audit_ledger_update
-  BEFORE UPDATE ON system_audit_ledger
+  BEFORE UPDATE ON public.system_audit_ledger
   FOR EACH ROW EXECUTE FUNCTION enforce_worm_protection();
-DROP TRIGGER IF EXISTS worm_protect_system_audit_ledger_delete ON system_audit_ledger;
+DROP TRIGGER IF EXISTS worm_protect_system_audit_ledger_delete ON public.system_audit_ledger;
 CREATE TRIGGER worm_protect_system_audit_ledger_delete
-  BEFORE DELETE ON system_audit_ledger
+  BEFORE DELETE ON public.system_audit_ledger
   FOR EACH ROW EXECUTE FUNCTION enforce_worm_protection();
 
 -- -------------------------------------------------------------
@@ -10301,88 +10291,70 @@ ON public.prediction_accuracy FOR DELETE
 
 
 -- ==========================================
--- APPENDED: 20260701_create_work_sessions.sql
+-- APPENDED: 20260701_create_work_sessions.sql (Canonical Integration)
 -- ==========================================
-DROP TABLE IF EXISTS work_sessions CASCADE;
+-- 1. Make task_id optional (supports quick_work_items and epic-level tracking)
+ALTER TABLE public.work_sessions ALTER COLUMN task_id DROP NOT NULL;
 
--- Create work_sessions table for operational work tracking
+-- 2. Add structural hierarchy links
+ALTER TABLE public.work_sessions 
+    ADD COLUMN IF NOT EXISTS attendance_session_id UUID REFERENCES public.clock_events(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS milestone_id UUID REFERENCES public.milestones(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS epic_id UUID REFERENCES public.epics(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS story_id UUID REFERENCES public.stories(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS quick_work_item_id UUID; -- Intentionally no FK until quick_work_items becomes a canonical table.
 
-CREATE TABLE IF NOT EXISTS work_sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    attendance_session_id UUID REFERENCES clock_events(id) ON DELETE SET NULL,
-    project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
-    milestone_id UUID REFERENCES milestones(id) ON DELETE SET NULL,
-    epic_id UUID REFERENCES epics(id) ON DELETE SET NULL,
-    story_id UUID REFERENCES stories(id) ON DELETE SET NULL,
-    task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
-    quick_work_item_id UUID, -- For ad-hoc items not yet formalized
-    session_type VARCHAR(50) NOT NULL DEFAULT 'general', -- e.g., Task, Story, Epic, Meeting, Research, Documentation
-    title VARCHAR(255),
-    description TEXT,
-    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    ended_at TIMESTAMPTZ,
-    duration_seconds INTEGER DEFAULT 0,
-    switch_reason TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- 3. Add new payload data
+ALTER TABLE public.work_sessions 
+    ADD COLUMN IF NOT EXISTS title VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS description TEXT,
+    ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS switch_reason TEXT;
 
--- Indexing for performance
+-- 4. Reconcile session_type
+DO $$ 
+DECLARE
+  const_name text;
+BEGIN
+  -- Drop the legacy text CHECK constraint safely using dynamic lookup
+  SELECT conname INTO const_name 
+  FROM pg_constraint 
+  WHERE conrelid = 'public.work_sessions'::regclass 
+    AND pg_get_constraintdef(oid) ILIKE '%session_type%';
+  
+  IF const_name IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.work_sessions DROP CONSTRAINT ' || const_name;
+  END IF;
+END $$;
+
+ALTER TABLE public.work_sessions ALTER COLUMN session_type SET DEFAULT 'general';
+ALTER TABLE public.work_sessions ALTER COLUMN session_type TYPE VARCHAR(50);
+
+-- 5. Backfill Legacy Data
+UPDATE public.work_sessions 
+SET duration_seconds = duration_minutes * 60 
+WHERE duration_minutes IS NOT NULL 
+  AND duration_seconds = 0;
+
+UPDATE public.work_sessions ws
+SET 
+  project_id = t.project_id,
+  milestone_id = t.milestone_id,
+  epic_id = t.epic_id,
+  story_id = t.story_id
+FROM public.tasks t
+WHERE ws.task_id = t.id
+  AND ws.project_id IS NULL;
+
+-- 6. Indexing for performance
 CREATE INDEX IF NOT EXISTS idx_work_sessions_workspace_user ON work_sessions(workspace_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_work_sessions_started_at ON work_sessions(started_at);
 CREATE INDEX IF NOT EXISTS idx_work_sessions_project ON work_sessions(project_id);
 
--- RLS setup
-ALTER TABLE work_sessions ENABLE ROW LEVEL SECURITY;
+-- Note: The new RLS policies were discarded here because they duplicated 
+-- and regressed the canonical Sprint 9 Security Audit Fix Pack policies at line 9406.
 
--- Allow users to see work sessions in their workspace
-CREATE POLICY "Users can view workspace work sessions"
-ON work_sessions
-FOR SELECT
-USING (
-  workspace_id IN (
-    SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
-  )
-);
-
--- Allow users to create work sessions for themselves
-CREATE POLICY "Users can create their own work sessions"
-ON work_sessions
-FOR INSERT
-WITH CHECK (
-  user_id = auth.uid() AND
-  workspace_id IN (
-    SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
-  )
-);
-
--- Allow users to update their own work sessions
-CREATE POLICY "Users can update their own work sessions"
-ON work_sessions
-FOR UPDATE
-USING (
-  user_id = auth.uid() AND
-  workspace_id IN (
-    SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
-  )
-);
-
--- Triggers for updated_at
-CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_work_sessions_updated_at ON work_sessions;
-CREATE TRIGGER trigger_work_sessions_updated_at
-BEFORE UPDATE ON work_sessions
-FOR EACH ROW
-EXECUTE FUNCTION set_updated_at();
 
 -- ==========================================
 -- APPENDED: 20260704_workspaces_idempotency.sql
