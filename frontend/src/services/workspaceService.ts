@@ -217,22 +217,34 @@ export async function createWorkspaceForUser({ name, settings, user, templateId,
 
   let workspaceRow = workspaceData;
 
-  const { error: workspaceError } = await supabase
+  // Preemptively check if the user already has a workspace to avoid triggering 
+  // a 409 Conflict in the browser network tab.
+  const { data: existingWs } = await supabase
     .from('workspaces')
-    .insert(workspaceData);
+    .select('*')
+    .eq('created_by_id', validOwnerId)
+    .maybeSingle();
 
-  if (workspaceError) {
-    if (workspaceError.code === '23505' && workspaceError.message.includes('idx_single_workspace_per_owner')) {
-      const { data: existingWs, error: fetchError } = await supabase
-        .from('workspaces')
-        .select('*')
-        .eq('created_by_id', validOwnerId)
-        .single();
-      
-      if (fetchError || !existingWs) throw workspaceError;
-      workspaceRow = existingWs as any;
-    } else {
-      throw workspaceError;
+  if (existingWs) {
+    workspaceRow = existingWs as any;
+  } else {
+    const { error: workspaceError } = await supabase
+      .from('workspaces')
+      .insert(workspaceData);
+
+    if (workspaceError) {
+      if (workspaceError.code === '23505' && workspaceError.message.includes('idx_single_workspace_per_owner')) {
+        const { data: fallbackWs, error: fetchError } = await supabase
+          .from('workspaces')
+          .select('*')
+          .eq('created_by_id', validOwnerId)
+          .single();
+        
+        if (fetchError || !fallbackWs) throw workspaceError;
+        workspaceRow = fallbackWs as any;
+      } else {
+        throw workspaceError;
+      }
     }
   }
 
