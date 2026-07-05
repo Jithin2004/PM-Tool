@@ -45,7 +45,7 @@ test.describe('Projects Certification Pack', () => {
     if (!projects || projects.length === 0) throw new Error('No seeded project found');
     firstProjectId = projects[0].id;
     
-    await CertificationNavigation.navigateTo(page, `/projects/${projectId}/edit`);
+    await CertificationNavigation.navigateTo(page, `/projects/${firstProjectId}/edit`);
     await page.fill('input[name="projectName"]', 'Updated Certification Project');
     
     await page.click('button[type="submit"]');

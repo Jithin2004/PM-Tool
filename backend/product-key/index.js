@@ -27,6 +27,7 @@ const adminAuth = require('./middleware/adminAuth');
 app.get('/addLicense', adminAuth, licenseController.addLicense);
 app.post('/admin/generate', adminAuth, licenseController.adminGenerateKey);
 app.post('/admin/disable', adminAuth, licenseController.adminDisableKey);
+app.post('/admin/reset', adminAuth, licenseController.adminResetKey);
 app.get('/admin/activations', adminAuth, licenseController.adminGetActivations);
 app.get('/admin/events', adminAuth, licenseController.adminGetEvents);
 

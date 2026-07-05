@@ -11,12 +11,11 @@ const licenseSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: [
+      "AVAILABLE",
       "ACTIVE",
-      "CONSUMED",
-      "EXPIRED",
       "REVOKED"
     ],
-    default: "ACTIVE"
+    default: "AVAILABLE"
   },
   plan: {
     type: String,
@@ -33,6 +32,9 @@ const licenseSchema = new mongoose.Schema({
   isUsed: {
     type: Boolean,
     default: false
+  },
+  activatedAt: {
+    type: Date
   },
   usedAt: {
     type: Date
@@ -94,6 +96,66 @@ const licenseSchema = new mongoose.Schema({
       default: "web"
     }
   }
+});
+
+// Enforce lifecycle constraints
+function validateLifecycle(doc) {
+  if (doc.status === 'AVAILABLE') {
+    if (doc.isUsed) throw new Error('Invalid State: AVAILABLE license cannot be isUsed=true');
+    if (doc.activatedAt || doc.usedAt || doc.last_verified_at || doc.workspaceId || doc.usedBy || (doc.activated_devices && doc.activated_devices.length > 0)) {
+      throw new Error('Invalid State: AVAILABLE license cannot have activation timestamps or usage metadata');
+    }
+  } else if (doc.status === 'ACTIVE') {
+    if (!doc.isUsed) throw new Error('Invalid State: ACTIVE license must have isUsed=true');
+    if (!doc.activatedAt || !doc.usedAt) {
+      throw new Error('Invalid State: ACTIVE license must have activatedAt and usedAt');
+    }
+  } else if (doc.status === 'REVOKED') {
+    if (doc.isUsed) throw new Error('Invalid State: REVOKED license must have isUsed=false');
+  }
+}
+
+licenseSchema.pre('save', function (next) {
+  try {
+    if (this.status === 'AVAILABLE' || this.status === 'REVOKED') {
+      this.isUsed = false;
+    } else if (this.status === 'ACTIVE') {
+      this.isUsed = true;
+    }
+    
+    validateLifecycle(this);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+licenseSchema.pre('findOneAndUpdate', function (next) {
+  const update = this.getUpdate();
+  if (!update) return next();
+  
+  const setOp = update.$set || update;
+  if (setOp.status) {
+    if (setOp.status === 'AVAILABLE' || setOp.status === 'REVOKED') {
+      setOp.isUsed = false;
+    } else if (setOp.status === 'ACTIVE') {
+      setOp.isUsed = true;
+    }
+  }
+
+  // We apply the update to the current document state to validate it
+  // But mongoose middleware for findOneAndUpdate doesn't easily expose the current doc.
+  // To keep it simple, we just validate the $set fields if they attempt to create contradictory states directly
+  if (setOp.status === 'AVAILABLE' && (setOp.isUsed === true || setOp.activatedAt || setOp.usedAt)) {
+    return next(new Error('Invalid State: Cannot update to AVAILABLE with active usage fields'));
+  }
+  if (setOp.status === 'ACTIVE' && setOp.isUsed === false) {
+    return next(new Error('Invalid State: Cannot update to ACTIVE with isUsed=false'));
+  }
+  if (setOp.status === 'REVOKED' && setOp.isUsed === true) {
+    return next(new Error('Invalid State: Cannot update to REVOKED with isUsed=true'));
+  }
+  next();
 });
 
 // Enforce security stripping of internal fields when converting to JSON/Object

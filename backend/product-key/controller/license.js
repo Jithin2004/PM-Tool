@@ -51,7 +51,7 @@ exports.addLicense = async (req, res) => {
                 await License.create({
                     key: k,
                     plan: 'BUSINESS',
-                    status: 'ACTIVE',
+                    status: 'AVAILABLE',
                     activation_limit: 3
                 });
                 await AuditEvent.create({
@@ -98,7 +98,7 @@ exports.activateLicense = async (req, res) => {
             return res.status(404).json({ error: 'Invalid product key' });
         }
 
-        if (initialCheck.status === 'EXPIRED' || initialCheck.status === 'REVOKED') {
+        if (initialCheck.status === 'REVOKED') {
             await AuditEvent.create({
                 event_type: 'verification_failed',
                 reason: `License has been ${initialCheck.status.toLowerCase()}`,
@@ -113,13 +113,14 @@ exports.activateLicense = async (req, res) => {
             {
                 key: productKey,
                 isUsed: false,
-                status: 'ACTIVE'
+                status: 'AVAILABLE'
             },
             {
                 $set: {
                     isUsed: true,
-                    status: "CONSUMED",
+                    status: "ACTIVE",
 
+                    activatedAt: new Date(),
                     usedAt: new Date(),
                     usedBy: userIdentifier || workspaceId,
                     workspaceId,
@@ -233,7 +234,7 @@ exports.verifyLicense = async (req, res) => {
             return res.status(403).json({ valid: false, isUsed: true, message: 'License key has already been activated' });
         }
 
-        // 3. If license exists but is not ACTIVE (e.g. EXPIRED or REVOKED), exit cleanly
+        // 3. If license exists but is not ACTIVE (e.g. REVOKED), exit cleanly
         if (license.status !== 'ACTIVE') {
             try {
                 await AuditEvent.create({
@@ -250,8 +251,10 @@ exports.verifyLicense = async (req, res) => {
 
         // Update verification time in the background safely
         try {
-            license.last_verified_at = new Date();
-            await license.save();
+            await License.updateOne(
+                { _id: license._id },
+                { $set: { last_verified_at: new Date() } }
+            );
         } catch (saveErr) {
             console.error('Failed to update last_verified_at timestamp:', saveErr.message);
         }
@@ -352,13 +355,13 @@ exports.adminGenerateKey = async (req, res) => {
 
 // 5. Admin API: Disable Keys
 exports.adminDisableKey = async (req, res) => {
-    const { productKey, status } = req.body; // status: 'EXPIRED' or 'REVOKED'
+    const { productKey } = req.body;
 
     if (!productKey) {
         return res.status(400).json({ error: 'Product key is required' });
     }
 
-    const targetStatus = ['EXPIRED', 'REVOKED'].includes(status) ? status : 'REVOKED';
+    const targetStatus = 'REVOKED';
 
     try {
         const license = await License.findOne({ key: productKey });
@@ -368,6 +371,7 @@ exports.adminDisableKey = async (req, res) => {
         }
 
         license.status = targetStatus;
+        // isUsed is automatically derived in pre-save hook
         await license.save();
 
         await AuditEvent.create({
@@ -381,6 +385,46 @@ exports.adminDisableKey = async (req, res) => {
     } catch (error) {
         console.error('Admin key disable error:', error);
         res.status(500).json({ error: 'Failed to update key status' });
+    }
+};
+
+exports.adminResetKey = async (req, res) => {
+    const { productKey } = req.body;
+    if (!productKey) return res.status(400).json({ error: 'Product key is required' });
+
+    try {
+        const license = await License.findOneAndUpdate(
+            { key: productKey },
+            {
+                $set: {
+                    status: 'AVAILABLE',
+                    isUsed: false,
+                    activated_devices: []
+                },
+                $unset: {
+                    activatedAt: "",
+                    usedAt: "",
+                    last_verified_at: "",
+                    workspaceId: "",
+                    usedBy: "",
+                    activation: ""
+                }
+            },
+            { new: true }
+        );
+        if (!license) return res.status(404).json({ error: 'Product key not found' });
+
+        await AuditEvent.create({
+            event_type: 'license_reset',
+            reason: 'Admin manual reset to AVAILABLE',
+            device_hash: 'admin',
+            license_key: productKey
+        });
+
+        res.json({ success: true, message: 'License key successfully reset to AVAILABLE' });
+    } catch (error) {
+        console.error('Admin key reset error:', error);
+        res.status(500).json({ error: 'Failed to reset key' });
     }
 };
 
