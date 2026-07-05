@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { AuthState, BootstrapState } from './types';
+import { AuthState, BootstrapState, ProvisioningState } from './types';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useOperationalData } from '../../context/OperationalDataContext';
@@ -17,7 +17,9 @@ import { TelemetryService } from '../observability/telemetry';
 interface BootstrapContextValue {
   authState: AuthState;
   bootstrapState: BootstrapState;
+  provisioningState: ProvisioningState;
   error: Error | null;
+  retryProvisioning: () => void;
 }
 
 const BootstrapContext = createContext<BootstrapContextValue | undefined>(undefined);
@@ -31,6 +33,7 @@ export function useBootstrap() {
 export function BootstrapOrchestrator({ children }: { children: React.ReactNode }) {
   const { authState, setAuthState, setUser, setProfile, profile } = useAuth();
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>(BootstrapState.IDLE);
+  const [provisioningState, setProvisioningState] = useState<ProvisioningState>(ProvisioningState.INITIALIZING);
   const [error, setError] = useState<Error | null>(null);
 
   const isOrchestrating = useRef(false);
@@ -50,6 +53,28 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
     setBootstrapState(state);
   };
 
+  const handleProvisioningFailure = (state: ProvisioningState, details: any = {}) => {
+    BootLogger.log(state, 'Provisioning Outcome');
+    setProvisioningState(state);
+    setBootstrap(BootstrapState.READY); // Bootstrap is technically "done" evaluating
+    
+    // Structured JSON log for support diagnostics
+    BootLogger.warn("Provisioning failed", {
+      authUser: details.authUserId || "unknown",
+      profileFound: details.profileFound || false,
+      workspaceFound: details.workspaceFound || false,
+      workspaceId: details.workspaceId || null,
+      provisioningState: state
+    });
+  };
+
+  const retryProvisioning = () => {
+    if (user) {
+      setProvisioningState(ProvisioningState.INITIALIZING);
+      orchestrate(user);
+    }
+  };
+
   const orchestrate = async (sessionUser: any) => {
     if (isOrchestrating.current) return;
     isOrchestrating.current = true;
@@ -59,8 +84,23 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
       let syncedProfile = await syncProfile(sessionUser);
       
       if (!syncedProfile) {
-        setAuthState(AuthState.UNAUTHENTICATED);
-        setBootstrap(BootstrapState.ERROR);
+        // Technically they could be uninvited or just have no profile row
+        // We'll treat !syncedProfile as PROFILE_MISSING unless we explicitly know they are uninvited.
+        handleProvisioningFailure(ProvisioningState.PROFILE_MISSING, {
+          authUserId: sessionUser.id,
+          profileFound: false,
+          workspaceFound: false
+        });
+        return;
+      }
+
+      // Check if they are uninvited but were caught by reconciliation
+      if (syncedProfile.role === 'uninvited' || (syncedProfile as any).status === 'uninvited') {
+        handleProvisioningFailure(ProvisioningState.PENDING_INVITE, {
+          authUserId: sessionUser.id,
+          profileFound: true,
+          workspaceFound: false
+        });
         return;
       }
 
@@ -73,25 +113,54 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
 
       setProfile(syncedProfile);
 
-      if (validation.needsSetup || !syncedProfile.workspace_id) {
-        setBootstrap(BootstrapState.PENDING_ONBOARDING);
+      if (!syncedProfile.workspace_id || validation.needsSetup) {
+        handleProvisioningFailure(ProvisioningState.WORKSPACE_MISSING, {
+          authUserId: sessionUser.id,
+          profileFound: true,
+          workspaceFound: false
+        });
         return;
       }
       
       // Load Workspace Context
       await refreshWorkspace(syncedProfile.workspace_id);
 
+      // Check for inactive workspace (if refreshWorkspace exposes workspace status)
+      // Actually we will check the workspace object on next effect or directly if returned.
+      // For now, if validateAndRepairWorkspace passed, we assume it's active. 
+      // But if we want to explicitly handle WORKSPACE_INACTIVE:
+      const { data: wsData } = await supabase.from('workspaces').select('status').eq('id', syncedProfile.workspace_id).maybeSingle();
+      if (wsData && wsData.status !== 'active') {
+        handleProvisioningFailure(ProvisioningState.WORKSPACE_INACTIVE, {
+          authUserId: sessionUser.id,
+          profileFound: true,
+          workspaceFound: true,
+          workspaceId: syncedProfile.workspace_id
+        });
+        return;
+      }
+
       // 5. Validate Product License
       setBootstrap(BootstrapState.VALIDATING_LICENSE);
       try {
         const res = await checkLicenseOnline();
         if (!res.valid) {
-          setBootstrap(BootstrapState.LICENSE_ACTIVATION);
+          handleProvisioningFailure(ProvisioningState.LICENSE_REQUIRED, {
+            authUserId: sessionUser.id,
+            profileFound: true,
+            workspaceFound: true,
+            workspaceId: syncedProfile.workspace_id
+          });
           return;
         }
       } catch (licenseErr) {
         // Fallback for offline mode if allowed, or force activation
-        setBootstrap(BootstrapState.LICENSE_ACTIVATION);
+        handleProvisioningFailure(ProvisioningState.LICENSE_REQUIRED, {
+          authUserId: sessionUser.id,
+          profileFound: true,
+          workspaceFound: true,
+          workspaceId: syncedProfile.workspace_id
+        });
         return;
       }
       
@@ -123,6 +192,7 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
         import('../engines/automationEngine').then(({ automationEngine }) => automationEngine.initialize(appContext));
         import('../presence/PresenceService').then(({ PresenceService }) => PresenceService.initialize(appContext));
 
+        setProvisioningState(ProvisioningState.READY);
         setBootstrap(BootstrapState.READY);
       } catch (err: any) {
         setError(err);
@@ -154,6 +224,7 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
         setAuthState(AuthState.UNAUTHENTICATED);
         logEvent(AuthState.UNAUTHENTICATED);
         setBootstrap(BootstrapState.IDLE);
+        setProvisioningState(ProvisioningState.INITIALIZING);
         return;
       }
 
@@ -172,6 +243,7 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
         setAuthState(AuthState.UNAUTHENTICATED);
         logEvent(AuthState.UNAUTHENTICATED);
         setBootstrap(BootstrapState.IDLE);
+        setProvisioningState(ProvisioningState.INITIALIZING);
         setUser(null);
         setProfile(null);
         setWorkspace(null);
@@ -195,7 +267,7 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
   }, []);
 
   return (
-    <BootstrapContext.Provider value={{ authState, bootstrapState, error }}>
+    <BootstrapContext.Provider value={{ authState, bootstrapState, provisioningState, error, retryProvisioning }}>
       {children}
     </BootstrapContext.Provider>
   );

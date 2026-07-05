@@ -5,7 +5,7 @@ import { useWorkspace } from "../context/WorkspaceContext";
 import { useAuth } from "../context/AuthContext";
 import { useOperationalData } from "../context/OperationalDataContext";
 import { useBootstrap } from "../core/lifecycle/BootstrapOrchestrator";
-import { AuthState, BootstrapState } from "../core/lifecycle/types";
+import { AuthState, BootstrapState, ProvisioningState } from "../core/lifecycle/types";
 import { canAccessRoute } from "../core/auth/permissions";
 import type { UserRole } from "../types";
 import {
@@ -17,7 +17,7 @@ import DashboardLayout from "../pages/dashboard/DashboardLayout";
 import { Login } from "../components/auth/Login";
 import { PasswordSetup } from "../components/auth/PasswordSetup";
 import { ResetPassword } from "../components/auth/ResetPassword";
-import { ProductKeyGate } from "../components/auth/ProductKeyGate";
+import { ProvisioningGate } from "../components/auth/ProvisioningGate";
 import { isProductKeyVerified, checkLicenseOnline } from "../lib/productKey";
 import { ResolveBootScreen } from "../components/common/ResolveBootScreen";
 import {
@@ -367,7 +367,7 @@ function RouteShell({ children }: { children: React.ReactNode }) {
 export function ResolveRouter() {
   const rawPathname = usePathname();
   const pathname = normalizePath(rawPathname);
-  const { authState, bootstrapState } = useBootstrap();
+  const { authState, bootstrapState, provisioningState } = useBootstrap();
   const { user, profile } = useAuth();
   const { workspace } = useWorkspace();
 
@@ -378,9 +378,8 @@ export function ResolveRouter() {
     if (
       bootstrapState === BootstrapState.READY ||
       bootstrapState === BootstrapState.ERROR ||
-      bootstrapState === BootstrapState.LICENSE_ACTIVATION ||
-      bootstrapState === BootstrapState.PENDING_ONBOARDING ||
-      authState === AuthState.UNAUTHENTICATED
+      authState === AuthState.UNAUTHENTICATED ||
+      (provisioningState !== ProvisioningState.INITIALIZING && provisioningState !== ProvisioningState.READY)
     ) {
       setFadeBootScreen(true);
     }
@@ -438,7 +437,8 @@ export function ResolveRouter() {
       bootstrapState === BootstrapState.VALIDATING_LICENSE ||
       bootstrapState === BootstrapState.INITIALIZING_SERVICES ||
       authState === AuthState.BOOTING ||
-      authState === AuthState.AUTHENTICATING
+      authState === AuthState.AUTHENTICATING ||
+      (bootstrapState === BootstrapState.READY && provisioningState === ProvisioningState.INITIALIZING)
     ) {
       return (
         <div className="flex h-screen w-screen items-center justify-center bg-surface">
@@ -447,20 +447,12 @@ export function ResolveRouter() {
       );
     }
 
-    // User authenticated but needs onboarding
-    if (bootstrapState === BootstrapState.PENDING_ONBOARDING) {
-      return <WorkspaceSetupWizard />;
-    }
-
-    // User authenticated, workspace resolved, but license invalid
-    if (bootstrapState === BootstrapState.LICENSE_ACTIVATION) {
-      return (
-        <ProductKeyGate
-          onVerified={() => {
-            window.location.reload(); // Hard reload to restart FSM
-          }}
-        />
-      );
+    // User authenticated but provisioning failed
+    if (provisioningState !== ProvisioningState.INITIALIZING && provisioningState !== ProvisioningState.READY) {
+      // NOTE: We could still route to WorkspaceSetupWizard for new owners, 
+      // but according to the new requirements, we route them to the ProvisioningGate.
+      // If we still need to allow workspace creation, they can click "Enter Product Key".
+      return <ProvisioningGate state={provisioningState} />;
     }
 
     // We must be READY at this point
