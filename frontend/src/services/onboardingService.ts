@@ -30,12 +30,16 @@ class OnboardingService {
         .maybeSingle();
 
       if (error) {
+        if (error.code === 'PGRST205' || error.code === '404' || error.message.includes('not found') || error.message.includes('Could not find')) {
+          console.warn('[onboardingService] Table missing or inaccessible. Falling back to default state.', error.message);
+          return null; // Safe fallback
+        }
         console.warn('[onboardingService] getState error:', error.message);
         return null;
       }
       return data as WorkspaceOnboardingState | null;
     } catch (err) {
-      console.error('[onboardingService] getState failed:', err);
+      console.warn('[onboardingService] getState failed:', err);
       return null;
     }
   }
@@ -66,8 +70,12 @@ class OnboardingService {
           },
           { onConflict: 'workspace_id' }
         );
+        
+      if (error) {
+        console.warn('[onboardingService] markStep upsert error (ignored):', error.message);
+      }
     } catch (err) {
-      console.error('[onboardingService] markStep failed:', err);
+      console.warn('[onboardingService] markStep failed (ignored):', err);
     }
   }
 
@@ -89,8 +97,11 @@ class OnboardingService {
           },
           { onConflict: 'workspace_id' }
         );
+      if (error) {
+        console.warn('[onboardingService] saveTemplates upsert error (ignored):', error.message);
+      }
     } catch (err) {
-      console.error('[onboardingService] saveTemplates failed:', err);
+      console.warn('[onboardingService] saveTemplates failed (ignored):', err);
     }
   }
 
@@ -110,8 +121,11 @@ class OnboardingService {
           },
           { onConflict: 'workspace_id' }
         );
+      if (error) {
+        console.warn('[onboardingService] completeSetup upsert error (ignored):', error.message);
+      }
     } catch (err) {
-      console.error('[onboardingService] completeSetup failed:', err);
+      console.warn('[onboardingService] completeSetup failed (ignored):', err);
     }
   }
 

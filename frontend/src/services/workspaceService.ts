@@ -215,12 +215,26 @@ export async function createWorkspaceForUser({ name, settings, user, templateId,
     ...settingsToWorkspaceRow(settings)
   };
 
+  let workspaceRow = workspaceData;
+
   const { error: workspaceError } = await supabase
     .from('workspaces')
     .insert(workspaceData);
 
-  if (workspaceError) throw workspaceError;
-  const workspaceRow = workspaceData;
+  if (workspaceError) {
+    if (workspaceError.code === '23505' && workspaceError.message.includes('idx_single_workspace_per_owner')) {
+      const { data: existingWs, error: fetchError } = await supabase
+        .from('workspaces')
+        .select('*')
+        .eq('created_by_id', validOwnerId)
+        .single();
+      
+      if (fetchError || !existingWs) throw workspaceError;
+      workspaceRow = existingWs as any;
+    } else {
+      throw workspaceError;
+    }
+  }
 
   const email = user.email || authData.user?.email || '';
   const fullName = user.user_metadata?.full_name || user.user_metadata?.name || authData.user?.user_metadata?.full_name || email.split('@')[0] || 'Workspace Owner';
