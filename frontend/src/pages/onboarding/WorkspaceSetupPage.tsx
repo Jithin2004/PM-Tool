@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Check, Plus, X, Layers, GitBranch, Users, Hash, BadgeCheck, CalendarDays } from 'lucide-react';
 import { BUSINESS_TYPES, WORKFLOW_TEMPLATES, getTemplatesForBusiness, EXECUTION_MODES } from '../../constants/product';
 import type { WorkflowTemplate } from '../../constants/product';
@@ -11,6 +11,8 @@ import { ResolveLayout } from '../../app/layouts/ResolveLayout';
 import { supabase } from '../../lib/supabase';
 import { COUNTRIES, getCountryByCode } from '../../data/countries';
 import type { DerivedHoliday } from '../../utils/holidays';
+import { activateLicenseKey } from '../../lib/productKey';
+import { sha256 } from '../../utils/cryptoUtils';
 
 const WORKDAYS = [
   { value: 1, label: 'Mon' },
@@ -55,6 +57,55 @@ export function WorkspaceSetupPage() {
   const [previewHolidays, setPreviewHolidays] = useState<DerivedHoliday[]>([]);
   const [ignoredHolidayDates, setIgnoredHolidayDates] = useState<Set<string>>(new Set());
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  const attachLicenseIfPending = async (workspaceId: string): Promise<boolean> => {
+    try {
+      const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
+      if (!pendingStr) return true;
+
+      const parsed = JSON.parse(pendingStr);
+      const productKeyStr = parsed.productKey || parsed.licenseId || 'OFFLINE-LICENSE';
+      const rawPlan = (parsed.plan || '').toLowerCase();
+      const planType = rawPlan === 'enterprise' ? 'enterprise' : rawPlan === 'premium' ? 'premium' : 'standard';
+      const seats = parsed.seats || 10;
+      const validatedAt = parsed.validatedAt || new Date().toISOString();
+      const supportExpiryDate = parsed.supportExpiry ? new Date(parsed.supportExpiry).toISOString() : null;
+
+      if (productKeyStr !== 'OFFLINE-LICENSE') {
+        const activationResult = await activateLicenseKey(productKeyStr, workspaceId);
+        if (!activationResult.success) {
+          console.error('Backend activation failed:', activationResult.error);
+          return false;
+        }
+      }
+
+      const hashedKey = await sha256(productKeyStr);
+      const { data: existingLicense } = await supabase.from('workspace_license').select('*').eq('workspace_id', workspaceId).maybeSingle();
+
+      if (existingLicense) {
+        await supabase.from('workspace_license').update({
+          license_key_hash: hashedKey,
+          activation_date: validatedAt,
+          allowed_users: seats,
+          license_type: planType,
+          support_until: supportExpiryDate
+        }).eq('workspace_id', workspaceId);
+      } else {
+        await supabase.from('workspace_license').insert({
+          workspace_id: workspaceId,
+          license_key_hash: hashedKey,
+          activation_date: validatedAt,
+          allowed_users: seats,
+          license_type: planType,
+          support_until: supportExpiryDate
+        });
+      }
+      return true;
+    } catch (err) {
+      console.error('Failed to attach license:', err);
+      return false;
+    }
+  };
 
   useEffect(() => {
     if (window.location.pathname !== '/onboarding/workspace') {
@@ -129,6 +180,16 @@ export function WorkspaceSetupPage() {
               .in('id', idsToRemove);
           }
         }
+      }
+
+      if (wsId) {
+        const licenseSuccess = await attachLicenseIfPending(wsId);
+        if (!licenseSuccess) {
+          setLocalError("Workspace created but license activation failed. Please retry activation.");
+          setSaving(false);
+          return;
+        }
+        sessionStorage.removeItem('pendingLicenseActivation');
       }
 
       setStep(6);

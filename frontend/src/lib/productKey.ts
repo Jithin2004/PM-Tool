@@ -433,7 +433,13 @@ export async function checkLicenseOnline(workspaceId: string): Promise<{ valid: 
   try {
     const { data: license, error } = await supabase.from('workspace_license').select('*').eq('workspace_id', workspaceId).limit(1).maybeSingle();
     
-    if (error || !license) {
+    if (error) {
+      console.error('[checkLicenseOnline] Supabase error:', error);
+      memoryLicense = null;
+      return { valid: false, offline: false, error: `DB Error: ${error.message}` };
+    }
+    
+    if (!license) {
       memoryLicense = null;
       return { valid: false, offline: false, error: 'No license key activated in database.' };
     }
