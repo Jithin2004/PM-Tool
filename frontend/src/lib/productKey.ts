@@ -429,9 +429,9 @@ export async function validateWorkspaceLicenseUpdate(productKey: string, current
 }
 
 // ── Background online license check ──────────────────────────────────────────
-export async function checkLicenseOnline(): Promise<{ valid: boolean; offline: boolean; error?: string }> {
+export async function checkLicenseOnline(workspaceId: string): Promise<{ valid: boolean; offline: boolean; error?: string }> {
   try {
-    const { data: license, error } = await supabase.from('workspace_license').select('*').limit(1).maybeSingle();
+    const { data: license, error } = await supabase.from('workspace_license').select('*').eq('workspace_id', workspaceId).limit(1).maybeSingle();
     
     if (error || !license) {
       memoryLicense = null;

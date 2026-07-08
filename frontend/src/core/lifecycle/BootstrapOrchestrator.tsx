@@ -143,8 +143,11 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
       // 5. Validate Product License
       setBootstrap(BootstrapState.VALIDATING_LICENSE);
       try {
-        const res = await checkLicenseOnline();
+        console.log('[Bootstrap] Validating license for workspace:', syncedProfile.workspace_id);
+        const res = await checkLicenseOnline(syncedProfile.workspace_id);
+        console.log('[Bootstrap] License validation result:', res);
         if (!res.valid) {
+          console.error('[Bootstrap] License invalid, setting LICENSE_REQUIRED', res);
           handleProvisioningFailure(ProvisioningState.LICENSE_REQUIRED, {
             authUserId: sessionUser.id,
             profileFound: true,

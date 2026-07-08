@@ -84,6 +84,7 @@ export function WorkspaceSetupWizard() {
 
       let queryResult;
       if (existingLicense) {
+        console.log('[WorkspaceSetup] Updating existing license for workspace', workspaceId);
         queryResult = await supabase
           .from('workspace_license')
           .update({
@@ -95,6 +96,7 @@ export function WorkspaceSetupWizard() {
           })
           .eq('workspace_id', workspaceId);
       } else {
+        console.log('[WorkspaceSetup] Inserting new license for workspace', workspaceId);
         queryResult = await supabase
           .from('workspace_license')
           .insert({
@@ -107,6 +109,7 @@ export function WorkspaceSetupWizard() {
           });
       }
 
+      console.log('[WorkspaceSetup] License attach result:', queryResult);
       if (queryResult.error) {
         console.error('License attachment query error:', queryResult.error);
         return false;
