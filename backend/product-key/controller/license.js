@@ -234,8 +234,8 @@ exports.verifyLicense = async (req, res) => {
             return res.status(403).json({ valid: false, isUsed: true, message: 'License key has already been activated' });
         }
 
-        // 3. If license exists but is not ACTIVE (e.g. REVOKED), exit cleanly
-        if (license.status !== 'ACTIVE') {
+        // 3. If license exists but is not ACTIVE or AVAILABLE (e.g. REVOKED), exit cleanly
+        if (license.status !== 'ACTIVE' && license.status !== 'AVAILABLE') {
             try {
                 await AuditEvent.create({
                     event_type: 'verification_failed',
