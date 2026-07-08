@@ -8,6 +8,8 @@ import { useAuth } from '../../context/AuthContext';
 import { hasCapability } from '../../core/auth/permissions';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { Users } from 'lucide-react';
+import { navigate } from '../../lib/navigation';
+
 
 export default function TeamsPage() {
   const { profile } = useAuth();
@@ -34,10 +36,7 @@ export default function TeamsPage() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const navigateTo = (path: string) => {
-    window.history.pushState(null, '', path);
-    window.dispatchEvent(new CustomEvent('popstate'));
-  };
+  
 
   const onboardedMembersCount = raw.profiles.filter(p => 
     p.id !== profile?.id && 
@@ -98,7 +97,7 @@ export default function TeamsPage() {
                title="Build Your Team"
                description="No employees have joined this workspace yet. Invite your first team member to unlock Team Directory, Capacity Planning, Skills Matrix and Workload Analytics."
                action={
-                 <button onClick={() => navigateTo('/admin/identity')} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                 <button onClick={() => navigate('/admin/identity')} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors">
                    Invite Teammates
                  </button>
                }

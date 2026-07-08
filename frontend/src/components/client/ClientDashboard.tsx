@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { LogOut, FolderKanban, CheckCircle2, Clock, Inbox, ShieldCheck } from 'lucide-react';
+import { navigate } from '../../lib/navigation';
+
 
 interface Task {
   id: string;
@@ -103,7 +105,7 @@ export const ClientDashboard: React.FC = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/';
+    navigate('/');
   };
 
   if (loading) {

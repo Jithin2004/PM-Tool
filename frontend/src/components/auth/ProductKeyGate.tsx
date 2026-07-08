@@ -4,6 +4,7 @@ import { Shield, CheckCircle, XCircle, Loader, AlertCircle, KeyRound } from 'luc
 import { validateNewActivationKey } from '../../lib/productKey';
 import { showAlert } from '../../components/common/Dialogs';
 import { useAuth } from '../../context/AuthContext';
+import { navigate } from '../../lib/navigation';
 
 interface ProductKeyGateProps {
   onVerified: () => void;
@@ -24,7 +25,7 @@ export function ProductKeyGate({ onVerified }: ProductKeyGateProps) {
     if (user && logout) {
       await logout();
     }
-    window.location.href = '/';
+    navigate('/');
   };
 
   // Signup Form State

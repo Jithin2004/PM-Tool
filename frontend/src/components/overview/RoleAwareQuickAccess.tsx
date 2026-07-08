@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { CheckSquare, LayoutDashboard, KanbanSquare, ListTodo, AlertTriangle, MessageSquare, Users, Clock, DollarSign, FileText, ShieldCheck, TrendingUp, Activity, Bell, Target, Play } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { hasCapability } from '../../core/auth/permissions';
+import { navigate } from '../../lib/navigation';
+
 
 interface RoleSection {
   icon: React.ElementType;
@@ -13,10 +15,7 @@ interface RoleSection {
   bgColor: string;
 }
 
-function navigateTo(path: string) {
-  window.history.pushState(null, '', path);
-  window.dispatchEvent(new CustomEvent('popstate'));
-}
+
 
 function RoleCard({ section }: { section: RoleSection }) {
   const Icon = section.icon;
@@ -24,7 +23,7 @@ function RoleCard({ section }: { section: RoleSection }) {
     <motion.button
       whileHover={{ scale: 1.02, y: -2 }}
       whileTap={{ scale: 0.98 }}
-      onClick={() => navigateTo(section.path)}
+      onClick={() => navigate(section.path)}
       className="flex flex-col items-start p-4 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-glass)] hover:bg-[var(--surface-hover)] hover:border-indigo-500/30 transition-all text-left w-full group"
     >
       <div className={`w-9 h-9 rounded-lg ${section.bgColor} flex items-center justify-center mb-3`}>

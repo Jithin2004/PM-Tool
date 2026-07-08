@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
 import { supabase } from '../../lib/supabase';
 import { Check, X, Shield, Lock, Briefcase, Building } from 'lucide-react';
+import { navigate } from '../../lib/navigation';
+
 
 export function AcceptInvitePage() {
   const token = window.location.pathname.split('/accept-invite/')[1];
@@ -118,7 +120,7 @@ export function AcceptInvitePage() {
       setSuccess(true);
 
       setTimeout(() => {
-        window.location.href = '/overview';
+        navigate('/overview');
       }, 2000);
 
     } catch (err: any) {

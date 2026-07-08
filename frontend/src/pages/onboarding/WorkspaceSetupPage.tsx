@@ -13,6 +13,8 @@ import { COUNTRIES, getCountryByCode } from '../../data/countries';
 import type { DerivedHoliday } from '../../utils/holidays';
 import { activateLicenseKey } from '../../lib/productKey';
 import { sha256 } from '../../utils/cryptoUtils';
+import { navigate, replace } from '../../lib/navigation';
+
 
 const WORKDAYS = [
   { value: 1, label: 'Mon' },
@@ -37,8 +39,7 @@ const DEFAULT_SETTINGS: WorkspaceSettings = {
   saturdayRule: 'off'
 };
 function navigate(path: string) {
-  window.history.pushState({}, '', path);
-  window.dispatchEvent(new PopStateEvent('popstate'));
+  navigate(path);
 }
 
 export function WorkspaceSetupPage() {
@@ -109,8 +110,7 @@ export function WorkspaceSetupPage() {
 
   useEffect(() => {
     if (window.location.pathname !== '/onboarding/workspace') {
-      window.history.replaceState(null, '', '/onboarding/workspace');
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      replace('/onboarding/workspace');
     }
   }, []);
 

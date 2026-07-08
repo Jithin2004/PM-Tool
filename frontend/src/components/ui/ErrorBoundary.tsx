@@ -1,6 +1,8 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { observabilityService } from '../../services/observabilityService';
+import { navigate, reload } from '../../lib/navigation';
+
 
 interface Props {
   children: ReactNode;
@@ -54,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 onClick={() => {
                   this.setState({ hasError: false, error: null });
-                  window.location.reload();
+                  reload();
                 }}
                 className="w-full sm:w-auto px-6 py-2.5 bg-surface-3 hover:bg-surface-4 text-text-primary text-xs font-bold uppercase tracking-widest rounded-lg transition-colors border border-border flex items-center justify-center gap-2 cursor-pointer"
               >
@@ -64,7 +66,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <button
                 onClick={() => {
                   this.setState({ hasError: false, error: null });
-                  window.location.href = '/workspace';
+                  navigate('/workspace');
                 }}
                 className="w-full sm:w-auto px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/90 text-[var(--pm-text)] text-[var(--text-primary)] text-xs font-bold uppercase tracking-widest rounded-lg transition-colors shadow-lg shadow-accent-primary/20 flex items-center justify-center gap-2 cursor-pointer"
               >

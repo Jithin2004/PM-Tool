@@ -7,6 +7,8 @@ import {
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { activityLogService } from '../../services/activityLogService';
+import { navigate } from '../../lib/navigation';
+
 
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return '';
@@ -120,8 +122,7 @@ export default function DocumentView() {
   };
 
   const handleBack = () => {
-    window.history.pushState(null, '', '/workspace/knowledge');
-    window.dispatchEvent(new CustomEvent('popstate'));
+    navigate('/workspace/knowledge');
   };
 
   if (loading) return (

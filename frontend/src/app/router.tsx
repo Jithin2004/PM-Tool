@@ -8,6 +8,7 @@ import { useBootstrap } from "../core/lifecycle/BootstrapOrchestrator";
 import { AuthState, BootstrapState, ProvisioningState } from "../core/lifecycle/types";
 import { canAccessRoute } from "../core/auth/permissions";
 import type { UserRole } from "../types";
+import { replace, reload, back } from "../lib/navigation";
 import {
   consumeRedirectToAfterAuth,
   resolveAuthenticatedDestination,
@@ -53,7 +54,7 @@ const withRetry = (componentImport: () => Promise<any>) => {
             "chunk_reload_count",
             (reloadCount + 1).toString(),
           );
-          window.location.reload();
+          reload();
           return { default: () => <RouteFallback /> };
         }
       }
@@ -77,6 +78,11 @@ const WorkspaceSetupWizard = withRetry(() =>
 const AcceptInvitePage = withRetry(() =>
   import("../pages/onboarding/AcceptInvitePage").then((m) => ({
     default: m.AcceptInvitePage,
+  })),
+);
+const ProductKeyGatePageLazy = withRetry(() =>
+  import("../pages/onboarding/ProductKeyPage").then((m) => ({
+    default: m.ProductKeyPage,
   })),
 );
 import { LandingPage } from "../landing/LandingPage";
@@ -258,7 +264,7 @@ function NotFound() {
           The route you are trying to access does not exist or has been moved.
         </p>
         <button
-          onClick={() => redirectTo("/overview")}
+          onClick={() => replace("/overview")}
           className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-500 hover:bg-indigo-600 text-white"
         >
           Return to Dashboard
@@ -302,13 +308,13 @@ function AccessRestricted() {
       </p>
       <div className="flex items-center gap-4">
         <button
-          onClick={() => window.history.back()}
+          onClick={() => back()}
           className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors border border-[var(--border-soft)] bg-[var(--surface-glass)] hover:bg-[var(--surface-hover)] text-white"
         >
           Go Back
         </button>
         <button
-          onClick={() => redirectTo("/overview")}
+          onClick={() => replace("/overview")}
           className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-500 hover:bg-indigo-600 text-white"
         >
           Return to Dashboard
@@ -340,14 +346,9 @@ function usePathname() {
   return pathname;
 }
 
-function redirectTo(target: string): void {
-  window.history.replaceState(null, "", target);
-  window.dispatchEvent(new CustomEvent("popstate"));
-}
-
 function Redirect({ to }: { to: string }) {
   useEffect(() => {
-    redirectTo(to);
+    replace(to);
   }, [to]);
   return null;
 }
@@ -401,7 +402,7 @@ export function ResolveRouter() {
     const destination = resolveAuthenticatedDestination(role, !!workspace, stored);
     const target = normalizePath(destination);
     if (target !== pathname) {
-      redirectTo(target);
+      replace(target);
     }
   }, [bootstrapState, user, profile, role, workspace, pathname]);
 
@@ -415,6 +416,8 @@ export function ResolveRouter() {
     if (pathname === "/compliance") return <CompliancePage />;
     if (pathname === "/security") return <SecurityPage />;
     if (pathname === "/reset-password") return <ResetPassword />;
+    if (pathname === "/activate-license") return <Redirect to="/provisioning/product-key" />;
+    if (pathname === "/provisioning/product-key") return <ProductKeyGatePageLazy />;
 
     // ── FSM Routing ──
     if (authState === AuthState.UNAUTHENTICATED) {

@@ -4,6 +4,8 @@ import { Activity, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { loginWithPassword } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
+import { navigate } from '../../lib/navigation';
+
 
 function getErrorParam(): string | null {
   const params = new URLSearchParams(window.location.search);
@@ -91,7 +93,7 @@ export function Login() {
                 <button onClick={() => setError(null)} className="w-full btn-premium-primary h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all shadow-sm">
                   Try Again
                 </button>
-                <button onClick={() => window.location.href = 'mailto:admin@example.com?subject=Request Access'} className="w-full btn-premium-secondary text-white border border-[var(--border-soft)] h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all">
+                <button onClick={() => navigate('mailto:admin@example.com?subject=Request Access')} className="w-full btn-premium-secondary text-white border border-[var(--border-soft)] h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all">
                   Request Invitation
                 </button>
                 <a href="/" className="w-full bg-transparent hover:bg-[var(--surface-hover)] text-[var(--text-secondary)] h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all">
@@ -113,6 +115,7 @@ export function Login() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="username"
                     className="w-full h-12 bg-[var(--surface-glass)] border border-[var(--border-soft)] rounded-xl px-4 text-white focus:outline-none focus:border-indigo-500 transition-colors"
                     placeholder="Enter your email"
                     required
@@ -124,6 +127,7 @@ export function Login() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
                     className="w-full h-12 bg-[var(--surface-glass)] border border-[var(--border-soft)] rounded-xl px-4 text-white focus:outline-none focus:border-indigo-500 transition-colors"
                     placeholder="Enter your password"
                     required

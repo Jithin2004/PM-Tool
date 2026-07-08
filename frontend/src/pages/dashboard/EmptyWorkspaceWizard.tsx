@@ -1,10 +1,11 @@
 import React from 'react';
 import { Rocket, Users, Target, CheckCircle2 } from 'lucide-react';
+import { navigate } from '../../lib/navigation';
+
 
 export function EmptyWorkspaceWizard() {
   const navigate = (path: string) => {
-    window.history.pushState(null, '', path);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(path);
   };
 
   return (

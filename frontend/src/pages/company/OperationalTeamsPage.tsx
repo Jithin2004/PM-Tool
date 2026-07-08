@@ -5,6 +5,8 @@ import { hasCapability } from '../../core/auth/permissions';
 import { TeamCard } from '../../components/team/TeamCard';
 import { CreateTeamModal } from '../../components/team/CreateTeamModal';
 import { Plus, Search, Users, ShieldAlert, LayoutGrid } from 'lucide-react';
+import { navigate } from '../../lib/navigation';
+
 
 export default function OperationalTeamsPage() {
   const { profile } = useAuth();
@@ -23,8 +25,7 @@ export default function OperationalTeamsPage() {
   }, [teams, searchQuery]);
 
   const handleTeamClick = (teamId: string) => {
-    window.history.pushState(null, '', `/company/teams/${teamId}`);
-    window.dispatchEvent(new CustomEvent('popstate'));
+    navigate(`/company/teams/${teamId}`);
   };
 
   if (!hasCapability(profile?.role, 'people.view')) {

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useBootstrap } from '../core/lifecycle/BootstrapOrchestrator';
 import { AuthState, BootstrapState } from '../core/lifecycle/types';
-import { navigateTo, resolveAuthenticatedDestination } from '../core/auth/postAuthRedirect';
+import {  resolveAuthenticatedDestination } from '../core/auth/postAuthRedirect';
 import { LiveCommandCenterSimulation } from './LiveCommandCenterSimulation';
 import { 
   CheckCircle2, Box, CalendarClock, MessageSquare, Briefcase, 
@@ -12,6 +12,7 @@ import {
   BarChart2, Users, Receipt
 } from 'lucide-react';
 import { CommercialRequestModal } from './components/CommercialRequestModal';
+import { navigate } from '../lib/navigation';
 
 export function LandingPage() {
   const verified = isProductKeyVerified() || !!useAuth().user;
@@ -59,7 +60,7 @@ export function LandingPage() {
     if (bootstrapState !== BootstrapState.READY && profile!.role !== 'pending-workspace-setup' && !workspace) {
       return;
     }
-    navigateTo(destination, true);
+    navigate(destination, true);
   }, [hasSession, profile, workspace, bootstrapState]);
 
   return (

@@ -27,6 +27,8 @@ import { OnboardingChecklist } from '../../components/onboarding/OnboardingCheck
 import { hasAuthority, hasFunction, hasCapability } from '../../core/auth/permissions';
 import { KanbanSquare, Users, Building2, Settings, Target, ListTodo, Calendar, Banknote, BarChart3, Play, MessageSquare, Rocket, ChevronRight, Activity, ActivitySquare } from 'lucide-react';
 import { TiltCard } from '../../components/ui/TiltCard';
+import { navigate } from '../../lib/navigation';
+
 
 function MissionControlContent() {
   const { profile } = useAuth();
@@ -34,10 +36,7 @@ function MissionControlContent() {
   const { raw } = useOperationalData();
   const [view, setView] = useState<MissionControlView>('strategic');
 
-  const navigateTo = (path: string) => {
-    window.history.pushState(null, '', path);
-    window.dispatchEvent(new CustomEvent('popstate'));
-  };
+  
 
   const presence = useOperationalPresence({
     userId: profile?.id || '',
@@ -219,7 +218,7 @@ function MissionControlContent() {
                   </div>
                 </TiltCard>
 
-                <TiltCard onClick={() => navigateTo('/resources/teams')}>
+                <TiltCard onClick={() => navigate('/resources/teams')}>
                   <div className="flex flex-col items-center gap-4 p-8 text-center h-full justify-center">
                     <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-2">
                       <Users className="w-6 h-6 text-emerald-400" />
@@ -231,7 +230,7 @@ function MissionControlContent() {
                   </div>
                 </TiltCard>
 
-                <TiltCard onClick={() => navigateTo('/control/settings')}>
+                <TiltCard onClick={() => navigate('/control/settings')}>
                   <div className="flex flex-col items-center gap-4 p-8 text-center h-full justify-center">
                     <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-2">
                       <Settings className="w-6 h-6 text-amber-400" />

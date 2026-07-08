@@ -9,6 +9,8 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { BookOpen, Search, Plus, FileText, Clock, Archive, Pin, Trash2, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { navigate } from '../../lib/navigation';
+
 
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return '';
@@ -93,8 +95,7 @@ export default function KnowledgeBase() {
   };
 
   const handleOpenDoc = (docId: string) => {
-    window.history.pushState(null, '', `/workspace/knowledge/${docId}`);
-    window.dispatchEvent(new CustomEvent('popstate'));
+    navigate(`/workspace/knowledge/${docId}`);
   };
 
   const switchTab = (t: 'active' | 'archived') => {

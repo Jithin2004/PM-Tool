@@ -6,6 +6,8 @@ import { Coffee, AlertCircle, ArrowRight, ShieldAlert, Clock, CheckCircle2, Refr
 import { supabase } from '../../lib/supabase';
 import { generatePriorityExplanation } from '../../core/intelligence/PriorityExplanationEngine';
 import { PriorityExplanationBadge } from '../ui/PriorityExplanationBadge';
+import { navigate } from '../../lib/navigation';
+
 
 export function ContinuityPanel() {
   const { profile, user } = useAuth();
@@ -56,11 +58,7 @@ export function ContinuityPanel() {
     return null; // Do not show if no significant absence or still loading
   }
 
-  const navigateTo = (path?: string) => {
-    if (!path) return;
-    window.history.pushState(null, '', path);
-    window.dispatchEvent(new Event('popstate'));
-  };
+  
 
   return (
     <div className="mb-8 border border-border rounded-xl overflow-hidden bg-surface-2 shadow-sm font-geist">
@@ -135,7 +133,7 @@ export function ContinuityPanel() {
                   key={r.id} 
                   className={`p-3 rounded-lg border bg-surface-highest transition-colors cursor-pointer hover:bg-[var(--pm-surface-hover)]
                     ${i === 0 ? 'border-accent-primary/50 bg-accent-primary/5 shadow-sm' : 'border-border'}`}
-                  onClick={() => navigateTo(r.type === 'blocker_others' ? '/workspace/approvals' : '/execution/board')}
+                  onClick={() => navigate(r.type === 'blocker_others' ? '/workspace/approvals' : '/execution/board')}
                 >
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold

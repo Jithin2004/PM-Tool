@@ -1,7 +1,7 @@
 import { canAccessRoute, getAuthorityRank } from './permissions';
 import { isRegisteredPath, normalizePath } from '../../app/routeRegistry';
 import type { UserRole } from '../../types';
-
+import { navigate, replace as navReplace } from '../../lib/navigation';
 const STORAGE_KEY = 'resolve.redirect.after.auth';
 const DEFAULT_ENTRY = '/overview';
 
@@ -88,9 +88,8 @@ export function resolveAuthenticatedDestination(
 export function navigateTo(path: string, replace = true): void {
   if (typeof window === 'undefined') return;
   if (replace) {
-    window.history.replaceState(null, '', path);
+    navReplace(path);
   } else {
-    window.history.pushState(null, '', path);
+    navigate(path);
   }
-  window.dispatchEvent(new Event('popstate'));
 }

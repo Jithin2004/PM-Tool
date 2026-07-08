@@ -6,6 +6,8 @@ import { getLicenseInfo, clearLicense, validateWorkspaceLicenseUpdate } from '..
 import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 import { supabase } from '../../lib/supabase';
 import { sha256 } from '../../utils/cryptoUtils';
+import { reload } from '../../lib/navigation';
+
 
 export function BillingSettings() {
   const { workspace } = useWorkspace();
@@ -109,7 +111,7 @@ export function BillingSettings() {
 
       if (dbError) throw new Error('Failed to attach license to workspace.');
 
-      window.location.reload();
+      reload();
 
     } catch (err: any) {
       setKeyError(err.message || 'License validation failed.');

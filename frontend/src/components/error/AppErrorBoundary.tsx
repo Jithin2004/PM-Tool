@@ -1,5 +1,7 @@
 import React, { Component, ErrorInfo } from 'react';
 import { AlertTriangle, RefreshCw, Home, ShieldAlert } from 'lucide-react';
+import { navigate, reload } from '../../lib/navigation';
+
 
 interface Props {
   children: React.ReactNode;
@@ -28,11 +30,11 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   private handleReload = () => {
-    window.location.reload();
+    reload();
   };
 
   private handleGoDashboard = () => {
-    window.location.href = '/';
+    navigate('/');
   };
 
   public render() {

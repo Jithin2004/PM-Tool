@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { AlertTriangle, KeyRound, ArrowLeft } from 'lucide-react';
 import { sendPasswordReset } from '../../services/authService';
+import { navigate } from '../../lib/navigation';
+
 
 export function ResetPassword() {
   const [email, setEmail] = useState('');
@@ -59,7 +61,7 @@ export function ResetPassword() {
                 We've sent a password reset link to <strong>{email}</strong>. Please check your inbox and spam folder.
               </p>
               
-              <button onClick={() => window.location.href = '/login'} className="w-full btn-premium-primary h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all shadow-sm">
+              <button onClick={() => navigate('/login')} className="w-full btn-premium-primary h-10 flex items-center justify-center rounded-lg font-semibold uppercase tracking-wide text-xs transition-all shadow-sm">
                 Return to Login
               </button>
             </div>

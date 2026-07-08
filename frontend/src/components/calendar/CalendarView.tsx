@@ -10,12 +10,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { hasCapability } from '../../core/auth/permissions';
 import { showConfirm } from '../../components/common/Dialogs';
+import { navigate } from '../../lib/navigation';
+
 
 /** App-wide navigation helper (matches the custom ResolveRouter pattern). */
-function navigateTo(path: string) {
-  window.history.pushState(null, '', path);
-  window.dispatchEvent(new Event('popstate'));
-}
+
 
 interface EventFormData {
   summary: string;
@@ -174,16 +173,16 @@ export function CalendarView() {
       switch (v.source) {
         case 'task':
           // Tasks live in the project board — navigate to project board
-          if (v.meta.project_id) navigateTo(`/projects/${v.meta.project_id}/board`);
+          if (v.meta.project_id) navigate(`/projects/${v.meta.project_id}/board`);
           break;
         case 'milestone':
-          if (v.meta.project_id) navigateTo(`/projects/${v.meta.project_id}/board`);
+          if (v.meta.project_id) navigate(`/projects/${v.meta.project_id}/board`);
           break;
         case 'sprint':
-          if (v.meta.project_id) navigateTo(`/projects/${v.meta.project_id}/sprints`);
+          if (v.meta.project_id) navigate(`/projects/${v.meta.project_id}/sprints`);
           break;
         case 'project':
-          navigateTo(`/projects/${v.source_id}/board`);
+          navigate(`/projects/${v.source_id}/board`);
           break;
         default:
           break;

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { CheckCircle2, Circle, Rocket, X } from 'lucide-react';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { navigate } from '../../lib/navigation';
+
 
 export function GettingStartedHub() {
   const [dismissed, setDismissed] = useState(false);
@@ -56,17 +58,17 @@ export function GettingStartedHub() {
                 </span>
               </div>
               {!item.completed && item.id === 'project' && (
-                <button onClick={() => window.location.href = '/workspace/portfolio'} className="px-3 py-1 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 text-xs font-bold uppercase rounded transition-colors">
+                <button onClick={() => navigate('/workspace/portfolio')} className="px-3 py-1 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 text-xs font-bold uppercase rounded transition-colors">
                   Go Create
                 </button>
               )}
               {!item.completed && item.id === 'invite' && (
-                <button onClick={() => window.location.href = '/resources/teams'} className="px-3 py-1 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 text-xs font-bold uppercase rounded transition-colors">
+                <button onClick={() => navigate('/resources/teams')} className="px-3 py-1 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 text-xs font-bold uppercase rounded transition-colors">
                   Go Invite
                 </button>
               )}
               {!item.completed && item.id === 'task' && (
-                <button onClick={() => window.location.href = '/workspace/portfolio'} className="px-3 py-1 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 text-xs font-bold uppercase rounded transition-colors">
+                <button onClick={() => navigate('/workspace/portfolio')} className="px-3 py-1 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20 text-xs font-bold uppercase rounded transition-colors">
                   Go Add
                 </button>
               )}

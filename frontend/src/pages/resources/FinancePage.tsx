@@ -23,6 +23,8 @@ import { profitabilityService, ProjectProfitability } from '../../services/profi
 import { Icon } from '../../components/ui/Icon';
 import { BillingSettings } from '../../components/control/BillingSettings';
 import FinanceCommandCenter from './FinanceCommandCenter';
+import { navigate } from '../../lib/navigation';
+
 
 export default function FinancePage() {
   const { workspace } = useWorkspace();
@@ -448,7 +450,7 @@ export default function FinancePage() {
             key={tab.id}
             onClick={() => {
               setActiveTab(tab.id);
-              window.history.pushState(null, '', `?tab=${tab.id}`);
+              navigate(`?tab=${tab.id}`);
             }}
             className={`pb-3 text-sm font-semibold uppercase tracking-wider transition-all relative ${activeTab === tab.id ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-[var(--text-secondary)] hover:text-white'}`}
           >
@@ -851,8 +853,7 @@ export default function FinancePage() {
             <h3 className="text-xl font-bold text-white mb-2">Payroll & Compensation Engine</h3>
             <p className="text-sm text-[var(--text-secondary)] mb-6 max-w-md">Detailed payroll management, tax deductions, and salary disbursement are securely handled in the centralized Logistics module.</p>
             <button onClick={() => {
-              window.history.pushState(null, '', '/resources/payroll');
-              window.dispatchEvent(new CustomEvent('popstate'));
+              navigate('/resources/payroll');
             }} className="btn-premium-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-wider">
               Go to Logistics
             </button>

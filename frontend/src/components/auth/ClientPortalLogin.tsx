@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Mail, ArrowRight, ShieldCheck, Loader2, Lock } from 'lucide-react';
+import { navigate } from '../../lib/navigation';
+
 
 export const ClientPortalLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -22,7 +24,7 @@ export const ClientPortalLogin: React.FC = () => {
       if (authError) throw authError;
 
       // Redirect immediately on success
-      window.location.href = '/client-dashboard';
+      navigate('/client-dashboard');
     } catch (err: any) {
       console.error('Login Error:', err);
       setError(err.message || 'Invalid login credentials. Please try again.');

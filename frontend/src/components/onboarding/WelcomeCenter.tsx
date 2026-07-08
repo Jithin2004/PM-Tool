@@ -3,6 +3,8 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { CheckCircle2, Circle, ArrowRight, Server, Shield, Users, Building2, HardDrive, KanbanSquare } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { navigate } from '../../lib/navigation';
+
 
 export function WelcomeCenter() {
   const { workspace } = useWorkspace();
@@ -56,25 +58,22 @@ export function WelcomeCenter() {
     };
   }, [workspace?.id]);
 
-  const navigateTo = (path: string) => {
-    window.history.pushState(null, '', path);
-    window.dispatchEvent(new CustomEvent('popstate'));
-  };
+  
 
   const handleSetupAction = (actionType: string) => {
     if (actionType === 'company') {
-      navigateTo('/control?tab=profile');
+      navigate('/control?tab=profile');
     } else if (actionType === 'license') {
-      navigateTo('/control?tab=license');
+      navigate('/control?tab=license');
     } else if (actionType === 'backup') {
-      navigateTo('/control?tab=backup');
+      navigate('/control?tab=backup');
     } else if (actionType === 'teams') {
-      navigateTo('/resources/teams');
+      navigate('/resources/teams');
       setTimeout(() => {
         if ((window as any).openTeamRosterModal) (window as any).openTeamRosterModal();
       }, 100);
     } else if (actionType === 'projects') {
-      navigateTo('/workspace');
+      navigate('/workspace');
       setTimeout(() => {
         if ((window as any).openCreateProjectModal) (window as any).openCreateProjectModal();
       }, 100);

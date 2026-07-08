@@ -9,6 +9,8 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { hasCapability } from '../../core/auth/permissions';
+import { navigate } from '../../lib/navigation';
+
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
@@ -37,7 +39,7 @@ export function CreateInvoiceModal({ isOpen, onClose, workspaceId, clients, comp
   const [overrideOverbill, setOverrideOverbill] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
   const [exchangeOverrideReason, setExchangeOverrideReason] = useState('');
-  const navigate = (path: string) => window.location.href = path;
+  const navigate = (path: string) => navigate(path);
   const [invoiceCurrency, setInvoiceCurrency] = useState('USD');
   const [exchangeRate, setExchangeRate] = useState(1);
 

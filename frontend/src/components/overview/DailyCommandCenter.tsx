@@ -5,6 +5,8 @@ import { getDailyIntelligence, DailyIntelligence, ActionableItem, Recommendation
 import { ActivityStream } from '../dashboard/ActivityStream';
 import { ArrowRight, CheckCircle2, Clock, ShieldAlert, Terminal, Play, Flame, Bell, Target, TrendingUp, Activity } from 'lucide-react';
 import { RoleAwareQuickAccess } from './RoleAwareQuickAccess';
+import { navigate } from '../../lib/navigation';
+
 
 export function DailyCommandCenter() {
   const { profile, user } = useAuth();
@@ -80,18 +82,7 @@ export function DailyCommandCenter() {
     );
   }
 
-  const navigateTo = (path: string) => {
-    if (path === 'modal:create-project') {
-      if ((window as any).openCreateProjectModal) (window as any).openCreateProjectModal();
-      return;
-    }
-    if (path === 'modal:invite-members') {
-      if ((window as any).openTeamRosterModal) (window as any).openTeamRosterModal();
-      return;
-    }
-    window.history.pushState(null, '', path);
-    window.dispatchEvent(new Event('popstate'));
-  };
+  
 
   const handleClockIn = async () => {
     setLoadingOps(true);
@@ -171,7 +162,7 @@ export function DailyCommandCenter() {
                   </p>
                   {intel.primaryFocus.actionRoute && (
                     <button
-                      onClick={() => navigateTo(intel.primaryFocus!.actionRoute!)}
+                      onClick={() => navigate(intel.primaryFocus!.actionRoute!)}
                       className="px-4 py-2 text-xs font-semibold rounded bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors inline-flex items-center gap-1.5 shadow-sm"
                     >
                       Take Action <ArrowRight className="w-3 h-3" />
@@ -231,7 +222,7 @@ export function DailyCommandCenter() {
                             {item.subtitle && <p className="text-xs text-text-secondary mt-0.5">{item.subtitle}</p>}
                           </div>
                           <button
-                            onClick={() => navigateTo(item.actionRoute)}
+                            onClick={() => navigate(item.actionRoute)}
                             className="px-3 py-1.5 bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20 text-xs font-semibold rounded transition-colors"
                           >
                             {item.actionLabel}
@@ -265,7 +256,7 @@ export function DailyCommandCenter() {
                             {item.subtitle && <p className="text-xs text-text-secondary mt-0.5">{item.subtitle}</p>}
                           </div>
                           <button
-                            onClick={() => navigateTo(item.actionRoute)}
+                            onClick={() => navigate(item.actionRoute)}
                             className="px-3 py-1.5 bg-surface-3 text-text-primary hover:bg-surface-hover border border-border text-xs font-semibold rounded transition-colors"
                           >
                             {item.actionLabel}
@@ -296,7 +287,7 @@ export function DailyCommandCenter() {
                           <div>
                             <p className="text-xs text-text-secondary">{rec.message}</p>
                             {rec.actionRoute && (
-                              <button onClick={() => navigateTo(rec.actionRoute!)} className="text-[10px] font-semibold text-indigo-400 hover:underline mt-1">
+                              <button onClick={() => navigate(rec.actionRoute!)} className="text-[10px] font-semibold text-indigo-400 hover:underline mt-1">
                                 Review Details
                               </button>
                             )}
@@ -336,7 +327,7 @@ export function DailyCommandCenter() {
                       <Bell className="w-4 h-4 text-accent-primary" />
                       <h2 className="text-sm font-semibold text-text-primary">Actionable Alerts</h2>
                     </div>
-                    <button onClick={() => navigateTo('/workspace/notifications')} className="text-[10px] text-accent-primary hover:underline">View Inbox</button>
+                    <button onClick={() => navigate('/workspace/notifications')} className="text-[10px] text-accent-primary hover:underline">View Inbox</button>
                   </div>
                   <div className="p-0">
                     <ul className="divide-y divide-border-subtle">
@@ -347,7 +338,7 @@ export function DailyCommandCenter() {
                             <p className="text-[10px] text-text-secondary">{notif.message}</p>
                           </div>
                           {notif.action_url && (
-                            <button onClick={() => navigateTo(notif.action_url)} className="text-[10px] bg-accent-primary/10 text-accent-primary px-2 py-1 rounded font-bold h-fit mt-1">Review</button>
+                            <button onClick={() => navigate(notif.action_url)} className="text-[10px] bg-accent-primary/10 text-accent-primary px-2 py-1 rounded font-bold h-fit mt-1">Review</button>
                           )}
                         </li>
                       ))}

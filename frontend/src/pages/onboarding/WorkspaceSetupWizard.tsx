@@ -10,9 +10,9 @@ import { sandboxSeedEngine } from '../../core/engines/sandboxSeedEngine';
 import { clearLicense, activateLicenseKey } from '../../lib/productKey';
 import { supabase } from '../../lib/supabase';
 import { sha256 } from '../../utils/cryptoUtils';
-import { navigateTo } from '../../core/auth/postAuthRedirect';
 import { onboardingService, ONBOARDING_STEPS } from '../../services/onboardingService';
 import { TemplatePreview, OperatingTemplate } from '../../components/setup/TemplatePreview';
+import { navigate } from '../../lib/navigation';
 const TEMPLATE_SUMMARIES: Record<string, { projects: number, milestones: number, tasks: number, members: number, recommendedFor: string }> = {
   'ERP Implementation': { projects: 3, milestones: 12, tasks: 45, members: 8, recommendedFor: 'Enterprise Transformation' },
   'Software Product Launch': { projects: 2, milestones: 8, tasks: 34, members: 5, recommendedFor: 'Product Teams' },
@@ -230,7 +230,7 @@ export function WorkspaceSetupWizard() {
         if (selectedOperatingTemplates.length > 0) {
           await onboardingService.saveTemplates(created.id, selectedOperatingTemplates);
         }
-        navigateTo('/overview');
+        navigate('/overview');
       }
     } catch (err: any) {
       console.error(err);

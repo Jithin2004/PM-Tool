@@ -18,7 +18,7 @@ export function ProvisioningGate({ state }: ProvisioningGateProps) {
   if (showProductKeyGate) {
     return (
       <ProductKeyGate 
-        onVerified={() => window.location.reload()} 
+        onVerified={() => retryProvisioning()} 
       />
     );
   }

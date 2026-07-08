@@ -4,6 +4,8 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useDashboard } from '../../context/DashboardContext';
 import { supabase } from '../../lib/supabase';
 import { activityLogService } from '../../services/activityLogService';
+import { reload } from '../../lib/navigation';
+
 
 export function SandboxWorkspaceManager() {
   const { workspace } = useWorkspace();
@@ -69,7 +71,7 @@ export function SandboxWorkspaceManager() {
               await supabase.from('projects').delete().eq('workspace_id', workspace.id);
               setLoading(false);
               notify('Sandbox data purged from workspace.', 'success');
-              setTimeout(() => window.location.reload(), 1000);
+              setTimeout(() => reload(), 1000);
             }
           }}
           disabled={loading}

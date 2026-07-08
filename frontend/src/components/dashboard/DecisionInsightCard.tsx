@@ -3,6 +3,8 @@ import { Icon } from '../ui/Icon';
 import { DecisionInsight } from '../../core/decision/DecisionIntelligenceEngine';
 import { simulateActionImpact, SimulationResult, SimulatorState } from '../../core/decision/ExecutionImpactSimulator';
 import { executeDecisionAction } from '../../services/decisionExecutionService';
+import { replace } from '../../lib/navigation';
+
 
 interface Props {
   insight: DecisionInsight;
@@ -111,7 +113,7 @@ export function DecisionInsightCard({ insight, simulatorState, workspaceId, user
             </button>
           )}
           {insight.actionRoute && !insight.actionType && (
-            <button onClick={() => { window.history.replaceState(null, '', insight.actionRoute!); window.dispatchEvent(new CustomEvent('popstate')); }} className="px-3 py-1.5 rounded bg-[var(--pm-surface)]/10 hover:bg-[var(--pm-surface)]/20 text-xs font-medium text-white transition-colors border border-border whitespace-nowrap shrink-0">
+            <button onClick={() => { replace(insight.actionRoute!); }} className="px-3 py-1.5 rounded bg-[var(--pm-surface)]/10 hover:bg-[var(--pm-surface)]/20 text-xs font-medium text-white transition-colors border border-border whitespace-nowrap shrink-0">
               {insight.actionLabel || 'Take Action'}
             </button>
           )}

@@ -23,6 +23,8 @@ import {
 import { MemberDirectory } from '../../components/team/MemberDirectory';
 import { SkillsMatrixView } from '../../components/resources/SkillsMatrixView';
 import { TeamRosterView } from '../../components/resources/TeamRosterView';
+import { navigate } from '../../lib/navigation';
+
 
 export default function TeamDetailsWorkspace({ teamId }: { teamId: string }) {
   const { profile } = useAuth();
@@ -38,8 +40,7 @@ export default function TeamDetailsWorkspace({ teamId }: { teamId: string }) {
           <h2 className="text-xl font-bold mb-2">Team not found</h2>
           <button 
             onClick={() => {
-              window.history.pushState(null, '', '/company/teams');
-              window.dispatchEvent(new CustomEvent('popstate'));
+              navigate('/company/teams');
             }} 
             className="text-indigo-400 hover:underline"
           >
@@ -70,8 +71,7 @@ export default function TeamDetailsWorkspace({ teamId }: { teamId: string }) {
       <div className="flex-shrink-0 p-6 md:p-8 border-b border-border bg-surface-2/30">
         <button 
           onClick={() => {
-            window.history.pushState(null, '', '/company/teams');
-            window.dispatchEvent(new CustomEvent('popstate'));
+            navigate('/company/teams');
           }}
           className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-white transition-colors mb-4"
         >

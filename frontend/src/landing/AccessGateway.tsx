@@ -42,7 +42,7 @@ export function AccessGateway({ verified }: AccessGatewayProps) {
             ) : (
               <>
                 <a
-                  href="/activate-license"
+                  href="/provisioning/product-key"
                   className="inline-flex items-center gap-2.5 px-6 py-3 bg-[var(--pm-surface)]/10 text-[var(--pm-text)] dark:text-[var(--text-secondary)] border border-[var(--pm-border)] dark:border-[var(--border-soft)] hover:bg-[var(--pm-surface)]/15 transition-all text-[12px] font-mono uppercase tracking-wider"
                 >
                   <Shield className="w-3.5 h-3.5" />
@@ -50,7 +50,7 @@ export function AccessGateway({ verified }: AccessGatewayProps) {
                   <ArrowRight className="w-3.5 h-3.5" />
                 </a>
                 <a
-                  href="/activate-license"
+                  href="/provisioning/product-key"
                   className="inline-flex items-center gap-2.5 px-6 py-3 text-[var(--pm-text)] dark:text-[var(--text-secondary)] border border-[var(--border-soft)] hover:border-[var(--border-soft)] hover:text-[var(--pm-text)] dark:text-[var(--text-secondary)] transition-all text-[12px] font-mono uppercase tracking-wider"
                 >
                   Request Demo

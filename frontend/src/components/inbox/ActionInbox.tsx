@@ -9,6 +9,8 @@ import { generatePriorityExplanation } from '../../core/intelligence/PriorityExp
 import { PriorityExplanationBadge } from '../ui/PriorityExplanationBadge';
 
 import { ApprovalDecisionModal } from '../../pages/workspace/ApprovalDecisionModal';
+import { navigate, replace } from '../../lib/navigation';
+
 
 export function ActionInbox() {
   const { profile } = useAuth();
@@ -26,7 +28,7 @@ export function ActionInbox() {
       setIsOpen(true);
       // Optional: remove query param to not trigger again on reload
       const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
+      replace(newUrl);
     }
   }, []);
 
@@ -61,11 +63,7 @@ export function ActionInbox() {
     }
   };
 
-  const navigateTo = (path: string) => {
-    window.history.pushState(null, '', path);
-    window.dispatchEvent(new Event('popstate'));
-    setIsOpen(false);
-  };
+  
 
   const criticalCount = inboxItems.filter(i => i.priority === 'CRITICAL').length;
   const totalCount = inboxItems.length;
@@ -121,10 +119,10 @@ export function ActionInbox() {
                         if (approval) {
                           setSelectedApproval(approval);
                         } else {
-                          navigateTo(item.actionRoute);
+                          navigate(item.actionRoute);
                         }
                       } else {
-                        navigateTo(item.actionRoute);
+                        navigate(item.actionRoute);
                       }
                     }}
                   >

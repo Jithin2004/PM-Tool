@@ -1,6 +1,8 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { ActivityFeed } from '../widgets/ActivityFeed';
 import { useActivityFeed } from '../../hooks/useActivityFeed';
+import { navigate } from '../../lib/navigation';
+
 
 interface ActivityStreamProps {
   wsId?: string;
@@ -26,8 +28,7 @@ export function ActivityStream({ wsId, onItemClick, maxVirtualWindow = 50 }: Act
       emptyAction={{
         label: "View Projects",
         onClick: () => {
-          window.history.pushState(null, '', '/workspace');
-          window.dispatchEvent(new Event('popstate'));
+          navigate('/workspace');
         }
       }}
       onItemClick={onItemClick}

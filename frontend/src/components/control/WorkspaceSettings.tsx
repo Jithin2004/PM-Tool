@@ -13,6 +13,8 @@ import { OperationalHealth } from './OperationalHealth';
 import { ExportCenter } from './ExportCenter';
 import { BillingSettings } from './BillingSettings';
 import { showPrompt } from '../../components/common/Dialogs';
+import { replace } from '../../lib/navigation';
+
 
 const TABS = [
   { id: 'general_setup', label: 'General Setup' },
@@ -174,7 +176,7 @@ export function WorkspaceSettings() {
             key={tab.id}
             onClick={() => {
               setActiveTab(tab.id);
-              window.history.replaceState(null, '', `?tab=${tab.id}`);
+              replace(`?tab=${tab.id}`);
             }}
             className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider premium-segmented-control-btn whitespace-nowrap px-4 ${
               activeTab === tab.id ? 'active' : ''

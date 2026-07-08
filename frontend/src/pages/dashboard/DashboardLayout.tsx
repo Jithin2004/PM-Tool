@@ -68,6 +68,8 @@ import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 import { EndOfDayModal } from '../../components/execution/EndOfDayModal';
 import { IconContainer } from '../../components/ui/IconContainer';
 import { CompanyHealthModal } from '../../components/dashboard/CompanyHealthModal';
+import { navigate, replace } from '../../lib/navigation';
+
 // Sunset imported above
 
 interface ConfirmState {
@@ -250,7 +252,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     setShowGuide(false);
     
     // Use existing router navigation
-    // navigateTo('/overview'); // Removed to prevent unintended redirects to the initialization phase when dismissing guide
+    // navigate('/overview'); // Removed to prevent unintended redirects to the initialization phase when dismissing guide
   };
 
   useEffect(() => {
@@ -259,17 +261,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     }
   }, [showGuide]);
 
-  const navigateTo = (path: string) => {
-    const queryIdx = path.indexOf('?');
-    const queryPart = queryIdx >= 0 ? path.substring(queryIdx) : '';
-    const normalized = normalizePath(path);
-    const target = normalized + queryPart;
-    if (import.meta.env.DEV && !isRegisteredPath(normalized)) {
-      console.error(`[navigateTo] Unregistered path: ${path} (canonical: ${normalized})`);
-    }
-    window.history.pushState(null, '', target);
-    window.dispatchEvent(new CustomEvent('popstate'));
-  };
+  
 
   const SIDEBAR_GROUP_LABELS: Record<SidebarGroup, string> = {
     core: 'Core',
@@ -356,7 +348,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     const domain = visibleDomains.find(d => d.id === domainId);
     if (domain && domain.subsections.length > 0) {
       const firstSub = domain.subsections[0];
-      navigateTo(firstSub.path);
+      navigate(firstSub.path);
     }
   };
 
@@ -368,7 +360,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
     if (isView) {
       const allowed = ['/workspace/portfolio', '/workspace/decisions', '/login'];
       if (!allowed.includes(routePath)) {
-        navigateTo('/workspace/portfolio');
+        navigate('/workspace/portfolio');
         window.dispatchEvent(
           new CustomEvent('notify-toast', {
             detail: { message: 'Stakeholders have read-only visibility to Portfolio Analytics.', type: 'warning' },
@@ -394,7 +386,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         },
       }),
     );
-    navigateTo('/overview');
+    navigate('/overview');
   }, [disclosure.active, disclosure.level, loading, routePath, profile]);
 
   const handleShowAllFeatures = () => {
@@ -475,31 +467,31 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           title: "Your Operational Command Center",
           description: "Start your day here. Monitor company activity, important actions, delivery signals, and areas requiring attention.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/overview')
+          actionBefore: () => navigate('/overview')
         },
         {
           title: "Manage Delivery",
           description: "Create projects, structure milestones, track ownership, and monitor execution progress.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace')
+          actionBefore: () => navigate('/workspace')
         },
         {
           title: "Manage Capacity",
           description: "Understand team allocation, responsibilities, availability, and workload distribution.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/resources/teams')
+          actionBefore: () => navigate('/resources/teams')
         },
         {
           title: "Track Operational Decisions",
           description: "Record approvals, escalations, ownership changes, and important coordination decisions.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/decisions')
+          actionBefore: () => navigate('/workspace/decisions')
         },
         {
           title: "Configure Workspace",
           description: "Manage users, permissions, workspace settings, and governance. Your next step: Create your first project.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/control/settings')
+          actionBefore: () => navigate('/control/settings')
         }
       ];
     } else if (hasCapability(profile, 'project.update')) {
@@ -509,25 +501,25 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           title: "Mission Control",
           description: "Daily delivery overview.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/overview')
+          actionBefore: () => navigate('/overview')
         },
         {
           title: "Projects",
           description: "Project planning and milestones.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace')
+          actionBefore: () => navigate('/workspace')
         },
         {
           title: "Tasks",
           description: "Execution tracking.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/execution/board')
+          actionBefore: () => navigate('/execution/board')
         },
         {
           title: "Team",
           description: "Capacity visibility. Your next step: Create your first project.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/resources/teams')
+          actionBefore: () => navigate('/resources/teams')
         }
       ];
     } else if (hasCapability(profile, 'finance.manage')) {
@@ -537,25 +529,25 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           title: "Mission Control",
           description: "Daily overview.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/overview')
+          actionBefore: () => navigate('/overview')
         },
         {
           title: "Finance",
           description: "Manage budgets, tracking, and financial health.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/resources/finance')
+          actionBefore: () => navigate('/resources/finance')
         },
         {
           title: "Reports/Documents",
           description: "Review financial reports and documentation.",
           targetSelector: "#tour-sidebar",
-          actionBefore: () => navigateTo('/workspace/reports')
+          actionBefore: () => navigate('/workspace/reports')
         },
         {
           title: "Approvals",
           description: "Review financial approvals and changes. Your next step: Check pending approvals.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/approvals')
+          actionBefore: () => navigate('/workspace/approvals')
         }
       ];
     } else if (hasCapability(profile, 'client.project.view')) {
@@ -565,25 +557,25 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           title: "Client Dashboard",
           description: "Your daily overview.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/overview')
+          actionBefore: () => navigate('/overview')
         },
         {
           title: "Project Visibility",
           description: "Check progress on your projects.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace')
+          actionBefore: () => navigate('/workspace')
         },
         {
           title: "Approvals",
           description: "Approve deliverables or changes.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/approvals')
+          actionBefore: () => navigate('/workspace/approvals')
         },
         {
           title: "Communication",
           description: "Connect with the team. Your next step: View your active projects.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/meetings')
+          actionBefore: () => navigate('/workspace/meetings')
         }
       ];
     } else {
@@ -593,19 +585,19 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
           title: "Your Daily Workspace",
           description: "See assigned work, updates, priorities, and items requiring your attention.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/overview')
+          actionBefore: () => navigate('/overview')
         },
         {
           title: "Your Execution Queue",
           description: "Track assigned work, progress updates, blockers, and deadlines.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/execution/board')
+          actionBefore: () => navigate('/execution/board')
         },
         {
           title: "Stay Connected",
           description: "Access project information and collaborate with your team. Your next step: Check your assigned tasks.",
           targetSelector: "#tour-main-content",
-          actionBefore: () => navigateTo('/workspace/documents')
+          actionBefore: () => navigate('/workspace/documents')
         }
       ];
     }
@@ -618,7 +610,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       sessionStorage.setItem('resolve-pm-tour-step', '0');
       setCurrentTourStep(0);
       setShowGuide(true);
-      navigateTo('/workspace');
+      navigate('/workspace');
     };
   }, [tourSteps]);
 
@@ -630,13 +622,13 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
       const projectId = detail.projectId;
 
       if (mode === 'SCRUM' || mode === 'HYBRID') {
-        window.history.pushState(null, '', `/projects/${projectId}/setup/execution`);
+        navigate(`/projects/${projectId}/setup/execution`);
       } else if (mode === 'KANBAN') {
-        window.history.pushState(null, '', `/projects/${projectId}/board`);
+        navigate(`/projects/${projectId}/board`);
       } else if (mode === 'SDLC' || mode === 'CUSTOM') {
-        window.history.pushState(null, '', `/projects/${projectId}/setup/execution`);
+        navigate(`/projects/${projectId}/setup/execution`);
       } else {
-        window.history.pushState(null, '', `/projects/${projectId}/backlog`);
+        navigate(`/projects/${projectId}/backlog`);
       }
       window.dispatchEvent(new CustomEvent('popstate'));
     };
@@ -726,7 +718,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
 
   useEffect(() => {
     if (window.location.hash && window.location.hash.includes('access_token')) {
-      window.history.replaceState(null, '', window.location.pathname);
+      replace(window.location.pathname);
     }
   }, []);
 
@@ -988,7 +980,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
   // Promote a task from Board into the Project creation form
   const handlePromoteTaskToAsset = (taskData: { title: string; description: string; projectId: string }) => {
     setNewName(taskData.title);
-    navigateTo('/workspace');
+    navigate('/workspace');
     setIsAdding(true);
     notify(`Task "${taskData.title}" elevated — fill in PERT estimates to register as a project.`, 'info');
   };
@@ -1211,7 +1203,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                   <span className="sr-only">Logout</span>
                 </button>
                 <button
-                  onClick={() => navigateTo('/control/settings')}
+                  onClick={() => navigate('/control/settings')}
                   className={`p-1.5 rounded-md transition-colors cursor-pointer ${isSidebarCollapsed ? '' : 'ml-1'}`}
                   style={{ color: 'var(--pm-on-surface-variant)' }}
                   onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
@@ -1377,7 +1369,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                 return (
                   <button
                     key={sub.path}
-                    onClick={() => navigateTo(sub.path)}
+                    onClick={() => navigate(sub.path)}
                     className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all whitespace-nowrap`}
                     style={isSubActive ? {
                       background: 'var(--pm-primary)',
@@ -1795,7 +1787,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                         <Play className="w-12 h-12 text-signal-safe mx-auto" />
                         <h4 className="text-base font-semibold">Ready to Launch</h4>
                         <p className="text-xs text-text-tertiary">Your sprint is configured. Launch to begin tracking velocity.</p>
-                        <button onClick={() => { setProjectSetupGuide(null); window.history.replaceState(null, '', '/execution'); window.dispatchEvent(new CustomEvent('popstate')); }} className="px-6 py-2 bg-green-600 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-green-500 transition-colors">Launch Sprint</button>
+                        <button onClick={() => { setProjectSetupGuide(null); replace('/execution'); }} className="px-6 py-2 bg-green-600 text-text-primary text-[10px] font-mono uppercase tracking-wider hover:bg-green-500 transition-colors">Launch Sprint</button>
                       </div>
                     )}
                   </div>

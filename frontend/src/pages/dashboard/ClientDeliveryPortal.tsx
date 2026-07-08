@@ -4,6 +4,8 @@ import { deliverableService, Milestone } from '../../services/deliverableService
 import { Icon } from '../../components/ui/Icon';
 import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
 import { Briefcase } from 'lucide-react';
+import { navigate } from '../../lib/navigation';
+
 
 export function ClientDeliveryPortal({ profile, projects, notify, workspaceId }: any) {
   // Only show projects the client has access to, and filter out internal metadata
@@ -106,7 +108,7 @@ export function ClientDeliveryPortal({ profile, projects, notify, workspaceId }:
                 project={project} 
                 teams={[]}
                 profiles={[]}
-                onClick={() => window.location.href = `/workspace/portfolio`}
+                onClick={() => navigate(`/workspace/portfolio`)}
               />
             ))}
           </div>

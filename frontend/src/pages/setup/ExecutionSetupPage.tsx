@@ -7,6 +7,8 @@ import { hasCapability } from '../../core/auth/permissions';
 import { ScrumBootstrap } from '../../components/setup/ScrumBootstrap';
 import { KanbanBootstrap } from '../../components/setup/KanbanBootstrap';
 import { SetupSkipState } from '../../components/setup/SetupSkipState';
+import { navigate } from '../../lib/navigation';
+
 
 function getProjectIdFromPath(): string | null {
   const segments = window.location.pathname.split('/');
@@ -14,10 +16,7 @@ function getProjectIdFromPath(): string | null {
   return null;
 }
 
-function navigateTo(path: string) {
-  window.history.pushState(null, '', path);
-  window.dispatchEvent(new CustomEvent('popstate'));
-}
+
 
 type SetupPhase = 'welcome' | 'bootstrap' | 'skip-confirm';
 
@@ -52,7 +51,7 @@ export default function ExecutionSetupPage() {
   }
 
   if (!canInitialize) {
-    navigateTo(`/projects/${projectId}/backlog`);
+    navigate(`/projects/${projectId}/backlog`);
     return null;
   }
 
@@ -71,23 +70,23 @@ export default function ExecutionSetupPage() {
 
   const handleSkipConfirmed = () => {
     notify('Setup skipped. You can configure execution later.', 'info');
-    navigateTo(`/projects/${projectId}/backlog`);
+    navigate(`/projects/${projectId}/backlog`);
   };
 
   const handleSetupComplete = () => {
     notify('Execution workspace ready.', 'success');
     if (isKanban) {
-      navigateTo(`/projects/${projectId}/board`);
+      navigate(`/projects/${projectId}/board`);
     } else {
-      navigateTo(`/projects/${projectId}/backlog`);
+      navigate(`/projects/${projectId}/backlog`);
     }
   };
 
   const handleSetupSkip = () => {
     if (isKanban) {
-      navigateTo(`/projects/${projectId}/board`);
+      navigate(`/projects/${projectId}/board`);
     } else {
-      navigateTo(`/projects/${projectId}/backlog`);
+      navigate(`/projects/${projectId}/backlog`);
     }
   };
 

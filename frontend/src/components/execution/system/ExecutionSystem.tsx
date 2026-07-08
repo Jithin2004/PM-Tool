@@ -51,6 +51,8 @@ import type { DeliveryTimeline } from '../../../core/execution/flowEngine';
 
 import { ScheduleView } from './ScheduleView';
 import { DynamicBoard } from '../../board/DynamicBoard';
+import { replace } from '../../../lib/navigation';
+
 
 interface ExecutionSystemProps {
   projects: Project[];
@@ -107,7 +109,7 @@ export function ExecutionSystem({
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') !== activeView) {
       params.set('view', activeView);
-      window.history.replaceState(null, '', `?${params.toString()}`);
+      replace(`?${params.toString()}`);
     }
   }, [activeView]);
 
@@ -130,7 +132,7 @@ export function ExecutionSystem({
         setEditingTask(task);
         // Clear the query parameter so it doesn't reopen on reload
         const newUrl = window.location.pathname;
-        window.history.replaceState(null, '', newUrl);
+        replace(newUrl);
       }
     }
   }, [tasks]);

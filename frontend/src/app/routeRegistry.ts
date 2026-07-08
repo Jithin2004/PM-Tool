@@ -81,7 +81,7 @@ export const CANONICAL_ROUTES: AppRoute[] = [
   { id: 'terms', path: '/terms', label: 'Terms of Service', iconName: 'FileText', isPublic: true, disclosureTier: 'essential' },
   { id: 'compliance', path: '/compliance', label: 'Compliance', iconName: 'FileText', isPublic: true, disclosureTier: 'essential' },
   { id: 'security', path: '/security', label: 'Security', iconName: 'FileText', isPublic: true, disclosureTier: 'essential' },
-  { id: 'activate', path: '/activate-license', label: 'Activate', iconName: 'Key', isPublic: true, disclosureTier: 'essential' },
+  { id: 'activate', path: '/provisioning/product-key', label: 'Activate', iconName: 'Key', isPublic: true, disclosureTier: 'essential' },
   { id: 'login', path: '/login', label: 'Login', iconName: 'Lock', isPublic: true, disclosureTier: 'essential' },
   { id: 'onboarding', path: '/onboarding/workspace', label: 'Workspace Setup', iconName: 'Building2', disclosureTier: 'essential' },
   { id: 'project-new', path: '/projects/new', label: 'Create Project', iconName: 'PlusCircle', capability: 'project.create', disclosureTier: 'essential' },

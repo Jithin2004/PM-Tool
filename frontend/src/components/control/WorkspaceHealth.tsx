@@ -3,6 +3,8 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { ShieldAlert, CheckCircle, AlertTriangle, Database } from 'lucide-react';
 import { useOperationalData } from '../../context/OperationalDataContext';
 import { workspaceHealthService, HealthCheckResult } from '../../services/workspaceHealthService';
+import { navigate } from '../../lib/navigation';
+
 
 export function WorkspaceHealth() {
   const { workspace } = useWorkspace();
@@ -55,10 +57,7 @@ export function WorkspaceHealth() {
   const hasIssues = healthChecks.some(c => c.type === 'warning');
   const hasDataErrors = dataDiagnostics.length > 0;
 
-  const navigateTo = (path: string) => {
-    window.history.pushState(null, '', path);
-    window.dispatchEvent(new CustomEvent('popstate'));
-  };
+  
 
   return (
     <div className="bg-surface/40 backdrop-blur-md border border-border/50 rounded-2xl p-6 mb-8 transition-all duration-300">
@@ -92,7 +91,7 @@ export function WorkspaceHealth() {
                 {check.type === 'warning' ? <AlertTriangle className="w-4 h-4 shrink-0" /> : <ShieldAlert className="w-4 h-4 shrink-0" />}
                 <p className="text-xs flex-1">{check.message}</p>
                 {check.actionRoute && (
-                  <button onClick={() => navigateTo(check.actionRoute!)} className="text-[10px] font-bold uppercase tracking-wider underline opacity-80 hover:opacity-100 transition-opacity whitespace-nowrap">
+                  <button onClick={() => navigate(check.actionRoute!)} className="text-[10px] font-bold uppercase tracking-wider underline opacity-80 hover:opacity-100 transition-opacity whitespace-nowrap">
                     Resolve
                   </button>
                 )}

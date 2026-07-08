@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { activityLogService } from '../../services/activityLogService';
+import { navigate } from '../../lib/navigation';
+
 
 export function PasswordSetup() {
   const [password, setPassword] = useState('');
@@ -37,7 +39,7 @@ export function PasswordSetup() {
         metadata: { user_id: profile?.id }
       });
       
-      window.location.href = '/overview';
+      navigate('/overview');
     } catch (e: any) {
       setErrorMsg(e.message || 'An unexpected error occurred.');
       setLoading(false);
