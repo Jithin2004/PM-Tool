@@ -59,10 +59,16 @@ export function WorkspaceSetupPage() {
   const [ignoredHolidayDates, setIgnoredHolidayDates] = useState<Set<string>>(new Set());
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  const attachLicenseIfPending = async (workspaceId: string): Promise<boolean> => {
+  type LicenseAttachResult = { success: boolean; error?: string };
+
+  const attachLicenseIfPending = async (workspaceId: string): Promise<LicenseAttachResult> => {
     try {
+      console.log(`[DEBUG-TRACE] attachLicenseIfPending Started for workspace: ${workspaceId}`);
       const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
-      if (!pendingStr) return true;
+      if (!pendingStr) {
+        console.log('[DEBUG-TRACE] No pending license found in session storage.');
+        return { success: true };
+      }
 
       const parsed = JSON.parse(pendingStr);
       const productKeyStr = parsed.productKey || parsed.licenseId || 'OFFLINE-LICENSE';
@@ -73,38 +79,19 @@ export function WorkspaceSetupPage() {
       const supportExpiryDate = parsed.supportExpiry ? new Date(parsed.supportExpiry).toISOString() : null;
 
       if (productKeyStr !== 'OFFLINE-LICENSE') {
+        console.log(`[DEBUG-TRACE] Calling Backend Activation API for key: ${productKeyStr}`);
         const activationResult = await activateLicenseKey(productKeyStr, workspaceId);
         if (!activationResult.success) {
-          console.error('Backend activation failed:', activationResult.error);
-          return false;
+          console.error('[DEBUG-TRACE] Backend activation failed:', activationResult.error);
+          return { success: false, error: activationResult.error || 'Backend activation failed.' };
         }
       }
 
-      const hashedKey = await sha256(productKeyStr);
-      const { data: existingLicense } = await supabase.from('workspace_license').select('*').eq('workspace_id', workspaceId).maybeSingle();
-
-      if (existingLicense) {
-        await supabase.from('workspace_license').update({
-          license_key_hash: hashedKey,
-          activation_date: validatedAt,
-          allowed_users: seats,
-          license_type: planType,
-          support_until: supportExpiryDate
-        }).eq('workspace_id', workspaceId);
-      } else {
-        await supabase.from('workspace_license').insert({
-          workspace_id: workspaceId,
-          license_key_hash: hashedKey,
-          activation_date: validatedAt,
-          allowed_users: seats,
-          license_type: planType,
-          support_until: supportExpiryDate
-        });
-      }
-      return true;
-    } catch (err) {
-      console.error('Failed to attach license:', err);
-      return false;
+      console.log('[DEBUG-TRACE] attachLicenseIfPending fully successful.');
+      return { success: true };
+    } catch (err: any) {
+      console.error('[DEBUG-TRACE] Failed to attach license exception:', err);
+      return { success: false, error: err?.message || 'Unknown exception during license attachment.' };
     }
   };
 
@@ -183,9 +170,9 @@ export function WorkspaceSetupPage() {
       }
 
       if (wsId) {
-        const licenseSuccess = await attachLicenseIfPending(wsId);
-        if (!licenseSuccess) {
-          setLocalError("Workspace created but license activation failed. Please retry activation.");
+        const attachResult = await attachLicenseIfPending(wsId);
+        if (!attachResult.success) {
+          setLocalError(`Workspace created successfully.\n\nHowever, the workspace license could not be activated.\n\nReason:\n${attachResult.error || 'Unknown error'}\n\nPlease retry or contact support.`);
           setSaving(false);
           return;
         }
@@ -289,9 +276,9 @@ export function WorkspaceSetupPage() {
             </div>
           </div>
           {localError && (
-            <div className="mb-6 border border-red-500/30 bg-red-500/5 p-4 text-xs text-red-200 rounded-lg flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              <span>{localError}</span>
+            <div className="mb-6 border border-red-500/30 bg-red-500/5 p-4 text-xs text-red-200 rounded-lg flex items-start gap-2">
+              <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-red-400 animate-pulse shrink-0" />
+              <span className="whitespace-pre-wrap">{localError}</span>
             </div>
           )}
           {step === 1 && (

@@ -86,30 +86,11 @@ export function BillingSettings() {
     setKeyError('');
 
     try {
-      const verifyRes = await validateWorkspaceLicenseUpdate(newKey.trim(), workspace.id);
+      const verifyRes = await activateLicenseKey(newKey.trim(), workspace.id);
 
       if (!verifyRes.success) {
         throw new Error(verifyRes.error || 'Invalid or expired license key.');
       }
-
-      // Upsert workspace_license
-      const rawPlan = (verifyRes.plan || '').toLowerCase();
-      const planType = rawPlan === 'enterprise' ? 'enterprise' : rawPlan === 'premium' ? 'premium' : 'standard';
-
-      const hashedKey = await sha256(newKey.trim());
-
-      const { error: dbError } = await supabase
-        .from('workspace_license')
-        .upsert({
-          workspace_id: workspace.id,
-          license_key_hash: hashedKey,
-          allowed_users: 9999,
-          license_type: planType,
-          activation_date: new Date().toISOString(),
-          support_until: verifyRes.licenseData?.supportExpiry ? new Date(verifyRes.licenseData.supportExpiry).toISOString() : null
-        }, { onConflict: 'workspace_id' });
-
-      if (dbError) throw new Error('Failed to attach license to workspace.');
 
       reload();
 

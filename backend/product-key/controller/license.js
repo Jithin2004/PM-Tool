@@ -1,12 +1,24 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const geoip = require('geoip-lite');
+const { createClient } = require('@supabase/supabase-js');
 const License = require('../models/License');
 const AuditEvent = require('../models/AuditEvent');
+
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
     console.error('[FATAL] JWT_SECRET is not configured in environment. Exiting...');
     process.exit(1);
+}
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+let supabaseAdmin = null;
+if (supabaseUrl && supabaseServiceKey) {
+    supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+} else {
+    console.warn('[WARNING] Supabase credentials (VITE_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY) not found. Supabase synchronization will be disabled or fail.');
 }
 // Plan features mapping
 function getFeaturesForPlan(plan) {
@@ -69,15 +81,75 @@ exports.addLicense = async (req, res) => {
     }
 };
 
+async function syncSupabaseLicense(productKey, workspaceId, plan) {
+    if (!supabaseAdmin) {
+        console.warn('[WARNING] Supabase Admin not initialized. Skipping synchronization.');
+        return;
+    }
+
+    try {
+        const hashedKey = crypto.createHash('sha256').update(productKey).digest('hex');
+        const planType = (plan || 'business').toLowerCase();
+        const seats = 10; // Backend default limit unless specified elsewhere
+
+        const { data: existingLicense } = await supabaseAdmin
+            .from('workspace_license')
+            .select('id')
+            .eq('workspace_id', workspaceId)
+            .maybeSingle();
+
+        let queryResult;
+        if (existingLicense) {
+            queryResult = await supabaseAdmin
+                .from('workspace_license')
+                .update({
+                    license_key_hash: hashedKey,
+                    activation_date: new Date().toISOString(),
+                    allowed_users: seats,
+                    license_type: planType,
+                })
+                .eq('workspace_id', workspaceId)
+                .select()
+                .single();
+        } else {
+            queryResult = await supabaseAdmin
+                .from('workspace_license')
+                .insert({
+                    workspace_id: workspaceId,
+                    license_key_hash: hashedKey,
+                    activation_date: new Date().toISOString(),
+                    allowed_users: seats,
+                    license_type: planType,
+                })
+                .select()
+                .single();
+        }
+
+        if (queryResult.error != null || queryResult.data == null) {
+            console.error('[FATAL] Supabase synchronization query failed:', queryResult.error);
+            throw new Error(queryResult.error?.message || 'Database persistence returned null data.');
+        }
+
+        const { data: verificationData, error: verificationError } = await supabaseAdmin
+            .from('workspace_license')
+            .select('*')
+            .eq('workspace_id', workspaceId)
+            .maybeSingle();
+
+        if (verificationError || !verificationData || verificationData.license_key_hash !== hashedKey) {
+            throw new Error('Supabase synchronization verification failed.');
+        }
+    } catch (e) {
+        console.error('[FATAL] Failed to synchronize license to Supabase:', e);
+        throw e;
+    }
+}
+
 // 2. License Key Activation
 exports.activateLicense = async (req, res) => {
     const { productKey, workspaceId, userIdentifier } = req.body;
-    const ip =
-        req.headers["x-forwarded-for"]?.split(",")[0] ||
-        req.socket.remoteAddress;
-
+    const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
     const geo = geoip.lookup(ip);
-
     const userAgent = req.headers["user-agent"];
 
     if (!productKey || !workspaceId) {
@@ -85,56 +157,32 @@ exports.activateLicense = async (req, res) => {
     }
 
     try {
-        // First check if key exists and its status
         const initialCheck = await License.findOne({ key: productKey });
 
         if (!initialCheck) {
-            await AuditEvent.create({
-                event_type: 'verification_failed',
-                reason: 'Invalid product key provided',
-                device_hash: workspaceId,
-                license_key: productKey
-            });
+            await AuditEvent.create({ event_type: 'verification_failed', reason: 'Invalid product key provided', device_hash: workspaceId, license_key: productKey });
             return res.status(404).json({ error: 'Invalid product key' });
         }
 
         if (initialCheck.status === 'REVOKED') {
-            await AuditEvent.create({
-                event_type: 'verification_failed',
-                reason: `License has been ${initialCheck.status.toLowerCase()}`,
-                device_hash: workspaceId,
-                license_key: productKey
-            });
+            await AuditEvent.create({ event_type: 'verification_failed', reason: `License has been ${initialCheck.status.toLowerCase()}`, device_hash: workspaceId, license_key: productKey });
             return res.status(403).json({ error: `Key has been ${initialCheck.status.toLowerCase()}` });
         }
 
         // ATOMIC ACTIVATION TRANSACTION
         const license = await License.findOneAndUpdate(
-            {
-                key: productKey,
-                isUsed: false,
-                status: 'AVAILABLE'
-            },
+            { key: productKey, isUsed: false, status: 'AVAILABLE' },
             {
                 $set: {
                     isUsed: true,
                     status: "ACTIVE",
-
                     activatedAt: new Date(),
                     usedAt: new Date(),
                     usedBy: userIdentifier || workspaceId,
                     workspaceId,
-
                     activation: {
-                        ip,
-                        country: geo?.country,
-                        region: geo?.region,
-                        city: geo?.city,
-                        timezone: geo?.timezone,
-                        userAgent,
-                        source: "web"
+                        ip, country: geo?.country, region: geo?.region, city: geo?.city, timezone: geo?.timezone, userAgent, source: "web"
                     },
-
                     last_verified_at: new Date()
                 }
             },
@@ -142,49 +190,47 @@ exports.activateLicense = async (req, res) => {
         );
 
         if (!license) {
-            // It might already be used by this workspace, let's check
             const existingUsed = await License.findOne({ key: productKey, workspaceId });
             if (existingUsed) {
-                // Return success for idempotency
-                const token = jwt.sign(
-                    { key: existingUsed.key, workspaceId: workspaceId },
-                    JWT_SECRET,
-                    { expiresIn: '30d' }
-                );
+                try {
+                    await syncSupabaseLicense(productKey, workspaceId, existingUsed.plan);
+                } catch (syncError) {
+                    return res.status(500).json({ error: 'Backend synchronization failed: ' + syncError.message });
+                }
 
-                await AuditEvent.create({
-                    event_type: 'license_activated',
-                    reason: 'Existing workspace re-verified',
-                    device_hash: workspaceId,
-                    license_key: productKey
-                });
+                const token = jwt.sign({ key: existingUsed.key, workspaceId: workspaceId }, JWT_SECRET, { expiresIn: '30d' });
+                await AuditEvent.create({ event_type: 'license_activated', reason: 'Existing workspace re-verified', device_hash: workspaceId, license_key: productKey });
                 return res.json({ success: true, token, plan: existingUsed.plan });
             }
 
-            // Otherwise, it was claimed by someone else
-            await AuditEvent.create({
-                event_type: 'verification_failed',
-                reason: 'License assigned to another workspace',
-                device_hash: workspaceId,
-                license_key: productKey
-            });
+            await AuditEvent.create({ event_type: 'verification_failed', reason: 'License assigned to another workspace', device_hash: workspaceId, license_key: productKey });
             return res.status(403).json({ error: 'License assigned to another workspace' });
         }
 
-        // Sign token containing only the key & workspaceId
-        const token = jwt.sign(
-            { key: license.key, workspaceId: workspaceId },
-            JWT_SECRET,
-            { expiresIn: '30d' }
-        );
+        try {
+            await syncSupabaseLicense(productKey, workspaceId, license.plan);
+        } catch (syncError) {
+            // Rollback Mongo Activation since Supabase failed
+            await License.findOneAndUpdate(
+                { key: productKey },
+                {
+                    $set: {
+                        isUsed: false,
+                        status: "AVAILABLE",
+                        activatedAt: null,
+                        usedAt: null,
+                        usedBy: null,
+                        workspaceId: null,
+                        activation: null,
+                        last_verified_at: null
+                    }
+                }
+            );
+            return res.status(500).json({ error: 'Backend synchronization failed: ' + syncError.message });
+        }
 
-        await AuditEvent.create({
-            event_type: 'license_activated',
-            reason: 'New workspace registered',
-            device_hash: workspaceId,
-            license_key: productKey
-        });
-
+        const token = jwt.sign({ key: license.key, workspaceId: workspaceId }, JWT_SECRET, { expiresIn: '30d' });
+        await AuditEvent.create({ event_type: 'license_activated', reason: 'New workspace registered', device_hash: workspaceId, license_key: productKey });
         res.json({ success: true, token, plan: license.plan });
 
     } catch (error) {
@@ -192,6 +238,8 @@ exports.activateLicense = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+
 
 // 3. License Key Verification
 exports.verifyLicense = async (req, res) => {

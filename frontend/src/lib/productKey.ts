@@ -313,6 +313,8 @@ export async function activateLicenseKey(productKey: string, workspaceId: string
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
+  console.log(`[DEBUG-TRACE] Mongo Activation Start - workspace: ${workspaceId}`);
+
   try {
     const res = await fetch(ACTIVATE_URL, {
       method: 'POST',
@@ -329,13 +331,28 @@ export async function activateLicenseKey(productKey: string, workspaceId: string
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       const errorMsg = body?.error || `Activation failed (${res.status}).`;
+      console.error(`[DEBUG-TRACE] Mongo Activation Error: ${errorMsg}`);
       return { success: false, error: errorMsg };
     }
 
     const data = await res.json();
-    return { success: true, token: data?.token, plan: data?.plan };
+    console.log('[DEBUG-TRACE] Mongo Activation Success payload:', data);
+
+    // Verify Mongo Transaction payload explicitly
+    if (data?.status !== 'ACTIVE' && data?.status !== 'Activated') {
+      return { success: false, error: `Invalid license status from backend: ${data?.status}` };
+    }
+    if (!data?.workspace_id || data.workspace_id !== workspaceId) {
+      return { success: false, error: 'Backend returned missing or mismatched workspace_id.' };
+    }
+    if (!data?.activatedAt && !data?.activation_date) {
+      return { success: false, error: 'Backend activation missing activation timestamp.' };
+    }
+
+    return { success: true, token: data?.token, plan: data?.plan, licenseData: data };
   } catch (err: any) {
     clearTimeout(timer);
+    console.error(`[DEBUG-TRACE] Mongo Activation Exception: ${err.message}`);
     return { success: false, error: err.message };
   }
 }
