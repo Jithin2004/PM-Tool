@@ -1,29 +1,118 @@
+'use strict';
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const licenseController = require('./controller/license');
+
+// ── Startup: Validate Critical Environment Variables ──────────────────────────
+// Fail fast so a misconfigured deployment is obvious immediately.
+const REQUIRED_ENV = [
+    'JWT_SECRET',              // Signs/verifies license tokens issued by this server
+    'SUPABASE_JWT_SECRET',     // Verifies Supabase user JWTs (from Supabase Auth)
+    'SUPABASE_SERVICE_ROLE_KEY', // Supabase service role for RPC calls
+    'LICENSE_ADMIN_SECRET'     // Protects /admin/* endpoints
+];
+const MISSING_ENV = REQUIRED_ENV.filter(v => !process.env[v]);
+if (MISSING_ENV.length > 0) {
+    console.error(`[FATAL] Missing required environment variables: ${MISSING_ENV.join(', ')}`);
+    console.error('[FATAL] Server cannot start safely. Exiting.');
+    process.exit(1);
+}
+
+// Warn about optional but operationally important variables.
+if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+    console.warn('[WARNING] SUPABASE_URL is not set. All Supabase operations will be skipped.');
+}
+if (!process.env.ALLOWED_ORIGINS) {
+    console.warn('[WARNING] ALLOWED_ORIGINS is not set. All cross-origin requests will be rejected.');
+}
+if (!process.env.MONGO_URI && !process.env.DB && !process.env.DATABASE_URL) {
+    console.error('[FATAL] No MongoDB URI configured (MONGO_URI, DB, or DATABASE_URL). Exiting.');
+    process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Global Core Middlewares
-app.use(cors());
-app.use(express.json());
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Only allow origins listed in ALLOWED_ORIGINS (comma-separated).
+// Requests with no Origin header (server-to-server, curl) are always allowed.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean);
 
-// Health Check Endpoint (for Render and Docker healthchecks)
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', service: 'resolve-pm-backend', version: '1.3.0', timestamp: new Date().toISOString() });
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true); // Non-browser requests
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS: origin ${origin} not permitted`));
+    },
+    methods: ['GET', 'POST'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-License-Admin-Secret',
+        'X-Idempotency-Key'      // For safe retries on /onboard
+    ]
+}));
+
+app.use(express.json({ limit: '256kb' })); // Prevent large-body attacks
+
+// ── Rate Limiting ─────────────────────────────────────────────────────────────
+// Applied per-endpoint. express-rate-limit v8 is already installed.
+
+/** /verify and /activate: 10 requests per minute per IP */
+const publicLicenseLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please wait before trying again.' }
 });
 
-// 🪪 Public Licensing Endpoints 🪪
-app.post('/verify', licenseController.verifyLicense);
-app.get('/verify', licenseController.verifyLicenseToken);
+/** /onboard: stricter — 3 requests per minute per IP */
+const onboardLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 3,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many onboarding requests. Please wait before trying again.' }
+});
 
-app.post('/activate', licenseController.activateLicense);
-
-// 🛡️ Admin Licensing Endpoints 🛡️
+// ── Middleware ────────────────────────────────────────────────────────────────
 const adminAuth = require('./middleware/adminAuth');
+const authMiddleware = require('./middleware/auth');
+
+// ── Health Check ──────────────────────────────────────────────────────────────
+// Returns MongoDB connection state so load balancers and uptime monitors can
+// distinguish a degraded server from a healthy one.
+app.get('/health', (req, res) => {
+    const mongoose = require('mongoose');
+    const mongoStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+    const dbState = mongoStates[mongoose.connection.readyState] || 'unknown';
+    const healthy = dbState === 'connected';
+    res.status(healthy ? 200 : 503).json({
+        status: healthy ? 'ok' : 'degraded',
+        service: 'resolve-pm-backend',
+        version: '1.3.2',
+        timestamp: new Date().toISOString(),
+        db: dbState
+    });
+});
+
+// ── Public Licensing Endpoints ────────────────────────────────────────────────
+app.post('/verify', publicLicenseLimiter, licenseController.verifyLicense);
+app.get('/verify', publicLicenseLimiter, licenseController.verifyLicenseToken);
+app.post('/activate', publicLicenseLimiter, licenseController.activateLicense);
+
+// /onboard requires a verified Supabase JWT (authMiddleware) in addition to rate limiting.
+app.post('/onboard', onboardLimiter, authMiddleware, licenseController.onboardWorkspace);
+
+// ── Admin Endpoints ───────────────────────────────────────────────────────────
 app.get('/addLicense', adminAuth, licenseController.addLicense);
 app.post('/admin/generate', adminAuth, licenseController.adminGenerateKey);
 app.post('/admin/disable', adminAuth, licenseController.adminDisableKey);
@@ -31,15 +120,22 @@ app.post('/admin/reset', adminAuth, licenseController.adminResetKey);
 app.get('/admin/activations', adminAuth, licenseController.adminGetActivations);
 app.get('/admin/events', adminAuth, licenseController.adminGetEvents);
 
+// ── Graceful Shutdown ─────────────────────────────────────────────────────────
+// Allows in-flight requests to complete before the process exits.
+// Render, Docker, and PM2 all send SIGTERM on deploy/restart.
+process.on('SIGTERM', () => {
+    console.log('[SERVER] SIGTERM received — draining in-flight requests (5s window)...');
+    setTimeout(() => {
+        console.log('[SERVER] Drain complete. Exiting.');
+        process.exit(0);
+    }, 5000);
+});
 
-// App Startup Process
-let isDbConnected = false;
-
+// ── App Startup ───────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
     console.log(`[SERVER] License server starting on port ${PORT}...`);
     try {
         await connectDB();
-        isDbConnected = true;
         console.log('[SERVER] ✓ License server ready (port ' + PORT + ')');
     } catch (dbErr) {
         console.error(`[DB] MongoDB Connection Error: ${dbErr.message}`);

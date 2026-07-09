@@ -7,7 +7,7 @@ import { Check, Layers, Users, Zap, Briefcase, Plus, X, ArrowLeft, LayoutTemplat
 import { EmailChipsInput, EmailChip } from '../../components/ui/EmailChipsInput';
 import { ProjectChipsInput } from '../../components/ui/ProjectChipsInput';
 import { sandboxSeedEngine } from '../../core/engines/sandboxSeedEngine';
-import { clearLicense, activateLicenseKey } from '../../lib/productKey';
+import { clearLicense, onboardWorkspaceTransaction } from '../../lib/productKey';
 import { supabase } from '../../lib/supabase';
 import { sha256 } from '../../utils/cryptoUtils';
 import { onboardingService, ONBOARDING_STEPS } from '../../services/onboardingService';
@@ -49,58 +49,36 @@ export function WorkspaceSetupWizard() {
   
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
-  type LicenseAttachResult = { success: boolean; error?: string };
 
-  const attachLicenseIfPending = async (workspaceId: string, userId: string): Promise<LicenseAttachResult> => {
-    try {
-      console.log(`[DEBUG-TRACE] attachLicenseIfPending Started for workspace: ${workspaceId}`);
-      const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
-      if (!pendingStr) {
-        console.log('[DEBUG-TRACE] No pending license found in session storage.');
-        return { success: true };
-      }
-
-      const parsed = JSON.parse(pendingStr);
-      const productKeyStr = parsed.productKey || parsed.licenseId || 'OFFLINE-LICENSE';
-      const rawPlan = (parsed.plan || '').toLowerCase();
-      const planType = rawPlan === 'enterprise' ? 'enterprise' : rawPlan === 'premium' ? 'premium' : 'standard';
-      const seats = parsed.seats || 10;
-      const validatedAt = parsed.validatedAt || new Date().toISOString();
-      const supportExpiryDate = parsed.supportExpiry ? new Date(parsed.supportExpiry).toISOString() : null;
-
-      // 1. Actually activate the license in the backend MongoDB (Atomic single-use claim)
-      if (productKeyStr !== 'OFFLINE-LICENSE') {
-        console.log(`[DEBUG-TRACE] Calling Backend Activation API for key: ${productKeyStr}`);
-        const activationResult = await activateLicenseKey(productKeyStr, workspaceId);
-        if (!activationResult.success) {
-          console.error('[DEBUG-TRACE] Backend activation failed:', activationResult.error);
-          return { success: false, error: activationResult.error || 'Backend activation failed.' };
-        }
-      }
-
-      // Cleanup on success
-      sessionStorage.removeItem('pendingLicenseActivation');
-      sessionStorage.removeItem('pending_workspace_name');
-      console.log('[DEBUG-TRACE] attachLicenseIfPending fully successful.');
-      return { success: true };
-    } catch (e: any) {
-      console.error('[DEBUG-TRACE] License attachment failed:', e);
-      return { success: false, error: e?.message || 'Unknown exception during license attachment.' };
-    }
-  };
 
   const handleFinish = async () => {
     if (loading) return;
     setLoading(true);
     try {
-      const created = await createWorkspace({
-        name: name || 'My Workspace',
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
+      let productKey = 'OFFLINE-LICENSE';
+      if (pendingStr) {
+        const parsed = JSON.parse(pendingStr);
+        productKey = parsed.productKey || parsed.licenseId || 'OFFLINE-LICENSE';
+      }
+
+      const workspaceId = crypto.randomUUID();
+
+      const payload = {
+        productKey,
+        workspaceId,
+        workspaceName: name || 'My Workspace',
+        executionMode: selectedOperatingTemplates.length > 0 ? selectedOperatingTemplates[0] : 'KANBAN',
+        defaultLanes: 5,
         settings: { 
           companyName: name || 'My Workspace',
           workStart: workingTimeFrom,
           workEnd: workingTimeTo,
-          workingTimeFrom: workingTimeFrom, // Keep for backward compatibility
-          workingTimeTo: workingTimeTo, // Keep for backward compatibility
+          workingTimeFrom: workingTimeFrom,
+          workingTimeTo: workingTimeTo,
           workingDays: [1, 2, 3, 4, 5],
           lunchDuration: 60,
           timezone: 'UTC',
@@ -108,15 +86,27 @@ export function WorkspaceSetupWizard() {
           payrollEnabled: false,
           productivityFactor: 0.8,
           businessType: 'Software'
-        } as any
-      });
-      if (created) {
+        },
+        user: {
+          id: user?.id,
+          email: user?.email,
+          full_name: profile?.full_name
+        }
+      };
+
+      const result = await onboardWorkspaceTransaction(payload, session.access_token);
+      
+      if (result.success) {
+        sessionStorage.removeItem('pendingLicenseActivation');
+        sessionStorage.removeItem('pending_workspace_name');
+        
+        const createdId = workspaceId;
         if (departments.length > 0) {
           try {
             await trackSupabaseOperation('supabase_insert_departments', () => 
               supabase.from('departments').insert(
                 departments.map(dept => ({
-                  workspace_id: created.id,
+                  workspace_id: createdId,
                   name: dept
                 }))
               )
@@ -145,8 +135,8 @@ export function WorkspaceSetupWizard() {
           });
 
           try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error("Not authenticated");
+            const { data: { session: invokeSession } } = await supabase.auth.getSession();
+            if (!invokeSession) throw new Error("Not authenticated");
 
             const { data: result, error: invokeError } = await supabase.functions.invoke('provisioning', {
               body: {
@@ -183,16 +173,11 @@ export function WorkspaceSetupWizard() {
             }));
           }
         }
-          const attachResult = await attachLicenseIfPending(created.id, user?.id || '');
-          if (!attachResult.success) {
-            setDbError(`Workspace created successfully.\n\nHowever, the workspace license could not be activated.\n\nReason:\n${attachResult.error || 'Unknown error'}\n\nPlease retry or contact support.`);
-            setLoading(false);
-            return;
-          }
+
         // Persist onboarding state - mark setup complete
-        await onboardingService.completeSetup(created.id);
+        await onboardingService.completeSetup(createdId);
         if (selectedOperatingTemplates.length > 0) {
-          await onboardingService.saveTemplates(created.id, selectedOperatingTemplates);
+          await onboardingService.saveTemplates(createdId, selectedOperatingTemplates);
         }
         navigate('/overview');
       }
@@ -210,20 +195,40 @@ export function WorkspaceSetupWizard() {
     if (!selectedTemplate) return;
     setDemoLoading(true);
     try {
-      const ws = await createWorkspace({
-        name: selectedTemplate,
-        settings: { companyName: selectedTemplate } as any
-      });
-        if (ws) {
-          await sandboxSeedEngine.seedSandboxEnvironment(ws.id, profile!.id, selectedTemplate);
-          const attachResult = await attachLicenseIfPending(ws.id, user?.id || '');
-          if (!attachResult.success) {
-            setDbError(`Workspace created successfully.\n\nHowever, the workspace license could not be activated.\n\nReason:\n${attachResult.error || 'Unknown error'}\n\nPlease retry or contact support.`);
-            setDemoLoading(false);
-            return;
-          }
-          window.location.href = '/overview';
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const pendingStr = sessionStorage.getItem('pendingLicenseActivation');
+      let productKey = 'OFFLINE-LICENSE';
+      if (pendingStr) {
+        const parsed = JSON.parse(pendingStr);
+        productKey = parsed.productKey || parsed.licenseId || 'OFFLINE-LICENSE';
+      }
+
+      const workspaceId = crypto.randomUUID();
+
+      const payload = {
+        productKey,
+        workspaceId,
+        workspaceName: selectedTemplate,
+        executionMode: 'KANBAN',
+        defaultLanes: 5,
+        settings: { companyName: selectedTemplate },
+        user: {
+          id: user?.id,
+          email: user?.email,
+          full_name: profile?.full_name
         }
+      };
+
+      const result = await onboardWorkspaceTransaction(payload, session.access_token);
+      
+      if (result.success) {
+          sessionStorage.removeItem('pendingLicenseActivation');
+          sessionStorage.removeItem('pending_workspace_name');
+          await sandboxSeedEngine.seedSandboxEnvironment(workspaceId, profile!.id, selectedTemplate);
+          window.location.href = '/overview';
+      }
     } catch (err: any) {
       console.error(err);
       if (err?.code === '42P01' || err?.message?.includes('relation "workspaces" does not exist')) {

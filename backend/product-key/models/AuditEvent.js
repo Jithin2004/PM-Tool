@@ -5,11 +5,13 @@ const auditEventSchema = new mongoose.Schema({
     type: String, 
     required: true, 
     enum: [
-      'license_created', 
-      'license_activated', 
-      'license_revoked', 
-      'verification_failed', 
-      'activation_limit_reached'
+      'license_created',
+      'license_activated',
+      'license_revoked',
+      'verification_failed',
+      'activation_limit_reached',
+      'onboard_workspace',
+      'onboard_rollback_failed'
     ],
     index: true
   },

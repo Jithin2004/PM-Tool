@@ -487,3 +487,34 @@ export async function checkLicenseOnline(workspaceId: string): Promise<{ valid: 
     return { valid: false, offline: false, error: err.message };
   }
 }
+
+const ONBOARD_URL = `${API_BASE_URL}/onboard`;
+
+export async function onboardWorkspaceTransaction(payload: any, token: string): Promise<any> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  
+  try {
+    const res = await fetch(ONBOARD_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timer);
+    
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error || `Onboarding failed (${res.status})`);
+    }
+    
+    return await res.json();
+  } catch (err: any) {
+    clearTimeout(timer);
+    throw err;
+  }
+}

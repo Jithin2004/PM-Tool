@@ -10405,3 +10405,123 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.workspace_onboarding_state TO ser
 
 -- Reload schema cache to resolve PostgREST 404s
 NOTIFY pgrst, 'reload schema';
+
+-- ==========================================
+-- APPENDED: patch_atomic_onboarding.sql (v1.3 Hardening)
+-- ==========================================
+-- Atomic workspace onboarding RPC executed by the backend service role.
+--
+-- Changes from initial implementation:
+--   1. Workspace conflict: raises a controlled exception when the workspace
+--      already exists and belongs to a DIFFERENT owner.
+--      Same owner = silent idempotent pass (safe retry).
+--   2. User UPSERT: only assigns 'super_admin' on initial workspace binding
+--      (when the user has no workspace_id yet). Preserves existing role on
+--      idempotent re-onboard. Prevents silent privilege escalation.
+-- ==========================================
+
+DROP FUNCTION IF EXISTS public.onboard_workspace_transaction(uuid, text, uuid, text, text, text, jsonb, integer, jsonb);
+
+CREATE OR REPLACE FUNCTION public.onboard_workspace_transaction(
+  p_workspace_id uuid,
+  p_workspace_name text,
+  p_user_id uuid,
+  p_user_email text,
+  p_user_full_name text,
+  p_execution_mode text,
+  p_settings jsonb,
+  p_default_lanes integer,
+  p_workflow_rules jsonb
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_existing_owner uuid;
+BEGIN
+
+  -- Step 1: Create the Workspace (conflict-aware)
+  --
+  -- Strategy:
+  --   No existing row               → INSERT normally.
+  --   Existing row, same owner      → idempotent re-onboard, continue silently.
+  --   Existing row, different owner → raise controlled exception.
+  --
+  INSERT INTO public.workspaces (
+    id, name, created_by_id, template_id, execution_mode, default_lanes, workflow_rules,
+    timezone, date_format, working_days, working_hours, industry, company_size
+  )
+  VALUES (
+    p_workspace_id, p_workspace_name, p_user_id,
+    p_settings->>'template_id', p_execution_mode, p_default_lanes, p_workflow_rules,
+    p_settings->>'timezone', p_settings->>'dateFormat',
+    ARRAY(SELECT jsonb_array_elements_text(p_settings->'workingDays')),
+    p_settings->'workingHours', p_settings->>'industry', p_settings->>'companySize'
+  )
+  ON CONFLICT (id) DO NOTHING;
+
+  IF NOT FOUND THEN
+    SELECT created_by_id INTO v_existing_owner
+      FROM public.workspaces
+     WHERE id = p_workspace_id;
+
+    IF v_existing_owner IS DISTINCT FROM p_user_id THEN
+      RAISE EXCEPTION 'WORKSPACE_CONFLICT: workspace % already exists and belongs to a different owner', p_workspace_id
+        USING ERRCODE = 'unique_violation';
+    END IF;
+    -- Same owner: idempotent re-onboard. Continue to ensure downstream rows exist.
+  END IF;
+
+  -- Step 2: Ensure User Exists and Update Profile
+  --
+  -- Role assignment rules:
+  --   New user (workspace_id IS NULL)        → assign 'super_admin'.
+  --   Existing user, same workspace          → preserve current role.
+  --   Existing user, different workspace     → preserve current role.
+  --
+  -- Never silently demotes or promotes an existing user's role.
+  --
+  INSERT INTO public.users (
+    id, email, full_name, role, workspace_id, availability_factor, status
+  )
+  VALUES (
+    p_user_id, p_user_email, p_user_full_name, 'super_admin', p_workspace_id, 1, 'active'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    full_name    = EXCLUDED.full_name,
+    workspace_id = EXCLUDED.workspace_id,
+    role = CASE
+      WHEN public.users.workspace_id IS NULL THEN 'super_admin'
+      ELSE public.users.role
+    END;
+
+  -- Step 3: Create Team Membership
+  INSERT INTO public.team_members (
+    workspace_id, user_id, role, status
+  )
+  VALUES (
+    p_workspace_id, p_user_id, 'super_admin', 'active'
+  )
+  ON CONFLICT (workspace_id, user_id) DO UPDATE SET
+    role   = 'super_admin',
+    status = 'active';
+
+  -- Step 4: Mark Onboarding as Complete
+  INSERT INTO public.workspace_onboarding_state (
+    workspace_id, setup_completed, completed_steps
+  )
+  VALUES (
+    p_workspace_id, true, ARRAY['verify_license', 'workspace_details', 'select_modules']
+  )
+  ON CONFLICT (workspace_id) DO UPDATE SET
+    setup_completed = true;
+
+END;
+$$;
+
+-- Grant execute to service role only (never anon or authenticated)
+GRANT EXECUTE ON FUNCTION public.onboard_workspace_transaction TO service_role;
+
+-- Reload PostgREST schema cache
+NOTIFY pgrst, 'reload schema';
