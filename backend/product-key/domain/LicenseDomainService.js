@@ -1,7 +1,6 @@
 const License = require('../models/License');
 const AuditEvent = require('../models/AuditEvent');
 const { log, maskKey, getPlanSeats } = require('../controller/helpers');
-const { PlatformError } = require('../../../shared/contracts/error'); // Adjust path as needed for CJS? Wait, shared is TS.
 // Since backend is pure JS, I will mock the PlatformError locally or require it if transpiled.
 // Since the backend is CommonJS, we can just export a class locally or import if we use a TS transpiler.
 // Actually, since shared is TS and backend is JS, maybe backend doesn't import from TS directly unless it uses ts-node.
