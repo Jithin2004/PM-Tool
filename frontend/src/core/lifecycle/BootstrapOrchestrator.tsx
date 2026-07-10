@@ -10,6 +10,7 @@ import { validateAndRepairWorkspace } from '../../services/authWorkspaceService'
 import { User } from '../../types';
 import { BootLogger } from './bootLogger';
 import { TelemetryService } from '../observability/telemetry';
+import { resolveProvisioningState } from './ProvisioningStateResolver';
 
 // We will inject the lifecycle aware services here or instantiate them
 // e.g. telemetryEngine, notificationEngine, etc.
@@ -37,6 +38,7 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
   const [error, setError] = useState<Error | null>(null);
 
   const isOrchestrating = useRef(false);
+  const sessionUserRef = useRef<any>(null);
 
   const { setWorkspace, refreshWorkspace, workspace } = useWorkspace();
   const { refreshAll } = useOperationalData();
@@ -69,108 +71,83 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
   };
 
   const retryProvisioning = () => {
-    if (user) {
+    if (sessionUserRef.current) {
       setProvisioningState(ProvisioningState.INITIALIZING);
-      orchestrate(user);
+      orchestrate(sessionUserRef.current);
     }
   };
 
   const orchestrate = async (sessionUser: any) => {
     if (isOrchestrating.current) return;
     isOrchestrating.current = true;
+    sessionUserRef.current = sessionUser;
     try {
       // 3. Load User Profile
       setBootstrap(BootstrapState.HYDRATING_PROFILE);
       let syncedProfile = await syncProfile(sessionUser);
-      
-      if (!syncedProfile) {
-        // Technically they could be uninvited or just have no profile row
-        // We'll treat !syncedProfile as PROFILE_MISSING unless we explicitly know they are uninvited.
-        handleProvisioningFailure(ProvisioningState.PROFILE_MISSING, {
-          authUserId: sessionUser.id,
-          profileFound: false,
-          workspaceFound: false
-        });
-        return;
+
+      if (syncedProfile) {
+        setProfile(syncedProfile);
       }
 
-      // Check if they are uninvited but were caught by reconciliation
-      if (syncedProfile.role === 'uninvited' || (syncedProfile as any).status === 'uninvited') {
-        handleProvisioningFailure(ProvisioningState.PENDING_INVITE, {
-          authUserId: sessionUser.id,
-          profileFound: true,
-          workspaceFound: false
-        });
-        return;
-      }
-
-      // 4. Resolve Workspace / Validate Access
-      setBootstrap(BootstrapState.RESOLVING_WORKSPACE);
-      const validation = await validateAndRepairWorkspace(sessionUser, syncedProfile);
-      if (validation.updatedProfile) {
-        syncedProfile = validation.updatedProfile;
-      }
-
-      setProfile(syncedProfile);
-
-      if (!syncedProfile.workspace_id || validation.needsSetup) {
-        handleProvisioningFailure(ProvisioningState.WORKSPACE_MISSING, {
-          authUserId: sessionUser.id,
-          profileFound: true,
-          workspaceFound: false
-        });
-        return;
-      }
-      
-      // Load Workspace Context
-      await refreshWorkspace(syncedProfile.workspace_id);
-
-      // Check for inactive workspace (if refreshWorkspace exposes workspace status)
-      // Actually we will check the workspace object on next effect or directly if returned.
-      // For now, if validateAndRepairWorkspace passed, we assume it's active. 
-      // But if we want to explicitly handle WORKSPACE_INACTIVE:
-      const { data: wsData } = await supabase.from('workspaces').select('status').eq('id', syncedProfile.workspace_id).maybeSingle();
-      if (wsData && wsData.status !== 'active') {
-        handleProvisioningFailure(ProvisioningState.WORKSPACE_INACTIVE, {
-          authUserId: sessionUser.id,
-          profileFound: true,
-          workspaceFound: true,
-          workspaceId: syncedProfile.workspace_id
-        });
-        return;
-      }
-
-      // 5. Validate Product License
-      setBootstrap(BootstrapState.VALIDATING_LICENSE);
-      try {
-        console.log('[Bootstrap] Validating license for workspace:', syncedProfile.workspace_id);
-        const res = await checkLicenseOnline(syncedProfile.workspace_id);
-        console.log('[Bootstrap] License validation result:', res);
-        if (!res.valid) {
-          console.error('[Bootstrap] License invalid, setting LICENSE_REQUIRED', res);
-          handleProvisioningFailure(ProvisioningState.LICENSE_REQUIRED, {
-            authUserId: sessionUser.id,
-            profileFound: true,
-            workspaceFound: true,
-            workspaceId: syncedProfile.workspace_id
-          });
-          return;
+      // 4. Validate and repair workspace ID mapping
+      let workspaceNeedsSetup = false;
+      if (syncedProfile) {
+        setBootstrap(BootstrapState.RESOLVING_WORKSPACE);
+        const validation = await validateAndRepairWorkspace(sessionUser, syncedProfile);
+        if (validation.updatedProfile) {
+          syncedProfile = validation.updatedProfile;
+          setProfile(syncedProfile);
         }
-      } catch (licenseErr) {
-        // Fallback for offline mode if allowed, or force activation
-        handleProvisioningFailure(ProvisioningState.LICENSE_REQUIRED, {
+        workspaceNeedsSetup = validation.needsSetup;
+      }
+
+      // 5. Parallel: Workspace info + license check (saves one sequential roundtrip)
+      setBootstrap(BootstrapState.VALIDATING_LICENSE);
+      const [wsResult, licenseResult] = syncedProfile?.workspace_id
+        ? await Promise.all([
+            supabase
+              .from('workspaces')
+              .select('status, initialized')
+              .eq('id', syncedProfile.workspace_id)
+              .maybeSingle(),
+            checkLicenseOnline(syncedProfile.workspace_id)
+          ])
+        : [{ data: null }, { valid: false, error: 'No workspace' }];
+
+      // Hydrate workspace into React context
+      if (syncedProfile?.workspace_id) {
+        refreshWorkspace(syncedProfile.workspace_id);
+      }
+
+      // 6. Delegate classification to ProvisioningStateResolver
+      const resolvedState = resolveProvisioningState({
+        profile: syncedProfile,
+        workspaceRow: wsResult.data,
+        licenseResult
+      });
+
+      // Handle override for missing workspace detected by validation helper
+      let finalState = resolvedState;
+      if (resolvedState === ProvisioningState.READY && workspaceNeedsSetup) {
+        finalState = ProvisioningState.WORKSPACE_MISSING;
+      }
+
+      // If we are not READY, fail fast and early-return
+      if (finalState !== ProvisioningState.READY) {
+        handleProvisioningFailure(finalState, {
           authUserId: sessionUser.id,
-          profileFound: true,
-          workspaceFound: true,
-          workspaceId: syncedProfile.workspace_id
+          profileFound: !!syncedProfile,
+          workspaceFound: !!wsResult.data,
+          workspaceId: syncedProfile?.workspace_id || null
         });
         return;
       }
-      
-      // 7. Initialize Operational Context
+
+      // 8. Initialize Operational Context
       await refreshAll();
 
-      // 8. Start Background Services
+      // 9. Start Background Services
       setBootstrap(BootstrapState.INITIALIZING_SERVICES);
 
     } catch (err: any) {

@@ -1602,7 +1602,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         <CommandPalette
           isOpen={commandPaletteOpen}
           onClose={() => setCommandPaletteOpen(false)}
-          onNavigate={navigateTo}
+          onNavigate={navigate}
         />
 
         <CommandAnalytics

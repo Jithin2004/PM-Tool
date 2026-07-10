@@ -38,9 +38,7 @@ const DEFAULT_SETTINGS: WorkspaceSettings = {
   productivityFactor: 0.8,
   saturdayRule: 'off'
 };
-function navigate(path: string) {
-  navigate(path);
-}
+
 
 export function WorkspaceSetupPage() {
   const { user, workspace, createWorkspace, updateWorkspaceSettings } = useWorkspace();

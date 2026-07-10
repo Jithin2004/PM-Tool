@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Key, Building2, Server, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { getLicenseInfo, clearLicense, validateWorkspaceLicenseUpdate } from '../../lib/productKey';
+import { getLicenseInfo, clearLicense, validateWorkspaceLicenseUpdate, activateLicenseKey } from '../../lib/productKey';
 import { getWorkspaceDisplayName } from '../../lib/workspaceDisplayName';
 import { supabase } from '../../lib/supabase';
 import { sha256 } from '../../utils/cryptoUtils';

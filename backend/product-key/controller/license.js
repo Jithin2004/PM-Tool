@@ -23,6 +23,17 @@ if (supabaseUrl && supabaseServiceKey) {
     console.warn('[WARNING] Supabase credentials (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY) not found. Supabase synchronization will be disabled.');
 }
 
+const { WorkspaceProvisioningService } = require('../services/WorkspaceProvisioningService');
+const { IdentityDomainService } = require('../domain/IdentityDomainService');
+const { LicenseDomainService } = require('../domain/LicenseDomainService');
+const { WorkspaceDomainService } = require('../domain/WorkspaceDomainService');
+
+const identityDomainService = new IdentityDomainService();
+const licenseDomainService = new LicenseDomainService();
+const workspaceDomainService = new WorkspaceDomainService(supabaseAdmin);
+const workspaceProvisioningService = new WorkspaceProvisioningService(identityDomainService, licenseDomainService, workspaceDomainService);
+
+
 // ── Idempotency Cache ─────────────────────────────────────────────────────────
 // Simple in-memory TTL store keyed on X-Idempotency-Key header.
 // NOTE: This is single-instance safe only. For horizontally scaled deployments,
@@ -531,205 +542,38 @@ exports.adminGetEvents = async (req, res) => {
         console.error('Admin fetch events error:', error);
         res.status(500).json({ error: 'Failed to fetch audit events' });
     }
-};// 2b. Atomic Workspace Onboarding
+};
+
+// 2b. Atomic Workspace Onboarding
 exports.onboardWorkspace = async (req, res) => {
-    // Every request gets a unique correlation ID for end-to-end tracing.
+
     const correlationId = crypto.randomUUID();
-    const startTime = Date.now();
-
-    const { productKey, workspaceId, workspaceName, executionMode, defaultLanes, workflowRules, settings, user } = req.body;
-    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
-
-    // ── Input Validation ──────────────────────────────────────────────────────
-    if (!workspaceId || !isValidUUID(workspaceId)) {
-        return res.status(400).json({ error: 'Missing or invalid workspaceId (must be a valid UUID)' });
-    }
-    if (!workspaceName || typeof workspaceName !== 'string' ||
-        workspaceName.trim().length < 2 || workspaceName.trim().length > 100) {
-        return res.status(400).json({ error: 'workspaceName must be 2–100 characters' });
-    }
-    if (!user?.id || !isValidUUID(user.id)) {
-        return res.status(400).json({ error: 'Missing or invalid user.id (must be a valid UUID)' });
-    }
-
-    // ── Identity Verification ─────────────────────────────────────────────────
-    // req.user is set by auth middleware (jwt.verify). The body user.id must
-    // match the authenticated subject — prevents impersonation.
-    if (!req.user?.id || req.user.id !== user.id) {
-        log('warn', correlationId, 'Identity mismatch between JWT sub and request body user.id', {
-            jwtUserId: req.user?.id, bodyUserId: user.id
-        });
-        return res.status(403).json({ error: 'User identity mismatch' });
-    }
-
-    // ── Idempotency Check ─────────────────────────────────────────────────────
-    // If the client sends X-Idempotency-Key and we have a cached successful
-    // response, return it immediately without re-running the flow.
-    const idempotencyKey = _getIdempotencyKey(req);
-    const cachedResponse = _checkIdempotency(idempotencyKey);
-    if (cachedResponse) {
-        log('info', correlationId, 'Returning cached idempotent response', { workspaceId, idempotencyKey });
-        return res.json(cachedResponse);
-    }
-
-    log('info', correlationId, 'Onboarding started', {
-        workspaceId, userId: user.id,
-        productKey: maskKey(productKey),
-        workspaceName: workspaceName.trim()
-    });
-
-    const geo = geoip.lookup(ip);
-    const userAgent = req.headers['user-agent'];
+    
+    // Construct ProvisionWorkspaceCommand from HTTP body
+    const command = {
+        productKey: req.body.productKey,
+        workspaceName: req.body.workspaceName,
+        executionMode: req.body.executionMode,
+        defaultLanes: req.body.defaultLanes,
+        workflowRules: req.body.workflowRules,
+        settings: req.body.settings
+        // Note: Identity fields deliberately ignored
+    };
 
     try {
-        // ── Step 1: MongoDB License Activation ────────────────────────────────
-        let activatedLicense = null;
-        if (productKey && productKey !== 'OFFLINE-LICENSE') {
-            const initialCheck = await License.findOne({ key: productKey });
-            if (!initialCheck) {
-                return res.status(404).json({ error: 'Invalid product key' });
-            }
-            if (initialCheck.status === 'REVOKED') {
-                return res.status(403).json({ error: 'Key has been revoked' });
-            }
-
-            activatedLicense = await License.findOneAndUpdate(
-                { key: productKey, isUsed: false, status: 'AVAILABLE' },
-                {
-                    $set: {
-                        isUsed: true,
-                        status: 'ACTIVE',
-                        activatedAt: new Date(),
-                        usedAt: new Date(),
-                        usedBy: user.id,
-                        workspaceId,
-                        activation: { ip, country: geo?.country, region: geo?.region,
-                                      city: geo?.city, timezone: geo?.timezone, userAgent, source: 'web' },
-                        last_verified_at: new Date()
-                    }
-                },
-                { new: true }
-            );
-
-            if (!activatedLicense) {
-                // License already used — check if it belongs to THIS workspace (idempotent re-onboard)
-                const existingUsed = await License.findOne({ key: productKey, workspaceId });
-                if (existingUsed) {
-                    log('info', correlationId, 'Idempotent re-onboard: license already active for this workspace', {
-                        workspaceId, productKey: maskKey(productKey)
-                    });
-                    activatedLicense = existingUsed;
-                } else {
-                    return res.status(403).json({ error: 'License assigned to another workspace' });
-                }
-            } else {
-                log('info', correlationId, 'MongoDB license activated', {
-                    workspaceId, productKey: maskKey(productKey), plan: activatedLicense.plan
-                });
-            }
-        }
-
-        // ── Step 2: PostgreSQL Atomic Onboarding RPC ──────────────────────────
-        if (supabaseAdmin) {
-            const rpcPayload = {
-                p_workspace_id: workspaceId,
-                p_workspace_name: workspaceName.trim(),
-                p_user_id: user.id,
-                p_user_email: user.email || '',
-                p_user_full_name: user.full_name || user.name || '',
-                p_execution_mode: executionMode || 'KANBAN',
-                p_settings: settings || {},
-                p_default_lanes: defaultLanes || 5,
-                p_workflow_rules: workflowRules || {}
-            };
-
-            const { error: rpcError } = await supabaseAdmin.rpc('onboard_workspace_transaction', rpcPayload);
-
-            if (rpcError) {
-                log('error', correlationId, 'Supabase RPC failed', { workspaceId, rpcError: rpcError.message });
-                throw new Error('Database transaction failed: ' + rpcError.message);
-            }
-
-            log('info', correlationId, 'PostgreSQL RPC committed', { workspaceId });
-
-            // ── Step 3: Sync License Metadata to Supabase ─────────────────────
-            // Runs after RPC commit. Uses UPSERT with up to 2 retries.
-            // Failure here triggers rollback of the MongoDB activation.
-            if (activatedLicense) {
-                await syncSupabaseLicense(productKey, workspaceId, activatedLicense.plan, correlationId);
-            }
-        } else {
-            log('warn', correlationId, 'Supabase Admin not configured — skipping database setup', { workspaceId });
-        }
-
-        // ── Build and Return Response ─────────────────────────────────────────
-        const responseToken = activatedLicense
-            ? jwt.sign({ key: activatedLicense.key, workspaceId }, JWT_SECRET, { expiresIn: '30d' })
-            : null;
-
-        const responseBody = { success: true, token: responseToken, plan: activatedLicense?.plan || 'STANDARD' };
-
-        const durationMs = Date.now() - startTime;
-        log('info', correlationId, 'Onboarding completed successfully', {
-            workspaceId, userId: user.id, durationMs, rollbackAttempted: false
-        });
-
-        // Fire-and-forget audit write — must not throw into the happy path.
-        AuditEvent.create({
-            event_type: 'onboard_workspace',
-            reason: 'Workspace onboarding completed',
-            device_hash: workspaceId,
-            license_key: productKey || 'OFFLINE-LICENSE'
-        }).catch(e => log('warn', correlationId, 'Audit event write failed (non-fatal)', { error: e.message }));
-
-        // Cache success for idempotent retries.
-        _storeIdempotency(idempotencyKey, responseBody);
-
-        return res.json(responseBody);
-
+        const response = await workspaceProvisioningService.provisionWorkspace(req, command, correlationId);
+        return res.json(response);
     } catch (error) {
-        const durationMs = Date.now() - startTime;
-        log('error', correlationId, 'Onboarding failed — initiating MongoDB rollback', {
-            workspaceId, error: error.message, durationMs
-        });
-
-        // ── Compensating Transaction: Roll Back MongoDB Activation ────────────
-        // The PostgreSQL RPC is self-contained and rolled back by Postgres on
-        // failure. We must compensate the MongoDB activation manually.
-        if (productKey && productKey !== 'OFFLINE-LICENSE') {
-            try {
-                await License.findOneAndUpdate(
-                    { key: productKey, workspaceId },
-                    {
-                        $set: {
-                            isUsed: false, status: 'AVAILABLE',
-                            activatedAt: null, usedAt: null, usedBy: null,
-                            workspaceId: null, activation: null, last_verified_at: null
-                        }
-                    }
-                );
-                log('info', correlationId, 'MongoDB license rollback succeeded', {
-                    workspaceId, productKey: maskKey(productKey)
-                });
-            } catch (rollbackError) {
-                // CRITICAL: License consumed but workspace not created.
-                // Requires manual remediation via POST /admin/reset.
-                log('error', correlationId, 'CRITICAL: MongoDB rollback failed — manual intervention required', {
-                    workspaceId,
-                    productKey: maskKey(productKey),
-                    rollbackError: rollbackError.message,
-                    remediation: 'Call POST /admin/reset with the affected productKey'
-                });
-                // Record failed rollback for the audit trail — fire-and-forget.
-                AuditEvent.create({
-                    event_type: 'onboard_rollback_failed',
-                    reason: `Rollback error: ${rollbackError.message}`,
-                    device_hash: workspaceId,
-                    license_key: productKey
-                }).catch(() => {});
-            }
+        if (error.name === 'PlatformError') {
+            return res.status(error.httpStatus).json(error.toResponse(correlationId));
         }
-
-        return res.status(500).json({ error: error.message || 'Server error during onboarding' });
+        return res.status(500).json({
+            code: 'UNEXPECTED_ERROR',
+            message: 'Server error during onboarding',
+            correlationId,
+            retryable: false,
+            httpStatus: 500,
+            category: 'Unexpected'
+        });
     }
 };

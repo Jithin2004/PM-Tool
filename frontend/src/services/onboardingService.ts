@@ -58,7 +58,7 @@ class OnboardingService {
       const updatedSteps = [...existing, step];
       const allDone = Object.values(ONBOARDING_STEPS).every(s => updatedSteps.includes(s));
 
-      await supabase
+      const { error } = await supabase
         .from('workspace_onboarding_state')
         .upsert(
           {
@@ -85,7 +85,7 @@ class OnboardingService {
   async saveTemplates(workspaceId: string, templates: string[]): Promise<void> {
     try {
       const current = await this.getState(workspaceId);
-      await supabase
+      const { error } = await supabase
         .from('workspace_onboarding_state')
         .upsert(
           {
@@ -110,7 +110,7 @@ class OnboardingService {
    */
   async completeSetup(workspaceId: string): Promise<void> {
     try {
-      await supabase
+      const { error } = await supabase
         .from('workspace_onboarding_state')
         .upsert(
           {

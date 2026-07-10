@@ -85,6 +85,22 @@ const ProductKeyGatePageLazy = withRetry(() =>
     default: m.ProductKeyPage,
   })),
 );
+// v2 entry architecture pages
+const NewCustomerPageLazy = withRetry(() =>
+  import("../pages/onboarding/NewCustomerPage").then((m) => ({
+    default: m.NewCustomerPage,
+  })),
+);
+const WorkspaceInitPageLazy = withRetry(() =>
+  import("../pages/onboarding/WorkspaceInitPage").then((m) => ({
+    default: m.WorkspaceInitPage,
+  })),
+);
+const UserInitPageLazy = withRetry(() =>
+  import("../pages/onboarding/UserInitPage").then((m) => ({
+    default: m.UserInitPage,
+  })),
+);
 import { LandingPage } from "../landing/LandingPage";
 import { PrivacyPage } from "../landing/PrivacyPage";
 import { TermsPage } from "../landing/TermsPage";
@@ -417,7 +433,10 @@ export function ResolveRouter() {
     if (pathname === "/security") return <SecurityPage />;
     if (pathname === "/reset-password") return <ResetPassword />;
     if (pathname === "/activate-license") return <Redirect to="/provisioning/product-key" />;
-    if (pathname === "/provisioning/product-key") return <ProductKeyGatePageLazy />;
+    // v2: NewCustomerPage replaces ProductKeyGatePage as the unified entry for new customers
+    if (pathname === "/provisioning/product-key") return (
+      <Suspense fallback={<RouteFallback />}><NewCustomerPageLazy /></Suspense>
+    );
 
     // ── FSM Routing ──
     if (authState === AuthState.UNAUTHENTICATED) {
@@ -511,13 +530,28 @@ export function ResolveRouter() {
       );
     }
 
-    // ── WORKSPACE ──
-    if (pathname === "/workspaces/new") {
+    // ── WORKSPACE SETUP (v2) ──
+    // /workspace-init: owner-only, full-screen, no DashboardLayout
+    if (pathname === "/workspace-init") {
+      if (role !== 'super_admin') return <Redirect to="/overview" />;
       return (
-        <RouteShell>
-          <WorkspaceSetupPageLazy />
-        </RouteShell>
+        <Suspense fallback={<RouteFallback />}><WorkspaceInitPageLazy /></Suspense>
       );
+    }
+    // /user-init: any authenticated user who hasn't completed their profile
+    if (pathname === "/user-init") {
+      return (
+        <Suspense fallback={<RouteFallback />}><UserInitPageLazy /></Suspense>
+      );
+    }
+    // /onboarding/workspace: legacy path referenced in postAuthRedirect.ts for
+    // pending-workspace-setup role; was never registered — now fixed
+    if (pathname === "/onboarding/workspace") return <Redirect to="/provisioning/product-key" />;
+
+    // ── WORKSPACE ──
+    // /workspaces/new is superseded by /workspace-init (direct DB insert removed)
+    if (pathname === "/workspaces/new") {
+      return <Redirect to="/workspace-init" />;
     }
     if (pathname === "/workspaces/settings") {
       if (!guardRoute(role, "/workspaces/settings"))

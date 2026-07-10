@@ -12,7 +12,7 @@ import {
   BarChart2, Users, Receipt
 } from 'lucide-react';
 import { CommercialRequestModal } from './components/CommercialRequestModal';
-import { navigate } from '../lib/navigation';
+import { navigate, replace } from '../lib/navigation';
 
 export function LandingPage() {
   const verified = isProductKeyVerified() || !!useAuth().user;
@@ -60,7 +60,7 @@ export function LandingPage() {
     if (bootstrapState !== BootstrapState.READY && profile!.role !== 'pending-workspace-setup' && !workspace) {
       return;
     }
-    navigate(destination, true);
+    replace(destination);
   }, [hasSession, profile, workspace, bootstrapState]);
 
   return (

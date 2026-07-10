@@ -3,17 +3,61 @@ import { useAuth } from '../../context/AuthContext';
 import { ProvisioningState } from '../../core/lifecycle/types';
 import { useBootstrap } from '../../core/lifecycle/BootstrapOrchestrator';
 import { ProductKeyGate } from './ProductKeyGate';
-import { AlertCircle, UserMinus, Building, Ban, KeyRound, RefreshCw, Mail } from 'lucide-react';
+import { AlertCircle, UserMinus, Building, Ban, KeyRound, RefreshCw, Mail, Settings, Clock } from 'lucide-react';
 import { ResolveLayout } from '../../app/layouts/ResolveLayout';
+import { replace } from '../../lib/navigation';
 
 interface ProvisioningGateProps {
   state: ProvisioningState;
 }
 
 export function ProvisioningGate({ state }: ProvisioningGateProps) {
-  const { logout } = useAuth();
+  const { logout, profile } = useAuth();
   const { retryProvisioning } = useBootstrap();
   const [showProductKeyGate, setShowProductKeyGate] = useState(false);
+
+  // ── v2 early returns: redirect rather than gate ─────────────────────────────
+
+  // WORKSPACE_UNINIT: super_admin must complete /workspace-init before anyone logs in
+  if (state === ProvisioningState.WORKSPACE_UNINIT) {
+    if (profile?.role === 'super_admin') {
+      replace('/workspace-init');
+      return null;
+    }
+    // Non-owners see a holding screen until the owner completes setup
+    return (
+      <ResolveLayout eyebrow="Setup in Progress">
+        <div className="flex flex-col items-center justify-center min-h-[80vh] w-full p-4 font-geist text-center">
+          <div className="bg-surface-2 p-8 rounded-xl border border-border/50 max-w-lg w-full shadow-2xl">
+            <div className="w-16 h-16 bg-surface-3 rounded-full flex items-center justify-center mx-auto mb-6 border border-border/50">
+              <Clock className="w-8 h-8 text-[var(--pm-primary)] animate-pulse" />
+            </div>
+            <h2 className="text-2xl font-bold text-[var(--pm-on-surface)] mb-4 tracking-tight">Workspace Setup In Progress</h2>
+            <p className="text-sm text-[var(--pm-on-surface-variant)] mb-8 leading-relaxed">
+              Your workspace owner is completing the initial configuration.<br/>
+              You'll be able to log in once setup is complete.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button onClick={retryProvisioning}
+                className="w-full px-4 py-3 bg-[var(--pm-primary)]/10 hover:bg-[var(--pm-primary)]/20 text-[var(--pm-primary)] rounded-lg transition-colors border border-[var(--pm-primary)]/20 flex items-center justify-center gap-3 font-semibold text-sm">
+                <RefreshCw className="w-4 h-4" /> Check Again
+              </button>
+              <button onClick={logout}
+                className="w-full px-4 py-3 bg-transparent hover:bg-surface-3 text-[var(--pm-on-surface-variant)] rounded-lg transition-colors flex items-center justify-center gap-3 font-semibold text-sm">
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      </ResolveLayout>
+    );
+  }
+
+  // PROFILE_INCOMPLETE: redirect to /user-init
+  if (state === ProvisioningState.PROFILE_INCOMPLETE) {
+    replace('/user-init');
+    return null;
+  }
 
   if (showProductKeyGate) {
     return (
@@ -113,7 +157,7 @@ export function ProvisioningGate({ state }: ProvisioningGateProps) {
 
             {showProductKeyBtn && (
               <button 
-                onClick={() => setShowProductKeyGate(true)}
+                onClick={() => replace('/provisioning/product-key')}
                 className="w-full text-left px-4 py-3 bg-[var(--pm-primary)]/10 hover:bg-[var(--pm-primary)]/20 text-[var(--pm-primary)] rounded-lg transition-colors border border-[var(--pm-primary)]/20 flex items-center gap-3 font-semibold text-sm"
               >
                 <KeyRound className="w-4 h-4" />

@@ -21,14 +21,19 @@ export enum BootstrapState {
 }
 
 export enum ProvisioningState {
-  INITIALIZING = 'INITIALIZING',
-  READY = 'READY',
-  PROFILE_MISSING = 'PROFILE_MISSING',
-  WORKSPACE_MISSING = 'WORKSPACE_MISSING',
+  INITIALIZING       = 'INITIALIZING',
+  READY              = 'READY',
+  PROFILE_MISSING    = 'PROFILE_MISSING',
+  WORKSPACE_MISSING  = 'WORKSPACE_MISSING',
   WORKSPACE_INACTIVE = 'WORKSPACE_INACTIVE',
-  PENDING_INVITE = 'PENDING_INVITE',
-  LICENSE_REQUIRED = 'LICENSE_REQUIRED'
+  // v2: owner must complete /workspace-init before team members can access
+  WORKSPACE_UNINIT   = 'WORKSPACE_UNINIT',
+  // v2: user must complete /user-init before accessing the dashboard
+  PROFILE_INCOMPLETE = 'PROFILE_INCOMPLETE',
+  PENDING_INVITE     = 'PENDING_INVITE',
+  LICENSE_REQUIRED   = 'LICENSE_REQUIRED'
 }
+
 
 export interface AppContext {
   session: Session | null;

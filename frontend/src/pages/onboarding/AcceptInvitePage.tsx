@@ -113,8 +113,10 @@ export function AcceptInvitePage() {
 
       if (signInError) {
          console.warn("Auto-login failed:", signInError);
-         // Don't throw, we still successfully accepted the invite.
-         // They can log in manually if this fails.
+         setError('Your account was created successfully. Please log in to continue.');
+         setTimeout(() => navigate('/login'), 3000);
+         setLoading(false);
+         return;
       }
 
       setSuccess(true);

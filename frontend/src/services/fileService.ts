@@ -1,6 +1,18 @@
+/**
+ * @deprecated DO NOT USE IN NEW CODE.
+ *
+ * This service targets the `workspace_files` table, which is a legacy flat
+ * schema that duplicates the canonical `files` + `file_versions` + `file_links`
+ * enterprise schema. All file operations must go through `fileStorageService`
+ * which targets the canonical schema.
+ *
+ * Scheduled for removal in Sprint 3 once all callsites have been verified
+ * against the canonical schema. See ADR-007 (Storage Architecture).
+ */
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Profile } from '../types';
 import { activityLogService } from './activityLogService';
+
 
 export interface FileVersion {
   id: string;
