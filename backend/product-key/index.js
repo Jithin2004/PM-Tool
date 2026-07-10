@@ -36,26 +36,31 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// Only allow origins listed in ALLOWED_ORIGINS (comma-separated).
-// Requests with no Origin header (server-to-server, curl) are always allowed.
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
-    .split(',')
-    .map(o => o.trim())
-    .filter(Boolean);
+const defaultOrigins = ['http://localhost:5173', 'https://resolve-pm.vercel.app'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+    : defaultOrigins;
 
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin) return callback(null, true); // Non-browser requests
+        
+        // Always preserve localhost origins for development safely
+        if (origin.startsWith('http://localhost:')) {
+            return callback(null, true);
+        }
+
         if (allowedOrigins.includes(origin)) return callback(null, true);
         callback(new Error(`CORS: origin ${origin} not permitted`));
     },
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: [
         'Content-Type',
         'Authorization',
         'X-License-Admin-Secret',
-        'X-Idempotency-Key'      // For safe retries on /onboard
-    ]
+        'X-Idempotency-Key'
+    ],
+    optionsSuccessStatus: 200 // legacy browser support for OPTIONS
 }));
 
 app.use(express.json({ limit: '256kb' })); // Prevent large-body attacks
