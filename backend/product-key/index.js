@@ -10,10 +10,11 @@ const licenseController = require('./controller/license');
 // ── Startup: Validate Critical Environment Variables ──────────────────────────
 // Fail fast so a misconfigured deployment is obvious immediately.
 const REQUIRED_ENV = [
-    'JWT_SECRET',              // Signs/verifies license tokens issued by this server
-    'SUPABASE_JWT_SECRET',     // Verifies Supabase user JWTs (from Supabase Auth)
-    'SUPABASE_SERVICE_ROLE_KEY', // Supabase service role for RPC calls
-    'LICENSE_ADMIN_SECRET'     // Protects /admin/* endpoints
+    'JWT_SECRET',                // Signs/verifies license tokens issued by this server
+    'SUPABASE_URL',              // Base URL for Supabase API
+    'SUPABASE_ANON_KEY',         // Used to verify authentication tokens via the API
+    'SUPABASE_SERVICE_ROLE_KEY', // Supabase service role for orchestration/RPC calls
+    'LICENSE_ADMIN_SECRET'       // Protects /admin/* endpoints
 ];
 const MISSING_ENV = REQUIRED_ENV.filter(v => !process.env[v]);
 if (MISSING_ENV.length > 0) {
@@ -22,10 +23,7 @@ if (MISSING_ENV.length > 0) {
     process.exit(1);
 }
 
-// Warn about optional but operationally important variables.
-if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
-    console.warn('[WARNING] SUPABASE_URL is not set. All Supabase operations will be skipped.');
-}
+// Ensure MongoDB is configured
 if (!process.env.ALLOWED_ORIGINS) {
     console.warn('[WARNING] ALLOWED_ORIGINS is not set. All cross-origin requests will be rejected.');
 }

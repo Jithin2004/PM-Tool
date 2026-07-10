@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const geoip = require('geoip-lite');
-const { createClient } = require('@supabase/supabase-js');
+const { supabaseAdmin } = require('../lib/supabase');
 const License = require('../models/License');
 const AuditEvent = require('../models/AuditEvent');
 const { log, isValidUUID, maskKey, getPlanSeats } = require('./helpers');
@@ -12,14 +12,7 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
-// Prefer the server-side env var; accept the Vite-prefixed one for backward compatibility only.
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-let supabaseAdmin = null;
-if (supabaseUrl && supabaseServiceKey) {
-    supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-} else {
+if (!supabaseAdmin) {
     console.warn('[WARNING] Supabase credentials (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY) not found. Supabase synchronization will be disabled.');
 }
 

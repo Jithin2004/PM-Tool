@@ -1,57 +1,56 @@
 'use strict';
 
-const jwt = require('jsonwebtoken');
-
-// Read once at module load. If missing, startup validation in index.js will
-// have already exited the process — this guard is belt-and-suspenders.
-const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+const { supabaseAnon } = require('../lib/supabase');
 
 /**
  * Auth middleware.
  *
- * Verifies the Supabase JWT signature using SUPABASE_JWT_SECRET.
- * On success, sets req.user = { id: decoded.sub } for downstream handlers.
+ * Authenticates requests using the Supabase Auth API (`getUser`).
+ * Treats Supabase as the exclusive Identity Provider.
  *
- * Previously used jwt.decode() (no signature check).
- * Now uses jwt.verify() — callers without a valid Supabase JWT are rejected.
+ * Populates `req.user` with minimal identity (id, email).
  */
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
     // OAuth callback carries state, not a Bearer token — skip this path.
     if (req.path === '/oauth2callback') return next();
 
-    if (!SUPABASE_JWT_SECRET) {
-        console.error('[AUTH] SUPABASE_JWT_SECRET is not configured.');
+    if (!supabaseAnon) {
+        console.error('[AUTH] supabaseAnon client is not initialized. Check SUPABASE_URL and SUPABASE_ANON_KEY.');
         return res.status(500).json({ error: 'Server authentication not configured' });
     }
 
     const authHeader = req.headers.authorization;
+    let token = null;
 
-    // Support legacy query-param token path (e.g. /auth/google redirect flows).
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        if (req.query.token) {
-            try {
-                const decoded = jwt.verify(req.query.token, SUPABASE_JWT_SECRET);
-                if (decoded?.sub) {
-                    req.user = { id: decoded.sub };
-                    return next();
-                }
-            } catch {
-                return res.status(401).json({ error: 'Invalid token' });
-            }
-        }
+    // Extract token from Bearer header or legacy query param
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else if (req.query.token) {
+        token = req.query.token;
+    }
+
+    if (!token) {
+        console.warn('[AUTH] AUTH_MISSING_TOKEN: Request rejected');
         return res.status(401).json({ error: 'Missing or invalid authorization header' });
     }
 
-    const token = authHeader.split(' ')[1];
     try {
-        const decoded = jwt.verify(token, SUPABASE_JWT_SECRET);
-        if (!decoded?.sub) {
-            return res.status(401).json({ error: 'Invalid token structure' });
+        const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
+
+        if (error || !user) {
+            console.warn(`[AUTH] AUTH_INVALID_TOKEN: ${error?.message || 'User not found'}`);
+            return res.status(401).json({ error: 'Invalid or expired token' });
         }
-        req.user = { id: decoded.sub };
+
+        // Populate req.user with minimal identity required by the application
+        req.user = { 
+            id: user.id,
+            email: user.email
+        };
+
         next();
     } catch (error) {
-        // jwt.verify throws JsonWebTokenError, TokenExpiredError, NotBeforeError
+        console.error(`[AUTH] AUTH_EXPIRED_TOKEN / VERIFICATION_ERROR: ${error.message}`);
         return res.status(401).json({ error: 'Token verification failed' });
     }
 };
