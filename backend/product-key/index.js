@@ -85,7 +85,9 @@ app.use(cors({
         'Content-Type',
         'Authorization',
         'X-License-Admin-Secret',
-        'X-Idempotency-Key'
+        'X-Idempotency-Key',
+        'X-Correlation-ID',
+        'X-Run-ID'
     ],
     optionsSuccessStatus: 200 // legacy browser support for OPTIONS
 }));
