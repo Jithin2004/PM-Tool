@@ -68,6 +68,9 @@ app.use(express.json({ limit: '256kb' })); // Prevent large-body attacks
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
 // Applied per-endpoint. express-rate-limit v8 is already installed.
 
+// Trust Render's proxy to accurately read X-Forwarded-For IPs for rate limiting
+app.set('trust proxy', 1);
+
 /** /verify and /activate: 10 requests per minute per IP */
 const publicLicenseLimiter = rateLimit({
     windowMs: 60 * 1000,

@@ -14,8 +14,19 @@ class BackendPlatformError extends Error {
     this.details = details;
     this.correlationId = correlationId;
     this.retryable = retryable;
-    this.httpStatus = httpStatus;
-    this.category = category;
+    this.httpStatus = httpStatus || 500;
+    this.category = category || 'System';
+  }
+
+  toResponse(fallbackCorrelationId) {
+    return {
+      code: this.code,
+      message: this.message,
+      details: this.details,
+      correlationId: this.correlationId || fallbackCorrelationId,
+      retryable: this.retryable,
+      category: this.category
+    };
   }
 }
 

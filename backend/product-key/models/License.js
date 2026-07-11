@@ -115,24 +115,19 @@ function validateLifecycle(doc) {
   }
 }
 
-licenseSchema.pre('save', function (next) {
-  try {
-    if (this.status === 'AVAILABLE' || this.status === 'REVOKED') {
-      this.isUsed = false;
-    } else if (this.status === 'ACTIVE') {
-      this.isUsed = true;
-    }
-    
-    validateLifecycle(this);
-    next();
-  } catch (err) {
-    next(err);
+licenseSchema.pre('save', function () {
+  if (this.status === 'AVAILABLE' || this.status === 'REVOKED') {
+    this.isUsed = false;
+  } else if (this.status === 'ACTIVE') {
+    this.isUsed = true;
   }
+  
+  validateLifecycle(this);
 });
 
-licenseSchema.pre('findOneAndUpdate', function (next) {
+licenseSchema.pre('findOneAndUpdate', function () {
   const update = this.getUpdate();
-  if (!update) return next();
+  if (!update) return;
   
   const setOp = update.$set || update;
   if (setOp.status) {
@@ -147,16 +142,16 @@ licenseSchema.pre('findOneAndUpdate', function (next) {
   // But mongoose middleware for findOneAndUpdate doesn't easily expose the current doc.
   // To keep it simple, we just validate the $set fields if they attempt to create contradictory states directly
   if (setOp.status === 'AVAILABLE' && (setOp.isUsed === true || setOp.activatedAt || setOp.usedAt)) {
-    return next(new Error('Invalid State: Cannot update to AVAILABLE with active usage fields'));
+    throw new Error('Invalid State: Cannot update to AVAILABLE with active usage fields');
   }
   if (setOp.status === 'ACTIVE' && setOp.isUsed === false) {
-    return next(new Error('Invalid State: Cannot update to ACTIVE with isUsed=false'));
+    throw new Error('Invalid State: Cannot update to ACTIVE with isUsed=false');
   }
   if (setOp.status === 'REVOKED' && setOp.isUsed === true) {
-    return next(new Error('Invalid State: Cannot update to REVOKED with isUsed=true'));
+    throw new Error('Invalid State: Cannot update to REVOKED with isUsed=true');
   }
-  next();
 });
+
 
 // Enforce security stripping of internal fields when converting to JSON/Object
 const stripSecrets = (doc, ret) => {
