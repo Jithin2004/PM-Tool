@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { log, isValidUUID } = require('../controller/helpers');
+const { log, isValidUUID, getPlanSeats } = require('../controller/helpers');
 const { BackendPlatformError } = require('../domain/LicenseDomainService'); // Adjust path
 const AuditEvent = require('../models/AuditEvent');
 
