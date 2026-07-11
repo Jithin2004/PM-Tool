@@ -10482,7 +10482,7 @@ CREATE OR REPLACE FUNCTION public.onboard_workspace_transaction(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_license_key_hash TEXT;
@@ -10514,7 +10514,7 @@ BEGIN
     'UTC',
     true, false,
     0.8,
-    'licensed',  -- workspace is licensed but not yet initialized
+    'onboarding',  -- workspace is in onboarding phase but not yet initialized
     false,       -- owner must complete /workspace-init
     NOW()
   )

@@ -31,9 +31,9 @@ export function resolveProvisioningState(input: ResolutionInput): ProvisioningSt
     return ProvisioningState.WORKSPACE_MISSING;
   }
 
-  // 4. Workspace status must be active or licensed
+  // 4. Workspace status must be active or onboarding
   const wsStatus = workspaceRow?.status;
-  if (workspaceRow && wsStatus !== 'active' && wsStatus !== 'licensed') {
+  if (workspaceRow && wsStatus !== 'active' && wsStatus !== 'onboarding') {
     return ProvisioningState.WORKSPACE_INACTIVE;
   }
 
