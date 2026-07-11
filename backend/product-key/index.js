@@ -123,7 +123,7 @@ const authMiddleware = require('./middleware/auth');
 // ── Health Check ──────────────────────────────────────────────────────────────
 // Returns MongoDB connection state so load balancers and uptime monitors can
 // distinguish a degraded server from a healthy one.
-app.get('/health', (req, res) => {
+const healthCheckHandler = (req, res) => {
     const mongoose = require('mongoose');
     const mongoStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
     const dbState = mongoStates[mongoose.connection.readyState] || 'unknown';
@@ -135,7 +135,11 @@ app.get('/health', (req, res) => {
         db: dbState,
         uptime: process.uptime()
     });
-});
+};
+
+app.get('/health', healthCheckHandler);
+app.get('/', healthCheckHandler);
+app.head('/', (req, res) => res.status(200).end());
 
 // ── Public Licensing Endpoints ────────────────────────────────────────────────
 app.post('/verify', publicLicenseLimiter, licenseController.verifyLicense);
