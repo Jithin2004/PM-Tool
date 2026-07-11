@@ -4,6 +4,36 @@ const { BackendPlatformError } = require('../domain/LicenseDomainService'); // A
 const AuditEvent = require('../models/AuditEvent');
 const logger = require('../lib/logger');
 
+function mapLicensePlanToWorkspacePlan(plan, ctx) {
+    if (!plan) {
+        throw new BackendPlatformError({
+            code: 'INVALID_LICENSE_PLAN',
+            message: 'License plan is missing or undefined',
+            httpStatus: 400,
+            category: 'Validation',
+            correlationId: ctx?.correlationId || ''
+        });
+    }
+
+    const normalizedPlan = String(plan).trim().toUpperCase();
+
+    switch (normalizedPlan) {
+        case 'STARTER':
+            return 'standard';
+        case 'BUSINESS':
+            return 'premium';
+        case 'ENTERPRISE':
+            return 'enterprise';
+        default:
+            throw new BackendPlatformError({
+                code: 'INVALID_LICENSE_PLAN',
+                message: `Unknown license plan: ${plan}`,
+                httpStatus: 400,
+                category: 'Validation',
+                correlationId: ctx?.correlationId || ''
+            });
+    }
+}
 class WorkspaceProvisioningService {
   constructor(identityDomainService, licenseDomainService, workspaceDomainService) {
     this.identityDomainService = identityDomainService;
@@ -84,8 +114,9 @@ class WorkspaceProvisioningService {
       req.traceContext = ctx;
 
       // 3. Workspace Creation & Owner Setup (Postgres RPC)
-      const plan = activatedLicense ? activatedLicense.plan : 'STANDARD';
-      const seats = activatedLicense ? getPlanSeats(plan) : 10;
+      const mongoPlan = activatedLicense ? activatedLicense.plan : 'STARTER';
+      const workspacePlan = mapLicensePlanToWorkspacePlan(mongoPlan, ctx);
+      const seats = activatedLicense ? getPlanSeats(mongoPlan) : 5;
 
       await this.workspaceDomainService.createWorkspace({
         workspaceId,
@@ -94,7 +125,7 @@ class WorkspaceProvisioningService {
         userEmail: identity.email,
         userName: identity.fullName,
         licenseKey: productKey || 'OFFLINE-LICENSE',
-        plan,
+        plan: workspacePlan,
         seats,
         traceContext: ctx
       });
