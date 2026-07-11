@@ -76,25 +76,21 @@ class WorkspaceProvisioningService {
       });
 
       // 3. Workspace Creation & Owner Setup (Postgres RPC)
+      // The RPC 'onboard_workspace_transaction' handles workspace, license sync, and user profile atomically.
+      const plan = activatedLicense ? activatedLicense.plan : 'STANDARD';
+      const seats = activatedLicense ? getPlanSeats(plan) : 10;
+
       await this.workspaceDomainService.createWorkspace({
         workspaceId,
         workspaceName,
         userId: identity.id,
         userEmail: identity.email,
-        userFullName: identity.fullName,
-        executionMode: command.executionMode,
-        defaultLanes: command.defaultLanes,
-        workflowRules: command.workflowRules,
-        settings: command.settings,
+        userName: identity.fullName,
+        licenseKey: productKey || 'OFFLINE-LICENSE',
+        plan,
+        seats,
         correlationId
       });
-
-      // 4. Sync License Metadata
-      if (activatedLicense) {
-        await this.workspaceDomainService.syncSupabaseLicense({
-          productKey, workspaceId, plan: activatedLicense.plan, correlationId
-        });
-      }
 
       // Success
       const responseBody = {
