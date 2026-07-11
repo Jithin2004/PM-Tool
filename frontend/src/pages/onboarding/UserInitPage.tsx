@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Phone, Camera, Palette, Bell, ChevronRight, ChevronLeft, CheckCircle, Loader } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { navigate } from '../../lib/navigation';
+import { logger } from '../../lib/logger';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,15 @@ function getInitials(name: string): string {
 
 export function UserInitPage() {
   const { profile, setProfile } = useAuth();
+
+  useEffect(() => {
+    const correlationId = sessionStorage.getItem('resolve_pm_correlation_id') || 'bootstrap';
+    const runId = sessionStorage.getItem('resolve_pm_run_id') || 'bootstrap';
+    const ctx = logger.createContext(correlationId, runId, profile);
+    logger.startTimeline(ctx);
+    logger.logCheckpoint('BOOT-503', 'STARTED', 'UserInitPage setup wizard mounted (USER_INIT_REQUIRED)');
+  }, [profile?.id]);
+
   const [step, setStep] = useState<Step>('personal');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -91,6 +101,8 @@ export function UserInitPage() {
     if (!profile?.id) return;
     setSaving(true);
     setError('');
+
+    logger.logCheckpoint('BOOT-503', 'STARTED', 'Saving user profile and preferences configuration...');
 
     try {
       const { error: updateError } = await supabase
@@ -132,9 +144,14 @@ export function UserInitPage() {
         } as any);
       }
 
+      logger.logCheckpoint('BOOT-503', 'SUCCESS', 'User profile setup completed successfully');
+      logger.dumpTimeline();
+
       setStep('complete');
       setTimeout(() => navigate('/overview'), 1600);
     } catch (err: any) {
+      logger.logCheckpoint('BOOT-503', 'FAILED', `User profile setup failed: ${err.message}`);
+      logger.dumpTimeline();
       setError(err?.message || 'Failed to save profile. Please try again.');
     } finally {
       setSaving(false);

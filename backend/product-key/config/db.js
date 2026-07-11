@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 async function connectDB() {
     try {
+        mongoose.set('bufferCommands', false);
         // Support multiple env var names: MONGO_URI (standard), DB (legacy), DATABASE_URL (Render default)
         const dbUri = process.env.MONGO_URI || process.env.DB || process.env.DATABASE_URL;
         

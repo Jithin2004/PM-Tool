@@ -10486,6 +10486,7 @@ SET search_path = public, extensions
 AS $$
 DECLARE
   v_license_key_hash TEXT;
+  v_team_id UUID := gen_random_uuid();
 BEGIN
 
   -- Input validation
@@ -10522,7 +10523,7 @@ BEGIN
 
   -- Step 2: Sync License (idempotent)
   INSERT INTO public.workspace_license (
-    workspace_id, license_key_hash, license_type, max_seats, activation_date, support_until
+    workspace_id, license_key_hash, license_type, allowed_users, activation_date, support_until
   )
   VALUES (
     p_workspace_id,
@@ -10535,7 +10536,7 @@ BEGIN
   ON CONFLICT (workspace_id) DO UPDATE SET
     license_key_hash = EXCLUDED.license_key_hash,
     license_type     = EXCLUDED.license_type,
-    max_seats        = EXCLUDED.max_seats,
+    allowed_users    = EXCLUDED.allowed_users,
     activation_date  = COALESCE(public.workspace_license.activation_date, EXCLUDED.activation_date),
     support_until    = EXCLUDED.support_until;
 
@@ -10561,15 +10562,18 @@ BEGIN
     END;
 
   -- Step 4: Create Team Membership (idempotent)
+  INSERT INTO public.teams (id, workspace_id, name)
+  VALUES (v_team_id, p_workspace_id, 'Engineering')
+  ON CONFLICT (id) DO NOTHING;
+
   INSERT INTO public.team_members (
-    workspace_id, user_id, role, status
+    workspace_id, team_id, user_id, member_role
   )
   VALUES (
-    p_workspace_id, p_user_id, 'super_admin', 'active'
+    p_workspace_id, v_team_id, p_user_id, 'project_manager'
   )
-  ON CONFLICT (workspace_id, user_id) DO UPDATE SET
-    role   = 'super_admin',
-    status = 'active';
+  ON CONFLICT (team_id, user_id) DO UPDATE SET
+    member_role   = 'project_manager';
 
   -- Step 5: Mark Onboarding State (idempotent)
   -- setup_completed remains false — owner must complete /workspace-init

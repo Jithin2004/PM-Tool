@@ -488,18 +488,27 @@ export async function checkLicenseOnline(workspaceId: string): Promise<{ valid: 
   }
 }
 
+import { logger } from './logger';
+
 const ONBOARD_URL = `${API_BASE_URL}/onboard`;
 
 export async function onboardWorkspaceTransaction(payload: any, token: string): Promise<any> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   
+  const correlationId = sessionStorage.getItem('resolve_pm_correlation_id') || '';
+  const runId = sessionStorage.getItem('resolve_pm_run_id') || '';
+
+  logger.logCheckpoint('HTTP-201', 'STARTED', `POST /onboard request started (correlationId=${correlationId}, runId=${runId})`);
+
   try {
     const res = await fetch(ONBOARD_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'X-Correlation-ID': correlationId,
+        'X-Run-ID': runId
       },
       body: JSON.stringify(payload),
       signal: controller.signal,
@@ -509,12 +518,18 @@ export async function onboardWorkspaceTransaction(payload: any, token: string): 
     
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      throw new Error(body?.error || `Onboarding failed (${res.status})`);
+      const errMessage = body?.message || `Onboarding failed (${res.status})`;
+      logger.logCheckpoint('HTTP-201', 'FAILED', `POST /onboard failed: ${errMessage}`);
+      throw new Error(errMessage);
     }
     
+    logger.logCheckpoint('HTTP-201', 'SUCCESS', 'POST /onboard succeeded');
     return await res.json();
   } catch (err: any) {
     clearTimeout(timer);
+    if (err.name !== 'AbortError') {
+      logger.logCheckpoint('HTTP-201', 'FAILED', `POST /onboard exception: ${err.message}`);
+    }
     throw err;
   }
 }

@@ -11,6 +11,7 @@ import { User } from '../../types';
 import { BootLogger } from './bootLogger';
 import { TelemetryService } from '../observability/telemetry';
 import { resolveProvisioningState } from './ProvisioningStateResolver';
+import { logger } from '../../lib/logger';
 
 // We will inject the lifecycle aware services here or instantiate them
 // e.g. telemetryEngine, notificationEngine, etc.
@@ -132,6 +133,12 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
       if (resolvedState === ProvisioningState.READY && workspaceNeedsSetup) {
         finalState = ProvisioningState.WORKSPACE_MISSING;
       }
+
+      // Log bootstrap classification decision (BOOT-501)
+      logger.logDecision('BOOT-501', finalState, `Bootstrap classification complete. wsStatus=${wsResult.data?.status || 'none'}, initialized=${wsResult.data?.initialized || 'none'}`, {
+        workspace: wsResult.data ? { status: wsResult.data.status, initialized: wsResult.data.initialized } : undefined,
+        license: { valid: licenseResult.valid, error: licenseResult.error }
+      });
 
       // If we are not READY, fail fast and early-return
       if (finalState !== ProvisioningState.READY) {

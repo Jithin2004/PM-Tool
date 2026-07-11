@@ -31,6 +31,35 @@ export interface FileVersionRecord {
   created_at: string;
 }
 
+function mapToFileRecord(row: any): FileRecord {
+  return {
+    id: row.id,
+    workspace_id: row.workspace_id,
+    uploaded_by: row.uploaded_by,
+    storage_provider: 'supabase',
+    storage_path: row.storage_path,
+    original_name: row.file_name,
+    mime_type: row.mime_type,
+    file_size: Number(row.file_size),
+    created_at: row.created_at,
+    archived_at: row.deleted_at,
+    archived_by: null,
+  };
+}
+
+function mapToFileVersionRecord(row: any): FileVersionRecord {
+  return {
+    id: row.id,
+    file_id: row.file_id,
+    version_number: row.version_number,
+    storage_path: row.storage_path,
+    uploaded_by: row.uploaded_by,
+    size: Number(row.file_size),
+    created_at: row.created_at,
+    checksum: row.checksum,
+  };
+}
+
 export const fileStorageService = {
   // ─────────────────────────────────────────────────────────────────────────
   // QUOTA
@@ -44,7 +73,7 @@ export const fileStorageService = {
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // UPLOAD — creates files + file_versions(v1) + optional file_links
+  // UPLOAD — creates workspace_files + file_versions(v1)
   // ─────────────────────────────────────────────────────────────────────────
   async uploadFile(
     file: File,
@@ -72,26 +101,20 @@ export const fileStorageService = {
 
     if (uploadError) throw uploadError;
 
-    const metadata = {
-      extension: file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase() : '',
-      scan_status: 'pending',
-      uploaded_from: 'web',
-      preview_available: file.type.startsWith('image/') || file.type === 'application/pdf' || file.type.startsWith('text/'),
-    };
-
-    // 2. Create files row
+    // 2. Create workspace_files row
     const { data: fileRecord, error: fileError } = await supabase
-      .from('files')
+      .from('workspace_files')
       .insert({
         id: fileId,
         workspace_id: workspaceId,
-        uploaded_by: authData.user.id,
-        storage_provider: 'supabase',
-        storage_path: storagePath,
-        original_name: file.name,
+        entity_type: entityType,
+        entity_id: entityId,
+        file_name: file.name,
+        file_type: file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase() : 'bin',
         mime_type: file.type || null,
         file_size: file.size,
-        metadata,
+        storage_path: storagePath,
+        uploaded_by: authData.user.id,
       })
       .select()
       .single();
@@ -103,50 +126,32 @@ export const fileStorageService = {
     }
 
     // 3. Create file_versions v1 row
-    const { data: versionRow, error: versionError } = await supabase
+    const { error: versionError } = await supabase
       .from('file_versions')
       .insert({
         file_id: fileId,
         version_number: version,
         storage_path: storagePath,
         uploaded_by: authData.user.id,
-        size: file.size,
-      })
-      .select('id')
-      .single();
+        file_size: file.size,
+      });
 
-    if (!versionError && versionRow) {
-      // 4. Point current_version_id at the first version
-      await supabase
-        .from('files')
-        .update({ current_version_id: versionRow.id })
-        .eq('id', fileId);
-      (fileRecord as any).current_version_id = versionRow.id;
+    if (versionError) {
+      console.error('Failed to create initial file version:', versionError.message);
     }
 
-    // 5. Link to entity (skip if entity is workspace itself)
-    if (entityType !== 'workspace' && entityId !== workspaceId) {
-      await supabase.from('file_links').insert({
-        workspace_id: workspaceId,
-        file_id: fileId,
-        entity_type: entityType,
-        entity_id: entityId,
-        relationship: 'attachment',
-      }).then(() => {});
-    }
-
-    // 6. Index for search
+    // 4. Index for search
     await searchIndexService.indexEntity({
       workspace_id: workspaceId,
       entity_type: 'file',
       entity_id: fileId,
       title: file.name,
       content: '',
-      keywords: { extension: metadata.extension, entity_type: entityType, entity_id: entityId },
+      keywords: { extension: file.name.split('.').pop() || '', entity_type: entityType, entity_id: entityId },
       metadata: { uploaded_by: authData.user.id, file_size: file.size, mime_type: file.type },
     }).catch(() => {});
 
-    // 7. Activity event → automation trigger
+    // 5. Activity event → automation trigger
     if (options?.emitActivity !== false) {
       await activityEventService.recordActivity({
         workspace_id: workspaceId,
@@ -164,7 +169,7 @@ export const fileStorageService = {
       });
     }
 
-    return fileRecord as FileRecord;
+    return mapToFileRecord(fileRecord);
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -201,33 +206,28 @@ export const fileStorageService = {
     if (uploadError) throw uploadError;
 
     // Insert new version row
-    const { data: versionRow, error: versionError } = await supabase
+    const { error: versionError } = await supabase
       .from('file_versions')
       .insert({
         file_id: fileId,
         version_number: nextVersion,
         storage_path: storagePath,
         uploaded_by: authData.user.id,
-        size: newFile.size,
-      })
-      .select('id')
-      .single();
+        file_size: newFile.size,
+      });
 
     if (versionError) throw versionError;
 
-    // Update files metadata & pointer
+    // Update workspace_files metadata & pointer
     await supabase
-      .from('files')
+      .from('workspace_files')
       .update({
         storage_path: storagePath,
         file_size: newFile.size,
-        original_name: newFile.name,
-        current_version_id: versionRow.id,
-        metadata: {
-          extension: newFile.name.includes('.') ? newFile.name.split('.').pop()!.toLowerCase() : '',
-          scan_status: 'pending',
-          preview_available: newFile.type.startsWith('image/') || newFile.type === 'application/pdf' || newFile.type.startsWith('text/'),
-        },
+        file_name: newFile.name,
+        file_type: newFile.name.includes('.') ? newFile.name.split('.').pop()!.toLowerCase() : 'bin',
+        mime_type: newFile.type || null,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', fileId);
 
@@ -252,7 +252,6 @@ export const fileStorageService = {
 
   // ─────────────────────────────────────────────────────────────────────────
   // RESTORE — never overwrites; creates vN = copy of old version
-  // e.g. v1,v2,v3 → restore v1 → creates v4 pointing to v1 storage path
   // ─────────────────────────────────────────────────────────────────────────
   async restoreVersion(fileId: string, fromVersionId: string, workspaceId: string): Promise<boolean> {
     const { data: authData } = await supabase.auth.getUser();
@@ -277,29 +276,27 @@ export const fileStorageService = {
 
     const nextVersion = (versions?.[0]?.version_number ?? 1) + 1;
 
-    // New version row pointing to the SAME storage path (immutable reference copy)
-    const { data: newVersionRow, error } = await supabase
+    // New version row pointing to the SAME storage path
+    const { error: versionError } = await supabase
       .from('file_versions')
       .insert({
         file_id: fileId,
         version_number: nextVersion,
         storage_path: sourceVersion.storage_path,
         uploaded_by: authData.user.id,
-        size: sourceVersion.size,
+        file_size: sourceVersion.file_size,
         checksum: sourceVersion.checksum ?? null,
-      })
-      .select('id')
-      .single();
+      });
 
-    if (error) throw error;
+    if (versionError) throw versionError;
 
-    // Update files to point at restored version
+    // Update workspace_files to point at restored version
     await supabase
-      .from('files')
+      .from('workspace_files')
       .update({
         storage_path: sourceVersion.storage_path,
-        file_size: sourceVersion.size,
-        current_version_id: newVersionRow.id,
+        file_size: sourceVersion.file_size,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', fileId);
 
@@ -319,17 +316,16 @@ export const fileStorageService = {
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ARCHIVE — soft delete only; never physically removes
+  // ARCHIVE — soft delete only
   // ─────────────────────────────────────────────────────────────────────────
   async archiveFile(fileId: string, workspaceId: string): Promise<boolean> {
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) return false;
 
     const { error } = await supabase
-      .from('files')
+      .from('workspace_files')
       .update({
-        // archived_at: new Date().toISOString(),
-        // archived_by: authData.user.id,
+        deleted_at: new Date().toISOString(),
       })
       .eq('id', fileId);
 
@@ -351,8 +347,19 @@ export const fileStorageService = {
   },
 
   async unarchiveFile(fileId: string, workspaceId: string): Promise<boolean> {
-    // Archiving is not supported in the current V1.3 schema.
-    return false;
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData.user) return false;
+
+    const { error } = await supabase
+      .from('workspace_files')
+      .update({
+        deleted_at: null,
+      })
+      .eq('id', fileId);
+
+    if (error) return false;
+
+    return true;
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -366,34 +373,36 @@ export const fileStorageService = {
   // FETCH HELPERS
   // ─────────────────────────────────────────────────────────────────────────
   async getFile(fileId: string): Promise<FileRecord | null> {
-    const { data } = await supabase.from('files').select('*').eq('id', fileId).maybeSingle();
-    return data as FileRecord | null;
+    const { data } = await supabase.from('workspace_files').select('*').eq('id', fileId).maybeSingle();
+    return data ? mapToFileRecord(data) : null;
   },
 
   async getWorkspaceFiles(workspaceId: string, includeArchived = false) {
     let q = supabase
-      .from('files')
-      .select('*, uploaded_by_user:users!files_uploaded_by_fkey(id, full_name, avatar_url)')
+      .from('workspace_files')
+      .select('*')
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false });
 
-    // if (!includeArchived) q = q.is('archived_at', null);
+    if (!includeArchived) q = q.is('deleted_at', null);
 
     const { data, error } = await q;
     if (error) throw error;
-    return data || [];
+    return (data || []).map(mapToFileRecord);
   },
 
   async getEntityFiles(workspaceId: string, entityType: string, entityId: string) {
     const { data, error } = await supabase
-      .from('file_links')
-      .select('*, file:files(*, uploaded_by_user:users!files_uploaded_by_fkey(id, full_name, avatar_url))')
+      .from('workspace_files')
+      .select('*')
       .eq('workspace_id', workspaceId)
       .eq('entity_type', entityType)
-      .eq('entity_id', entityId);
+      .eq('entity_id', entityId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []).map((l: any) => l.file).filter(Boolean) as FileRecord[];
+    return (data || []).map(mapToFileRecord);
   },
 
   async getFileVersions(fileId: string): Promise<FileVersionRecord[]> {
@@ -404,30 +413,24 @@ export const fileStorageService = {
       .order('version_number', { ascending: false });
 
     if (error) throw error;
-    return (data || []) as FileVersionRecord[];
+    return (data || []).map(mapToFileVersionRecord);
   },
 
   async getUserFiles(workspaceId: string, userId: string) {
     const { data, error } = await supabase
-      .from('files')
+      .from('workspace_files')
       .select('*')
       .eq('workspace_id', workspaceId)
       .eq('uploaded_by', userId)
-      // .is('archived_at', null)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(mapToFileRecord);
   },
 
   async getSharedWithMe(workspaceId: string, userId: string) {
-    const { data, error } = await supabase
-      .from('file_access')
-      .select('*, file:files(*)')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return (data || []).map((a: any) => a.file).filter((f: any) => f?.workspace_id === workspaceId);
+    // file_access table does not exist in the active schema, return empty array to prevent crashes.
+    return [];
   },
 };

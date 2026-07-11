@@ -1,10 +1,6 @@
 const License = require('../models/License');
 const AuditEvent = require('../models/AuditEvent');
-const { log, maskKey, getPlanSeats } = require('../controller/helpers');
-// Since backend is pure JS, I will mock the PlatformError locally or require it if transpiled.
-// Since the backend is CommonJS, we can just export a class locally or import if we use a TS transpiler.
-// Actually, since shared is TS and backend is JS, maybe backend doesn't import from TS directly unless it uses ts-node.
-// Let's create an error utility in backend to match the contract.
+const logger = require('../lib/logger');
 
 class BackendPlatformError extends Error {
   constructor({ code, message, details, correlationId, retryable = false, httpStatus, category }) {
@@ -31,18 +27,23 @@ class BackendPlatformError extends Error {
 }
 
 class LicenseDomainService {
-  async activateLicense({ productKey, workspaceId, userId, ip, geo, userAgent, correlationId }) {
+  async activateLicense({ productKey, workspaceId, userId, ip, geo, userAgent, traceContext }) {
     if (!productKey || productKey === 'OFFLINE-LICENSE') return null;
+
+    const ctx = traceContext;
+    const licSpan = logger.startSpan('LICENSE', 'LIC-201', ctx);
 
     const initialCheck = await License.findOne({ key: productKey });
     if (!initialCheck) {
+      licSpan.finish('FAILED', { errorCode: 'LICENSE_NOT_FOUND', errorMessage: 'Invalid product key' });
       throw new BackendPlatformError({
-        code: 'INVALID_LICENSE', message: 'Invalid product key', httpStatus: 404, category: 'Validation', correlationId
+        code: 'LICENSE_NOT_FOUND', message: 'Invalid product key', httpStatus: 404, category: 'Validation', correlationId: ctx.correlationId
       });
     }
     if (initialCheck.status === 'REVOKED') {
+      licSpan.finish('FAILED', { errorCode: 'LICENSE_REVOKED', errorMessage: 'Key has been revoked' });
       throw new BackendPlatformError({
-        code: 'LICENSE_REVOKED', message: 'Key has been revoked', httpStatus: 403, category: 'Authorization', correlationId
+        code: 'LICENSE_REVOKED', message: 'Key has been revoked', httpStatus: 403, category: 'Authorization', correlationId: ctx.correlationId
       });
     }
 
@@ -55,26 +56,30 @@ class LicenseDomainService {
           last_verified_at: new Date()
         }
       },
-      { new: true }
+      { returnDocument: 'after' } // fixed deprecated `new: true`
     );
 
     if (!activatedLicense) {
       const existingUsed = await License.findOne({ key: productKey, workspaceId });
       if (existingUsed) {
-        log('info', correlationId, 'Idempotent re-onboard: license already active for this workspace', { workspaceId, productKey: maskKey(productKey) });
+        logger.info('LICENSE', 'LIC-202', ctx, 'Idempotent re-onboard: license already active for this workspace');
+        licSpan.finish('SUCCESS');
         return existingUsed;
       }
+      licSpan.finish('FAILED', { errorCode: 'LICENSE_ALREADY_USED', errorMessage: 'License assigned to another workspace' });
       throw new BackendPlatformError({
-        code: 'LICENSE_ALREADY_USED', message: 'License assigned to another workspace', httpStatus: 409, category: 'Conflict', correlationId
+        code: 'LICENSE_ALREADY_USED', message: 'License assigned to another workspace', httpStatus: 409, category: 'Conflict', correlationId: ctx.correlationId
       });
     }
 
-    log('info', correlationId, 'MongoDB license activated', { workspaceId, productKey: maskKey(productKey), plan: activatedLicense.plan });
+    logger.info('LICENSE', 'LIC-202', ctx, 'MongoDB license activated');
+    licSpan.finish('SUCCESS');
     return activatedLicense;
   }
 
-  async rollbackLicenseActivation({ productKey, workspaceId, correlationId }) {
+  async rollbackLicenseActivation({ productKey, workspaceId, traceContext }) {
     if (!productKey || productKey === 'OFFLINE-LICENSE') return;
+    const ctx = traceContext;
     try {
       await License.findOneAndUpdate(
         { key: productKey, workspaceId },
@@ -85,9 +90,9 @@ class LicenseDomainService {
           }
         }
       );
-      log('info', correlationId, 'MongoDB license rollback succeeded', { workspaceId, productKey: maskKey(productKey) });
+      logger.info('LICENSE', 'LIC-202', ctx, 'MongoDB license rollback succeeded');
     } catch (e) {
-      log('error', correlationId, 'CRITICAL: MongoDB rollback failed — manual intervention required', { workspaceId, productKey: maskKey(productKey), error: e.message });
+      logger.error('LICENSE', 'LIC-202', ctx, `CRITICAL: MongoDB rollback failed — manual intervention required: ${e.message}`);
       AuditEvent.create({
         event_type: 'onboard_rollback_failed', reason: `Rollback error: ${e.message}`, device_hash: workspaceId, license_key: productKey
       }).catch(() => {});

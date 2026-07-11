@@ -23,16 +23,15 @@ export const filePermissionService = {
    * Full permission resolution chain:
    * 1. Owner / Admin  → always allowed
    * 2. Uploader       → always allowed for their own file
-   * 3. Explicit file_access grant
-   * 4. Inherited from linked entity (with HR/Finance scope guard)
-   * 5. Workspace member fallback for non-sensitive files
+   * 3. Inherited from linked entity (with HR/Finance scope guard)
+   * 4. Workspace member fallback for non-sensitive files
    */
   async canViewFile(fileId: string, userId: string, role: string): Promise<boolean> {
     if (hasCapability(role as any, 'document.manage')) return true;
 
     const { data: file } = await supabase
-      .from('files')
-      .select('uploaded_by, workspace_id')
+      .from('workspace_files')
+      .select('uploaded_by, workspace_id, entity_type')
       .eq('id', fileId)
       .maybeSingle();
 
@@ -41,42 +40,12 @@ export const filePermissionService = {
     // 2. Uploader
     if (file.uploaded_by === userId) return true;
 
-    // 3. Explicit access grant
-    const { data: access } = await supabase
-      .from('file_access')
-      .select('permission')
-      .eq('file_id', fileId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (access) return true;
-
-    // 4. Inherited entity permission
-    const { data: links } = await supabase
-      .from('file_links')
-      .select('entity_type, entity_id')
-      .eq('file_id', fileId);
-
-    if (links && links.length > 0) {
-      for (const link of links) {
-        const scope = detectScope(link.entity_type);
-        if (scope !== 'none' && !hasSensitiveCapability(role, scope)) continue;
-        // Entity-linked and user has scope → allow
-        if (await this._isWorkspaceMember(file.workspace_id, userId)) return true;
-      }
+    // 3. Inherited entity permission scope check
+    const scope = detectScope(file.entity_type);
+    if (scope !== 'none' && !hasSensitiveCapability(role, scope)) {
+      return false;
     }
 
-    // 5. Workspace member fallback (non-sensitive only)
-    const { data: allLinks } = await supabase
-      .from('file_links')
-      .select('entity_type')
-      .eq('file_id', fileId);
-
-    const isSensitive = (allLinks || []).some(l =>
-      detectScope(l.entity_type) !== 'none'
-    );
-
-    if (isSensitive) return false;
     return this._isWorkspaceMember(file.workspace_id, userId);
   },
 
@@ -84,73 +53,45 @@ export const filePermissionService = {
     if (hasCapability(role as any, 'document.manage')) return true;
 
     const { data: file } = await supabase
-      .from('files')
+      .from('workspace_files')
       .select('uploaded_by')
       .eq('id', fileId)
       .maybeSingle();
 
     if (file?.uploaded_by === userId) return true;
 
-    const { data: access } = await supabase
-      .from('file_access')
-      .select('permission')
-      .eq('file_id', fileId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    return !!(access && ['edit', 'manage'].includes(access.permission));
+    return false;
   },
 
   async canManageFile(fileId: string, userId: string, role: string): Promise<boolean> {
     if (hasCapability(role as any, 'document.manage')) return true;
 
     const { data: file } = await supabase
-      .from('files')
+      .from('workspace_files')
       .select('uploaded_by')
       .eq('id', fileId)
       .maybeSingle();
 
     if (file?.uploaded_by === userId) return true;
 
-    const { data: access } = await supabase
-      .from('file_access')
-      .select('permission')
-      .eq('file_id', fileId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    return access?.permission === 'manage';
+    return false;
   },
 
-  /** Grant explicit access to a user */
+  /** Grant explicit access to a user (no-op since file_access table is deprecated) */
   async shareFile(
     fileId: string,
     targetUserId: string,
     permission: 'view' | 'download' | 'edit' | 'manage' = 'view'
   ): Promise<boolean> {
-    const { error } = await supabase.from('file_access').upsert({
-      file_id: fileId,
-      user_id: targetUserId,
-      permission,
-    }, { onConflict: 'file_id,user_id' });
-    return !error;
+    return false;
   },
 
   async revokeAccess(fileId: string, targetUserId: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('file_access')
-      .delete()
-      .eq('file_id', fileId)
-      .eq('user_id', targetUserId);
-    return !error;
+    return false;
   },
 
   async getFileAccessList(fileId: string) {
-    const { data } = await supabase
-      .from('file_access')
-      .select('*, user:users!file_access_user_id_fkey(id, full_name, avatar_url, email)')
-      .eq('file_id', fileId);
-    return data || [];
+    return [];
   },
 
   // ─── Internal ─────────────────────────────────────────────────────────────
@@ -164,8 +105,3 @@ export const filePermissionService = {
     return !!data;
   },
 };
-
-
-
-
-

@@ -20,6 +20,8 @@ const { WorkspaceProvisioningService } = require('../services/WorkspaceProvision
 const { IdentityDomainService } = require('../domain/IdentityDomainService');
 const { LicenseDomainService } = require('../domain/LicenseDomainService');
 const { WorkspaceDomainService } = require('../domain/WorkspaceDomainService');
+const logger = require('../lib/logger');
+const ErrorRegistry = require('../lib/errorRegistry');
 
 const identityDomainService = new IdentityDomainService();
 const licenseDomainService = new LicenseDomainService();
@@ -539,9 +541,9 @@ exports.adminGetEvents = async (req, res) => {
 
 // 2b. Atomic Workspace Onboarding
 exports.onboardWorkspace = async (req, res) => {
+    const ctx = req.traceContext;
+    const onboardSpan = logger.startSpan('WORKSPACE', 'ONBOARD-101', ctx);
 
-    const correlationId = crypto.randomUUID();
-    
     // Construct ProvisionWorkspaceCommand from HTTP body
     const command = {
         productKey: req.body.productKey,
@@ -550,23 +552,47 @@ exports.onboardWorkspace = async (req, res) => {
         defaultLanes: req.body.defaultLanes,
         workflowRules: req.body.workflowRules,
         settings: req.body.settings
-        // Note: Identity fields deliberately ignored
     };
 
     try {
-        const response = await workspaceProvisioningService.provisionWorkspace(req, command, correlationId);
+        const response = await workspaceProvisioningService.provisionWorkspace(req, command, ctx);
+        
+        // Finalized context update (after provisioning has attached workspace & license)
+        const finalCtx = req.traceContext || ctx;
+        onboardSpan.finish('SUCCESS');
+        
+        // Return structured sanitised response
         return res.json(response);
     } catch (error) {
-        if (error.name === 'PlatformError') {
-            return res.status(error.httpStatus).json(error.toResponse(correlationId));
-        }
-        return res.status(500).json({
-            code: 'UNEXPECTED_ERROR',
-            message: 'Server error during onboarding',
-            correlationId,
+        let httpStatus = 500;
+        let responsePayload = {
+            code: 'UNKNOWN_ERROR',
+            message: error.message || 'Server error during onboarding',
+            correlationId: ctx.correlationId,
             retryable: false,
-            httpStatus: 500,
             category: 'Unexpected'
+        };
+
+        if (error.name === 'PlatformError') {
+            httpStatus = error.httpStatus;
+            responsePayload = error.toResponse(ctx.correlationId);
+        } else if (ErrorRegistry[error.code]) {
+            const errDef = ErrorRegistry[error.code];
+            httpStatus = errDef.httpStatus;
+            responsePayload = {
+                code: error.code,
+                message: error.message || errDef.message,
+                correlationId: ctx.correlationId,
+                retryable: errDef.retryable,
+                category: errDef.category
+            };
+        }
+
+        onboardSpan.finish('FAILED', {
+            errorCode: responsePayload.code,
+            errorMessage: responsePayload.message
         });
+
+        return res.status(httpStatus).json(responsePayload);
     }
 };

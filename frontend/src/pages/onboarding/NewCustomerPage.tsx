@@ -6,6 +6,7 @@ import {
 import { validateNewActivationKey, onboardWorkspaceTransaction } from '../../lib/productKey';
 import { supabase } from '../../lib/supabase';
 import { navigate } from '../../lib/navigation';
+import { logger } from '../../lib/logger';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -101,9 +102,25 @@ export function NewCustomerPage() {
 
     setPageState('submitting');
 
+    const correlationId = self.crypto.randomUUID();
+    const runId = self.crypto.randomUUID();
+    sessionStorage.setItem('resolve_pm_correlation_id', correlationId);
+    sessionStorage.setItem('resolve_pm_run_id', runId);
+
+    const ctx = logger.createContext(
+      correlationId,
+      runId,
+      { email: form.email.trim() },
+      { id: workspaceIdRef.current, name: form.workspaceName.trim() },
+      { productKey: verifiedKey }
+    );
+    logger.startTimeline(ctx);
+
     try {
       // 1. Create Supabase auth user
       let accessToken: string | null = null;
+
+      logger.logCheckpoint('AUTH-101', 'STARTED', 'Supabase Auth signUp request started');
 
       const signUpResult = await supabase.auth.signUp({
         email: form.email.trim(),
@@ -114,21 +131,27 @@ export function NewCustomerPage() {
       if (signUpResult.error) {
         const msg = signUpResult.error.message?.toLowerCase() ?? '';
         if (msg.includes('already registered') || msg.includes('already exists')) {
-          // Recovery path: user already registered — sign in instead
+          logger.logCheckpoint('AUTH-101', 'SKIPPED', 'Email registered: attempting password sign-in recovery path');
+          
+          logger.logCheckpoint('AUTH-103', 'STARTED', 'Supabase Auth signInWithPassword started');
           const signInResult = await supabase.auth.signInWithPassword({
             email: form.email.trim(),
             password: form.password,
           });
           if (signInResult.error) {
+            logger.logCheckpoint('AUTH-103', 'FAILED', `Recovery password sign-in failed: ${signInResult.error.message}`);
             throw new Error(
               `This email is already registered. Please log in at /login instead.`
             );
           }
+          logger.logCheckpoint('AUTH-103', 'SUCCESS', 'Supabase Auth signInWithPassword verified');
           accessToken = signInResult.data.session?.access_token ?? null;
         } else {
+          logger.logCheckpoint('AUTH-101', 'FAILED', `Supabase Auth signUp failed: ${signUpResult.error.message}`);
           throw signUpResult.error;
         }
       } else {
+        logger.logCheckpoint('AUTH-101', 'SUCCESS', 'Supabase Auth signUp completed');
         accessToken = signUpResult.data.session?.access_token ?? null;
       }
 
@@ -137,6 +160,7 @@ export function NewCustomerPage() {
       }
 
       // 2. Single atomic backend call — MongoDB activation + PG workspace + user + license
+      logger.logCheckpoint('WSP-301', 'STARTED', 'Provisioning request initiated via HTTP');
       await onboardWorkspaceTransaction(
         {
           workspaceId: workspaceIdRef.current,
@@ -154,15 +178,19 @@ export function NewCustomerPage() {
       });
 
       if (finalSignIn.error) {
-        // Onboarding succeeded — only session refresh failed; tell user to log in
         setError('Workspace created successfully. Please log in to continue.');
+        logger.logCheckpoint('WSP-302', 'FAILED', `Session establishment failed: ${finalSignIn.error.message}`);
+        logger.dumpTimeline();
         setTimeout(() => navigate('/login'), 3000);
         return;
       }
 
-      // 4. Done — SIGNED_IN fires → BootstrapOrchestrator.orchestrate() → /workspace-init
+      logger.logCheckpoint('WSP-302', 'SUCCESS', 'Onboarding completed successfully');
+      logger.dumpTimeline();
       setPageState('done');
     } catch (err: any) {
+      logger.logCheckpoint('WSP-302', 'FAILED', `Onboarding workflow failed: ${err?.message}`);
+      logger.dumpTimeline();
       setError(err?.message || 'Setup failed. Please try again.');
       setPageState('error');
     }

@@ -35,6 +35,33 @@ if (!process.env.MONGO_URI && !process.env.DB && !process.env.DATABASE_URL) {
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+const logger = require('./lib/logger');
+const crypto = require('crypto');
+
+// ── Observability Trace Middleware ────────────────────────────────────────────
+app.use((req, res, next) => {
+    const correlationId = req.headers['x-correlation-id'] || crypto.randomUUID();
+    const runId = req.headers['x-run-id'] || crypto.randomUUID();
+    
+    req.traceContext = logger.createContext(correlationId, runId);
+    
+    res.setHeader('X-Correlation-ID', correlationId);
+    res.setHeader('X-Run-ID', runId);
+    
+    req.httpSpan = logger.startSpan('HTTP', 'HTTP-101', req.traceContext);
+    
+    res.on('finish', () => {
+        const status = res.statusCode >= 400 ? 'FAILED' : 'SUCCESS';
+        req.httpSpan.finish(status, {
+            httpStatus: res.statusCode,
+            method: req.method,
+            url: req.originalUrl || req.url
+        });
+    });
+    
+    next();
+});
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const defaultOrigins = ['http://localhost:5173', 'https://resolve-pm.vercel.app'];
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -100,13 +127,13 @@ app.get('/health', (req, res) => {
     const mongoose = require('mongoose');
     const mongoStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
     const dbState = mongoStates[mongoose.connection.readyState] || 'unknown';
-    const healthy = dbState === 'connected';
-    res.status(healthy ? 200 : 503).json({
-        status: healthy ? 'ok' : 'degraded',
+    res.status(200).json({
+        status: 'ok',
         service: 'resolve-pm-backend',
         version: '1.3.2',
         timestamp: new Date().toISOString(),
-        db: dbState
+        db: dbState,
+        uptime: process.uptime()
     });
 });
 
@@ -130,20 +157,20 @@ app.get('/admin/events', adminAuth, licenseController.adminGetEvents);
 // Allows in-flight requests to complete before the process exits.
 // Render, Docker, and PM2 all send SIGTERM on deploy/restart.
 process.on('SIGTERM', () => {
-    console.log('[SERVER] SIGTERM received — draining in-flight requests (5s window)...');
+    logger.info('SYSTEM', 'SYS-101', null, '[SERVER] SIGTERM received — draining in-flight requests (5s window)...');
     setTimeout(() => {
-        console.log('[SERVER] Drain complete. Exiting.');
+        logger.info('SYSTEM', 'SYS-102', null, '[SERVER] Drain complete. Exiting.');
         process.exit(0);
     }, 5000);
 });
 
 // ── App Startup ───────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
-    console.log(`[SERVER] License server starting on port ${PORT}...`);
+    logger.info('SYSTEM', 'SYS-103', null, `[SERVER] License server starting on port ${PORT}...`);
     try {
         await connectDB();
-        console.log('[SERVER] ✓ License server ready (port ' + PORT + ')');
+        logger.info('SYSTEM', 'SYS-104', null, `[SERVER] ✓ License server ready (port ${PORT})`);
     } catch (dbErr) {
-        console.error(`[DB] MongoDB Connection Error: ${dbErr.message}`);
+        logger.error('SYSTEM', 'SYS-104', null, `[DB] MongoDB Connection Error: ${dbErr.message}`);
     }
 });

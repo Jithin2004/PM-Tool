@@ -1,7 +1,8 @@
 const crypto = require('crypto');
-const { log, isValidUUID, getPlanSeats } = require('../controller/helpers');
+const { getPlanSeats } = require('../controller/helpers');
 const { BackendPlatformError } = require('../domain/LicenseDomainService'); // Adjust path
 const AuditEvent = require('../models/AuditEvent');
+const logger = require('../lib/logger');
 
 class WorkspaceProvisioningService {
   constructor(identityDomainService, licenseDomainService, workspaceDomainService) {
@@ -33,14 +34,17 @@ class WorkspaceProvisioningService {
     this._idempotencyCache.set(key, { response, expiresAt: Date.now() + this.IDEMPOTENCY_TTL_MS });
   }
 
-  async provisionWorkspace(req, command, correlationId) {
-    const startTime = Date.now();
+  async provisionWorkspace(req, command, traceContext) {
+    let ctx = traceContext;
+    const wspSpan = logger.startSpan('WORKSPACE', 'WSP-301', ctx);
+
     const { productKey, workspaceName } = command;
     const workspaceId = crypto.randomUUID(); // Generate workspaceId internally since it's provisioning
 
     // 1. Validation
     if (!workspaceName || typeof workspaceName !== 'string' || workspaceName.trim().length < 2 || workspaceName.trim().length > 100) {
-      throw new BackendPlatformError({ code: 'INVALID_INPUT', message: 'workspaceName must be 2–100 characters', httpStatus: 400, category: 'Validation', correlationId });
+      wspSpan.finish('FAILED', { errorCode: 'INVALID_INPUT', errorMessage: 'workspaceName must be 2–100 characters' });
+      throw new BackendPlatformError({ code: 'INVALID_INPUT', message: 'workspaceName must be 2–100 characters', httpStatus: 400, category: 'Validation', correlationId: ctx.correlationId });
     }
 
     // Identity Validation via Domain Service (strictly from JWT)
@@ -48,20 +52,20 @@ class WorkspaceProvisioningService {
     try {
       identity = this.identityDomainService.verifyIdentity(req.user);
     } catch (e) {
-      throw new BackendPlatformError({ code: 'UNAUTHENTICATED', message: 'User identity missing or invalid', httpStatus: 401, category: 'Authentication', correlationId });
+      wspSpan.finish('FAILED', { errorCode: 'AUTH_USER_NOT_FOUND', errorMessage: 'User identity missing or invalid' });
+      throw new BackendPlatformError({ code: 'AUTH_USER_NOT_FOUND', message: 'User identity missing or invalid', httpStatus: 401, category: 'Authentication', correlationId: ctx.correlationId });
     }
 
     // Idempotency
     const idempotencyKey = this._getIdempotencyKey(req);
     const cachedResponse = this._checkIdempotency(idempotencyKey);
     if (cachedResponse) {
-      log('info', correlationId, 'Returning cached idempotent response', { workspaceId: cachedResponse.workspaceId, idempotencyKey });
+      logger.info('WORKSPACE', 'WSP-301', ctx, 'Returning cached idempotent response');
+      wspSpan.finish('SUCCESS');
       return cachedResponse;
     }
 
-    log('info', correlationId, 'WorkspaceProvisioningStarted', {
-      userId: identity.id, workspaceName: workspaceName.trim()
-    });
+    logger.info('WORKSPACE', 'WSP-301', ctx, 'WorkspaceProvisioningStarted');
 
     const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
     const geo = null; // geoip-lite lookup if available
@@ -70,13 +74,16 @@ class WorkspaceProvisioningService {
     let activatedLicense = null;
 
     try {
-      // 2. License Activation
+      // 2. License Activation (LIC-201 span evaluates inside LicenseDomainService)
       activatedLicense = await this.licenseDomainService.activateLicense({
-        productKey, workspaceId, userId: identity.id, ip, geo, userAgent, correlationId
+        productKey, workspaceId, userId: identity.id, ip, geo, userAgent, traceContext: ctx
       });
 
+      // Update TraceContext with user and license parameters
+      ctx = logger.createContext(ctx.correlationId, ctx.runId, req.user, { id: workspaceId, name: workspaceName }, activatedLicense);
+      req.traceContext = ctx;
+
       // 3. Workspace Creation & Owner Setup (Postgres RPC)
-      // The RPC 'onboard_workspace_transaction' handles workspace, license sync, and user profile atomically.
       const plan = activatedLicense ? activatedLicense.plan : 'STANDARD';
       const seats = activatedLicense ? getPlanSeats(plan) : 10;
 
@@ -89,7 +96,7 @@ class WorkspaceProvisioningService {
         licenseKey: productKey || 'OFFLINE-LICENSE',
         plan,
         seats,
-        correlationId
+        traceContext: ctx
       });
 
       // Success
@@ -101,8 +108,7 @@ class WorkspaceProvisioningService {
         plan: activatedLicense ? activatedLicense.plan : 'STANDARD'
       };
 
-      const durationMs = Date.now() - startTime;
-      log('info', correlationId, 'WorkspaceCreated', { workspaceId, userId: identity.id, durationMs });
+      logger.info('WORKSPACE', 'WSP-302', ctx, 'WorkspaceCreated');
 
       AuditEvent.create({
         event_type: 'onboard_workspace',
@@ -113,27 +119,25 @@ class WorkspaceProvisioningService {
 
       this._storeIdempotency(idempotencyKey, responseBody);
 
+      wspSpan.finish('SUCCESS');
       return responseBody;
     } catch (error) {
-      const durationMs = Date.now() - startTime;
-      log('error', correlationId, 'WorkspaceProvisioningFailed', {
-        workspaceId, error: error.message, durationMs
-      });
+      wspSpan.finish('FAILED', { errorCode: error.code || 'PROVISIONING_FAILED', errorMessage: error.message });
 
       // Compensation: Rollback MongoDB license activation if we got that far
       if (activatedLicense) {
-        await this.licenseDomainService.rollbackLicenseActivation({ productKey, workspaceId, correlationId });
+        await this.licenseDomainService.rollbackLicenseActivation({ productKey, workspaceId, traceContext: ctx });
       }
 
       if (error instanceof BackendPlatformError) {
         throw error;
       }
       throw new BackendPlatformError({
-        code: 'PROVISIONING_FAILED',
+        code: 'UNKNOWN_ERROR',
         message: error.message || 'Server error during onboarding',
         httpStatus: 500,
         category: 'Unexpected',
-        correlationId
+        correlationId: ctx.correlationId
       });
     }
   }

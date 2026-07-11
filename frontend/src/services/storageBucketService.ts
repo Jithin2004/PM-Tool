@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 
-export const WORKSPACE_BUCKET = 'workspace-assets';
+export const WORKSPACE_BUCKET = 'workspace_files';
 
 /**
  * Manages workspace-isolated storage paths inside the single Supabase bucket.

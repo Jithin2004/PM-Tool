@@ -8,6 +8,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { navigate } from '../../lib/navigation';
+import { logger } from '../../lib/logger';
 import { COUNTRIES } from '../../data/countries';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -76,6 +77,15 @@ const DEFAULT_SCHEDULE: ScheduleInfo = {
 export function WorkspaceInitPage() {
   const { workspace, refreshWorkspace } = useWorkspace();
   const { profile } = useAuth();
+
+  useEffect(() => {
+    const correlationId = sessionStorage.getItem('resolve_pm_correlation_id') || 'bootstrap';
+    const runId = sessionStorage.getItem('resolve_pm_run_id') || 'bootstrap';
+    const ctx = logger.createContext(correlationId, runId, profile, { id: workspace?.id, name: workspace?.name });
+    logger.startTimeline(ctx);
+    logger.logCheckpoint('BOOT-502', 'STARTED', 'WorkspaceInitPage setup wizard mounted (WORKSPACE_INIT_REQUIRED)');
+  }, [workspace?.id, profile?.id]);
+
   const [step, setStep] = useState<Step>('company');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -141,6 +151,8 @@ export function WorkspaceInitPage() {
     setSaving(true);
     setError('');
 
+    logger.logCheckpoint('WSP-303', 'STARTED', 'Workspace setup configuration saving...');
+
     try {
       // Build serialized business_type JSON (matches existing rowToWorkspace parser)
       const businessTypeSerialized = JSON.stringify({
@@ -186,11 +198,16 @@ export function WorkspaceInitPage() {
       // Refresh workspace in React context
       await refreshWorkspace(workspace.id);
 
+      logger.logCheckpoint('WSP-303', 'SUCCESS', 'Workspace setup completed successfully');
+      logger.dumpTimeline();
+
       setStep('complete');
 
       // Route to user-init after short pause
       setTimeout(() => navigate('/user-init'), 1800);
     } catch (err: any) {
+      logger.logCheckpoint('WSP-303', 'FAILED', `Workspace setup configuration failed: ${err.message}`);
+      logger.dumpTimeline();
       setError(err?.message || 'Failed to save workspace configuration.');
     } finally {
       setSaving(false);
