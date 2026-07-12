@@ -10700,3 +10700,9 @@ ALTER FUNCTION public.transfer_workspace_ownership(new_created_by_id uuid) SET s
 ALTER FUNCTION public.archive_employee(p_user_id uuid, p_status text, p_reason text) SET search_path = public, extensions;
 ALTER FUNCTION public.cascade_subtask_status() SET search_path = public, extensions;
 ALTER FUNCTION public.get_user_workload_baseline(p_workspace_id uuid, p_user_id uuid, p_role text) SET search_path = public, extensions;
+
+
+-- =============================================================================
+-- APPENDED: Schema Drift Fix - Add missing UNIQUE constraint to workspace_license
+-- =============================================================================
+ALTER TABLE public.workspace_license ADD CONSTRAINT workspace_license_workspace_id_key UNIQUE (workspace_id);
