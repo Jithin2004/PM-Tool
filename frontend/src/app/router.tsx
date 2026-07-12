@@ -544,12 +544,14 @@ export function ResolveRouter() {
     // /workspace-init: owner-only, full-screen, no DashboardLayout
     if (pathname === "/workspace-init") {
       if (role !== 'super_admin') return <Redirect to="/overview" />;
+      if (provisioningState === ProvisioningState.READY) return <Redirect to="/overview" />;
       return (
         <Suspense fallback={<RouteFallback />}><WorkspaceInitPageLazy /></Suspense>
       );
     }
     // /user-init: any authenticated user who hasn't completed their profile
     if (pathname === "/user-init") {
+      if (provisioningState === ProvisioningState.READY) return <Redirect to="/overview" />;
       return (
         <Suspense fallback={<RouteFallback />}><UserInitPageLazy /></Suspense>
       );
