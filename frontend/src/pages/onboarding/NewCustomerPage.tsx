@@ -188,6 +188,7 @@ export function NewCustomerPage() {
       logger.logCheckpoint('WSP-302', 'SUCCESS', 'Onboarding completed successfully');
       logger.dumpTimeline();
       setPageState('done');
+      setTimeout(() => navigate('/workspace-init'), 2000);
     } catch (err: any) {
       logger.logCheckpoint('WSP-302', 'FAILED', `Onboarding workflow failed: ${err?.message}`);
       logger.dumpTimeline();

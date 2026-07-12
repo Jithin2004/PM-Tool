@@ -471,6 +471,11 @@ export function ResolveRouter() {
 
     // User authenticated but provisioning failed
     if (provisioningState !== ProvisioningState.INITIALIZING && provisioningState !== ProvisioningState.READY) {
+      if (provisioningState === ProvisioningState.WORKSPACE_UNINIT && pathname === "/workspace-init" && role === 'super_admin') {
+        return (
+          <Suspense fallback={<RouteFallback />}><WorkspaceInitPageLazy /></Suspense>
+        );
+      }
       // NOTE: We could still route to WorkspaceSetupWizard for new owners, 
       // but according to the new requirements, we route them to the ProvisioningGate.
       // If we still need to allow workspace creation, they can click "Enter Product Key".
