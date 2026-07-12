@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { navigate } from '../../lib/navigation';
 import { logger } from '../../lib/logger';
+import { useBootstrap } from '../../core/lifecycle/BootstrapOrchestrator';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ function getInitials(name: string): string {
 
 export function UserInitPage() {
   const { profile, setProfile } = useAuth();
+  const { retryProvisioning } = useBootstrap();
 
   useEffect(() => {
     const correlationId = sessionStorage.getItem('resolve_pm_correlation_id') || 'bootstrap';
@@ -131,6 +133,7 @@ export function UserInitPage() {
         setProfile({
           ...(profile as any),
           full_name: personal.fullName.trim(),
+          phone: personal.phone.trim() || null,
           avatar_url: personal.avatarUrl.trim() || null,
           metadata: {
             ...(profile as any)?.metadata,
@@ -148,7 +151,7 @@ export function UserInitPage() {
       logger.dumpTimeline();
 
       setStep('complete');
-      setTimeout(() => navigate('/overview'), 1600);
+      setTimeout(() => retryProvisioning(), 1600);
     } catch (err: any) {
       logger.logCheckpoint('BOOT-503', 'FAILED', `User profile setup failed: ${err.message}`);
       logger.dumpTimeline();

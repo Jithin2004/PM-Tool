@@ -476,6 +476,11 @@ export function ResolveRouter() {
           <Suspense fallback={<RouteFallback />}><WorkspaceInitPageLazy /></Suspense>
         );
       }
+      if (provisioningState === ProvisioningState.PROFILE_INCOMPLETE && pathname === "/user-init") {
+        return (
+          <Suspense fallback={<RouteFallback />}><UserInitPageLazy /></Suspense>
+        );
+      }
       // NOTE: We could still route to WorkspaceSetupWizard for new owners, 
       // but according to the new requirements, we route them to the ProvisioningGate.
       // If we still need to allow workspace creation, they can click "Enter Product Key".
