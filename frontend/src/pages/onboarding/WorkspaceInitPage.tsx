@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase';
 import { navigate } from '../../lib/navigation';
 import { logger } from '../../lib/logger';
 import { COUNTRIES } from '../../data/countries';
+import { useBootstrap } from '../../core/lifecycle/BootstrapOrchestrator';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -77,6 +78,8 @@ const DEFAULT_SCHEDULE: ScheduleInfo = {
 export function WorkspaceInitPage() {
   const { workspace, refreshWorkspace } = useWorkspace();
   const { profile } = useAuth();
+  const { retryProvisioning } = useBootstrap();
+  const [showTimezoneSelect, setShowTimezoneSelect] = useState(false);
 
   useEffect(() => {
     const correlationId = sessionStorage.getItem('resolve_pm_correlation_id') || 'bootstrap';
@@ -203,8 +206,8 @@ export function WorkspaceInitPage() {
 
       setStep('complete');
 
-      // Route to user-init after short pause
-      setTimeout(() => navigate('/user-init'), 1800);
+      // Let bootstrap orchestrator re-evaluate and route correctly
+      setTimeout(() => retryProvisioning(), 1800);
     } catch (err: any) {
       logger.logCheckpoint('WSP-303', 'FAILED', `Workspace setup configuration failed: ${err.message}`);
       logger.dumpTimeline();
@@ -390,22 +393,42 @@ export function WorkspaceInitPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Timezone</label>
-                <select value={schedule.timezone} onChange={e => setSchedule(p => ({ ...p, timezone: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none"
-                  style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}>
-                  {Intl.supportedValuesOf('timeZone').map(tz => <option key={tz} value={tz}>{tz}</option>)}
-                </select>
-              </div>
-
-              <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--pm-on-surface-variant)' }}>Country <span className="opacity-50">(for holiday calendar)</span></label>
-                <select value={schedule.country} onChange={e => setSchedule(p => ({ ...p, country: e.target.value }))}
+                <select value={schedule.country} onChange={e => {
+                  const val = e.target.value;
+                  const COUNTRY_TO_TZ: Record<string, string> = {
+                    US: 'America/New_York', GB: 'Europe/London', IN: 'Asia/Kolkata', AU: 'Australia/Sydney', CA: 'America/Toronto', DE: 'Europe/Berlin', FR: 'Europe/Paris', JP: 'Asia/Tokyo', CN: 'Asia/Shanghai'
+                  };
+                  setSchedule(p => ({ ...p, country: val, timezone: COUNTRY_TO_TZ[val] || p.timezone }));
+                }}
                   className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none"
                   style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}>
                   <option value="">Select country…</option>
                   {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
                 </select>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-medium" style={{ color: 'var(--pm-on-surface-variant)' }}>Timezone</label>
+                  {!showTimezoneSelect && (
+                    <button type="button" onClick={() => setShowTimezoneSelect(true)} className="text-xs text-[var(--pm-primary)] hover:underline focus:outline-none">
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {showTimezoneSelect ? (
+                  <select value={schedule.timezone} onChange={e => setSchedule(p => ({ ...p, timezone: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none"
+                    style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}>
+                    {Intl.supportedValuesOf('timeZone').map(tz => <option key={tz} value={tz}>{tz}</option>)}
+                  </select>
+                ) : (
+                  <div className="px-4 py-2.5 rounded-xl border text-sm opacity-80"
+                    style={{ background: 'var(--pm-surface-lowest)', borderColor: 'rgba(70,69,84,0.3)', color: 'var(--pm-on-surface)' }}>
+                    {schedule.timezone || 'Not set'}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">
