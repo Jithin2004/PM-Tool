@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="1" failures="0" errors="0" time="0.0094198">
-    <testsuite name="testing/certification/dummy.vitest.ts" timestamp="2026-06-29T15:46:27.339Z" hostname="tRoJan" tests="1" failures="0" errors="0" skipped="0" time="0.0094198">
-        <testcase classname="testing/certification/dummy.vitest.ts" name="dummy vitest" time="0.0069403">
-        </testcase>
-    </testsuite>
-</testsuites>

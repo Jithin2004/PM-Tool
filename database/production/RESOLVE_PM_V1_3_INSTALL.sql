@@ -815,36 +815,86 @@ FROM auth.users
 ON CONFLICT (id) DO NOTHING;
 
 -- Fix 3: Privilege Escalation Protection
-CREATE OR REPLACE FUNCTION prevent_role_escalation()
-RETURNS trigger
+CREATE OR REPLACE FUNCTION public.is_workspace_bootstrap_transition(
+  p_old_workspace_id UUID,
+  p_new_workspace_id UUID,
+  p_new_role TEXT,
+  p_user_id UUID
+) RETURNS BOOLEAN
 LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = ''
+SECURITY DEFINER SET search_path = public, extensions
 AS $$
 BEGIN
-  -- Prevent changing workspace_id after it has been set, EXCEPT during a soft-delete (workspace_id = NULL)
+  -- Condition 1: Old workspace is NULL (must be user's first workspace)
+  IF p_old_workspace_id IS NOT NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Condition 2: New workspace exists
+  IF p_new_workspace_id IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Condition 3: Requested role is super_admin
+  IF p_new_role != 'super_admin' THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Condition 4: Workspace creator matches the user
+  IF NOT EXISTS (
+    SELECT 1 FROM public.workspaces w
+    WHERE w.id = p_new_workspace_id
+    AND w.created_by_id = p_user_id
+  ) THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Condition 5: No super_admin already exists in this workspace
+  -- This guarantees the exemption is strictly one-time for the founder
+  IF EXISTS (
+    SELECT 1 FROM public.users u
+    WHERE u.workspace_id = p_new_workspace_id
+    AND u.role = 'super_admin'
+  ) THEN
+    RETURN FALSE;
+  END IF;
+
+  RETURN TRUE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.prevent_role_escalation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public, extensions
+AS $$
+BEGIN
+  -- 1. Prevent workspace migration after it has been set, EXCEPT during a soft-delete (workspace_id = NULL)
   IF OLD.workspace_id IS NOT NULL AND NEW.workspace_id IS NOT NULL AND NEW.workspace_id IS DISTINCT FROM OLD.workspace_id THEN
     RAISE EXCEPTION 'Unauthorized: Cannot migrate workspaces.';
   END IF;
 
-  -- Prevent role escalation unless performed by a super_admin of the same workspace
+  -- Role modification flow
   IF OLD.role IS NOT NULL AND NEW.role IS DISTINCT FROM OLD.role THEN
+    
+    -- 2. Allow verified bootstrap
+    IF public.is_workspace_bootstrap_transition(OLD.workspace_id, NEW.workspace_id, NEW.role, NEW.id) THEN
+      RETURN NEW;
+    END IF;
+
+    -- 3. Enforce role escalation rules (Requires authenticated user to be super_admin of the same workspace)
     IF NOT EXISTS (
       SELECT 1 FROM public.users me 
       WHERE me.id = auth.uid() 
         AND me.workspace_id = OLD.workspace_id 
         AND public.has_capability(auth.uid(), 'workspace.update')
-    ) AND NOT (
-      -- Exemption: Workspace founder bootstrapping their own role
-      NEW.id = auth.uid()
-      AND EXISTS (
-        SELECT 1 FROM public.workspaces w 
-        WHERE w.id = NEW.workspace_id AND w.created_by_id = auth.uid()
-      )
     ) THEN
       RAISE EXCEPTION 'Unauthorized: Only super_admin can modify roles.';
     END IF;
+
   END IF;
 
+  -- 4. Return NEW
   RETURN NEW;
 END;
 $$;
@@ -10617,4 +10667,36 @@ UPDATE public.workspaces w
       AND  s.setup_completed = true
   );
 
-
+-- =============================================================================
+-- APPENDED: Security Definer search_path Hardening Migration
+-- =============================================================================
+ALTER FUNCTION public.get_workspace_operational_summary(p_workspace_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.record_backup_snapshot(p_workspace_id uuid, p_snapshot_type text, p_status text, p_metadata jsonb) SET search_path = public, extensions;
+ALTER FUNCTION public.check_storage_allowed(p_workspace_id uuid, p_file_size bigint, p_mime_type text) SET search_path = public, extensions;
+ALTER FUNCTION public.accept_invitation(p_token text) SET search_path = public, extensions;
+ALTER FUNCTION public.restore_sandbox_snapshot(p_snapshot_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.clone_workspace_to_sandbox(p_workspace_id uuid, p_user_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.delete_sandbox_workspace(p_workspace_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.create_sandbox_snapshot(p_workspace_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.is_working_day(p_workspace_id uuid, p_date date) SET search_path = public, extensions;
+ALTER FUNCTION public.has_capability(p_user_id uuid, p_cap text) SET search_path = public, extensions;
+ALTER FUNCTION public.generate_invoice_from_time_logs(p_workspace_id uuid, p_client_id uuid, p_project_id uuid, p_start_date timestamp with time zone, p_end_date timestamp with time zone, p_hourly_rate numeric) SET search_path = public, extensions;
+ALTER FUNCTION public.is_active_employee(p_user_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.get_grouped_notifications(p_workspace_id uuid, p_user_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.get_workspace_activity_baseline(p_workspace_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.get_invitation_by_token(p_token text) SET search_path = public, extensions;
+ALTER FUNCTION public.notify_on_task_blocked() SET search_path = public, extensions;
+ALTER FUNCTION public.get_estimate_history_lookup(p_workspace_id uuid, p_assignee_id uuid, p_project_id uuid, p_current_estimate numeric) SET search_path = public, extensions;
+ALTER FUNCTION public.complete_work_session(p_session_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.cleanup_test_workspace(p_workspace_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.get_employee_exit_impact(p_user_id uuid, p_workspace_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.get_delivery_health_trend(p_workspace_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.create_default_calendar_settings() SET search_path = public, extensions;
+ALTER FUNCTION public.notify_on_task_assignment() SET search_path = public, extensions;
+ALTER FUNCTION public.current_workspace() SET search_path = public, extensions;
+ALTER FUNCTION public.get_shared_project_data(p_token text) SET search_path = public, extensions;
+ALTER FUNCTION public.submit_client_approval(p_token text, p_approval_id uuid, p_status text, p_notes text) SET search_path = public, extensions;
+ALTER FUNCTION public.transfer_workspace_ownership(new_created_by_id uuid) SET search_path = public, extensions;
+ALTER FUNCTION public.archive_employee(p_user_id uuid, p_status text, p_reason text) SET search_path = public, extensions;
+ALTER FUNCTION public.cascade_subtask_status() SET search_path = public, extensions;
+ALTER FUNCTION public.get_user_workload_baseline(p_workspace_id uuid, p_user_id uuid, p_role text) SET search_path = public, extensions;
