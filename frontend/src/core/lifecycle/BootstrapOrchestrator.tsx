@@ -103,6 +103,23 @@ export function BootstrapOrchestrator({ children }: { children: React.ReactNode 
         workspaceNeedsSetup = validation.needsSetup;
       }
 
+      // Sync user JWT app_metadata if claims are stale compared to profile
+      const tokenWorkspaceId = sessionUser.app_metadata?.workspace_id;
+      const tokenRole = sessionUser.app_metadata?.role;
+      if (syncedProfile && syncedProfile.workspace_id && 
+          (tokenWorkspaceId !== syncedProfile.workspace_id || tokenRole !== syncedProfile.role)) {
+        BootLogger.log('STALE_JWT_DETECTED', 'Refreshing Supabase auth session to sync claims...');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.error('Failed to refresh Supabase session:', refreshError);
+        } else if (refreshData?.user) {
+          sessionUser = refreshData.user;
+          sessionUserRef.current = refreshData.user;
+          setUser(refreshData.user);
+          BootLogger.log('JWT_REFRESHED', 'Claims successfully refreshed');
+        }
+      }
+
       // 5. Parallel: Workspace info + license check (saves one sequential roundtrip)
       setBootstrap(BootstrapState.VALIDATING_LICENSE);
       const [wsResult, licenseResult] = syncedProfile?.workspace_id

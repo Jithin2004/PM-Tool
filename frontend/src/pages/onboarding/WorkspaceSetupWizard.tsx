@@ -179,6 +179,13 @@ export function WorkspaceSetupWizard() {
         if (selectedOperatingTemplates.length > 0) {
           await onboardingService.saveTemplates(createdId, selectedOperatingTemplates);
         }
+
+        // Force refresh session to immediately update JWT app_metadata claims
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.error('Failed to refresh session on finish onboarding:', refreshError);
+        }
+
         navigate('/overview');
       }
     } catch (err: any) {
