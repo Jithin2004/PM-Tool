@@ -104,10 +104,9 @@ export const attendanceEngine = {
       .gte('timestamp', start.toISOString())
       .order('timestamp', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    // It's okay if no row is returned, that means not clocked in today.
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Error fetching current session:', error);
       return null;
     }
@@ -138,7 +137,7 @@ export const attendanceEngine = {
       .from('attendance_policies')
       .select('settings')
       .eq('workspace_id', workspaceId)
-      .single();
+      .maybeSingle();
 
     if (!policy?.settings?.shifts) return false;
     

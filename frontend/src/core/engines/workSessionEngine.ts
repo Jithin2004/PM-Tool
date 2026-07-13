@@ -30,7 +30,7 @@ export const workSessionEngine = {
       .is('ended_at', null)
       .order('started_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (activeSession) {
       const startedAt = new Date(activeSession.started_at);
@@ -57,7 +57,7 @@ export const workSessionEngine = {
       .gte('timestamp', new Date(now.setHours(0,0,0,0)).toISOString())
       .order('timestamp', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
       
     if (attendance && (attendance.event_type === 'CLOCK_IN' || attendance.event_type === 'RESUME')) {
       attendanceSessionId = attendance.id;
@@ -122,9 +122,9 @@ export const workSessionEngine = {
       .is('ended_at', null)
       .order('started_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Error fetching active work session:', error);
       return null;
     }
@@ -167,7 +167,7 @@ export const workSessionEngine = {
       .is('ended_at', null)
       .order('started_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (activeSession) {
       const startedAt = new Date(activeSession.started_at);
@@ -200,9 +200,9 @@ export const workSessionEngine = {
       .not('ended_at', 'is', null)
       .order('started_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Error fetching last work session:', error);
       return null;
     }

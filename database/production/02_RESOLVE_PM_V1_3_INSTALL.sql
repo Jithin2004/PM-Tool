@@ -355,6 +355,7 @@ ADD COLUMN IF NOT EXISTS target_date date;
 CREATE TABLE IF NOT EXISTS tasks (
   external_id           text,
   id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_number           serial,
   workspace_id          uuid        NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
   project_id            uuid        NOT NULL REFERENCES projects(id) ON DELETE RESTRICT,
   assignee_id           uuid        REFERENCES users(id) ON DELETE RESTRICT,
@@ -814,6 +815,29 @@ SELECT
   1
 FROM auth.users
 ON CONFLICT (id) DO NOTHING;
+
+-- User JWT app_metadata synchronisation trigger
+CREATE OR REPLACE FUNCTION public.sync_user_app_metadata()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public, extensions
+AS $$
+BEGIN
+  UPDATE auth.users
+  SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || 
+    jsonb_build_object(
+      'workspace_id', NEW.workspace_id,
+      'role', NEW.role
+    )
+  WHERE id = NEW.id;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_public_user_updated ON public.users;
+CREATE TRIGGER on_public_user_updated
+  AFTER INSERT OR UPDATE OF workspace_id, role ON public.users
+  FOR EACH ROW EXECUTE PROCEDURE public.sync_user_app_metadata();
 
 -- Fix 3: Privilege Escalation Protection
 CREATE OR REPLACE FUNCTION public.is_workspace_bootstrap_transition(
@@ -5641,11 +5665,18 @@ ALTER TABLE public.automation_rules ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS public.integration_sync_jobs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
-    provider text NOT NULL,
-    status text DEFAULT 'pending',
-    started_at timestamptz DEFAULT now(),
-    completed_at timestamptz
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    provider text,
+    service text NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'queued',
+    started_at timestamptz,
+    completed_at timestamptz,
+    attempts integer DEFAULT 0,
+    next_retry_at timestamptz,
+    last_error text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.integration_sync_jobs ENABLE ROW LEVEL SECURITY;
 
@@ -9806,6 +9837,20 @@ CREATE TABLE IF NOT EXISTS public.leave_balances (
 );
 ALTER TABLE public.leave_balances ENABLE ROW LEVEL SECURITY;
 
+CREATE TABLE IF NOT EXISTS public.attendance_policies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    working_days TEXT[] NOT NULL DEFAULT ARRAY['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']::text[],
+    daily_hours NUMERIC NOT NULL DEFAULT 8,
+    settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT attendance_policies_workspace_id_key UNIQUE (workspace_id)
+);
+ALTER TABLE public.attendance_policies ENABLE ROW LEVEL SECURITY;
+
+
 -- Note: approval_chains, approval_instances, approval_steps, decision_recommendation_history 
 -- are already cleanly embedded in the main file by our previous step! (Wait, I embedded them at line 5607)
 -- Let's check if they are already in the top half. Yes, they are!
@@ -9816,6 +9861,10 @@ CREATE POLICY "Enable write for workspace members" ON public.clock_events FOR AL
 
 CREATE POLICY "Enable read for workspace members" ON public.leave_balances FOR SELECT USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance'));
 CREATE POLICY "Enable write for hr and admins" ON public.leave_balances FOR ALL USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'hr'));
+
+CREATE POLICY "Enable read for workspace members" ON public.attendance_policies FOR SELECT USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client'));
+CREATE POLICY "Enable write for admins" ON public.attendance_policies FOR ALL USING (workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'hr'));
+
 
 -- ==============================================================================
 -- V1.3.1 RELEASE CONSOLIDATION (AGILE & INTELLIGENCE EXTENSIONS)
@@ -10395,12 +10444,37 @@ ALTER TABLE public.work_sessions ALTER COLUMN task_id DROP NOT NULL;
 
 -- 2. Add structural hierarchy links
 ALTER TABLE public.work_sessions 
-    ADD COLUMN IF NOT EXISTS attendance_session_id UUID REFERENCES public.clock_events(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS milestone_id UUID REFERENCES public.milestones(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS epic_id UUID REFERENCES public.epics(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS story_id UUID REFERENCES public.stories(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS quick_work_item_id UUID; -- Intentionally no FK until quick_work_items becomes a canonical table.
+    ADD COLUMN IF NOT EXISTS attendance_session_id UUID,
+    ADD COLUMN IF NOT EXISTS project_id UUID,
+    ADD COLUMN IF NOT EXISTS milestone_id UUID,
+    ADD COLUMN IF NOT EXISTS epic_id UUID,
+    ADD COLUMN IF NOT EXISTS story_id UUID,
+    ADD COLUMN IF NOT EXISTS quick_work_item_id UUID;
+
+-- Ensure foreign key constraints exist on all columns of work_sessions
+DO $$
+BEGIN
+    ALTER TABLE public.work_sessions DROP CONSTRAINT IF EXISTS work_sessions_workspace_id_fkey;
+    ALTER TABLE public.work_sessions DROP CONSTRAINT IF EXISTS work_sessions_user_id_fkey;
+    ALTER TABLE public.work_sessions DROP CONSTRAINT IF EXISTS work_sessions_task_id_fkey;
+    ALTER TABLE public.work_sessions DROP CONSTRAINT IF EXISTS work_sessions_project_id_fkey;
+    ALTER TABLE public.work_sessions DROP CONSTRAINT IF EXISTS work_sessions_attendance_session_id_fkey;
+    ALTER TABLE public.work_sessions DROP CONSTRAINT IF EXISTS work_sessions_milestone_id_fkey;
+    ALTER TABLE public.work_sessions DROP CONSTRAINT IF EXISTS work_sessions_epic_id_fkey;
+    ALTER TABLE public.work_sessions DROP CONSTRAINT IF EXISTS work_sessions_story_id_fkey;
+    ALTER TABLE public.work_sessions DROP CONSTRAINT IF EXISTS work_sessions_invoice_id_fkey;
+
+    ALTER TABLE public.work_sessions 
+        ADD CONSTRAINT work_sessions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE,
+        ADD CONSTRAINT work_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE,
+        ADD CONSTRAINT work_sessions_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON DELETE SET NULL,
+        ADD CONSTRAINT work_sessions_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE SET NULL,
+        ADD CONSTRAINT work_sessions_attendance_session_id_fkey FOREIGN KEY (attendance_session_id) REFERENCES public.clock_events(id) ON DELETE SET NULL,
+        ADD CONSTRAINT work_sessions_milestone_id_fkey FOREIGN KEY (milestone_id) REFERENCES public.milestones(id) ON DELETE SET NULL,
+        ADD CONSTRAINT work_sessions_epic_id_fkey FOREIGN KEY (epic_id) REFERENCES public.epics(id) ON DELETE SET NULL,
+        ADD CONSTRAINT work_sessions_story_id_fkey FOREIGN KEY (story_id) REFERENCES public.stories(id) ON DELETE SET NULL,
+        ADD CONSTRAINT work_sessions_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES public.invoices(id) ON DELETE SET NULL;
+END $$;
 
 -- 3. Add new payload data
 ALTER TABLE public.work_sessions 
@@ -10714,3 +10788,10 @@ BEGIN
     ALTER TABLE public.workspace_license ADD CONSTRAINT workspace_license_workspace_id_key UNIQUE (workspace_id);
   END IF;
 END $$;
+
+-- ── TABLE GRANTS FOR EXTENDED SCHEMA ─────────────────────────────────────────
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.clock_events TO authenticated, anon, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.leave_balances TO authenticated, anon, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.attendance_policies TO authenticated, anon, service_role;
+
+
