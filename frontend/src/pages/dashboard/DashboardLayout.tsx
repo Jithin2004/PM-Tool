@@ -1677,7 +1677,7 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
             isOpen={isEndOfDayModalOpen}
             onClose={() => setIsEndOfDayModalOpen(false)}
             currentUser={profile}
-            workspaceId={workspace.id}
+            workspaceId={workspace?.id || ''}
             notify={notify}
           />
         </AnimatePresence>
