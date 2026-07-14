@@ -153,7 +153,100 @@ FROM public.users p
 WHERE u.id = p.id AND p.workspace_id IS NOT NULL;
 
 
--- ── 7. NOTIFY POSTGREST SCHEMA CACHE REFRESH ────────────────────────────────
+-- ── 7. CREATING & ALTERING ACTIVITY_EVENTS SCHEMA ─────────────────────────────
+-- Create activity_events table base if not exists
+CREATE TABLE IF NOT EXISTS public.activity_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    actor_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    entity_type TEXT,
+    entity_id UUID,
+    action_type TEXT,
+    before_value JSONB,
+    after_value JSONB,
+    metadata JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Safely adjust existing column constraints to allow optional entity and action types
+ALTER TABLE public.activity_events ALTER COLUMN entity_id DROP NOT NULL;
+ALTER TABLE public.activity_events ALTER COLUMN entity_type DROP NOT NULL;
+ALTER TABLE public.activity_events ALTER COLUMN action_type DROP NOT NULL;
+
+-- Safely add new canonical columns from Phase 2
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS actor_name TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS actor_avatar TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS verb TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS action TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS severity TEXT CHECK (severity IN ('low', 'medium', 'high', 'critical'));
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS importance TEXT CHECK (importance IN ('info', 'normal', 'important', 'critical'));
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS icon_key TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS ip_address TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS device TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS workspace_timezone TEXT DEFAULT 'UTC';
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS display_time TIMESTAMPTZ;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS correlation_id TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS run_id TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT false;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS visibility TEXT CHECK (visibility IN ('public', 'admin', 'private'));
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS origin TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS module TEXT;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS event_version INTEGER DEFAULT 1;
+ALTER TABLE public.activity_events ADD COLUMN IF NOT EXISTS event_hash TEXT;
+
+-- Safely add UNIQUE constraint to event_hash
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'activity_events_event_hash_key'
+    ) THEN
+        ALTER TABLE public.activity_events ADD CONSTRAINT activity_events_event_hash_key UNIQUE (event_hash);
+    END IF;
+END $$;
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_activity_events_workspace_id ON public.activity_events(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_entity ON public.activity_events(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_actor ON public.activity_events(actor_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_user_id ON public.activity_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_event_hash ON public.activity_events(event_hash);
+CREATE INDEX IF NOT EXISTS idx_activity_events_category_severity ON public.activity_events(module, severity);
+CREATE INDEX IF NOT EXISTS idx_activity_events_created_at ON public.activity_events(created_at DESC);
+
+-- Enable RLS
+ALTER TABLE public.activity_events ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Enable read for workspace members" ON public.activity_events;
+CREATE POLICY "Enable read for workspace members" ON public.activity_events 
+    FOR SELECT USING (
+        workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid 
+        AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client')
+    );
+
+DROP POLICY IF EXISTS "Enable insert for workspace members" ON public.activity_events;
+CREATE POLICY "Enable insert for workspace members" ON public.activity_events 
+    FOR INSERT WITH CHECK (
+        workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid 
+        AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+    );
+
+-- Table grants
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.activity_events TO authenticated, anon, service_role;
+
+
+
+-- ── 8. CLOCK_EVENTS CHECK CONSTRAINT REMEDIATION ─────────────────────────────
+-- Expand the check constraint to support PAUSE and RESUME events
+ALTER TABLE public.clock_events DROP CONSTRAINT IF EXISTS clock_events_event_type_check;
+ALTER TABLE public.clock_events ADD CONSTRAINT clock_events_event_type_check CHECK (event_type IN ('CLOCK_IN', 'CLOCK_OUT', 'PAUSE', 'RESUME'));
+
+
+-- ── 9. NOTIFY POSTGREST SCHEMA CACHE REFRESH ────────────────────────────────
 -- Ensure PostgREST immediately re-caches the relationships and tables.
 NOTIFY pgrst, 'reload schema';
+
 

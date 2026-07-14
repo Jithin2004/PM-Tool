@@ -50,7 +50,7 @@ export default function ProjectWorkspace() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column - Execution Timeline */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-[var(--pm-primary)]">Execution Timeline</h2>
               <div className="flex gap-2">
@@ -127,7 +127,7 @@ export default function ProjectWorkspace() {
 
         {/* Right Column - Intelligence Surface */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-[var(--pm-primary)]">Dependency Map</h2>
               <Navigation size={16} className="text-emerald-400" />

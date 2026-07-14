@@ -7,7 +7,7 @@ import { hasCapability } from '../../core/auth/permissions';
 import { Icon } from '../../components/ui/Icon';
 import { MeetingCreationModal } from './MeetingCreationModal';
 import { MeetingDetailsModal } from './MeetingDetailsModal';
-import { PremiumEmptyState } from '../../components/common/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 import { PremiumLoader } from '../../components/common/PremiumLoader';
 
 export default function MeetingsPage() {
@@ -93,7 +93,7 @@ export default function MeetingsPage() {
           <PremiumLoader type="card" count={3} label="Loading scheduled discussions..." />
         ) : meetings.length === 0 ? (
           <div className="max-w-md mx-auto mt-12">
-            <PremiumEmptyState
+            <EmptyState
               icon={Calendar}
               title={`No ${filter} meetings`}
               description={`There are currently no ${filter} meetings registered in this workspace.`}
@@ -115,7 +115,7 @@ export default function MeetingsPage() {
                 {/* Timeline Card */}
                 <div 
                   onClick={() => setSelectedMeeting(meeting)}
-                  className="premium-panel premium-hover-lift rounded-2xl p-5 cursor-pointer transition-all duration-200 border border-[var(--border-soft)]"
+                  className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 cursor-pointer transition-all duration-200 border border-[var(--border-soft)]"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2">
@@ -158,7 +158,7 @@ export default function MeetingsPage() {
               <div 
                 key={meeting.id} 
                 onClick={() => setSelectedMeeting(meeting)}
-                className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)] cursor-pointer transition-all duration-200"
+                className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)] cursor-pointer transition-all duration-200"
               >
                 <div className="flex items-start justify-between mb-4">
                   <span className="text-[10px] uppercase tracking-widest font-mono px-2 py-0.5 bg-indigo-500/10 text-indigo-300 rounded border border-indigo-500/15">

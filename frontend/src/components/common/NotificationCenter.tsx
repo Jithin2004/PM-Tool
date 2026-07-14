@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { activityLogService } from '../../services/activityLogService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
-import { PremiumEmptyState } from './PremiumEmptyState';
+import { EmptyState } from './PremiumEmptyState';
 
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
@@ -152,7 +152,7 @@ export function NotificationCenter() {
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute right-0 top-full mt-2 w-96 premium-panel rounded-2xl overflow-hidden z-50 flex flex-col max-h-[500px]"
+            className="absolute right-0 top-full mt-2 w-96 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl overflow-hidden z-50 flex flex-col max-h-[500px]"
           >
             <div className="flex items-center justify-between p-4 border-b border-[var(--border-soft)] bg-[var(--surface-glass)]">
               <h3 className="text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)] font-mono">Notifications</h3>
@@ -168,7 +168,7 @@ export function NotificationCenter() {
             
             <div className="flex-1 overflow-y-auto scrollbar-thin p-2">
               {groupedData.length === 0 ? (
-                <PremiumEmptyState
+                <EmptyState
                   icon={Bell}
                   title="All caught up!"
                   description="Your team's updates and system alerts will appear here."

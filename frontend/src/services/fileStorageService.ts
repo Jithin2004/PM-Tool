@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { storageBucketService, WORKSPACE_BUCKET } from './storageBucketService';
 import { activityEventService } from './activityEventService';
 import { searchIndexService } from './searchIndexService';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
 
 export interface FileRecord {
   id: string;
@@ -153,6 +154,32 @@ export const fileStorageService = {
 
     // 5. Activity event → automation trigger
     if (options?.emitActivity !== false) {
+      try {
+        await enterpriseEventPublisher.publish({
+          workspace_id: workspaceId,
+          user_id: authData.user.id,
+          entity_type: 'file',
+          entity_id: fileId,
+          verb: 'upload',
+          title: 'File Uploaded',
+          description: `Uploaded file "${file.name}" (${(file.size / 1024).toFixed(1)} KB).`,
+          severity: 'low',
+          importance: 'normal',
+          icon_key: 'warning',
+          visibility: 'public',
+          module: 'files',
+          metadata: {
+            original_name: file.name,
+            entity_type: entityType,
+            entity_id: entityId,
+            file_size: file.size,
+            mime_type: file.type,
+          }
+        });
+      } catch (e) {
+        console.error('Failed to log file upload event:', e);
+      }
+
       await activityEventService.recordActivity({
         workspace_id: workspaceId,
         actor_id: authData.user.id,
@@ -238,6 +265,26 @@ export const fileStorageService = {
     }).catch(() => {});
 
     // Emit
+    try {
+      await enterpriseEventPublisher.publish({
+        workspace_id: workspaceId,
+        user_id: authData.user.id,
+        entity_type: 'file',
+        entity_id: fileId,
+        verb: 'version_created',
+        title: 'File Version Created',
+        description: `Created version ${nextVersion} for file "${newFile.name}".`,
+        severity: 'low',
+        importance: 'normal',
+        icon_key: 'warning',
+        visibility: 'public',
+        module: 'files',
+        metadata: { version: nextVersion, original_name: newFile.name, file_size: newFile.size }
+      });
+    } catch (e) {
+      console.error('Failed to log version created event:', e);
+    }
+
     await activityEventService.recordActivity({
       workspace_id: workspaceId,
       actor_id: authData.user.id,
@@ -300,6 +347,27 @@ export const fileStorageService = {
       })
       .eq('id', fileId);
 
+    try {
+      const { data: fData } = await supabase.from('workspace_files').select('file_name').eq('id', fileId).maybeSingle();
+      await enterpriseEventPublisher.publish({
+        workspace_id: workspaceId,
+        user_id: authData.user.id,
+        entity_type: 'file',
+        entity_id: fileId,
+        verb: 'version_restored',
+        title: 'File Version Restored',
+        description: `Restored version ${sourceVersion.version_number} as version ${nextVersion} for file "${fData?.file_name || 'file'}".`,
+        severity: 'low',
+        importance: 'normal',
+        icon_key: 'warning',
+        visibility: 'public',
+        module: 'files',
+        metadata: { restored_from_version: sourceVersion.version_number, new_version: nextVersion }
+      });
+    } catch (e) {
+      console.error('Failed to log version restored event:', e);
+    }
+
     await activityEventService.recordActivity({
       workspace_id: workspaceId,
       actor_id: authData.user.id,
@@ -333,6 +401,27 @@ export const fileStorageService = {
 
     // Remove from search index
     await searchIndexService.removeEntity('file', fileId).catch(() => {});
+
+    try {
+      const { data: fData } = await supabase.from('workspace_files').select('file_name').eq('id', fileId).maybeSingle();
+      await enterpriseEventPublisher.publish({
+        workspace_id: workspaceId,
+        user_id: authData.user.id,
+        entity_type: 'file',
+        entity_id: fileId,
+        verb: 'deleted',
+        title: 'File Deleted',
+        description: `Archived/deleted file "${fData?.file_name || 'file'}".`,
+        severity: 'low',
+        importance: 'normal',
+        icon_key: 'warning',
+        visibility: 'public',
+        module: 'files',
+        metadata: { file_id: fileId }
+      });
+    } catch (e) {
+      console.error('Failed to log file archived event:', e);
+    }
 
     await activityEventService.recordActivity({
       workspace_id: workspaceId,

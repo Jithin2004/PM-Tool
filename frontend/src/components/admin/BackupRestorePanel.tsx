@@ -3,7 +3,7 @@ import { HardDriveDownload, History, FileJson, AlertCircle } from 'lucide-react'
 import { exportWorkspace } from '../../services/backupService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { supabase } from '../../lib/supabase';
-import { PremiumEmptyState } from '../ui/PremiumEmptyState';
+import { EmptyState } from '../core';
 import { PremiumLoader } from '../common/PremiumLoader';
 
 export function BackupRestorePanel() {
@@ -128,7 +128,7 @@ export function BackupRestorePanel() {
                 <PremiumLoader />
               </div>
             ) : history.length === 0 ? (
-              <PremiumEmptyState
+              <EmptyState
                 icon={FileJson}
                 title="No backups generated yet"
                 description="Click Generate Backup to create your first workspace data snapshot."

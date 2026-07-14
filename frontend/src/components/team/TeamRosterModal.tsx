@@ -271,7 +271,6 @@ export function TeamRosterModal({
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className="relative modal-premium border border-[var(--border-soft)] w-full max-w-6xl overflow-hidden shadow-2xl rounded-2xl flex flex-col h-[90vh]"
       >
-        <div className="absolute top-0 inset-x-0 h-[3px] bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 z-50" />
 
         {/* Roster Header */}
         <div className="p-6 border-b border-[var(--border-soft)] bg-[var(--pm-surface-lowest)]/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">

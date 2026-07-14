@@ -58,7 +58,7 @@ export function AllocationPeriodManager() {
   };
 
   return (
-    <div className="glass-panel rounded-xl p-6 mt-6">
+    <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 mt-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
           Allocation Period Management

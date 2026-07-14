@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
 
 interface WorkspaceExport {
   version: number;
@@ -54,6 +55,30 @@ export async function exportWorkspace(wsId: string): Promise<WorkspaceExport | n
     milestones: milestones?.data || [],
     invoices: invoices?.data || [],
   };
+
+  try {
+    await enterpriseEventPublisher.publish({
+      workspace_id: wsId,
+      entity_type: 'workspace',
+      entity_id: wsId,
+      verb: 'backup',
+      title: 'Workspace Backup Exported',
+      description: `Workspace data backup was successfully exported.`,
+      severity: 'low',
+      importance: 'normal',
+      icon_key: 'warning',
+      visibility: 'admin',
+      module: 'system',
+      metadata: {
+        projects: pack.projects.length,
+        tasks: pack.tasks.length,
+        users: pack.users.length,
+        exported_at: pack.exportedAt
+      }
+    });
+  } catch (e) {
+    console.error('Failed to log workspace backup exported event:', e);
+  }
 
   await activityLogService.appendLog({
     workspace_id: wsId, action_type: 'workspace_exported',
@@ -174,6 +199,25 @@ export async function importWorkspace(data: unknown): Promise<{ success: boolean
       const { error } = await supabase.from('activity_logs').upsert(pack.activityLogs, upsertConfig);
       if (error) result.errors.push(`activity_logs: ${error.message}`);
       else result.imported += pack.activityLogs.length;
+    }
+
+    try {
+      await enterpriseEventPublisher.publish({
+        workspace_id: wsId,
+        entity_type: 'workspace',
+        entity_id: wsId,
+        verb: 'restore',
+        title: 'Workspace Backup Restored',
+        description: `Workspace data backup was successfully restored.`,
+        severity: 'medium',
+        importance: 'important',
+        icon_key: 'warning',
+        visibility: 'admin',
+        module: 'system',
+        metadata: { imported: result.imported, errors: result.errors.length }
+      });
+    } catch (e) {
+      console.error('Failed to log workspace backup restored event:', e);
     }
 
     await activityLogService.appendLog({

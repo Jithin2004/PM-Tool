@@ -5,7 +5,7 @@ import { Icon } from '../../components/ui/Icon';
 import { DocumentCreationModal } from './DocumentCreationModal';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 import { PremiumLoader } from '../../components/common/PremiumLoader';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 import { Link2, Plus } from 'lucide-react';
 
 export default function DocumentsPage() {
@@ -86,7 +86,7 @@ export default function DocumentsPage() {
           <PremiumLoader type="card" count={8} label="Syncing document index..." />
         ) : documents.length === 0 ? (
           <div className="max-w-md mx-auto mt-12">
-            <PremiumEmptyState
+            <EmptyState
               icon={Link2}
               title="No Documents Connected"
               description="Keep your design files, specs, code repositories, and external resources organized in a single unified index."

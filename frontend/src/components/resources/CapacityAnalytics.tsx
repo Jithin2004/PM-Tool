@@ -101,7 +101,7 @@ export function CapacityAnalytics() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">Overall Utilization</div>
             <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
@@ -116,7 +116,7 @@ export function CapacityAnalytics() {
           </div>
         </div>
 
-        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">Overallocated</div>
             <div className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center">
@@ -131,7 +131,7 @@ export function CapacityAnalytics() {
           </div>
         </div>
 
-        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">Active Teams</div>
             <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
@@ -146,7 +146,7 @@ export function CapacityAnalytics() {
           </div>
         </div>
 
-        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">Today's Attendance</div>
             <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
@@ -165,7 +165,7 @@ export function CapacityAnalytics() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 pt-4">
         {/* Main Utilization Cards Grid (Removed spreadsheet feel) */}
         <div className="xl:col-span-2 space-y-6">
-          <div className="premium-panel rounded-2xl border border-[var(--border-soft)] p-6">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl border border-[var(--border-soft)] p-6">
             <h2 className="text-lg font-bold tracking-tight text-white mb-6">Member Resource Distribution</h2>
             
             {analyticsData.memberStats.length === 0 ? (
@@ -177,7 +177,7 @@ export function CapacityAnalytics() {
                   return (
                     <div 
                       key={member.id} 
-                      className={`premium-panel premium-hover-lift rounded-2xl p-5 border transition-all duration-200 flex flex-col justify-between ${
+                      className={`bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border transition-all duration-200 flex flex-col justify-between ${
                         isOverallocated 
                           ? 'border-rose-500/20 shadow-[0_0_15px_rgba(239,68,68,0.08)] bg-rose-500/[0.01]' 
                           : 'border-[var(--border-soft)]'
@@ -250,7 +250,7 @@ export function CapacityAnalytics() {
 
         {/* Sidebar Widgets */}
         <div className="space-y-6">
-          <div className="premium-panel rounded-2xl border border-[var(--border-soft)] overflow-hidden">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl border border-[var(--border-soft)] overflow-hidden">
             <div className="p-5 border-b border-[var(--border-soft)] bg-[var(--surface-glass)]">
               <h2 className="text-base font-bold text-white">Upcoming Leaves</h2>
             </div>
@@ -286,7 +286,7 @@ export function CapacityAnalytics() {
             </div>
           </div>
           
-          <div className="premium-panel rounded-2xl border border-[var(--border-soft)] p-5">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl border border-[var(--border-soft)] p-5">
             <h3 className="text-xs font-mono uppercase tracking-widest text-[var(--text-secondary)] mb-3">Resource Allocation Note</h3>
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
               Workload is calculated by aggregating active tasks assigned to each member across all projects. Members marked as overallocated may require load balancing to prevent burnout.

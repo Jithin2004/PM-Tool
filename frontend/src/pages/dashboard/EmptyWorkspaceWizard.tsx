@@ -22,7 +22,7 @@ export function EmptyWorkspaceWizard() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Step 1 */}
-        <div className="premium-panel border border-[var(--border-soft)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] border border-[var(--border-soft)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
           <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
           <div className="flex items-center justify-between mb-4">
             <div className="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center">
@@ -40,7 +40,7 @@ export function EmptyWorkspaceWizard() {
         </div>
 
         {/* Step 2 */}
-        <div className="premium-panel border border-[var(--border-soft)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] border border-[var(--border-soft)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center">
               <Users className="w-5 h-5 text-indigo-300" />
@@ -57,7 +57,7 @@ export function EmptyWorkspaceWizard() {
         </div>
 
         {/* Step 3 */}
-        <div className="premium-panel border border-[var(--border-soft)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] border border-[var(--border-soft)] rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/50 transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5 text-indigo-300" />

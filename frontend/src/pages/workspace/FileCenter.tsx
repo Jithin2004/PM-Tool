@@ -169,8 +169,7 @@ const FileCenterPage: React.FC = () => {
         <div style={{
           padding: '20px 24px 0',
           borderBottom: '1px solid var(--border-soft)',
-          background: 'var(--surface-glass)',
-          backdropFilter: 'blur(12px)',
+          background: 'var(--color-surface-0)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>

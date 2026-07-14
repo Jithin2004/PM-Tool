@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { activityEventService } from './activityEventService';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
 
 export const leaveBalanceService = {
   async getBalance(workspaceId: string, userId: string, leaveType: string) {
@@ -44,12 +45,19 @@ export const leaveBalanceService = {
     });
 
     try {
-      await activityEventService.recordActivity({
+      await enterpriseEventPublisher.publish({
         workspace_id: workspaceId,
-        actor_id: userId,
-        entity_type: 'personal_leave',
+        user_id: userId,
+        entity_type: 'leave',
         entity_id: leaveRow.id,
-        action_type: 'leave_requested',
+        verb: 'leave_applied',
+        title: 'Leave Applied',
+        description: `Applied for ${leaveType} leave from ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}.`,
+        severity: 'low',
+        importance: 'important',
+        icon_key: 'warning',
+        visibility: 'public',
+        module: 'leave',
         metadata: { leaveType, startDate, endDate, reason }
       });
     } catch (e) {

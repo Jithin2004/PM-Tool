@@ -7,7 +7,7 @@ import { FileText, Download, Activity, Calendar, Users, DollarSign } from 'lucid
 import { exportToPDF, exportToCSV } from '../../services/pdfExportService';
 import { supabase } from '../../lib/supabase';
 import { showAlert } from '../../components/common/Dialogs';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { PageShell, PageHeader, PageContent, EmptyState } from '../../components/core';
 import { generateWeeklyDigestMarkdown } from '../../core/reporting/WeeklyDigestEngine';
 import { ProjectReportBuilder } from '../../components/reports/ProjectReportBuilder';
 
@@ -218,25 +218,21 @@ export default function ReportsCenter() {
   };
 
   return (
-    <div className="space-y-8 pb-16 font-geist text-[var(--pm-primary)]" style={{ color: 'var(--pm-on-surface)' }}>
-      {/* Header */}
-      <div className="flex items-end justify-between px-1 pt-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--pm-on-surface)' }}>
-            Reports Center
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            Generate enterprise business reports and analytics.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-border bg-surface-2"
-          style={{ background: 'var(--pm-surface-highest)', borderColor: 'rgba(70,69,84,0.3)' }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 operational-pulse" style={{ boxShadow: '0 0 8px rgba(96,165,250,0.5)' }} />
-          <span className="font-mono-pm text-xs uppercase tracking-widest text-[var(--pm-on-surface-variant)]" style={{ color: 'var(--pm-on-surface-variant)' }}>
-             REPORTING ENGINE
-          </span>
-        </div>
-      </div>
+    <PageShell maxWidth="full" className="px-6 py-6 flex flex-col">
+      <PageHeader
+        title="Reports Center"
+        overline="Enterprise Business Reports & Analytics"
+        description="Generate enterprise business reports, weekly digest, and execution analytics."
+        actions={
+          <div className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-info)] operational-pulse" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-secondary)]">
+               REPORTING ENGINE
+            </span>
+          </div>
+        }
+      />
+      <PageContent>
 
 
       <div className="flex gap-4 mb-6">
@@ -255,7 +251,7 @@ export default function ReportsCenter() {
       </div>
 
       {viewMode === 'v2' ? (
-        <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border min-h-[500px]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border min-h-[500px]">
           <div className="mb-4">
             <label className="block text-xs font-semibold uppercase tracking-widest text-text-tertiary mb-2">Select Project Context</label>
             <select 
@@ -277,7 +273,7 @@ export default function ReportsCenter() {
               currentUser={profile} 
             />
           ) : (
-             <PremiumEmptyState 
+             <EmptyState 
                icon={Activity} 
                title="Select a Project" 
                description="Choose a project to generate a V2 operational intelligence report." 
@@ -287,9 +283,9 @@ export default function ReportsCenter() {
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
-          <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border space-y-6">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border space-y-6">
             {projects.length === 0 ? (
-              <PremiumEmptyState 
+              <EmptyState 
                 icon={FileText}
                 title="No Data for Reports"
                 description="Reports will be automatically generated once you have active projects, tasks, and team activity."
@@ -387,12 +383,12 @@ export default function ReportsCenter() {
 
       {/* Preview Section */}
       {previewData !== null && (
-        <div className="mt-8 glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+        <div className="mt-8 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border">
           <h2 className="text-lg font-semibold mb-4 text-[var(--pm-on-surface)]">
             Report Preview ({previewData.length} records)
           </h2>
           {previewData.length === 0 ? (
-            <PremiumEmptyState 
+            <EmptyState 
               icon={FileText} 
               title="No Report Data Available" 
               description="There is no data matching your selected filters. Try adjusting the date range or selecting a different report type to see insights." 
@@ -434,7 +430,7 @@ export default function ReportsCenter() {
 
       {/* Markdown Digest Preview */}
       {digestMarkdown !== null && (
-        <div className="mt-8 glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+        <div className="mt-8 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-[var(--pm-on-surface)]">
               Weekly Digest Report
@@ -456,7 +452,8 @@ export default function ReportsCenter() {
           </div>
         </div>
       )}
-    </div>
-  );
+    </PageContent>
+  </PageShell>
+);
 }
 

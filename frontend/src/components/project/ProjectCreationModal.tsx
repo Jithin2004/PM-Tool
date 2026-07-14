@@ -172,12 +172,12 @@ export function ProjectCreationModal({ isOpen, onClose, onSuccess }: ProjectCrea
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-bg/90 backdrop-blur-sm p-4 overflow-y-auto">
       <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="relative bg-surface border border-border/50 w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden font-geist text-[var(--pm-on-surface)]"
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="relative modal-premium w-full max-w-[900px] overflow-hidden shadow-2xl rounded-2xl flex flex-col h-[85vh] my-auto"
       >
-        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500" />
         
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border/50 shrink-0">

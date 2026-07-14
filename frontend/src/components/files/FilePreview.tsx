@@ -102,8 +102,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     gap: 10,
     padding: '12px 16px',
     borderBottom: '1px solid var(--border-soft)',
-    background: 'var(--surface-glass)',
-    backdropFilter: 'blur(8px)',
+    background: 'var(--color-surface-0)',
   };
 
   const iconColor = '#818cf8';

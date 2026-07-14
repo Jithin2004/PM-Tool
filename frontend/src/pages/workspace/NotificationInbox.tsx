@@ -5,6 +5,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { notificationEngine } from '../../core/engines/notificationEngine';
 import { Bell, Check, AlertCircle, Briefcase, FileText, Activity, Shield, Users, Search, Volume2, VolumeX, Moon } from 'lucide-react';
 import { notificationSoundService } from '../../services/notificationSoundService';
+import { PageShell, PageHeader, PageContent, Button } from '../../components/core';
 
 export default function NotificationInbox() {
   const { profile } = useAuth();
@@ -64,36 +65,34 @@ export default function NotificationInbox() {
   };
 
   return (
-    <div className="space-y-8 pb-16 font-geist text-text-primary p-6 bg-surface">
-      <div className="flex items-end justify-between px-1 pt-2 border-b border-border pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary flex items-center gap-2">
-            <Bell className="w-6 h-6 text-accent-primary" /> Notification Inbox
-          </h1>
-          <p className="text-sm mt-1 text-text-secondary">
-            Global communication audit log and preference center.
-          </p>
-        </div>
-        
-        {/* Preference Toggles */}
-        <div className="flex gap-4">
-          <button 
-            onClick={toggleSound}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-colors border ${settings?.sound_enabled ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-surface-2 text-text-secondary border-border'}`}
-          >
-            {settings?.sound_enabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            {settings?.sound_enabled ? 'Sound On' : 'Sound Off'}
-          </button>
-          
-          <button 
-            onClick={toggleFocus}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-colors border ${settings?.focus_mode ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-surface-2 text-text-secondary border-border'}`}
-          >
-            <Moon className="w-4 h-4" />
-            {settings?.focus_mode ? 'Focus Mode Active' : 'Focus Mode Off'}
-          </button>
-        </div>
-      </div>
+    <PageShell maxWidth="full" className="px-6 py-6 flex flex-col">
+      <PageHeader
+        title="Notification Inbox"
+        overline="Workspace Notifications & Audit Log"
+        description="Global communication audit log and preference center."
+        actions={
+          <div className="flex gap-4">
+            <Button 
+              onClick={toggleSound}
+              variant={settings?.sound_enabled ? 'primary' : 'secondary'}
+              size="sm"
+            >
+              {settings?.sound_enabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              {settings?.sound_enabled ? 'Sound On' : 'Sound Off'}
+            </Button>
+            
+            <Button 
+              onClick={toggleFocus}
+              variant={settings?.focus_mode ? 'primary' : 'secondary'}
+              size="sm"
+            >
+              <Moon className="w-4 h-4" />
+              {settings?.focus_mode ? 'Focus Mode Active' : 'Focus Mode Off'}
+            </Button>
+          </div>
+        }
+      />
+      <PageContent>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1 space-y-6">
@@ -175,6 +174,7 @@ export default function NotificationInbox() {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </PageContent>
+  </PageShell>
+);
 }

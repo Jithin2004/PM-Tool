@@ -99,7 +99,7 @@ export function SharedProjectDashboard({ previewToken }: { previewToken?: string
   if (loading) {
     return (
       <div className="min-h-screen  flex items-center justify-center p-6">
-        <div className="max-w-md w-full premium-panel p-8 rounded-2xl">
+        <div className="max-w-md w-full bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-8 rounded-2xl">
           <PremiumLoader type="page" label="Syncing Client Portal..." />
         </div>
       </div>
@@ -109,7 +109,7 @@ export function SharedProjectDashboard({ previewToken }: { previewToken?: string
   if (error) {
     return (
       <div className="min-h-screen  flex items-center justify-center p-6">
-        <div className="premium-panel p-8 max-w-md w-full text-center rounded-2xl border-rose-500/20">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-8 max-w-md w-full text-center rounded-2xl border-rose-500/20">
           <Shield className="w-12 h-12 text-rose-500/50 mx-auto mb-4" />
           <h2 className="text-xl font-sans text-rose-400 mb-2 font-semibold">Access Denied</h2>
           <p className="text-sm font-mono text-[var(--text-secondary)]">{error}</p>
@@ -134,7 +134,7 @@ export function SharedProjectDashboard({ previewToken }: { previewToken?: string
       {/* Client Header */}
       <header className="h-16 border-b border-[var(--border-soft)] bg-[#050712]/50 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 premium-panel flex items-center justify-center rounded-xl">
+          <div className="w-8 h-8 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] flex items-center justify-center rounded-xl">
             <ShieldCheck className="w-4 h-4 text-purple-400" />
           </div>
           <div>
@@ -165,7 +165,7 @@ export function SharedProjectDashboard({ previewToken }: { previewToken?: string
             </h2>
             <div className="grid gap-4">
               {approvals.map(appr => (
-                <div key={appr.id} className="premium-panel border border-amber-500/20 bg-amber-500/5 p-5 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div key={appr.id} className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] border border-amber-500/20 bg-amber-500/5 p-5 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div>
                     <div className="text-xs font-mono text-amber-400/50 uppercase mb-1">Phase: {appr.phase}</div>
                     <div className="text-sm font-medium text-[var(--text-secondary)]">{appr.comment || "Please review and approve the latest delivery."}</div>

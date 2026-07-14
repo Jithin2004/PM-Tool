@@ -3,6 +3,7 @@ const { getPlanSeats } = require('../controller/helpers');
 const { BackendPlatformError } = require('../domain/LicenseDomainService'); // Adjust path
 const AuditEvent = require('../models/AuditEvent');
 const logger = require('../lib/logger');
+const EnterpriseEventRecorder = require('./EnterpriseEventRecorder');
 
 function mapLicensePlanToWorkspacePlan(plan, ctx) {
     if (!plan) {
@@ -140,6 +141,54 @@ class WorkspaceProvisioningService {
       };
 
       logger.info('WORKSPACE', 'WSP-302', ctx, 'WorkspaceCreated');
+
+      try {
+        if (activatedLicense) {
+          await EnterpriseEventRecorder.recordEvent({
+            workspace_id: workspaceId,
+            user_id: identity.id,
+            actor_name: identity.fullName || 'System',
+            entity_type: 'license',
+            entity_id: productKey,
+            verb: 'license_activated',
+            title: 'License Activated',
+            description: `License activated for plan ${mongoPlan}.`,
+            severity: 'low',
+            importance: 'important',
+            icon_key: 'warning',
+            ip_address: ip,
+            device: userAgent || 'server',
+            is_system: false,
+            visibility: 'admin',
+            origin: 'backend',
+            module: 'licensing',
+            metadata: { plan: mongoPlan }
+          });
+        }
+
+        await EnterpriseEventRecorder.recordEvent({
+          workspace_id: workspaceId,
+          user_id: identity.id,
+          actor_name: identity.fullName || 'System',
+          entity_type: 'workspace',
+          entity_id: workspaceId,
+          verb: 'workspace_created',
+          title: 'Workspace Provisioned',
+          description: `Workspace "${workspaceName}" successfully provisioned on plan "${workspacePlan}".`,
+          severity: 'low',
+          importance: 'important',
+          icon_key: 'project',
+          ip_address: ip,
+          device: userAgent || 'server',
+          is_system: false,
+          visibility: 'public',
+          origin: 'backend',
+          module: 'workspace',
+          metadata: { plan: workspacePlan, seats }
+        });
+      } catch (e) {
+        logger.error('WORKSPACE', 'WSP-ERR', ctx, `Failed to record provisioning events: ${e.message}`);
+      }
 
       AuditEvent.create({
         event_type: 'onboard_workspace',

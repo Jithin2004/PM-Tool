@@ -145,7 +145,7 @@ export function DailyCommandCenter() {
 
           {/* Primary Focus */}
           {intel.primaryFocus && (
-            <div className={`glass-panel p-6 rounded-xl border relative overflow-hidden mb-6 ${intel.primaryFocus.type === 'urgent' ? 'border-red-500/20 bg-red-500/5' :
+            <div className={`bg-[var(--color-surface-1)] border border-[var(--color-border)] p-6 rounded-xl border relative overflow-hidden mb-6 ${intel.primaryFocus.type === 'urgent' ? 'border-red-500/20 bg-red-500/5' :
                 intel.primaryFocus.type === 'focus' ? 'border-amber-500/20 bg-amber-500/5' :
                   'border-indigo-500/20 bg-surface-2'
               }`}>

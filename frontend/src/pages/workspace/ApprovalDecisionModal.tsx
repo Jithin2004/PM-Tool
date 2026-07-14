@@ -8,6 +8,7 @@ import { Icon } from '../../components/ui/Icon';
 import { activityLogService } from '../../services/activityLogService';
 import { activityEventService } from '../../services/activityEventService';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
+import { enterpriseEventPublisher } from '../../services/enterpriseEventPublisher';
 
 export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approval: any, onClose: () => void, onUpdate: () => void }) {
   useEscapeKey(true, onClose);
@@ -97,6 +98,24 @@ export function ApprovalDecisionModal({ approval, onClose, onUpdate }: { approva
       }).eq('id', approval.id);
 
       if (error) throw error;
+
+      if (approval.entity_type === 'personal_leave') {
+        await enterpriseEventPublisher.publish({
+          workspace_id: workspace!.id,
+          user_id: profile?.id,
+          entity_type: 'leave',
+          entity_id: approval.entity_id,
+          verb: 'leave_approved',
+          title: `Leave ${decisionStr === 'approved' ? 'Approved' : 'Rejected'}`,
+          description: `Leave request was ${decisionStr.toLowerCase()}${noteStr ? `: ${noteStr}` : ''}`,
+          severity: decisionStr === 'approved' ? 'low' : 'medium',
+          importance: 'important',
+          icon_key: 'warning',
+          visibility: 'public',
+          module: 'leave',
+          metadata: { approval_id: approval.id, decision: decisionStr, requested_by: approval.requested_by }
+        });
+      }
 
       await activityLogService.appendLog({
         workspace_id: workspace!.id,

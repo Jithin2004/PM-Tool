@@ -42,7 +42,7 @@ export function WorkLogsPanel() {
         <p className="text-sm tracking-tight" style={{ color: 'var(--pm-on-surface-variant)' }}>Time tracking, attendance, and productivity analytics</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center glass-panel rounded-xl p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6">
         <div className="flex flex-col gap-2">
           <label className="text-[10px] font-mono-pm uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>Date</label>
           <div className="relative">
@@ -71,7 +71,7 @@ export function WorkLogsPanel() {
         </div>
       </div>
 
-      <div className="glass-panel rounded-xl overflow-hidden">
+      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl overflow-hidden">
         <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: 'rgba(70,69,84,0.3)', background: 'var(--pm-surface-highest)' }}>
           <h3 className="text-sm font-semibold tracking-tight">Daily Productivity Log</h3>
           <span className="text-[10px] font-mono-pm uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>{selectedDate}</span>

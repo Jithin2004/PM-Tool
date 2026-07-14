@@ -10,6 +10,7 @@ import { sha256 } from '../utils/cryptoUtils';
 import { hasCapability, guardCapability, getAuthorityRank, hasAuthority } from '../core/auth/permissions';
 import { getFriendlyErrorMessage } from '../utils/errorUtils';
 import { WorkspaceLifecycleEngine } from '../core/system/WorkspaceLifecycleEngine';
+import { enterpriseEventPublisher } from '../services/enterpriseEventPublisher';
 
 export const wouldCreateCycle = (
   taskId: string,
@@ -272,6 +273,44 @@ export function useTasks(workspaceId?: string) {
             .eq('workspace_id', workspaceId);
 
           if (updateError) throw updateError;
+
+          const newStatus = item.payload.status;
+          let verb = '';
+          let title = '';
+          let icon_key = 'task';
+          if (newStatus === 'in_progress') {
+            verb = 'started';
+            title = 'Task Started';
+          } else if (newStatus === 'completed') {
+            verb = 'completed';
+            title = 'Task Completed';
+          } else if (newStatus === 'blocked') {
+            verb = 'blocked';
+            title = 'Task Blocked';
+            icon_key = 'warning';
+          }
+
+          if (verb) {
+            try {
+              const { data: tData } = await supabase.from('tasks').select('name, project_id').eq('id', taskId).maybeSingle();
+              await enterpriseEventPublisher.publish({
+                workspace_id: workspaceId,
+                entity_type: 'task',
+                entity_id: taskId,
+                verb,
+                title,
+                description: `Task "${tData?.name || 'Task'}" was marked as ${newStatus}.`,
+                severity: newStatus === 'blocked' ? 'medium' : 'low',
+                importance: newStatus === 'completed' ? 'important' : 'normal',
+                icon_key,
+                visibility: 'public',
+                module: 'projects',
+                metadata: { task_id: taskId, project_id: tData?.project_id, status: newStatus }
+              });
+            } catch (e) {
+              console.error('Failed to log task status event:', e);
+            }
+          }
         }
         else if (item.operation === 'updateTaskDates') {
           const taskId = getRealId(item.payload.taskId);
@@ -299,9 +338,38 @@ export function useTasks(workspaceId?: string) {
             .eq('workspace_id', workspaceId);
 
           if (updateError) throw updateError;
+
+          if (updates.assignee_id) {
+            try {
+              const { data: tData } = await supabase.from('tasks').select('name, project_id').eq('id', taskId).maybeSingle();
+              await enterpriseEventPublisher.publish({
+                workspace_id: workspaceId,
+                entity_type: 'task',
+                entity_id: taskId,
+                verb: 'assigned',
+                title: 'Task Assigned',
+                description: `Task "${tData?.name || 'Task'}" was assigned to user ${updates.assignee_id}.`,
+                severity: 'low',
+                importance: 'normal',
+                icon_key: 'task',
+                visibility: 'public',
+                module: 'projects',
+                metadata: { task_id: taskId, project_id: tData?.project_id, assignee_id: updates.assignee_id }
+              });
+            } catch (e) {
+              console.error('Failed to log task assignment event:', e);
+            }
+          }
         }
         else if (item.operation === 'deleteTask') {
           const taskId = getRealId(item.payload.taskId);
+          
+          let taskName = 'Task';
+          try {
+            const { data: tData } = await supabase.from('tasks').select('name').eq('id', taskId).maybeSingle();
+            if (tData?.name) taskName = tData.name;
+          } catch {}
+
           const { error: deleteError } = await supabase
             .from('tasks')
             .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -310,6 +378,25 @@ export function useTasks(workspaceId?: string) {
             .is('deleted_at', null);
 
           if (deleteError) throw deleteError;
+
+          try {
+            await enterpriseEventPublisher.publish({
+              workspace_id: workspaceId,
+              entity_type: 'task',
+              entity_id: taskId,
+              verb: 'deleted',
+              title: 'Task Deleted',
+              description: `Task "${taskName}" was deleted.`,
+              severity: 'low',
+              importance: 'normal',
+              icon_key: 'task',
+              visibility: 'public',
+              module: 'projects',
+              metadata: { task_id: taskId }
+            });
+          } catch (e) {
+            console.error('Failed to log task deletion event:', e);
+          }
         }
         else if (item.operation === 'addDependency') {
           const taskId = getRealId(item.payload.taskId);

@@ -1,6 +1,8 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User } from '../types';
 import { reconcileInvitationMembership, rowToProfile } from '../core/auth/reconcileInvitationMembership';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
+
 
 export async function syncProfile(authUser: any): Promise<User | null> {
   if (!isSupabaseConfigured) return null;
@@ -123,6 +125,28 @@ export async function updateRole(id: string, role: User['role'], currentProfile:
     .from('users')
     .update({ role: dbRole })
     .eq('id', id);
+
+  if (!error) {
+    try {
+      await enterpriseEventPublisher.publish({
+        workspace_id: currentProfile.workspace_id || '00000000-0000-0000-0000-000000000000',
+        user_id: currentProfile.id,
+        entity_type: 'user',
+        entity_id: id,
+        verb: 'role_changed',
+        title: 'Role Updated',
+        description: `Role of user ${id} updated to ${role}.`,
+        severity: 'medium',
+        importance: 'important',
+        icon_key: 'warning',
+        visibility: 'admin',
+        module: 'administration',
+        metadata: { updated_user_id: id, new_role: role }
+      });
+    } catch (e) {
+      console.error('Failed to log role_changed event:', e);
+    }
+  }
 
   return !error;
 }

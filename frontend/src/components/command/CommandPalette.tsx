@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, FolderOpen, Check, FileText, Users, Activity, Zap, X, ChevronRight, BrainCircuit } from 'lucide-react';
 import { universalSearchService, UniversalSearchResult } from '../../services/universalSearchService';
-import { PremiumEmptyState } from '../common/PremiumEmptyState';
+import { EmptyState } from '../core';
 import { CANONICAL_ROUTES, renderRouteIcon } from '../../app/routeRegistry';
 
 interface Props {
@@ -128,7 +128,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: Props) {
 
   return (
     <div onClick={onClose} className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-start justify-center pt-[15vh] px-4 font-geist animate-fade-in">
-      <div onClick={e => e.stopPropagation()} className="premium-panel border border-[var(--border-soft)] w-full max-w-2xl rounded-2xl shadow-premium overflow-hidden flex flex-col transition-all animate-scale-up">
+      <div onClick={e => e.stopPropagation()} className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] border border-[var(--border-soft)] w-full max-w-2xl rounded-2xl shadow-premium overflow-hidden flex flex-col transition-all animate-scale-up">
         {/* Input */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border-soft)] bg-[var(--surface-glass)]">
           <Search className="w-5 h-5 text-[var(--text-secondary)]" />
@@ -262,7 +262,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: Props) {
             </div>
           ) : (
             // No Results
-             <PremiumEmptyState
+             <EmptyState
               icon={Search}
               title="No results found"
               description={`We couldn't find any projects, tasks, or decisions matching "${query}".`}

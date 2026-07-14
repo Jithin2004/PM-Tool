@@ -1,4 +1,3 @@
-import { PremiumEmptyState } from '../components/ui/PremiumEmptyState';
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LayoutGrid, Layers, Plus, Shield, ChevronDown, X, Terminal, Send, Lock, ListTodo, BrainCircuit, Play, AlertTriangle, Edit2, Check } from 'lucide-react';
@@ -296,9 +295,7 @@ export default function ExecutionBoard({
       </div>
 
       {/* Desktop Board */}
-      <div className="hidden md:block w-full bg-bg border border-border-subtle rounded-sm p-4 sm:p-6 backdrop-blur-md relative overflow-hidden">
-        {/* Visual Accent top gradient line */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500/80 via-purple-500/80 to-pink-500/80" />
+      <div className="hidden md:block w-full bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-sm p-4 sm:p-6 relative overflow-hidden">
 
         {/* Header controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-border-subtle pb-4">

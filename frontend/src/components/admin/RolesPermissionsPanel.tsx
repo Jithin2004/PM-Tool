@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Shield, Key, Check, X, AlertTriangle } from 'lucide-react';
 import { PremiumLoader } from '../common/PremiumLoader';
+import { enterpriseEventPublisher } from '../../services/enterpriseEventPublisher';
 
 export function RolesPermissionsPanel() {
   const [roles, setRoles] = useState<any[]>([]);
@@ -82,9 +83,24 @@ export function RolesPermissionsPanel() {
 
       // Record audit log
       if (actorId) {
-        await supabase.from('activity_logs').insert({
-          action_type: 'PERMISSION_CHANGED',
-          actor_id: actorId,
+        let workspaceId = '00000000-0000-0000-0000-000000000000';
+        try {
+          const { data: user } = await supabase.from('users').select('workspace_id').eq('id', actorId).maybeSingle();
+          if (user?.workspace_id) workspaceId = user.workspace_id;
+        } catch {}
+
+        await enterpriseEventPublisher.publish({
+          workspace_id: workspaceId,
+          user_id: actorId,
+          entity_type: 'user',
+          verb: 'capability_changed',
+          title: 'Capabilities Updated',
+          description: `Permissions matrix updated by admin.`,
+          severity: 'medium',
+          importance: 'important',
+          icon_key: 'warning',
+          visibility: 'admin',
+          module: 'administration',
           metadata: { updated_roles: roles.map(r => r.id) }
         });
       }

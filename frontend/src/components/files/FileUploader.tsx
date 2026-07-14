@@ -135,12 +135,11 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         style={{
           border: `2px dashed ${isDragging ? 'var(--pm-accent)' : 'var(--border-soft)'}`,
           borderRadius: 12,
-          background: isDragging ? 'var(--surface-hover)' : 'var(--surface-glass)',
+          background: isDragging ? 'var(--surface-hover)' : 'var(--color-surface-1)',
           padding: compact ? '16px' : '32px',
           textAlign: 'center',
           cursor: 'pointer',
           transition: 'all 0.2s',
-          backdropFilter: 'blur(8px)',
         }}
         role="button"
         tabIndex={0}

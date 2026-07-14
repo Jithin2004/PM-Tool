@@ -1,0 +1,21 @@
+/* ================================================================
+   RESOLVE PM — DESIGN BIBLE ELEVATION TOKENS
+   Source of truth: resolve_pm_design_bible.html (Phase 7-8, 16)
+   Rule: No glow. No glassmorphism. No backdrop-filter.
+   ================================================================ */
+
+:root {
+  /* ── Border Radius ────────────────────────────────────────── */
+  --radius-xs:   2px;     /* Status dots, micro indicators */
+  --radius-sm:   4px;     /* Badges, tags, chips, code blocks */
+  --radius-md:   6px;     /* Buttons, inputs, select, tabs */
+  --radius-lg:   8px;     /* Cards, panels, sidebar sections */
+  --radius-xl:   12px;    /* Modal containers, command palette */
+  --radius-pill: 9999px;  /* Nav active pills, toggle switches only */
+
+  /* ── Box Shadows ──────────────────────────────────────────── */
+  --shadow-sm:      0 1px 3px rgba(0, 0, 0, 0.3);     /* Cards, inputs */
+  --shadow-md:      0 2px 8px rgba(0, 0, 0, 0.4);     /* Dropdowns, tooltips */
+  --shadow-lg:      0 4px 16px rgba(0, 0, 0, 0.5);    /* Modals, drawers */
+  --shadow-overlay: 0 8px 32px rgba(0, 0, 0, 0.6);    /* Critical alerts, overlays */
+}

@@ -547,6 +547,53 @@ ALTER TABLE public.activity_logs
 ADD COLUMN IF NOT EXISTS entity_type text,
 ADD COLUMN IF NOT EXISTS entity_id uuid;
 
+CREATE TABLE IF NOT EXISTS public.activity_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    actor_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    entity_type TEXT,
+    entity_id UUID,
+    action_type TEXT,
+    before_value JSONB,
+    after_value JSONB,
+    metadata JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    actor_name TEXT,
+    actor_avatar TEXT,
+    verb TEXT,
+    action TEXT,
+    title TEXT,
+    description TEXT,
+    severity TEXT CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+    importance TEXT CHECK (importance IN ('info', 'normal', 'important', 'critical')),
+    icon_key TEXT,
+    ip_address TEXT,
+    device TEXT,
+    workspace_timezone TEXT DEFAULT 'UTC',
+    display_time TIMESTAMPTZ,
+    correlation_id TEXT,
+    run_id TEXT,
+    is_system BOOLEAN DEFAULT false,
+    visibility TEXT CHECK (visibility IN ('public', 'admin', 'private')),
+    origin TEXT,
+    module TEXT,
+    event_version INTEGER DEFAULT 1,
+    event_hash TEXT UNIQUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_events_workspace_id ON public.activity_events(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_entity ON public.activity_events(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_actor ON public.activity_events(actor_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_user_id ON public.activity_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_event_hash ON public.activity_events(event_hash);
+CREATE INDEX IF NOT EXISTS idx_activity_events_category_severity ON public.activity_events(module, severity);
+CREATE INDEX IF NOT EXISTS idx_activity_events_created_at ON public.activity_events(created_at DESC);
+
+ALTER TABLE public.activity_events ENABLE ROW LEVEL SECURITY;
+
+
+
 
 -- Fix 6: Audit & Forensic Protection (WORM rules for activity logs)
 -- WARNING: Removed WORM RULES because they break referential integrity (ERROR: XX000).
@@ -4576,6 +4623,21 @@ WITH CHECK (
 );
 
 -- Note: No UPDATE or DELETE policies are created, meaning they are implicitly DENIED.
+
+DROP POLICY IF EXISTS "Enable read for workspace members" ON public.activity_events;
+CREATE POLICY "Enable read for workspace members" ON public.activity_events 
+    FOR SELECT USING (
+        workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid 
+        AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance', 'client')
+    );
+
+DROP POLICY IF EXISTS "Enable insert for workspace members" ON public.activity_events;
+CREATE POLICY "Enable insert for workspace members" ON public.activity_events 
+    FOR INSERT WITH CHECK (
+        workspace_id = (auth.jwt() -> 'app_metadata' ->> 'workspace_id')::uuid 
+        AND (auth.jwt() -> 'app_metadata' ->> 'role') IN ('super_admin', 'admin', 'project_manager', 'team_lead', 'developer', 'employee', 'hr', 'finance')
+    );
+
 
 -- 4. RLS SWEEP ON CORE TABLES (Projects, Tasks, Users, Invoices)
 -- Ensure 'client' roles can only view their specific entities.
@@ -9815,7 +9877,7 @@ CREATE TABLE IF NOT EXISTS public.clock_events (
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     clock_in timestamptz,
     clock_out timestamptz,
-    event_type TEXT NOT NULL CHECK (event_type IN ('CLOCK_IN', 'CLOCK_OUT')),
+    event_type TEXT NOT NULL CHECK (event_type IN ('CLOCK_IN', 'CLOCK_OUT', 'PAUSE', 'RESUME')),
     timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -10793,5 +10855,7 @@ END $$;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.clock_events TO authenticated, anon, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.leave_balances TO authenticated, anon, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.attendance_policies TO authenticated, anon, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.activity_events TO authenticated, anon, service_role;
+
 
 

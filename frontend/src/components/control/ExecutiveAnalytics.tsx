@@ -191,7 +191,7 @@ export function ExecutiveAnalytics() {
       {/* Strategic Trend Console & Tabs */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Stability Trend Chart */}
-        <div className="lg:col-span-7 glass-panel rounded-xl p-6 bg-surface-2 border border-border flex flex-col justify-between">
+        <div className="lg:col-span-7 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border flex flex-col justify-between">
           <div>
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <TrendingUp className="w-4 h-4 text-accent-primary" /> Delivery Stability Index
@@ -219,7 +219,7 @@ export function ExecutiveAnalytics() {
         </div>
 
         {/* Strategic Delivery Profile Checklist for PMs/Stakeholders */}
-        <div className="lg:col-span-5 glass-panel rounded-xl p-6 bg-surface-2 border border-border flex flex-col gap-5">
+        <div className="lg:col-span-5 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border flex flex-col gap-5">
           <div>
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-1 flex items-center gap-1.5">
               <Award className="w-4 h-4 text-accent-secondary" /> Project Delivery Behavior Profiles
@@ -267,7 +267,7 @@ export function ExecutiveAnalytics() {
       </div>
 
       {/* Main Console Explorer */}
-      <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border">
         <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
           <div className="flex items-center bg-surface-2 rounded-lg p-1 border border-border">
             {[
@@ -439,7 +439,7 @@ export function ExecutiveAnalytics() {
 
       {/* Developer specific: Local Recurrent Blocker Warning */}
       {isDeveloper && (
-        <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border">
           <div className="flex items-center gap-2 mb-4 border-b border-border pb-3">
             <AlertTriangle className="w-4 h-4 text-signal-critical" />
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">Developer Local Recovery Dashboard</h3>

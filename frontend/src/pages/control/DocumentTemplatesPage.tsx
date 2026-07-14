@@ -250,7 +250,7 @@ export default function DocumentTemplatesPage() {
           )}
         </div>
       ) : isEditing && editingTemplate ? (
-        <div className="premium-panel rounded-2xl border border-[var(--border-soft)] flex flex-col md:flex-row overflow-hidden min-h-[700px] backdrop-blur-xl">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl border border-[var(--border-soft)] flex flex-col md:flex-row overflow-hidden min-h-[700px] backdrop-blur-xl">
           {/* Builder Editor */}
           <div className="flex-1 border-r border-[var(--border-soft)] flex flex-col">
             <div className="p-4 border-b border-[var(--border-soft)] flex items-center justify-between bg-[var(--surface-glass)]">
@@ -413,7 +413,7 @@ export default function DocumentTemplatesPage() {
         </div>
       ) : isPreviewing ? (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-fade-in">
-          <div className="premium-panel w-full max-w-4xl h-full flex flex-col rounded-2xl overflow-hidden border border-[var(--border-soft)] shadow-2xl animate-scale-up">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] w-full max-w-4xl h-full flex flex-col rounded-2xl overflow-hidden border border-[var(--border-soft)] shadow-2xl animate-scale-up">
             <div className="px-4 py-3 border-b border-[var(--border-soft)] flex items-center justify-between bg-[var(--surface-glass)]">
               <h3 className="font-semibold flex items-center gap-2 text-white"><Eye className="w-4 h-4 text-purple-400"/> PDF Preview Tool</h3>
               <button 

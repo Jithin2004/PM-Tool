@@ -795,8 +795,6 @@ export function ProjectDetailsModal({
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className="relative modal-premium w-full max-w-2xl overflow-y-auto max-h-[90vh] md:max-h-none rounded-2xl my-auto scrollbar-premium"
       >
-        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-teal-500 to-emerald-500 z-50" />
-
         {previewToken ? (
           <div className="absolute inset-0 z-[130] bg-surface overflow-y-auto">
             <div className="sticky top-0 z-[140] bg-bg border-b border-border p-4 flex justify-between items-center">

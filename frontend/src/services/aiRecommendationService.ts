@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { activityEventService } from './activityEventService';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
 
 export interface AIRecommendation {
   id?: string;
@@ -32,7 +33,27 @@ export const aiRecommendationService = {
           .insert(newRec)
           .select()
           .single();
-        if (!error && data) return data;
+        if (!error && data) {
+          try {
+            await enterpriseEventPublisher.publish({
+              workspace_id: rec.workspace_id,
+              entity_type: 'ai',
+              entity_id: data.id,
+              verb: 'ai_decision',
+              title: 'AI Recommendation Generated',
+              description: `AI recommendation created: type ${rec.recommendation_type}.`,
+              severity: 'low',
+              importance: 'normal',
+              icon_key: 'warning',
+              visibility: 'public',
+              module: 'ai',
+              metadata: { recommendation_id: data.id, recommendation_type: rec.recommendation_type }
+            });
+          } catch (e) {
+            console.error('Failed to log AI decision event:', e);
+          }
+          return data;
+        }
       } catch (err) {
       }
     }

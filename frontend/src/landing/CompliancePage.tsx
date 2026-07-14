@@ -13,33 +13,33 @@ export function CompliancePage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-12 lg:py-24 space-y-8 selectable-content">
-        <div className="premium-panel p-8 rounded-xl border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-8 rounded-xl border border-[var(--border-soft)]">
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-white">Compliance Statement</h1>
           <p className="text-[#a1a1aa] font-mono text-sm opacity-80">Effective Date: May 28, 2026</p>
         </div>
 
-        <section className="space-y-4 premium-panel p-6 rounded-xl">
+        <section className="space-y-4 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">Data Governance</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
             Resolve PM adheres to strict data governance protocols to ensure all project information is handled with transparency.
           </p>
         </section>
 
-        <section className="space-y-4 premium-panel p-6 rounded-xl">
+        <section className="space-y-4 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">Internal Calendar Security</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
             All calendar and scheduling data remains strictly within the Resolve PM internal system, ensuring that project dates, deadlines, and personal availability never leave the platform.
           </p>
         </section>
 
-        <section className="space-y-4 premium-panel p-6 rounded-xl">
+        <section className="space-y-4 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">Regional Standards</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
             While currently in development, our roadmap includes alignment with global data protection standards (such as GDPR/CCPA logic) to ensure international reliability.
           </p>
         </section>
 
-        <section className="space-y-4 premium-panel p-6 rounded-xl">
+        <section className="space-y-4 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-white">Auditability</h2>
           <p className="text-[#a1a1aa] leading-relaxed">
             Every system interaction is logged in our internal audit ledger to ensure accountability for all automated scheduling changes.

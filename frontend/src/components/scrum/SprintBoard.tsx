@@ -6,7 +6,7 @@ import {
   LayoutList, Layers, FileText
 } from 'lucide-react';
 import { EntityAttachments } from '../files/EntityAttachments';
-import { PremiumEmptyState } from '../common/PremiumEmptyState';
+import { EmptyState } from '../core';
 import type { Sprint, Task, User, Epic, Project, CalendarEvent } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { TaskCard } from '../task/TaskCard';
@@ -271,7 +271,7 @@ export function SprintBoard({
         </p>
       </div>
 
-      <div className="hidden md:block w-full premium-panel rounded-2xl p-4 sm:p-6 relative overflow-hidden">
+      <div className="hidden md:block w-full bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl p-4 sm:p-6 relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-500/80 via-pink-500/80 to-orange-500/80 animate-pulse" />
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 border-b border-[var(--border-soft)] pb-4">
@@ -406,7 +406,7 @@ export function SprintBoard({
                   return true;
                 });
                 return (
-                  <div key={col.id} className="premium-panel rounded-2xl p-4 flex flex-col min-h-[400px]">
+                  <div key={col.id} className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl p-4 flex flex-col min-h-[400px]">
                     <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-[var(--border-soft)]">
                       <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--text-secondary)] font-semibold flex items-center gap-1.5">
                         <span className={`w-1.5 h-1.5 rounded-full ${col.id === 'todo' ? 'bg-[var(--surface-glass)]' :
@@ -421,7 +421,7 @@ export function SprintBoard({
                     <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1 max-h-[450px]">
                       {colTasks.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center p-2 text-center">
-                          <PremiumEmptyState
+                          <EmptyState
                             icon={Layers}
                             title="No Tasks"
                             description="This stage is empty."

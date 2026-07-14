@@ -171,10 +171,8 @@ export function GuidedTour({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="w-full bg-[#0e0e0e]/95 border border-border rounded-xl p-6 shadow-[0_20px_60px_rgba(59,130,246,0.15)] relative overflow-hidden backdrop-blur-md"
+            className="w-full bg-[var(--color-surface-3)] border border-[var(--color-border-strong)] rounded-xl p-6 shadow-[var(--shadow-lg)] relative overflow-hidden"
           >
-            {/* Core accent gradient bar */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
 
             {/* Header */}
             <div className="flex justify-between items-start mb-4">

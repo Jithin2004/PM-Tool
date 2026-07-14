@@ -3,6 +3,8 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { hasCapability } from '../core/auth/permissions';
 import { activityLogService } from './activityLogService';
 import { logServiceFailure } from '../utils/supabaseError';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
+
 
 const EXECUTION_MODES = ['KANBAN', 'SCRUM', 'HYBRID', 'SDLC', 'CUSTOM'] as const;
 
@@ -124,6 +126,26 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
         ));
       }
 
+      try {
+        await enterpriseEventPublisher.publish({
+          workspace_id: input.workspace_id,
+          user_id: input.owner_id,
+          entity_type: 'project',
+          entity_id: projectId,
+          verb: 'created',
+          title: 'Project Created',
+          description: `Project "${input.name}" was created.`,
+          severity: 'low',
+          importance: 'important',
+          icon_key: 'project',
+          visibility: 'public',
+          module: 'projects',
+          metadata: { project_id: projectId, name: input.name }
+        });
+      } catch (e) {
+        console.error('Failed to log project_created event:', e);
+      }
+
       await activityLogService.appendLog({
         workspace_id: input.workspace_id,
         action_type: 'project_created',
@@ -160,6 +182,25 @@ export async function updateProject(
       
     if (error) throw error;
     
+    try {
+      await enterpriseEventPublisher.publish({
+        workspace_id: workspaceId,
+        entity_type: 'project',
+        entity_id: projectId,
+        verb: 'updated',
+        title: 'Project Updated',
+        description: `Project updates saved.`,
+        severity: 'low',
+        importance: 'normal',
+        icon_key: 'project',
+        visibility: 'public',
+        module: 'projects',
+        metadata: { project_id: projectId, updates }
+      });
+    } catch (e) {
+      console.error('Failed to log project_updated event:', e);
+    }
+    
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       action_type: 'project_updated',
@@ -193,6 +234,27 @@ export async function archiveProject(projectId: string, workspaceId: string, act
     await trackSupabaseOperation('supabase_from_allocation_periods', () => supabase.from('allocation_periods').update({ deleted_at: now }).eq('project_id', projectId).is('deleted_at', null));
 
     // Audit the action
+    try {
+      const { data: pData } = await supabase.from('projects').select('name').eq('id', projectId).maybeSingle();
+      await enterpriseEventPublisher.publish({
+        workspace_id: workspaceId,
+        user_id: actorId,
+        entity_type: 'project',
+        entity_id: projectId,
+        verb: 'archived',
+        title: 'Project Archived',
+        description: `Project "${pData?.name || 'Project'}" was archived.`,
+        severity: 'low',
+        importance: 'normal',
+        icon_key: 'project',
+        visibility: 'public',
+        module: 'projects',
+        metadata: { project_id: projectId }
+      });
+    } catch (e) {
+      console.error('Failed to log project_archived event:', e);
+    }
+
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       actor_id: actorId,
@@ -217,6 +279,27 @@ export async function restoreProject(projectId: string, workspaceId: string, act
     await trackSupabaseOperation('supabase_from_tasks', () => supabase.from('tasks').update({ status: 'backlog', deleted_at: null }).eq('project_id', projectId).eq('status', 'archived'));
 
     // Audit the action
+    try {
+      const { data: pData } = await supabase.from('projects').select('name').eq('id', projectId).maybeSingle();
+      await enterpriseEventPublisher.publish({
+        workspace_id: workspaceId,
+        user_id: actorId,
+        entity_type: 'project',
+        entity_id: projectId,
+        verb: 'restored',
+        title: 'Project Restored',
+        description: `Project "${pData?.name || 'Project'}" was restored.`,
+        severity: 'low',
+        importance: 'normal',
+        icon_key: 'project',
+        visibility: 'public',
+        module: 'projects',
+        metadata: { project_id: projectId }
+      });
+    } catch (e) {
+      console.error('Failed to log project_restored event:', e);
+    }
+
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       actor_id: actorId,

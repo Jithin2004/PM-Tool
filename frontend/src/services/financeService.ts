@@ -2,6 +2,7 @@ import { trackSupabaseOperation } from '../core/observability/telemetry';
 import { supabase } from '../lib/supabase';
 import { activityEventService } from './activityEventService';
 import type { PostgrestError } from '@supabase/supabase-js';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
 
 export interface CompanyBillingProfile {
   id: string;
@@ -331,16 +332,36 @@ export async function generateInvoice(workspaceId: string, invoice: Partial<Invo
   }
 
   try {
+    await enterpriseEventPublisher.publish({
+      workspace_id: workspaceId,
+      user_id: newInvoice.created_by,
+      entity_type: 'invoice',
+      entity_id: newInvoice.id,
+      verb: 'invoice_created',
+      title: 'Invoice Created',
+      description: `Invoice ${invNumber} was created for amount ${newInvoice.grand_total || newInvoice.amount} ${newInvoice.currency}.`,
+      severity: 'low',
+      importance: 'important',
+      icon_key: 'warning',
+      visibility: 'admin',
+      module: 'finance',
+      metadata: { invoice_number: invNumber, amount: newInvoice.grand_total || newInvoice.amount, currency: newInvoice.currency }
+    });
+  } catch (e) {
+    console.error('Failed to log invoice created event', e);
+  }
+
+  try {
     await activityEventService.recordActivity({
       workspace_id: workspaceId,
       actor_id: newInvoice.created_by,
       entity_type: 'invoice',
       entity_id: newInvoice.id,
       action_type: 'invoice_created',
-      metadata: { invoice_number: invNumber, amount: newInvoice.total_amount, currency: newInvoice.currency }
+      metadata: { invoice_number: invNumber, amount: newInvoice.grand_total || newInvoice.amount, currency: newInvoice.currency }
     });
   } catch (e) {
-    console.error('Failed to log invoice created event', e);
+    console.error('Failed to log invoice created activity log event', e);
   }
 
   try {
@@ -414,8 +435,24 @@ export async function recordPayment(payment: Partial<Payment>) {
   }
 
   try {
-    const { data: inv } = await supabase.from('invoices').select('workspace_id, created_by').eq('id', payment.invoice_id).single();
+    const { data: inv } = await supabase.from('invoices').select('workspace_id, created_by, invoice_number').eq('id', payment.invoice_id).single();
     if (inv) {
+      await enterpriseEventPublisher.publish({
+        workspace_id: inv.workspace_id,
+        user_id: inv.created_by,
+        entity_type: 'invoice',
+        entity_id: payment.invoice_id,
+        verb: 'payment_received',
+        title: 'Payment Received',
+        description: `Payment of ${payment.amount} received for invoice ${inv.invoice_number}.`,
+        severity: 'low',
+        importance: 'important',
+        icon_key: 'warning',
+        visibility: 'admin',
+        module: 'finance',
+        metadata: { amount: payment.amount, invoice_id: payment.invoice_id, invoice_number: inv.invoice_number }
+      });
+
       await activityEventService.recordActivity({
         workspace_id: inv.workspace_id,
         actor_id: inv.created_by,

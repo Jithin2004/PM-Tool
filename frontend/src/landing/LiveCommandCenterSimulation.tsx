@@ -180,7 +180,7 @@ export function LiveCommandCenterSimulation() {
       ></div>
 
       {/* Simulator Terminal Container */}
-      <div className="relative glass-panel rounded-2xl overflow-hidden border border-white/5 bg-[#050712]/90 shadow-2xl flex flex-col min-h-[440px]">
+      <div className="relative bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-2xl overflow-hidden border border-white/5 bg-[#050712]/90 shadow-2xl flex flex-col min-h-[440px]">
         <style>{`
           .cursor-blink::after {
             content: '_';

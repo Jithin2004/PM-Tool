@@ -9,7 +9,7 @@ export function PremiumAppShell({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
 
   return (
-    <div className={`app-shell app-premium-bg min-h-screen w-full flex flex-col text-[var(--pm-text)] transition-colors duration-300 ${theme === 'light' ? 'light' : ''}`}>
+    <div className={`app-shell bg-[var(--color-bg-base)] min-h-screen w-full flex flex-col text-[var(--color-text-primary)] transition-colors duration-[var(--dur-base)] ${theme === 'light' ? 'light' : ''}`}>
       {children}
     </div>
   );

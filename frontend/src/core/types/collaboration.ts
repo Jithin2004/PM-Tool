@@ -121,6 +121,7 @@ export interface Meeting {
   decisions?: any;
   action_items?: any;
   follow_up_date?: string;
+  status?: string;
   created_at: string;
   updated_at: string;
 }

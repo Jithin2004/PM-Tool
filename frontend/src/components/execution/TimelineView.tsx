@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Activity, GitBranch, Calendar, AlertTriangle, ArrowRight, Clock, Calendar as CalendarIcon } from 'lucide-react';
-import { PremiumEmptyState } from '../ui/PremiumEmptyState';
+import { EmptyState } from '../core';
 
 interface TimelineViewProps {
   projects: any[];
@@ -97,7 +97,7 @@ export function TimelineView({ projects, tasks, dependencies, profiles }: Timeli
         <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-6 flex items-center gap-2"><Activity className="w-4 h-4 text-signal-info" /> Project Timeline Phases</h3>
         {timelineData.phases.length === 0 ? (
           <div className="max-w-md mx-auto my-8">
-            <PremiumEmptyState
+            <EmptyState
               icon={CalendarIcon}
               title="No Timeline Data"
               description="Add due dates to your tasks to see project timeline phases and critical paths."

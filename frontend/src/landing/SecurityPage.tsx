@@ -22,7 +22,7 @@ export function SecurityPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="premium-panel p-6 rounded-xl border border-[var(--border-soft)]">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-6 rounded-xl border border-[var(--border-soft)]">
             <div className="w-12 h-12 rounded-lg bg-indigo-500/10 flex items-center justify-center mb-4">
               <Database className="w-6 h-6 text-indigo-400" />
             </div>
@@ -32,7 +32,7 @@ export function SecurityPage() {
             </p>
           </div>
 
-          <div className="premium-panel p-6 rounded-xl border border-[var(--border-soft)]">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-6 rounded-xl border border-[var(--border-soft)]">
             <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4">
               <Lock className="w-6 h-6 text-emerald-400" />
             </div>
@@ -42,7 +42,7 @@ export function SecurityPage() {
             </p>
           </div>
 
-          <div className="premium-panel p-6 rounded-xl border border-[var(--border-soft)]">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-6 rounded-xl border border-[var(--border-soft)]">
             <div className="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center mb-4">
               <Shield className="w-6 h-6 text-purple-400" />
             </div>
@@ -52,7 +52,7 @@ export function SecurityPage() {
             </p>
           </div>
 
-          <div className="premium-panel p-6 rounded-xl border border-[var(--border-soft)]">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-6 rounded-xl border border-[var(--border-soft)]">
             <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4">
               <FileText className="w-6 h-6 text-amber-400" />
             </div>
@@ -63,7 +63,7 @@ export function SecurityPage() {
           </div>
         </div>
 
-        <div className="premium-panel p-8 rounded-xl border border-[var(--border-soft)] bg-black/40">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-8 rounded-xl border border-[var(--border-soft)] bg-black/40">
           <h2 className="text-2xl font-bold text-white mb-4">Security Reporting</h2>
           <p className="text-[#a1a1aa] leading-relaxed mb-6">
             If you discover a vulnerability in the Resolve PM source code or architecture, we request that you confidentially disclose it to us before publicizing it. We treat security reports as highest priority.

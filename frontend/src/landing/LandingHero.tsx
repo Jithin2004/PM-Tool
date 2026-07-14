@@ -31,7 +31,7 @@ export function LandingHero({ verified }: LandingHeroProps) {
           className="mb-8"
         >
           <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-14 h-14 premium-panel flex items-center justify-center overflow-hidden rounded-xl">
+            <div className="w-14 h-14 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] flex items-center justify-center overflow-hidden rounded-xl">
               <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-cover scale-110" />
             </div>
           </div>

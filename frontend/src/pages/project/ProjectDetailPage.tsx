@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { updateProject } from '../../services/projectService';
 import { supabase } from '../../lib/supabase';
 
+import { PageShell, PageHeader, Button } from '../../components/core';
+
 const STATUSES = ['Planning', 'In Progress', 'On Hold', 'Completed'];
 
 export function ProjectDetailPage() {
@@ -86,35 +88,35 @@ export function ProjectDetailPage() {
   const displayStatus = (project.status || '').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-text-primary">{project.name}</h1>
-        <div className="relative">
-          <button
-            aria-label="Change Status"
-            onClick={() => setShowStatusMenu(!showStatusMenu)}
-            className="px-4 py-2 border border-border text-text-secondary hover:bg-surface-3 rounded-lg text-sm font-medium transition-colors"
-          >
-            {displayStatus}
-          </button>
-          {showStatusMenu && (
-            <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-xl z-50 min-w-[160px]">
-              {STATUSES.map(status => (
-                <button
-                  key={status}
-                  onClick={() => handleStatusChange(status)}
-                  className="block w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-surface-3 transition-colors first:rounded-t-lg last:rounded-b-lg"
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-      {project.description && (
-        <p className="text-sm text-text-secondary mb-6">{project.description}</p>
-      )}
-    </div>
+    <PageShell maxWidth="reading">
+      <PageHeader
+        title={project.name}
+        overline="Project Details"
+        description={project.description || 'Project metadata and lifecycle details.'}
+        actions={
+          <div className="relative">
+            <Button
+              variant="secondary"
+              onClick={() => setShowStatusMenu(!showStatusMenu)}
+            >
+              {displayStatus}
+            </Button>
+            {showStatusMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-xl z-50 min-w-[160px]">
+                {STATUSES.map(status => (
+                  <button
+                    key={status}
+                    onClick={() => handleStatusChange(status)}
+                    className="block w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-surface-3 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        }
+      />
+    </PageShell>
   );
 }

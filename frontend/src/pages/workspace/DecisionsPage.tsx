@@ -34,7 +34,7 @@ import {
   X
 } from 'lucide-react';
 import { EntityAttachments } from '../../components/files/EntityAttachments';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { PageShell, PageHeader, PageContent, Button, Input, Modal, EmptyState } from '../../components/core';
 import { CheckCircle2, FolderGit2 } from 'lucide-react';
 
 export default function DecisionsPage() {
@@ -383,35 +383,32 @@ export default function DecisionsPage() {
   const { taskActions } = useOperationalData();
 
   return (
-    <div className="flex flex-col gap-6 pb-12 font-geist" style={{ color: 'var(--pm-on-surface)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-1">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-text-primary">Decisions</h1>
-          <p className="text-sm mt-0.5 text-text-tertiary">
-            Track approvals, mitigate risks, and manage cross-functional decisions.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-
-          {canCoordinate && (
-            <>
-              <button
+    <PageShell maxWidth="full" className="px-6 py-6 flex flex-col">
+      <PageHeader
+        title="Decisions"
+        overline="Coord & Risk Control"
+        description="Track approvals, mitigate risks, and manage cross-functional decisions."
+        actions={
+          canCoordinate ? (
+            <div className="flex items-center gap-2">
+              <Button
                 onClick={() => setIsDecisionModalOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-teal-500 rounded-xl text-xs font-bold uppercase tracking-wider text-[var(--pm-text)] text-[var(--text-primary)] hover:from-blue-500 hover:to-teal-400 shadow-lg hover:shadow-teal-500/25 transition-all"
+                size="sm"
               >
                 <Plus className="w-4 h-4" /> Register Decision
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => setIsEventModalOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2 border border-border/50 bg-surface-3/50 hover:bg-surface-3 rounded-xl text-xs font-bold uppercase tracking-wider text-text-secondary hover:text-text-primary transition-all shadow-sm"
+                size="sm"
               >
                 <Plus className="w-4 h-4" /> Log Sync Meeting
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+              </Button>
+            </div>
+          ) : undefined
+        }
+      />
+      <PageContent className="flex-1 min-h-0 flex flex-col gap-6">
 
       {/* KPI Indicators Panel */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -445,7 +442,7 @@ export default function DecisionsPage() {
             </div>
 
             {decisions.length === 0 ? (
-              <PremiumEmptyState
+              <EmptyState
                 icon={CheckCircle2}
                 title="No Active Decisions Registered"
                 description="Use the decisions support framework to establish organizational alignments, sign-off parameters, and mitigation guidelines."
@@ -782,7 +779,7 @@ export default function DecisionsPage() {
               </div>
 
               {events.length === 0 ? (
-                <PremiumEmptyState
+                <EmptyState
                   icon={Users}
                   title="No Coordination Logs"
                   description="Log alignment triage meetings, sprint planning standups, or client check-ins to capture operational outcomes."
@@ -1080,7 +1077,8 @@ export default function DecisionsPage() {
           </div>
         </div>
       )}
-    </div>
+      </PageContent>
+    </PageShell>
   );
 }
 

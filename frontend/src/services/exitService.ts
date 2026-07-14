@@ -3,6 +3,8 @@ import { trackSupabaseOperation } from '../core/observability/telemetry';
 import { activityLogService } from './activityLogService';
 import { propagateAndPersist } from './timelineImpactEngine';
 import { calendarEventService } from './calendarEventService';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
+
 
 export interface ExitImpactSummary {
   active_tasks: number;
@@ -107,6 +109,31 @@ export const transferAndArchiveEmployee = async (
   );
 
   // 6. Audit Trail
+  try {
+    await enterpriseEventPublisher.publish({
+      workspace_id: workspaceId,
+      user_id: performedBy,
+      entity_type: 'user',
+      entity_id: userId,
+      verb: 'user_removed',
+      title: 'User Offboarded',
+      description: `Archived user ${userId} and transferred responsibilities.`,
+      severity: 'medium',
+      importance: 'important',
+      icon_key: 'warning',
+      visibility: 'admin',
+      module: 'administration',
+      metadata: {
+        archived_user_id: userId,
+        tasks_transferred_to: transferMap.taskAssigneeId,
+        projects_transferred_to: transferMap.projectOwnerId,
+        approvals_transferred_to: transferMap.approverId
+      }
+    });
+  } catch (e) {
+    console.error('Failed to log user_removed event:', e);
+  }
+
   await activityLogService.appendLog({
     workspace_id: workspaceId,
     actor_id: performedBy,

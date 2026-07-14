@@ -147,7 +147,7 @@ export const TaskCard = React.memo(function TaskCard({
         boxShadow: "0 20px 35px rgba(124, 58, 237, 0.25), 0 0 15px rgba(124, 58, 237, 0.15)", 
         opacity: 0.95 
       }}
-      className={`group relative shrink-0 w-full premium-panel premium-hover-lift overflow-hidden cursor-pointer rounded-2xl ${
+      className={`group relative shrink-0 w-full bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift overflow-hidden cursor-pointer rounded-2xl ${
         isBlocked 
           ? 'border-[var(--signal-critical)] bg-[var(--signal-critical-bg)]/20 shadow-[0_0_15px_rgba(239,68,68,0.08)] bg-red-500/[0.02]' 
           : 'border-[var(--border-soft)]'

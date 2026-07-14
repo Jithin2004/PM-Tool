@@ -3,7 +3,7 @@ import { SprintBoard } from '../scrum/SprintBoard';
 import { SDLCBoard } from '../sdlc/SDLCBoard';
 import { activityLogService } from '../../services/activityLogService';
 import { updateTaskWithLock } from '../../services/taskService';
-import { PremiumEmptyState } from '../ui/PremiumEmptyState';
+import { EmptyState } from '../core';
 import { Rocket } from 'lucide-react';
 
 interface SprintViewProps {
@@ -119,7 +119,7 @@ const SprintView = React.memo(function SprintView({
       ))}
       {scrumProjects.length === 0 && sdlcProjects.length === 0 && (
         <div className="max-w-md mx-auto mt-12">
-          <PremiumEmptyState
+          <EmptyState
             icon={Rocket}
             title="No Active Sprints"
             description="Scrum and SDLC projects will appear here for sprint and iteration planning."

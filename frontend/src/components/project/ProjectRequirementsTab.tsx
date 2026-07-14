@@ -4,7 +4,7 @@ import { Icon } from '../ui/Icon';
 import { RequirementCreationModal } from '../../pages/workspace/RequirementCreationModal';
 import { RequirementDetailsModal } from '../../pages/workspace/RequirementDetailsModal';
 import { PremiumLoader } from '../common/PremiumLoader';
-import { PremiumEmptyState } from '../common/PremiumEmptyState';
+import { EmptyState } from '../core';
 import { useAuth } from '../../context/AuthContext';
 import { User, Project } from '../../types';
 import { FileText, Plus } from 'lucide-react';
@@ -57,7 +57,7 @@ export function ProjectRequirementsTab({ project }: { project: Project }) {
         {loading ? (
           <PremiumLoader type="card" count={3} label="Syncing Requirements..." />
         ) : requirements.length === 0 ? (
-          <PremiumEmptyState
+          <EmptyState
             icon={FileText}
             title="No Requirements"
             description="Start building out the project scope by adding formal requirements."

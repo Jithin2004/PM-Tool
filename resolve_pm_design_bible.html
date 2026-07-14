@@ -1,0 +1,797 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--r-bg:#0A0C18;--r-surface:#0F1124;--r-card:#151829;--r-card-2:#1A1E30;--r-border:#1E2440;--r-border-2:#252B45;--r-primary:#4F6DFF;--r-primary-h:#3D5AE8;--r-primary-a:#2E49D4;--r-green:#22D3A0;--r-amber:#F59E0B;--r-red:#EF4444;--r-muted:#6B7494;--r-text:#E8EAF2;--r-text-2:#9BA3C7;--r-accent:#FF3B3B}
+body{background:transparent;font-family:var(--font-sans,"Anthropic Sans",sans-serif);color:var(--r-text);line-height:1.6}
+.bible{max-width:680px;padding:0 0 40px}
+.phase-nav{display:flex;flex-wrap:wrap;gap:4px;padding:16px 0 24px;border-bottom:1px solid var(--r-border);margin-bottom:24px}
+.pn-btn{padding:4px 10px;border-radius:4px;border:1px solid var(--r-border);background:var(--r-card);color:var(--r-text-2);font-size:11px;cursor:pointer;transition:all .15s;font-family:inherit}
+.pn-btn:hover,.pn-btn.act{background:var(--r-primary);border-color:var(--r-primary);color:#fff}
+.phase{display:none;animation:fi .2s ease}
+.phase.vis{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.phase-label{font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--r-primary);margin-bottom:6px}
+.phase-title{font-size:22px;font-weight:500;color:var(--r-text);margin-bottom:8px}
+.phase-sub{font-size:14px;color:var(--r-text-2);margin-bottom:24px;line-height:1.6}
+.section{margin-bottom:28px}
+.section-title{font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--r-muted);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--r-border)}
+.kw-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kw-card{background:var(--r-card);border:1px solid var(--r-border);border-radius:8px;padding:12px 14px}
+.kw-name{font-size:13px;font-weight:500;color:var(--r-text);margin-bottom:4px}
+.kw-why{font-size:11px;color:var(--r-text-2);line-height:1.5}
+.principle-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--r-border)}
+.principle-row:last-child{border-bottom:none}
+.pr-num{font-size:11px;color:var(--r-primary);font-weight:500;min-width:24px;padding-top:2px}
+.pr-name{font-size:13px;font-weight:500;color:var(--r-text);margin-bottom:3px}
+.pr-why{font-size:12px;color:var(--r-text-2);line-height:1.5}
+.verdict-box{background:var(--r-card);border:1px solid var(--r-border);border-left:3px solid var(--r-primary);border-radius:8px;padding:16px;margin-bottom:12px}
+.verdict-title{font-size:13px;font-weight:500;color:var(--r-text);margin-bottom:6px}
+.verdict-body{font-size:12px;color:var(--r-text-2);line-height:1.6}
+.philosophy-box{background:var(--r-card);border:1px solid var(--r-border);border-radius:12px;padding:24px;text-align:center;margin-bottom:20px}
+.phl-quote{font-size:18px;color:var(--r-text);line-height:1.5;margin-bottom:12px}
+.phl-sub{font-size:12px;color:var(--r-muted)}
+.type-table{width:100%;border-collapse:collapse;font-size:12px}
+.type-table th{text-align:left;padding:6px 8px;color:var(--r-muted);font-weight:500;border-bottom:1px solid var(--r-border);font-size:11px}
+.type-table td{padding:8px 8px;border-bottom:1px solid var(--r-border);color:var(--r-text-2);vertical-align:middle}
+.type-table tr:last-child td{border-bottom:none}
+.type-sample{color:var(--r-text);font-weight:400}
+.swatch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px}
+.swatch{border-radius:6px;padding:10px 10px 8px;border:1px solid transparent}
+.sw-hex{font-size:10px;font-family:monospace;margin-top:4px;opacity:.7}
+.sw-name{font-size:11px;font-weight:500}
+.color-group{margin-bottom:20px}
+.color-group-title{font-size:11px;color:var(--r-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.space-row{display:flex;align-items:center;gap:12px;padding:6px 0}
+.space-bar{background:var(--r-primary);border-radius:2px;height:8px;opacity:.7}
+.space-token{font-size:11px;font-family:monospace;color:var(--r-primary);min-width:70px}
+.space-val{font-size:11px;color:var(--r-muted);min-width:36px}
+.space-use{font-size:11px;color:var(--r-text-2)}
+.elev-row{display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--r-border)}
+.elev-row:last-child{border-bottom:none}
+.elev-box{width:48px;height:32px;border-radius:6px}
+.elev-name{font-size:12px;font-weight:500;color:var(--r-text);min-width:80px}
+.elev-desc{font-size:11px;color:var(--r-text-2)}
+.rad-row{display:flex;align-items:center;gap:16px;padding:8px 0;border-bottom:1px solid var(--r-border)}
+.rad-row:last-child{border-bottom:none}
+.rad-box{width:48px;height:32px;background:var(--r-card-2);border:1px solid var(--r-border-2)}
+.rad-label{font-size:12px;font-weight:500;color:var(--r-text);min-width:80px}
+.rad-val{font-size:11px;font-family:monospace;color:var(--r-primary);min-width:60px}
+.rad-use{font-size:11px;color:var(--r-text-2)}
+.motion-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--r-border);align-items:flex-start}
+.motion-row:last-child{border-bottom:none}
+.mot-token{font-size:11px;font-family:monospace;color:var(--r-primary);min-width:130px;padding-top:2px}
+.mot-val{font-size:11px;color:var(--r-text);min-width:120px;padding-top:2px}
+.mot-use{font-size:11px;color:var(--r-text-2);line-height:1.5}
+.icon-rule-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--r-border)}
+.icon-rule-row:last-child{border-bottom:none}
+.ir-key{font-size:12px;font-weight:500;color:var(--r-text);min-width:100px}
+.ir-val{font-size:12px;color:var(--r-text-2)}
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.comp-item{background:var(--r-card);border:1px solid var(--r-border);border-radius:6px;padding:10px 12px}
+.ci-name{font-size:12px;font-weight:500;color:var(--r-text);margin-bottom:3px}
+.ci-rule{font-size:11px;color:var(--r-text-2);line-height:1.5}
+.layout-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--r-border);align-items:flex-start}
+.layout-row:last-child{border-bottom:none}
+.lr-token{font-size:11px;font-family:monospace;color:var(--r-primary);min-width:130px}
+.lr-val{font-size:11px;color:var(--r-text);min-width:80px}
+.lr-desc{font-size:11px;color:var(--r-text-2)}
+.token-block{background:var(--r-card);border:1px solid var(--r-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:var(--r-text-2);line-height:2;margin-bottom:12px;overflow:auto}
+.tok-k{color:var(--r-primary)}
+.tok-v{color:var(--r-green)}
+.tok-c{color:var(--r-muted);font-style:italic}
+.rule-card{background:var(--r-card);border:1px solid var(--r-border);border-radius:8px;padding:14px 16px;margin-bottom:8px}
+.rc-title{font-size:12px;font-weight:500;color:var(--r-text);margin-bottom:4px}
+.rc-body{font-size:11px;color:var(--r-text-2);line-height:1.6}
+.warn{color:var(--r-red)}
+.ok{color:var(--r-green)}
+.pg-foot{display:flex;justify-content:space-between;align-items:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--r-border)}
+.pg-nav-btn{padding:6px 16px;border-radius:6px;border:1px solid var(--r-border);background:var(--r-card);color:var(--r-text-2);font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.pg-nav-btn:hover{background:var(--r-primary);border-color:var(--r-primary);color:#fff}
+.pg-nav-btn:disabled{opacity:.3;cursor:default;pointer-events:none}
+.pg-of{font-size:11px;color:var(--r-muted)}
+.impl-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--r-border);align-items:flex-start}
+.impl-row:last-child{border-bottom:none}
+.impl-num{width:24px;height:24px;border-radius:50%;background:var(--r-primary);color:#fff;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.impl-title{font-size:12px;font-weight:500;color:var(--r-text);margin-bottom:3px}
+.impl-body{font-size:11px;color:var(--r-text-2);line-height:1.5}
+.dash-row{display:flex;gap:8px;margin-bottom:8px}
+.dash-badge{padding:3px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.db-1{background:rgba(79,109,255,.15);color:#7B9CFF;border:1px solid rgba(79,109,255,.2)}
+.db-2{background:rgba(34,211,160,.1);color:var(--r-green);border:1px solid rgba(34,211,160,.15)}
+.db-3{background:rgba(245,158,11,.1);color:var(--r-amber);border:1px solid rgba(245,158,11,.15)}
+.acc-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--r-border)}
+.acc-row:last-child{border-bottom:none}
+.acc-icon{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.acc-title{font-size:12px;font-weight:500;color:var(--r-text);margin-bottom:2px}
+.acc-body{font-size:11px;color:var(--r-text-2);line-height:1.5}
+.dm-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.dm-card{border-radius:8px;padding:12px;border:1px solid}
+.dm-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:500;margin-bottom:8px}
+.dm-surface{border-radius:4px;padding:8px 10px;font-size:11px;margin-bottom:4px}
+.cat-group{margin-bottom:20px}
+.cat-title{font-size:12px;font-weight:500;color:var(--r-text);margin-bottom:8px}
+.cat-list{display:flex;flex-wrap:wrap;gap:6px}
+.cat-tag{padding:3px 10px;border-radius:4px;font-size:11px;background:var(--r-card-2);border:1px solid var(--r-border);color:var(--r-text-2)}
+.pt-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--r-border);align-items:flex-start}
+.pt-row:last-child{border-bottom:none}
+.pt-name{font-size:12px;font-weight:500;color:var(--r-text);min-width:130px}
+.pt-body{font-size:11px;color:var(--r-text-2);line-height:1.5}
+</style>
+
+<div class="bible">
+
+<div class="phase-nav" id="nav"></div>
+
+<div id="phases">
+
+<!-- PHASE 1 -->
+<div class="phase vis" data-phase="0">
+<div class="phase-label">Phase 1</div>
+<div class="phase-title">Brand Identity</div>
+<div class="phase-sub">The foundational personality of Resolve PM — what the brand believes, how it feels, and why every decision flows from this core.</div>
+
+<div class="section">
+<div class="section-title">Brand Personality Keywords</div>
+<div class="kw-grid">
+<div class="kw-card"><div class="kw-name">Controlled</div><div class="kw-why">The ECG pulse in the logo signals urgency that is always managed — never chaotic. The platform deals with high-stakes operations but presents them calmly.</div></div>
+<div class="kw-card"><div class="kw-name">Operationally Aware</div><div class="kw-why">Resolve PM sees everything. Its visual language communicates intelligence — surfaces that feel like they're monitoring, not just displaying.</div></div>
+<div class="kw-card"><div class="kw-name">Executive</div><div class="kw-why">Decision-makers live here. Every element must convey authority and precision — nothing decorative, nothing casual.</div></div>
+<div class="kw-card"><div class="kw-name">Precise</div><div class="kw-why">Enterprise work is about accuracy. Typography, spacing, and data presentation must be surgical. No ambiguity.</div></div>
+<div class="kw-card"><div class="kw-name">Trustworthy</div><div class="kw-why">People stake their careers on this data. The platform must never look unstable, experimental, or uncertain.</div></div>
+<div class="kw-card"><div class="kw-name">Purposeful</div><div class="kw-why">Every pixel serves a function. The brand is not decorative. Visual weight implies operational weight.</div></div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Core Design Principles</div>
+<div class="principle-row"><div class="pr-num">P1</div><div><div class="pr-name">Calm at Scale</div><div class="pr-why">A platform used 8 hours/day must never create anxiety through its visual design. Density is acceptable; visual noise is not. Breathing room prevents cognitive fatigue.</div></div></div>
+<div class="principle-row"><div class="pr-num">P2</div><div><div class="pr-name">Information Before Decoration</div><div class="pr-why">No visual element exists unless it carries information or enables action. Background textures, gradients for aesthetics, and decorative icons are prohibited.</div></div></div>
+<div class="principle-row"><div class="pr-num">P3</div><div><div class="pr-name">Hierarchy Through Restraint</div><div class="pr-why">Emphasis works because most elements are de-emphasized. If everything is bold, nothing is. Primary actions must earn their prominence.</div></div></div>
+<div class="principle-row"><div class="pr-num">P4</div><div><div class="pr-name">Consistent Vocabulary</div><div class="pr-why">One button style. One card style. One table style. Uniformity across 200+ screens is not a constraint — it is the feature. Consistency reduces learning load.</div></div></div>
+<div class="principle-row"><div class="pr-num">P5</div><div><div class="pr-name">Dark is Primary</div><div class="pr-why">The platform commits fully to dark mode as its native state — not as an option. This reduces eye strain for long sessions and creates a premium, focused environment.</div></div></div>
+<div class="principle-row"><div class="pr-num">P6</div><div><div class="pr-name">The Pulse is Alive</div><div class="pr-why">Resolve PM monitors live operations. Motion, status indicators, and real-time data should feel alive but never frantic. The ECG metaphor guides all animation.</div></div></div>
+</div>
+</div>
+
+<!-- PHASE 2 -->
+<div class="phase" data-phase="1">
+<div class="phase-label">Phase 2</div>
+<div class="phase-title">Visual Direction</div>
+<div class="phase-sub">What emotional register does Resolve PM occupy? The answer determines every macro design decision.</div>
+
+<div class="section">
+<div class="section-title">Direction Verdict</div>
+<div class="verdict-box">
+<div class="verdict-title">Resolve PM is: Enterprise — with Operational Intelligence Character</div>
+<div class="verdict-body">Not purely Financial (too austere, no operational warmth). Not Government (too bureaucratic). Not Startup (too casual, damages credibility). Not Industrial (too mechanical).<br><br>The closest analog is the mission control room aesthetic — high information density, professional dark environment, status-forward, with clear operational hierarchy. Think Bloomberg Terminal meets Linear. Sophisticated, fast, and alive.</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Why Not the Others</div>
+<div class="verdict-box" style="border-left-color:var(--r-red)">
+<div class="verdict-title">❌ Startup / Modern SaaS</div>
+<div class="verdict-body">White backgrounds, bright accent colors, rounded everything — this is Notion, Linear, Figma. Resolve PM is not building productivity tools. It is running company operations. The stakes are different. The visual register must reflect that.</div>
+</div>
+<div class="verdict-box" style="border-left-color:var(--r-amber)">
+<div class="verdict-title">⚠ Technical / Developer Tool</div>
+<div class="verdict-body">The current UI leans too far into this — monospace labels, terminal aesthetics, PROBE_01 identifiers. This is the correct direction to borrow from, not to fully inhabit. It should feel precise, not like a command line.</div>
+</div>
+<div class="verdict-box" style="border-left-color:var(--r-green)">
+<div class="verdict-title">✓ Enterprise Operations Intelligence</div>
+<div class="verdict-body">Dark, composed, data-forward. Calm default state. Visible hierarchy. Status colors that mean something. Motion that communicates operational pulse, not decoration. This is where Resolve PM lives.</div>
+</div>
+</div>
+</div>
+
+<!-- PHASE 3 -->
+<div class="phase" data-phase="2">
+<div class="phase-label">Phase 3</div>
+<div class="phase-title">Design Philosophy</div>
+<div class="phase-sub">The single guiding question that every design decision must answer.</div>
+
+<div class="philosophy-box">
+<div class="phl-quote">"After 8 hours in Resolve PM, the user should feel informed and in control — not drained."</div>
+<div class="phl-sub">This is the north star. Every decision is tested against it.</div>
+</div>
+
+<div class="section">
+<div class="section-title">What This Means for Design</div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">No cognitive taxation without payoff</div><div class="pr-why">Dense data is acceptable. Visual complexity without information value is not. Every chart, badge, and label must earn its place by answering a question the user actually has.</div></div></div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">Status should be instantly readable</div><div class="pr-why">A user scanning a project list must understand what is healthy, at risk, and blocked within 3 seconds. Color, iconography, and layout must support this without requiring reading.</div></div></div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">The interface should recede</div><div class="pr-why">The interface itself should become invisible after familiarity. The user should be thinking about their work, not the UI. This is achieved through consistency, predictability, and restraint.</div></div></div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">Actions should feel safe</div><div class="pr-why">Destructive actions require confirmation. Reversible actions should be clearly reversible. The platform manages critical business data. Users must never feel like they're guessing.</div></div></div>
+</div>
+</div>
+
+<!-- PHASE 4 -->
+<div class="phase" data-phase="3">
+<div class="phase-label">Phase 4</div>
+<div class="phase-title">Typography System</div>
+<div class="phase-sub">A single font family. Strict roles. No freelancing on font sizes.</div>
+
+<div class="section">
+<div class="section-title">Font Family Decision</div>
+<div class="verdict-box">
+<div class="verdict-title">Primary: Inter (v4) — Fallback: system-ui, -apple-system, sans-serif</div>
+<div class="verdict-body">Rationale: Inter was designed for screens. It is neutral at small sizes, readable at high density, and carries no aesthetic personality that competes with the product. It scales from 10px monospace labels to 32px page titles without personality shifts. The variable font axis allows precise weight control.</div>
+</div>
+<div class="verdict-box" style="border-left-color:var(--r-amber)">
+<div class="verdict-title">Mono: JetBrains Mono — for all technical labels, timestamps, IDs, code</div>
+<div class="verdict-body">Status timestamps, AES identifiers, connection strings, database values. Never use monospace for navigation or prose. Rationale: the current UI uses mono for operational indicators — this is correct and should be systematized, not reduced.</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Type Scale</div>
+<table class="type-table">
+<tr><th>Role</th><th>Size</th><th>Weight</th><th>Line-H</th><th>Tracking</th><th>Usage</th></tr>
+<tr><td>Display</td><td>32px</td><td>600</td><td>1.2</td><td>-0.02em</td><td>Hero stats, landing page only</td></tr>
+<tr><td>H1 / Page Title</td><td>22px</td><td>600</td><td>1.25</td><td>-0.01em</td><td>Section page headings</td></tr>
+<tr><td>H2</td><td>18px</td><td>500</td><td>1.3</td><td>0</td><td>Sub-section headings</td></tr>
+<tr><td>H3</td><td>15px</td><td>500</td><td>1.35</td><td>0</td><td>Card titles, widget headings</td></tr>
+<tr><td>Label / Overline</td><td>11px</td><td>500</td><td>1.3</td><td>+0.06em</td><td>Section labels (UPPERCASE), table headers</td></tr>
+<tr><td>Body</td><td>14px</td><td>400</td><td>1.6</td><td>0</td><td>All primary prose, descriptions</td></tr>
+<tr><td>Body Small</td><td>13px</td><td>400</td><td>1.55</td><td>0</td><td>Secondary descriptions, helper text</td></tr>
+<tr><td>Caption</td><td>12px</td><td>400</td><td>1.5</td><td>0</td><td>Timestamps, metadata, footnotes</td></tr>
+<tr><td>Metric / Stat</td><td>28px</td><td>500</td><td>1.1</td><td>-0.02em</td><td>Dashboard KPI numbers</td></tr>
+<tr><td>Mono / Code</td><td>12px</td><td>400</td><td>1.5</td><td>0</td><td>IDs, timestamps, tech labels</td></tr>
+<tr><td>Button</td><td>13px</td><td>500</td><td>1.0</td><td>+0.01em</td><td>All button labels</td></tr>
+<tr><td>Nav Item</td><td>13px</td><td>400</td><td>1.0</td><td>0</td><td>Sidebar navigation labels</td></tr>
+<tr><td>Table Cell</td><td>13px</td><td>400</td><td>1.4</td><td>0</td><td>Table body text</td></tr>
+</table>
+</div>
+
+<div class="section">
+<div class="section-title">Typography Rules</div>
+<div class="principle-row"><div class="pr-num">R1</div><div><div class="pr-name">All-caps labels are rationed to 3 uses per page</div><div class="pr-why">Currently overused. Reserved for: table column headers, section overlines, and technical status codes only.</div></div></div>
+<div class="principle-row"><div class="pr-num">R2</div><div><div class="pr-name">Never use font weight below 400 in the application</div><div class="pr-why">Dark backgrounds make thin weights unreadable at small sizes. Minimum 400 everywhere.</div></div></div>
+<div class="principle-row"><div class="pr-num">R3</div><div><div class="pr-name">Metric numbers use tabular figures (font-variant-numeric: tabular-nums)</div><div class="pr-why">Dashboard numbers must not shift width as values change. Tabular numerals ensure stable column alignment.</div></div></div>
+</div>
+</div>
+
+<!-- PHASE 5 -->
+<div class="phase" data-phase="4">
+<div class="phase-label">Phase 5</div>
+<div class="phase-title">Color Architecture</div>
+<div class="phase-sub">A complete semantic color system built for dark-native enterprise. Every color exists for a reason.</div>
+
+<div class="section">
+<div class="section-title">Primary Palette — Resolved</div>
+<div class="verdict-box" style="border-left-color:var(--r-primary)">
+<div class="verdict-title">Single Primary: Indigo Blue (#4F6DFF) — replaces current purple/teal split</div>
+<div class="verdict-body">The current app uses both violet-purple (CTAs, sidebar) and teal (modal accent, input focus). This creates two competing primaries. The new system unifies to a single Indigo Blue that works on dark surfaces, reads as confident and operational (not playful), and creates clear hierarchy. The red from the logo becomes the accent/alert color, not a primary.</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Surface & Background Tokens</div>
+<div class="swatch-grid">
+<div class="swatch" style="background:#080A16;border-color:#1E2440"><div class="sw-name" style="color:#6B7494">bg-base</div><div class="sw-hex" style="color:#6B7494">#080A16</div></div>
+<div class="swatch" style="background:#0F1124;border-color:#1E2440"><div class="sw-name" style="color:#8890B0">surface-0</div><div class="sw-hex" style="color:#8890B0">#0F1124</div></div>
+<div class="swatch" style="background:#151829;border-color:#1E2440"><div class="sw-name" style="color:#9BA3C7">surface-1</div><div class="sw-hex" style="color:#9BA3C7">#151829</div></div>
+<div class="swatch" style="background:#1A1E30;border-color:#252B45"><div class="sw-name" style="color:#9BA3C7">surface-2</div><div class="sw-hex" style="color:#9BA3C7">#1A1E30</div></div>
+</div>
+<div class="swatch-grid">
+<div class="swatch" style="background:#1F2438;border-color:#252B45"><div class="sw-name" style="color:#9BA3C7">surface-3</div><div class="sw-hex" style="color:#9BA3C7">#1F2438</div></div>
+<div class="swatch" style="background:#252B45;border-color:#2E3558"><div class="sw-name" style="color:#C0C7E0">sidebar</div><div class="sw-hex" style="color:#C0C7E0">#0F1124</div></div>
+<div class="swatch" style="background:#2A3050;border-color:#3A4060"><div class="sw-name" style="color:#C0C7E0">surface-overlay</div><div class="sw-hex" style="color:#C0C7E0">#2A3050</div></div>
+<div class="swatch" style="background:#1E2440;border-color:#252B45"><div class="sw-name" style="color:#9BA3C7">border</div><div class="sw-hex" style="color:#9BA3C7">#1E2440</div></div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Brand & Interactive</div>
+<div class="swatch-grid">
+<div class="swatch" style="background:#4F6DFF;border-color:#3D5AE8"><div class="sw-name" style="color:#fff">primary</div><div class="sw-hex" style="color:rgba(255,255,255,.7)">#4F6DFF</div></div>
+<div class="swatch" style="background:#3D5AE8;border-color:#2E49D4"><div class="sw-name" style="color:#fff">primary-hover</div><div class="sw-hex" style="color:rgba(255,255,255,.7)">#3D5AE8</div></div>
+<div class="swatch" style="background:#2E49D4;border-color:#1E38C0"><div class="sw-name" style="color:#fff">primary-active</div><div class="sw-hex" style="color:rgba(255,255,255,.7)">#2E49D4</div></div>
+<div class="swatch" style="background:rgba(79,109,255,.12);border-color:rgba(79,109,255,.25)"><div class="sw-name" style="color:#7B9CFF">primary-subtle</div><div class="sw-hex" style="color:#7B9CFF">10% opacity</div></div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Semantic Status Colors</div>
+<div class="swatch-grid">
+<div class="swatch" style="background:#22D3A0;border-color:#1AB589"><div class="sw-name" style="color:#0A2E22">success</div><div class="sw-hex" style="color:#0A2E22">#22D3A0</div></div>
+<div class="swatch" style="background:#F59E0B;border-color:#D4870A"><div class="sw-name" style="color:#2D1E00">warning</div><div class="sw-hex" style="color:#2D1E00">#F59E0B</div></div>
+<div class="swatch" style="background:#EF4444;border-color:#D02E2E"><div class="sw-name" style="color:#fff">danger</div><div class="sw-hex" style="color:rgba(255,255,255,.8)">#EF4444</div></div>
+<div class="swatch" style="background:#60A5FA;border-color:#3D8AE0"><div class="sw-name" style="color:#0A1A30">information</div><div class="sw-hex" style="color:#0A1A30">#60A5FA</div></div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Operational Status Colors (Task / Project)</div>
+<div class="swatch-grid">
+<div class="swatch" style="background:#6B7494;border-color:#7E89A8"><div class="sw-name" style="color:#E8EAF2">Not Started</div><div class="sw-hex" style="color:#E8EAF2">#6B7494</div></div>
+<div class="swatch" style="background:#4F6DFF;border-color:#3D5AE8"><div class="sw-name" style="color:#fff">In Progress</div><div class="sw-hex" style="color:rgba(255,255,255,.8)">#4F6DFF</div></div>
+<div class="swatch" style="background:#22D3A0;border-color:#1AB589"><div class="sw-name" style="color:#0A2E22">Completed</div><div class="sw-hex" style="color:#0A2E22">#22D3A0</div></div>
+<div class="swatch" style="background:#EF4444;border-color:#D02E2E"><div class="sw-name" style="color:#fff">Blocked</div><div class="sw-hex" style="color:rgba(255,255,255,.8)">#EF4444</div></div>
+</div>
+<div class="swatch-grid">
+<div class="swatch" style="background:#F59E0B;border-color:#D4870A"><div class="sw-name" style="color:#2D1E00">At Risk</div><div class="sw-hex" style="color:#2D1E00">#F59E0B</div></div>
+<div class="swatch" style="background:#A855F7;border-color:#8B3DD4"><div class="sw-name" style="color:#fff">Review</div><div class="sw-hex" style="color:rgba(255,255,255,.8)">#A855F7</div></div>
+<div class="swatch" style="background:#EC4899;border-color:#D03080"><div class="sw-name" style="color:#fff">High Priority</div><div class="sw-hex" style="color:rgba(255,255,255,.8)">#EC4899</div></div>
+<div class="swatch" style="background:#1E2440;border-color:#252B45"><div class="sw-name" style="color:#6B7494">Archived</div><div class="sw-hex" style="color:#6B7494">#1E2440</div></div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Risk Level Colors</div>
+<div class="swatch-grid">
+<div class="swatch" style="background:#22D3A0;border-color:#1AB589"><div class="sw-name" style="color:#0A2E22">Low Risk</div></div>
+<div class="swatch" style="background:#60A5FA;border-color:#3D8AE0"><div class="sw-name" style="color:#0A1A30">Moderate</div></div>
+<div class="swatch" style="background:#F59E0B;border-color:#D4870A"><div class="sw-name" style="color:#2D1E00">High Risk</div></div>
+<div class="swatch" style="background:#EF4444;border-color:#D02E2E"><div class="sw-name" style="color:#fff">Critical</div></div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Text Tokens</div>
+<div class="principle-row"><div class="pr-num" style="min-width:16px;width:12px;height:12px;border-radius:50%;background:#E8EAF2;margin-top:4px"></div><div><div class="pr-name">text-primary — #E8EAF2</div><div class="pr-why">All primary content: page titles, body text, table data, input values.</div></div></div>
+<div class="principle-row"><div class="pr-num" style="min-width:16px;width:12px;height:12px;border-radius:50%;background:#9BA3C7;margin-top:4px"></div><div><div class="pr-name">text-secondary — #9BA3C7</div><div class="pr-why">Subtitles, descriptions, helper text, secondary column data.</div></div></div>
+<div class="principle-row"><div class="pr-num" style="min-width:16px;width:12px;height:12px;border-radius:50%;background:#6B7494;margin-top:4px"></div><div><div class="pr-name">text-muted — #6B7494</div><div class="pr-why">Placeholder text, timestamps, metadata, navigation secondary labels.</div></div></div>
+<div class="principle-row"><div class="pr-num" style="min-width:16px;width:12px;height:12px;border-radius:50%;background:#3A4060;margin-top:4px"></div><div><div class="pr-name">text-disabled — #3A4060</div><div class="pr-why">Disabled controls, inactive tab labels.</div></div></div>
+</div>
+</div>
+
+<!-- PHASE 6 -->
+<div class="phase" data-phase="5">
+<div class="phase-label">Phase 6–9</div>
+<div class="phase-title">Spacing, Elevation, Radius & Motion</div>
+<div class="phase-sub">The structural rules that make the system feel consistent at scale.</div>
+
+<div class="section">
+<div class="section-title">Spacing Scale — Base 4px</div>
+<div class="space-row"><div class="space-token">--space-1</div><div class="space-val">4px</div><div class="space-bar" style="width:4px"></div><div class="space-use">Icon internal padding, inline gap</div></div>
+<div class="space-row"><div class="space-token">--space-2</div><div class="space-val">8px</div><div class="space-bar" style="width:8px"></div><div class="space-use">Badge padding, tight row gaps</div></div>
+<div class="space-row"><div class="space-token">--space-3</div><div class="space-val">12px</div><div class="space-bar" style="width:12px"></div><div class="space-use">Button padding vertical, form field gap</div></div>
+<div class="space-row"><div class="space-token">--space-4</div><div class="space-val">16px</div><div class="space-bar" style="width:16px"></div><div class="space-use">Card internal padding, section gap</div></div>
+<div class="space-row"><div class="space-token">--space-5</div><div class="space-val">20px</div><div class="space-bar" style="width:20px"></div><div class="space-use">Table row height padding</div></div>
+<div class="space-row"><div class="space-token">--space-6</div><div class="space-val">24px</div><div class="space-bar" style="width:24px"></div><div class="space-use">Content block gap, modal padding</div></div>
+<div class="space-row"><div class="space-token">--space-8</div><div class="space-val">32px</div><div class="space-bar" style="width:32px"></div><div class="space-use">Section heading margin, card grid gap</div></div>
+<div class="space-row"><div class="space-token">--space-10</div><div class="space-val">40px</div><div class="space-bar" style="width:40px"></div><div class="space-use">Page section separation</div></div>
+<div class="space-row"><div class="space-token">--space-12</div><div class="space-val">48px</div><div class="space-bar" style="width:48px"></div><div class="space-use">Content area top padding</div></div>
+<div class="space-row"><div class="space-token">--space-16</div><div class="space-val">64px</div><div class="space-bar" style="width:64px"></div><div class="space-use">Dashboard section margins</div></div>
+</div>
+
+<div class="section">
+<div class="section-title">Elevation System — No Glow, No Glassmorphism</div>
+<div class="elev-row"><div class="elev-box" style="background:#151829;border:1px solid #1E2440"></div><div class="elev-name">None / Flat</div><div class="elev-desc">Sidebar items, table rows, inline elements. No shadow. Border defines edge.</div></div>
+<div class="elev-row"><div class="elev-box" style="background:#1A1E30;border:1px solid #252B45;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div><div class="elev-name">sm</div><div class="elev-desc">Cards, form inputs, data cells. 0 1px 3px rgba(0,0,0,0.3).</div></div>
+<div class="elev-row"><div class="elev-box" style="background:#1F2438;border:1px solid #2E3558;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div><div class="elev-name">md</div><div class="elev-desc">Dropdowns, popovers, tooltips. 0 2px 8px rgba(0,0,0,0.4).</div></div>
+<div class="elev-row"><div class="elev-box" style="background:#252B45;border:1px solid #3A4060;box-shadow:0 4px 16px rgba(0,0,0,.5)"></div><div class="elev-name">lg</div><div class="elev-desc">Modals, command palette, drawer. 0 4px 16px rgba(0,0,0,0.5).</div></div>
+<div class="elev-row"><div class="elev-box" style="background:#2A3050;border:1px solid #3A4060;box-shadow:0 8px 32px rgba(0,0,0,.6)"></div><div class="elev-name">overlay</div><div class="elev-desc">Critical alerts, full-screen overlays. 0 8px 32px rgba(0,0,0,0.6).</div></div>
+</div>
+
+<div class="section">
+<div class="section-title">Border Radius System</div>
+<div class="rad-row"><div class="rad-box" style="border-radius:2px"></div><div class="rad-label">xs</div><div class="rad-val">2px</div><div class="rad-use">Status dots, micro indicators, table cell badges</div></div>
+<div class="rad-row"><div class="rad-box" style="border-radius:4px"></div><div class="rad-label">sm</div><div class="rad-val">4px</div><div class="rad-use">Badges, tags, inline chips, code blocks</div></div>
+<div class="rad-row"><div class="rad-box" style="border-radius:6px"></div><div class="rad-label">md</div><div class="rad-val">6px</div><div class="rad-use">Buttons, inputs, select controls, tabs</div></div>
+<div class="rad-row"><div class="rad-box" style="border-radius:8px"></div><div class="rad-label">lg</div><div class="rad-val">8px</div><div class="rad-use">Cards, panels, sidebar sections</div></div>
+<div class="rad-row"><div class="rad-box" style="border-radius:12px"></div><div class="rad-label">xl</div><div class="rad-val">12px</div><div class="rad-use">Modal containers, expanded command palette</div></div>
+<div class="rad-row"><div class="rad-box" style="border-radius:9999px;width:64px"></div><div class="rad-label">pill</div><div class="rad-val">9999px</div><div class="rad-use">Navigation active pills, toggle switches only</div></div>
+</div>
+
+<div class="section">
+<div class="section-title">Motion Tokens</div>
+<div class="motion-row"><div class="mot-token">--dur-instant</div><div class="mot-val">80ms</div><div class="mot-use">Hover state fills, focus rings, active presses</div></div>
+<div class="motion-row"><div class="mot-token">--dur-fast</div><div class="mot-val">150ms</div><div class="mot-use">Dropdown open, badge appear, tooltip show</div></div>
+<div class="motion-row"><div class="mot-token">--dur-base</div><div class="mot-val">200ms</div><div class="mot-use">Modal enter/exit, drawer slide, tab switch</div></div>
+<div class="motion-row"><div class="mot-token">--dur-slow</div><div class="mot-val">300ms</div><div class="mot-use">Page transitions, skeleton to content, chart animate</div></div>
+<div class="motion-row"><div class="mot-token">--ease-standard</div><div class="mot-val">cubic-bezier(.2,0,0,1)</div><div class="mot-use">Default for all transitions</div></div>
+<div class="motion-row"><div class="mot-token">--ease-decel</div><div class="mot-val">cubic-bezier(0,0,.2,1)</div><div class="mot-use">Elements entering screen</div></div>
+<div class="motion-row"><div class="mot-token">--ease-accel</div><div class="mot-val">cubic-bezier(.4,0,1,1)</div><div class="mot-use">Elements leaving screen</div></div>
+<div class="motion-row"><div class="mot-token">Hover state</div><div class="mot-val">80ms ease</div><div class="mot-use">Background color change only. Never scale on hover for data elements.</div></div>
+<div class="motion-row"><div class="mot-token">Skeleton pulse</div><div class="mot-val">1.4s infinite</div><div class="mot-use">Opacity 0.4→0.7→0.4. No shimmer. No gradient sweep.</div></div>
+<div class="motion-row"><div class="mot-token">Reduced motion</div><div class="mot-val">prefers-reduced-motion</div><div class="mot-use">All transitions → 0ms. Skeleton → static. Charts → instant render.</div></div>
+</div>
+</div>
+
+<!-- PHASE 10 -->
+<div class="phase" data-phase="6">
+<div class="phase-label">Phase 10–11</div>
+<div class="phase-title">Iconography & Component Language</div>
+<div class="phase-sub">One icon library. Strict usage rules. Component philosophy without implementation.</div>
+
+<div class="section">
+<div class="section-title">Icon Library Decision</div>
+<div class="verdict-box">
+<div class="verdict-title">Library: Lucide Icons — outline only, 1.5px stroke</div>
+<div class="verdict-body">Rationale: Lucide is the most consistent outline icon library available. Clean geometric forms. Designed at 24px, scales to 16px without artifacts. No filled variants — mixing outline and filled icons in the same product is prohibited. The consistency of the outline style reads as precision and professionalism.</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Icon Usage Rules</div>
+<div class="icon-rule-row"><div class="ir-key">Sizes</div><div class="ir-val">16px (inline/nav), 18px (buttons), 20px (standalone), 24px (empty states only)</div></div>
+<div class="icon-rule-row"><div class="ir-key">Stroke width</div><div class="ir-val">1.5px at all sizes. Never 2px. Thicker strokes at small sizes feel heavy.</div></div>
+<div class="icon-rule-row"><div class="ir-key">Color</div><div class="ir-val">Icons inherit text color of parent. Never independently colored unless conveying semantic status.</div></div>
+<div class="icon-rule-row"><div class="ir-key">Paired with text</div><div class="ir-val">8px gap between icon and label. Icon left of label always. Never icon-only for primary actions.</div></div>
+<div class="icon-rule-row"><div class="ir-key">Semantic icons</div><div class="ir-val">Status icons (check, x, alert-triangle, info) may carry semantic color (success/danger/warning/info).</div></div>
+<div class="icon-rule-row"><div class="ir-key">Navigation icons</div><div class="ir-val">Fixed icon per section. Never change. Active state: color shifts to primary, not icon change.</div></div>
+<div class="icon-rule-row"><div class="ir-key">Prohibited</div><div class="ir-val">No emoji as icons. No filled icon variants. No custom SVG icons that don't match Lucide stroke weight.</div></div>
+</div>
+
+<div class="section">
+<div class="section-title">Component Language Philosophy</div>
+<div class="comp-grid">
+<div class="comp-item"><div class="ci-name">Buttons</div><div class="ci-rule">Three variants: Primary (filled indigo), Secondary (bordered), Ghost (text-only). One primary per view. Never more than two button variants in the same context.</div></div>
+<div class="comp-item"><div class="ci-name">Inputs</div><div class="ci-rule">Single input style. Dark surface background, border on all four sides, indigo focus ring. No floating labels — always above the field. Error state: red border + message below.</div></div>
+<div class="comp-item"><div class="ci-name">Cards</div><div class="ci-rule">One card style: surface-1 background, 1px border, 8px radius. No drop shadows on cards. Elevation through background lightness, not shadow. No card hover effects that lift or scale.</div></div>
+<div class="comp-item"><div class="ci-name">Tables</div><div class="ci-rule">Fixed header. Row separator only (no vertical grid lines). Alternating row highlight optional for dense tables. Column headers in UPPERCASE 11px. Actions right-aligned.</div></div>
+<div class="comp-item"><div class="ci-name">Badges / Tags</div><div class="ci-rule">Always semantic: color encodes meaning, never style. Text + colored background. 4px radius. Never gradient. Width constrained to content. No decorative badges.</div></div>
+<div class="comp-item"><div class="ci-name">Dialogs / Modals</div><div class="ci-rule">Max width 640px. Title + close button in header. Action buttons bottom-right, right-aligned. Destructive action left-aligned. Backdrop: 60% opacity overlay. No animations except fade + 4px translateY.</div></div>
+<div class="comp-item"><div class="ci-name">Navigation</div><div class="ci-rule">Left sidebar: fixed 220px. Icon + label. Active: indigo left border + subtle indigo background tint. No active icon change. Section groups separated by 4px gap.</div></div>
+<div class="comp-item"><div class="ci-name">Metrics / KPIs</div><div class="ci-rule">Large number (28px, 500 weight). Label above in 11px uppercase muted. Delta indicator below. Trend sparkline optional. Never more than 6 KPI cards per row.</div></div>
+<div class="comp-item"><div class="ci-name">Charts</div><div class="ci-rule">Minimal axes. No chart border. Gridlines: 1px, 15% opacity. Legend always present for multi-series. Tooltip on hover. Empty state: inline message, never a spinner.</div></div>
+<div class="comp-item"><div class="ci-name">Kanban</div><div class="ci-rule">Column headers in surface-2. Card: white title, secondary meta. Status badge on card. Priority indicator: left border color. No card shadows. Drag state: 4px opacity reduction of source.</div></div>
+<div class="comp-item"><div class="ci-name">Command Palette</div><div class="ci-rule">Full-width, centered, 640px max, 480px max-height. Groups with uppercase labels. Keyboard hint right-aligned. Active item: indigo tint background, no border.</div></div>
+<div class="comp-item"><div class="ci-name">Empty States</div><div class="ci-rule">20px Lucide icon, centered. 16px title (500 weight). 14px description (muted). One CTA button. No illustrations. No emoji. Background matches surrounding surface.</div></div>
+</div>
+</div>
+</div>
+
+<!-- PHASE 12 -->
+<div class="phase" data-phase="7">
+<div class="phase-label">Phase 12–13</div>
+<div class="phase-title">Layout & Dashboard Philosophy</div>
+<div class="phase-sub">The structural skeleton every page builds on, and the hierarchy that governs the most important surface.</div>
+
+<div class="section">
+<div class="section-title">Layout Tokens</div>
+<div class="layout-row"><div class="lr-token">sidebar-width</div><div class="lr-val">220px</div><div class="lr-desc">Fixed. Collapsible to 60px (icon-only). Never fluid.</div></div>
+<div class="layout-row"><div class="lr-token">header-height</div><div class="lr-val">48px</div><div class="lr-desc">Top navigation bar. Fixed. Contains subnav tabs and global actions.</div></div>
+<div class="layout-row"><div class="lr-token">content-max-width</div><div class="lr-val">1280px</div><div class="lr-desc">Maximum content width. Centered when viewport exceeds this.</div></div>
+<div class="layout-row"><div class="lr-token">content-padding</div><div class="lr-val">32px</div><div class="lr-desc">Left/right padding within the content area.</div></div>
+<div class="layout-row"><div class="lr-token">reading-width</div><div class="lr-val">680px</div><div class="lr-desc">Documents, forms, wizard steps. Never full-width prose.</div></div>
+<div class="layout-row"><div class="lr-token">panel-width</div><div class="lr-val">380px</div><div class="lr-desc">Right-side detail panels, drawers, preview panes.</div></div>
+<div class="layout-row"><div class="lr-token">table-min-col</div><div class="lr-val">100px</div><div class="lr-desc">Minimum column width before horizontal scroll activates.</div></div>
+</div>
+
+<div class="section">
+<div class="section-title">Page Template Grid Rules</div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">Dashboard</div><div class="pr-why">12-column grid. KPI cards span 3 cols. Primary chart spans 8 cols. Side panel spans 4 cols. Activity feed spans 4 cols.</div></div></div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">CRUD / List</div><div class="pr-why">Full width table. Filter bar above. Toolbar right-aligned (Add button, view toggles). Detail panel slides in from right on row click — never navigates away.</div></div></div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">Analytics</div><div class="pr-why">Full-width canvas. No sidebar on analytics pages. Chart takes priority. Filter controls in a sticky toolbar above charts.</div></div></div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">Forms / Settings</div><div class="pr-why">Reading width (680px). Single column. Section headers separate logical groups. Never two-column forms for complex fields.</div></div></div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">Kanban</div><div class="pr-why">Full horizontal scroll. Fixed column width (280px). Header row sticky. No page padding—columns extend to edges.</div></div></div>
+</div>
+
+<div class="section">
+<div class="section-title">Dashboard Philosophy — The Three Questions</div>
+<div class="dash-row"><div class="dash-badge db-1">Zone 1 — What happened?</div></div>
+<div class="verdict-box" style="margin-bottom:12px">
+<div class="verdict-body">KPI metrics, trend deltas, activity feed. Positioned top of page. Answers the operational status at a glance. Maximum 6 metrics. Each metric shows: current value, delta from previous period, trend direction.</div>
+</div>
+<div class="dash-row"><div class="dash-badge db-3">Zone 2 — What requires attention?</div></div>
+<div class="verdict-box" style="margin-bottom:12px">
+<div class="verdict-body">At-risk items, overdue tasks, blocked projects, pending approvals. Visually distinguished — amber/red semantic colors. Never buried below the fold. This zone earns its position because it drives decisions.</div>
+</div>
+<div class="dash-row"><div class="dash-badge db-2">Zone 3 — What should I do next?</div></div>
+<div class="verdict-box">
+<div class="verdict-body">Recommended actions, AI suggestions, quick-access shortcuts. Positioned after the user has context. Never the first thing on screen. The platform earns the right to recommend after it informs.</div>
+</div>
+</div>
+</div>
+
+<!-- PHASE 14 -->
+<div class="phase" data-phase="8">
+<div class="phase-label">Phase 14–15</div>
+<div class="phase-title">Accessibility & Dark Mode</div>
+<div class="phase-sub">WCAG AA compliance is non-negotiable. Dark mode is designed independently, not inverted.</div>
+
+<div class="section">
+<div class="section-title">Accessibility Requirements</div>
+<div class="acc-row"><div class="acc-icon" style="background:rgba(79,109,255,.15)">👁</div><div><div class="acc-title">Contrast — WCAG AA minimum</div><div class="acc-body">All body text: ≥4.5:1. Large text (18px+): ≥3:1. UI components and focus indicators: ≥3:1. The defined color pairs in this system all meet these ratios. Primary (#4F6DFF) on surface-1 (#151829): 4.7:1 ✓</div></div></div>
+<div class="acc-row"><div class="acc-icon" style="background:rgba(34,211,160,.1)">⌨</div><div><div class="acc-title">Keyboard Navigation</div><div class="acc-body">Every interactive element reachable by Tab. Focus order follows visual order. Skip-to-content link present. Command Palette (Ctrl/Cmd+K) is the primary keyboard shortcut for all navigation.</div></div></div>
+<div class="acc-row"><div class="acc-icon" style="background:rgba(245,158,11,.1)">◻</div><div><div class="acc-title">Focus States</div><div class="acc-body">All focused elements: 2px indigo (#4F6DFF) outline + 2px offset. Never outline:none without a visible replacement. Focus ring must be visible in both light and dark contexts.</div></div></div>
+<div class="acc-row"><div class="acc-icon" style="background:rgba(239,68,68,.1)">📢</div><div><div class="acc-title">Screen Readers</div><div class="acc-body">All icons have aria-label or aria-hidden. Status changes announced via aria-live. Tables have proper thead/th with scope. Modals trap focus and restore on close.</div></div></div>
+<div class="acc-row"><div class="acc-icon" style="background:rgba(79,109,255,.1)">↔</div><div><div class="acc-title">Reduced Motion</div><div class="acc-body">@media (prefers-reduced-motion: reduce) removes all transitions, animations, and skeleton pulses. Charts render statically. Skeleton states become static placeholders.</div></div></div>
+<div class="acc-row"><div class="acc-icon" style="background:rgba(34,211,160,.1)">🔁</div><div><div class="acc-title">Error Recovery</div><div class="acc-body">Form errors: inline message below field, aria-describedby linking field to error. Focus moves to first error on submit. Error messages describe what to do, not just what went wrong.</div></div></div>
+</div>
+
+<div class="section">
+<div class="section-title">Dark Mode — Independent Design, Not Inversion</div>
+<div class="dm-pair">
+<div class="dm-card" style="background:#F8F9FC;border-color:#D0D5E8">
+<div class="dm-label" style="color:#6B7494">❌ Do Not Invert</div>
+<div class="dm-surface" style="background:#fff;border:1px solid #E0E4F0;color:#1A1E30">surface-3 #FFFFFF</div>
+<div class="dm-surface" style="background:#F4F5FA;border:1px solid #E0E4F0;color:#1A1E30">surface-2 #F4F5FA</div>
+<div class="dm-surface" style="background:#ECEEF5;border:1px solid #E0E4F0;color:#1A1E30">surface-1 #ECEEF5</div>
+</div>
+<div class="dm-card" style="background:#080A16;border-color:#1E2440">
+<div class="dm-label" style="color:#6B7494">✓ Dark Primary</div>
+<div class="dm-surface" style="background:#1F2438;border:1px solid #252B45;color:#E8EAF2">surface-3 #1F2438</div>
+<div class="dm-surface" style="background:#1A1E30;border:1px solid #1E2440;color:#9BA3C7">surface-2 #1A1E30</div>
+<div class="dm-surface" style="background:#151829;border:1px solid #1E2440;color:#6B7494">surface-1 #151829</div>
+</div>
+</div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">Charts in dark mode</div><div class="pr-why">Chart gridlines: 1px rgba(255,255,255,0.06). Axis labels: text-muted (#6B7494). Chart backgrounds: transparent. Data colors remain identical between light and dark — they are semantic, not surface colors.</div></div></div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">Borders in dark mode</div><div class="pr-why">Two border strengths: border (#1E2440) for standard, border-strong (#252B45) for emphasis. Borders are additive — they define structure, not decoration. Never use box-shadow to simulate borders.</div></div></div>
+<div class="principle-row"><div class="pr-num">→</div><div><div class="pr-name">No pure black (#000000)</div><div class="pr-why">Pure black creates harsh contrast that reads as broken on modern displays. The darkest surface (#080A16) has a blue tint that connects to the indigo brand system.</div></div></div>
+</div>
+</div>
+
+<!-- PHASE 16 -->
+<div class="phase" data-phase="9">
+<div class="phase-label">Phase 16</div>
+<div class="phase-title">Design Tokens</div>
+<div class="phase-sub">The complete token vocabulary. These are implemented as CSS custom properties on :root.</div>
+
+<div class="section">
+<div class="section-title">Color Tokens</div>
+<div class="token-block">
+<span class="tok-c">/* Surfaces */</span><br>
+<span class="tok-k">--color-bg-base</span>: <span class="tok-v">#080A16</span>;<br>
+<span class="tok-k">--color-surface-0</span>: <span class="tok-v">#0F1124</span>;<br>
+<span class="tok-k">--color-surface-1</span>: <span class="tok-v">#151829</span>;<br>
+<span class="tok-k">--color-surface-2</span>: <span class="tok-v">#1A1E30</span>;<br>
+<span class="tok-k">--color-surface-3</span>: <span class="tok-v">#1F2438</span>;<br>
+<span class="tok-k">--color-border</span>: <span class="tok-v">#1E2440</span>;<br>
+<span class="tok-k">--color-border-strong</span>: <span class="tok-v">#252B45</span>;<br>
+<br>
+<span class="tok-c">/* Brand */</span><br>
+<span class="tok-k">--color-primary</span>: <span class="tok-v">#4F6DFF</span>;<br>
+<span class="tok-k">--color-primary-hover</span>: <span class="tok-v">#3D5AE8</span>;<br>
+<span class="tok-k">--color-primary-active</span>: <span class="tok-v">#2E49D4</span>;<br>
+<span class="tok-k">--color-primary-subtle</span>: <span class="tok-v">rgba(79,109,255,0.12)</span>;<br>
+<br>
+<span class="tok-c">/* Semantic */</span><br>
+<span class="tok-k">--color-success</span>: <span class="tok-v">#22D3A0</span>;<br>
+<span class="tok-k">--color-warning</span>: <span class="tok-v">#F59E0B</span>;<br>
+<span class="tok-k">--color-danger</span>: <span class="tok-v">#EF4444</span>;<br>
+<span class="tok-k">--color-info</span>: <span class="tok-v">#60A5FA</span>;<br>
+<br>
+<span class="tok-c">/* Text */</span><br>
+<span class="tok-k">--color-text-primary</span>: <span class="tok-v">#E8EAF2</span>;<br>
+<span class="tok-k">--color-text-secondary</span>: <span class="tok-v">#9BA3C7</span>;<br>
+<span class="tok-k">--color-text-muted</span>: <span class="tok-v">#6B7494</span>;<br>
+<span class="tok-k">--color-text-disabled</span>: <span class="tok-v">#3A4060</span>;<br>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Spacing Tokens</div>
+<div class="token-block">
+<span class="tok-k">--space-1</span>: <span class="tok-v">4px</span>; &nbsp;&nbsp;
+<span class="tok-k">--space-2</span>: <span class="tok-v">8px</span>; &nbsp;&nbsp;
+<span class="tok-k">--space-3</span>: <span class="tok-v">12px</span>;<br>
+<span class="tok-k">--space-4</span>: <span class="tok-v">16px</span>; &nbsp;
+<span class="tok-k">--space-5</span>: <span class="tok-v">20px</span>; &nbsp;
+<span class="tok-k">--space-6</span>: <span class="tok-v">24px</span>;<br>
+<span class="tok-k">--space-8</span>: <span class="tok-v">32px</span>; &nbsp;
+<span class="tok-k">--space-10</span>: <span class="tok-v">40px</span>; &nbsp;
+<span class="tok-k">--space-12</span>: <span class="tok-v">48px</span>;<br>
+<span class="tok-k">--space-16</span>: <span class="tok-v">64px</span>;
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Typography Tokens</div>
+<div class="token-block">
+<span class="tok-k">--font-sans</span>: <span class="tok-v">'Inter', system-ui, sans-serif</span>;<br>
+<span class="tok-k">--font-mono</span>: <span class="tok-v">'JetBrains Mono', monospace</span>;<br>
+<br>
+<span class="tok-k">--text-xs</span>: <span class="tok-v">11px</span>; &nbsp;&nbsp;
+<span class="tok-k">--text-sm</span>: <span class="tok-v">12px</span>; &nbsp;&nbsp;
+<span class="tok-k">--text-base</span>: <span class="tok-v">13px</span>;<br>
+<span class="tok-k">--text-md</span>: <span class="tok-v">14px</span>; &nbsp;&nbsp;
+<span class="tok-k">--text-lg</span>: <span class="tok-v">15px</span>; &nbsp;&nbsp;
+<span class="tok-k">--text-xl</span>: <span class="tok-v">18px</span>;<br>
+<span class="tok-k">--text-2xl</span>: <span class="tok-v">22px</span>; &nbsp;
+<span class="tok-k">--text-3xl</span>: <span class="tok-v">28px</span>; &nbsp;
+<span class="tok-k">--text-4xl</span>: <span class="tok-v">32px</span>;<br>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Motion Tokens</div>
+<div class="token-block">
+<span class="tok-k">--dur-instant</span>: <span class="tok-v">80ms</span>;<br>
+<span class="tok-k">--dur-fast</span>: <span class="tok-v">150ms</span>;<br>
+<span class="tok-k">--dur-base</span>: <span class="tok-v">200ms</span>;<br>
+<span class="tok-k">--dur-slow</span>: <span class="tok-v">300ms</span>;<br>
+<span class="tok-k">--ease-standard</span>: <span class="tok-v">cubic-bezier(.2,0,0,1)</span>;<br>
+<span class="tok-k">--ease-decel</span>: <span class="tok-v">cubic-bezier(0,0,.2,1)</span>;<br>
+<span class="tok-k">--ease-accel</span>: <span class="tok-v">cubic-bezier(.4,0,1,1)</span>;<br>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Radius & Shadow Tokens</div>
+<div class="token-block">
+<span class="tok-k">--radius-xs</span>: <span class="tok-v">2px</span>; &nbsp;&nbsp;
+<span class="tok-k">--radius-sm</span>: <span class="tok-v">4px</span>; &nbsp;&nbsp;
+<span class="tok-k">--radius-md</span>: <span class="tok-v">6px</span>;<br>
+<span class="tok-k">--radius-lg</span>: <span class="tok-v">8px</span>; &nbsp;&nbsp;
+<span class="tok-k">--radius-xl</span>: <span class="tok-v">12px</span>; &nbsp;&nbsp;
+<span class="tok-k">--radius-pill</span>: <span class="tok-v">9999px</span>;<br>
+<br>
+<span class="tok-k">--shadow-sm</span>: <span class="tok-v">0 1px 3px rgba(0,0,0,.3)</span>;<br>
+<span class="tok-k">--shadow-md</span>: <span class="tok-v">0 2px 8px rgba(0,0,0,.4)</span>;<br>
+<span class="tok-k">--shadow-lg</span>: <span class="tok-v">0 4px 16px rgba(0,0,0,.5)</span>;<br>
+<span class="tok-k">--shadow-overlay</span>: <span class="tok-v">0 8px 32px rgba(0,0,0,.6)</span>;<br>
+</div>
+</div>
+</div>
+
+<!-- PHASE 17 -->
+<div class="phase" data-phase="10">
+<div class="phase-label">Phase 17</div>
+<div class="phase-title">Component Catalogue</div>
+<div class="phase-sub">Every component the platform will need, organized by tier. This is the complete scope of what must be built.</div>
+
+<div class="section">
+<div class="section-title">Tier 1 — Primitive (build first)</div>
+<div class="cat-group">
+<div class="cat-list">
+<div class="cat-tag">Button (primary, secondary, ghost, destructive)</div>
+<div class="cat-tag">IconButton</div>
+<div class="cat-tag">Input</div>
+<div class="cat-tag">Textarea</div>
+<div class="cat-tag">Select</div>
+<div class="cat-tag">Checkbox</div>
+<div class="cat-tag">Radio</div>
+<div class="cat-tag">Toggle / Switch</div>
+<div class="cat-tag">Badge</div>
+<div class="cat-tag">Tag / Chip</div>
+<div class="cat-tag">Avatar</div>
+<div class="cat-tag">Tooltip</div>
+<div class="cat-tag">Spinner</div>
+<div class="cat-tag">Skeleton</div>
+<div class="cat-tag">Divider</div>
+<div class="cat-tag">StatusDot</div>
+<div class="cat-tag">ProgressBar</div>
+<div class="cat-tag">Kbd (keyboard hint)</div>
+</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Tier 2 — Composite (requires primitives)</div>
+<div class="cat-group">
+<div class="cat-list">
+<div class="cat-tag">Card</div>
+<div class="cat-tag">MetricCard (KPI)</div>
+<div class="cat-tag">FormField (label + input + error)</div>
+<div class="cat-tag">SearchInput</div>
+<div class="cat-tag">DatePicker</div>
+<div class="cat-tag">MultiSelect</div>
+<div class="cat-tag">Dropdown Menu</div>
+<div class="cat-tag">ContextMenu</div>
+<div class="cat-tag">Tabs</div>
+<div class="cat-tag">Breadcrumb</div>
+<div class="cat-tag">Pagination</div>
+<div class="cat-tag">Alert / Banner</div>
+<div class="cat-tag">Toast / Notification</div>
+<div class="cat-tag">EmptyState</div>
+<div class="cat-tag">UserProfile chip</div>
+<div class="cat-tag">FileUpload</div>
+<div class="cat-tag">RichTextEditor</div>
+<div class="cat-tag">CommentThread</div>
+</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Tier 3 — Complex (platform-specific)</div>
+<div class="cat-group">
+<div class="cat-list">
+<div class="cat-tag">DataTable (sortable, filterable)</div>
+<div class="cat-tag">Modal / Dialog</div>
+<div class="cat-tag">Drawer / SlidePanel</div>
+<div class="cat-tag">CommandPalette</div>
+<div class="cat-tag">KanbanBoard</div>
+<div class="cat-tag">GanttChart</div>
+<div class="cat-tag">Timeline</div>
+<div class="cat-tag">Calendar (month/week/day)</div>
+<div class="cat-tag">ChartWrapper (bar, line, area, donut)</div>
+<div class="cat-tag">HeatmapGrid</div>
+<div class="cat-tag">ActivityFeed</div>
+<div class="cat-tag">ApprovalFlow</div>
+<div class="cat-tag">RiskMatrix</div>
+<div class="cat-tag">ResourceAllocationBar</div>
+<div class="cat-tag">BudgetTracker</div>
+<div class="cat-tag">DocumentViewer</div>
+<div class="cat-tag">AICopilotPanel</div>
+<div class="cat-tag">AuditLogViewer</div>
+</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Tier 4 — Layout Templates</div>
+<div class="cat-group">
+<div class="cat-list">
+<div class="cat-tag">AppShell (sidebar + header + content)</div>
+<div class="cat-tag">DashboardLayout</div>
+<div class="cat-tag">ListDetailLayout</div>
+<div class="cat-tag">FullWidthLayout</div>
+<div class="cat-tag">ReadingLayout (forms, docs)</div>
+<div class="cat-tag">AuthLayout</div>
+<div class="cat-tag">WizardLayout</div>
+<div class="cat-tag">SettingsLayout (sidebar nav)</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- PHASE 19 -->
+<div class="phase" data-phase="11">
+<div class="phase-label">Phase 18–20</div>
+<div class="phase-title">Enterprise UX Rules & Implementation</div>
+<div class="phase-sub">The non-negotiable rules that enforce consistency at scale, and the order to implement everything.</div>
+
+<div class="section">
+<div class="section-title">Enterprise UX Rules — The Non-Negotiables</div>
+<div class="rule-card"><div class="rc-title">One Button Style per context</div><div class="rc-body">Primary (indigo filled) for the one primary action. Secondary (bordered) for supporting actions. Ghost for tertiary. Never create page-specific button variants. Never use gradient buttons.</div></div>
+<div class="rule-card"><div class="rc-title">One Card Style</div><div class="rc-body">surface-1 background. 1px border. 8px radius. 16px padding. No exceptions. No "special cards" with unique shadows, gradients, or colored backgrounds for decoration.</div></div>
+<div class="rule-card"><div class="rc-title">One Table Style</div><div class="rc-body">Fixed header. Row separators only. 40px row height for standard density, 32px for compact. Actions right-aligned. No zebra striping by default — only enable for very dense tables (>12 columns).</div></div>
+<div class="rule-card"><div class="rc-title">One Modal Style</div><div class="rc-body">Max 640px width. Standard header/body/footer structure. Primary action bottom-right. Cancel left of primary. Destructive action bottom-left. The teal modal gradient accent in current UI is eliminated.</div></div>
+<div class="rule-card"><div class="rc-title">One Form Style</div><div class="rc-body">Label above field. Full-width inputs. Helper text below. Error message below (red, 12px). No floating labels. No inline editing as default — only after explicit "Edit" mode activation.</div></div>
+<div class="rule-card"><div class="rc-title">One Navigation Style</div><div class="rc-body">Sidebar: section groups, icon + label, indigo left-border active. No nested navigation beyond 2 levels. Top subnav bar for within-section tabs only (exactly as current — this pattern is correct).</div></div>
+<div class="rule-card"><div class="rc-title">One Empty State Style</div><div class="rc-body">Lucide icon (24px, muted). Title (15px, 500). Description (13px, muted). One CTA. Centered. No illustrations. No emoji. This applies to tables, boards, calendars, and all list surfaces.</div></div>
+<div class="rule-card"><div class="rc-title">One Loading Style</div><div class="rc-body">Skeleton placeholders that match the layout of the loading content. Never a spinner centered on a page. Spinners only in buttons (inline loading) and small contained components.</div></div>
+<div class="rule-card"><div class="rc-title">Color is always semantic</div><div class="rc-body">No color used purely for visual interest. Every color choice communicates state, priority, status, or role. If the color carries no information, it is removed.</div></div>
+<div class="rule-card"><div class="rc-title">No modal-on-modal stacking</div><div class="rc-body">Modals never spawn secondary modals. If a confirmation is needed from within a modal, use an inline destructive confirmation pattern within the same modal. Never stack.</div></div>
+</div>
+
+<div class="section">
+<div class="section-title">Implementation Order</div>
+<div class="impl-row"><div class="impl-num">1</div><div><div class="impl-title">Design Tokens → CSS custom properties file</div><div class="impl-body">All colors, spacing, typography, radius, shadow, motion tokens. This file becomes the single source of truth. Every component references only these tokens — never hardcoded values. Duration: 1–2 days.</div></div></div>
+<div class="impl-row"><div class="impl-num">2</div><div><div class="impl-title">Tier 1 Primitives → component library</div><div class="impl-body">Button, Input, Badge, Avatar, Tooltip, Skeleton, StatusDot. These are the atoms. All other components depend on them. Duration: 1 week.</div></div></div>
+<div class="impl-row"><div class="impl-num">3</div><div><div class="impl-title">AppShell → Sidebar + Header rebuild</div><div class="impl-body">The container that wraps everything. Fix the sidebar active states (eliminate teal, unify to indigo). Standardize the top subnav pill pattern across all sections. Duration: 3–4 days.</div></div></div>
+<div class="impl-row"><div class="impl-num">4</div><div><div class="impl-title">Tier 2 Composites → Card, Modal, Table, Form</div><div class="impl-body">The four most-used patterns. Once these are correct and consistent, 70% of pages are automatically improved. Eliminate the teal modal accent. Duration: 1 week.</div></div></div>
+<div class="impl-row"><div class="impl-num">5</div><div><div class="impl-title">Dashboard → Mission Control rebuild</div><div class="impl-body">Implement the three-zone philosophy. KPI row, attention zone, recommendation zone. This is the highest-visibility surface and the first thing users see. Duration: 1 week.</div></div></div>
+<div class="impl-row"><div class="impl-num">6</div><div><div class="impl-title">Tier 3 Complex → DataTable, Kanban, Calendar, Charts</div><div class="impl-body">Page-by-page rebuild in order of usage frequency. Execution section first (most used), then Company, Finance, Admin. Duration: 2–4 weeks.</div></div></div>
+<div class="impl-row"><div class="impl-num">7</div><div><div class="impl-title">Polish pass → Motion, Empty States, Loading, Accessibility audit</div><div class="impl-body">After all layouts are correct, add the motion layer. Audit every empty state. Run keyboard navigation test. Check all contrast ratios. Duration: 1 week.</div></div></div>
+</div>
+</div>
+
+</div>
+
+<div id="page-footer" class="pg-foot">
+<button class="pg-nav-btn" id="btn-prev" onclick="navigate(-1)" disabled>← Previous</button>
+<span class="pg-of" id="pg-label">Phase 1 of 12</span>
+<button class="pg-nav-btn" id="btn-next" onclick="navigate(1)">Next →</button>
+</div>
+
+</div>
+
+<script>
+const phases=[
+{label:"1 — Brand Identity"},{label:"2 — Visual Direction"},{label:"3 — Philosophy"},
+{label:"4 — Typography"},{label:"5 — Color System"},{label:"6-9 — Space/Motion"},
+{label:"10-11 — Icons/Components"},{label:"12-13 — Layout/Dashboard"},
+{label:"14-15 — Accessibility/Dark"},{label:"16 — Design Tokens"},
+{label:"17 — Component Catalogue"},{label:"18-20 — Rules/Implementation"}
+];
+let cur=0;
+const nav=document.getElementById('nav');
+const phaseDivs=document.querySelectorAll('.phase');
+const btnPrev=document.getElementById('btn-prev');
+const btnNext=document.getElementById('btn-next');
+const pgLabel=document.getElementById('pg-label');
+
+phases.forEach((p,i)=>{
+const b=document.createElement('button');
+b.className='pn-btn'+(i===0?' act':'');
+b.textContent=p.label;
+b.onclick=()=>goTo(i);
+nav.appendChild(b);
+});
+
+function goTo(n){
+phaseDivs[cur].classList.remove('vis');
+nav.children[cur].classList.remove('act');
+cur=n;
+phaseDivs[cur].classList.add('vis');
+nav.children[cur].classList.add('act');
+btnPrev.disabled=cur===0;
+btnNext.disabled=cur===phases.length-1;
+pgLabel.textContent='Phase '+(cur+1)+' of '+phases.length;
+}
+function navigate(dir){goTo(cur+dir);}
+</script>

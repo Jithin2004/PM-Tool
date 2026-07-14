@@ -17,7 +17,7 @@ import { RecordPaymentModal } from '../../components/finance/RecordPaymentModal'
 import { FinanceInitializationModal } from '../../components/finance/FinanceInitializationModal';
 import { generateInvoicePDF } from '../../services/invoicePdfService';
 import { showAlert, showConfirm, showPrompt } from '../../components/common/Dialogs';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 import { deliverableService, Milestone } from '../../services/deliverableService';
 import { profitabilityService, ProjectProfitability } from '../../services/profitabilityService';
 import { Icon } from '../../components/ui/Icon';
@@ -272,8 +272,8 @@ export default function FinancePage() {
     if (!isInitialized) {
       return (
         <div className="h-full flex flex-col items-center justify-center p-6 bg-surface">
-          <div className="max-w-md w-full glass-panel rounded-xl border border-border p-8 text-center">
-            <PremiumEmptyState
+          <div className="max-w-md w-full bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl border border-border p-8 text-center">
+            <EmptyState
               icon={Landmark}
               title="Initialize Financial Accounts"
               description="Configure your baseline financial settings to begin tracking revenue, costs, and profitability."
@@ -301,8 +301,8 @@ export default function FinancePage() {
 
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 bg-surface">
-        <div className="max-w-md w-full glass-panel rounded-xl border border-border p-8 text-center">
-          <PremiumEmptyState
+        <div className="max-w-md w-full bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl border border-border p-8 text-center">
+          <EmptyState
             icon={Landmark}
             title="Setup Financial Tracking"
             description="Your workspace currently has no financial data. Manage clients, generate invoices, track expenses, and monitor profitability."
@@ -462,7 +462,7 @@ export default function FinancePage() {
       {activeTab === 'forecast' ? (
         <FinanceCommandCenter />
       ) : activeTab === 'billing' ? (
-        <div className="premium-panel rounded-2xl flex flex-col border border-[var(--border-soft)] p-0">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl flex flex-col border border-[var(--border-soft)] p-0">
           <BillingSettings />
         </div>
       ) : (
@@ -497,7 +497,7 @@ export default function FinancePage() {
       
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-1">
-        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">
             <TrendingUp className="text-emerald-400 w-4 h-4" />
             <span>Revenue</span>
@@ -512,7 +512,7 @@ export default function FinancePage() {
           </div>
         </div>
         
-        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">
             <Receipt className="text-amber-400 w-4 h-4" />
             <span>Pending Receivables</span>
@@ -527,7 +527,7 @@ export default function FinancePage() {
           )}
         </div>
  
-        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">
             <TrendingDown className="text-rose-400 w-4 h-4" />
             <span>Salary Cost</span>
@@ -542,7 +542,7 @@ export default function FinancePage() {
           </div>
         </div>
  
-        <div className="premium-panel premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 border border-[var(--border-soft)]">
           <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-[var(--text-secondary)]">
             <Wallet className={netProfit >= 0 ? "text-emerald-400 w-4 h-4" : "text-rose-400 w-4 h-4"} />
             <span>Net Profit</span>
@@ -563,7 +563,7 @@ export default function FinancePage() {
         
         {/* Adjustments Section - visible if closed and adjustments exist */}
         {['reports', 'budgets'].includes(activeTab) && isClosed && periodAdjustments.length > 0 ? (
-          <div className="premium-panel rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)]">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)]">
             <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <History className="w-4 h-4 text-amber-400" />
@@ -599,7 +599,7 @@ export default function FinancePage() {
 
         {/* Project Profitability Section */}
         {activeTab === 'reports' && projectProfitability.length > 0 && (
-          <div className="premium-panel rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)]">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)]">
             <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center bg-indigo-500/5">
               <div className="flex items-center gap-2">
                 <Icon name="monitoring" size={16} className="text-indigo-400" />
@@ -649,7 +649,7 @@ export default function FinancePage() {
 
         {/* Billable Deliverables Section */}
         {activeTab === 'invoices' && billableMilestones.length > 0 && (
-          <div className="premium-panel rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-emerald-500/30">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-emerald-500/30">
             <div className="px-5 py-4 border-b border-emerald-500/30 flex justify-between items-center bg-emerald-500/5">
               <div className="flex items-center gap-2">
                 <Icon name="check_circle" size={16} className="text-emerald-400" />
@@ -691,13 +691,13 @@ export default function FinancePage() {
         )}
  
         {activeTab === 'invoices' && (
-          <div className="premium-panel rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)]">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)]">
             <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center">
               <h3 className="font-semibold text-sm text-white">Recent Invoices</h3>
             </div>
           <div className="p-0">
             {data.invoices.length === 0 ? (
-              <PremiumEmptyState 
+              <EmptyState 
                 icon={Receipt} 
                 title="No Invoices Issued" 
                 description="Billing history and outstanding invoices will appear here once you generate an invoice for client work."
@@ -807,7 +807,7 @@ export default function FinancePage() {
         )}
  
         {activeTab === 'budgets' && (
-        <div className="premium-panel rounded-2xl flex flex-col border border-[var(--border-soft)]">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl flex flex-col border border-[var(--border-soft)]">
           <div className="px-5 py-4 border-b border-[var(--border-soft)] flex justify-between items-center">
             <h3 className="font-semibold text-sm text-white">Expenses (This Month)</h3>
           </div>
@@ -848,7 +848,7 @@ export default function FinancePage() {
 
         {/* Payroll Empty State */}
         {activeTab === 'payroll' && (
-          <div className="premium-panel rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)] p-12 text-center items-center justify-center">
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl flex flex-col col-span-1 lg:col-span-2 border border-[var(--border-soft)] p-12 text-center items-center justify-center">
             <Building2 className="w-12 h-12 text-indigo-400 mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">Payroll & Compensation Engine</h3>
             <p className="text-sm text-[var(--text-secondary)] mb-6 max-w-md">Detailed payroll management, tax deductions, and salary disbursement are securely handled in the centralized Logistics module.</p>

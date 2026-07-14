@@ -55,7 +55,7 @@ export function PasswordSetup() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen  text-white p-4 font-geist">
-      <div className="max-w-md w-full premium-panel p-8 rounded-2xl">
+      <div className="max-w-md w-full bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-8 rounded-2xl">
         <h2 className="text-2xl font-bold mb-2 text-white">Set Your Password</h2>
         <p className="text-[var(--text-secondary)] text-sm mb-6">Your account was created by HR. Please set a secure password to continue.</p>
         

@@ -3,7 +3,7 @@ import { ShieldCheck, CheckCircle, AlertCircle, FileSignature, Clock, XCircle, L
 import { fetchApprovalInstances, approveStep, rejectStep, ApprovalInstance } from '../../services/approvalService';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 
 export default function ApprovalsPage() {
   const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
@@ -90,7 +90,7 @@ export default function ApprovalsPage() {
             <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
           </div>
         ) : displayList.length === 0 ? (
-          <PremiumEmptyState 
+          <EmptyState 
             icon={FileSignature}
             title={activeTab === 'pending' ? "No pending approvals" : "No approval history"}
             description={activeTab === 'pending' 

@@ -69,6 +69,7 @@ import { EndOfDayModal } from '../../components/execution/EndOfDayModal';
 import { IconContainer } from '../../components/ui/IconContainer';
 import { CompanyHealthModal } from '../../components/dashboard/CompanyHealthModal';
 import { navigate, replace } from '../../lib/navigation';
+import { Sidebar, Header } from '../../components/core';
 
 // Sunset imported above
 
@@ -1051,171 +1052,19 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
         style={{ color: 'var(--pm-on-surface)' }}>
 
         {/* Left Sidebar (Fixed on Desktop, Slide-out on Mobile) */}
-        <aside id="tour-sidebar" className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 ${isSidebarCollapsed ? 'lg:w-[4.5rem] sidebar-collapsed-premium' : 'lg:w-[15.5rem] 2xl:w-[17.5rem]'} border-r z-30 transition-[transform,opacity] duration-200 user-interface`}
-          style={{ 
-            background: isSidebarCollapsed ? 'rgba(8,12,25,0.85)' : 'rgba(5,7,18,0.7)', 
-            borderColor: 'rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(16px)'
-          }}>
-          {/* Sidebar Brand */}
-          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} h-16 px-4 border-b shrink-0`}
-            style={{ borderColor: 'rgba(70,69,84,0.3)' }}>
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-                <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
-              </div>
-              {!isSidebarCollapsed && (
-                <div className="flex-1 min-w-0 premium-fade-in">
-                  <h1 className="font-semibold tracking-tight text-[13px] font-geist truncate" style={{ color: 'var(--pm-primary)' }}>
-                    Resolve PM {workspace?.settings?.companyName ? `| ${getWorkspaceDisplayName(workspace.settings.companyName, false)}` : ''}
-                  </h1>
-                  <p className="text-[9px] font-mono-pm uppercase tracking-[0.15em] truncate" style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}>Enterprise Orchestration</p>
-                </div>
-              )}
-            </div>
-            {!isSidebarCollapsed && (
-              <button onClick={() => setIsSidebarCollapsed(true)} className="p-1 rounded hover:bg-[var(--pm-surface)]/5 text-text-tertiary hover:text-text-primary transition-colors">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          {isSidebarCollapsed && (
-            <button onClick={() => setIsSidebarCollapsed(false)} className="mx-auto mt-2 p-1 rounded hover:bg-[var(--pm-surface)]/5 text-text-tertiary hover:text-text-primary transition-colors">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Nav — Executive Domains */}
-          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 pm-scrollbar">
-            {visibleDomains.map(domain => {
-              const isActive = activeDomain?.id === domain.id;
-              const isIntelligence = domain.id === 'knowledge-hub' || domain.id === 'strategic-oversight';
-              const activeColor = domain.id === 'automation-engine' ? '#f59e0b' : isIntelligence ? '#14b8a6' : 'var(--pm-primary)';
-
-              return (
-                <button
-                  key={domain.id}
-                  title={isSidebarCollapsed ? domain.label : undefined}
-                  onClick={() => handleDomainClick(domain.id)}
-                  className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-0 h-10 w-10 mx-auto' : 'w-full gap-3 px-3 py-2.5'} rounded-lg text-[12px] font-medium transition-all duration-200`}
-                  style={isActive ? (
-                    isSidebarCollapsed ? {
-                      background: 'rgba(124, 58, 237, 0.18)',
-                      color: '#a78bfa',
-                      boxShadow: '0 0 12px rgba(124, 58, 237, 0.35)',
-                    } : {
-                      background: 'var(--pm-surface-high)',
-                      color: activeColor,
-                      borderLeft: `3px solid ${activeColor}`,
-                      paddingLeft: '9px',
-                    }
-                  ) : {
-                    color: 'rgba(156, 163, 175, 0.7)',
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) {
-                      (e.currentTarget as any).style.background = 'rgba(255, 255, 255, 0.03)';
-                      (e.currentTarget as any).style.color = 'var(--pm-on-surface)';
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) {
-                      (e.currentTarget as any).style.background = '';
-                      (e.currentTarget as any).style.color = 'rgba(156, 163, 175, 0.7)';
-                    }
-                  }}
-                >
-                  <IconContainer className={isSidebarCollapsed ? 'w-8 h-8 rounded-lg' : ''}>
-                    {renderRouteIcon(domain.iconName)}
-                  </IconContainer>
-                  {!isSidebarCollapsed && (
-                    <div className="flex flex-col text-left">
-                      <span className="whitespace-nowrap premium-fade-in">{domain.label}</span>
-                      {domain.id === 'mission-control' && (
-                        <span className="text-[9px] text-[var(--text-secondary)] font-normal leading-tight mt-0.5 whitespace-normal break-words pr-2 opacity-70">Your daily overview of work, team, and priorities</span>
-                      )}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {disclosure.active && disclosure.nextUnlock && (
-            <ProgressiveUnlockHint
-              message={disclosure.nextUnlock.message}
-              nextLevel={disclosure.nextUnlock.level}
-              lockedCount={disclosure.lockedCount}
-              onShowAll={hasCapability(profile, 'settings.manage') ? handleShowAllFeatures : undefined}
-            />
-          )}
-
-          {/* Bottom utility strip */}
-          <div className="shrink-0 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-            <button
-              onClick={() => (window as any).startOnboardingTour?.()}
-              className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 h-10 mx-auto' : 'w-full gap-2.5 px-5 py-2.5'} transition-colors text-[11px] font-geist`}
-              style={{ color: 'var(--pm-on-surface-variant)', opacity: 0.5 }}
-              onMouseEnter={e => { (e.currentTarget as any).style.opacity = '1'; }}
-              onMouseLeave={e => { (e.currentTarget as any).style.opacity = '0.5'; }}
-              title={isSidebarCollapsed ? 'Help & Documentation' : undefined}
-            >
-              <HelpCircle className="w-3.5 h-3.5 shrink-0" />
-              {!isSidebarCollapsed && <span className="premium-fade-in whitespace-nowrap">Help & Documentation</span>}
-            </button>
-
-            {/* User identity strip */}
-            <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center flex-col gap-2.5 px-2' : 'gap-3 px-4'} py-3 border-t`} style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-              <div
-                onClick={() => setIsProfileOpen(true)}
-                className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden shrink-0 cursor-pointer transition-all hover:scale-105"
-                style={{ background: 'rgba(192,193,255,0.08)', border: '1px solid rgba(192,193,255,0.2)' }}
-                title="View Profile"
-              >
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                ) : profile?.full_name ? (
-                  <span className="text-[10px] font-bold text-white">{profile.full_name.substring(0, 2).toUpperCase()}</span>
-                ) : (
-                  <Users className="w-3.5 h-3.5 text-white" />
-                )}
-              </div>
-              {!isSidebarCollapsed && (
-                <div className="flex-1 min-w-0 premium-fade-in">
-                  <p className="text-[12px] font-medium truncate font-geist" style={{ color: 'var(--pm-on-surface)' }}>
-                    {profile?.full_name || user.email?.split('@')[0]}
-                  </p>
-                  <p className="text-[9px] truncate capitalize font-mono-pm" style={{ color: 'var(--pm-primary)', opacity: 0.7 }}>
-                    {(profile && userCustomRoles[profile.id]) || profile?.role?.replace('_', ' ') || 'Viewer'}
-                  </p>
-                </div>
-              )}
-              <div className={`flex ${isSidebarCollapsed ? 'flex-col gap-1' : 'items-center'}`}>
-                <button
-                  onClick={handleLogout}
-                  className="p-1.5 rounded-md transition-colors cursor-pointer"
-                  style={{ color: 'var(--pm-on-surface-variant)' }}
-                  onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-color-error, #f87171)'; (e.currentTarget as any).style.background = 'rgba(255,180,171,0.08)'; }}
-                  onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
-                  title="Sign Out"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="sr-only">Logout</span>
-                </button>
-                <button
-                  onClick={() => navigate('/control/settings')}
-                  className={`p-1.5 rounded-md transition-colors cursor-pointer ${isSidebarCollapsed ? '' : 'ml-1'}`}
-                  style={{ color: 'var(--pm-on-surface-variant)' }}
-                  onMouseEnter={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface)'; (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; }}
-                  onMouseLeave={e => { (e.currentTarget as any).style.color = 'var(--pm-on-surface-variant)'; (e.currentTarget as any).style.background = ''; }}
-                  title="Settings"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </aside>
+        <Sidebar
+          isSidebarCollapsed={isSidebarCollapsed}
+          setIsSidebarCollapsed={setIsSidebarCollapsed}
+          visibleDomains={visibleDomains}
+          activeDomain={activeDomain}
+          handleDomainClick={handleDomainClick}
+          profile={profile}
+          workspace={workspace}
+          disclosure={disclosure}
+          setIsProfileOpen={setIsProfileOpen}
+          onLogout={handleLogout}
+          onStartTour={() => (window as any).startOnboardingTour?.()}
+        />
 
         {/* Mobile Slide-out Sidebar Drawer */}
         <AnimatePresence>
@@ -1269,16 +1118,11 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
                           handleDomainClick(domain.id);
                           setMobileSidebarOpen(false);
                         }}
-                        className={`w-full flex items-center gap-3 2xl:gap-4 px-3 2xl:px-4 py-2.5 2xl:py-3.5 rounded-lg text-xs 2xl:text-sm font-medium transition-all ${isActive ? 'shadow-sm' : 'hover:bg-surface-high hover:text-text-primary'
-                          }`}
-                        style={isActive ? {
-                          background: 'var(--pm-surface-high)',
-                          color: activeColor,
-                          borderLeft: `3px solid ${activeColor}`,
-                          paddingLeft: '9px',
-                        } : {
-                          color: 'var(--pm-on-surface-variant)',
-                        }}
+                        className={`w-full flex items-center gap-3 2xl:gap-4 px-3 2xl:px-4 py-2.5 2xl:py-3.5 rounded-lg text-xs 2xl:text-sm font-medium transition-all border-l-2 ${
+                          isActive 
+                            ? 'bg-[var(--color-primary-subtle)] text-[var(--color-text-primary)] border-[var(--color-primary)] pl-2.5' 
+                            : 'bg-transparent text-[var(--color-text-secondary)] border-transparent hover:bg-white/[0.02] hover:text-[var(--color-text-primary)] pl-2.5'
+                        }`}
                       >
                         <div className="2xl:scale-110 transition-transform duration-200">
                           {renderRouteIcon(domain.iconName)}
@@ -1347,173 +1191,54 @@ export default function DashboardLayout({ children }: { children?: React.ReactNo
             </div>
           )}
           {/* Top Bar — utility layer, operational status */}
-          <header id="tour-topbar" className="h-12 flex items-center justify-between px-5 border-b sticky top-0 z-40 backdrop-blur-2xl transition-colors duration-200 shadow-sm user-interface"
-            style={{ background: 'color-mix(in srgb, var(--pm-surface) 95%, transparent)', borderColor: 'var(--pm-border-subtle)' }}>
-            {/* Mobile menu toggle */}
-            <div className="flex items-center gap-3 lg:hidden">
-              <button
-                onClick={() => setMobileSidebarOpen(true)}
-                className="p-1.5 border border-border-subtle bg-surface-3 rounded-md text-text-tertiary"
-              >
-                <Menu className="w-4 h-4" />
-              </button>
-              <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0">
-                <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
-              </div>
-            </div>
-
-            {/* Top bar center: Dynamic Subsections Pill Tabs */}
-            <div className="flex items-center gap-1 font-geist mx-auto flex-1 justify-start sm:justify-center px-4 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              {activeDomain?.subsections.map(sub => {
-                const isSubActive = activeSubsection === sub;
-                return (
-                  <button
-                    key={sub.path}
-                    onClick={() => navigate(sub.path)}
-                    className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all whitespace-nowrap`}
-                    style={isSubActive ? {
-                      background: 'var(--pm-primary)',
-                      color: 'var(--pm-on-primary)',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                    } : {
-                      color: 'var(--pm-on-surface-variant)',
-                      background: 'transparent'
-                    }}
-                    onMouseEnter={e => { if (!isSubActive) { (e.currentTarget as any).style.background = 'var(--pm-surface-high)'; } }}
-                    onMouseLeave={e => { if (!isSubActive) { (e.currentTarget as any).style.background = 'transparent'; } }}
-                  >
-                    {sub.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Top bar right: compact utilities */}
-            <div className="flex items-center gap-2 ml-auto">
-
-              {/* Search */}
-              <div
-                onClick={() => setCommandPaletteOpen(true)}
-                className="hidden md:flex items-center gap-2 bg-surface-highest hover:bg-surface-3 border border-border h-8 px-3 rounded-md text-text-secondary cursor-pointer transition-all shadow-sm focus-within:border-accent-primary focus-within:ring-1 focus-within:ring-accent-primary"
-              >
-                <Search className="w-3.5 h-3.5 text-text-tertiary" />
-                <span className="text-[11px] select-none font-mono flex-1 text-left">Search...</span>
-                <span className="ml-2 bg-surface border border-border-subtle px-1.5 py-0.5 rounded text-[9px] font-mono tracking-tighter text-text-quaternary shadow-inner">Cmd/Ctrl + K</span>
-              </div>
-
-              {/* View As Role Tool */}
-              {hasCapability(trueProfile?.role, 'user.manage') && (
-                  <div className="relative group flex items-center">
-                  <select
-                    value={simulatedRole || ''}
-                    onChange={(e) => setSimulatedRole(e.target.value ? (e.target.value as UserRole) : null)}
-                    className={`h-8 pl-3 pr-8 rounded-md text-[11px] font-medium border appearance-none cursor-pointer transition-all ${
-                      isSimulating 
-                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.2)]' 
-                        : 'bg-surface-highest border-border text-text-secondary hover:bg-surface-3'
-                    }`}
-                    title="View As Role Tool"
-                  >
-                    <option value="">View As: Super Admin</option>
-                    <option value="pm">Simulate: PM</option>
-                    <option value="developer">Simulate: Developer</option>
-                    <option value="external_client">Simulate: Client</option>
-                  </select>
-                  <div className={`absolute right-2 pointer-events-none ${isSimulating ? 'text-amber-500' : 'text-text-tertiary'}`}>
-                    <ChevronDown className="w-3 h-3" />
-                  </div>
-                </div>
-                )}
-
-              {/* Sandbox Toggle */}
-              {hasCapability(profile?.role, 'sandbox.manage') && (
-                  <button
-                  onClick={async () => {
-                    if (!workspace || !user) return;
-                    setIsSandboxTransitioning(true);
-                    notify('Transitioning environment...', 'info');
-                    try {
-                      if (!isSandboxMode) {
-                        // Enter Sandbox — save the current (parent) workspace ID so we can reliably exit
-                        localStorage.setItem('resolve-sandbox-parent-workspace', workspace.id);
-                        await cloneWorkspaceToSandbox(workspace.id, user.id);
-                        setIsSandboxMode(true);
-                        localStorage.setItem('resolve-sandbox-mode', 'true');
-                        notify('Sandbox Mode Activated - Data isolated.', 'success');
-                        setTimeout(() => window.location.reload(), 1000);
-                      } else {
-                        // Exit Sandbox — use stored parent workspace ID (DB may not set parent_workspace_id)
-                        const parentId = workspace.parent_workspace_id || localStorage.getItem('resolve-sandbox-parent-workspace');
-                        if (parentId && user) {
-                          await switchWorkspace(user.id, parentId);
-                        }
-                        setIsSandboxMode(false);
-                        localStorage.setItem('resolve-sandbox-mode', 'false');
-                        localStorage.removeItem('resolve-sandbox-parent-workspace');
-                        notify('Exited Sandbox - Returning to Production.', 'success');
-                        setTimeout(() => window.location.reload(), 1000);
-                      }
-                    } catch (err: any) {
-                      notify('Failed to transition sandbox: ' + err.message, 'error');
-                    } finally {
-                      setIsSandboxTransitioning(false);
-                    }
-                  }}
-                  disabled={isSandboxTransitioning}
-                  className={`p-1.5 border rounded-md transition-all shrink-0 cursor-pointer shadow-sm flex items-center gap-1 px-2 ${
-                    isSandboxMode 
-                      ? 'bg-blue-500/20 border-blue-500/50 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]' 
-                      : 'border-border bg-surface-highest hover:bg-surface-3 text-text-secondary hover:text-text-primary'
-                  } ${isSandboxTransitioning ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title="Toggle Sandbox Training Mode"
-                >
-                  <Shield className={`w-3.5 h-3.5 ${isSandboxTransitioning ? 'animate-spin' : ''}`} />
-                  <span className="text-[10px] font-bold tracking-wider uppercase hidden sm:inline">Sandbox</span>
-                </button>
-              )}
-
-              {/* Theme */}
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-1.5 border border-border bg-surface-highest hover:bg-surface-3 rounded-md text-text-secondary hover:text-text-primary transition-all shrink-0 cursor-pointer shadow-sm"
-                title={theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
-              >
-                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-
-              {/* End Day */}
-              <button
-                onClick={() => setIsEndOfDayModalOpen(true)}
-                className="p-1.5 border border-border bg-surface-highest hover:bg-surface-3 rounded-md text-indigo-400 hover:text-indigo-300 transition-all shrink-0 cursor-pointer shadow-sm"
-                title="Finish My Day"
-              >
-                <Sunset className="w-4 h-4" />
-              </button>
-
-              {/* Help Escalation */}
-              <button
-                onClick={() => setSupportModalOpen(true)}
-                className="p-1.5 border border-border bg-surface-highest hover:bg-surface-3 rounded-md text-indigo-400 hover:text-indigo-300 transition-all shrink-0 cursor-pointer shadow-sm"
-                title="Support Escalation"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </button>
-
-              <ActionInbox />
-
-              {/* New Project CTA */}
-              {profile && hasCapability(profile.role, 'project.update') && (
-                <button
-                  onClick={() => setIsAdding(true)}
-                  className="flex items-center gap-1.5 text-[11px] font-medium h-7 px-3 rounded-md transition-all cursor-pointer shrink-0 active:scale-95"
-                  style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)', fontFamily: 'Geist, sans-serif' }}
-                >
-                  <Plus className="w-3 h-3" />
-                  <span className="hidden sm:inline">New Project</span>
-                </button>
-              )}
-            </div>
-          </header>
+          <Header
+            activeDomain={activeDomain}
+            activeSubsection={activeSubsection}
+            setMobileSidebarOpen={setMobileSidebarOpen}
+            setCommandPaletteOpen={setCommandPaletteOpen}
+            isSandboxMode={isSandboxMode}
+            isSandboxTransitioning={isSandboxTransitioning}
+            theme={theme}
+            setTheme={setTheme}
+            setIsEndOfDayModalOpen={setIsEndOfDayModalOpen}
+            setSupportModalOpen={setSupportModalOpen}
+            setIsAdding={setIsAdding}
+            profile={profile}
+            trueProfile={trueProfile}
+            simulatedRole={simulatedRole}
+            setSimulatedRole={setSimulatedRole}
+            isSimulating={isSimulating}
+            onNavigate={navigate}
+            onToggleSandbox={async () => {
+              if (!workspace || !user) return;
+              setIsSandboxTransitioning(true);
+              notify('Transitioning environment...', 'info');
+              try {
+                if (!isSandboxMode) {
+                  localStorage.setItem('resolve-sandbox-parent-workspace', workspace.id);
+                  await cloneWorkspaceToSandbox(workspace.id, user.id);
+                  setIsSandboxMode(true);
+                  localStorage.setItem('resolve-sandbox-mode', 'true');
+                  notify('Sandbox Mode Activated - Data isolated.', 'success');
+                  setTimeout(() => window.location.reload(), 1000);
+                } else {
+                  const parentId = workspace.parent_workspace_id || localStorage.getItem('resolve-sandbox-parent-workspace');
+                  if (parentId && user) {
+                    await switchWorkspace(user.id, parentId);
+                  }
+                  setIsSandboxMode(false);
+                  localStorage.setItem('resolve-sandbox-mode', 'false');
+                  localStorage.removeItem('resolve-sandbox-parent-workspace');
+                  notify('Exited Sandbox - Returning to Production.', 'success');
+                  setTimeout(() => window.location.reload(), 1000);
+                }
+              } catch (err: any) {
+                notify('Failed to transition sandbox: ' + err.message, 'error');
+              } finally {
+                setIsSandboxTransitioning(false);
+              }
+            }}
+          />
 
           {/* Context Header — Welcome + operational context (Simplified to reduce visual noise) */}
           {window.location.pathname === '/workspace' && (

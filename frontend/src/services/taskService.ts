@@ -1,6 +1,8 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { activityLogService } from './activityLogService';
 import { logServiceFailure } from '../utils/supabaseError';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
+
 
 export interface CreateTaskInput {
   workspace_id: string;
@@ -67,6 +69,26 @@ export async function createTask(input: CreateTaskInput): Promise<{ id: string }
             generated_task_id: data.id
           });
         }
+      }
+
+      try {
+        await enterpriseEventPublisher.publish({
+          workspace_id: input.workspace_id,
+          user_id: input.assignee_id, // Or current session, which publisher automatically falls back to if omitted
+          entity_type: 'task',
+          entity_id: data.id,
+          verb: 'created',
+          title: 'Task Created',
+          description: `Task "${input.name}" was created.`,
+          severity: 'low',
+          importance: 'normal',
+          icon_key: 'task',
+          visibility: 'public',
+          module: 'projects',
+          metadata: { task_id: data.id, project_id: input.project_id, name: input.name }
+        });
+      } catch (e) {
+        console.error('Failed to log task_created event:', e);
       }
 
       await activityLogService.appendLog({
@@ -157,6 +179,27 @@ export async function archiveTask(taskId: string, workspaceId: string, actorId: 
     await supabase.from('task_dependencies').delete().eq('depends_on_task_id', taskId);
 
     // Audit
+    try {
+      const { data: tData } = await supabase.from('tasks').select('name').eq('id', taskId).maybeSingle();
+      await enterpriseEventPublisher.publish({
+        workspace_id: workspaceId,
+        user_id: actorId,
+        entity_type: 'task',
+        entity_id: taskId,
+        verb: 'archived',
+        title: 'Task Archived',
+        description: `Task "${tData?.name || 'Task'}" was archived.`,
+        severity: 'low',
+        importance: 'normal',
+        icon_key: 'task',
+        visibility: 'public',
+        module: 'projects',
+        metadata: { task_id: taskId }
+      });
+    } catch (e) {
+      console.error('Failed to log task_archived event:', e);
+    }
+
     await activityLogService.appendLog({
       workspace_id: workspaceId,
       actor_id: actorId,

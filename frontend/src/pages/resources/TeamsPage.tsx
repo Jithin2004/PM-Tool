@@ -1,4 +1,4 @@
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 import React, { useState, useEffect } from 'react';
 import { TeamRosterView } from '../../components/resources/TeamRosterView';
 import { SkillsMatrixView } from '../../components/resources/SkillsMatrixView';
@@ -47,22 +47,22 @@ export default function TeamsPage() {
   
   const TEAM_VIEWS = {
     employees: (
-      <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
+      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl border border-border overflow-hidden bg-surface-2">
         <MemberDirectory />
       </div>
     ),
     departments: (
-      <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
+      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl border border-border overflow-hidden bg-surface-2">
         <DepartmentManagement />
       </div>
     ),
     workloadPlanning: (
-      <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
+      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl border border-border overflow-hidden bg-surface-2">
         <TeamRosterView />
       </div>
     ),
     skillsMatrix: (
-      <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2">
+      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl border border-border overflow-hidden bg-surface-2">
         <SkillsMatrixView />
       </div>
     )
@@ -91,8 +91,8 @@ export default function TeamsPage() {
 
       <div className="grid grid-cols-1 gap-6 mt-8">
         {onboardedMembersCount === 0 ? (
-          <div className="glass-panel rounded-xl border border-border overflow-hidden bg-surface-2 p-8">
-             <PremiumEmptyState
+          <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl border border-border overflow-hidden bg-surface-2 p-8">
+             <EmptyState
                icon={Users}
                title="Build Your Team"
                description="No employees have joined this workspace yet. Invite your first team member to unlock Team Directory, Capacity Planning, Skills Matrix and Workload Analytics."

@@ -10,6 +10,7 @@ import { sandboxSeedEngine } from '../../core/engines/sandboxSeedEngine';
 import { clearLicense, onboardWorkspaceTransaction } from '../../lib/productKey';
 import { supabase } from '../../lib/supabase';
 import { sha256 } from '../../utils/cryptoUtils';
+import { enterpriseEventPublisher } from '../../services/enterpriseEventPublisher';
 import { onboardingService, ONBOARDING_STEPS } from '../../services/onboardingService';
 import { TemplatePreview, OperatingTemplate } from '../../components/setup/TemplatePreview';
 import { navigate } from '../../lib/navigation';
@@ -180,6 +181,26 @@ export function WorkspaceSetupWizard() {
           await onboardingService.saveTemplates(createdId, selectedOperatingTemplates);
         }
 
+        try {
+          await enterpriseEventPublisher.publish({
+            workspace_id: createdId,
+            user_id: user?.id,
+            entity_type: 'workspace',
+            entity_id: createdId,
+            verb: 'workspace_created',
+            title: 'Workspace Created',
+            description: `Workspace "${name}" was successfully created and initialized.`,
+            severity: 'low',
+            importance: 'important',
+            icon_key: 'project',
+            visibility: 'public',
+            module: 'workspace',
+            metadata: { companyName: name, selectedOperatingTemplates }
+          });
+        } catch (e) {
+          console.error('Failed to log workspace_created event:', e);
+        }
+
         // Force refresh session to immediately update JWT app_metadata claims
         const { error: refreshError } = await supabase.auth.refreshSession();
         if (refreshError) {
@@ -231,6 +252,26 @@ export function WorkspaceSetupWizard() {
       const result = await onboardWorkspaceTransaction(payload, session.access_token);
       
       if (result.success) {
+          try {
+            await enterpriseEventPublisher.publish({
+              workspace_id: workspaceId,
+              user_id: user?.id,
+              entity_type: 'workspace',
+              entity_id: workspaceId,
+              verb: 'workspace_created',
+              title: 'Workspace Created (Demo)',
+              description: `Demo workspace "${selectedTemplate}" was successfully created.`,
+              severity: 'low',
+              importance: 'important',
+              icon_key: 'project',
+              visibility: 'public',
+              module: 'workspace',
+              metadata: { selectedTemplate }
+            });
+          } catch (e) {
+            console.error('Failed to log workspace_created (demo) event:', e);
+          }
+
           sessionStorage.removeItem('pendingLicenseActivation');
           sessionStorage.removeItem('pending_workspace_name');
           await sandboxSeedEngine.seedSandboxEnvironment(workspaceId, profile!.id, selectedTemplate);
@@ -275,7 +316,7 @@ export function WorkspaceSetupWizard() {
   return (
     <ResolveLayout eyebrow="Onboarding">
       <div className="flex flex-col items-center justify-center w-full min-h-[80vh] py-8 px-4">
-        <section className="premium-panel rounded-2xl p-8 font-geist w-full max-w-2xl">
+        <section className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl p-8 font-geist w-full max-w-2xl">
           
           {/* Onboarding setup completion progress bar */}
           <div className="w-full h-1 bg-white/5 mb-6 rounded-full overflow-hidden">

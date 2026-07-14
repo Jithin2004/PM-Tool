@@ -8,7 +8,7 @@ import { SprintPlanningPanel } from './SprintPlanningPanel';
 import { useAuth } from '../../../context/AuthContext';
 import { useWorkspace } from '../../../context/WorkspaceContext';
 import { Task } from '../../../types';
-import { PremiumEmptyState } from '../../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../../components/core';
 
 function getProjectIdFromPath(): string | null {
   const segments = window.location.pathname.split('/');
@@ -185,7 +185,7 @@ export const BacklogView: React.FC = () => {
 
           {data?.epics.length === 0 && data?.inbox.length === 0 && (
             <div className="max-w-md mx-auto mt-12">
-              <PremiumEmptyState
+              <EmptyState
                 icon={Package}
                 title="Backlog is empty"
                 description="Start by creating an Epic to organize your high-level goals, or add tasks directly to the inbox."

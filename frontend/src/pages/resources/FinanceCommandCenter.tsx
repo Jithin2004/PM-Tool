@@ -63,28 +63,28 @@ export default function FinanceCommandCenter() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="glass-panel p-6 rounded-xl bg-surface-2 border border-border">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-6 rounded-xl bg-surface-2 border border-border">
           <p className="text-xs font-bold uppercase tracking-widest text-text-tertiary mb-2">Available Cash</p>
           <div className="text-3xl font-bold text-text-primary">
             ${riskData?.cash?.toLocaleString() || '0'}
           </div>
         </div>
         
-        <div className="glass-panel p-6 rounded-xl bg-surface-2 border border-border">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-6 rounded-xl bg-surface-2 border border-border">
           <p className="text-xs font-bold uppercase tracking-widest text-text-tertiary mb-2">Monthly Burn</p>
           <div className="text-3xl font-bold text-rose-400">
             ${riskData?.monthlyBurn?.toLocaleString() || '0'}
           </div>
         </div>
 
-        <div className="glass-panel p-6 rounded-xl bg-surface-2 border border-border">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-6 rounded-xl bg-surface-2 border border-border">
           <p className="text-xs font-bold uppercase tracking-widest text-text-tertiary mb-2">Runway</p>
           <div className="text-3xl font-bold text-emerald-400">
             {riskData?.runwayMonths === 999 ? 'Infinite' : `${riskData?.runwayMonths?.toFixed(1)} months`}
           </div>
         </div>
 
-        <div className="glass-panel p-6 rounded-xl bg-surface-2 border border-border">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-6 rounded-xl bg-surface-2 border border-border">
           <p className="text-xs font-bold uppercase tracking-widest text-text-tertiary mb-2">Overdue Receivables</p>
           <div className="text-3xl font-bold text-amber-400">
             ${riskData?.totalOverdue?.toLocaleString() || '0'}
@@ -94,7 +94,7 @@ export default function FinanceCommandCenter() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Payroll Forecast */}
-        <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border">
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-text-primary">
             <Activity className="w-5 h-5 text-indigo-400" /> Payroll Forecast Engine
           </h2>
@@ -118,7 +118,7 @@ export default function FinanceCommandCenter() {
         </div>
 
         {/* Risk Scanner */}
-        <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border">
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-text-primary">
             <Shield className="w-5 h-5 text-amber-400" /> Financial Risk Escalations
           </h2>

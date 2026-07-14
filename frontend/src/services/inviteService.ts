@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { UserRole } from '../types';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
+
 
 export interface CreateInvitationInput {
   email: string;
@@ -53,6 +55,25 @@ export class InviteService {
           return { success: false, error: 'An invitation already exists for this email.' };
         }
         return { success: false, error: error.message };
+      }
+
+      try {
+        await enterpriseEventPublisher.publish({
+          workspace_id: workspaceId,
+          user_id: createdBy,
+          entity_type: 'user',
+          verb: 'user_invited',
+          title: 'User Invited',
+          description: `Invited user ${email} as ${role}.`,
+          severity: 'low',
+          importance: 'important',
+          icon_key: 'warning',
+          visibility: 'admin',
+          module: 'administration',
+          metadata: { email, role }
+        });
+      } catch (e) {
+        console.error('Failed to log user_invited event:', e);
       }
 
       const inviteUrl = `${window.location.origin}/accept-invite/${token}`;

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ProjectCard } from '../../components/project/ProjectCard';
 import { deliverableService, Milestone } from '../../services/deliverableService';
 import { Icon } from '../../components/ui/Icon';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 import { Briefcase } from 'lucide-react';
 import { navigate } from '../../lib/navigation';
 
@@ -113,7 +113,7 @@ export function ClientDeliveryPortal({ profile, projects, notify, workspaceId }:
             ))}
           </div>
         ) : (
-          <PremiumEmptyState
+          <EmptyState
             icon={Briefcase}
             title="No Active Projects"
             description="You do not currently have any active projects deployed in the delivery portal. Once projects are initialized, their progress status will be visualized here."

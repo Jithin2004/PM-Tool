@@ -1,0 +1,30 @@
+/* ================================================================
+   RESOLVE PM — DESIGN BIBLE SPACING TOKENS
+   Source of truth: resolve_pm_design_bible.html (Phase 6, 16)
+   Base unit: 4px
+   ================================================================ */
+
+:root {
+  /* ── Spacing Scale ────────────────────────────────────────── */
+  --space-1:   4px;    /* Icon internal padding, inline gap */
+  --space-2:   8px;    /* Badge padding, tight row gaps */
+  --space-3:   12px;   /* Button padding vertical, form field gap */
+  --space-4:   16px;   /* Card internal padding, section gap */
+  --space-5:   20px;   /* Table row height padding */
+  --space-6:   24px;   /* Content block gap, modal padding */
+  --space-8:   32px;   /* Section heading margin, card grid gap */
+  --space-10:  40px;   /* Page section separation */
+  --space-12:  48px;   /* Content area top padding */
+  --space-16:  64px;   /* Dashboard section margins */
+
+  /* ── Layout Tokens ────────────────────────────────────────── */
+  --layout-sidebar-width:     220px;
+  --layout-sidebar-collapsed: 60px;
+  --layout-header-height:     48px;
+  --layout-content-max-width: 1280px;
+  --layout-content-padding:   32px;
+  --layout-reading-width:     680px;
+  --layout-panel-width:       380px;
+  --layout-table-min-col:     100px;
+  --layout-kanban-col-width:  280px;
+}

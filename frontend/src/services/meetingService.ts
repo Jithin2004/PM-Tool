@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { Meeting, MeetingAttendee } from '../types';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
 
 export const meetingService = {
   async createMeeting(meeting: Omit<Meeting, 'id' | 'created_at' | 'updated_at'>): Promise<Meeting | null> {
@@ -10,19 +11,107 @@ export const meetingService = {
       .select()
       .single();
     if (error) { console.error('meetingService.createMeeting:', error); return null; }
+
+    try {
+      await enterpriseEventPublisher.publish({
+        workspace_id: meeting.workspace_id,
+        user_id: meeting.organizer_id,
+        entity_type: 'meeting',
+        entity_id: data.id,
+        verb: 'meeting_created',
+        title: 'Meeting Scheduled',
+        description: `Meeting "${meeting.title}" was scheduled.`,
+        severity: 'low',
+        importance: 'normal',
+        icon_key: 'meeting',
+        visibility: 'public',
+        module: 'meetings',
+        metadata: { meeting_id: data.id }
+      });
+    } catch (e) {
+      console.error('Failed to log meeting_created event:', e);
+    }
+
     return data as Meeting;
   },
 
   async updateMeeting(id: string, updates: Partial<Meeting>): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
+    const { data: currentMeeting } = await supabase.from('meetings').select('*').eq('id', id).maybeSingle();
     const { error } = await supabase.from('meetings').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
-    return !error;
+    if (error) return false;
+
+    if (currentMeeting) {
+      try {
+        let verb = '';
+        let title = '';
+        let desc = '';
+        if (updates.status === 'started' && currentMeeting.status !== 'started') {
+          verb = 'meeting_started';
+          title = 'Meeting Started';
+          desc = `Meeting "${currentMeeting.title}" has started.`;
+        } else if (updates.status === 'completed' && currentMeeting.status !== 'completed') {
+          verb = 'meeting_ended';
+          title = 'Meeting Ended';
+          desc = `Meeting "${currentMeeting.title}" has ended.`;
+        } else if (updates.minutes && !currentMeeting.minutes) {
+          verb = 'minutes_published';
+          title = 'Minutes Published';
+          desc = `Minutes published for meeting "${currentMeeting.title}".`;
+        }
+
+        if (verb) {
+          await enterpriseEventPublisher.publish({
+            workspace_id: currentMeeting.workspace_id,
+            entity_type: 'meeting',
+            entity_id: id,
+            verb,
+            title,
+            description: desc,
+            severity: 'low',
+            importance: 'normal',
+            icon_key: 'meeting',
+            visibility: 'public',
+            module: 'meetings',
+            metadata: { meeting_id: id }
+          });
+        }
+      } catch (e) {
+        console.error('Failed to log meeting update event:', e);
+      }
+    }
+
+    return true;
   },
 
   async deleteMeeting(id: string): Promise<boolean> {
     if (!isSupabaseConfigured) return false;
+    const { data: currentMeeting } = await supabase.from('meetings').select('*').eq('id', id).maybeSingle();
     const { error } = await supabase.from('meetings').update({ deleted_at: new Date().toISOString() }).eq('id', id).is('deleted_at', null);
-    return !error;
+    if (error) return false;
+
+    if (currentMeeting) {
+      try {
+        await enterpriseEventPublisher.publish({
+          workspace_id: currentMeeting.workspace_id,
+          entity_type: 'meeting',
+          entity_id: id,
+          verb: 'deleted',
+          title: 'Meeting Cancelled',
+          description: `Meeting "${currentMeeting.title}" was cancelled.`,
+          severity: 'low',
+          importance: 'normal',
+          icon_key: 'meeting',
+          visibility: 'public',
+          module: 'meetings',
+          metadata: { meeting_id: id }
+        });
+      } catch (e) {
+        console.error('Failed to log meeting delete event:', e);
+      }
+    }
+
+    return true;
   },
 
   async getMeetings(workspaceId: string, projectId?: string): Promise<Meeting[]> {

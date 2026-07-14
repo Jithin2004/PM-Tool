@@ -1,8 +1,6 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
-import { ActivityFeed } from '../widgets/ActivityFeed';
+import { OperationalTimeline } from '../widgets/OperationalTimeline';
 import { useActivityFeed } from '../../hooks/useActivityFeed';
-import { navigate } from '../../lib/navigation';
-
 
 interface ActivityStreamProps {
   wsId?: string;
@@ -10,29 +8,33 @@ interface ActivityStreamProps {
   maxVirtualWindow?: number;
 }
 
-const IS_SSR = typeof window === 'undefined';
-
 export function ActivityStream({ wsId, onItemClick, maxVirtualWindow = 50 }: ActivityStreamProps) {
-  const { entries, loading, error } = useActivityFeed(wsId);
-
-  const windowed = maxVirtualWindow && entries.length > maxVirtualWindow
-    ? entries.slice(entries.length - maxVirtualWindow)
-    : entries;
+  const { 
+    entries, 
+    loading, 
+    loadingMore, 
+    hasMore, 
+    error, 
+    loadMore, 
+    searchQuery, 
+    setSearchQuery, 
+    filterModule, 
+    setFilterModule 
+  } = useActivityFeed(wsId, maxVirtualWindow);
 
   return (
-    <ActivityFeed
-      entries={windowed}
+    <OperationalTimeline
+      entries={entries}
       loading={loading}
+      loadingMore={loadingMore}
+      hasMore={hasMore}
       error={error}
-      emptyMessage="Activity appears here when team members complete tasks, update milestones, or escalate risks."
-      emptyAction={{
-        label: "View Projects",
-        onClick: () => {
-          navigate('/workspace');
-        }
-      }}
+      onLoadMore={loadMore}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      filterModule={filterModule}
+      setFilterModule={setFilterModule}
       onItemClick={onItemClick}
-      maxItems={maxVirtualWindow}
     />
   );
 }

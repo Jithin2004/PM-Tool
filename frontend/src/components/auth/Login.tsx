@@ -68,10 +68,10 @@ export function Login() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md premium-panel p-10 relative z-10 rounded-2xl"
+        className="w-full max-w-md bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] p-10 relative z-10 rounded-2xl"
       >
         <div className="flex flex-col items-center text-center mb-10">
-          <div className="w-16 h-16 premium-panel flex items-center justify-center rounded-xl mb-6 p-2 shadow-sm">
+          <div className="w-16 h-16 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] flex items-center justify-center rounded-xl mb-6 p-2 shadow-sm">
             <img src="/logo.png" alt="Resolve PM" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-semibold tracking-tight mb-2 text-white">RESOLVE PM</h1>

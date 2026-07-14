@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrainCircuit, CheckCircle2, Clock, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 
 export default function DecisionCenter() {
   const { workspace } = useWorkspace();
@@ -71,7 +71,7 @@ export default function DecisionCenter() {
       </div>
 
       {/* Decision Pipeline */}
-      <div className="glass-panel rounded-xl p-6 bg-surface-2 border border-border">
+      <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 bg-surface-2 border border-border">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-[var(--pm-primary)]">Decision Pipeline</h2>
         </div>
@@ -81,7 +81,7 @@ export default function DecisionCenter() {
             <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : approvals.filter(a => a.status === 'pending').length === 0 ? (
-          <PremiumEmptyState
+          <EmptyState
             icon={CheckCircle2}
             title="No Pending Decisions"
             description="All decisions are resolved. New approval requests will appear here."

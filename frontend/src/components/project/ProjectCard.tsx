@@ -67,7 +67,7 @@ export function ProjectCard({
   return (
     <div
       onClick={() => onClick(project)}
-      className={`group relative premium-panel premium-hover-lift rounded-2xl p-5 cursor-pointer transition-all duration-200 ${
+      className={`group relative bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] premium-hover-lift rounded-2xl p-5 cursor-pointer transition-all duration-200 ${
         isCritical 
           ? 'border-rose-500/30 shadow-[0_0_15px_rgba(239,68,68,0.08)] bg-rose-500/[0.01]' 
           : 'border-[var(--border-soft)]'

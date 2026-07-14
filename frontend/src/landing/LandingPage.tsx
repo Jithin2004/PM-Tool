@@ -67,17 +67,10 @@ export function LandingPage() {
     <div className="font-body-md text-body-md overflow-x-hidden min-h-screen bg-[#0a0c10] text-[#e2e2e5]">
       <style>{`
         html { scroll-behavior: smooth; }
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-        }
       `}</style>
 
       {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-6 lg:px-12 h-16 bg-[#0a0c10]/80 backdrop-blur-xl border-b border-white/5 shadow-sm">
+      <nav className="fixed top-0 w-full z-50 flex justify-between items-center px-6 lg:px-12 h-16 bg-[#0a0c10] border-b border-white/5 shadow-sm">
         <div className="flex items-center gap-8">
           <img src="/logo.png" alt="Resolve PM Logo" className="h-7 w-auto object-contain" />
           <div className="hidden md:flex items-center gap-6">
@@ -112,7 +105,7 @@ export function LandingPage() {
               <button onClick={() => setModalMode('demo')} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-indigo-500/20 transition-all">
                 Explore Demo
               </button>
-              <a href="#pricing" className="glass-panel text-white hover:bg-white/5 px-6 py-3 rounded-xl font-medium transition-all">
+              <a href="#pricing" className="bg-[var(--color-surface-1)] border border-[var(--color-border)] text-white hover:bg-white/5 px-6 py-3 rounded-xl font-medium transition-all">
                 View Pricing
               </a>
             </div>
@@ -162,7 +155,7 @@ export function LandingPage() {
         {/* 3. DAILY OVERVIEW SECTION */}
         <section id="features" className="py-24 scroll-mt-16">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="order-2 lg:order-1 glass-panel p-8 rounded-2xl relative overflow-hidden">
+            <div className="order-2 lg:order-1 bg-[var(--color-surface-1)] border border-[var(--color-border)] p-8 rounded-2xl relative overflow-hidden">
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
                   <h4 className="text-white font-medium">Daily Command Center</h4>
@@ -223,7 +216,7 @@ export function LandingPage() {
                 <li className="flex items-center gap-2 text-sm text-zinc-300"><CheckCircle2 className="w-4 h-4 text-purple-400" /> Progress tracking</li>
               </ul>
             </div>
-            <div className="glass-panel p-2 rounded-xl overflow-hidden hidden md:block">
+            <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-2 rounded-xl overflow-hidden hidden md:block">
               <div className="bg-[#131620] rounded-lg border border-white/5 p-4 h-72 flex flex-col relative overflow-hidden">
                  <div className="flex gap-4 h-full">
                    {/* Column 1: Planning */}
@@ -300,7 +293,7 @@ export function LandingPage() {
         {/* 5. SMART INSIGHTS SECTION */}
         <section className="py-24">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="order-2 lg:order-1 glass-panel p-8 rounded-2xl relative overflow-hidden border-orange-500/20">
+            <div className="order-2 lg:order-1 bg-[var(--color-surface-1)] border border-[var(--color-border)] p-8 rounded-2xl relative overflow-hidden border-orange-500/20">
               <div className="absolute top-0 right-0 p-4">
                 <span className="text-[10px] font-mono text-orange-400/80 uppercase tracking-widest">Workspace Insights</span>
               </div>
@@ -352,7 +345,7 @@ export function LandingPage() {
                 <li className="flex items-center gap-2 text-sm text-zinc-300"><CheckCircle2 className="w-4 h-4 text-cyan-400" /> Workload visibility</li>
               </ul>
             </div>
-            <div className="glass-panel p-6 rounded-2xl text-sm border-cyan-500/10">
+            <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-6 rounded-2xl text-sm border-cyan-500/10">
               <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
                 <span className="text-white font-medium">Team Roster</span>
                 <span className="text-xs bg-cyan-500/10 text-cyan-400 px-2 py-1 rounded">12 Active</span>
@@ -410,7 +403,7 @@ export function LandingPage() {
         {/* 7. FINANCE SECTION */}
         <section className="py-24">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="order-2 lg:order-1 glass-panel p-6 rounded-2xl">
+            <div className="order-2 lg:order-1 bg-[var(--color-surface-1)] border border-[var(--color-border)] p-6 rounded-2xl">
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="p-4 rounded-xl bg-white/5 border border-white/5">
                   <div className="text-xs text-zinc-500 mb-1">Cash Visibility</div>
@@ -458,7 +451,7 @@ export function LandingPage() {
           <div className="max-w-7xl mx-auto px-6 lg:px-12 grid grid-cols-1 md:grid-cols-2 gap-12">
             
             {/* Documents */}
-            <div className="glass-panel p-8 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-colors">
+            <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-8 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-colors">
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-6">
                 <FolderSearch className="text-blue-400 w-5 h-5" />
               </div>
@@ -474,7 +467,7 @@ export function LandingPage() {
             </div>
 
             {/* Automations */}
-            <div className="glass-panel p-8 rounded-2xl border border-white/5 hover:border-yellow-500/30 transition-colors">
+            <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-8 rounded-2xl border border-white/5 hover:border-yellow-500/30 transition-colors">
               <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center mb-6">
                 <Settings2 className="text-yellow-400 w-5 h-5" />
               </div>
@@ -527,7 +520,7 @@ export function LandingPage() {
             </div>
 
             {/* Sandbox */}
-            <div className="glass-panel p-10 rounded-3xl border border-indigo-500/20 text-center relative overflow-hidden bg-indigo-900/10">
+            <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-10 rounded-3xl border border-indigo-500/20 text-center relative overflow-hidden bg-indigo-900/10">
               <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
               <div className="relative z-10">
                 <h3 className="text-2xl font-bold text-white mb-4">Try before adding your company</h3>
@@ -551,7 +544,7 @@ export function LandingPage() {
               Purchase once, set up your workspace, and run your operations without monthly per-user billing.
             </p>
 
-            <div className="glass-panel p-10 rounded-3xl border border-indigo-500/30 text-left relative shadow-[0_0_40px_rgba(99,102,241,0.1)]">
+            <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-10 rounded-3xl border border-indigo-500/30 text-left relative shadow-[0_0_40px_rgba(99,102,241,0.1)]">
               <div className="absolute top-0 right-0 p-6">
                 <span className="bg-indigo-500/20 text-indigo-300 text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-full">One-Time Asset</span>
               </div>

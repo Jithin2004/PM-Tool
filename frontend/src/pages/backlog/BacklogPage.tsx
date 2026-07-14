@@ -5,7 +5,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { EmptyExecutionState } from '../../components/setup/EmptyExecutionState';
 import { ExecutionReadinessPanel } from '../../components/setup/ExecutionReadinessPanel';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState, PageShell, PageHeader, PageContent, Button, Input, Modal } from '../../components/core';
 
 function getProjectIdFromPath(): string | null {
   const segments = window.location.pathname.split('/');
@@ -83,13 +83,13 @@ export default function BacklogPage() {
 
   if (!projectId || !project) {
     return (
-      <main className="max-w-[1200px] mx-auto px-3 sm:px-6 py-12">
+      <PageShell maxWidth="standard">
         <EmptyExecutionState
           icon={Archive}
           title="Project Not Found"
           description="The project you're looking for doesn't exist or has been archived."
         />
-      </main>
+      </PageShell>
     );
   }
 
@@ -97,49 +97,55 @@ export default function BacklogPage() {
   const isScrumOrHybrid = mode === 'SCRUM' || mode === 'HYBRID';
 
   return (
-    <main className="max-w-[1200px] mx-auto px-3 sm:px-6 py-6 sm:py-12">
-      <div className="flex items-center justify-between mb-6 bg-[#090a0f]/40 border border-border p-4 rounded-lg backdrop-blur-md">
-        <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-text-primary">{project.name} — Backlog</h2>
-          <p className="text-[10px] font-mono text-text-tertiary uppercase">
-            {isScrumOrHybrid ? 'Top-down planning: Epics → Stories → Sprints' : 'Planning center'}
-          </p>
-        </div>
-      </div>
+    <PageShell maxWidth="standard">
+      <PageHeader
+        title={`${project.name} — Backlog`}
+        overline="Project Backlog & Sprints"
+        description={isScrumOrHybrid ? 'Top-down planning: Epics → Stories → Sprints' : 'Planning center'}
+      />
 
       <ExecutionReadinessPanel projectId={projectId} />
 
-      <div className="mt-6 space-y-6">
+      <PageContent>
         {/* Section 1: Epics — highest visual priority */}
-        <div className="border border-border rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-surface-3 border-b border-border">
+        <div className="border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-surface-1)]">
+          <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-2)] border-b border-[var(--color-border)]">
             <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-pink-400" />
-              <h3 className="text-xs font-sans tracking-tight uppercase tracking-wider text-text-secondary">Epics</h3>
-              {hasEpics && <span className="text-[9px] font-mono text-text-quaternary bg-[var(--pm-surface)]/5 px-1.5 py-0.5 rounded-sm">{projectEpics.length}</span>}
+              <Layers className="w-4 h-4 text-[var(--color-primary)]" />
+              <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">Epics</h3>
+              {hasEpics && (
+                <span className="text-[10px] font-semibold text-[var(--color-text-muted)] bg-[var(--color-surface-3)] px-1.5 py-0.5 rounded-sm">
+                  {projectEpics.length}
+                </span>
+              )}
             </div>
-            <button onClick={() => setShowCreateEpic(true)} className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider text-text-quaternary hover:text-text-secondary transition-colors">
-              <Plus className="w-3 h-3" /> Add Epic
-            </button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowCreateEpic(true)}
+              className="text-[10px] font-medium"
+            >
+              Add Epic
+            </Button>
           </div>
           <div className="p-4">
             {hasEpics ? (
               <div className="grid gap-2">
                 {projectEpics.map((epic: any) => (
-                  <div key={epic.id} className="flex items-center justify-between p-3 border border-border-subtle rounded-sm bg-surface-3 hover:bg-surface-3 transition-colors">
+                  <div key={epic.id} className="flex items-center justify-between p-3 border border-[var(--color-border)] rounded-lg bg-[var(--color-surface-2)] hover:border-[var(--color-primary)] transition-colors">
                     <div className="flex items-center gap-3">
-                      <GitBranch className="w-3.5 h-3.5 text-pink-400/40" />
-                      <span className="text-xs text-text-secondary">{epic.name}</span>
+                      <GitBranch className="w-4 h-4 text-[var(--color-text-muted)]" />
+                      <span className="text-sm font-medium text-[var(--color-text-primary)]">{epic.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {epic.priority && (
-                        <span className={`text-[9px] font-mono uppercase ${
-                          epic.priority === 'urgent' ? 'text-signal-critical' :
-                          epic.priority === 'high' ? 'text-signal-warning' :
-                          'text-text-quaternary'
+                        <span className={`text-[10px] font-semibold uppercase ${
+                          epic.priority === 'urgent' ? 'text-[var(--color-danger)]' :
+                          epic.priority === 'high' ? 'text-[var(--color-warning)]' :
+                          'text-[var(--color-text-muted)]'
                         }`}>{epic.priority}</span>
                       )}
-                      <span className="text-[9px] font-mono text-text-quaternary uppercase bg-[var(--pm-surface)]/5 px-1.5 py-0.5 rounded-sm">{epic.status}</span>
+                      <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase bg-[var(--color-surface-3)] px-1.5 py-0.5 rounded-sm">{epic.status}</span>
                     </div>
                   </div>
                 ))}
@@ -157,36 +163,40 @@ export default function BacklogPage() {
         </div>
 
         {/* Section 2: Backlog Tasks — second visual priority */}
-        <div className="border border-border rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-surface-3 border-b border-border">
+        <div className="border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-surface-1)]">
+          <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-2)] border-b border-[var(--color-border)]">
             <div className="flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-signal-info" />
-              <h3 className="text-xs font-sans tracking-tight uppercase tracking-wider text-text-secondary">Backlog Tasks</h3>
-              {hasBacklogTasks && <span className="text-[9px] font-mono text-text-quaternary bg-[var(--pm-surface)]/5 px-1.5 py-0.5 rounded-sm">{backlogTasks.length}</span>}
+              <ClipboardList className="w-4 h-4 text-[var(--color-primary)]" />
+              <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">Backlog Tasks</h3>
+              {hasBacklogTasks && (
+                <span className="text-[10px] font-semibold text-[var(--color-text-muted)] bg-[var(--color-surface-3)] px-1.5 py-0.5 rounded-sm">
+                  {backlogTasks.length}
+                </span>
+              )}
             </div>
           </div>
           <div className="p-4">
             {hasBacklogTasks ? (
               <div className="grid gap-1">
                 {backlogTasks.slice(0, 30).map((task: any) => (
-                  <div key={task.id} className="flex items-center justify-between p-2.5 border border-border-subtle rounded-sm hover:bg-surface-3 transition-colors">
+                  <div key={task.id} className="flex items-center justify-between p-2.5 border border-[var(--color-border)] rounded-lg hover:border-[var(--color-primary)] transition-colors">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        task.priority === 'urgent' ? 'bg-red-500' :
-                        task.priority === 'high' ? 'bg-amber-500' :
-                        'bg-[var(--pm-surface)]/20'
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${
+                        task.priority === 'urgent' ? 'bg-[var(--color-danger)]' :
+                        task.priority === 'high' ? 'bg-[var(--color-warning)]' :
+                        'bg-[var(--color-border)]'
                       }`} />
-                      <span className="text-xs text-text-tertiary truncate">{task.name}</span>
+                      <span className="text-sm text-[var(--color-text-secondary)] truncate">{task.name}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {task.story_points > 0 && (
-                        <span className="text-[9px] text-text-quaternary">{task.story_points}pt</span>
+                        <span className="text-[11px] text-[var(--color-text-muted)] font-medium">{task.story_points}pt</span>
                       )}
                       {task.priority && (
-                        <span className={`text-[9px] font-mono uppercase ${
-                          task.priority === 'urgent' ? 'text-signal-critical' :
-                          task.priority === 'high' ? 'text-signal-warning' :
-                          'text-text-quaternary'
+                        <span className={`text-[10px] font-semibold uppercase ${
+                          task.priority === 'urgent' ? 'text-[var(--color-danger)]' :
+                          task.priority === 'high' ? 'text-[var(--color-warning)]' :
+                          'text-[var(--color-text-muted)]'
                         }`}>{task.priority}</span>
                       )}
                     </div>
@@ -194,14 +204,14 @@ export default function BacklogPage() {
                 ))}
               </div>
             ) : (
-              <PremiumEmptyState
+              <EmptyState
                 icon={Zap}
                 title="Your Backlog is Empty"
                 description="The backlog is where your team lines up future work. Add tasks here so developers always know what's coming next."
                 action={
-                  <button onClick={() => hasEpics ? {} : setShowCreateEpic(true)} className="btn-premium-primary px-4 py-2 rounded text-xs mt-2">
+                  <Button onClick={() => hasEpics ? {} : setShowCreateEpic(true)} size="sm">
                     {hasEpics ? 'Create First Task' : 'Start with an Epic First'}
-                  </button>
+                  </Button>
                 }
               />
             )}
@@ -210,15 +220,20 @@ export default function BacklogPage() {
 
         {/* Section 3: Sprint — lowest visual priority for empty state */}
         {isScrumOrHybrid && !hasBacklogTasks && (
-          <div className="border border-border rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 bg-surface-3 border-b border-border">
+          <div className="border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-surface-1)]">
+            <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-2)] border-b border-[var(--color-border)]">
               <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-signal-safe" />
-                <h3 className="text-xs font-sans tracking-tight uppercase tracking-wider text-text-secondary">Sprint</h3>
+                <Target className="w-4 h-4 text-[var(--color-success)]" />
+                <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">Sprint</h3>
               </div>
-              <button onClick={() => setShowCreateSprint(true)} className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider text-text-quaternary hover:text-text-secondary transition-colors">
-                <Plus className="w-3 h-3" /> Start Sprint
-              </button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowCreateSprint(true)}
+                className="text-[10px] font-medium"
+              >
+                Start Sprint
+              </Button>
             </div>
             <div className="p-4">
               <EmptyExecutionState
@@ -231,63 +246,66 @@ export default function BacklogPage() {
             </div>
           </div>
         )}
-      </div>
+      </PageContent>
 
-      {/* Inline create forms */}
-      {showCreateEpic && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg backdrop-blur-sm" onClick={() => setShowCreateEpic(false)}>
-          <div className="bg-bg border border-border rounded-lg p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Create Epic</h3>
-            <input
-              value={newEpicName}
-              onChange={e => setNewEpicName(e.target.value)}
-              placeholder="Epic name"
-              className="w-full bg-[var(--pm-surface)]/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border mb-4"
-              onKeyDown={e => e.key === 'Enter' && handleCreateEpic()}
-            />
-            <div className="flex items-center gap-2">
-              <button onClick={handleCreateEpic} className="px-4 py-2 bg-pink-600 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-pink-500 transition-all rounded-sm">Create</button>
-              <button onClick={() => setShowCreateEpic(false)} className="px-4 py-2 text-text-quaternary text-[10px] font-mono uppercase tracking-wider hover:text-text-tertiary transition-all">Cancel</button>
-            </div>
+      {/* Core Dialog Modals */}
+      <Modal
+        isOpen={showCreateEpic}
+        onClose={() => setShowCreateEpic(false)}
+        title="Create Epic"
+        primaryActionLabel="Create"
+        onPrimaryAction={handleCreateEpic}
+        secondaryActionLabel="Cancel"
+        onSecondaryAction={() => setShowCreateEpic(false)}
+      >
+        <Input
+          label="Epic Name *"
+          required
+          value={newEpicName}
+          onChange={e => setNewEpicName(e.target.value)}
+          placeholder="Enter epic name"
+          onKeyDown={e => e.key === 'Enter' && handleCreateEpic()}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={showCreateSprint}
+        onClose={() => setShowCreateSprint(false)}
+        title="Create Sprint"
+        primaryActionLabel="Create"
+        onPrimaryAction={handleCreateSprint}
+        secondaryActionLabel="Cancel"
+        onSecondaryAction={() => setShowCreateSprint(false)}
+      >
+        <div className="space-y-4">
+          <Input
+            label="Sprint Name *"
+            required
+            value={newSprintName}
+            onChange={e => setNewSprintName(e.target.value)}
+            placeholder="Sprint name"
+          />
+          <Input
+            label="Sprint Goal (Optional)"
+            value={newSprintGoal}
+            onChange={e => setNewSprintGoal(e.target.value)}
+            placeholder="Sprint goal description"
+          />
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-medium text-[var(--color-text-secondary)]">Duration</label>
+            <select
+              value={newSprintDuration}
+              onChange={e => setNewSprintDuration(parseInt(e.target.value))}
+              className="w-full bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg px-4 py-3 text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)] transition-all"
+            >
+              <option value={1}>1 Week</option>
+              <option value={2}>2 Weeks</option>
+              <option value={3}>3 Weeks</option>
+              <option value={4}>4 Weeks</option>
+            </select>
           </div>
         </div>
-      )}
-
-      {showCreateSprint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg backdrop-blur-sm" onClick={() => setShowCreateSprint(false)}>
-          <div className="bg-bg border border-border rounded-lg p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-xs font-sans tracking-tight uppercase tracking-wide text-text-secondary mb-4">Create Sprint</h3>
-            <div className="space-y-3">
-              <input
-                value={newSprintName}
-                onChange={e => setNewSprintName(e.target.value)}
-                placeholder="Sprint name"
-                className="w-full bg-[var(--pm-surface)]/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border"
-              />
-              <input
-                value={newSprintGoal}
-                onChange={e => setNewSprintGoal(e.target.value)}
-                placeholder="Sprint goal (optional)"
-                className="w-full bg-[var(--pm-surface)]/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary placeholder-white/20 outline-none focus:border-border"
-              />
-              <select
-                value={newSprintDuration}
-                onChange={e => setNewSprintDuration(parseInt(e.target.value))}
-                className="w-full bg-[var(--pm-surface)]/5 border border-border rounded-sm px-3 py-2 text-xs font-mono text-text-secondary outline-none focus:border-border"
-              >
-                <option value={1}>1 Week</option>
-                <option value={2}>2 Weeks</option>
-                <option value={3}>3 Weeks</option>
-                <option value={4}>4 Weeks</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2 mt-4">
-              <button onClick={handleCreateSprint} className="px-4 py-2 bg-green-600 text-text-primary text-[10px] font-medium uppercase tracking-wider hover:bg-green-500 transition-all rounded-sm">Create</button>
-              <button onClick={() => setShowCreateSprint(false)} className="px-4 py-2 text-text-quaternary text-[10px] font-mono uppercase tracking-wider hover:text-text-tertiary transition-all">Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </main>
+      </Modal>
+    </PageShell>
   );
 }

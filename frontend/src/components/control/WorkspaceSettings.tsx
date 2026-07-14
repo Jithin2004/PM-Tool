@@ -14,6 +14,7 @@ import { ExportCenter } from './ExportCenter';
 import { BillingSettings } from './BillingSettings';
 import { showPrompt } from '../../components/common/Dialogs';
 import { replace } from '../../lib/navigation';
+import { PageShell, PageHeader, PageContent } from '../core';
 
 
 const TABS = [
@@ -160,12 +161,13 @@ export function WorkspaceSettings() {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-8 premium-fade-in-up pb-32">
-      <div className="relative">
-        <div className="absolute -inset-1 bg-gradient-to-r from-accent-primary/20 via-accent-secondary/20 to-transparent blur-2xl opacity-50 -z-10" />
-        <h2 className="text-4xl font-semibold tracking-tight text-white mb-2">Company Control Center</h2>
-        <p className="text-xs text-[var(--text-secondary)] tracking-wide max-w-2xl">Unified settings and operational rules for your organization.</p>
-      </div>
+    <PageShell maxWidth="standard" className="pb-32">
+      <PageHeader
+        title="Company Control Center"
+        overline="Workspace Settings"
+        description="Unified settings and operational rules for your organization."
+      />
+      <PageContent>
 
       <WorkspaceReadiness />
       <OperationalHealth />
@@ -186,8 +188,9 @@ export function WorkspaceSettings() {
           </button>
         ))}
       </div>
+    </PageContent>
 
-      <div className="mt-8">
+    <div className="mt-8">
         {activeTab === 'general_setup' && (
           <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
             <div className="premium-panel border border-[var(--border-soft)] rounded-2xl p-6 sm:p-8">
@@ -398,7 +401,7 @@ export function WorkspaceSettings() {
         <PilotReadinessPanel />
         <WorkspaceDangerZone />
       </div>
-    </div>
+    </PageShell>
   );
 }
 

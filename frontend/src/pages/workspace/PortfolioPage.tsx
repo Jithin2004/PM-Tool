@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { PageShell, PageHeader, PageContent, Button } from '../../components/core';
 
 import { useAuth } from '../../context/AuthContext';
 import { Icon } from '../../components/ui/Icon';
@@ -81,24 +82,20 @@ export default function PortfolioPage() {
   }, [projects, tasks]);
 
   return (
-    <div className="flex flex-col min-h-full font-geist pb-16" style={{ color: 'var(--pm-on-surface)' }}>
-
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-1 py-2 mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Portfolio Orchestration</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--pm-on-surface-variant)' }}>
-            {stats.active} active initiatives across {stats.total} total projects
-          </p>
-        </div>
-        {hasCapability(profile?.role, 'project.update') && (
-          <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all active:scale-95"
-            style={{ background: 'var(--pm-primary)', color: 'var(--pm-on-primary)' }}>
-            <Icon name="add" size={18} />
-            New Project
-          </button>
-        )}
-      </div>
+    <PageShell maxWidth="full" className="px-6 py-6 flex flex-col">
+      <PageHeader
+        title="Portfolio Orchestration"
+        overline="Initiative & Status Oversight"
+        description={`${stats.active} active initiatives across ${stats.total} total projects`}
+        actions={
+          hasCapability(profile?.role, "project.update") ? (
+            <Button onClick={() => setIsAdding(true)} size="sm">
+              New Project
+            </Button>
+          ) : undefined
+        }
+      />
+      <PageContent className="flex-1 min-h-0 flex flex-col gap-6">
 
       {/* ── View Controls + Filter Bar ──────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -350,7 +347,7 @@ export default function PortfolioPage() {
 
       {/* Timeline View (placeholder) */}
       {view === 'timeline' && (
-        <div className="glass-panel rounded-xl p-8 flex flex-col items-center justify-center min-h-64 gap-4">
+        <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-8 flex flex-col items-center justify-center min-h-64 gap-4">
           <Icon name="timeline" size={40} style={{ color: 'var(--pm-primary)', opacity: 0.4 }} />
           <p className="text-sm" style={{ color: 'var(--pm-on-surface-variant)' }}>
             Gantt timeline view — navigate to <strong>Scheduling</strong> for full execution timeline.
@@ -447,7 +444,7 @@ export default function PortfolioPage() {
 
       {/* ── Cross Project Dependencies Panel ──────────────────── */}
       {crossDeps.length > 0 && (
-        <div className="mt-8 glass-panel rounded-xl p-6 border border-amber-500/20">
+        <div className="mt-8 bg-[var(--color-surface-1)] border border-[var(--color-border)] rounded-xl p-6 border border-amber-500/20">
           <div className="flex items-center gap-2 mb-4">
             <Icon name="warning" size={20} style={{ color: 'var(--pm-tertiary)' }} />
             <h2 className="text-lg font-semibold" style={{ color: 'var(--pm-on-surface)' }}>Cross-Project Blockers</h2>
@@ -490,7 +487,7 @@ export default function PortfolioPage() {
           { label: 'Risk Index', value: stats.blockers > 0 ? 'Elevated' : 'Low', unit: '', trend: `${stats.blockers} blockers`, up: stats.blockers === 0 },
           { label: 'Delivery Rate', value: `${stats.total > 0 ? Math.round((stats.deployed / stats.total) * 100) : 0}%`, unit: 'completed', trend: 'Steady', up: true },
         ].map((item, i) => (
-          <div key={i} className="glass-panel p-4 rounded-lg flex flex-col gap-2">
+          <div key={i} className="bg-[var(--color-surface-1)] border border-[var(--color-border)] p-4 rounded-lg flex flex-col gap-2">
             <span className="font-mono-pm text-[9px] uppercase tracking-widest" style={{ color: 'var(--pm-on-surface-variant)' }}>
               {item.label}
             </span>
@@ -504,7 +501,8 @@ export default function PortfolioPage() {
           </div>
         ))}
       </div>
-    </div>
+      </PageContent>
+    </PageShell>
   );
 }
 

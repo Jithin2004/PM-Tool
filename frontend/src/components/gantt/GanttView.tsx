@@ -371,7 +371,7 @@ export function GanttView({
 
               <div ref={timelineRef} className="flex-1 overflow-auto" onScroll={onTimelineScroll} style={{ overflowX: 'auto', overflowY: 'auto' }}>
                 <div style={{ width: `${totalWidth}px`, minWidth: '100%' }}>
-                  <div className="sticky top-0 z-20 flex border-b border-border-subtle" style={{ height: `${HEADER_H}px`, background: 'rgba(5,6,10,0.96)', backdropFilter: 'blur(8px)' }}>
+                  <div className="sticky top-0 z-20 flex border-b border-border-subtle" style={{ height: `${HEADER_H}px`, background: 'rgba(5,6,10,0.96)' }}>
                     {columns.map((col, ci) => {
                       const x = getX(col.date, origin, viewMode);
                       return (

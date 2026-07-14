@@ -79,7 +79,7 @@ export function DocumentGeneratorDropdown({ workspaceId, type, data, fileName, b
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 mt-1 w-48 premium-panel rounded-xl z-20 py-1.5 backdrop-blur-xl border border-[var(--border-soft)] shadow-xl shadow-purple-950/20">
+          <div className="absolute right-0 mt-1 w-48 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-xl z-20 py-1.5 backdrop-blur-xl border border-[var(--border-soft)] shadow-xl shadow-purple-950/20">
             {templates.map(t => (
               <button
                 key={t.id}

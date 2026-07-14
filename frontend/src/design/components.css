@@ -1,0 +1,56 @@
+/* ================================================================
+   RESOLVE PM — DESIGN BIBLE BASE COMPONENT STYLES
+   Source of truth: resolve_pm_design_bible.html (Phase 10-11, 18)
+   These are the canonical CSS classes for Bible-compliant components.
+   ================================================================ */
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ── Focus States ───────────────────────────────────────────── */
+/* Bible: 2px indigo outline + 2px offset. Never outline:none without replacement. */
+*:focus-visible {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 2px !important;
+}
+*:focus:not(:focus-visible) {
+  outline: none !important;
+}
+
+/* ── Selection ──────────────────────────────────────────────── */
+.app-shell { user-select: none; }
+input, textarea, [contenteditable="true"], .selectable, .copyable {
+  user-select: text;
+}
+
+/* ── Status Dot ─────────────────────────────────────────────── */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* ── Skeleton Loading ───────────────────────────────────────── */
+/* Bible: opacity pulse 0.4→0.7→0.4, 1.4s. No shimmer. No gradient sweep. */
+.skeleton {
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  animation: resolve-skeleton-pulse 1.4s infinite ease-in-out;
+}
+
+/* ── Mobile Touch Targets ───────────────────────────────────── */
+@media (max-width: 768px) {
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+}

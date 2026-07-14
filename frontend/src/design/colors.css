@@ -1,0 +1,82 @@
+/* ================================================================
+   RESOLVE PM — DESIGN BIBLE COLOR TOKENS
+   Source of truth: resolve_pm_design_bible.html (Phase 5, 16)
+   ================================================================ */
+
+:root {
+  /* ── Surfaces ─────────────────────────────────────────────── */
+  --color-bg-base:        #080A16;
+  --color-surface-0:      #0F1124;
+  --color-surface-1:      #151829;
+  --color-surface-2:      #1A1E30;
+  --color-surface-3:      #1F2438;
+  --color-surface-overlay: #2A3050;
+
+  /* ── Borders ──────────────────────────────────────────────── */
+  --color-border:         #1E2440;
+  --color-border-strong:  #252B45;
+
+  /* ── Brand / Primary ──────────────────────────────────────── */
+  --color-primary:        #4F6DFF;
+  --color-primary-hover:  #3D5AE8;
+  --color-primary-active: #2E49D4;
+  --color-primary-subtle: rgba(79, 109, 255, 0.12);
+
+  /* ── Semantic Status ──────────────────────────────────────── */
+  --color-success:        #22D3A0;
+  --color-warning:        #F59E0B;
+  --color-danger:         #EF4444;
+  --color-info:           #60A5FA;
+
+  /* Semantic subtle backgrounds */
+  --color-success-subtle: rgba(34, 211, 160, 0.10);
+  --color-warning-subtle: rgba(245, 158, 11, 0.10);
+  --color-danger-subtle:  rgba(239, 68, 68, 0.10);
+  --color-info-subtle:    rgba(96, 165, 250, 0.10);
+
+  /* ── Operational Status ───────────────────────────────────── */
+  --color-status-not-started: #6B7494;
+  --color-status-in-progress: #4F6DFF;
+  --color-status-completed:   #22D3A0;
+  --color-status-blocked:     #EF4444;
+  --color-status-at-risk:     #F59E0B;
+  --color-status-review:      #A855F7;
+  --color-status-high-priority: #EC4899;
+  --color-status-archived:    #1E2440;
+
+  /* ── Risk Levels ──────────────────────────────────────────── */
+  --color-risk-low:       #22D3A0;
+  --color-risk-moderate:  #60A5FA;
+  --color-risk-high:      #F59E0B;
+  --color-risk-critical:  #EF4444;
+
+  /* ── Text ─────────────────────────────────────────────────── */
+  --color-text-primary:   #E8EAF2;
+  --color-text-secondary: #9BA3C7;
+  --color-text-muted:     #6B7494;
+  --color-text-disabled:  #3A4060;
+  --color-text-on-primary: #FFFFFF;
+
+  /* ── Backward Compatibility Aliases ───────────────────────── */
+  /* These map old token names to new ones. Remove once migration is complete. */
+  --bg:              var(--color-bg-base);
+  --surface:         var(--color-surface-0);
+  --surface-2:       var(--color-surface-2);
+  --surface-3:       var(--color-surface-3);
+  --border:          var(--color-border);
+  --border-subtle:   var(--color-border);
+  --text-primary:    var(--color-text-primary);
+  --text-secondary:  var(--color-text-secondary);
+  --text-tertiary:   var(--color-text-muted);
+  --text-quaternary: var(--color-text-disabled);
+  --accent-primary:  var(--color-primary);
+  --accent-secondary: var(--color-primary-hover);
+  --signal-critical: var(--color-danger);
+  --signal-warning:  var(--color-warning);
+  --signal-safe:     var(--color-success);
+  --signal-info:     var(--color-info);
+  --signal-critical-bg: var(--color-danger-subtle);
+  --signal-warning-bg:  var(--color-warning-subtle);
+  --signal-safe-bg:     var(--color-success-subtle);
+  --signal-info-bg:     var(--color-info-subtle);
+}

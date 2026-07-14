@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { updateProject } from '../../services/projectService';
 import { supabase } from '../../lib/supabase';
 
+import { PageShell, PageHeader, Input, Button } from '../../components/core';
+
 export function ProjectEditPage() {
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
@@ -46,7 +48,7 @@ export function ProjectEditPage() {
     setSuccessMessage('');
     try {
       await updateProject(projectId, { name: name.trim() }, profile?.role || 'admin', workspace.id);
-      setSuccessMessage('Project updated');
+      setSuccessMessage('Project updated successfully.');
     } catch (err: any) {
       console.error('Failed to update project:', err);
       setErrorMessage(err?.message || 'Failed to update project.');
@@ -64,41 +66,42 @@ export function ProjectEditPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-8">
-      <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-6">Edit Project</h1>
+    <PageShell maxWidth="reading">
+      <PageHeader
+        title="Edit Project"
+        overline="Project Administration"
+        description="Update project identifiers and operational characteristics."
+      />
 
       {successMessage && (
-        <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm">
+        <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium">
           {successMessage}
         </div>
       )}
       {errorMessage && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium">
           {errorMessage}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">Project Name *</label>
-          <input
-            name="projectName"
-            required
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className="w-full bg-surface-3 border border-border rounded-lg px-4 py-3 text-text-primary focus:ring-2 focus:ring-indigo-500 outline-none"
-            placeholder="Enter project name"
-          />
-        </div>
-        <button
+        <Input
+          label="Project Name *"
+          required
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Enter project name"
+        />
+
+        <Button
           type="submit"
           disabled={isSubmitting || !name.trim()}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
+          className="w-full"
         >
-          {isSubmitting ? 'Saving...' : 'Save'}
-        </button>
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
+        </Button>
       </form>
-    </div>
+    </PageShell>
   );
 }

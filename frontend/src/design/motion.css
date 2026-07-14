@@ -1,0 +1,33 @@
+/* ================================================================
+   RESOLVE PM — DESIGN BIBLE MOTION TOKENS
+   Source of truth: resolve_pm_design_bible.html (Phase 8, 16)
+   ================================================================ */
+
+:root {
+  /* ── Duration Tokens ──────────────────────────────────────── */
+  --dur-instant: 80ms;    /* Hover fills, focus rings, active presses */
+  --dur-fast:    150ms;   /* Dropdown open, badge appear, tooltip show */
+  --dur-base:    200ms;   /* Modal enter/exit, drawer slide, tab switch */
+  --dur-slow:    300ms;   /* Page transitions, skeleton→content, chart animate */
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);   /* Default for all transitions */
+  --ease-decel:    cubic-bezier(0, 0, 0.2, 1);    /* Elements entering screen */
+  --ease-accel:    cubic-bezier(0.4, 0, 1, 1);    /* Elements leaving screen */
+}
+
+/* ── Skeleton Pulse ─────────────────────────────────────────── */
+/* Bible: opacity 0.4→0.7→0.4, 1.4s infinite. No shimmer. No gradient sweep. */
+@keyframes resolve-skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.7; }
+}
+
+/* ── Reduced Motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

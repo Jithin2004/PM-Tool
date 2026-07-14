@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AutomationRule, AutomationRun, automationRuleService } from '../../services/automationRuleService';
 import { RuleBuilder } from '../../components/automation/RuleBuilder';
 import { Plus, Power, Settings, Clock, AlertCircle, CheckCircle2, Zap, Activity } from 'lucide-react';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 
 export default function AutomationCenter() {
   const [rules, setRules] = useState<AutomationRule[]>([]);
@@ -77,7 +77,7 @@ export default function AutomationCenter() {
           
           {rules.length === 0 ? (
             <div className="mt-8">
-              <PremiumEmptyState
+              <EmptyState
                 icon={Zap}
                 title="No active rules"
                 description="Automate repetitive tasks like assigning issues, sending notifications, or transitioning states."
@@ -133,7 +133,7 @@ export default function AutomationCenter() {
           <div className="bg-surface border border-border rounded-xl overflow-hidden">
             {runs.length === 0 ? (
               <div className="p-12 border-t border-transparent">
-                <PremiumEmptyState
+                <EmptyState
                   icon={Activity}
                   title="No executions"
                   description="Recent automation activity will appear here once your rules trigger."

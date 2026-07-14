@@ -8,7 +8,7 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { Zap, Plus, Settings2, Trash2, Shield, Activity, Power, Download } from 'lucide-react';
 import { PremiumLoader } from '../../components/common/PremiumLoader';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return '';
@@ -126,7 +126,7 @@ export default function AutomationsPanel() {
               const msgKey = `install_${tmpl.id}`;
               const installed = rules.find(r => r.name === tmpl.name);
               return (
-                <div key={tmpl.id} className="group relative pm-card glass-panel p-6 border-transparent hover:border-[var(--pm-primary)] flex flex-col">
+                <div key={tmpl.id} className="group relative pm-card bg-[var(--color-surface-1)] border border-[var(--color-border)] p-6 border-transparent hover:border-[var(--pm-primary)] flex flex-col">
                   <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent rounded-2xl pointer-events-none" />
                   
                   <div className="relative z-10 flex-1">
@@ -170,7 +170,7 @@ export default function AutomationsPanel() {
           </div>
 
           {showCreate && (
-            <div className="glass-panel pm-card rounded-2xl p-6 border-[var(--pm-primary)]/50 mb-8 shadow-lg animate-fade-in relative overflow-hidden">
+            <div className="bg-[var(--color-surface-1)] border border-[var(--color-border)] pm-card rounded-2xl p-6 border-[var(--pm-primary)]/50 mb-8 shadow-lg animate-fade-in relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-teal-500" />
               <h3 className="text-xs font-bold uppercase tracking-widest text-text-secondary mb-5">Configure Automation</h3>
               <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
@@ -211,7 +211,7 @@ export default function AutomationsPanel() {
           )}
 
           {rules.length === 0 ? (
-            <PremiumEmptyState
+            <EmptyState
               icon={Settings2}
               title="No active automation rules"
               description="Deploy predefined templates from the marketplace or build a custom workflow trigger to automate notifications, state machines, and task ownership."
@@ -224,7 +224,7 @@ export default function AutomationsPanel() {
           ) : (
             <div className="space-y-3">
               {rules.map(rule => (
-                <div key={rule.id} className="pm-card glass-panel p-5 border-transparent hover:border-[var(--pm-primary)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-surface/60">
+                <div key={rule.id} className="pm-card bg-[var(--color-surface-1)] border border-[var(--color-border)] p-5 border-transparent hover:border-[var(--pm-primary)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-surface/60">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3 mb-1.5">
                       <span className="text-sm font-bold text-text-primary">{rule.name}</span>

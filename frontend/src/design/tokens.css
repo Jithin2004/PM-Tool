@@ -1,0 +1,16 @@
+/* ================================================================
+   RESOLVE PM — DESIGN SYSTEM MASTER IMPORT
+   
+   This is the single entry point for the Resolve PM Design Bible
+   token system. All visual values flow from these files.
+   
+   Source of truth: resolve_pm_design_bible.html
+   ================================================================ */
+
+@import "./colors.css";
+@import "./typography.css";
+@import "./spacing.css";
+@import "./elevation.css";
+@import "./motion.css";
+@import "./components.css";
+@import "./layouts.css";

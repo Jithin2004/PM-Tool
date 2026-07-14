@@ -10,7 +10,7 @@ import { useDashboard } from '../../context/DashboardContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { ProjectCard } from '../../components/project/ProjectCard';
 import { hasCapability } from '../../core/auth/permissions';
-import { PremiumEmptyState } from '../../components/ui/PremiumEmptyState';
+import { EmptyState } from '../../components/core';
 
 export function ProjectWorkspace() {
   const { workspace, user } = useWorkspace() as any;

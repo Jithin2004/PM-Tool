@@ -3,6 +3,7 @@ import { activityLogService } from './activityLogService';
 import { fireEventWebhooks } from './webhookService';
 import { logServiceFailure } from '../utils/supabaseError';
 import { calendarEventService } from './calendarEventService';
+import { enterpriseEventPublisher } from './enterpriseEventPublisher';
 
 const SYNC_COOLDOWN_MS = 30000;
 const QUEUE_MAX_CONCURRENT = 2;
@@ -543,6 +544,25 @@ export function getConnectionDisplayState(
 
 async function syncUpdateHealth(workspaceId: string, service: string, success: boolean, error?: string, itemsSynced?: number): Promise<void> {
   await updateIntegrationHealth(workspaceId, service, success ? 'connected' : 'failed', error);
+  
+  try {
+    await enterpriseEventPublisher.publish({
+      workspace_id: workspaceId,
+      entity_type: 'integration',
+      verb: 'sync',
+      title: success ? 'Integration Synced' : 'Integration Sync Failed',
+      description: success ? `Synced ${service} connection successfully.` : `Failed to sync ${service} connection: ${error || 'Unknown error'}.`,
+      severity: success ? 'low' : 'high',
+      importance: success ? 'normal' : 'important',
+      icon_key: 'warning',
+      visibility: 'admin',
+      module: 'integrations',
+      metadata: { service, success, items_synced: itemsSynced || 0, error }
+    });
+  } catch (e) {
+    console.error('Failed to log integration sync event:', e);
+  }
+
   if (success) {
     await activityLogService.appendLog({
       workspace_id: workspaceId, action_type: 'integration_sync',

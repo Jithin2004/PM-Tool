@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { workSessionEngine } from './workSessionEngine';
+import { enterpriseEventPublisher } from '../../services/enterpriseEventPublisher';
 
 export const attendanceEngine = {
   async clockIn(workspaceId: string, userId: string) {
@@ -21,6 +22,22 @@ export const attendanceEngine = {
       .single();
 
     if (error) throw error;
+
+    await enterpriseEventPublisher.publish({
+      workspace_id: workspaceId,
+      user_id: userId,
+      entity_type: 'attendance',
+      entity_id: data.id,
+      verb: 'clock_in',
+      title: 'Clocked In',
+      description: `User clocked in${isLate ? ' (Late arrival)' : ''}.`,
+      severity: isLate ? 'medium' : 'low',
+      importance: 'info',
+      icon_key: 'clock',
+      visibility: 'public',
+      module: 'attendance',
+      metadata: { is_late: isLate }
+    });
 
     if (isLate) {
       await this._routeLateApproval(workspaceId, userId, data.id, now);
@@ -44,6 +61,21 @@ export const attendanceEngine = {
       .single();
 
     if (error) throw error;
+
+    await enterpriseEventPublisher.publish({
+      workspace_id: workspaceId,
+      user_id: userId,
+      entity_type: 'attendance',
+      entity_id: data.id,
+      verb: 'clock_out',
+      title: 'Clocked Out',
+      description: 'User clocked out.',
+      severity: 'low',
+      importance: 'info',
+      icon_key: 'clock',
+      visibility: 'public',
+      module: 'attendance'
+    });
     
     // Also end any active work session
     await workSessionEngine.endActiveSession(workspaceId, userId, 'Clocked Out');
@@ -66,6 +98,22 @@ export const attendanceEngine = {
       .single();
 
     if (error) throw error;
+
+    await enterpriseEventPublisher.publish({
+      workspace_id: workspaceId,
+      user_id: userId,
+      entity_type: 'attendance',
+      entity_id: data.id,
+      verb: 'break_start',
+      title: 'Break Started',
+      description: `User started break${reason ? `: ${reason}` : ''}.`,
+      severity: 'low',
+      importance: 'info',
+      icon_key: 'pause',
+      visibility: 'public',
+      module: 'attendance',
+      metadata: { reason }
+    });
     
     // Also end any active work session on pause
     await workSessionEngine.endActiveSession(workspaceId, userId, 'Attendance Paused');
@@ -88,6 +136,22 @@ export const attendanceEngine = {
       .single();
 
     if (error) throw error;
+
+    await enterpriseEventPublisher.publish({
+      workspace_id: workspaceId,
+      user_id: userId,
+      entity_type: 'attendance',
+      entity_id: data.id,
+      verb: 'break_end',
+      title: 'Break Ended',
+      description: 'User resumed work.',
+      severity: 'low',
+      importance: 'info',
+      icon_key: 'clock',
+      visibility: 'public',
+      module: 'attendance'
+    });
+
     return data;
   },
 
@@ -160,6 +224,21 @@ export const attendanceEngine = {
       type: 'attendance_correction',
       status: 'pending',
       requested_by: userId,
+      metadata: { requestedTime: requestedTime.toISOString(), eventType, reason }
+    });
+
+    await enterpriseEventPublisher.publish({
+      workspace_id: workspaceId,
+      user_id: userId,
+      entity_type: 'attendance',
+      verb: 'manual_adjustment',
+      title: 'Manual Adjustment Requested',
+      description: `Manual adjustment requested for ${eventType}: ${reason}`,
+      severity: 'medium',
+      importance: 'normal',
+      icon_key: 'warning',
+      visibility: 'admin',
+      module: 'attendance',
       metadata: { requestedTime: requestedTime.toISOString(), eventType, reason }
     });
   },

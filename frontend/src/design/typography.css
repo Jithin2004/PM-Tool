@@ -1,0 +1,34 @@
+/* ================================================================
+   RESOLVE PM — DESIGN BIBLE TYPOGRAPHY TOKENS
+   Source of truth: resolve_pm_design_bible.html (Phase 4, 16)
+   ================================================================ */
+
+:root {
+  /* ── Font Families ────────────────────────────────────────── */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* ── Type Scale ───────────────────────────────────────────── */
+  --text-xs:   11px;   /* Label / Overline */
+  --text-sm:   12px;   /* Caption, Mono/Code */
+  --text-base: 13px;   /* Body Small, Button, Nav Item, Table Cell */
+  --text-md:   14px;   /* Body */
+  --text-lg:   15px;   /* H3 */
+  --text-xl:   18px;   /* H2 */
+  --text-2xl:  22px;   /* H1 / Page Title */
+  --text-3xl:  28px;   /* Metric / Stat */
+  --text-4xl:  32px;   /* Display */
+}
+
+/* ── Element Typography Rules ──────────────────────────────── */
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code, pre, .font-mono {
+  font-family: var(--font-mono) !important;
+}

@@ -85,7 +85,7 @@ export default function ConnectionsPanel() {
     const display = describeChannelState(state);
 
     return (
-      <div key={ch.key} className="group relative pm-card glass-panel p-5 border-transparent hover:border-[var(--pm-primary)] transition-all duration-300 shadow-sm hover:shadow-accent-primary/5">
+      <div key={ch.key} className="group relative pm-card bg-[var(--color-surface-1)] border border-[var(--color-border)] p-5 border-transparent hover:border-[var(--pm-primary)] transition-all duration-300 shadow-sm hover:shadow-accent-primary/5">
         <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] to-transparent rounded-2xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">

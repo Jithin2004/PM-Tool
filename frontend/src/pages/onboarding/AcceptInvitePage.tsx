@@ -146,7 +146,7 @@ export function AcceptInvitePage() {
     if (error === 'INVITE_EXPIRED') {
       return (
         <ResolveLayout eyebrow="Setup">
-          <div className="max-w-md mx-auto mt-20 p-8 premium-panel rounded-2xl text-center shadow-2xl border border-red-500/20 bg-dark-eval/50 backdrop-blur-xl">
+          <div className="max-w-md mx-auto mt-20 p-8 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl text-center shadow-2xl border border-red-500/20 bg-dark-eval/50 backdrop-blur-xl">
             <div className="w-16 h-16 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
               <X className="w-8 h-8" />
             </div>
@@ -159,7 +159,7 @@ export function AcceptInvitePage() {
 
     return (
       <ResolveLayout eyebrow="Setup">
-        <div className="max-w-md mx-auto mt-20 p-8 premium-panel rounded-2xl text-center shadow-2xl border border-red-500/20 bg-dark-eval/50 backdrop-blur-xl">
+        <div className="max-w-md mx-auto mt-20 p-8 bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl text-center shadow-2xl border border-red-500/20 bg-dark-eval/50 backdrop-blur-xl">
           <div className="w-16 h-16 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
             <X className="w-8 h-8" />
           </div>
@@ -173,7 +173,7 @@ export function AcceptInvitePage() {
   return (
     <ResolveLayout eyebrow="Onboarding">
       <div className="max-w-md mx-auto mt-20">
-        <section className="premium-panel rounded-2xl p-8 shadow-2xl border border-white/5 bg-dark-eval/50 backdrop-blur-xl font-geist relative overflow-hidden">
+        <section className="bg-[var(--color-surface-1)] border border-[var(--color-border-strong)] rounded-2xl p-8 shadow-2xl border border-white/5 bg-dark-eval/50 backdrop-blur-xl font-geist relative overflow-hidden">
           
           {/* Decorative background elements */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -z-10 transform translate-x-1/2 -translate-y-1/2" />

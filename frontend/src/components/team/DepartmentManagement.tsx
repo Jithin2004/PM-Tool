@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { PremiumEmptyState } from '../ui/PremiumEmptyState';
+import { EmptyState } from '../core';
 import { PremiumLoader } from '../common/PremiumLoader';
 import { Users, Briefcase, Folders, Plus, Edit2, UserPlus, Building2 } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
@@ -67,7 +67,7 @@ export function DepartmentManagement() {
       </div>
 
       {departments.length === 0 ? (
-        <PremiumEmptyState
+        <EmptyState
           icon={Building2}
           title="No departments created yet"
           description="Create your first department to start organizing your company structure."

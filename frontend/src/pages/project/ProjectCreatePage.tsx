@@ -3,6 +3,8 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 
+import { PageShell, PageHeader, Input, Button } from '../../components/core';
+
 export function ProjectCreatePage() {
   const { workspace } = useWorkspace();
   const { profile } = useAuth();
@@ -38,7 +40,7 @@ export function ProjectCreatePage() {
 
       if (error) throw error;
       if (data?.id) {
-        setSuccessMessage('Project created');
+        setSuccessMessage('Project created successfully.');
         setName('');
         setDescription('');
       } else {
@@ -53,51 +55,53 @@ export function ProjectCreatePage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-8">
-      <h1 className="text-2xl font-bold tracking-tight text-text-primary mb-6">Create Project</h1>
+    <PageShell maxWidth="reading">
+      <PageHeader
+        title="Create Project"
+        overline="Project Administration"
+        description="Initiate a new project lifecycle and map execution constraints."
+      />
 
       {successMessage && (
-        <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm">
+        <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-medium">
           {successMessage}
         </div>
       )}
       {errorMessage && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium">
           {errorMessage}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">Project Name *</label>
-          <input
-            name="projectName"
-            required
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className="w-full bg-surface-3 border border-border rounded-lg px-4 py-3 text-text-primary focus:ring-2 focus:ring-indigo-500 outline-none"
-            placeholder="Enter project name"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-2">Description (Optional)</label>
+        <Input
+          label="Project Name *"
+          required
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Enter project name"
+        />
+        
+        <div className="flex flex-col gap-2">
+          <label className="text-[13px] font-medium text-[var(--color-text-secondary)]">Description (Optional)</label>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={4}
-            className="w-full bg-surface-3 border border-border rounded-lg px-4 py-3 text-text-primary focus:ring-2 focus:ring-indigo-500 outline-none"
-            placeholder="Provide additional notes..."
+            className="w-full bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-lg px-4 py-3 text-[var(--color-text-primary)] outline-none transition-all focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)]"
+            placeholder="Provide additional details..."
           />
         </div>
-        <button
+
+        <Button
           type="submit"
           disabled={isSubmitting || !name.trim()}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50"
+          className="w-full"
         >
           {isSubmitting ? 'Creating...' : 'Create Project'}
-        </button>
+        </Button>
       </form>
-    </div>
+    </PageShell>
   );
 }
